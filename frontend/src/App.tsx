@@ -61,6 +61,7 @@ export default function App() {
   const [authError, setAuthError] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+  const [isMaximized, setIsMaximized] = useState<boolean>(false);
 
   // Connection states
   const [wsConnected, setWsConnected] = useState<boolean>(false);
@@ -146,6 +147,16 @@ export default function App() {
   // Lifecycle
   useEffect(() => {
     checkAuth();
+
+    if ((window as any).electron) {
+      (window as any).electron.isMaximized().then(setIsMaximized);
+      const unsubscribe = (window as any).electron.onMaximizedChange((maximized: boolean) => {
+        setIsMaximized(maximized);
+      });
+      return () => {
+        if (unsubscribe) unsubscribe();
+      };
+    }
   }, []);
 
   useEffect(() => {
@@ -683,7 +694,14 @@ export default function App() {
                 <div className="window-controls-separator" />
                 <div className="window-controls flex items-center">
                   <button type="button" className="window-control-btn" onClick={() => (window as any).electron.minimize()} title="Minimize">—</button>
-                  <button type="button" className="window-control-btn" onClick={() => (window as any).electron.maximize()} title="Maximize">▢</button>
+                  <button 
+                    type="button" 
+                    className="window-control-btn" 
+                    onClick={() => (window as any).electron.maximize()} 
+                    title={isMaximized ? "Restore" : "Maximize"}
+                  >
+                    {isMaximized ? "❐" : "▢"}
+                  </button>
                   <button type="button" className="window-control-btn window-control-btn-close" onClick={() => (window as any).electron.close()} title="Close">✕</button>
                 </div>
               </>

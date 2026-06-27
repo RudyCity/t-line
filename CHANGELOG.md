@@ -11,6 +11,7 @@ All notable changes to the **t-line** workspace manager project will be document
 - **Workspace Terminal Paths**: Configured new terminals (from the `+` button or the welcome screen) to open automatically in the current active workspace directory rather than the user's home directory.
 - **Default Maximize Window**: Programmed the desktop application window to launch maximized by default.
 - **Bottom Status Bar (Footer)**: Relocated the Cloudflare Tunnel widget, status indicator, and controls from the sidebar to a new bottom status bar (footer) to free up sidebar space and match standard workspace design layouts.
+- **Dynamic Maximize/Restore Icons**: Integrated main process maximize/unmaximize listeners and window state checks to dynamically toggle the window header maximize button between standard maximize (`▢`) and restore (`❐`) icons.
 
 ## [1.0.5] - 2026-06-27
 

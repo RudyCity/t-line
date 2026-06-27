@@ -187,6 +187,14 @@ function createWindow(url) {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+
+  mainWindow.on('maximize', () => {
+    mainWindow.webContents.send('window-maximized-change', true);
+  });
+
+  mainWindow.on('unmaximize', () => {
+    mainWindow.webContents.send('window-maximized-change', false);
+  });
 }
 
 function createTray() {
@@ -323,6 +331,10 @@ ipcMain.handle('select-directory', async () => {
   });
   if (result.canceled) return null;
   return result.filePaths[0];
+});
+
+ipcMain.handle('is-window-maximized', () => {
+  return mainWindow ? mainWindow.isMaximized() : false;
 });
 
 ipcMain.on('window-minimize', () => {
