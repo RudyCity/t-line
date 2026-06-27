@@ -16,17 +16,16 @@ import { wsManager } from './services/websocket';
 import { FileViewerTab } from './components/FileViewerTab';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
 import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal } from './components/Modals';
-import { FileExplorer, GitChanges } from './components/FilePanel';
 import { useTunnel } from './hooks/useTunnel';
 import { useWorkspaces } from './hooks/useWorkspaces';
 import { useTerminals, WorkspaceInfo } from './hooks/useTerminals';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { SplitLayoutRenderer } from './components/SplitLayoutRenderer';
 import { Footer } from './components/Footer';
-import { WorkspaceList } from './components/WorkspaceList';
 import { EmptyDashboard } from './components/EmptyDashboard';
 import { MobileKeyboard } from './components/MobileKeyboard';
 import { useLayoutHelpers } from './hooks/useLayoutHelpers';
+import { SidebarContentPanel } from './components/SidebarContentPanel';
 
 export default function App() {
   const [setupRequired, setSetupRequired] = useState<boolean | null>(null);
@@ -102,7 +101,7 @@ export default function App() {
   } = useTunnel(isAuthenticated);
 
   // Active panel state: 'workspaces' | 'explorer' | 'changes'
-  const [activePanel, setActivePanel] = useState<'workspaces' | 'explorer' | 'changes'>('workspaces');
+  const [activePanel, setActivePanel] = useState<'workspaces' | 'explorer' | 'changes' | 'tabs'>('workspaces');
   const [panelWorkspace, setPanelWorkspace] = useState<WorkspaceInfo | null>(null);
 
   // Terminal state management hook
@@ -416,6 +415,14 @@ export default function App() {
         {/* Sidebar Panel Tabs */}
         <div className="sidebar-panel-tabs">
           <button
+            className={`sidebar-panel-tab mobile-only ${activePanel === 'tabs' ? 'active' : ''}`}
+            onClick={() => setActivePanel('tabs')}
+            title="Active Tabs"
+          >
+            <TerminalIcon size={15} />
+            <span>Tabs</span>
+          </button>
+          <button
             className={`sidebar-panel-tab ${activePanel === 'workspaces' ? 'active' : ''}`}
             onClick={() => setActivePanel('workspaces')}
             title="Workspaces"
@@ -441,115 +448,25 @@ export default function App() {
           </button>
         </div>
 
-        <div 
-          className="sidebar-content"
-          style={{
-            padding: activePanel === 'workspaces' ? '16px 0px' : '0px',
-            gap: activePanel === 'workspaces' ? '16px' : '0px'
-          }}
-        >
-
-          {/* ── Workspaces Panel ── */}
-          {activePanel === 'workspaces' && (
-          <div>
-            <div className="section-title" style={{ padding: '0 16px' }}>
-              <span>Workspaces</span>
-              <button className="action-btn" onClick={() => { setShowWorkspaceModal(true); setSidebarOpen(false); }} title="Add Workspace">
-                <Plus size={16} />
-              </button>
-            </div>
-
-            <WorkspaceList
-              workspaces={workspaces}
-              setPanelWorkspace={setPanelWorkspace}
-              setActivePanel={setActivePanel}
-              handleOpenWorktreeModal={handleOpenWorktreeModal}
-              openTerminal={openTerminal}
-              handleRemoveWorkspace={handleRemoveWorkspace}
-              handleRemoveWorktree={handleRemoveWorktree}
-            />
-
-              {workspaces.length === 0 && (
-                <div style={{ textAlign: 'center', color: 'var(--text-dark)', fontSize: '0.85rem', padding: '16px' }}>
-                  No workspaces registered.
-                </div>
-              )}
-          </div>
-          )}
-
-          {/* ── File Explorer Panel ── */}
-          {activePanel === 'explorer' && (
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-              {workspaces.length > 0 && (
-                <div className="workspace-select-bar">
-                  <span className="select-bar-label">Workspace:</span>
-                  <select
-                    value={panelWorkspace?.id || ''}
-                    onChange={(e) => {
-                      const ws = workspaces.find(w => w.id === e.target.value);
-                      if (ws) setPanelWorkspace(ws);
-                    }}
-                    className="workspace-select-dropdown"
-                  >
-                    <option value="" disabled>Select Workspace...</option>
-                    {workspaces.map(w => (
-                      <option key={w.id} value={w.id}>{w.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {panelWorkspace ? (
-                <FileExplorer
-                  rootPath={panelWorkspace.path}
-                  token={localStorage.getItem('token') || ''}
-                  onFileClick={openFileTab}
-                />
-              ) : (
-                <div className="panel-empty" style={{ flex: 1 }}>
-                  <FolderTree size={24} style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
-                  <span>No workspace selected</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Git Changes Panel ── */}
-          {activePanel === 'changes' && (
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-              {workspaces.filter(w => w.isGit).length > 0 && (
-                <div className="workspace-select-bar">
-                  <span className="select-bar-label">Workspace:</span>
-                  <select
-                    value={panelWorkspace?.id || ''}
-                    onChange={(e) => {
-                      const ws = workspaces.find(w => w.id === e.target.value);
-                      if (ws) setPanelWorkspace(ws);
-                    }}
-                    className="workspace-select-dropdown"
-                  >
-                    <option value="" disabled>Select Workspace...</option>
-                    {workspaces.filter(w => w.isGit).map(w => (
-                      <option key={w.id} value={w.id}>{w.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {panelWorkspace && panelWorkspace.isGit ? (
-                <GitChanges
-                  workspaceId={panelWorkspace.id}
-                  token={localStorage.getItem('token') || ''}
-                />
-              ) : (
-                <div className="panel-empty" style={{ flex: 1 }}>
-                  <GitCompare size={24} style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
-                  <span>No Git workspace selected</span>
-                </div>
-              )}
-            </div>
-          )}
-
-
-        </div>
+        <SidebarContentPanel
+          activePanel={activePanel}
+          setActivePanel={setActivePanel}
+          workspaces={workspaces}
+          panelWorkspace={panelWorkspace}
+          setPanelWorkspace={setPanelWorkspace}
+          tabs={tabs}
+          setActiveTabId={setActiveTabId}
+          activeTabId={activeTabId}
+          terminalInstances={terminalInstances}
+          setShowWorkspaceModal={setShowWorkspaceModal}
+          setSidebarOpen={setSidebarOpen}
+          handleOpenWorktreeModal={handleOpenWorktreeModal}
+          openTerminal={openTerminal}
+          handleRemoveWorkspace={handleRemoveWorkspace}
+          handleRemoveWorktree={handleRemoveWorktree}
+          openFileTab={openFileTab}
+          closeTerminal={closeTerminal}
+        />
       </div>
 
       {/* Resize Handle */}
@@ -592,12 +509,12 @@ export default function App() {
 
           {/* Left Divider if there are tabs */}
           {tabs.length > 0 && (
-            <div className="window-controls-separator shrink-0" style={{ margin: '0 12px', height: '16px' }} />
+            <div className="window-controls-separator shrink-0 desktop-only" style={{ margin: '0 12px', height: '16px' }} />
           )}
 
           {/* Integrated Tab Bar */}
           {tabs.length > 0 && (
-            <div className="flex items-center gap-2 flex-1 overflow-x-auto mx-3 h-full" style={{ scrollbarWidth: 'none', WebkitAppRegion: 'no-drag' } as any}>
+            <div className="flex items-center gap-2 flex-1 overflow-x-auto mx-3 h-full desktop-only" style={{ scrollbarWidth: 'none', WebkitAppRegion: 'no-drag' } as any}>
               {tabs.map(t => {
                 const isFile = t.type === 'file';
                 const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
@@ -662,7 +579,7 @@ export default function App() {
 
           {/* Right Divider if there are tabs */}
           {tabs.length > 0 && (
-            <div className="window-controls-separator shrink-0" style={{ margin: '0 12px', height: '16px' }} />
+            <div className="window-controls-separator shrink-0 desktop-only" style={{ margin: '0 12px', height: '16px' }} />
           )}
 
           <div className="top-bar-actions flex items-center gap-3 shrink-0">

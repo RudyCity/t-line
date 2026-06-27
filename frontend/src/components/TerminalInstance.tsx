@@ -129,6 +129,8 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
   const onFocusRef = useRef(onFocus);
   const [showSearch, setShowSearch] = useState(false);
 
+  const actualFontSize = window.innerWidth <= 768 ? 8 : fontSize;
+
   useEffect(() => {
     onTitleChangeRef.current = onTitleChange;
   }, [onTitleChange]);
@@ -149,7 +151,7 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     // ── Instantiate Terminal ─────────────────────────────
     const term = new Terminal({
       cursorBlink: true,
-      fontSize: fontSize,
+      fontSize: actualFontSize,
       fontFamily: 'JetBrains Mono, Fira Code, Courier New, monospace',
       lineHeight: 1.2,
       letterSpacing: 0,
@@ -295,13 +297,13 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
   useEffect(() => {
     if (terminalRef.current && fitAddonRef.current) {
       try {
-        terminalRef.current.options.fontSize = fontSize;
+        terminalRef.current.options.fontSize = actualFontSize;
         setTimeout(() => { try { fitAddonRef.current?.fit(); } catch (e) {} }, 50);
       } catch (e) {
         console.error('Error changing terminal font size:', e);
       }
     }
-  }, [fontSize]);
+  }, [actualFontSize]);
 
   // ── Search toggle keyboard (Ctrl+F when terminal is focused) ─
   useEffect(() => {
