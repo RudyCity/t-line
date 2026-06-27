@@ -627,55 +627,6 @@ export default function App() {
           )}
 
 
-        {/* Cloudflare Tunnel Widget */}
-        </div>
-        <div className="tunnel-widget glass-panel" style={{ borderRadius: '0', borderLeft: 'none', borderRight: 'none', borderBottom: 'none' }}>
-          <div className="section-title" style={{ marginBottom: '4px' }}>
-            <span>Cloudflare Tunnel</span>
-            <span className="status-indicator">
-              <span className={`dot ${tunnelStatus.active ? 'dot-active' : 'dot-inactive'}`} />
-              {tunnelStatus.active ? 'Active' : 'Inactive'}
-            </span>
-          </div>
-
-          {tunnelStatus.active && tunnelStatus.url && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div className="tunnel-url">{tunnelStatus.url}</div>
-              <a 
-                href={tunnelStatus.url} 
-                target="_blank" 
-                rel="noreferrer" 
-                className="btn btn-secondary" 
-                style={{ fontSize: '0.75rem', padding: '6px 12px', display: 'flex', justifyContent: 'center', gap: '6px' }}
-              >
-                <span>Visit URL</span>
-                <ExternalLink size={12} />
-              </a>
-            </div>
-          )}
-
-          {tunnelStatus.error && (
-            <div style={{ color: 'var(--color-danger)', fontSize: '0.75rem', wordBreak: 'break-all' }}>
-              Error: {tunnelStatus.error}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-            {tunnelStatus.active ? (
-              <button className="btn btn-danger" style={{ flex: '1', fontSize: '0.75rem', padding: '8px' }} onClick={handleStopTunnel}>
-                Stop Tunnel
-              </button>
-            ) : (
-              <>
-                <button className="btn btn-secondary" style={{ flex: '1', fontSize: '0.75rem', padding: '8px' }} onClick={() => handleStartTunnel('quick')}>
-                  Quick URL
-                </button>
-                <button className="btn btn-secondary" style={{ flex: '1', fontSize: '0.75rem', padding: '8px' }} onClick={() => handleStartTunnel('token')}>
-                  Custom
-                </button>
-              </>
-            )}
-          </div>
         </div>
       </div>
 
@@ -899,6 +850,76 @@ export default function App() {
         token={localStorage.getItem('token') || ''}
         workspacesCount={workspaces.length}
       />
+
+      {/* App Footer */}
+      <footer className="app-footer flex items-center justify-between px-4 py-2 border-t border-white/5 bg-slate-950/85 text-xs text-slate-400 select-none shrink-0 h-9 z-20">
+        <div className="flex items-center gap-4">
+          <span className="flex items-center gap-1.5 font-medium text-slate-300">
+            <span className="h-2 w-2 rounded-full bg-purple-500 shadow-[0_0_6px_#a855f7]" />
+            <span>t-line v1.0.6</span>
+          </span>
+          {panelWorkspace && (
+            <span className="text-[11px] font-mono text-slate-500 hidden sm:inline">
+              Workspace: {panelWorkspace.name} ({panelWorkspace.path})
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-slate-500">Cloudflare Tunnel:</span>
+            <span className="flex items-center gap-1.5 font-medium px-2 py-0.5 rounded bg-white/5 text-[11px]">
+              <span className={`h-1.5 w-1.5 rounded-full ${tunnelStatus.active ? 'bg-emerald-400 animate-pulse shadow-[0_0_6px_#34d399]' : 'bg-red-400 shadow-[0_0_6px_#f87171]'}`} />
+              <span className={tunnelStatus.active ? 'text-emerald-400' : 'text-red-400'}>
+                {tunnelStatus.active ? 'Active' : 'Inactive'}
+              </span>
+            </span>
+          </div>
+
+          {tunnelStatus.active && tunnelStatus.url && (
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[11px] text-sky-400 max-w-[200px] truncate" title={tunnelStatus.url}>
+                {tunnelStatus.url}
+              </span>
+              <a 
+                href={tunnelStatus.url} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="flex items-center gap-1 text-[10px] text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded transition-all duration-150"
+              >
+                <span>Open</span>
+                <ExternalLink size={10} />
+              </a>
+            </div>
+          )}
+
+          <div className="flex items-center gap-1">
+            {tunnelStatus.active ? (
+              <button 
+                onClick={handleStopTunnel}
+                className="px-2 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-[10px] font-medium transition-all cursor-pointer"
+              >
+                Stop
+              </button>
+            ) : (
+              <>
+                <button 
+                  onClick={() => handleStartTunnel('quick')}
+                  className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-medium transition-all cursor-pointer"
+                >
+                  Quick URL
+                </button>
+                <button 
+                  onClick={() => handleStartTunnel('token')}
+                  className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-medium transition-all cursor-pointer"
+                >
+                  Custom
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
