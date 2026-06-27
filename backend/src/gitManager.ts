@@ -237,3 +237,50 @@ export async function getRepoBranches(repoPath: string): Promise<string[]> {
     return [];
   }
 }
+
+export interface GitFileStatus {
+  path: string;
+  status: 'modified' | 'untracked' | 'added' | 'deleted' | 'renamed';
+}
+
+// Get git changes (modified, untracked, added, deleted, renamed)
+export async function getGitStatus(repoPath: string): Promise<GitFileStatus[]> {
+  try {
+    const normalizedRepo = path.normalize(repoPath);
+    const output = await runCmd('git status --porcelain', normalizedRepo);
+    if (!output.trim()) return [];
+    
+    return output.split('\n').map(line => {
+      if (line.length < 3) return null;
+      const statusChar = line.substring(0, 2);
+      const filePath = line.substring(3).trim();
+      
+      let status: GitFileStatus['status'] = 'modified';
+      if (statusChar.includes('??')) {
+        status = 'untracked';
+      } else if (statusChar.includes('A')) {
+        status = 'added';
+      } else if (statusChar.includes('D')) {
+        status = 'deleted';
+      } else if (statusChar.includes('R')) {
+        status = 'renamed';
+      }
+      
+      return { path: filePath, status };
+    }).filter((item): item is GitFileStatus => item !== null && !!item.path);
+  } catch (e) {
+    return [];
+  }
+}
+
+// Get diff for a modified file
+export async function getGitDiff(repoPath: string, filePath: string): Promise<string> {
+  try {
+    const normalizedRepo = path.normalize(repoPath);
+    const normalizedFile = path.normalize(filePath);
+    const output = await runCmd(`git diff "${normalizedFile}"`, normalizedRepo);
+    return output;
+  } catch (error: any) {
+    return `Error generating diff: ${error.message}`;
+  }
+}

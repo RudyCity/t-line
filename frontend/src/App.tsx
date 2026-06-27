@@ -10,12 +10,15 @@ import {
   Loader2, 
   FolderPlus, 
   ExternalLink,
-  Menu as MenuIcon
+  Menu as MenuIcon,
+  GitCompare,
+  FolderTree
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { TerminalInstance } from './components/TerminalInstance';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
 import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal } from './components/Modals';
+import { FileExplorer, GitChanges } from './components/FilePanel';
 
 // Types
 interface WorktreeInfo {
@@ -89,6 +92,10 @@ export default function App() {
   const [showTunnelModal, setShowTunnelModal] = useState<boolean>(false);
   const [tunnelToken, setTunnelToken] = useState<string>('');
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+
+  // Active panel state: 'workspaces' | 'explorer' | 'changes'
+  const [activePanel, setActivePanel] = useState<'workspaces' | 'explorer' | 'changes'>('workspaces');
+  const [panelWorkspace, setPanelWorkspace] = useState<WorkspaceInfo | null>(null);
 
   // Terminal tab states
   const [terminals, setTerminals] = useState<TerminalTab[]>(() => {
@@ -594,8 +601,38 @@ export default function App() {
           <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', fontWeight: 500, color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)', marginLeft: '8px', alignSelf: 'center' }}>v1.0.1</span>
         </div>
 
+        {/* Sidebar Panel Tabs */}
+        <div className="sidebar-panel-tabs">
+          <button
+            className={`sidebar-panel-tab ${activePanel === 'workspaces' ? 'active' : ''}`}
+            onClick={() => setActivePanel('workspaces')}
+            title="Workspaces"
+          >
+            <Folder size={15} />
+            <span>Workspaces</span>
+          </button>
+          <button
+            className={`sidebar-panel-tab ${activePanel === 'explorer' ? 'active' : ''}`}
+            onClick={() => setActivePanel('explorer')}
+            title="File Explorer"
+          >
+            <FolderTree size={15} />
+            <span>Explorer</span>
+          </button>
+          <button
+            className={`sidebar-panel-tab ${activePanel === 'changes' ? 'active' : ''}`}
+            onClick={() => setActivePanel('changes')}
+            title="Git Changes"
+          >
+            <GitCompare size={15} />
+            <span>Changes</span>
+          </button>
+        </div>
+
         <div className="sidebar-content">
-          
+
+          {/* ── Workspaces Panel ── */}
+          {activePanel === 'workspaces' && (
           <div>
             <div className="section-title">
               <span>Workspaces</span>
@@ -619,6 +656,14 @@ export default function App() {
                           <GitFork size={13} />
                         </button>
                       )}
+                      {w.isGit && (
+                        <button className="action-btn" onClick={() => { setPanelWorkspace(w); setActivePanel('changes'); }} title="Git Changes">
+                          <GitCompare size={13} />
+                        </button>
+                      )}
+                      <button className="action-btn" onClick={() => { setPanelWorkspace(w); setActivePanel('explorer'); }} title="Browse Files">
+                        <FolderTree size={13} />
+                      </button>
                       <button className="action-btn" onClick={() => openTerminal(w.name, w.path, w.defaultShell)} title={`Open terminal (${w.defaultShell || 'default'})`}>
                         <TerminalIcon size={13} />
                       </button>
@@ -668,10 +713,45 @@ export default function App() {
                   No workspaces registered.
                 </div>
               )}
-            </div>
           </div>
+          )}
+
+          {/* ── File Explorer Panel ── */}
+          {activePanel === 'explorer' && (
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              {panelWorkspace ? (
+                <FileExplorer
+                  rootPath={panelWorkspace.path}
+                  token={localStorage.getItem('token') || ''}
+                />
+              ) : (
+                <div className="panel-empty" style={{ flex: 1 }}>
+                  <FolderTree size={24} style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
+                  <span>Click the <FolderTree size={12} style={{ display: 'inline' }} /> icon on a workspace to browse files</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Git Changes Panel ── */}
+          {activePanel === 'changes' && (
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              {panelWorkspace ? (
+                <GitChanges
+                  workspaceId={panelWorkspace.id}
+                  token={localStorage.getItem('token') || ''}
+                />
+              ) : (
+                <div className="panel-empty" style={{ flex: 1 }}>
+                  <GitCompare size={24} style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
+                  <span>Click the <GitCompare size={12} style={{ display: 'inline' }} /> icon on a git workspace</span>
+                </div>
+              )}
+            </div>
+          )}
 
         {/* Cloudflare Tunnel Widget */}
+        </div>
         <div className="tunnel-widget glass-panel" style={{ borderRadius: '0', borderLeft: 'none', borderRight: 'none', borderBottom: 'none' }}>
           <div className="section-title" style={{ marginBottom: '4px' }}>
             <span>Cloudflare Tunnel</span>

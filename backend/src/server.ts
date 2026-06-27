@@ -22,7 +22,9 @@ import {
   getWorkspaceInfo, 
   addWorktree, 
   removeWorktree,
-  getRepoBranches
+  getRepoBranches,
+  getGitStatus,
+  getGitDiff
 } from './gitManager';
 import { terminalManager } from './terminalManager';
 import { tunnelManager } from './tunnelManager';
@@ -134,7 +136,46 @@ app.get('/api/workspaces/:id/branches', authMiddleware, async (req, res) => {
   }
 });
 
-app.post('/api/worktrees/add', authMiddleware, async (req, res) => {
+app.get('/api/workspaces/:id/git/status', authMiddleware, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const configs = getWorkspaces();
+    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
+    
+    if (!matched) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+    
+    const statusList = await getGitStatus(matched.path);
+    res.json(statusList);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/workspaces/:id/git/diff', authMiddleware, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const { filePath } = req.query;
+    if (!filePath || typeof filePath !== 'string') {
+      return res.status(400).json({ error: 'filePath is required.' });
+    }
+    
+    const configs = getWorkspaces();
+    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
+    
+    if (!matched) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+    
+    const diffOutput = await getGitDiff(matched.path, filePath);
+    res.json({ diff: diffOutput });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/worktrees/add', authMiddleware, async (req, res) =>>,StartLine:136,TargetContent: {
   const { repoPath, worktreePath, branchName, newBranch } = req.body;
   if (!repoPath || !worktreePath || !branchName) {
     return res.status(400).json({ error: 'repoPath, worktreePath, and branchName are required.' });
@@ -262,6 +303,96 @@ app.get('/api/fs/list', authMiddleware, (req, res) => {
       currentPath: resolvedPath,
       parentPath: parentPath !== resolvedPath ? parentPath : null,
       directories
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/fs/explore', authMiddleware, (req, res) => {
+  const targetPath = req.query.path as string;
+  if (!targetPath) {
+    return res.status(400).json({ error: 'Path is required.' });
+  }
+
+  try {
+    const resolvedPath = path.resolve(targetPath);
+    if (!fs.existsSync(resolvedPath)) {
+      return res.status(404).json({ error: 'Path does not exist.' });
+    }
+
+    const stat = fs.statSync(resolvedPath);
+    if (!stat.isDirectory()) {
+      return res.status(400).json({ error: 'Path is not a directory.' });
+    }
+
+    const items = fs.readdirSync(resolvedPath, { withFileTypes: true });
+    const contents = items
+      .map(item => {
+        try {
+          return {
+            name: item.name,
+            path: path.join(resolvedPath, item.name),
+            isDirectory: item.isDirectory()
+          };
+        } catch {
+          return null;
+        }
+      })
+      .filter((item): item is { name: string; path: string; isDirectory: boolean } => 
+        item !== null && 
+        !item.name.startsWith('.') && 
+        item.name !== 'node_modules' && 
+        item.name !== 'dist' && 
+        item.name !== 'dist-exe' &&
+        item.name !== '.git'
+      )
+      .sort((a, b) => {
+        if (a.isDirectory === b.isDirectory) {
+          return a.name.localeCompare(b.name);
+        }
+        return a.isDirectory ? -1 : 1;
+      });
+
+    const parentPath = path.dirname(resolvedPath);
+
+    res.json({
+      currentPath: resolvedPath,
+      parentPath: parentPath !== resolvedPath ? parentPath : null,
+      contents
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/fs/read', authMiddleware, (req, res) => {
+  const filePath = req.query.path as string;
+  if (!filePath) {
+    return res.status(400).json({ error: 'File path is required.' });
+  }
+
+  try {
+    const resolvedPath = path.resolve(filePath);
+    if (!fs.existsSync(resolvedPath)) {
+      return res.status(404).json({ error: 'File does not exist.' });
+    }
+
+    const stat = fs.statSync(resolvedPath);
+    if (!stat.isFile()) {
+      return res.status(400).json({ error: 'Path is not a file.' });
+    }
+
+    // Limit read size to 1MB to prevent large memory overhead
+    const fd = fs.openSync(resolvedPath, 'r');
+    const buffer = Buffer.alloc(1024 * 1024);
+    const bytesRead = fs.readSync(fd, buffer, 0, buffer.length, 0);
+    fs.closeSync(fd);
+
+    const content = buffer.toString('utf8', 0, bytesRead);
+    res.json({
+      content,
+      truncated: stat.size > bytesRead
     });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
