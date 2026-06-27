@@ -17,8 +17,6 @@ import {
   FileCode,
   ZoomIn,
   ZoomOut,
-  Columns2,
-  Rows2,
   Keyboard
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
@@ -59,6 +57,7 @@ export default function App() {
   });
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [showShortcutModal, setShowShortcutModal] = useState<boolean>(false);
+  const [isDraggingTab, setIsDraggingTab] = useState<string | null>(null);
 
   // Workspaces Hook
   const {
@@ -184,6 +183,16 @@ export default function App() {
     onZoomIn: handleZoomIn,
     onZoomOut: handleZoomOut,
   });
+
+  // Auto-close split if the secondary tab is closed
+  useEffect(() => {
+    if (splitState.isSplit && splitState.secondaryTabId) {
+      const exists = terminals.some(t => t.id === splitState.secondaryTabId);
+      if (!exists) {
+        closeSplit();
+      }
+    }
+  }, [terminals, splitState.isSplit, splitState.secondaryTabId, closeSplit]);
 
 
   // Lifecycle
@@ -700,6 +709,12 @@ export default function App() {
                     key={t.id} 
                     className={`tab ${activeTabId === t.id ? 'tab-active' : ''}`}
                     onClick={() => setActiveTabId(t.id)}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', t.id);
+                      setIsDraggingTab(t.id);
+                    }}
+                    onDragEnd={() => setIsDraggingTab(null)}
                     style={{ 
                       height: '32px', 
                       padding: '0 12px', 
@@ -711,7 +726,7 @@ export default function App() {
                       background: activeTabId === t.id ? 'rgba(168, 85, 247, 0.08)' : 'transparent',
                       border: activeTabId === t.id ? '1px solid rgba(168, 85, 247, 0.25)' : '1px solid transparent',
                       color: activeTabId === t.id ? '#c084fc' : 'var(--text-muted)',
-                      cursor: 'pointer',
+                      cursor: 'grab',
                       whiteSpace: 'nowrap'
                     }}
                   >
@@ -738,43 +753,10 @@ export default function App() {
                 <Plus size={14} />
               </button>
 
-              {/* Split Pane toggle buttons */}
-              {terminals.filter(t => t.type === 'terminal').length >= 2 && (
-                <>
-                  <button
-                    className={`action-btn shrink-0 ${splitState.isSplit && splitState.direction === 'horizontal' ? 'text-purple-400' : ''}`}
-                    onClick={() => {
-                      if (splitState.isSplit && splitState.direction === 'horizontal') {
-                        closeSplit();
-                      } else {
-                        const secId = getSecondaryTabId();
-                        if (secId) splitHorizontal(secId);
-                      }
-                    }}
-                    title="Split Horizontal (Alt+D)"
-                    style={{ marginLeft: '4px' }}
-                  >
-                    <Columns2 size={14} />
-                  </button>
-                  <button
-                    className={`action-btn shrink-0 ${splitState.isSplit && splitState.direction === 'vertical' ? 'text-purple-400' : ''}`}
-                    onClick={() => {
-                      if (splitState.isSplit && splitState.direction === 'vertical') {
-                        closeSplit();
-                      } else {
-                        const secId = getSecondaryTabId();
-                        if (secId) splitVertical(secId);
-                      }
-                    }}
-                    title="Split Vertical (Alt+E)"
-                  >
-                    <Rows2 size={14} />
-                  </button>
-                </>
-              )}
 
             </div>
           )}
+
 
           {/* Right Divider if there are tabs */}
           {terminals.length > 0 && (
@@ -843,8 +825,105 @@ export default function App() {
             
           ) : (
             
-            // Terminals View — supports split pane
-            <div className="terminal-container" style={{ flex: 1, border: 'none', borderRadius: 0, padding: 0, display: 'flex', flexDirection: splitState.direction === 'vertical' ? 'column' : 'row' }}>
+            // Terminals View — supports split pane and drag-and-drop splitting
+            <div className="terminal-container" style={{ flex: 1, border: 'none', borderRadius: 0, padding: 0, display: 'flex', flexDirection: splitState.direction === 'vertical' ? 'column' : 'row', position: 'relative' }}>
+              {/* Drop Zones Overlay for Drag and Drop Splitting */}
+              {isDraggingTab && (
+                <div style={{ position: 'absolute', inset: 0, zIndex: 1000, pointerEvents: 'none' }}>
+                  {/* Left Zone */}
+                  <div
+                    style={{
+                      position: 'absolute', left: 0, top: 0, bottom: 0, width: '25%',
+                      borderRight: '2px dashed rgba(168,85,247,0.4)',
+                      background: 'rgba(168,85,247,0.03)', pointerEvents: 'auto',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s', cursor: 'copy', backdropFilter: 'blur(1px)'
+                    }}
+                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = 'rgba(168,85,247,0.18)'; }}
+                    onDragLeave={(e) => { e.currentTarget.style.background = 'rgba(168,85,247,0.03)'; }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const draggedId = e.dataTransfer.getData('text/plain') || isDraggingTab;
+                      if (draggedId && draggedId !== activeTabId) {
+                        splitHorizontal(draggedId);
+                      }
+                      setIsDraggingTab(null);
+                    }}
+                  >
+                    <span style={{ color: '#c084fc', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', writingMode: 'vertical-lr', letterSpacing: '0.12em' }}>Split Left</span>
+                  </div>
+
+                  {/* Right Zone */}
+                  <div
+                    style={{
+                      position: 'absolute', right: 0, top: 0, bottom: 0, width: '25%',
+                      borderLeft: '2px dashed rgba(168,85,247,0.4)',
+                      background: 'rgba(168,85,247,0.03)', pointerEvents: 'auto',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s', cursor: 'copy', backdropFilter: 'blur(1px)'
+                    }}
+                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = 'rgba(168,85,247,0.18)'; }}
+                    onDragLeave={(e) => { e.currentTarget.style.background = 'rgba(168,85,247,0.03)'; }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const draggedId = e.dataTransfer.getData('text/plain') || isDraggingTab;
+                      if (draggedId && draggedId !== activeTabId) {
+                        splitHorizontal(draggedId);
+                      }
+                      setIsDraggingTab(null);
+                    }}
+                  >
+                    <span style={{ color: '#c084fc', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', writingMode: 'vertical-lr', letterSpacing: '0.12em' }}>Split Right</span>
+                  </div>
+
+                  {/* Top Zone */}
+                  <div
+                    style={{
+                      position: 'absolute', left: '25%', right: '25%', top: 0, height: '25%',
+                      borderBottom: '2px dashed rgba(168,85,247,0.4)',
+                      background: 'rgba(168,85,247,0.03)', pointerEvents: 'auto',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s', cursor: 'copy', backdropFilter: 'blur(1px)'
+                    }}
+                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = 'rgba(168,85,247,0.18)'; }}
+                    onDragLeave={(e) => { e.currentTarget.style.background = 'rgba(168,85,247,0.03)'; }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const draggedId = e.dataTransfer.getData('text/plain') || isDraggingTab;
+                      if (draggedId && draggedId !== activeTabId) {
+                        splitVertical(draggedId);
+                      }
+                      setIsDraggingTab(null);
+                    }}
+                  >
+                    <span style={{ color: '#c084fc', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Split Top</span>
+                  </div>
+
+                  {/* Bottom Zone */}
+                  <div
+                    style={{
+                      position: 'absolute', left: '25%', right: '25%', bottom: 0, height: '25%',
+                      borderTop: '2px dashed rgba(168,85,247,0.4)',
+                      background: 'rgba(168,85,247,0.03)', pointerEvents: 'auto',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s', cursor: 'copy', backdropFilter: 'blur(1px)'
+                    }}
+                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = 'rgba(168,85,247,0.18)'; }}
+                    onDragLeave={(e) => { e.currentTarget.style.background = 'rgba(168,85,247,0.03)'; }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const draggedId = e.dataTransfer.getData('text/plain') || isDraggingTab;
+                      if (draggedId && draggedId !== activeTabId) {
+                        splitVertical(draggedId);
+                      }
+                      setIsDraggingTab(null);
+                    }}
+                  >
+                    <span style={{ color: '#c084fc', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Split Bottom</span>
+                  </div>
+                </div>
+              )}
+
               {/* Primary Pane */}
               <div style={{ flex: splitState.isSplit ? `0 0 ${splitState.splitRatio}%` : '1', position: 'relative', overflow: 'hidden', minWidth: 0, minHeight: 0 }}>
                 {terminals.map(t => (
