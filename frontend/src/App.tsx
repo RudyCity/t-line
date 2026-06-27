@@ -730,7 +730,7 @@ export default function App() {
               <button
                 className="action-btn shrink-0"
                 onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')}
-                title="New terminal (Ctrl+T)"
+                title="New terminal (Alt+T)"
                 style={{ marginLeft: '6px' }}
               >
                 <Plus size={14} />
@@ -749,7 +749,7 @@ export default function App() {
                         if (secId) splitHorizontal(secId);
                       }
                     }}
-                    title="Split Horizontal (Ctrl+Shift+D)"
+                    title="Split Horizontal (Alt+D)"
                     style={{ marginLeft: '4px' }}
                   >
                     <Columns2 size={14} />
@@ -764,7 +764,7 @@ export default function App() {
                         if (secId) splitVertical(secId);
                       }
                     }}
-                    title="Split Vertical (Ctrl+Shift+E)"
+                    title="Split Vertical (Alt+E)"
                   >
                     <Rows2 size={14} />
                   </button>

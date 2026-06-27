@@ -1,20 +1,20 @@
 import { useEffect, useCallback } from 'react';
 
 export interface KeyboardShortcutsOptions {
-  /** Buka terminal baru (Ctrl+T) */
+  /** Buka terminal baru (Alt+T) */
   onNewTerminal: () => void;
-  /** Tutup tab aktif (Ctrl+W) */
+  /** Tutup tab aktif (Alt+W) */
   onCloseTab: () => void;
-  /** Tab berikutnya (Ctrl+Tab) */
+  /** Tab berikutnya (Alt+]) */
   onNextTab: () => void;
-  /** Tab sebelumnya (Ctrl+Shift+Tab) */
+  /** Tab sebelumnya (Alt+[) */
   onPrevTab: () => void;
-  /** Loncat ke tab ke-N (Ctrl+1..9) */
+  /** Loncat ke tab ke-N (Alt+1..9) */
   onJumpToTab: (index: number) => void;
-  /** Toggle split pane (Ctrl+Shift+D = horizontal, Ctrl+Shift+E = vertical) */
+  /** Toggle split pane (Alt+D = horizontal, Alt+E = vertical) */
   onSplitHorizontal?: () => void;
   onSplitVertical?: () => void;
-  /** Zoom in/out (Ctrl+= / Ctrl+-) */
+  /** Zoom in/out (Alt+= / Alt+-) */
   onZoomIn?: () => void;
   onZoomOut?: () => void;
   /** Aktif atau tidak (false jika modal terbuka, dll) */
@@ -25,7 +25,20 @@ export interface KeyboardShortcutsOptions {
  * useKeyboardShortcuts
  *
  * Global keyboard shortcuts untuk t-line terminal manager.
- * Shortcut tidak aktif saat user sedang fokus di dalam elemen input/textarea.
+ * Menggunakan Alt+ agar kompatibel di browser (Chrome/Firefox mencegat Ctrl+T/W/Tab).
+ * Shortcut tidak aktif saat user sedang fokus di dalam elemen input/textarea biasa.
+ *
+ * Shortcut Reference:
+ *   Alt+T          → New Terminal
+ *   Alt+W          → Close active tab
+ *   Alt+]          → Next tab
+ *   Alt+[          → Previous tab
+ *   Alt+1-9        → Jump to tab N
+ *   Alt+D          → Split horizontal (side-by-side)
+ *   Alt+E          → Split vertical (top-bottom)
+ *   Alt+= / Alt++  → Zoom in
+ *   Alt+-          → Zoom out
+ *   Ctrl+Shift+F   → Search in terminal (handled inside TerminalInstance)
  */
 export function useKeyboardShortcuts({
   onNewTerminal,
@@ -44,7 +57,7 @@ export function useKeyboardShortcuts({
     if (!target) return false;
     const el = target as HTMLElement;
     const tag = el.tagName?.toLowerCase();
-    // Allow shortcuts even when xterm canvas is focused
+    // Allow shortcuts even when xterm canvas textarea is focused
     if (el.classList?.contains('xterm-helper-textarea')) return false;
     return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable;
   }, []);
@@ -56,67 +69,67 @@ export function useKeyboardShortcuts({
       // Skip if in a real input field (but not xterm)
       if (isInInput(e.target)) return;
 
-      const ctrl = e.ctrlKey || e.metaKey;
+      const alt = e.altKey;
       const shift = e.shiftKey;
 
-      // ── Ctrl+T — New Terminal ───────────────────────────
-      if (ctrl && !shift && e.key === 't') {
+      // ── Alt+T — New Terminal ────────────────────────────
+      if (alt && !shift && e.key === 't') {
         e.preventDefault();
         onNewTerminal();
         return;
       }
 
-      // ── Ctrl+W — Close current tab ──────────────────────
-      if (ctrl && !shift && e.key === 'w') {
+      // ── Alt+W — Close current tab ───────────────────────
+      if (alt && !shift && e.key === 'w') {
         e.preventDefault();
         onCloseTab();
         return;
       }
 
-      // ── Ctrl+Tab — Next tab ─────────────────────────────
-      if (ctrl && !shift && e.key === 'Tab') {
+      // ── Alt+] — Next tab ────────────────────────────────
+      if (alt && !shift && (e.key === ']' || e.key === 'ArrowRight')) {
         e.preventDefault();
         onNextTab();
         return;
       }
 
-      // ── Ctrl+Shift+Tab — Previous tab ───────────────────
-      if (ctrl && shift && e.key === 'Tab') {
+      // ── Alt+[ — Previous tab ────────────────────────────
+      if (alt && !shift && (e.key === '[' || e.key === 'ArrowLeft')) {
         e.preventDefault();
         onPrevTab();
         return;
       }
 
-      // ── Ctrl+1..9 — Jump to tab N ───────────────────────
-      if (ctrl && !shift && e.key >= '1' && e.key <= '9') {
+      // ── Alt+1..9 — Jump to tab N ────────────────────────
+      if (alt && !shift && e.key >= '1' && e.key <= '9') {
         e.preventDefault();
         onJumpToTab(parseInt(e.key) - 1);
         return;
       }
 
-      // ── Ctrl+Shift+D — Split horizontal ─────────────────
-      if (ctrl && shift && e.key === 'D') {
+      // ── Alt+D — Split horizontal ─────────────────────────
+      if (alt && !shift && e.key === 'd') {
         e.preventDefault();
         onSplitHorizontal?.();
         return;
       }
 
-      // ── Ctrl+Shift+E — Split vertical ───────────────────
-      if (ctrl && shift && e.key === 'E') {
+      // ── Alt+E — Split vertical ───────────────────────────
+      if (alt && !shift && e.key === 'e') {
         e.preventDefault();
         onSplitVertical?.();
         return;
       }
 
-      // ── Ctrl+= — Zoom in ────────────────────────────────
-      if (ctrl && (e.key === '=' || e.key === '+')) {
+      // ── Alt+= or Alt++ — Zoom in ─────────────────────────
+      if (alt && (e.key === '=' || e.key === '+')) {
         e.preventDefault();
         onZoomIn?.();
         return;
       }
 
-      // ── Ctrl+- — Zoom out ───────────────────────────────
-      if (ctrl && e.key === '-') {
+      // ── Alt+- — Zoom out ─────────────────────────────────
+      if (alt && e.key === '-') {
         e.preventDefault();
         onZoomOut?.();
         return;
