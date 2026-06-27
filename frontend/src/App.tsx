@@ -29,11 +29,155 @@ import { useTunnel } from './hooks/useTunnel';
 import { useWorkspaces } from './hooks/useWorkspaces';
 import { useTerminals, WorkspaceInfo } from './hooks/useTerminals';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-import { useSplitPane } from './hooks/useSplitPane';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { SplitLayoutNode, TerminalInstanceData } from './hooks/useTerminals';
 
 
 
+
+// ── Split Layout Renderer Component ────────────────────────
+
+interface SplitLayoutRendererProps {
+  node: SplitLayoutNode;
+  activeTabId: string;
+  focusedTerminalId?: string;
+  wsConnected: boolean;
+  terminalFontSize: number;
+  terminalInstances: Record<string, TerminalInstanceData>;
+  handleTitleChange: (id: string, title: string) => void;
+  focusTerminal: (id: string) => void;
+  closePane: (id: string) => void;
+  splitFocusedTerminal: (direction: 'horizontal' | 'vertical') => void;
+  hasMultiplePanes: boolean;
+}
+
+function SplitLayoutRenderer({
+  node,
+  activeTabId,
+  focusedTerminalId,
+  wsConnected,
+  terminalFontSize,
+  terminalInstances,
+  handleTitleChange,
+  focusTerminal,
+  closePane,
+  splitFocusedTerminal,
+  hasMultiplePanes
+}: SplitLayoutRendererProps) {
+  if (node.type === 'leaf') {
+    const term = terminalInstances[node.terminalId];
+    if (!term) return null;
+    const isFocused = focusedTerminalId === node.terminalId;
+
+    return (
+      <div 
+        onClick={() => focusTerminal(node.terminalId)}
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          border: isFocused ? '1px solid rgba(168, 85, 247, 0.4)' : '1px solid transparent',
+          background: isFocused ? 'rgba(168, 85, 247, 0.02)' : 'transparent',
+          boxSizing: 'border-box'
+        }}
+        className="group/pane"
+      >
+        <TerminalInstance
+          tab={term as any}
+          active={!!(activeTabId && isFocused)}
+          wsConnected={wsConnected}
+          fontSize={terminalFontSize}
+          onTitleChange={(title) => handleTitleChange(term.id, title)}
+        />
+        
+        {/* Floating action bar at top-right of each pane */}
+        <div 
+          className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover/pane:opacity-100 transition-opacity duration-200 z-50 bg-[#0f111a]/85 backdrop-blur-md border border-purple-500/25 rounded-md p-1 shadow-lg"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            title="Split Horizontal (Alt+D)"
+            onClick={() => splitFocusedTerminal('horizontal')}
+            className="text-slate-400 hover:text-purple-400 hover:bg-white/5 rounded p-1 transition-colors flex items-center justify-center cursor-pointer"
+            style={{ width: '20px', height: '20px' }}
+          >
+            <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
+              <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm6.5 1v8h1V4z" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            title="Split Vertical (Alt+E)"
+            onClick={() => splitFocusedTerminal('vertical')}
+            className="text-slate-400 hover:text-purple-400 hover:bg-white/5 rounded p-1 transition-colors flex items-center justify-center cursor-pointer"
+            style={{ width: '20px', height: '20px' }}
+          >
+            <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
+              <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm1 5.5h12v-1H2z" />
+            </svg>
+          </button>
+          {hasMultiplePanes && (
+            <button
+              type="button"
+              title="Close Pane (Alt+W)"
+              onClick={() => closePane(node.terminalId)}
+              className="text-slate-400 hover:text-red-400 hover:bg-white/5 rounded p-1 transition-colors flex items-center justify-center cursor-pointer"
+              style={{ width: '20px', height: '20px' }}
+            >
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 3l10 10M13 3L3 13" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <PanelGroup direction={node.direction}>
+      <Panel defaultSize={50}>
+        <SplitLayoutRenderer
+          node={node.first}
+          activeTabId={activeTabId}
+          focusedTerminalId={focusedTerminalId}
+          wsConnected={wsConnected}
+          terminalFontSize={terminalFontSize}
+          terminalInstances={terminalInstances}
+          handleTitleChange={handleTitleChange}
+          focusTerminal={focusTerminal}
+          closePane={closePane}
+          splitFocusedTerminal={splitFocusedTerminal}
+          hasMultiplePanes={hasMultiplePanes}
+        />
+      </Panel>
+      <PanelResizeHandle
+        className="bg-purple-500/15 hover:bg-purple-500/40 transition-colors flex-shrink-0"
+        style={{
+          width: node.direction === 'horizontal' ? '4px' : '100%',
+          height: node.direction === 'vertical' ? '4px' : '100%',
+          cursor: node.direction === 'horizontal' ? 'col-resize' : 'row-resize',
+        }}
+      />
+      <Panel defaultSize={50}>
+        <SplitLayoutRenderer
+          node={node.second}
+          activeTabId={activeTabId}
+          focusedTerminalId={focusedTerminalId}
+          wsConnected={wsConnected}
+          terminalFontSize={terminalFontSize}
+          terminalInstances={terminalInstances}
+          handleTitleChange={handleTitleChange}
+          focusTerminal={focusTerminal}
+          closePane={closePane}
+          splitFocusedTerminal={splitFocusedTerminal}
+          hasMultiplePanes={hasMultiplePanes}
+        />
+      </Panel>
+    </PanelGroup>
+  );
+}
 
 export default function App() {
   // Auth states
@@ -115,8 +259,10 @@ export default function App() {
 
   // Terminal state management hook
   const {
-    terminals,
-    setTerminals,
+    tabs,
+    setTabs,
+    terminalInstances,
+    setTerminalInstances,
     activeTabId,
     setActiveTabId,
     terminalFontSize,
@@ -127,25 +273,42 @@ export default function App() {
     openTerminal,
     openFileTab,
     closeTerminal,
+    closePane,
+    splitFocusedTerminal,
+    focusTerminal,
     handleTitleChange
   } = useTerminals(workspaces, () => setSidebarOpen(false));
 
-  // Split Pane Hook
-  const {
-    splitState,
-    splitHorizontal,
-    splitVertical,
-    closeSplit
-  } = useSplitPane();
+  // Helper for drag-and-drop merging of tabs
+  const handleMergeTab = useCallback((draggedId: string, direction: 'horizontal' | 'vertical') => {
+    if (draggedId === activeTabId) return;
+    const draggedTab = tabs.find(t => t.id === draggedId);
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    if (!draggedTab || !activeTab || draggedTab.type !== 'terminal' || activeTab.type !== 'terminal') return;
 
-  // Helper: get a secondary tab for split (the tab after active, or the first different one)
-  const getSecondaryTabId = useCallback(() => {
-    const termTabs = terminals.filter(t => t.type === 'terminal');
-    if (termTabs.length < 2) return '';
-    const currentIdx = termTabs.findIndex(t => t.id === activeTabId);
-    if (currentIdx === -1) return termTabs[0].id;
-    return termTabs[(currentIdx + 1) % termTabs.length].id;
-  }, [terminals, activeTabId]);
+    const activeLayout = activeTab.layout;
+    const draggedLayout = draggedTab.layout;
+    if (!activeLayout || !draggedLayout) return;
+
+    setTabs(prev => {
+      const filtered = prev.filter(t => t.id !== draggedId);
+      return filtered.map(t => {
+        if (t.id === activeTabId) {
+          return {
+            ...t,
+            layout: {
+              type: 'split',
+              direction,
+              first: activeLayout,
+              second: draggedLayout
+            },
+            focusedTerminalId: draggedTab.focusedTerminalId
+          };
+        }
+        return t;
+      });
+    });
+  }, [tabs, activeTabId, setTabs]);
 
   // Keyboard Shortcuts
   const hasModals = showWorkspaceModal || showWorktreeModal || showTunnelModal || showSettingsModal;
@@ -153,60 +316,39 @@ export default function App() {
     enabled: isAuthenticated && !hasModals,
     onNewTerminal: () => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || ''),
     onCloseTab: () => {
-      if (activeTabId) closeTerminal(activeTabId);
+      const activeTab = tabs.find(t => t.id === activeTabId);
+      if (activeTab) {
+        if (activeTab.type === 'terminal' && activeTab.focusedTerminalId && activeTab.layout && activeTab.layout.type !== 'leaf') {
+          closePane(activeTab.focusedTerminalId);
+        } else {
+          closeTerminal(activeTabId);
+        }
+      }
     },
     onNextTab: () => {
-      const idx = terminals.findIndex(t => t.id === activeTabId);
-      if (idx !== -1 && terminals.length > 1) {
-        setActiveTabId(terminals[(idx + 1) % terminals.length].id);
+      const idx = tabs.findIndex(t => t.id === activeTabId);
+      if (idx !== -1 && tabs.length > 1) {
+        setActiveTabId(tabs[(idx + 1) % tabs.length].id);
       }
     },
     onPrevTab: () => {
-      const idx = terminals.findIndex(t => t.id === activeTabId);
-      if (idx !== -1 && terminals.length > 1) {
-        setActiveTabId(terminals[(idx - 1 + terminals.length) % terminals.length].id);
+      const idx = tabs.findIndex(t => t.id === activeTabId);
+      if (idx !== -1 && tabs.length > 1) {
+        setActiveTabId(tabs[(idx - 1 + tabs.length) % tabs.length].id);
       }
     },
     onJumpToTab: (index) => {
-      if (terminals[index]) setActiveTabId(terminals[index].id);
+      if (tabs[index]) setActiveTabId(tabs[index].id);
     },
     onSplitHorizontal: () => {
-      const secId = getSecondaryTabId();
-      if (secId) splitHorizontal(secId);
-      else openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '');
+      splitFocusedTerminal('horizontal');
     },
     onSplitVertical: () => {
-      const secId = getSecondaryTabId();
-      if (secId) splitVertical(secId);
-      else openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '');
+      splitFocusedTerminal('vertical');
     },
     onZoomIn: handleZoomIn,
     onZoomOut: handleZoomOut,
   });
-
-  // Auto-close split if the secondary tab is closed
-  useEffect(() => {
-    if (splitState.isSplit && splitState.secondaryTabId) {
-      const exists = terminals.some(t => t.id === splitState.secondaryTabId);
-      if (!exists) {
-        closeSplit();
-      }
-    }
-  }, [terminals, splitState.isSplit, splitState.secondaryTabId, closeSplit]);
-
-  // Swap tabs if activeTabId becomes the secondary split tab to prevent duplicate rendering
-  useEffect(() => {
-    if (splitState.isSplit && activeTabId === splitState.secondaryTabId) {
-      const otherTab = terminals.find(t => t.id !== activeTabId);
-      if (otherTab) {
-        if (splitState.direction === 'horizontal') {
-          splitHorizontal(otherTab.id);
-        } else {
-          splitVertical(otherTab.id);
-        }
-      }
-    }
-  }, [activeTabId, splitState.isSplit, splitState.secondaryTabId, splitState.direction, terminals, splitHorizontal, splitVertical]);
 
 
   // Lifecycle
@@ -384,9 +526,11 @@ export default function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('tline-terminals');
+    localStorage.removeItem('tline-tabs-v2');
+    localStorage.removeItem('tline-terminal-instances-v2');
     localStorage.removeItem('tline-active-tab-id');
-    setTerminals([]);
+    setTabs([]);
+    setTerminalInstances({});
     setActiveTabId('');
     setIsAuthenticated(false);
     setPassword('');
@@ -709,15 +853,17 @@ export default function App() {
           </div>
 
           {/* Left Divider if there are tabs */}
-          {terminals.length > 0 && (
+          {tabs.length > 0 && (
             <div className="window-controls-separator shrink-0" style={{ margin: '0 12px', height: '16px' }} />
           )}
 
           {/* Integrated Tab Bar */}
-          {terminals.length > 0 && (
+          {tabs.length > 0 && (
             <div className="flex items-center gap-2 flex-1 overflow-x-auto mx-3 h-full" style={{ scrollbarWidth: 'none', WebkitAppRegion: 'no-drag' } as any}>
-              {terminals.map(t => {
+              {tabs.map(t => {
                 const isFile = t.type === 'file';
+                const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
+                const shellType = focusedInst?.shellType || '';
                 return (
                   <div 
                     key={t.id} 
@@ -754,8 +900,8 @@ export default function App() {
                       <TerminalIcon size={13} style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                     )}
                     <span>{t.name}</span>
-                    {!isFile && (
-                      <span style={{ fontSize: '0.65rem', opacity: 0.6, fontFamily: 'var(--font-mono)' }}>({t.shellType === 'powershell' ? 'ps' : t.shellType})</span>
+                    {shellType && (
+                      <span style={{ fontSize: '0.65rem', opacity: 0.6, fontFamily: 'var(--font-mono)' }}>({shellType === 'powershell' ? 'ps' : shellType})</span>
                     )}
                     <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)} style={{ marginLeft: '6px', fontSize: '11px', opacity: 0.6 }}>×</span>
                   </div>
@@ -777,7 +923,7 @@ export default function App() {
 
 
           {/* Right Divider if there are tabs */}
-          {terminals.length > 0 && (
+          {tabs.length > 0 && (
             <div className="window-controls-separator shrink-0" style={{ margin: '0 12px', height: '16px' }} />
           )}
 
@@ -812,8 +958,8 @@ export default function App() {
         </div>
 
         {/* Dynamic Panels */}
-        <div className="content-area" style={{ padding: terminals.length === 0 ? '16px' : '0', gap: '0' }}>
-          {terminals.length === 0 ? (
+        <div className="content-area" style={{ padding: tabs.length === 0 ? '16px' : '0', gap: '0' }}>
+          {tabs.length === 0 ? (
             
             // Empty Dashboard Welcome View
             <div className="flex items-center justify-center flex-1 p-8">
@@ -830,10 +976,10 @@ export default function App() {
                     Register workspaces, view git branch/worktree checkouts, and launch terminal instances inside specific project directories.
                   </p>
                   <div className="flex gap-4">
-                    <button className="btn btn-primary shadow-lg shadow-purple-500/10 hover:shadow-[0_0_15px_rgba(168,85,247,0.45)] transition-all duration-300" onClick={() => setShowWorkspaceModal(true)}>
+                    <button className="btn btn-primary shadow-lg shadow-purple-500/10 hover:shadow-[0_0_15px_rgba(168,85,247,0.45)] transition-all duration-300 animate-pulse cursor-pointer" onClick={() => setShowWorkspaceModal(true)}>
                       Add Workspace Folder
                     </button>
-                    <button className="btn btn-secondary border border-white/5 hover:border-white/10" onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')}>
+                    <button className="btn btn-secondary border border-white/5 hover:border-white/10 cursor-pointer" onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')}>
                       Open Terminal
                     </button>
                   </div>
@@ -844,7 +990,7 @@ export default function App() {
           ) : (
             
             // Terminals View — supports split pane and drag-and-drop splitting
-            <div className="terminal-container" style={{ flex: 1, border: 'none', borderRadius: 0, padding: 0, display: 'flex', flexDirection: splitState.direction === 'vertical' ? 'column' : 'row', position: 'relative' }}>
+            <div className="terminal-container" style={{ flex: 1, border: 'none', borderRadius: 0, padding: 0, display: 'flex', flexDirection: 'row', position: 'relative' }}>
               {/* Drop Zones Overlay for Drag and Drop Splitting */}
               <div className="drag-drop-overlay">
                 {/* Left Zone */}
@@ -860,15 +1006,7 @@ export default function App() {
                     e.preventDefault();
                     const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
                     if (draggedId) {
-                      if (draggedId === activeTabId) {
-                        const nextActive = getSecondaryTabId();
-                        if (nextActive) {
-                          setActiveTabId(nextActive);
-                          splitHorizontal(draggedId);
-                        }
-                      } else {
-                        splitHorizontal(draggedId);
-                      }
+                      handleMergeTab(draggedId, 'horizontal');
                     }
                     document.body.classList.remove('tab-dragging');
                   }}
@@ -889,15 +1027,7 @@ export default function App() {
                     e.preventDefault();
                     const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
                     if (draggedId) {
-                      if (draggedId === activeTabId) {
-                        const nextActive = getSecondaryTabId();
-                        if (nextActive) {
-                          setActiveTabId(nextActive);
-                          splitHorizontal(draggedId);
-                        }
-                      } else {
-                        splitHorizontal(draggedId);
-                      }
+                      handleMergeTab(draggedId, 'horizontal');
                     }
                     document.body.classList.remove('tab-dragging');
                   }}
@@ -918,15 +1048,7 @@ export default function App() {
                     e.preventDefault();
                     const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
                     if (draggedId) {
-                      if (draggedId === activeTabId) {
-                        const nextActive = getSecondaryTabId();
-                        if (nextActive) {
-                          setActiveTabId(nextActive);
-                          splitVertical(draggedId);
-                        }
-                      } else {
-                        splitVertical(draggedId);
-                      }
+                      handleMergeTab(draggedId, 'vertical');
                     }
                     document.body.classList.remove('tab-dragging');
                   }}
@@ -947,15 +1069,7 @@ export default function App() {
                     e.preventDefault();
                     const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
                     if (draggedId) {
-                      if (draggedId === activeTabId) {
-                        const nextActive = getSecondaryTabId();
-                        if (nextActive) {
-                          setActiveTabId(nextActive);
-                          splitVertical(draggedId);
-                        }
-                      } else {
-                        splitVertical(draggedId);
-                      }
+                      handleMergeTab(draggedId, 'vertical');
                     }
                     document.body.classList.remove('tab-dragging');
                   }}
@@ -965,84 +1079,32 @@ export default function App() {
 
               </div>
 
-              {/* Primary & Secondary Panes */}
-              {!splitState.isSplit ? (
-                <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minWidth: 0, minHeight: 0 }}>
-                  {terminals.map(t => (
-                    <div
-                      key={t.id}
-                      style={{ display: activeTabId === t.id ? 'block' : 'none', width: '100%', height: '100%' }}
-                    >
-                      {t.type === 'file' ? (
-                        <FileViewerTab filePath={t.filePath || ''} token={localStorage.getItem('token') || ''} />
-                      ) : (
-                        <TerminalInstance
-                          tab={t as any}
-                          active={activeTabId === t.id}
-                          wsConnected={wsConnected}
-                          fontSize={terminalFontSize}
-                          onTitleChange={(title) => handleTitleChange(t.id, title)}
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (() => {
-                const secondaryTab = terminals.find(t => t.id === splitState.secondaryTabId);
-                return (
-                  <PanelGroup
-                    direction={splitState.direction === 'vertical' ? 'vertical' : 'horizontal'}
-                    style={{ flex: 1, width: '100%', height: '100%' }}
-                  >
-                    <Panel defaultSize={50} minSize={20}>
-                      <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
-                        {terminals.map(t => (
-                          <div
-                            key={t.id}
-                            style={{ display: activeTabId === t.id ? 'block' : 'none', width: '100%', height: '100%' }}
-                          >
-                            {t.type === 'file' ? (
-                              <FileViewerTab filePath={t.filePath || ''} token={localStorage.getItem('token') || ''} />
-                            ) : (
-                              <TerminalInstance
-                                tab={t as any}
-                                active={activeTabId === t.id && t.id !== splitState.secondaryTabId}
-                                wsConnected={wsConnected}
-                                fontSize={terminalFontSize}
-                                onTitleChange={(title) => handleTitleChange(t.id, title)}
-                              />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </Panel>
-                    <PanelResizeHandle
-                      className="bg-purple-500/15 hover:bg-purple-500/40 transition-colors flex-shrink-0"
-                      style={{
-                        width: splitState.direction === 'horizontal' ? '4px' : '100%',
-                        height: splitState.direction === 'vertical' ? '4px' : '100%',
-                        cursor: splitState.direction === 'horizontal' ? 'col-resize' : 'row-resize',
-                      }}
+              {(() => {
+                const activeTab = tabs.find(t => t.id === activeTabId);
+                if (!activeTab) return null;
+                if (activeTab.type === 'file') {
+                  return (
+                    <FileViewerTab filePath={activeTab.filePath || ''} token={localStorage.getItem('token') || ''} />
+                  );
+                }
+                if (activeTab.type === 'terminal' && activeTab.layout) {
+                  return (
+                    <SplitLayoutRenderer
+                      node={activeTab.layout}
+                      activeTabId={activeTabId}
+                      focusedTerminalId={activeTab.focusedTerminalId}
+                      wsConnected={wsConnected}
+                      terminalFontSize={terminalFontSize}
+                      terminalInstances={terminalInstances}
+                      handleTitleChange={handleTitleChange}
+                      focusTerminal={focusTerminal}
+                      closePane={closePane}
+                      splitFocusedTerminal={splitFocusedTerminal}
+                      hasMultiplePanes={activeTab.layout.type === 'split'}
                     />
-                    <Panel defaultSize={50} minSize={20}>
-                      <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
-                        {secondaryTab && (
-                          secondaryTab.type === 'file' ? (
-                            <FileViewerTab filePath={secondaryTab.filePath || ''} token={localStorage.getItem('token') || ''} />
-                          ) : (
-                            <TerminalInstance
-                              tab={secondaryTab as any}
-                              active={true}
-                              wsConnected={wsConnected}
-                              fontSize={terminalFontSize}
-                              onTitleChange={(title) => handleTitleChange(secondaryTab.id, title)}
-                            />
-                          )
-                        )}
-                      </div>
-                    </Panel>
-                  </PanelGroup>
-                );
+                  );
+                }
+                return null;
               })()}
             </div>
 
