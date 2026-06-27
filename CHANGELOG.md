@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.2.2] - 2026-06-27
+
+### Added
+- **Auto-Suppress Native Keyboard & Auto-Open Custom Keyboard**: Dynamically set `inputmode="none"` on the hidden helper `<textarea>` of xterm.js to suppress the native mobile virtual keyboard. Integrated an `onTerminalFocus` callback so that clicking/tapping on any terminal instance automatically opens the custom virtual touch keyboard on mobile.
+
 ## [1.2.1] - 2026-06-27
 
 ### Fixed

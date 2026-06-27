@@ -19,6 +19,7 @@ interface TerminalInstanceProps {
   wsConnected: boolean;
   fontSize: number;
   onTitleChange?: (title: string) => void;
+  onFocus?: () => void;
 }
 
 // ── Search Bar Sub-Component ──────────────────────────────
@@ -119,17 +120,22 @@ function TerminalSearchBar({ searchAddon, onClose }: SearchBarProps) {
 }
 
 // ── Main Terminal Instance ────────────────────────────────
-export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleChange }: TerminalInstanceProps) {
+export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleChange, onFocus }: TerminalInstanceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
   const onTitleChangeRef = useRef(onTitleChange);
+  const onFocusRef = useRef(onFocus);
   const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => {
     onTitleChangeRef.current = onTitleChange;
   }, [onTitleChange]);
+
+  useEffect(() => {
+    onFocusRef.current = onFocus;
+  }, [onFocus]);
 
   const closeSearch = useCallback(() => {
     setShowSearch(false);
@@ -200,6 +206,10 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     searchAddonRef.current = searchAddon;
 
     term.open(containerRef.current);
+
+    if (term.textarea) {
+      term.textarea.setAttribute('inputmode', 'none');
+    }
 
     setTimeout(() => {
       try { fitAddon.fit(); } catch (e) { console.error('Initial fit failed:', e); }
@@ -316,6 +326,7 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
       if (terminalRef.current.textarea) {
         terminalRef.current.textarea.focus();
       }
+      onFocusRef.current?.();
     }
   };
 
