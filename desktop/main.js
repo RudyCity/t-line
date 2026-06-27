@@ -1,6 +1,9 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog, Tray, nativeImage, Notification } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
+const net = require('net');
+const fs = require('fs');
+const os = require('os');
 
 // Disable hardware acceleration to prevent GPU process crash (error code -1073741819)
 app.disableHardwareAcceleration();
@@ -11,6 +14,27 @@ let backendStatus = 'stopped'; // 'stopped' | 'starting' | 'running'
 let tray = null;
 let isQuitting = false;
 let hasShownMinimizeNotification = false;
+let bypassToken = null;
+
+const BYPASS_TOKEN_FILE = path.join(os.homedir(), '.tline-bypass-token');
+
+function isPortOpen(port, host = '127.0.0.1') {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    const onError = () => {
+      socket.destroy();
+      resolve(false);
+    };
+    socket.setTimeout(1000);
+    socket.once('error', onError);
+    socket.once('timeout', onError);
+    socket.once('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.connect(port, host);
+  });
+}
 
 function startBackend() {
   if (backendStatus !== 'stopped') return;
@@ -52,6 +76,7 @@ function startBackend() {
     const tokenMatch = output.match(/Bypass Token:\s+([a-f0-9]+)/);
     if (tokenMatch) {
       token = tokenMatch[1];
+      bypassToken = token;
     }
 
     // Parse when the server is ready
@@ -220,7 +245,8 @@ function updateTrayMenu() {
 function showWindow() {
   if (!mainWindow) {
     if (backendStatus === 'running') {
-      startBackend();
+      const url = bypassToken ? `http://localhost:3999/?token=${bypassToken}` : 'http://localhost:3999/';
+      createWindow(url);
     } else {
       createWindow('data:text/html,<html><body style="background:#0b0f19;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;user-select:none;"><div style="text-align:center;"><h2>Backend is stopped</h2><p>Start the backend from the system tray to continue.</p></div></body></html>');
     }
@@ -316,10 +342,30 @@ ipcMain.on('window-close', () => {
   if (mainWindow) mainWindow.close();
 });
 
-app.on('ready', () => {
+app.on('ready', async () => {
   createMenu();
   createTray();
-  startBackend();
+  
+  const port = 3999;
+  const alreadyRunning = await isPortOpen(port);
+  if (alreadyRunning) {
+    console.log(`Backend is already running on port ${port}. Connecting directly...`);
+    backendStatus = 'running';
+    updateTrayMenu();
+    
+    try {
+      if (fs.existsSync(BYPASS_TOKEN_FILE)) {
+        bypassToken = fs.readFileSync(BYPASS_TOKEN_FILE, 'utf8').trim();
+      }
+    } catch (err) {
+      console.error('Error reading external bypass token:', err);
+    }
+    
+    const url = bypassToken ? `http://localhost:3999/?token=${bypassToken}` : 'http://localhost:3999/';
+    createWindow(url);
+  } else {
+    startBackend();
+  }
 });
 
 app.on('window-all-closed', () => {
@@ -348,8 +394,9 @@ app.on('quit', () => {
 });
 
 app.on('activate', () => {
-  if (mainWindow === null && backendProcess) {
+  if (mainWindow === null && backendStatus === 'running') {
     // If backend is running, try to open window again
-    createWindow('http://localhost:3999/');
+    const url = bypassToken ? `http://localhost:3999/?token=${bypassToken}` : 'http://localhost:3999/';
+    createWindow(url);
   }
 });
