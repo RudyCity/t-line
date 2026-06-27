@@ -351,6 +351,21 @@ export default function App() {
 
 
   // Terminals management
+  const getWorkspaceActiveBranch = (workspace: WorkspaceInfo | null): { name: string; isDirty: boolean; isMain: boolean } | null => {
+    if (!workspace || !workspace.isGit || !workspace.worktrees || workspace.worktrees.length === 0) return null;
+    
+    const activeWt = workspace.worktrees.find(wt => wt.path === workspace.path) 
+      || workspace.worktrees.find(wt => wt.isMain) 
+      || workspace.worktrees[0];
+      
+    if (!activeWt) return null;
+    return {
+      name: activeWt.branch || 'detached',
+      isDirty: !!activeWt.isDirty,
+      isMain: activeWt.isMain
+    };
+  };
+
   const handleZoomIn = () => {
     setTerminalFontSize(prev => Math.min(prev + 1, 24));
   };
@@ -893,8 +908,30 @@ export default function App() {
             <span>t-line v1.0.6</span>
           </span>
           {panelWorkspace && (
-            <span className="text-[11px] font-mono text-slate-500 hidden sm:inline">
-              Workspace: {panelWorkspace.name} ({panelWorkspace.path})
+            <span className="text-[11px] font-mono text-slate-500 hidden sm:flex items-center gap-2">
+              <span>Workspace: {panelWorkspace.name}</span>
+              <span className="text-slate-700">|</span>
+              <span className="text-slate-400 font-sans text-xs truncate max-w-[200px]" title={panelWorkspace.path}>
+                {panelWorkspace.path}
+              </span>
+              {(() => {
+                const activeBranch = getWorkspaceActiveBranch(panelWorkspace);
+                if (!activeBranch) return null;
+                return (
+                  <>
+                    <span className="text-slate-700">|</span>
+                    <span className="flex items-center gap-1 text-[11px] text-purple-400 font-sans" title={activeBranch.isDirty ? "Uncommitted changes" : "Git Branch"}>
+                      <GitBranch size={11} className={activeBranch.isMain ? 'text-purple-400' : 'text-emerald-400'} />
+                      <span className={activeBranch.isDirty ? 'text-amber-400 font-medium' : ''}>
+                        {activeBranch.name}
+                      </span>
+                      {activeBranch.isDirty && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_6px_#f59e0b]" />
+                      )}
+                    </span>
+                  </>
+                );
+              })()}
             </span>
           )}
         </div>
