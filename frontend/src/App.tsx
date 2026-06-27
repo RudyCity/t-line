@@ -667,13 +667,13 @@ export default function App() {
 
           <div className="top-bar-actions flex items-center gap-3 shrink-0">
             <button 
-              className={`action-btn mobile-keyboard-toggle ${showMobileKeyboard ? 'text-purple-400 bg-purple-500/10' : ''}`}
+              className={`action-btn mobile-only ${showMobileKeyboard ? 'text-purple-400 bg-purple-500/10' : ''}`}
               onClick={() => setShowMobileKeyboard(v => !v)}
               title="Toggle virtual touch keyboard"
             >
               <Keyboard size={16} />
             </button>
-            <button className="action-btn" onClick={() => setShowShortcutModal(true)} title="Keyboard Shortcuts">
+            <button className="action-btn desktop-only" onClick={() => setShowShortcutModal(true)} title="Keyboard Shortcuts">
               <Keyboard size={16} />
             </button>
             <button className="action-btn" onClick={() => setShowSettingsModal(true)} title="Settings">

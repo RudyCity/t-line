@@ -1045,14 +1045,26 @@ a {
 
 
 
-.mobile-keyboard-toggle {
+.mobile-only {
   display: none !important;
+}
+
+.desktop-only {
+  /* displayed by default on desktop */
 }
 
 /* Mobile Responsiveness Media Queries */
 @media (max-width: 768px) {
-  .mobile-keyboard-toggle {
+  :root {
+    --topbar-height: 42px;
+  }
+
+  .mobile-only {
     display: flex !important;
+  }
+
+  .desktop-only {
+    display: none !important;
   }
 
   .sidebar {
