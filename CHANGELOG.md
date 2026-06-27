@@ -4,6 +4,12 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.1.4] - 2026-06-27
+
+### Changed
+- **Split Pane Library**: Replaced custom split ratios and drag-resize calculations with the `react-resizable-panels` library for horizontal and vertical splitting.
+- **Terminal Resize Observer**: Added a `ResizeObserver` on `TerminalInstance` to automatically refit the active terminal container when dragging split panel layout sizes or collapsing/expanding the sidebar, providing smooth and native-feeling window sizing.
+
 ## [1.1.3] - 2026-06-27
 
 ### Added

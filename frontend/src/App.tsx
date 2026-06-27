@@ -30,6 +30,7 @@ import { useWorkspaces } from './hooks/useWorkspaces';
 import { useTerminals, WorkspaceInfo } from './hooks/useTerminals';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useSplitPane } from './hooks/useSplitPane';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 
 
@@ -134,8 +135,7 @@ export default function App() {
     splitState,
     splitHorizontal,
     splitVertical,
-    closeSplit,
-    startResizeSplit
+    closeSplit
   } = useSplitPane();
 
   // Helper: get a secondary tab for split (the tab after active, or the first different one)
@@ -965,63 +965,83 @@ export default function App() {
 
               </div>
 
-              {/* Primary Pane */}
-              <div style={{ flex: splitState.isSplit ? `0 0 ${splitState.splitRatio}%` : '1', position: 'relative', overflow: 'hidden', minWidth: 0, minHeight: 0 }}>
-                {terminals.map(t => (
-                  <div
-                    key={t.id}
-                    style={{ display: activeTabId === t.id ? 'block' : 'none', width: '100%', height: '100%' }}
-                  >
-                    {t.type === 'file' ? (
-                      <FileViewerTab filePath={t.filePath || ''} token={localStorage.getItem('token') || ''} />
-                    ) : (
-                      <TerminalInstance
-                        tab={t as any}
-                        active={activeTabId === t.id && (!splitState.isSplit || t.id !== splitState.secondaryTabId)}
-                        wsConnected={wsConnected}
-                        fontSize={terminalFontSize}
-                        onTitleChange={(title) => handleTitleChange(t.id, title)}
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Split Resizer + Secondary Pane */}
-              {splitState.isSplit && (() => {
-                const secondaryTab = terminals.find(t => t.id === splitState.secondaryTabId);
-                if (!secondaryTab) return null;
-                return (
-                  <>
-                    {/* Resize handle */}
+              {/* Primary & Secondary Panes */}
+              {!splitState.isSplit ? (
+                <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minWidth: 0, minHeight: 0 }}>
+                  {terminals.map(t => (
                     <div
-                      onMouseDown={startResizeSplit}
-                      style={{
-                        flexShrink: 0,
-                        width: splitState.direction === 'horizontal' ? '4px' : '100%',
-                        height: splitState.direction === 'vertical' ? '4px' : '100%',
-                        background: 'rgba(168,85,247,0.15)',
-                        cursor: splitState.direction === 'horizontal' ? 'col-resize' : 'row-resize',
-                        transition: 'background 0.15s',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(168,85,247,0.4)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(168,85,247,0.15)')}
-                    />
-                    {/* Secondary pane */}
-                    <div style={{ flex: `0 0 ${100 - splitState.splitRatio}%`, position: 'relative', overflow: 'hidden', minWidth: 0, minHeight: 0 }}>
-                      {secondaryTab.type === 'file' ? (
-                        <FileViewerTab filePath={secondaryTab.filePath || ''} token={localStorage.getItem('token') || ''} />
+                      key={t.id}
+                      style={{ display: activeTabId === t.id ? 'block' : 'none', width: '100%', height: '100%' }}
+                    >
+                      {t.type === 'file' ? (
+                        <FileViewerTab filePath={t.filePath || ''} token={localStorage.getItem('token') || ''} />
                       ) : (
                         <TerminalInstance
-                          tab={secondaryTab as any}
-                          active={true}
+                          tab={t as any}
+                          active={activeTabId === t.id}
                           wsConnected={wsConnected}
                           fontSize={terminalFontSize}
-                          onTitleChange={(title) => handleTitleChange(secondaryTab.id, title)}
+                          onTitleChange={(title) => handleTitleChange(t.id, title)}
                         />
                       )}
                     </div>
-                  </>
+                  ))}
+                </div>
+              ) : (() => {
+                const secondaryTab = terminals.find(t => t.id === splitState.secondaryTabId);
+                return (
+                  <PanelGroup
+                    direction={splitState.direction === 'vertical' ? 'vertical' : 'horizontal'}
+                    style={{ flex: 1, width: '100%', height: '100%' }}
+                  >
+                    <Panel defaultSize={50} minSize={20}>
+                      <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+                        {terminals.map(t => (
+                          <div
+                            key={t.id}
+                            style={{ display: activeTabId === t.id ? 'block' : 'none', width: '100%', height: '100%' }}
+                          >
+                            {t.type === 'file' ? (
+                              <FileViewerTab filePath={t.filePath || ''} token={localStorage.getItem('token') || ''} />
+                            ) : (
+                              <TerminalInstance
+                                tab={t as any}
+                                active={activeTabId === t.id && t.id !== splitState.secondaryTabId}
+                                wsConnected={wsConnected}
+                                fontSize={terminalFontSize}
+                                onTitleChange={(title) => handleTitleChange(t.id, title)}
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </Panel>
+                    <PanelResizeHandle
+                      className="bg-purple-500/15 hover:bg-purple-500/40 transition-colors flex-shrink-0"
+                      style={{
+                        width: splitState.direction === 'horizontal' ? '4px' : '100%',
+                        height: splitState.direction === 'vertical' ? '4px' : '100%',
+                        cursor: splitState.direction === 'horizontal' ? 'col-resize' : 'row-resize',
+                      }}
+                    />
+                    <Panel defaultSize={50} minSize={20}>
+                      <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+                        {secondaryTab && (
+                          secondaryTab.type === 'file' ? (
+                            <FileViewerTab filePath={secondaryTab.filePath || ''} token={localStorage.getItem('token') || ''} />
+                          ) : (
+                            <TerminalInstance
+                              tab={secondaryTab as any}
+                              active={true}
+                              wsConnected={wsConnected}
+                              fontSize={terminalFontSize}
+                              onTitleChange={(title) => handleTitleChange(secondaryTab.id, title)}
+                            />
+                          )
+                        )}
+                      </div>
+                    </Panel>
+                  </PanelGroup>
                 );
               })()}
             </div>

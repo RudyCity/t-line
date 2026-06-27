@@ -234,14 +234,26 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
       wsManager.send(JSON.stringify({ type: 'resize', id: tab.id, cols, rows }));
     });
 
-    // ── Window resize ────────────────────────────────────
+    // ── Window and Container resize ──────────────────────
     const handleResize = () => {
-      try { fitAddon.fit(); } catch (e) {}
+      try {
+        if (containerRef.current && containerRef.current.clientWidth > 0 && containerRef.current.clientHeight > 0) {
+          fitAddon.fit();
+        }
+      } catch (e) {}
     };
     window.addEventListener('resize', handleResize);
 
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
     return () => {
       window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       term.dispose();
     };
   }, [tab.id]);
