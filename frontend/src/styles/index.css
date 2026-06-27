@@ -342,6 +342,38 @@ a {
   gap: 0;
 }
 
+/* Welcome Card Layout & Spacing */
+.welcome-card-outer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+.welcome-card-inner {
+  position: relative;
+  background: rgba(7, 9, 15, 0.95);
+  border-radius: 14px;
+  padding: 40px !important; /* Explicitly enforce generous padding around all sides of the welcome content */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .welcome-card-outer {
+    padding: 16px;
+  }
+  .welcome-card-inner {
+    padding: 24px !important; /* Scaled down padding on mobile screen sizes */
+  }
+}
+
 /* Multi-Terminal Tab Bar */
 .tab-bar {
   display: flex;

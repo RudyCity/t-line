@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.3] - 2026-06-28
+
+### Fixed
+- **Welcome Dashboard Bottom Padding**: Replaced Tailwind inline card padding configuration with custom `.welcome-card-outer` and `.welcome-card-inner` classes, enforcing explicit paddings (40px on desktop and 24px on mobile) using `!important` to resolve the button padding cutoff.
+
 ## [1.3.2] - 2026-06-28
 
 ### Added

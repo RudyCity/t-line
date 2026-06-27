@@ -16,10 +16,10 @@ export function EmptyDashboard({
   workspaces
 }: EmptyDashboardProps): React.JSX.Element {
   return (
-    <div className="flex items-center justify-center flex-1 p-4 sm:p-8">
+    <div className="welcome-card-outer">
       <div className="relative p-[1.5px] rounded-2xl bg-gradient-to-r from-purple-500/30 via-violet-600/30 to-cyan-500/30 shadow-[0_8px_30px_rgb(0,0,0,0.5)] overflow-hidden max-w-xl w-full">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-cyan-500/10 blur-2xl opacity-40 pointer-events-none" />
-        <div className="relative bg-[#07090f]/95 rounded-[14px] p-6 sm:p-10 flex flex-col items-center text-center">
+        <div className="welcome-card-inner">
           <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-purple-600/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-4 sm:mb-6 shadow-[0_0_15px_rgba(168,85,247,0.15)] animate-pulse">
             <FolderPlus className="w-6 h-6 sm:w-8 sm:h-8" />
           </div>
