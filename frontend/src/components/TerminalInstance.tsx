@@ -306,8 +306,25 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     return () => window.removeEventListener('keydown', handleKey);
   }, [active]);
 
+  const handleTerminalFocus = (e: React.MouseEvent | React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('input') || target.closest('button') || target.closest('select') || target.closest('a')) {
+      return;
+    }
+    if (terminalRef.current) {
+      terminalRef.current.focus();
+      if (terminalRef.current.textarea) {
+        terminalRef.current.textarea.focus();
+      }
+    }
+  };
+
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div 
+      style={{ position: 'relative', width: '100%', height: '100%' }}
+      onClick={handleTerminalFocus}
+      onTouchEnd={handleTerminalFocus}
+    >
       {showSearch && (
         <TerminalSearchBar searchAddon={searchAddonRef.current} onClose={closeSearch} />
       )}
