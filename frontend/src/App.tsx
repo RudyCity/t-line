@@ -203,6 +203,7 @@ export default function App() {
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [showShortcutModal, setShowShortcutModal] = useState<boolean>(false);
   const draggedTabIdRef = useRef<string | null>(null);
+  const [dragOverZone, setDragOverZone] = useState<'left' | 'right' | 'top' | 'bottom' | null>(null);
 
   // Workspaces Hook
   const {
@@ -998,12 +999,21 @@ export default function App() {
                   className="drag-drop-zone"
                   style={{
                     position: 'absolute', left: 0, top: 0, bottom: 0, width: '25%',
-                    borderRight: '2px dashed rgba(168,85,247,0.4)',
-                    background: 'rgba(168,85,247,0.03)'
+                    borderRight: dragOverZone === 'left' ? '2.5px solid rgba(168,85,247,0.85)' : '2px dashed rgba(168,85,247,0.4)',
+                    background: dragOverZone === 'left' ? 'rgba(168,85,247,0.12)' : 'rgba(168,85,247,0.03)',
+                    boxShadow: dragOverZone === 'left' ? 'inset 15px 0 30px -15px rgba(168,85,247,0.25)' : 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.2s ease-in-out',
+                    color: dragOverZone === 'left' ? '#c084fc' : 'rgba(168,85,247,0.5)',
+                    fontWeight: dragOverZone === 'left' ? 'bold' : 'normal',
+                    fontSize: '12px'
                   }}
                   onDragOver={(e) => e.preventDefault()}
+                  onDragEnter={() => setDragOverZone('left')}
+                  onDragLeave={() => setDragOverZone(null)}
                   onDrop={(e) => {
                     e.preventDefault();
+                    setDragOverZone(null);
                     const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
                     if (draggedId) {
                       handleMergeTab(draggedId, 'horizontal');
@@ -1019,12 +1029,21 @@ export default function App() {
                   className="drag-drop-zone"
                   style={{
                     position: 'absolute', right: 0, top: 0, bottom: 0, width: '25%',
-                    borderLeft: '2px dashed rgba(168,85,247,0.4)',
-                    background: 'rgba(168,85,247,0.03)'
+                    borderLeft: dragOverZone === 'right' ? '2.5px solid rgba(168,85,247,0.85)' : '2px dashed rgba(168,85,247,0.4)',
+                    background: dragOverZone === 'right' ? 'rgba(168,85,247,0.12)' : 'rgba(168,85,247,0.03)',
+                    boxShadow: dragOverZone === 'right' ? 'inset -15px 0 30px -15px rgba(168,85,247,0.25)' : 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.2s ease-in-out',
+                    color: dragOverZone === 'right' ? '#c084fc' : 'rgba(168,85,247,0.5)',
+                    fontWeight: dragOverZone === 'right' ? 'bold' : 'normal',
+                    fontSize: '12px'
                   }}
                   onDragOver={(e) => e.preventDefault()}
+                  onDragEnter={() => setDragOverZone('right')}
+                  onDragLeave={() => setDragOverZone(null)}
                   onDrop={(e) => {
                     e.preventDefault();
+                    setDragOverZone(null);
                     const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
                     if (draggedId) {
                       handleMergeTab(draggedId, 'horizontal');
@@ -1040,12 +1059,21 @@ export default function App() {
                   className="drag-drop-zone"
                   style={{
                     position: 'absolute', left: '25%', right: '25%', top: 0, height: '25%',
-                    borderBottom: '2px dashed rgba(168,85,247,0.4)',
-                    background: 'rgba(168,85,247,0.03)'
+                    borderBottom: dragOverZone === 'top' ? '2.5px solid rgba(168,85,247,0.85)' : '2px dashed rgba(168,85,247,0.4)',
+                    background: dragOverZone === 'top' ? 'rgba(168,85,247,0.12)' : 'rgba(168,85,247,0.03)',
+                    boxShadow: dragOverZone === 'top' ? 'inset 0 15px 30px -15px rgba(168,85,247,0.25)' : 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.2s ease-in-out',
+                    color: dragOverZone === 'top' ? '#c084fc' : 'rgba(168,85,247,0.5)',
+                    fontWeight: dragOverZone === 'top' ? 'bold' : 'normal',
+                    fontSize: '12px'
                   }}
                   onDragOver={(e) => e.preventDefault()}
+                  onDragEnter={() => setDragOverZone('top')}
+                  onDragLeave={() => setDragOverZone(null)}
                   onDrop={(e) => {
                     e.preventDefault();
+                    setDragOverZone(null);
                     const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
                     if (draggedId) {
                       handleMergeTab(draggedId, 'vertical');
@@ -1061,12 +1089,21 @@ export default function App() {
                   className="drag-drop-zone"
                   style={{
                     position: 'absolute', left: '25%', right: '25%', bottom: 0, height: '25%',
-                    borderTop: '2px dashed rgba(168,85,247,0.4)',
-                    background: 'rgba(168,85,247,0.03)'
+                    borderTop: dragOverZone === 'bottom' ? '2.5px solid rgba(168,85,247,0.85)' : '2px dashed rgba(168,85,247,0.4)',
+                    background: dragOverZone === 'bottom' ? 'rgba(168,85,247,0.12)' : 'rgba(168,85,247,0.03)',
+                    boxShadow: dragOverZone === 'bottom' ? 'inset 0 -15px 30px -15px rgba(168,85,247,0.25)' : 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.2s ease-in-out',
+                    color: dragOverZone === 'bottom' ? '#c084fc' : 'rgba(168,85,247,0.5)',
+                    fontWeight: dragOverZone === 'bottom' ? 'bold' : 'normal',
+                    fontSize: '12px'
                   }}
                   onDragOver={(e) => e.preventDefault()}
+                  onDragEnter={() => setDragOverZone('bottom')}
+                  onDragLeave={() => setDragOverZone(null)}
                   onDrop={(e) => {
                     e.preventDefault();
+                    setDragOverZone(null);
                     const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
                     if (draggedId) {
                       handleMergeTab(draggedId, 'vertical');
