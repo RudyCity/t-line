@@ -174,6 +174,7 @@ function createWindow(url) {
   });
 
   mainWindow.loadURL(url);
+  mainWindow.maximize();
 
   mainWindow.on('close', (event) => {
     if (!isQuitting) {
