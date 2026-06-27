@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.2.6] - 2026-06-27
+
+### Added
+- **File Explorer Editor Support**: Integrated an editor mode inside `FileViewerTab.tsx` with a toggled textarea, enabling full-featured file edits. Exposed a new POST `/api/fs/write` route in `server.ts` to write updated files back to disk.
+
 ## [1.2.5] - 2026-06-27
 
 ### Added

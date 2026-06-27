@@ -545,6 +545,24 @@ app.get('/api/fs/read', authMiddleware, (req, res) => {
   }
 });
 
+app.post('/api/fs/write', authMiddleware, (req, res) => {
+  const { path: filePath, content } = req.body;
+  if (!filePath) {
+    return res.status(400).json({ error: 'File path is required.' });
+  }
+  if (content === undefined) {
+    return res.status(400).json({ error: 'Content is required.' });
+  }
+
+  try {
+    const resolvedPath = path.resolve(filePath);
+    fs.writeFileSync(resolvedPath, content, 'utf8');
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Serve frontend routing fallback in production
 if (fs.existsSync(frontendDistPath)) {
   app.get('*', (req, res) => {
