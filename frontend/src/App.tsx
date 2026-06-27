@@ -416,7 +416,13 @@ export default function App() {
           </button>
         </div>
 
-        <div className="sidebar-content">
+        <div 
+          className="sidebar-content"
+          style={{
+            padding: activePanel === 'workspaces' ? '16px' : '0px',
+            gap: activePanel === 'workspaces' ? '20px' : '0px'
+          }}
+        >
 
           {/* ── Workspaces Panel ── */}
           {activePanel === 'workspaces' && (

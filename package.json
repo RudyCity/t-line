@@ -1,6 +1,6 @@
 {
   "name": "t-line-root",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "private": true,
   "workspaces": [
     "backend",
