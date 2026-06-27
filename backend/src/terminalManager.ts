@@ -30,7 +30,11 @@ class PtyTerminal implements ITerminal {
       cols: cols || 80,
       rows: rows || 24,
       cwd: cwd || os.homedir(),
-      env: process.env as Record<string, string>
+      env: process.env as Record<string, string>,
+      // Disable ConPTY on Windows: avoids "AttachConsole failed" error
+      // when running inside Electron (no real console window available).
+      // Falls back to the stable winpty backend instead.
+      useConpty: false
     });
   }
 
