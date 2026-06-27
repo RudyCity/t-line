@@ -1,6 +1,6 @@
 {
   "name": "desktop",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Electron desktop wrapper for t-line",
   "main": "main.js",
   "scripts": {
@@ -8,10 +8,8 @@
     "pack": "electron-builder --dir",
     "dist": "electron-builder"
   },
-  "dependencies": {
-    "electron": "^30.0.6"
-  },
   "devDependencies": {
+    "electron": "30.0.6",
     "electron-builder": "^24.13.3"
   },
   "build": {
@@ -24,12 +22,14 @@
       "main.js",
       "preload.js",
       "package.json",
+      "icon.png",
       "../backend/dist/**/*",
       "../backend/node_modules/**/*",
       "../backend/package.json",
       "../frontend/dist/**/*"
     ],
     "win": {
+      "icon": "icon.png",
       "target": [
         "nsis",
         "portable"

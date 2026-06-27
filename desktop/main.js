@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, Tray, nativeImage, Notification } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 
@@ -7,8 +7,14 @@ app.disableHardwareAcceleration();
 
 let mainWindow = null;
 let backendProcess = null;
+let backendStatus = 'stopped'; // 'stopped' | 'starting' | 'running'
+let tray = null;
+let isQuitting = false;
+let hasShownMinimizeNotification = false;
 
 function startBackend() {
+  if (backendStatus !== 'stopped') return;
+
   const isDev = !app.isPackaged;
   const projectRoot = path.join(__dirname, '..');
   
@@ -27,6 +33,9 @@ function startBackend() {
 
   console.log(`Spawning backend: ${cmd} ${args.join(' ')}`);
   
+  backendStatus = 'starting';
+  updateTrayMenu();
+
   backendProcess = spawn(cmd, args, {
     cwd: projectRoot,
     shell: true,
@@ -34,7 +43,6 @@ function startBackend() {
   });
 
   let token = null;
-  let serverStarted = false;
 
   backendProcess.stdout.on('data', (data) => {
     const output = data.toString();
@@ -48,15 +56,17 @@ function startBackend() {
 
     // Parse when the server is ready
     if (output.includes('Workspace Server running on port') || output.includes('running on port')) {
-      serverStarted = true;
+      backendStatus = 'running';
+      updateTrayMenu();
       
       // Delay slightly to ensure server socket is fully listening
       setTimeout(() => {
-        if (token) {
-          createWindow(`http://localhost:3999/?token=${token}`);
+        const url = token ? `http://localhost:3999/?token=${token}` : 'http://localhost:3999/';
+        if (mainWindow) {
+          mainWindow.loadURL(url);
+          mainWindow.show();
         } else {
-          // Fallback to setup/login screen if no token parsed
-          createWindow('http://localhost:3999/');
+          createWindow(url);
         }
       }, 500);
     }
@@ -68,11 +78,53 @@ function startBackend() {
 
   backendProcess.on('close', (code) => {
     console.log(`Backend process exited with code ${code}`);
+    backendProcess = null;
+    backendStatus = 'stopped';
+    updateTrayMenu();
+    
+    // If window is open, reload with stopped state
+    if (mainWindow && !isQuitting) {
+      mainWindow.loadURL('data:text/html,<html><body style="background:#0b0f19;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;user-select:none;"><div style="text-align:center;"><h2>Backend is stopped</h2><p>Start the backend from the system tray to continue.</p></div></body></html>');
+    }
   });
+}
+
+function stopBackend() {
+  if (!backendProcess) return;
+  console.log('Stopping backend process...');
+  
+  backendStatus = 'stopped';
+  updateTrayMenu();
+  
+  try {
+    if (process.platform === 'win32') {
+      // Use taskkill to kill the entire process tree on Windows
+      spawn('taskkill', ['/pid', backendProcess.pid, '/f', '/t']);
+    } else {
+      backendProcess.kill();
+    }
+  } catch (e) {
+    console.error('Failed to kill backend process:', e);
+  }
+  
+  backendProcess = null;
+  
+  if (mainWindow) {
+    mainWindow.loadURL('data:text/html,<html><body style="background:#0b0f19;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;user-select:none;"><div style="text-align:center;"><h2>Backend is stopped</h2><p>Start the backend from the system tray to continue.</p></div></body></html>');
+  }
+}
+
+function restartBackend() {
+  stopBackend();
+  setTimeout(() => {
+    startBackend();
+  }, 1500);
 }
 
 function createWindow(url) {
   if (mainWindow) return;
+
+  const iconPath = path.join(__dirname, 'icon.png');
 
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -80,6 +132,7 @@ function createWindow(url) {
     title: 't-line Workspace Manager',
     backgroundColor: '#0b0f19',
     frame: false, // Make window frameless
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -97,9 +150,102 @@ function createWindow(url) {
 
   mainWindow.loadURL(url);
 
+  mainWindow.on('close', (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+      showMinimizeNotification();
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+}
+
+function createTray() {
+  const iconPath = path.join(__dirname, 'icon.png');
+  const icon = nativeImage.createFromPath(iconPath);
+  tray = new Tray(icon);
+  tray.setToolTip('t-line Workspace Manager');
+  
+  tray.on('double-click', () => {
+    showWindow();
+  });
+  
+  updateTrayMenu();
+}
+
+function updateTrayMenu() {
+  if (!tray) return;
+  
+  let statusText = 'Unknown';
+  if (backendStatus === 'running') statusText = 'Running';
+  else if (backendStatus === 'starting') statusText = 'Starting...';
+  else if (backendStatus === 'stopped') statusText = 'Stopped';
+  
+  const contextMenu = Menu.buildFromTemplate([
+    { label: `t-line: ${statusText}`, enabled: false },
+    { type: 'separator' },
+    { label: 'Show Dashboard', click: () => showWindow() },
+    { type: 'separator' },
+    { 
+      label: 'Start Backend', 
+      enabled: backendStatus === 'stopped',
+      click: () => startBackend() 
+    },
+    { 
+      label: 'Stop Backend', 
+      enabled: backendStatus === 'running',
+      click: () => stopBackend() 
+    },
+    { 
+      label: 'Restart Backend', 
+      enabled: backendStatus === 'running',
+      click: () => restartBackend() 
+    },
+    { type: 'separator' },
+    { 
+      label: 'Quit', 
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      } 
+    }
+  ]);
+  
+  tray.setContextMenu(contextMenu);
+}
+
+function showWindow() {
+  if (!mainWindow) {
+    if (backendStatus === 'running') {
+      startBackend();
+    } else {
+      createWindow('data:text/html,<html><body style="background:#0b0f19;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;user-select:none;"><div style="text-align:center;"><h2>Backend is stopped</h2><p>Start the backend from the system tray to continue.</p></div></body></html>');
+    }
+    return;
+  }
+  
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function showMinimizeNotification() {
+  if (hasShownMinimizeNotification) return;
+  
+  if (Notification.isSupported()) {
+    const iconPath = path.join(__dirname, 'icon.png');
+    const notification = new Notification({
+      title: 't-line Workspace Manager',
+      body: 't-line is running in the background. Access it from the system tray.',
+      icon: iconPath,
+      silent: true
+    });
+    notification.show();
+    hasShownMinimizeNotification = true;
+  }
 }
 
 function createMenu() {
@@ -172,6 +318,7 @@ ipcMain.on('window-close', () => {
 
 app.on('ready', () => {
   createMenu();
+  createTray();
   startBackend();
 });
 

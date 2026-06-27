@@ -4,6 +4,16 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.0.2] - 2026-06-27
+
+### Added
+- **System Tray Integration**: Added system tray icon and background running capability. The main window now hides to the system tray on close instead of exiting completely, and alerts the user with a cross-platform system notification on the first hide.
+- **Backend Process Controls**: Added Start, Stop, and Restart controls for the backend process directly inside the system tray context menu. Included a fallback state page in the main window when the backend is stopped.
+- **Premium App Icon**: Added a sleek, high-resolution Obsidian-themed application icon used for both the window icon and the system tray.
+
+### Changed
+- **Dependencies Configuration**: Moved the `electron` package from `dependencies` to `devDependencies` in `desktop/package.json` and pinned it to a fixed version as required by `electron-builder`.
+
 ## [1.0.1] - 2026-06-27
 
 ### Fixed
