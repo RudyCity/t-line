@@ -12,13 +12,16 @@ import {
   ExternalLink,
   Menu as MenuIcon,
   GitCompare,
-  FolderTree
+  FolderTree,
+  Settings
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { TerminalInstance } from './components/TerminalInstance';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
-import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal } from './components/Modals';
+import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal } from './components/Modals';
 import { FileExplorer, GitChanges } from './components/FilePanel';
+import { useTunnel } from './hooks/useTunnel';
+import { useWorkspaces } from './hooks/useWorkspaces';
 
 // Types
 interface WorktreeInfo {
@@ -45,12 +48,7 @@ interface TerminalTab {
   shellType: string;
 }
 
-interface TunnelStatus {
-  active: boolean;
-  url: string | null;
-  type: 'quick' | 'token' | 'none';
-  error: string | null;
-}
+
 
 export default function App() {
   // Auth states
@@ -63,35 +61,65 @@ export default function App() {
   // Connection states
   const [wsConnected, setWsConnected] = useState<boolean>(false);
 
-  // App data states
-  const [workspaces, setWorkspaces] = useState<WorkspaceInfo[]>([]);
-  const [tunnelStatus, setTunnelStatus] = useState<TunnelStatus>({
-    active: false,
-    url: null,
-    type: 'none',
-    error: null
+  // Resizing and Sidebar States
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    const saved = localStorage.getItem('tline-sidebar-width');
+    return saved ? parseInt(saved, 10) : 320;
   });
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    const saved = localStorage.getItem('tline-sidebar-collapsed');
+    return saved === 'true';
+  });
+  const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
 
-  // Modal states
-  const [showWorkspaceModal, setShowWorkspaceModal] = useState<boolean>(false);
-  const [newWorkspacePath, setNewWorkspacePath] = useState<string>('');
-  const [newWorkspaceShell, setNewWorkspaceShell] = useState<string>('powershell');
-  const [showFolderExplorer, setShowFolderExplorer] = useState<boolean>(false);
-  const [explorerPath, setExplorerPath] = useState<string>('');
-  const [explorerDirs, setExplorerDirs] = useState<{name: string, path: string}[]>([]);
-  const [explorerParent, setExplorerParent] = useState<string | null>(null);
-  
-  const [showWorktreeModal, setShowWorktreeModal] = useState<boolean>(false);
-  const [selectedRepoPath, setSelectedRepoPath] = useState<string>('');
-  const [newWorktreePath, setNewWorktreePath] = useState<string>('');
-  const [newWorktreeBranch, setNewWorktreeBranch] = useState<string>('');
-  const [isNewBranch, setIsNewBranch] = useState<boolean>(false);
-  const [repoBranches, setRepoBranches] = useState<string[]>([]);
-  const [gitLoading, setGitLoading] = useState<boolean>(false);
+  // Workspaces Hook
+  const {
+    workspaces,
+    fetchWorkspaces,
+    showWorkspaceModal,
+    setShowWorkspaceModal,
+    newWorkspacePath,
+    setNewWorkspacePath,
+    newWorkspaceShell,
+    setNewWorkspaceShell,
+    showFolderExplorer,
+    setShowFolderExplorer,
+    explorerPath,
+    explorerDirs,
+    explorerParent,
+    fetchDirectoryList,
+    handleFolderBrowse,
+    handleAddWorkspace,
+    handleRemoveWorkspace,
+    showWorktreeModal,
+    setShowWorktreeModal,
+    newWorktreePath,
+    setNewWorktreePath,
+    newWorktreeBranch,
+    setNewWorktreeBranch,
+    isNewBranch,
+    setIsNewBranch,
+    repoBranches,
+    gitLoading,
+    handleOpenWorktreeModal,
+    handleAddWorktree,
+    handleRemoveWorktree
+  } = useWorkspaces(isAuthenticated, localStorage.getItem('token'));
 
-  const [showTunnelModal, setShowTunnelModal] = useState<boolean>(false);
-  const [tunnelToken, setTunnelToken] = useState<string>('');
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+
+  // Tunnel Hook
+  const {
+    tunnelStatus,
+    showTunnelModal,
+    setShowTunnelModal,
+    tunnelToken,
+    setTunnelToken,
+    fetchTunnelStatus,
+    handleStartTunnel,
+    handleStartTokenTunnel,
+    handleStopTunnel
+  } = useTunnel(isAuthenticated);
 
   // Active panel state: 'workspaces' | 'explorer' | 'changes'
   const [activePanel, setActivePanel] = useState<'workspaces' | 'explorer' | 'changes'>('workspaces');
@@ -121,12 +149,30 @@ export default function App() {
       wsManager.connect();
       wsManager.setOnConnectionChange(setWsConnected);
       fetchDashboardData();
-
-      // Poll tunnel status every 5 seconds
-      const interval = setInterval(fetchTunnelStatus, 5000);
-      return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
+
+  const startResizing = (mouseDownEvent: React.MouseEvent) => {
+    mouseDownEvent.preventDefault();
+    const startWidth = sidebarWidth;
+    const startX = mouseDownEvent.clientX;
+
+    const doDrag = (mouseMoveEvent: MouseEvent) => {
+      const newWidth = startWidth + (mouseMoveEvent.clientX - startX);
+      if (newWidth >= 200 && newWidth <= 600) {
+        setSidebarWidth(newWidth);
+        localStorage.setItem('tline-sidebar-width', newWidth.toString());
+      }
+    };
+
+    const stopDrag = () => {
+      document.removeEventListener('mousemove', doDrag);
+      document.removeEventListener('mouseup', stopDrag);
+    };
+
+    document.addEventListener('mousemove', doDrag);
+    document.addEventListener('mouseup', stopDrag);
+  };
 
   useEffect(() => {
     localStorage.setItem('tline-terminals', JSON.stringify(terminals));
@@ -277,207 +323,7 @@ export default function App() {
     fetchTunnelStatus();
   };
 
-  const fetchWorkspaces = async () => {
-    try {
-      const res = await fetch('/api/workspaces', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setWorkspaces(data);
-      }
-    } catch (e) {
-      console.error('Failed to fetch workspaces:', e);
-    }
-  };
 
-  const fetchTunnelStatus = async () => {
-    try {
-      const res = await fetch('/api/tunnel/status', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      const data = await res.json();
-      setTunnelStatus(data);
-    } catch (e) {
-      console.error('Failed to fetch tunnel status:', e);
-    }
-  };
-
-  // Directory Browser Loader (Web fallback)
-  const fetchDirectoryList = async (targetPath = '') => {
-    try {
-      const res = await fetch(`/api/fs/list?path=${encodeURIComponent(targetPath)}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setExplorerPath(data.currentPath);
-        setExplorerParent(data.parentPath);
-        setExplorerDirs(data.directories);
-      } else {
-        alert(data.error);
-      }
-    } catch (e) {
-      console.error('Failed to list directories:', e);
-    }
-  };
-
-  const handleFolderBrowse = async () => {
-    if ((window as any).electron) {
-      try {
-        const selected = await (window as any).electron.selectDirectory();
-        if (selected) {
-          setNewWorkspacePath(selected);
-        }
-      } catch (e) {
-        console.error('Electron folder selection failed, falling back to Web Explorer:', e);
-        setShowFolderExplorer(true);
-        fetchDirectoryList(newWorkspacePath || explorerPath);
-      }
-    } else {
-      setShowFolderExplorer(true);
-      fetchDirectoryList(newWorkspacePath || explorerPath);
-    }
-  };
-
-  // Add Workspace Handler
-  const handleAddWorkspace = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newWorkspacePath) return;
-
-    try {
-      const res = await fetch('/api/workspaces', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ path: newWorkspacePath, defaultShell: newWorkspaceShell })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setShowWorkspaceModal(false);
-        setNewWorkspacePath('');
-        setNewWorkspaceShell('powershell');
-        setShowFolderExplorer(false);
-        fetchWorkspaces();
-      } else {
-        alert(data.error || 'Failed to add workspace.');
-      }
-    } catch (e) {
-      alert('Error occurred adding workspace.');
-    }
-  };
-
-  // Remove Workspace Handler
-  const handleRemoveWorkspace = async (workspacePath: string) => {
-    if (!confirm('Are you sure you want to remove this workspace from tracking? (Files will not be deleted)')) return;
-
-    try {
-      const res = await fetch('/api/workspaces', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ path: workspacePath })
-      });
-      const data = await res.json();
-      if (data.success) {
-        fetchWorkspaces();
-      }
-    } catch (e) {
-      console.error('Error removing workspace:', e);
-    }
-  };
-
-  // Open Add Worktree Modal
-  const handleOpenWorktreeModal = async (workspace: WorkspaceInfo) => {
-    setSelectedRepoPath(workspace.path);
-    // Pre-populate target directory path: Workspace parent + name-worktree
-    const parentDir = workspace.path.substring(0, workspace.path.lastIndexOf(window.navigator.userAgent.includes('Windows') ? '\\' : '/'));
-    const worktreeBaseDir = `${parentDir}/${workspace.name}-worktrees`;
-    setNewWorktreePath(`${worktreeBaseDir}/new-worktree`);
-    setNewWorktreeBranch('');
-    setIsNewBranch(false);
-    setShowWorktreeModal(true);
-    setSidebarOpen(false);
-    setGitLoading(true);
-
-    try {
-      const id = workspace.id;
-      const res = await fetch(`/api/workspaces/${id}/branches`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      const branches = await res.json();
-      setRepoBranches(branches);
-    } catch (e) {
-      console.error('Failed to get repo branches:', e);
-    } finally {
-      setGitLoading(false);
-    }
-  };
-
-  // Add Git Worktree Handler
-  const handleAddWorktree = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newWorktreePath || !newWorktreeBranch) return;
-
-    setGitLoading(true);
-    try {
-      const res = await fetch('/api/worktrees/add', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          repoPath: selectedRepoPath,
-          worktreePath: newWorktreePath,
-          branchName: newWorktreeBranch,
-          newBranch: isNewBranch
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setShowWorktreeModal(false);
-        fetchWorkspaces();
-      } else {
-        alert(data.output || 'Failed to create worktree.');
-      }
-    } catch (e) {
-      alert('Error occurred adding worktree.');
-    } finally {
-      setGitLoading(false);
-    }
-  };
-
-  // Remove Git Worktree Handler
-  const handleRemoveWorktree = async (repoPath: string, worktreePath: string) => {
-    if (!confirm(`Are you sure you want to remove the worktree at ${worktreePath}? This will delete the checked-out files but keep the branch.`)) return;
-
-    setGitLoading(true);
-    try {
-      const res = await fetch('/api/worktrees/remove', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ repoPath, worktreePath, force: true })
-      });
-      const data = await res.json();
-      if (data.success) {
-        fetchWorkspaces();
-      } else {
-        alert(data.output || 'Failed to remove worktree.');
-      }
-    } catch (e) {
-      console.error('Error removing worktree:', e);
-    } finally {
-      setGitLoading(false);
-    }
-  };
 
   // Terminals management
   const openTerminal = (name: string, cwd: string, shellType?: string) => {
@@ -502,73 +348,7 @@ export default function App() {
     });
   };
 
-  // Cloudflare Tunnel Toggles
-  const handleStartTunnel = async (type: 'quick' | 'token') => {
-    if (type === 'token') {
-      setShowTunnelModal(true);
-      return;
-    }
-    
-    try {
-      const res = await fetch('/api/tunnel/start', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ type: 'quick' })
-      });
-      const data = await res.json();
-      if (data.success) {
-        fetchTunnelStatus();
-      } else {
-        alert(data.error);
-      }
-    } catch (e) {
-      alert('Failed to start quick tunnel.');
-    }
-  };
 
-  const handleStartTokenTunnel = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!tunnelToken) return;
-
-    try {
-      const res = await fetch('/api/tunnel/start', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ type: 'token', token: tunnelToken })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setShowTunnelModal(false);
-        setTunnelToken('');
-        fetchTunnelStatus();
-      } else {
-        alert(data.error);
-      }
-    } catch (e) {
-      alert('Failed to start named tunnel.');
-    }
-  };
-
-  const handleStopTunnel = async () => {
-    try {
-      const res = await fetch('/api/tunnel/stop', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      const data = await res.json();
-      if (data.success) {
-        fetchTunnelStatus();
-      }
-    } catch (e) {
-      console.error('Failed to stop tunnel:', e);
-    }
-  };
 
   // Loading Screen
   if (loading) {
@@ -609,25 +389,16 @@ export default function App() {
   return (
     <div className="app-container">
       
-      {/* Custom Title Bar */}
-      <div className="title-bar">
-        <div className="title-bar-logo">
-          <TerminalIcon size={14} style={{ color: 'var(--color-primary)' }} />
-          <span>t-line Workspace Manager <span style={{ opacity: 0.5, fontSize: '0.75rem', fontWeight: 'normal', marginLeft: '6px' }}>v1.0.3</span></span>
-        </div>
-        {(window as any).electron && (
-          <div className="title-bar-controls">
-            <button type="button" className="title-bar-btn" onClick={() => (window as any).electron.minimize()} title="Minimize">—</button>
-            <button type="button" className="title-bar-btn" onClick={() => (window as any).electron.maximize()} title="Maximize">▢</button>
-            <button type="button" className="title-bar-btn title-bar-btn-close" onClick={() => (window as any).electron.close()} title="Close">✕</button>
-          </div>
-        )}
-      </div>
-
       <div className="app-content-wrapper">
         
         {/* Sidebar Panel */}
-        <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+        <div 
+          className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}
+          style={{
+            width: sidebarCollapsed ? 0 : `${sidebarWidth}px`,
+            minWidth: sidebarCollapsed ? 0 : `${sidebarWidth}px`
+          }}
+        >
         
         <div className="sidebar-header">
           <div className="welcome-icon-box" style={{ width: '32px', height: '32px', borderRadius: '8px', margin: 0 }}>
@@ -875,6 +646,14 @@ export default function App() {
         </div>
       </div>
 
+      {/* Resize Handle */}
+      {!sidebarCollapsed && (
+        <div 
+          className="sidebar-resizer" 
+          onMouseDown={startResizing} 
+        />
+      )}
+
       {sidebarOpen && (
         <div className="sidebar-overlay md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
@@ -886,8 +665,16 @@ export default function App() {
         <div className="top-bar flex items-center justify-between">
           <div className="top-bar-info flex items-center gap-3">
             <button 
-              className="action-btn md:hidden" 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="action-btn" 
+              onClick={() => {
+                if (window.innerWidth <= 768) {
+                  setSidebarOpen(!sidebarOpen);
+                } else {
+                  const newVal = !sidebarCollapsed;
+                  setSidebarCollapsed(newVal);
+                  localStorage.setItem('tline-sidebar-collapsed', newVal.toString());
+                }
+              }}
               title="Toggle Sidebar"
             >
               <MenuIcon size={18} />
@@ -899,9 +686,25 @@ export default function App() {
               </span>
             </span>
           </div>
-          <button className="action-btn" onClick={handleLogout} title="Log out">
-            <LogOut size={16} />
-          </button>
+          
+          <div className="top-bar-actions flex items-center gap-1">
+            <button className="action-btn" onClick={() => setShowSettingsModal(true)} title="Settings">
+              <Settings size={16} />
+            </button>
+            <button className="action-btn" onClick={handleLogout} title="Log out">
+              <LogOut size={16} />
+            </button>
+            {(window as any).electron && (
+              <>
+                <div className="window-controls-separator" />
+                <div className="window-controls flex items-center">
+                  <button type="button" className="window-control-btn" onClick={() => (window as any).electron.minimize()} title="Minimize">—</button>
+                  <button type="button" className="window-control-btn" onClick={() => (window as any).electron.maximize()} title="Maximize">▢</button>
+                  <button type="button" className="window-control-btn window-control-btn-close" onClick={() => (window as any).electron.close()} title="Close">✕</button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Dynamic Panels */}
@@ -1041,6 +844,14 @@ export default function App() {
         onSubmit={handleStartTokenTunnel}
         tunnelToken={tunnelToken}
         setTunnelToken={setTunnelToken}
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal
+        show={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        token={localStorage.getItem('token') || ''}
+        workspacesCount={workspaces.length}
       />
     </div>
   );

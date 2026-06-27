@@ -622,38 +622,45 @@ a {
   user-select: none;
 }
 
-/* Custom Title Bar */
-.title-bar {
-  height: 32px;
-  background: rgba(15, 23, 42, 0.95);
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
-  user-select: none;
+/* Draggable Regions for Window (Custom Frameless Titlebar integration) */
+.top-bar {
   -webkit-app-region: drag;
-  z-index: 1000;
-  width: 100%;
 }
 
-.title-bar-logo {
+.sidebar-header {
+  -webkit-app-region: drag;
+}
+
+/* Allow interaction with inner elements of draggable headers */
+.top-bar button,
+.top-bar select,
+.top-bar input,
+.top-bar a,
+.sidebar-header button,
+.sidebar-header select,
+.sidebar-header input,
+.sidebar-panel-tabs {
+  -webkit-app-region: no-drag;
+}
+
+/* Window controls (Minimize, Maximize, Close) inside Top Bar */
+.window-controls-separator {
+  width: 1px;
+  height: 16px;
+  background: var(--border-color);
+  margin: 0 8px;
+  -webkit-app-region: no-drag;
+}
+
+.window-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.title-bar-controls {
-  display: flex;
+  margin-left: 4px;
   -webkit-app-region: no-drag;
-  height: 100%;
 }
 
-.title-bar-btn {
-  width: 46px;
+.window-control-btn {
+  width: 36px;
   height: 32px;
   display: flex;
   align-items: center;
@@ -662,17 +669,44 @@ a {
   border: none;
   cursor: pointer;
   color: var(--text-muted);
+  font-size: 0.85rem;
   transition: all 0.15s ease;
+  border-radius: 4px;
+  -webkit-app-region: no-drag;
 }
 
-.title-bar-btn:hover {
+.window-control-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-main);
 }
 
-.title-bar-btn-close:hover {
+.window-control-btn-close:hover {
   background: var(--color-danger) !important;
   color: white !important;
+}
+
+/* Sidebar Resizer Divider */
+.sidebar-resizer {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.2s ease;
+  position: relative;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.sidebar-resizer:hover,
+.sidebar-resizer:active {
+  background: var(--color-primary);
+  box-shadow: 0 0 8px var(--color-primary);
+}
+
+/* Collapsed Sidebar */
+.sidebar.sidebar-collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  border-right: none !important;
 }
 
 /* Web-based Folder Explorer */
@@ -1012,9 +1046,11 @@ a {
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
-    top: 32px; /* below title bar */
+    top: 0; /* no title bar above it now */
     left: 0;
     bottom: 0;
+    width: 280px !important;
+    min-width: 280px !important;
     transform: translateX(-100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 50;
@@ -1027,7 +1063,7 @@ a {
   
   .sidebar-overlay {
     position: fixed;
-    top: 32px;
+    top: 0; /* starts from very top */
     left: 0;
     right: 0;
     bottom: 0;
@@ -1035,6 +1071,10 @@ a {
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
     z-index: 40;
+  }
+
+  .sidebar-resizer {
+    display: none !important;
   }
   
   /* Layout adjustments for smaller screen sizes */

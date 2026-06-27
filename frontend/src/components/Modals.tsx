@@ -1,5 +1,5 @@
 import React from 'react';
-import { Folder, Loader2 } from 'lucide-react';
+import { Folder, Loader2, Info, Shield } from 'lucide-react';
 import { FormField, Input, Select, TextArea, Button } from './Form';
 
 interface WorkspaceAddModalProps {
@@ -303,6 +303,189 @@ export const TunnelSetupModal: React.FC<TunnelSetupModalProps> = ({
           <Button type="submit">Start Named Tunnel</Button>
         </div>
       </form>
+    </div>
+  );
+};
+
+interface SettingsModalProps {
+  show: boolean;
+  onClose: () => void;
+  token: string;
+  workspacesCount: number;
+}
+
+export const SettingsModal: React.FC<SettingsModalProps> = ({
+  show,
+  onClose,
+  token,
+  workspacesCount
+}) => {
+  const [activeTab, setActiveTab] = React.useState<'general' | 'security'>('general');
+  const [currentPassword, setCurrentPassword] = React.useState('');
+  const [newPassword, setNewPassword] = React.useState('');
+  const [confirmPassword, setConfirmPassword] = React.useState('');
+  const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
+
+  if (!show) return null;
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (newPassword.length < 6) {
+      setError('New password must be at least 6 characters.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('New passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccess('Password updated successfully.');
+        localStorage.setItem('token', data.token);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        setError(data.error || 'Failed to update password.');
+      }
+    } catch (err) {
+      setError('An error occurred during password change.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content glass-panel" style={{ maxWidth: '440px', padding: 0, overflow: 'hidden' }}>
+        <div className="modal-header" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 className="modal-title">Settings</h3>
+          <button type="button" className="action-btn" onClick={onClose}>×</button>
+        </div>
+
+        {/* Tabs navigation */}
+        <div className="sidebar-panel-tabs" style={{ background: 'rgba(0,0,0,0.15)' }}>
+          <button
+            type="button"
+            className={`sidebar-panel-tab ${activeTab === 'general' ? 'active' : ''}`}
+            onClick={() => setActiveTab('general')}
+            style={{ padding: '12px' }}
+          >
+            <Info size={14} />
+            <span>General</span>
+          </button>
+          <button
+            type="button"
+            className={`sidebar-panel-tab ${activeTab === 'security' ? 'active' : ''}`}
+            onClick={() => setActiveTab('security')}
+            style={{ padding: '12px' }}
+          >
+            <Shield size={14} />
+            <span>Security</span>
+          </button>
+        </div>
+
+        <div style={{ padding: '20px' }}>
+          {activeTab === 'general' && (
+            <div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '8px' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Application Version</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-main)', fontFamily: 'var(--font-mono)' }}>v1.0.3</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '8px' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Active Workspaces</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-main)', fontFamily: 'var(--font-mono)' }}>{workspacesCount}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '8px' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Backend Connection</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--color-success)', fontWeight: 'bold' }}>Active</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '8px' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Client OS Platform</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-main)' }}>
+                    {window.navigator.userAgent.includes('Windows') ? 'Windows' : 'Unix-like'}
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
+                <Button type="button" onClick={onClose}>Close</Button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'security' && (
+            <form onSubmit={handlePasswordChange}>
+              {error && (
+                <div style={{ color: 'var(--color-danger)', fontSize: '0.8rem', marginBottom: '12px', background: 'rgba(239, 68, 68, 0.1)', padding: '8px 12px', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div style={{ color: 'var(--color-success)', fontSize: '0.8rem', marginBottom: '12px', background: 'rgba(16, 185, 129, 0.1)', padding: '8px 12px', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                  {success}
+                </div>
+              )}
+
+              <FormField label="Current Master Password">
+                <Input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                  placeholder="Enter current password"
+                />
+              </FormField>
+
+              <FormField label="New Master Password">
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  placeholder="Min 6 characters"
+                />
+              </FormField>
+
+              <FormField label="Confirm New Master Password">
+                <Input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  placeholder="Retype new password"
+                />
+              </FormField>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px' }}>
+                <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
+                  Cancel
+                </Button>
+                <Button type="submit" loading={loading} disabled={loading}>
+                  {loading ? 'Updating...' : 'Update Password'}
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
