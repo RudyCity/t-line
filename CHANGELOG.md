@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.1] - 2026-06-27
+
+### Fixed
+- **Monaco Full-Width Stretch**: Updated `FileViewerTab.tsx` parent container class names with `flex-1 w-full h-full` and passed `width="100%"` explicitly to the Monaco `<Editor>` component, ensuring the coding area stretches cleanly to fill the entire horizontal space of the right viewport pane.
+
 ## [1.3.0] - 2026-06-27
 
 ### Added

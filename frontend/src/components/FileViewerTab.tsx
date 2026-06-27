@@ -170,7 +170,7 @@ export function FileViewerTab({ filePath, token }: FileViewerTabProps) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#030408] overflow-hidden">
+    <div className="flex flex-col flex-1 w-full h-full bg-[#030408] overflow-hidden">
       {/* File Header */}
       <div className="flex items-center justify-between px-4 py-2 bg-slate-950/80 border-b border-white/5 shrink-0">
         <div className="flex items-center gap-2 truncate">
@@ -215,9 +215,10 @@ export function FileViewerTab({ filePath, token }: FileViewerTabProps) {
       </div>
 
       {/* Editor Area */}
-      <div className="flex-1 overflow-hidden relative">
+      <div className="flex-1 w-full h-full overflow-hidden relative">
         <Editor
           height="100%"
+          width="100%"
           language={getLanguageFromPath(filePath)}
           theme="vs-dark"
           value={editedContent}
