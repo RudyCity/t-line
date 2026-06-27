@@ -18,13 +18,14 @@ import {
   ZoomIn,
   ZoomOut,
   Columns2,
-  Rows2
+  Rows2,
+  Keyboard
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { TerminalInstance } from './components/TerminalInstance';
 import { FileViewerTab } from './components/FileViewerTab';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
-import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal } from './components/Modals';
+import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal } from './components/Modals';
 import { FileExplorer, GitChanges } from './components/FilePanel';
 import { useTunnel } from './hooks/useTunnel';
 import { useWorkspaces } from './hooks/useWorkspaces';
@@ -57,6 +58,7 @@ export default function App() {
     return saved === 'true';
   });
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
+  const [showShortcutModal, setShowShortcutModal] = useState<boolean>(false);
 
   // Workspaces Hook
   const {
@@ -780,6 +782,9 @@ export default function App() {
           )}
 
           <div className="top-bar-actions flex items-center gap-3 shrink-0">
+            <button className="action-btn" onClick={() => setShowShortcutModal(true)} title="Keyboard Shortcuts">
+              <Keyboard size={16} />
+            </button>
             <button className="action-btn" onClick={() => setShowSettingsModal(true)} title="Settings">
               <Settings size={16} />
             </button>
@@ -958,6 +963,13 @@ export default function App() {
         token={localStorage.getItem('token') || ''}
         workspacesCount={workspaces.length}
       />
+
+      {/* Keyboard Shortcuts Help Modal */}
+      <ShortcutHelpModal
+        show={showShortcutModal}
+        onClose={() => setShowShortcutModal(false)}
+      />
+
 
       {/* App Footer */}
       <footer className="app-footer flex items-center justify-between px-4 py-2 border-t border-white/5 bg-slate-950/85 text-xs text-slate-400 select-none shrink-0 h-9 z-20">

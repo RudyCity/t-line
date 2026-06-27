@@ -641,3 +641,155 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     </div>
   );
 };
+
+// ─────────────────────────────────────────────────────────────────
+// Keyboard Shortcut Help Modal
+// ─────────────────────────────────────────────────────────────────
+
+interface ShortcutGroup {
+  title: string;
+  icon: string;
+  shortcuts: { keys: string[]; label: string }[];
+}
+
+const SHORTCUT_GROUPS: ShortcutGroup[] = [
+  {
+    title: 'Terminal',
+    icon: '⌨️',
+    shortcuts: [
+      { keys: ['Alt', 'T'], label: 'Buka terminal baru' },
+      { keys: ['Alt', 'W'], label: 'Tutup tab aktif' },
+      { keys: ['Alt', ']'], label: 'Tab berikutnya' },
+      { keys: ['Alt', '['], label: 'Tab sebelumnya' },
+      { keys: ['Alt', '1–9'], label: 'Loncat ke tab ke-N' },
+    ],
+  },
+  {
+    title: 'Split Pane',
+    icon: '⬛',
+    shortcuts: [
+      { keys: ['Alt', 'D'], label: 'Split horizontal (side-by-side)' },
+      { keys: ['Alt', 'E'], label: 'Split vertikal (atas-bawah)' },
+      { keys: ['Alt', 'D'], label: 'Tutup split (klik ulang)' },
+    ],
+  },
+  {
+    title: 'Tampilan',
+    icon: '🔍',
+    shortcuts: [
+      { keys: ['Alt', '='], label: 'Zoom in font terminal' },
+      { keys: ['Alt', '-'], label: 'Zoom out font terminal' },
+      { keys: ['Ctrl', 'Shift', 'F'], label: 'Cari teks di terminal' },
+    ],
+  },
+  {
+    title: 'Search Bar',
+    icon: '🔎',
+    shortcuts: [
+      { keys: ['Enter'], label: 'Cari berikutnya' },
+      { keys: ['Shift', 'Enter'], label: 'Cari sebelumnya' },
+      { keys: ['Esc'], label: 'Tutup search bar' },
+    ],
+  },
+];
+
+interface ShortcutHelpModalProps {
+  show: boolean;
+  onClose: () => void;
+}
+
+export const ShortcutHelpModal: React.FC<ShortcutHelpModalProps> = ({ show, onClose }) => {
+  if (!show) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal-content glass-panel"
+        style={{ maxWidth: '560px', width: '100%' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '30px', height: '30px', borderRadius: '8px',
+              background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px'
+            }}>⌨️</div>
+            <div>
+              <h3 className="modal-title" style={{ margin: 0 }}>Keyboard Shortcuts</h3>
+              <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>
+                Semua shortcut t-line — kompatibel di browser &amp; Electron
+              </p>
+            </div>
+          </div>
+          <button type="button" className="action-btn" onClick={onClose}>×</button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '8px 20px 20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {SHORTCUT_GROUPS.map((group) => (
+            <div key={group.title}>
+              {/* Section header */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                marginBottom: '10px', paddingBottom: '6px',
+                borderBottom: '1px solid rgba(255,255,255,0.06)'
+              }}>
+                <span style={{ fontSize: '13px' }}>{group.icon}</span>
+                <span style={{
+                  fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em',
+                  textTransform: 'uppercase', color: 'rgba(168,85,247,0.9)'
+                }}>{group.title}</span>
+              </div>
+
+              {/* Shortcut rows */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                {group.shortcuts.map((sc, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                    {/* Label */}
+                    <span style={{ fontSize: '13px', color: 'var(--text-main)', flex: 1 }}>{sc.label}</span>
+                    {/* Key badges */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                      {sc.keys.map((k, ki) => (
+                        <React.Fragment key={ki}>
+                          <kbd style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            minWidth: '28px', padding: '2px 7px',
+                            background: 'rgba(255,255,255,0.06)',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            borderBottom: '2px solid rgba(255,255,255,0.18)',
+                            borderRadius: '5px',
+                            fontFamily: 'var(--font-mono)', fontSize: '11px',
+                            fontWeight: 600, color: '#e2e8f0',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                            lineHeight: 1.4,
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {k}
+                          </kbd>
+                          {ki < sc.keys.length - 1 && (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '11px', userSelect: 'none' }}>+</span>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {/* Footer tip */}
+          <div style={{
+            marginTop: '4px', padding: '10px 14px', borderRadius: '8px',
+            background: 'rgba(168,85,247,0.07)', border: '1px solid rgba(168,85,247,0.15)',
+            fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6
+          }}>
+            💡 <strong style={{ color: 'var(--text-main)' }}>Tip:</strong> Shortcut menggunakan <kbd style={{ padding: '1px 5px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', fontSize: '10px' }}>Alt</kbd> agar tidak konflik dengan shortcut browser Chrome/Firefox.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
