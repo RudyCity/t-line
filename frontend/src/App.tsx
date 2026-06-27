@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Folder, 
   Plus, 
@@ -25,6 +25,8 @@ import { SplitLayoutRenderer } from './components/SplitLayoutRenderer';
 import { Footer } from './components/Footer';
 import { WorkspaceList } from './components/WorkspaceList';
 import { EmptyDashboard } from './components/EmptyDashboard';
+import { MobileKeyboard } from './components/MobileKeyboard';
+import { useLayoutHelpers } from './hooks/useLayoutHelpers';
 
 export default function App() {
   const [setupRequired, setSetupRequired] = useState<boolean | null>(null);
@@ -48,6 +50,7 @@ export default function App() {
   const [showShortcutModal, setShowShortcutModal] = useState<boolean>(false);
   const draggedTabIdRef = useRef<string | null>(null);
   const [dragOverZone, setDragOverZone] = useState<'left' | 'right' | 'top' | 'bottom' | null>(null);
+  const [showMobileKeyboard, setShowMobileKeyboard] = useState<boolean>(false);
 
   // Workspaces Hook
   const {
@@ -125,36 +128,13 @@ export default function App() {
     importActiveSessions
   } = useTerminals(workspaces, () => setSidebarOpen(false));
 
-  // Helper for drag-and-drop merging of tabs
-  const handleMergeTab = useCallback((draggedId: string, direction: 'horizontal' | 'vertical') => {
-    if (draggedId === activeTabId) return;
-    const draggedTab = tabs.find(t => t.id === draggedId);
-    const activeTab = tabs.find(t => t.id === activeTabId);
-    if (!draggedTab || !activeTab || draggedTab.type !== 'terminal' || activeTab.type !== 'terminal') return;
-
-    const activeLayout = activeTab.layout;
-    const draggedLayout = draggedTab.layout;
-    if (!activeLayout || !draggedLayout) return;
-
-    setTabs(prev => {
-      const filtered = prev.filter(t => t.id !== draggedId);
-      return filtered.map(t => {
-        if (t.id === activeTabId) {
-          return {
-            ...t,
-            layout: {
-              type: 'split',
-              direction,
-              first: activeLayout,
-              second: draggedLayout
-            },
-            focusedTerminalId: draggedTab.focusedTerminalId
-          };
-        }
-        return t;
-      });
-    });
-  }, [tabs, activeTabId, setTabs]);
+  const { startResizing, handleMergeTab } = useLayoutHelpers(
+    sidebarWidth,
+    setSidebarWidth,
+    tabs,
+    setTabs,
+    activeTabId
+  );
 
   // Keyboard Shortcuts
   const hasModals = showWorkspaceModal || showWorktreeModal || showTunnelModal || showSettingsModal;
@@ -210,27 +190,7 @@ export default function App() {
     }
   }, [isAuthenticated]);
 
-  const startResizing = (mouseDownEvent: React.MouseEvent) => {
-    mouseDownEvent.preventDefault();
-    const startWidth = sidebarWidth;
-    const startX = mouseDownEvent.clientX;
 
-    const doDrag = (mouseMoveEvent: MouseEvent) => {
-      const newWidth = startWidth + (mouseMoveEvent.clientX - startX);
-      if (newWidth >= 200 && newWidth <= 600) {
-        setSidebarWidth(newWidth);
-        localStorage.setItem('tline-sidebar-width', newWidth.toString());
-      }
-    };
-
-    const stopDrag = () => {
-      document.removeEventListener('mousemove', doDrag);
-      document.removeEventListener('mouseup', stopDrag);
-    };
-
-    document.addEventListener('mousemove', doDrag);
-    document.addEventListener('mouseup', stopDrag);
-  };
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -386,6 +346,17 @@ export default function App() {
     fetchWorkspaces();
     fetchTunnelStatus();
     checkActiveSessions();
+  };
+
+  const handleMobileKeyInput = (data: string) => {
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    if (activeTab && activeTab.type === 'terminal' && activeTab.focusedTerminalId) {
+      wsManager.send(JSON.stringify({
+        type: 'data',
+        id: activeTab.focusedTerminalId,
+        data
+      }));
+    }
   };
 
   if (loading) {
@@ -695,6 +666,13 @@ export default function App() {
           )}
 
           <div className="top-bar-actions flex items-center gap-3 shrink-0">
+            <button 
+              className={`action-btn mobile-keyboard-toggle ${showMobileKeyboard ? 'text-purple-400 bg-purple-500/10' : ''}`}
+              onClick={() => setShowMobileKeyboard(v => !v)}
+              title="Toggle virtual touch keyboard"
+            >
+              <Keyboard size={16} />
+            </button>
             <button className="action-btn" onClick={() => setShowShortcutModal(true)} title="Keyboard Shortcuts">
               <Keyboard size={16} />
             </button>
@@ -921,6 +899,10 @@ export default function App() {
               })()}
             </div>
 
+          )}
+
+          {showMobileKeyboard && tabs.length > 0 && tabs.find(t => t.id === activeTabId)?.type === 'terminal' && (
+            <MobileKeyboard onKeyInput={handleMobileKeyInput} />
           )}
         </div>
       </div>

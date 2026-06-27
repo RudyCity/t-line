@@ -4,6 +4,14 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.2.0] - 2026-06-27
+
+### Added
+- **Custom Touch On-Screen Keyboard**: Integrated a premium, toggleable virtual on-screen keyboard (`MobileKeyboard`) visible on mobile screens (< 768px). Includes sticky modifier locks for `Ctrl` and `Alt` (enabling shortcuts like `Ctrl+C` or `Ctrl+D` on touch), standard QWERTY rows, a symbols toggle tab, and arrow navigation pads (`↑`, `↓`, `←`, `→`).
+
+### Fixed
+- **App.tsx Code Complexity Reduction**: Refactored `startResizing` and `handleMergeTab` drag/merge logic from `App.tsx` into a custom hook `useLayoutHelpers.ts` to keep the core component under the strict 1000-line ceiling.
+
 ## [1.1.9] - 2026-06-27
 
 ### Fixed

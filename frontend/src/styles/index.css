@@ -1045,8 +1045,16 @@ a {
 
 
 
+.mobile-keyboard-toggle {
+  display: none !important;
+}
+
 /* Mobile Responsiveness Media Queries */
 @media (max-width: 768px) {
+  .mobile-keyboard-toggle {
+    display: flex !important;
+  }
+
   .sidebar {
     position: fixed;
     top: 0; /* no title bar above it now */
