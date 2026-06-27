@@ -1156,3 +1156,44 @@ a {
   box-shadow: 0 0 0 1px var(--color-primary-glow);
 }
 
+/* Drag and Drop Split Zones */
+.drag-drop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+  display: none;
+}
+
+body.tab-dragging .drag-drop-overlay {
+  display: block;
+}
+
+.drag-drop-zone {
+  position: absolute;
+  background: rgba(168, 85, 247, 0.02);
+  border: 2px dashed rgba(168, 85, 247, 0.3);
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  cursor: copy;
+  backdrop-filter: blur(1px);
+}
+
+.drag-drop-zone:hover {
+  background: rgba(168, 85, 247, 0.18) !important;
+  border-color: #c084fc !important;
+}
+
+.drag-drop-zone span {
+  color: #c084fc;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  user-select: none;
+}
+
+

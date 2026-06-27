@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Folder, 
   GitBranch, 
@@ -57,7 +57,7 @@ export default function App() {
   });
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [showShortcutModal, setShowShortcutModal] = useState<boolean>(false);
-  const [isDraggingTab, setIsDraggingTab] = useState<string | null>(null);
+  const draggedTabIdRef = useRef<string | null>(null);
 
   // Workspaces Hook
   const {
@@ -712,9 +712,13 @@ export default function App() {
                     draggable
                     onDragStart={(e) => {
                       e.dataTransfer.setData('text/plain', t.id);
-                      setIsDraggingTab(t.id);
+                      draggedTabIdRef.current = t.id;
+                      document.body.classList.add('tab-dragging');
                     }}
-                    onDragEnd={() => setIsDraggingTab(null)}
+                    onDragEnd={() => {
+                      draggedTabIdRef.current = null;
+                      document.body.classList.remove('tab-dragging');
+                    }}
                     style={{ 
                       height: '32px', 
                       padding: '0 12px', 
@@ -828,101 +832,91 @@ export default function App() {
             // Terminals View — supports split pane and drag-and-drop splitting
             <div className="terminal-container" style={{ flex: 1, border: 'none', borderRadius: 0, padding: 0, display: 'flex', flexDirection: splitState.direction === 'vertical' ? 'column' : 'row', position: 'relative' }}>
               {/* Drop Zones Overlay for Drag and Drop Splitting */}
-              {isDraggingTab && (
-                <div style={{ position: 'absolute', inset: 0, zIndex: 1000, pointerEvents: 'none' }}>
-                  {/* Left Zone */}
-                  <div
-                    style={{
-                      position: 'absolute', left: 0, top: 0, bottom: 0, width: '25%',
-                      borderRight: '2px dashed rgba(168,85,247,0.4)',
-                      background: 'rgba(168,85,247,0.03)', pointerEvents: 'auto',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all 0.2s', cursor: 'copy', backdropFilter: 'blur(1px)'
-                    }}
-                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = 'rgba(168,85,247,0.18)'; }}
-                    onDragLeave={(e) => { e.currentTarget.style.background = 'rgba(168,85,247,0.03)'; }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const draggedId = e.dataTransfer.getData('text/plain') || isDraggingTab;
-                      if (draggedId && draggedId !== activeTabId) {
-                        splitHorizontal(draggedId);
-                      }
-                      setIsDraggingTab(null);
-                    }}
-                  >
-                    <span style={{ color: '#c084fc', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', writingMode: 'vertical-lr', letterSpacing: '0.12em' }}>Split Left</span>
-                  </div>
-
-                  {/* Right Zone */}
-                  <div
-                    style={{
-                      position: 'absolute', right: 0, top: 0, bottom: 0, width: '25%',
-                      borderLeft: '2px dashed rgba(168,85,247,0.4)',
-                      background: 'rgba(168,85,247,0.03)', pointerEvents: 'auto',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all 0.2s', cursor: 'copy', backdropFilter: 'blur(1px)'
-                    }}
-                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = 'rgba(168,85,247,0.18)'; }}
-                    onDragLeave={(e) => { e.currentTarget.style.background = 'rgba(168,85,247,0.03)'; }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const draggedId = e.dataTransfer.getData('text/plain') || isDraggingTab;
-                      if (draggedId && draggedId !== activeTabId) {
-                        splitHorizontal(draggedId);
-                      }
-                      setIsDraggingTab(null);
-                    }}
-                  >
-                    <span style={{ color: '#c084fc', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', writingMode: 'vertical-lr', letterSpacing: '0.12em' }}>Split Right</span>
-                  </div>
-
-                  {/* Top Zone */}
-                  <div
-                    style={{
-                      position: 'absolute', left: '25%', right: '25%', top: 0, height: '25%',
-                      borderBottom: '2px dashed rgba(168,85,247,0.4)',
-                      background: 'rgba(168,85,247,0.03)', pointerEvents: 'auto',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all 0.2s', cursor: 'copy', backdropFilter: 'blur(1px)'
-                    }}
-                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = 'rgba(168,85,247,0.18)'; }}
-                    onDragLeave={(e) => { e.currentTarget.style.background = 'rgba(168,85,247,0.03)'; }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const draggedId = e.dataTransfer.getData('text/plain') || isDraggingTab;
-                      if (draggedId && draggedId !== activeTabId) {
-                        splitVertical(draggedId);
-                      }
-                      setIsDraggingTab(null);
-                    }}
-                  >
-                    <span style={{ color: '#c084fc', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Split Top</span>
-                  </div>
-
-                  {/* Bottom Zone */}
-                  <div
-                    style={{
-                      position: 'absolute', left: '25%', right: '25%', bottom: 0, height: '25%',
-                      borderTop: '2px dashed rgba(168,85,247,0.4)',
-                      background: 'rgba(168,85,247,0.03)', pointerEvents: 'auto',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all 0.2s', cursor: 'copy', backdropFilter: 'blur(1px)'
-                    }}
-                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = 'rgba(168,85,247,0.18)'; }}
-                    onDragLeave={(e) => { e.currentTarget.style.background = 'rgba(168,85,247,0.03)'; }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const draggedId = e.dataTransfer.getData('text/plain') || isDraggingTab;
-                      if (draggedId && draggedId !== activeTabId) {
-                        splitVertical(draggedId);
-                      }
-                      setIsDraggingTab(null);
-                    }}
-                  >
-                    <span style={{ color: '#c084fc', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Split Bottom</span>
-                  </div>
+              <div className="drag-drop-overlay">
+                {/* Left Zone */}
+                <div
+                  className="drag-drop-zone"
+                  style={{
+                    position: 'absolute', left: 0, top: 0, bottom: 0, width: '25%',
+                    borderRight: '2px dashed rgba(168,85,247,0.4)',
+                    background: 'rgba(168,85,247,0.03)'
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
+                    if (draggedId && draggedId !== activeTabId) {
+                      splitHorizontal(draggedId);
+                    }
+                    document.body.classList.remove('tab-dragging');
+                  }}
+                >
+                  <span style={{ writingMode: 'vertical-lr' }}>Split Left</span>
                 </div>
-              )}
+
+                {/* Right Zone */}
+                <div
+                  className="drag-drop-zone"
+                  style={{
+                    position: 'absolute', right: 0, top: 0, bottom: 0, width: '25%',
+                    borderLeft: '2px dashed rgba(168,85,247,0.4)',
+                    background: 'rgba(168,85,247,0.03)'
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
+                    if (draggedId && draggedId !== activeTabId) {
+                      splitHorizontal(draggedId);
+                    }
+                    document.body.classList.remove('tab-dragging');
+                  }}
+                >
+                  <span style={{ writingMode: 'vertical-lr' }}>Split Right</span>
+                </div>
+
+                {/* Top Zone */}
+                <div
+                  className="drag-drop-zone"
+                  style={{
+                    position: 'absolute', left: '25%', right: '25%', top: 0, height: '25%',
+                    borderBottom: '2px dashed rgba(168,85,247,0.4)',
+                    background: 'rgba(168,85,247,0.03)'
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
+                    if (draggedId && draggedId !== activeTabId) {
+                      splitVertical(draggedId);
+                    }
+                    document.body.classList.remove('tab-dragging');
+                  }}
+                >
+                  <span>Split Top</span>
+                </div>
+
+                {/* Bottom Zone */}
+                <div
+                  className="drag-drop-zone"
+                  style={{
+                    position: 'absolute', left: '25%', right: '25%', bottom: 0, height: '25%',
+                    borderTop: '2px dashed rgba(168,85,247,0.4)',
+                    background: 'rgba(168,85,247,0.03)'
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
+                    if (draggedId && draggedId !== activeTabId) {
+                      splitVertical(draggedId);
+                    }
+                    document.body.classList.remove('tab-dragging');
+                  }}
+                >
+                  <span>Split Bottom</span>
+                </div>
+              </div>
 
               {/* Primary Pane */}
               <div style={{ flex: splitState.isSplit ? `0 0 ${splitState.splitRatio}%` : '1', position: 'relative', overflow: 'hidden', minWidth: 0, minHeight: 0 }}>
