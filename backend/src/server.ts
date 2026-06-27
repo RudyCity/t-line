@@ -630,15 +630,12 @@ wss.on('connection', (ws: WebSocket) => {
       if (type === 'init') {
         const { cwd, cols, rows, shellType } = payload;
         
-        const isPersisted = terminalManager.isSessionPersisted(id);
+        const existingTerm = terminalManager.getTerminal(id);
         
-        if (isPersisted) {
+        if (existingTerm) {
           activeTerminals.add(id);
-          const term = terminalManager.getTerminal(id);
           let stopPolling: (() => void) | null = null;
-          if (term) {
-            stopPolling = startTitlePolling(id, term);
-          }
+          stopPolling = startTitlePolling(id, existingTerm);
 
           terminalManager.setSender(
             id,
@@ -658,7 +655,6 @@ wss.on('connection', (ws: WebSocket) => {
 
           // Replay output buffer so client sees what was missed while detached
           const buffer = terminalManager.getOutputBuffer(id);
-          terminalManager.clearOutputBuffer(id);
 
           setTimeout(() => {
             if (ws.readyState === WebSocket.OPEN) {
@@ -675,9 +671,6 @@ wss.on('connection', (ws: WebSocket) => {
             }
           }, 100);
         } else {
-          // Remove old terminal if exists (safety)
-          terminalManager.removeTerminal(id);
-          
           const term = terminalManager.createTerminal(id, cwd, cols, rows, shellType);
           activeTerminals.add(id);
           const stopPolling = startTitlePolling(id, term);
@@ -698,6 +691,7 @@ wss.on('connection', (ws: WebSocket) => {
             }
           );
         }
+
       } else if (type === 'data') {
         const { data } = payload;
         const term = terminalManager.getTerminal(id);

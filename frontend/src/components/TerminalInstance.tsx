@@ -246,9 +246,9 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     };
   }, [tab.id]);
 
-  // ── WebSocket reconnect → send init ─────────────────────
+  // ── WebSocket reconnect or activation → send init ────────
   useEffect(() => {
-    if (wsConnected && terminalRef.current) {
+    if (active && wsConnected && terminalRef.current) {
       const term = terminalRef.current;
       const cols = term.cols || 80;
       const rows = term.rows || 24;
@@ -256,7 +256,8 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
         type: 'init', id: tab.id, cwd: tab.cwd, cols, rows, shellType: tab.shellType
       }));
     }
-  }, [wsConnected, tab.id, tab.cwd, tab.shellType]);
+  }, [active, wsConnected, tab.id, tab.cwd, tab.shellType]);
+
 
   // ── Active tab: refit + focus ────────────────────────────
   useEffect(() => {
