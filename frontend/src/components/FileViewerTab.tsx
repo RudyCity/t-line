@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileCode, Save, RotateCcw, Check } from 'lucide-react';
+import { FileCode, RotateCcw, Check } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 
 interface FileViewerTabProps {
@@ -91,32 +91,42 @@ export function FileViewerTab({ filePath, token }: FileViewerTabProps) {
     };
   }, [filePath, token]);
 
-  const handleSave = async () => {
-    setSaving(true);
-    setSaveError(null);
-    setSaveSuccess(false);
-    try {
-      const res = await fetch('/api/fs/write', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ path: filePath, content: editedContent })
-      });
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Failed to save file');
+  // Debounced Auto-Save Effect
+  useEffect(() => {
+    if (content === null || editedContent === content) return;
+
+    const timer = setTimeout(() => {
+      async function autoSave() {
+        setSaving(true);
+        setSaveError(null);
+        setSaveSuccess(false);
+        try {
+          const res = await fetch('/api/fs/write', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ path: filePath, content: editedContent })
+          });
+          if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.error || 'Failed to save file');
+          }
+          setContent(editedContent);
+          setSaveSuccess(true);
+          setTimeout(() => setSaveSuccess(false), 1500);
+        } catch (e: any) {
+          setSaveError(e.message || 'Error saving file');
+        } finally {
+          setSaving(false);
+        }
       }
-      setContent(editedContent);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 2000);
-    } catch (e: any) {
-      setSaveError(e.message || 'Error saving file');
-    } finally {
-      setSaving(false);
-    }
-  };
+      autoSave();
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [editedContent, content, filePath, token]);
 
   const handleRevert = () => {
     setEditedContent(content || '');
@@ -168,48 +178,38 @@ export function FileViewerTab({ filePath, token }: FileViewerTabProps) {
           <span className="text-xs font-mono text-slate-300 truncate" title={filePath}>
             {filePath}
           </span>
-          {isDirty && (
-            <span className="text-[10px] text-purple-400 font-semibold px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20">
-              Modified
-            </span>
-          )}
           {saveError && (
             <span className="text-[10px] text-red-400 font-semibold truncate ml-2">({saveError})</span>
           )}
         </div>
         
         <div className="flex items-center gap-2">
-          {saveSuccess && (
+          {saving ? (
+            <div className="flex items-center gap-1.5 text-[11px] text-purple-400 font-medium animate-pulse">
+              <span className="h-1.5 w-1.5 rounded-full bg-purple-500 animate-ping" />
+              <span>Saving...</span>
+            </div>
+          ) : saveSuccess ? (
             <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
               <Check size={12} />
-              <span>Saved!</span>
+              <span>Saved</span>
             </div>
-          )}
-          
-          <button
-            onClick={handleSave}
-            disabled={saving || !isDirty}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold transition-all duration-200 cursor-pointer ${
-              isDirty
-                ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/25'
-                : 'bg-white/5 text-slate-500 cursor-not-allowed'
-            }`}
-            title="Save changes"
-          >
-            <Save size={12} />
-            <span>{saving ? 'Saving...' : 'Save'}</span>
-          </button>
-          
-          {isDirty && (
-            <button
-              onClick={handleRevert}
-              disabled={saving}
-              className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-slate-400 hover:text-white hover:bg-white/5 rounded transition-all duration-150 cursor-pointer"
-              title="Revert unsaved changes"
-            >
-              <RotateCcw size={12} />
-              <span>Revert</span>
-            </button>
+          ) : isDirty ? (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-purple-400 font-semibold px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20">
+                Modified
+              </span>
+              <button
+                onClick={handleRevert}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-slate-400 hover:text-white hover:bg-white/5 rounded transition-all duration-150 cursor-pointer"
+                title="Revert changes"
+              >
+                <RotateCcw size={12} />
+                <span>Revert</span>
+              </button>
+            </div>
+          ) : (
+            <span className="text-[11px] text-slate-500 font-medium">Auto-save active</span>
           )}
         </div>
       </div>
