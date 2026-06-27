@@ -461,12 +461,9 @@ export default function App() {
           }}
         >
         
-        <div className="sidebar-header">
-          <div className="welcome-icon-box" style={{ width: '32px', height: '32px', borderRadius: '8px', margin: 0 }}>
-            <TerminalIcon size={18} />
-          </div>
-          <span className="logo-text">t-line</span>
-          <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', fontWeight: 500, color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)', marginLeft: '8px', alignSelf: 'center' }}>v1.0.6</span>
+        <div className="sidebar-header" style={{ padding: '12px 16px', gap: '8px' }}>
+          <TerminalIcon size={16} className="text-purple-400 shrink-0" />
+          <span className="logo-text" style={{ fontSize: '1.05rem', fontWeight: 600 }}>t-line</span>
         </div>
 
         {/* Sidebar Panel Tabs */}
@@ -692,11 +689,8 @@ export default function App() {
             >
               <MenuIcon size={18} />
             </button>
-            <span className="status-indicator" title={wsConnected ? 'WebSocket connection active' : 'WebSocket connecting...'}>
+            <span className="status-indicator" style={{ display: 'flex', alignItems: 'center' }} title={wsConnected ? 'Backend Connected' : 'Connecting to Backend...'}>
               <span className={`dot ${wsConnected ? 'dot-active' : 'dot-inactive'}`} />
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                {wsConnected ? 'Backend Connected' : 'Connecting to Backend...'}
-              </span>
             </span>
           </div>
           
