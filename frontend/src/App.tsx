@@ -730,7 +730,7 @@ export default function App() {
                     <button className="btn btn-primary shadow-lg shadow-purple-500/10 hover:shadow-[0_0_15px_rgba(168,85,247,0.45)] transition-all duration-300" onClick={() => setShowWorkspaceModal(true)}>
                       Add Workspace Folder
                     </button>
-                    <button className="btn btn-secondary border border-white/5 hover:border-white/10" onClick={() => openTerminal('Global Shell', panelWorkspace?.path || workspaces[0]?.path || '')}>
+                    <button className="btn btn-secondary border border-white/5 hover:border-white/10" onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')}>
                       Open Terminal
                     </button>
                   </div>

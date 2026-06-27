@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.1.0] - 2026-06-27
+
+### Removed
+- **Global Shell Concept**: Removed the 'Global Shell' terminal title and button configurations, routing all terminal instances through active workspace scopes under standard 'Shell' naming.
+
 ## [1.0.9] - 2026-06-27
 
 ### Added
