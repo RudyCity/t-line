@@ -1,0 +1,40 @@
+{
+  "name": "desktop",
+  "version": "1.0.1",
+  "description": "Electron desktop wrapper for t-line",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "dependencies": {
+    "electron": "^30.0.6"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.tline.manager",
+    "productName": "t-line",
+    "directories": {
+      "output": "dist-exe"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      "../backend/dist/**/*",
+      "../backend/node_modules/**/*",
+      "../backend/package.json",
+      "../frontend/dist/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "asar": true
+  }
+}

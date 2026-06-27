@@ -1,0 +1,23 @@
+{
+  "name": "t-line-root",
+  "version": "1.0.1",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "desktop"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:backend": "npm run build --workspace=backend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "build:desktop": "npm run dist --workspace=desktop",
+    "build:exe": "npm run build:frontend && npm run build:backend && npm run build:desktop",
+    "desktop": "npm run start --workspace=desktop"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
