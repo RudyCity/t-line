@@ -232,6 +232,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     const existing = tabs.find(t => t.type === 'file' && t.filePath === filePath);
     if (existing) {
       setActiveTabId(existing.id);
+      onTerminalOpen?.();
       return;
     }
 
@@ -245,7 +246,8 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
 
     setTabs(prev => [...prev, newTab]);
     setActiveTabId(tabId);
-  }, [tabs]);
+    onTerminalOpen?.();
+  }, [tabs, onTerminalOpen]);
 
   const closeTerminal = useCallback((tabId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();

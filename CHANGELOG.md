@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.2.8] - 2026-06-27
+
+### Fixed
+- **Sidebar Auto-Collapse on File Open**: Updated `openFileTab` inside `useTerminals.ts` to trigger the `onTerminalOpen` callback. This automatically closes/collapses the left sidebar panel on mobile and tablet devices when a file is opened, immediately showing the File Viewer/Editor interface.
+
 ## [1.2.7] - 2026-06-27
 
 ### Added
