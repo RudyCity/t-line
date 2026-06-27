@@ -673,7 +673,7 @@ export default function App() {
         
         {/* Topbar */}
         <div className="top-bar flex items-center justify-between">
-          <div className="top-bar-info flex items-center gap-3 shrink-0">
+          <div className="top-bar-info flex items-center gap-4 shrink-0">
             <button 
               className="action-btn" 
               onClick={() => {
@@ -696,7 +696,7 @@ export default function App() {
 
           {/* Integrated Tab Bar */}
           {terminals.length > 0 && (
-            <div className="flex items-center gap-1.5 flex-1 overflow-x-auto mx-4 h-full" style={{ scrollbarWidth: 'none', WebkitAppRegion: 'no-drag' } as any}>
+            <div className="flex items-center gap-2 flex-1 overflow-x-auto mx-6 h-full" style={{ scrollbarWidth: 'none', WebkitAppRegion: 'no-drag' } as any}>
               {terminals.map(t => {
                 const isFile = t.type === 'file';
                 return (
@@ -706,11 +706,11 @@ export default function App() {
                     onClick={() => setActiveTabId(t.id)}
                     style={{ 
                       height: '32px', 
-                      padding: '0 10px', 
+                      padding: '0 12px', 
                       borderRadius: '6px', 
                       display: 'flex', 
                       alignItems: 'center', 
-                      gap: '6px', 
+                      gap: '8px', 
                       fontSize: '0.75rem', 
                       background: activeTabId === t.id ? 'rgba(168, 85, 247, 0.08)' : 'transparent',
                       border: activeTabId === t.id ? '1px solid rgba(168, 85, 247, 0.25)' : '1px solid transparent',
@@ -726,25 +726,30 @@ export default function App() {
                     )}
                     <span>{t.name}</span>
                     {!isFile && (
-                      <span style={{ fontSize: '0.6rem', opacity: 0.6, fontFamily: 'var(--font-mono)' }}>({t.shellType === 'powershell' ? 'ps' : t.shellType})</span>
+                      <span style={{ fontSize: '0.65rem', opacity: 0.6, fontFamily: 'var(--font-mono)' }}>({t.shellType === 'powershell' ? 'ps' : t.shellType})</span>
                     )}
-                    <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)} style={{ marginLeft: '4px', fontSize: '11px', opacity: 0.6 }}>×</span>
+                    <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)} style={{ marginLeft: '6px', fontSize: '11px', opacity: 0.6 }}>×</span>
                   </div>
                 );
               })}
-              <button className="action-btn shrink-0" onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')} title="New terminal">
+              <button 
+                className="action-btn shrink-0" 
+                onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')} 
+                title="New terminal"
+                style={{ marginLeft: '6px' }}
+              >
                 <Plus size={14} />
               </button>
 
               {/* Zoom Controls */}
-              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px', borderRight: '1px solid var(--border-color)', paddingRight: '8px', marginRight: '4px' }} className="shrink-0">
-                <button className="action-btn" onClick={handleZoomOut} title="Zoom Out Terminal font" style={{ padding: '2px' }}>
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', borderRight: '1px solid var(--border-color)', paddingRight: '12px', marginRight: '8px' }} className="shrink-0">
+                <button className="action-btn" onClick={handleZoomOut} title="Zoom Out Terminal font" style={{ padding: '2px 4px' }}>
                   <ZoomOut size={12} />
                 </button>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '28px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '32px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
                   {terminalFontSize}px
                 </span>
-                <button className="action-btn" onClick={handleZoomIn} title="Zoom In Terminal font" style={{ padding: '2px' }}>
+                <button className="action-btn" onClick={handleZoomIn} title="Zoom In Terminal font" style={{ padding: '2px 4px' }}>
                   <ZoomIn size={12} />
                 </button>
               </div>
@@ -755,14 +760,15 @@ export default function App() {
                 onChange={(e) => setDefaultShell(e.target.value)}
                 className="form-input shrink-0" 
                 style={{ 
-                  width: '90px', 
-                  padding: '2px 4px', 
+                  width: '95px', 
+                  padding: '2px 6px', 
                   fontSize: '0.7rem', 
                   height: '22px', 
                   background: 'rgba(255,255,255,0.04)', 
                   borderRadius: '4px', 
                   border: '1px solid var(--border-color)',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  marginRight: '4px'
                 }}
                 title="Default Shell for new tabs"
               >
@@ -774,7 +780,7 @@ export default function App() {
             </div>
           )}
 
-          <div className="top-bar-actions flex items-center gap-1 shrink-0">
+          <div className="top-bar-actions flex items-center gap-3 shrink-0">
             <button className="action-btn" onClick={() => setShowSettingsModal(true)} title="Settings">
               <Settings size={16} />
             </button>
@@ -783,7 +789,7 @@ export default function App() {
             </button>
             {(window as any).electron && (
               <>
-                <div className="window-controls-separator" />
+                <div className="window-controls-separator" style={{ margin: '0 12px' }} />
                 <div className="window-controls flex items-center">
                   <button type="button" className="window-control-btn" onClick={() => (window as any).electron.minimize()} title="Minimize">—</button>
                   <button 
