@@ -745,43 +745,6 @@ export default function App() {
               >
                 <Plus size={14} />
               </button>
-
-              {/* Zoom Controls */}
-              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', borderRight: '1px solid var(--border-color)', paddingRight: '12px', marginRight: '8px' }} className="shrink-0">
-                <button className="action-btn" onClick={handleZoomOut} title="Zoom Out Terminal font" style={{ padding: '2px 4px' }}>
-                  <ZoomOut size={12} />
-                </button>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '32px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-                  {terminalFontSize}px
-                </span>
-                <button className="action-btn" onClick={handleZoomIn} title="Zoom In Terminal font" style={{ padding: '2px 4px' }}>
-                  <ZoomIn size={12} />
-                </button>
-              </div>
-
-              {/* Shell Type Selector dropdown */}
-              <select 
-                value={defaultShell} 
-                onChange={(e) => setDefaultShell(e.target.value)}
-                className="form-input shrink-0" 
-                style={{ 
-                  width: '95px', 
-                  padding: '2px 6px', 
-                  fontSize: '0.7rem', 
-                  height: '22px', 
-                  background: 'rgba(255,255,255,0.04)', 
-                  borderRadius: '4px', 
-                  border: '1px solid var(--border-color)',
-                  cursor: 'pointer',
-                  marginRight: '4px'
-                }}
-                title="Default Shell for new tabs"
-              >
-                <option value="powershell">PowerShell</option>
-                <option value="cmd">CMD</option>
-                <option value="gitbash">Git Bash</option>
-                <option value="wsl">WSL (Linux)</option>
-              </select>
             </div>
           )}
 
@@ -934,6 +897,60 @@ export default function App() {
               Workspace: {panelWorkspace.name} ({panelWorkspace.path})
             </span>
           )}
+        </div>
+
+        {/* Zoom & Shell Controls (Dashboard Pill) */}
+        <div className="flex items-center gap-3 bg-white/5 px-2.5 py-1 rounded border border-white/5">
+          {/* Zoom controls */}
+          <div className="flex items-center gap-1.5">
+            <button 
+              className="action-btn text-slate-400 hover:text-white" 
+              onClick={handleZoomOut} 
+              title="Zoom Out Terminal font"
+              style={{ padding: '1px', display: 'flex', alignItems: 'center' }}
+            >
+              <ZoomOut size={11} />
+            </button>
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '24px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+              {terminalFontSize}px
+            </span>
+            <button 
+              className="action-btn text-slate-400 hover:text-white" 
+              onClick={handleZoomIn} 
+              title="Zoom In Terminal font"
+              style={{ padding: '1px', display: 'flex', alignItems: 'center' }}
+            >
+              <ZoomIn size={11} />
+            </button>
+          </div>
+
+          <div style={{ width: '1px', height: '12px', background: 'rgba(255,255,255,0.08)' }} />
+
+          {/* Shell Selector */}
+          <div className="flex items-center gap-1.5">
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Shell:</span>
+            <select 
+              value={defaultShell} 
+              onChange={(e) => setDefaultShell(e.target.value)}
+              style={{ 
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-main)',
+                fontSize: '0.65rem', 
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 600,
+                cursor: 'pointer',
+                padding: '0',
+                outline: 'none'
+              }}
+              title="Default Shell for new tabs"
+            >
+              <option value="powershell" style={{ background: '#0e111a', color: 'var(--text-main)' }}>powershell</option>
+              <option value="cmd" style={{ background: '#0e111a', color: 'var(--text-main)' }}>cmd</option>
+              <option value="gitbash" style={{ background: '#0e111a', color: 'var(--text-main)' }}>gitbash</option>
+              <option value="wsl" style={{ background: '#0e111a', color: 'var(--text-main)' }}>wsl</option>
+            </select>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
