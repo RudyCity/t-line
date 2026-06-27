@@ -17,7 +17,6 @@ export interface FooterProps {
   handleZoomOut: () => void;
   handleStartTunnel: (type: 'quick' | 'token') => void;
   handleStopTunnel: () => void;
-  getWorkspaceActiveBranch: (workspace: WorkspaceInfo | null) => { name: string; isDirty: boolean; isMain: boolean } | null;
 }
 
 export function Footer({
@@ -29,9 +28,22 @@ export function Footer({
   handleZoomIn,
   handleZoomOut,
   handleStartTunnel,
-  handleStopTunnel,
-  getWorkspaceActiveBranch
+  handleStopTunnel
 }: FooterProps): React.JSX.Element {
+  const getWorkspaceActiveBranch = (workspace: WorkspaceInfo | null): { name: string; isDirty: boolean; isMain: boolean } | null => {
+    if (!workspace || !workspace.isGit || !workspace.worktrees || workspace.worktrees.length === 0) return null;
+    
+    const activeWt = workspace.worktrees.find(wt => wt.path === workspace.path) 
+      || workspace.worktrees.find(wt => wt.isMain) 
+      || workspace.worktrees[0];
+      
+    if (!activeWt) return null;
+    return {
+      name: activeWt.branch || 'detached',
+      isDirty: !!activeWt.isDirty,
+      isMain: activeWt.isMain
+    };
+  };
   return (
     <footer className="app-footer flex items-center justify-between px-[20px] py-2 border-t border-white/5 bg-slate-950/85 text-xs text-slate-400 select-none shrink-0 h-9 z-20">
       <div className="flex items-center gap-4">

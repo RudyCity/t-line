@@ -121,7 +121,8 @@ export default function App() {
     closePane,
     splitFocusedTerminal,
     focusTerminal,
-    handleTitleChange
+    handleTitleChange,
+    importActiveSessions
   } = useTerminals(workspaces, () => setSidebarOpen(false));
 
   // Helper for drag-and-drop merging of tabs
@@ -172,25 +173,15 @@ export default function App() {
     },
     onNextTab: () => {
       const idx = tabs.findIndex(t => t.id === activeTabId);
-      if (idx !== -1 && tabs.length > 1) {
-        setActiveTabId(tabs[(idx + 1) % tabs.length].id);
-      }
+      if (idx !== -1 && tabs.length > 1) setActiveTabId(tabs[(idx + 1) % tabs.length].id);
     },
     onPrevTab: () => {
       const idx = tabs.findIndex(t => t.id === activeTabId);
-      if (idx !== -1 && tabs.length > 1) {
-        setActiveTabId(tabs[(idx - 1 + tabs.length) % tabs.length].id);
-      }
+      if (idx !== -1 && tabs.length > 1) setActiveTabId(tabs[(idx - 1 + tabs.length) % tabs.length].id);
     },
-    onJumpToTab: (index) => {
-      if (tabs[index]) setActiveTabId(tabs[index].id);
-    },
-    onSplitHorizontal: () => {
-      splitFocusedTerminal('horizontal');
-    },
-    onSplitVertical: () => {
-      splitFocusedTerminal('vertical');
-    },
+    onJumpToTab: (index) => { if (tabs[index]) setActiveTabId(tabs[index].id); },
+    onSplitHorizontal: () => splitFocusedTerminal('horizontal'),
+    onSplitVertical: () => splitFocusedTerminal('vertical'),
     onZoomIn: handleZoomIn,
     onZoomOut: handleZoomOut,
   });
@@ -373,34 +364,30 @@ export default function App() {
     setPassword('');
   };
 
+  const [activeSessionsToImport, setActiveSessionsToImport] = useState<Array<{ id: string; shellType: string; cwd: string }>>([]);
+
+  const checkActiveSessions = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/terminals/active', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const sessions: Array<{ id: string; shellType: string; cwd: string }> = await res.json();
+        const notImported = sessions.filter(s => !terminalInstances[s.id]);
+        setActiveSessionsToImport(notImported);
+      }
+    } catch (e) {
+      console.error('Failed to check active sessions:', e);
+    }
+  };
+
   const fetchDashboardData = () => {
     fetchWorkspaces();
     fetchTunnelStatus();
+    checkActiveSessions();
   };
 
-
-
-  // Terminals management
-  const getWorkspaceActiveBranch = (workspace: WorkspaceInfo | null): { name: string; isDirty: boolean; isMain: boolean } | null => {
-    if (!workspace || !workspace.isGit || !workspace.worktrees || workspace.worktrees.length === 0) return null;
-    
-    const activeWt = workspace.worktrees.find(wt => wt.path === workspace.path) 
-      || workspace.worktrees.find(wt => wt.isMain) 
-      || workspace.worktrees[0];
-      
-    if (!activeWt) return null;
-    return {
-      name: activeWt.branch || 'detached',
-      isDirty: !!activeWt.isDirty,
-      isMain: activeWt.isMain
-    };
-  };
-
-
-
-
-
-  // Loading Screen
   if (loading) {
     return (
       <div className="auth-wrapper">
@@ -737,6 +724,34 @@ export default function App() {
           </div>
         </div>
 
+        {activeSessionsToImport.length > 0 && (
+          <div className="mx-4 mt-4 p-3 bg-purple-950/40 border border-purple-500/30 rounded-lg flex items-center justify-between z-30 shrink-0">
+            <div className="flex items-center gap-3">
+              <span className="h-2 w-2 rounded-full bg-purple-500 animate-pulse shadow-[0_0_6px_#a855f7]" />
+              <span className="text-xs text-purple-200">
+                Ditemukan <strong>{activeSessionsToImport.length}</strong> sesi terminal aktif di latar belakang (misal dari desktop).
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => {
+                  importActiveSessions(activeSessionsToImport);
+                  setActiveSessionsToImport([]);
+                }}
+                className="px-3 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition-all cursor-pointer shadow-md shadow-purple-600/10"
+              >
+                Muat Sesi Aktif
+              </button>
+              <button 
+                onClick={() => setActiveSessionsToImport([])}
+                className="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium transition-all cursor-pointer"
+              >
+                Abaikan
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Dynamic Panels */}
         <div className="content-area" style={{ padding: tabs.length === 0 ? '16px' : '0', gap: '0' }}>
           {tabs.length === 0 ? (
@@ -947,7 +962,6 @@ export default function App() {
         gitLoading={gitLoading}
       />
 
-      {/* Cloudflare Tunnel Setup Modal */}
       <TunnelSetupModal
         show={showTunnelModal}
         onClose={() => setShowTunnelModal(false)}
@@ -956,7 +970,6 @@ export default function App() {
         setTunnelToken={setTunnelToken}
       />
 
-      {/* Settings Modal */}
       <SettingsModal
         show={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
@@ -964,14 +977,11 @@ export default function App() {
         workspacesCount={workspaces.length}
       />
 
-      {/* Keyboard Shortcuts Help Modal */}
       <ShortcutHelpModal
         show={showShortcutModal}
         onClose={() => setShowShortcutModal(false)}
       />
 
-
-      {/* App Footer */}
       <Footer
         panelWorkspace={panelWorkspace}
         tunnelStatus={tunnelStatus}
@@ -982,7 +992,6 @@ export default function App() {
         handleZoomOut={handleZoomOut}
         handleStartTunnel={handleStartTunnel}
         handleStopTunnel={handleStopTunnel}
-        getWorkspaceActiveBranch={getWorkspaceActiveBranch}
       />
     </div>
   );

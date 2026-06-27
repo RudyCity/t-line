@@ -397,6 +397,53 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     );
   }, []);
 
+  const importActiveSessions = useCallback((sessions: Array<{ id: string; shellType: string; cwd: string }>) => {
+    setTerminalInstances(prev => {
+      const next = { ...prev };
+      sessions.forEach(s => {
+        if (!next[s.id]) {
+          next[s.id] = {
+            id: s.id,
+            name: `Terminal (${s.shellType === 'powershell' ? 'ps' : s.shellType})`,
+            cwd: s.cwd,
+            shellType: s.shellType
+          };
+        }
+      });
+      return next;
+    });
+
+    setTabs(prev => {
+      const nextTabs = [...prev];
+      let firstNewTabId = '';
+      sessions.forEach(s => {
+        const exists = prev.some(t => {
+          if (t.type === 'terminal' && t.layout) {
+            return getTerminalIds(t.layout).includes(s.id);
+          }
+          return false;
+        });
+
+        if (!exists) {
+          const tabId = `tab-${Date.now()}-${s.id}`;
+          if (!firstNewTabId) firstNewTabId = tabId;
+          nextTabs.push({
+            id: tabId,
+            name: `Terminal (${s.shellType === 'powershell' ? 'ps' : s.shellType})`,
+            type: 'terminal',
+            layout: { type: 'leaf', terminalId: s.id },
+            focusedTerminalId: s.id
+          });
+        }
+      });
+
+      if (firstNewTabId) {
+        setActiveTabId(firstNewTabId);
+      }
+      return nextTabs;
+    });
+  }, []);
+
   return {
     tabs,
     setTabs,
@@ -416,6 +463,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     closePane,
     splitFocusedTerminal,
     focusTerminal,
-    handleTitleChange
+    handleTitleChange,
+    importActiveSessions
   };
 }

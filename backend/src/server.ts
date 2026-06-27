@@ -384,6 +384,11 @@ app.post('/api/tunnel/stop', authMiddleware, (req, res) => {
   res.json({ success: true, message: 'Tunnel stopped.' });
 });
 
+// Active terminals listing endpoint for remote sync
+app.get('/api/terminals/active', authMiddleware, (req, res) => {
+  res.json(terminalManager.listTerminals());
+});
+
 // File System directory browser endpoint
 app.get('/api/fs/list', authMiddleware, (req, res) => {
   const targetPath = req.query.path as string;
