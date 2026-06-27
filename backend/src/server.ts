@@ -37,6 +37,101 @@ const port = process.env.PORT || 3999;
 app.use(cors());
 app.use(express.json());
 
+// ----------------------------------------------------
+// Cloudflare Tunnel & IP Access Rules Manager
+// ----------------------------------------------------
+const RULES_FILE = path.join(os.homedir(), '.tline-ip-rules.json');
+
+let ipRules: Record<string, 'allow' | 'block'> = {};
+try {
+  if (fs.existsSync(RULES_FILE)) {
+    ipRules = JSON.parse(fs.readFileSync(RULES_FILE, 'utf8'));
+  }
+} catch (e) {
+  console.error('Failed to load IP rules:', e);
+}
+
+function saveIpRules() {
+  try {
+    fs.writeFileSync(RULES_FILE, JSON.stringify(ipRules, null, 2));
+  } catch (e) {
+    console.error('Failed to save IP rules:', e);
+  }
+}
+
+function getClientIp(req: express.Request): string {
+  const cfIp = req.headers['cf-connecting-ip'];
+  if (cfIp && typeof cfIp === 'string') return cfIp;
+  
+  const forwardIp = req.headers['x-forwarded-for'];
+  if (forwardIp && typeof forwardIp === 'string') {
+    return forwardIp.split(',')[0].trim();
+  }
+  
+  return req.socket.remoteAddress || 'unknown';
+}
+
+function parseUserAgent(ua: string): string {
+  if (!ua) return 'Unknown Device';
+  const uaLower = ua.toLowerCase();
+  if (uaLower.includes('windows')) return 'Windows PC';
+  if (uaLower.includes('macintosh') || uaLower.includes('mac os')) return 'Mac';
+  if (uaLower.includes('iphone')) return 'iPhone';
+  if (uaLower.includes('ipad')) return 'iPad';
+  if (uaLower.includes('android')) {
+    if (uaLower.includes('mobile')) return 'Android Mobile';
+    return 'Android Tablet';
+  }
+  if (uaLower.includes('linux')) return 'Linux PC';
+  return 'Web Client';
+}
+
+interface AccessLog {
+  ip: string;
+  userAgent: string;
+  deviceType: string;
+  lastActive: number;
+  path: string;
+}
+
+let recentAccesses: AccessLog[] = [];
+
+// Access Logging & Blocking Middleware
+app.use((req, res, next) => {
+  const ip = getClientIp(req);
+  const ua = req.headers['user-agent'] || '';
+  const deviceType = parseUserAgent(ua);
+  
+  // Log API requests
+  if (req.path.startsWith('/api/')) {
+    const existingIndex = recentAccesses.findIndex(a => a.ip === ip);
+    if (existingIndex > -1) {
+      recentAccesses[existingIndex].lastActive = Date.now();
+      recentAccesses[existingIndex].path = req.path;
+      if (ua) {
+        recentAccesses[existingIndex].userAgent = ua;
+        recentAccesses[existingIndex].deviceType = deviceType;
+      }
+    } else {
+      recentAccesses.unshift({
+        ip,
+        userAgent: ua,
+        deviceType,
+        lastActive: Date.now(),
+        path: req.path
+      });
+      if (recentAccesses.length > 100) recentAccesses.pop();
+    }
+  }
+
+  // Block check
+  if (ipRules[ip] === 'block') {
+    return res.status(403).json({ error: 'Access denied: your IP has been blocked.' });
+  }
+
+  next();
+});
+
 // Serve static frontend in production if available
 const frontendDistPath = path.join(__dirname, '../../frontend/dist');
 if (fs.existsSync(frontendDistPath)) {
@@ -216,6 +311,37 @@ app.post('/api/worktrees/remove', authMiddleware, async (req, res) => {
   } else {
     res.status(400).json(result);
   }
+});
+
+// ----------------------------------------------------
+// Security & Access Control Endpoints (Protected)
+// ----------------------------------------------------
+
+app.get('/api/security/connections', authMiddleware, (req, res) => {
+  res.json({
+    accesses: recentAccesses,
+    rules: ipRules
+  });
+});
+
+app.post('/api/security/rules', authMiddleware, (req, res) => {
+  const { ip, rule } = req.body;
+  if (!ip) {
+    return res.status(400).json({ error: 'IP address is required.' });
+  }
+  
+  const currentIp = getClientIp(req);
+  if (ip === currentIp && rule === 'block') {
+    return res.status(400).json({ error: 'You cannot block your own current IP address.' });
+  }
+
+  if (rule === 'block') {
+    ipRules[ip] = 'block';
+  } else {
+    delete ipRules[ip];
+  }
+  saveIpRules();
+  res.json({ success: true, rules: ipRules });
 });
 
 // ----------------------------------------------------
@@ -430,6 +556,26 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ noServer: true });
 
 server.on('upgrade', (request, socket, head) => {
+  // IP block check for WebSocket
+  const cfIp = request.headers['cf-connecting-ip'];
+  let ip = 'unknown';
+  if (cfIp && typeof cfIp === 'string') {
+    ip = cfIp;
+  } else {
+    const forwardIp = request.headers['x-forwarded-for'];
+    if (forwardIp && typeof forwardIp === 'string') {
+      ip = forwardIp.split(',')[0].trim();
+    } else {
+      ip = request.socket.remoteAddress || 'unknown';
+    }
+  }
+
+  if (ipRules[ip] === 'block') {
+    socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+
   const urlParams = new URL(request.url || '', `http://${request.headers.host}`);
   const token = urlParams.searchParams.get('token');
 

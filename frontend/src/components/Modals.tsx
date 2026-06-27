@@ -320,13 +320,68 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   token,
   workspacesCount
 }) => {
-  const [activeTab, setActiveTab] = React.useState<'general' | 'security'>('general');
+  const [activeTab, setActiveTab] = React.useState<'general' | 'security' | 'connections'>('general');
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
+
+  // Access Control State
+  const [connections, setConnections] = React.useState<any[]>([]);
+  const [ipRules, setIpRules] = React.useState<Record<string, string>>({});
+
+  const fetchConnections = async () => {
+    try {
+      const res = await fetch('/api/security/connections', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setConnections(data.accesses || []);
+        setIpRules(data.rules || {});
+      }
+    } catch (e) {
+      console.error('Failed to fetch connections:', e);
+    }
+  };
+
+  React.useEffect(() => {
+    if (show) {
+      fetchConnections();
+      
+      // Auto-refresh logs every 10 seconds if Access Control tab is open
+      if (activeTab === 'connections') {
+        const interval = setInterval(fetchConnections, 10000);
+        return () => clearInterval(interval);
+      }
+    }
+  }, [show, activeTab]);
+
+  const handleToggleRule = async (ip: string, currentRule: string | undefined) => {
+    const newRule = currentRule === 'block' ? 'allow' : 'block';
+    try {
+      const res = await fetch('/api/security/rules', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ ip, rule: newRule })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setIpRules(data.rules || {});
+        fetchConnections();
+      } else {
+        const errData = await res.json();
+        alert(errData.error || 'Failed to update rule');
+      }
+    } catch (e) {
+      alert('Error updating security rule.');
+    }
+  };
 
   if (!show) return null;
 
@@ -374,7 +429,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content glass-panel" style={{ maxWidth: '440px', padding: 0, overflow: 'hidden' }}>
+      <div className="modal-content glass-panel" style={{ maxWidth: '480px', padding: 0, overflow: 'hidden' }}>
         <div className="modal-header" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 className="modal-title">Settings</h3>
           <button type="button" className="action-btn" onClick={onClose}>×</button>
@@ -399,6 +454,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           >
             <Shield size={14} />
             <span>Security</span>
+          </button>
+          <button
+            type="button"
+            className={`sidebar-panel-tab ${activeTab === 'connections' ? 'active' : ''}`}
+            onClick={() => setActiveTab('connections')}
+            style={{ padding: '12px' }}
+          >
+            <Shield size={14} />
+            <span>Access Control</span>
           </button>
         </div>
 
@@ -483,6 +547,94 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </Button>
               </div>
             </form>
+          )}
+
+          {activeTab === 'connections' && (
+            <div>
+              <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(168, 85, 247, 0.05)', border: '1px solid rgba(168, 85, 247, 0.1)', padding: '10px', borderRadius: '8px' }}>
+                <Shield size={16} className="text-purple-400 shrink-0" />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                  Manage client devices accessing your server. You can block individual IPs to prevent unauthorized web or terminal connection requests.
+                </span>
+              </div>
+
+              <h4 style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-main)' }}>
+                Active & Recent Devices
+              </h4>
+              <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '6px', background: 'rgba(0,0,0,0.1)' }}>
+                {connections.length === 0 ? (
+                  <div style={{ fontSize: '0.75rem', padding: '16px', color: 'var(--text-muted)', textAlign: 'center' }}>
+                    No connection history logged.
+                  </div>
+                ) : (
+                  connections.map(conn => {
+                    const isBlocked = ipRules[conn.ip] === 'block';
+                    const relativeTime = Math.max(0, Math.round((Date.now() - conn.lastActive) / 1000));
+                    let timeStr = 'Just now';
+                    if (relativeTime >= 60) {
+                      const mins = Math.floor(relativeTime / 60);
+                      timeStr = `${mins}m ago`;
+                    } else if (relativeTime > 5) {
+                      timeStr = `${relativeTime}s ago`;
+                    }
+                    
+                    return (
+                      <div key={conn.ip} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.03)', fontSize: '0.75rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, flex: 1, paddingRight: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{conn.deviceType}</span>
+                            <span style={{ fontSize: '0.6rem', padding: '1px 4px', borderRadius: '3px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }}>
+                              {conn.path.split('/')[2] || 'api'}
+                            </span>
+                          </div>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-muted)' }} className="truncate">
+                            {conn.ip}
+                          </span>
+                          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', opacity: 0.7 }}>
+                            Last Active: {timeStr}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleRule(conn.ip, ipRules[conn.ip])}
+                          className={`btn ${isBlocked ? 'btn-secondary' : 'btn-danger'}`}
+                          style={{ padding: '3px 8px', fontSize: '0.65rem', height: '22px', cursor: 'pointer', flexShrink: 0, borderRadius: '4px' }}
+                        >
+                          {isBlocked ? 'Unblock' : 'Block'}
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {Object.keys(ipRules).length > 0 && (
+                <div>
+                  <h4 style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '8px', color: 'rgb(248, 113, 113)' }}>
+                    Blocked IPs ({Object.keys(ipRules).length})
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '100px', overflowY: 'auto' }}>
+                    {Object.keys(ipRules).map(ip => (
+                      <div key={ip} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 8px', borderRadius: '4px', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.1)', fontSize: '0.75rem' }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', color: 'rgb(248, 113, 113)' }}>{ip}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleRule(ip, 'block')}
+                          className="btn btn-secondary"
+                          style={{ padding: '3px 6px', fontSize: '0.65rem', height: '20px', cursor: 'pointer', borderRadius: '4px' }}
+                        >
+                          Unblock
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
+                <Button type="button" onClick={onClose}>Close</Button>
+              </div>
+            </div>
           )}
         </div>
       </div>
