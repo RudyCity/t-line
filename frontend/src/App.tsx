@@ -673,7 +673,7 @@ export default function App() {
         
         {/* Topbar */}
         <div className="top-bar flex items-center justify-between">
-          <div className="top-bar-info flex items-center gap-3">
+          <div className="top-bar-info flex items-center gap-3 shrink-0">
             <button 
               className="action-btn" 
               onClick={() => {
@@ -693,8 +693,88 @@ export default function App() {
               <span className={`dot ${wsConnected ? 'dot-active' : 'dot-inactive'}`} />
             </span>
           </div>
-          
-          <div className="top-bar-actions flex items-center gap-1">
+
+          {/* Integrated Tab Bar */}
+          {terminals.length > 0 && (
+            <div className="flex items-center gap-1.5 flex-1 overflow-x-auto mx-4 h-full" style={{ scrollbarWidth: 'none', WebkitAppRegion: 'no-drag' } as any}>
+              {terminals.map(t => {
+                const isFile = t.type === 'file';
+                return (
+                  <div 
+                    key={t.id} 
+                    className={`tab ${activeTabId === t.id ? 'tab-active' : ''}`}
+                    onClick={() => setActiveTabId(t.id)}
+                    style={{ 
+                      height: '32px', 
+                      padding: '0 10px', 
+                      borderRadius: '6px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '6px', 
+                      fontSize: '0.75rem', 
+                      background: activeTabId === t.id ? 'rgba(168, 85, 247, 0.08)' : 'transparent',
+                      border: activeTabId === t.id ? '1px solid rgba(168, 85, 247, 0.25)' : '1px solid transparent',
+                      color: activeTabId === t.id ? '#c084fc' : 'var(--text-muted)',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {isFile ? (
+                      <FileCode size={13} style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
+                    ) : (
+                      <TerminalIcon size={13} style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
+                    )}
+                    <span>{t.name}</span>
+                    {!isFile && (
+                      <span style={{ fontSize: '0.6rem', opacity: 0.6, fontFamily: 'var(--font-mono)' }}>({t.shellType === 'powershell' ? 'ps' : t.shellType})</span>
+                    )}
+                    <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)} style={{ marginLeft: '4px', fontSize: '11px', opacity: 0.6 }}>×</span>
+                  </div>
+                );
+              })}
+              <button className="action-btn shrink-0" onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')} title="New terminal">
+                <Plus size={14} />
+              </button>
+
+              {/* Zoom Controls */}
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px', borderRight: '1px solid var(--border-color)', paddingRight: '8px', marginRight: '4px' }} className="shrink-0">
+                <button className="action-btn" onClick={handleZoomOut} title="Zoom Out Terminal font" style={{ padding: '2px' }}>
+                  <ZoomOut size={12} />
+                </button>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '28px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                  {terminalFontSize}px
+                </span>
+                <button className="action-btn" onClick={handleZoomIn} title="Zoom In Terminal font" style={{ padding: '2px' }}>
+                  <ZoomIn size={12} />
+                </button>
+              </div>
+
+              {/* Shell Type Selector dropdown */}
+              <select 
+                value={defaultShell} 
+                onChange={(e) => setDefaultShell(e.target.value)}
+                className="form-input shrink-0" 
+                style={{ 
+                  width: '90px', 
+                  padding: '2px 4px', 
+                  fontSize: '0.7rem', 
+                  height: '22px', 
+                  background: 'rgba(255,255,255,0.04)', 
+                  borderRadius: '4px', 
+                  border: '1px solid var(--border-color)',
+                  cursor: 'pointer'
+                }}
+                title="Default Shell for new tabs"
+              >
+                <option value="powershell">PowerShell</option>
+                <option value="cmd">CMD</option>
+                <option value="gitbash">Git Bash</option>
+                <option value="wsl">WSL (Linux)</option>
+              </select>
+            </div>
+          )}
+
+          <div className="top-bar-actions flex items-center gap-1 shrink-0">
             <button className="action-btn" onClick={() => setShowSettingsModal(true)} title="Settings">
               <Settings size={16} />
             </button>
@@ -722,7 +802,7 @@ export default function App() {
         </div>
 
         {/* Dynamic Panels */}
-        <div className="content-area">
+        <div className="content-area" style={{ padding: terminals.length === 0 ? '16px' : '0', gap: '0' }}>
           {terminals.length === 0 ? (
             
             // Empty Dashboard Welcome View
@@ -753,88 +833,20 @@ export default function App() {
             
           ) : (
             
-            // Terminals Terminal View
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', gap: '12px' }}>
-              <div className="tab-bar">
-                {terminals.map(t => {
-                  const isFile = t.type === 'file';
-                  return (
-                    <div 
-                      key={t.id} 
-                      className={`tab ${activeTabId === t.id ? 'tab-active' : ''}`}
-                      onClick={() => setActiveTabId(t.id)}
-                    >
-                      {isFile ? (
-                        <FileCode size={14} style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
-                      ) : (
-                        <TerminalIcon size={14} style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
-                      )}
-                      <span>{t.name}</span>
-                      {!isFile && (
-                        <span style={{ fontSize: '0.65rem', opacity: 0.6, fontFamily: 'var(--font-mono)' }}>({t.shellType === 'powershell' ? 'ps' : t.shellType})</span>
-                      )}
-                      <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)}>×</span>
-                    </div>
-                  );
-                })}
-                <button className="action-btn" style={{ marginLeft: '4px' }} onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')} title="New terminal">
-                  <Plus size={16} />
-                </button>
-
-                {/* Zoom Controls */}
-                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', borderRight: '1px solid var(--border-color)', paddingRight: '12px', marginRight: '4px' }}>
-                  <button className="action-btn" onClick={handleZoomOut} title="Zoom Out Terminal font" style={{ padding: '2px 4px' }}>
-                    <ZoomOut size={13} />
-                  </button>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', minWidth: '32px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-                    {terminalFontSize}px
-                  </span>
-                  <button className="action-btn" onClick={handleZoomIn} title="Zoom In Terminal font" style={{ padding: '2px 4px' }}>
-                    <ZoomIn size={13} />
-                  </button>
+            // Terminals Terminal View - fully flush/nempel
+            <div className="terminal-container" style={{ flex: 1, border: 'none', borderRadius: 0, padding: 0 }}>
+              {terminals.map(t => (
+                <div 
+                  key={t.id} 
+                  style={{ display: activeTabId === t.id ? 'block' : 'none', width: '100%', height: '100%' }}
+                >
+                  {t.type === 'file' ? (
+                    <FileViewerTab filePath={t.filePath || ''} token={localStorage.getItem('token') || ''} />
+                  ) : (
+                    <TerminalInstance tab={t as any} active={activeTabId === t.id} wsConnected={wsConnected} fontSize={terminalFontSize} />
+                  )}
                 </div>
-
-                {/* Shell Type Selector dropdown */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Shell:</span>
-                  <select 
-                    value={defaultShell} 
-                    onChange={(e) => setDefaultShell(e.target.value)}
-                    className="form-input" 
-                    style={{ 
-                      width: '110px', 
-                      padding: '2px 6px', 
-                      fontSize: '0.75rem', 
-                      height: '24px', 
-                      background: 'rgba(255,255,255,0.04)', 
-                      borderRadius: '4px', 
-                      border: '1px solid var(--border-color)',
-                      cursor: 'pointer'
-                    }}
-                    title="Default Shell for new tabs"
-                  >
-                    <option value="powershell">PowerShell</option>
-                    <option value="cmd">CMD</option>
-                    <option value="gitbash">Git Bash</option>
-                    <option value="wsl">WSL (Linux)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="terminal-container">
-                {terminals.map(t => (
-                  <div 
-                    key={t.id} 
-                    style={{ display: activeTabId === t.id ? 'block' : 'none', width: '100%', height: '100%' }}
-                  >
-                    {t.type === 'file' ? (
-                      <FileViewerTab filePath={t.filePath || ''} token={localStorage.getItem('token') || ''} />
-                    ) : (
-                      <TerminalInstance tab={t as any} active={activeTabId === t.id} wsConnected={wsConnected} fontSize={terminalFontSize} />
-                    )}
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
           )}
         </div>
