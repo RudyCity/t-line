@@ -497,9 +497,9 @@ export default function App() {
               </button>
             </div>
 
-            <div className="workspace-list flex flex-col gap-0">
+            <div className="workspace-list flex flex-col gap-2.5 px-3">
               {workspaces.map(w => (
-                <div key={w.id} className="group p-4 border-b border-white/5 bg-slate-900/10 backdrop-blur-md hover:bg-slate-900/40 transition-all duration-300 relative overflow-hidden flex flex-col gap-2">
+                <div key={w.id} className="group p-3 rounded-lg border border-white/5 bg-slate-900/10 backdrop-blur-md hover:bg-slate-900/40 hover:border-purple-500/20 transition-all duration-300 relative overflow-hidden flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 font-medium truncate">
                       <Folder size={16} className="text-sky-400 shrink-0" />
@@ -972,7 +972,7 @@ export default function App() {
 
 
       {/* App Footer */}
-      <footer className="app-footer flex items-center justify-between px-4 py-2 border-t border-white/5 bg-slate-950/85 text-xs text-slate-400 select-none shrink-0 h-9 z-20">
+      <footer className="app-footer flex items-center justify-between px-[20px] py-2 border-t border-white/5 bg-slate-950/85 text-xs text-slate-400 select-none shrink-0 h-9 z-20">
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1.5 font-medium text-slate-300">
             <span className="h-2 w-2 rounded-full bg-purple-500 shadow-[0_0_6px_#a855f7]" />
