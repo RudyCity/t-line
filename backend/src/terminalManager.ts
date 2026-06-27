@@ -18,6 +18,7 @@ export interface ITerminal {
   onExit(cb: (code: number) => void): void;
   kill(): void;
   getPid(): number;
+  getProcessName(): string;
 }
 
 // node-pty based terminal implementation
@@ -65,6 +66,10 @@ class PtyTerminal implements ITerminal {
   getPid(): number {
     return this.ptyProcess.pid;
   }
+
+  getProcessName(): string {
+    return this.ptyProcess.process;
+  }
 }
 
 // child_process.spawn fallback terminal implementation
@@ -110,6 +115,10 @@ class SpawnTerminal implements ITerminal {
 
   getPid(): number {
     return this.pid;
+  }
+
+  getProcessName(): string {
+    return 'Shell';
   }
 }
 

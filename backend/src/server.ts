@@ -593,6 +593,35 @@ server.on('upgrade', (request, socket, head) => {
 wss.on('connection', (ws: WebSocket) => {
   const activeTerminals = new Set<string>();
 
+  // Helper to start process title polling
+  const startTitlePolling = (termId: string, terminal: any) => {
+    let lastProcessName = '';
+    const titleInterval = setInterval(() => {
+      if (ws.readyState !== WebSocket.OPEN) {
+        clearInterval(titleInterval);
+        return;
+      }
+      try {
+        let currentName = terminal.getProcessName();
+        if (currentName) {
+          // clean it (strip .exe)
+          if (currentName.toLowerCase().endsWith('.exe')) {
+            currentName = currentName.slice(0, -4);
+          }
+          if (currentName !== lastProcessName) {
+            lastProcessName = currentName;
+            ws.send(JSON.stringify({ type: 'title', id: termId, title: currentName }));
+          }
+        }
+      } catch (e) {
+        clearInterval(titleInterval);
+      }
+    }, 1000);
+
+    // Return a cleanup function
+    return () => clearInterval(titleInterval);
+  };
+
   ws.on('message', (message: string) => {
     try {
       const payload = JSON.parse(message);
@@ -605,6 +634,12 @@ wss.on('connection', (ws: WebSocket) => {
         
         if (isPersisted) {
           activeTerminals.add(id);
+          const term = terminalManager.getTerminal(id);
+          let stopPolling: (() => void) | null = null;
+          if (term) {
+            stopPolling = startTitlePolling(id, term);
+          }
+
           terminalManager.setSender(
             id,
             (data) => {
@@ -614,6 +649,7 @@ wss.on('connection', (ws: WebSocket) => {
             },
             (code) => {
               activeTerminals.delete(id);
+              if (stopPolling) stopPolling();
               if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: 'exit', id, code }));
               }
@@ -637,6 +673,7 @@ wss.on('connection', (ws: WebSocket) => {
           
           const term = terminalManager.createTerminal(id, cwd, cols, rows, shellType);
           activeTerminals.add(id);
+          const stopPolling = startTitlePolling(id, term);
 
           terminalManager.setSender(
             id,
@@ -647,6 +684,7 @@ wss.on('connection', (ws: WebSocket) => {
             },
             (code) => {
               activeTerminals.delete(id);
+              stopPolling();
               if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: 'exit', id, code }));
               }

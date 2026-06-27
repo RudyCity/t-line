@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.0.9] - 2026-06-27
+
+### Added
+- **Backend Process Name Polling**: Integrated active foreground process tracking on the backend (querying `node-pty` process names every 1,000ms) and dispatching WebSocket `title` events to update client terminal tab titles dynamically, resolving WinPTY/shell limitations on Windows.
+
 ## [1.0.8] - 2026-06-27
 
 ### Changed

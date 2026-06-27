@@ -80,6 +80,8 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     wsManager.subscribe(tab.id, (payload) => {
       if (payload.type === 'data') {
         term.write(payload.data);
+      } else if (payload.type === 'title') {
+        onTitleChangeRef.current?.(payload.title);
       } else if (payload.type === 'exit') {
         term.write('\r\n\r\n[Process Exited]\r\n');
       }
