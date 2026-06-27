@@ -106,7 +106,8 @@ interface TerminalSession {
   shellType: string;
   cwd: string;
   /** Rolling output buffer for replay on reconnect */
-  outputBuffer: string;
+  outputBufferChunks: string[];
+  outputBufferLength: number;
 }
 
 // ── Main Terminal Manager ──────────────────────────────────
@@ -165,7 +166,8 @@ export class TerminalManager {
       isDetached: false,
       shellType,
       cwd: normalizedCwd,
-      outputBuffer: '',
+      outputBufferChunks: [],
+      outputBufferLength: 0,
     };
     this.sessions.set(id, session);
 
@@ -174,13 +176,15 @@ export class TerminalManager {
       const activeSess = this.sessions.get(id);
       if (!activeSess) return;
 
-      // Append to rolling buffer (trim if too large)
-      activeSess.outputBuffer += data;
-      if (activeSess.outputBuffer.length > OUTPUT_BUFFER_MAX_BYTES) {
-        // Keep only the last OUTPUT_BUFFER_MAX_BYTES characters
-        activeSess.outputBuffer = activeSess.outputBuffer.slice(
-          activeSess.outputBuffer.length - OUTPUT_BUFFER_MAX_BYTES
-        );
+      activeSess.outputBufferChunks.push(data);
+      activeSess.outputBufferLength += data.length;
+
+      // Trim buffer chunks if they exceed maximum bytes
+      while (activeSess.outputBufferLength > OUTPUT_BUFFER_MAX_BYTES && activeSess.outputBufferChunks.length > 0) {
+        const removed = activeSess.outputBufferChunks.shift();
+        if (removed) {
+          activeSess.outputBufferLength -= removed.length;
+        }
       }
 
       if (activeSess.sender) {
@@ -207,13 +211,17 @@ export class TerminalManager {
 
   /** Get the output buffer for replay on reconnect */
   getOutputBuffer(id: string): string {
-    return this.sessions.get(id)?.outputBuffer ?? '';
+    const session = this.sessions.get(id);
+    return session ? session.outputBufferChunks.join('') : '';
   }
 
   /** Clear output buffer (after replay) */
   clearOutputBuffer(id: string): void {
     const session = this.sessions.get(id);
-    if (session) session.outputBuffer = '';
+    if (session) {
+      session.outputBufferChunks = [];
+      session.outputBufferLength = 0;
+    }
   }
 
   setSender(id: string, sender: ((data: string) => void) | null, onExit?: ((code: number) => void) | null) {

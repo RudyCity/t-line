@@ -1,9 +1,9 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog, Tray, nativeImage, Notification } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
-const net = require('net');
 const fs = require('fs');
 const os = require('os');
+const http = require('http');
 
 // Disable hardware acceleration to prevent GPU process crash (error code -1073741819)
 app.disableHardwareAcceleration();
@@ -18,21 +18,35 @@ let bypassToken = null;
 
 const BYPASS_TOKEN_FILE = path.join(os.homedir(), '.tline-bypass-token');
 
-function isPortOpen(port, host = '127.0.0.1') {
+function isBackendRunning(port) {
   return new Promise((resolve) => {
-    const socket = new net.Socket();
-    const onError = () => {
-      socket.destroy();
-      resolve(false);
-    };
-    socket.setTimeout(1000);
-    socket.once('error', onError);
-    socket.once('timeout', onError);
-    socket.once('connect', () => {
-      socket.destroy();
-      resolve(true);
+    const req = http.request({
+      host: '127.0.0.1',
+      port: port,
+      path: '/api/auth/setup-status',
+      method: 'GET',
+      timeout: 1000
+    }, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          resolve(parsed && typeof parsed.setupRequired === 'boolean');
+        } catch (e) {
+          resolve(false);
+        }
+      });
     });
-    socket.connect(port, host);
+
+    req.on('error', () => {
+      resolve(false);
+    });
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(false);
+    });
+    req.end();
   });
 }
 
@@ -360,7 +374,7 @@ app.on('ready', async () => {
   createTray();
   
   const port = 3999;
-  const alreadyRunning = await isPortOpen(port);
+  const alreadyRunning = await isBackendRunning(port);
   if (alreadyRunning) {
     console.log(`Backend is already running on port ${port}. Connecting directly...`);
     backendStatus = 'running';

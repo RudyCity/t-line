@@ -15,10 +15,10 @@ interface AppConfig {
 // Generate an ephemeral bypass token for the local Electron instance on each startup
 export const localBypassToken = crypto.randomBytes(32).toString('hex');
 
-// Write the bypass token to a file so that a separately launched Electron instance can read it
+// Write the bypass token to a file with owner-only read/write permissions
 const BYPASS_TOKEN_FILE = path.join(os.homedir(), '.tline-bypass-token');
 try {
-  fs.writeFileSync(BYPASS_TOKEN_FILE, localBypassToken, 'utf8');
+  fs.writeFileSync(BYPASS_TOKEN_FILE, localBypassToken, { encoding: 'utf8', mode: 0o600 });
 } catch (e) {
   console.error('Failed to write bypass token file:', e);
 }

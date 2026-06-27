@@ -1,26 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Folder, 
-  GitBranch, 
-  GitFork, 
   Plus, 
-  Trash2, 
   Terminal as TerminalIcon, 
   LogOut, 
   Loader2, 
-  FolderPlus, 
-  ExternalLink,
   Menu as MenuIcon,
   GitCompare,
   FolderTree,
   Settings,
   FileCode,
-  ZoomIn,
-  ZoomOut,
   Keyboard
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
-import { TerminalInstance } from './components/TerminalInstance';
 import { FileViewerTab } from './components/FileViewerTab';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
 import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal } from './components/Modals';
@@ -29,158 +21,12 @@ import { useTunnel } from './hooks/useTunnel';
 import { useWorkspaces } from './hooks/useWorkspaces';
 import { useTerminals, WorkspaceInfo } from './hooks/useTerminals';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { SplitLayoutNode, TerminalInstanceData } from './hooks/useTerminals';
-
-
-
-
-// ── Split Layout Renderer Component ────────────────────────
-
-interface SplitLayoutRendererProps {
-  node: SplitLayoutNode;
-  activeTabId: string;
-  focusedTerminalId?: string;
-  wsConnected: boolean;
-  terminalFontSize: number;
-  terminalInstances: Record<string, TerminalInstanceData>;
-  handleTitleChange: (id: string, title: string) => void;
-  focusTerminal: (id: string) => void;
-  closePane: (id: string) => void;
-  splitFocusedTerminal: (direction: 'horizontal' | 'vertical') => void;
-  hasMultiplePanes: boolean;
-}
-
-function SplitLayoutRenderer({
-  node,
-  activeTabId,
-  focusedTerminalId,
-  wsConnected,
-  terminalFontSize,
-  terminalInstances,
-  handleTitleChange,
-  focusTerminal,
-  closePane,
-  splitFocusedTerminal,
-  hasMultiplePanes
-}: SplitLayoutRendererProps) {
-  if (node.type === 'leaf') {
-    const term = terminalInstances[node.terminalId];
-    if (!term) return null;
-    const isFocused = focusedTerminalId === node.terminalId;
-
-    return (
-      <div 
-        onClick={() => focusTerminal(node.terminalId)}
-        style={{
-          width: '100%',
-          height: '100%',
-          position: 'relative',
-          border: isFocused ? '1px solid rgba(168, 85, 247, 0.4)' : '1px solid transparent',
-          background: isFocused ? 'rgba(168, 85, 247, 0.02)' : 'transparent',
-          boxSizing: 'border-box'
-        }}
-        className="group/pane"
-      >
-        <TerminalInstance
-          tab={term as any}
-          active={!!(activeTabId && isFocused)}
-          wsConnected={wsConnected}
-          fontSize={terminalFontSize}
-          onTitleChange={(title) => handleTitleChange(term.id, title)}
-        />
-        
-        {/* Floating action bar at top-right of each pane */}
-        <div 
-          className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover/pane:opacity-100 transition-opacity duration-200 z-50 bg-[#0f111a]/85 backdrop-blur-md border border-purple-500/25 rounded-md p-1 shadow-lg"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            type="button"
-            title="Split Horizontal (Alt+D)"
-            onClick={() => splitFocusedTerminal('horizontal')}
-            className="text-slate-400 hover:text-purple-400 hover:bg-white/5 rounded p-1 transition-colors flex items-center justify-center cursor-pointer"
-            style={{ width: '20px', height: '20px' }}
-          >
-            <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
-              <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm6.5 1v8h1V4z" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            title="Split Vertical (Alt+E)"
-            onClick={() => splitFocusedTerminal('vertical')}
-            className="text-slate-400 hover:text-purple-400 hover:bg-white/5 rounded p-1 transition-colors flex items-center justify-center cursor-pointer"
-            style={{ width: '20px', height: '20px' }}
-          >
-            <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
-              <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm1 5.5h12v-1H2z" />
-            </svg>
-          </button>
-          {hasMultiplePanes && (
-            <button
-              type="button"
-              title="Close Pane (Alt+W)"
-              onClick={() => closePane(node.terminalId)}
-              className="text-slate-400 hover:text-red-400 hover:bg-white/5 rounded p-1 transition-colors flex items-center justify-center cursor-pointer"
-              style={{ width: '20px', height: '20px' }}
-            >
-              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 3l10 10M13 3L3 13" />
-              </svg>
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <PanelGroup direction={node.direction}>
-      <Panel defaultSize={50}>
-        <SplitLayoutRenderer
-          node={node.first}
-          activeTabId={activeTabId}
-          focusedTerminalId={focusedTerminalId}
-          wsConnected={wsConnected}
-          terminalFontSize={terminalFontSize}
-          terminalInstances={terminalInstances}
-          handleTitleChange={handleTitleChange}
-          focusTerminal={focusTerminal}
-          closePane={closePane}
-          splitFocusedTerminal={splitFocusedTerminal}
-          hasMultiplePanes={hasMultiplePanes}
-        />
-      </Panel>
-      <PanelResizeHandle
-        className="bg-purple-500/15 hover:bg-purple-500/40 transition-colors flex-shrink-0"
-        style={{
-          width: node.direction === 'horizontal' ? '4px' : '100%',
-          height: node.direction === 'vertical' ? '4px' : '100%',
-          cursor: node.direction === 'horizontal' ? 'col-resize' : 'row-resize',
-        }}
-      />
-      <Panel defaultSize={50}>
-        <SplitLayoutRenderer
-          node={node.second}
-          activeTabId={activeTabId}
-          focusedTerminalId={focusedTerminalId}
-          wsConnected={wsConnected}
-          terminalFontSize={terminalFontSize}
-          terminalInstances={terminalInstances}
-          handleTitleChange={handleTitleChange}
-          focusTerminal={focusTerminal}
-          closePane={closePane}
-          splitFocusedTerminal={splitFocusedTerminal}
-          hasMultiplePanes={hasMultiplePanes}
-        />
-      </Panel>
-    </PanelGroup>
-  );
-}
+import { SplitLayoutRenderer } from './components/SplitLayoutRenderer';
+import { Footer } from './components/Footer';
+import { WorkspaceList } from './components/WorkspaceList';
+import { EmptyDashboard } from './components/EmptyDashboard';
 
 export default function App() {
-  // Auth states
   const [setupRequired, setSetupRequired] = useState<boolean | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string>('');
@@ -188,10 +34,8 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
 
-  // Connection states
   const [wsConnected, setWsConnected] = useState<boolean>(false);
 
-  // Resizing and Sidebar States
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
     const saved = localStorage.getItem('tline-sidebar-width');
     return saved ? parseInt(saved, 10) : 320;
@@ -396,10 +240,6 @@ export default function App() {
     document.addEventListener('mousemove', doDrag);
     document.addEventListener('mouseup', stopDrag);
   };
-
-
-
-  // Auto-select workspace logic when workspaces or activePanel changes
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -415,13 +255,11 @@ export default function App() {
       return;
     }
 
-    // Multiple workspaces case
     if (activePanel === 'explorer') {
       if (!panelWorkspace || !workspaces.some(w => w.id === panelWorkspace.id)) {
         setPanelWorkspace(workspaces[0]);
       }
     } else if (activePanel === 'changes') {
-      // For changes tab, prefer git-enabled workspace
       const isCurrentGit = panelWorkspace && workspaces.find(w => w.id === panelWorkspace.id)?.isGit;
       if (!panelWorkspace || !isCurrentGit || !workspaces.some(w => w.id === panelWorkspace.id)) {
         const firstGit = workspaces.find(w => w.isGit);
@@ -434,10 +272,8 @@ export default function App() {
     }
   }, [workspaces, activePanel, panelWorkspace, isAuthenticated]);
 
-
   const checkAuth = async () => {
     try {
-      // Check query params first for token (Electron Integration)
       const urlParams = new URLSearchParams(window.location.search);
       const urlToken = urlParams.get('token');
       if (urlToken) {
@@ -665,72 +501,15 @@ export default function App() {
               </button>
             </div>
 
-            <div className="workspace-list flex flex-col gap-2.5 px-3">
-              {workspaces.map(w => (
-                <div key={w.id} className="group p-3 rounded-lg border border-white/5 bg-slate-900/10 backdrop-blur-md hover:bg-slate-900/40 hover:border-purple-500/20 transition-all duration-300 relative overflow-hidden flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 font-medium truncate">
-                      <Folder size={16} className="text-sky-400 shrink-0" />
-                      <span className="text-sm font-semibold tracking-wide text-slate-100 truncate" title={w.path}>{w.name}</span>
-                    </div>
-                    
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 shrink-0">
-                      {w.isGit && (
-                        <button className="action-btn" onClick={() => handleOpenWorktreeModal(w)} title="New Worktree branch">
-                          <GitFork size={13} />
-                        </button>
-                      )}
-                      {w.isGit && (
-                        <button className="action-btn" onClick={() => { setPanelWorkspace(w); setActivePanel('changes'); }} title="Git Changes">
-                          <GitCompare size={13} />
-                        </button>
-                      )}
-                      <button className="action-btn" onClick={() => { setPanelWorkspace(w); setActivePanel('explorer'); }} title="Browse Files">
-                        <FolderTree size={13} />
-                      </button>
-                      <button className="action-btn" onClick={() => openTerminal(w.name, w.path, w.defaultShell)} title={`Open terminal (${w.defaultShell || 'default'})`}>
-                        <TerminalIcon size={13} />
-                      </button>
-                      <button className="action-btn action-btn-danger" onClick={() => handleRemoveWorkspace(w.path)} title="Remove workspace">
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="text-[10px] text-slate-500 font-mono truncate">{w.path}</div>
-
-                  {w.isGit && w.worktrees.length > 0 && (
-                    <div className="mt-2 pl-2 border-l border-dashed border-white/10 flex flex-col gap-1.5">
-                      {w.worktrees.map(wt => (
-                        <div key={wt.path} className="flex items-center justify-between py-1 px-1.5 rounded-md hover:bg-white/5 transition-all text-xs cursor-pointer group/item">
-                          <div className="flex items-center gap-2 truncate" title={wt.path}>
-                            <GitBranch size={12} className={wt.isMain ? 'text-purple-400' : 'text-emerald-400'} />
-                            <span className={`truncate ${wt.isDirty ? 'text-amber-400 font-medium' : (wt.isMain ? 'text-slate-200' : 'text-slate-400')}`}>
-                              {wt.branch || 'detached'}
-                            </span>
-                            {wt.isDirty && (
-                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_6px_#f59e0b]" title="Uncommitted changes" />
-                            )}
-                            <span className={`badge ${wt.isMain ? 'badge-main' : 'badge-worktree'}`}>
-                              {wt.isMain ? 'main' : 'wt'}
-                            </span>
-                          </div>
-                          <div className="flex gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity duration-150 shrink-0">
-                             <button className="action-btn" onClick={() => openTerminal(`${w.name} (${wt.branch || 'detached'})`, wt.path, w.defaultShell)} title={`Open terminal here (${w.defaultShell || 'default'})`}>
-                              <TerminalIcon size={11} />
-                            </button>
-                            {!wt.isMain && (
-                              <button className="action-btn action-btn-danger" onClick={() => handleRemoveWorktree(w.path, wt.path)} title="Delete worktree">
-                                <Trash2 size={11} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            <WorkspaceList
+              workspaces={workspaces}
+              setPanelWorkspace={setPanelWorkspace}
+              setActivePanel={setActivePanel}
+              handleOpenWorktreeModal={handleOpenWorktreeModal}
+              openTerminal={openTerminal}
+              handleRemoveWorkspace={handleRemoveWorkspace}
+              handleRemoveWorktree={handleRemoveWorktree}
+            />
 
               {workspaces.length === 0 && (
                 <div style={{ textAlign: 'center', color: 'var(--text-dark)', fontSize: '0.85rem', padding: '16px' }}>
@@ -963,30 +742,12 @@ export default function App() {
           {tabs.length === 0 ? (
             
             // Empty Dashboard Welcome View
-            <div className="flex items-center justify-center flex-1 p-8">
-              <div className="relative p-[1.5px] rounded-2xl bg-gradient-to-r from-purple-500/30 via-violet-600/30 to-cyan-500/30 shadow-[0_8px_30px_rgb(0,0,0,0.5)] overflow-hidden max-w-xl w-full">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-cyan-500/10 blur-2xl opacity-40 pointer-events-none" />
-                <div className="relative bg-[#07090f]/95 rounded-[14px] p-10 flex flex-col items-center text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-purple-600/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-6 shadow-[0_0_15px_rgba(168,85,247,0.15)] animate-pulse">
-                    <FolderPlus size={32} />
-                  </div>
-                  <h2 className="text-xl font-bold tracking-tight mb-3 bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
-                    Manage Workspaces & Git Worktrees
-                  </h2>
-                  <p className="text-sm text-slate-400 max-w-sm mb-8 leading-relaxed">
-                    Register workspaces, view git branch/worktree checkouts, and launch terminal instances inside specific project directories.
-                  </p>
-                  <div className="flex gap-4">
-                    <button className="btn btn-primary shadow-lg shadow-purple-500/10 hover:shadow-[0_0_15px_rgba(168,85,247,0.45)] transition-all duration-300 animate-pulse cursor-pointer" onClick={() => setShowWorkspaceModal(true)}>
-                      Add Workspace Folder
-                    </button>
-                    <button className="btn btn-secondary border border-white/5 hover:border-white/10 cursor-pointer" onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')}>
-                      Open Terminal
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <EmptyDashboard
+              setShowWorkspaceModal={setShowWorkspaceModal}
+              openTerminal={openTerminal}
+              panelWorkspace={panelWorkspace}
+              workspaces={workspaces}
+            />
             
           ) : (
             
@@ -1211,153 +972,18 @@ export default function App() {
 
 
       {/* App Footer */}
-      <footer className="app-footer flex items-center justify-between px-[20px] py-2 border-t border-white/5 bg-slate-950/85 text-xs text-slate-400 select-none shrink-0 h-9 z-20">
-        <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1.5 font-medium text-slate-300">
-            <span className="h-2 w-2 rounded-full bg-purple-500 shadow-[0_0_6px_#a855f7]" />
-            <span>t-line v1.1.3</span>
-          </span>
-
-          {panelWorkspace && (
-            <span className="text-[11px] font-mono text-slate-500 hidden sm:flex items-center gap-2">
-              <span>Workspace: {panelWorkspace.name}</span>
-              <span className="text-slate-700">|</span>
-              <span className="text-slate-400 font-sans text-xs truncate max-w-[200px]" title={panelWorkspace.path}>
-                {panelWorkspace.path}
-              </span>
-              {(() => {
-                const activeBranch = getWorkspaceActiveBranch(panelWorkspace);
-                if (!activeBranch) return null;
-                return (
-                  <>
-                    <span className="text-slate-700">|</span>
-                    <span className="flex items-center gap-1 text-[11px] text-purple-400 font-sans" title={activeBranch.isDirty ? "Uncommitted changes" : "Git Branch"}>
-                      <GitBranch size={11} className={activeBranch.isMain ? 'text-purple-400' : 'text-emerald-400'} />
-                      <span className={activeBranch.isDirty ? 'text-amber-400 font-medium' : ''}>
-                        {activeBranch.name}
-                      </span>
-                      {activeBranch.isDirty && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_6px_#f59e0b]" />
-                      )}
-                    </span>
-                  </>
-                );
-              })()}
-            </span>
-          )}
-        </div>
-
-        {/* Zoom & Shell Controls (Dashboard Pill) */}
-        <div className="flex items-center gap-3 bg-white/5 px-2.5 py-1 rounded border border-white/5">
-          {/* Zoom controls */}
-          <div className="flex items-center gap-1.5">
-            <button 
-              className="action-btn text-slate-400 hover:text-white" 
-              onClick={handleZoomOut} 
-              title="Zoom Out Terminal font"
-              style={{ padding: '1px', display: 'flex', alignItems: 'center' }}
-            >
-              <ZoomOut size={11} />
-            </button>
-            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '24px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-              {terminalFontSize}px
-            </span>
-            <button 
-              className="action-btn text-slate-400 hover:text-white" 
-              onClick={handleZoomIn} 
-              title="Zoom In Terminal font"
-              style={{ padding: '1px', display: 'flex', alignItems: 'center' }}
-            >
-              <ZoomIn size={11} />
-            </button>
-          </div>
-
-          <div style={{ width: '1px', height: '12px', background: 'rgba(255,255,255,0.08)' }} />
-
-          {/* Shell Selector */}
-          <div className="flex items-center gap-1.5">
-            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Shell:</span>
-            <select 
-              value={defaultShell} 
-              onChange={(e) => setDefaultShell(e.target.value)}
-              style={{ 
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-main)',
-                fontSize: '0.65rem', 
-                fontFamily: 'var(--font-mono)',
-                fontWeight: 600,
-                cursor: 'pointer',
-                padding: '0',
-                outline: 'none'
-              }}
-              title="Default Shell for new tabs"
-            >
-              <option value="powershell" style={{ background: '#0e111a', color: 'var(--text-main)' }}>powershell</option>
-              <option value="cmd" style={{ background: '#0e111a', color: 'var(--text-main)' }}>cmd</option>
-              <option value="gitbash" style={{ background: '#0e111a', color: 'var(--text-main)' }}>gitbash</option>
-              <option value="wsl" style={{ background: '#0e111a', color: 'var(--text-main)' }}>wsl</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-slate-500">Cloudflare Tunnel:</span>
-            <span className="flex items-center gap-1.5 font-medium px-2 py-0.5 rounded bg-white/5 text-[11px]">
-              <span className={`h-1.5 w-1.5 rounded-full ${tunnelStatus.active ? 'bg-emerald-400 animate-pulse shadow-[0_0_6px_#34d399]' : 'bg-red-400 shadow-[0_0_6px_#f87171]'}`} />
-              <span className={tunnelStatus.active ? 'text-emerald-400' : 'text-red-400'}>
-                {tunnelStatus.active ? 'Active' : 'Inactive'}
-              </span>
-            </span>
-          </div>
-
-          {tunnelStatus.active && tunnelStatus.url && (
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-[11px] text-sky-400 max-w-[200px] truncate" title={tunnelStatus.url}>
-                {tunnelStatus.url}
-              </span>
-              <a 
-                href={tunnelStatus.url} 
-                target="_blank" 
-                rel="noreferrer" 
-                className="flex items-center gap-1 text-[10px] text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded transition-all duration-150"
-              >
-                <span>Open</span>
-                <ExternalLink size={10} />
-              </a>
-            </div>
-          )}
-
-          <div className="flex items-center gap-1">
-            {tunnelStatus.active ? (
-              <button 
-                onClick={handleStopTunnel}
-                className="px-2 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-[10px] font-medium transition-all cursor-pointer"
-              >
-                Stop
-              </button>
-            ) : (
-              <>
-                <button 
-                  onClick={() => handleStartTunnel('quick')}
-                  className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-medium transition-all cursor-pointer"
-                >
-                  Quick URL
-                </button>
-                <button 
-                  onClick={() => handleStartTunnel('token')}
-                  className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-medium transition-all cursor-pointer"
-                >
-                  Custom
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </footer>
+      <Footer
+        panelWorkspace={panelWorkspace}
+        tunnelStatus={tunnelStatus}
+        terminalFontSize={terminalFontSize}
+        defaultShell={defaultShell}
+        setDefaultShell={setDefaultShell}
+        handleZoomIn={handleZoomIn}
+        handleZoomOut={handleZoomOut}
+        handleStartTunnel={handleStartTunnel}
+        handleStopTunnel={handleStopTunnel}
+        getWorkspaceActiveBranch={getWorkspaceActiveBranch}
+      />
     </div>
   );
 }
-
-

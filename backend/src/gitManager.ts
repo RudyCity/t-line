@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { loadConfig, saveConfig } from './auth';
@@ -20,10 +20,11 @@ interface WorkspaceInfo {
   defaultShell?: string;
 }
 
-// Promisified exec helper
-function runCmd(cmd: string, cwd: string): Promise<string> {
+// Promisified safe execFile helper for git commands
+function runGit(args: string[], cwd: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    exec(cmd, { cwd }, (error, stdout, stderr) => {
+    // 15 seconds timeout to prevent hanging processes
+    execFile('git', args, { cwd, timeout: 15000 }, (error, stdout, stderr) => {
       if (error) {
         reject(new Error(stderr || error.message));
       } else {
@@ -135,7 +136,7 @@ export function parseWorktreePorcelain(porcelain: string): WorktreeInfo[] {
 // Check if a worktree has uncommitted changes
 async function isWorktreeDirty(worktreePath: string): Promise<boolean> {
   try {
-    const output = await runCmd('git status --porcelain', worktreePath);
+    const output = await runGit(['status', '--porcelain'], worktreePath);
     return output.trim().length > 0;
   } catch (e) {
     return false;
@@ -152,17 +153,19 @@ export async function getWorkspaceInfo(workspace: WorkspaceConfig): Promise<Work
 
   if (isGit) {
     try {
-      const ptyOutput = await runCmd('git worktree list --porcelain', normalizedPath);
+      const ptyOutput = await runGit(['worktree', 'list', '--porcelain'], normalizedPath);
       const parsedWorktrees = parseWorktreePorcelain(ptyOutput);
       
-      // Check dirty status for each worktree
-      worktrees = await Promise.all(parsedWorktrees.map(async wt => {
+      // Check dirty status for each worktree sequentially to prevent resource contention
+      const resolvedWorktrees: WorktreeInfo[] = [];
+      for (const wt of parsedWorktrees) {
         const isDirty = await isWorktreeDirty(wt.path);
-        return {
+        resolvedWorktrees.push({
           ...wt,
           isDirty
-        };
-      }));
+        });
+      }
+      worktrees = resolvedWorktrees;
     } catch (e) {
       console.error(`Error listing worktrees in ${normalizedPath}:`, e);
       // Fallback: create a mock worktree representing the main repo if list fails
@@ -198,15 +201,14 @@ export async function addWorktree(
     const normalizedRepo = path.normalize(repoPath);
     const normalizedWorktree = path.normalize(worktreePath);
     
-    // Command compilation
-    let cmd = 'git worktree add';
+    const args = ['worktree', 'add'];
     if (newBranch) {
-      cmd += ` -b "${branchName}" "${normalizedWorktree}"`;
+      args.push('-b', branchName, normalizedWorktree);
     } else {
-      cmd += ` "${normalizedWorktree}" "${branchName}"`;
+      args.push(normalizedWorktree, branchName);
     }
 
-    const output = await runCmd(cmd, normalizedRepo);
+    const output = await runGit(args, normalizedRepo);
     return { success: true, output };
   } catch (error: any) {
     return { success: false, output: error.message };
@@ -219,9 +221,13 @@ export async function removeWorktree(repoPath: string, worktreePath: string, for
     const normalizedRepo = path.normalize(repoPath);
     const normalizedWorktree = path.normalize(worktreePath);
     
-    const cmd = `git worktree remove ${force ? '--force' : ''} "${normalizedWorktree}"`;
-    const output = await runCmd(cmd, normalizedRepo);
-    
+    const args = ['worktree', 'remove'];
+    if (force) {
+      args.push('--force');
+    }
+    args.push(normalizedWorktree);
+
+    const output = await runGit(args, normalizedRepo);
     return { success: true, output };
   } catch (error: any) {
     return { success: false, output: error.message };
@@ -231,7 +237,7 @@ export async function removeWorktree(repoPath: string, worktreePath: string, for
 // List local git branches in repository
 export async function getRepoBranches(repoPath: string): Promise<string[]> {
   try {
-    const output = await runCmd('git branch --format="%(refname:short)"', repoPath);
+    const output = await runGit(['branch', '--format=%(refname:short)'], repoPath);
     return output.split('\n').map(b => b.trim()).filter(Boolean);
   } catch (e) {
     return [];
@@ -247,7 +253,7 @@ export interface GitFileStatus {
 export async function getGitStatus(repoPath: string): Promise<GitFileStatus[]> {
   try {
     const normalizedRepo = path.normalize(repoPath);
-    const output = await runCmd('git status --porcelain', normalizedRepo);
+    const output = await runGit(['status', '--porcelain'], normalizedRepo);
     if (!output.trim()) return [];
     
     return output.split('\n').map(line => {
@@ -278,7 +284,7 @@ export async function getGitDiff(repoPath: string, filePath: string): Promise<st
   try {
     const normalizedRepo = path.normalize(repoPath);
     const normalizedFile = path.normalize(filePath);
-    const output = await runCmd(`git diff "${normalizedFile}"`, normalizedRepo);
+    const output = await runGit(['diff', normalizedFile], normalizedRepo);
     return output;
   } catch (error: any) {
     return `Error generating diff: ${error.message}`;
