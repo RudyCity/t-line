@@ -419,24 +419,24 @@ export default function App() {
         <div 
           className="sidebar-content"
           style={{
-            padding: activePanel === 'workspaces' ? '16px' : '0px',
-            gap: activePanel === 'workspaces' ? '20px' : '0px'
+            padding: activePanel === 'workspaces' ? '16px 0px' : '0px',
+            gap: activePanel === 'workspaces' ? '16px' : '0px'
           }}
         >
 
           {/* ── Workspaces Panel ── */}
           {activePanel === 'workspaces' && (
           <div>
-            <div className="section-title">
+            <div className="section-title" style={{ padding: '0 16px' }}>
               <span>Workspaces</span>
               <button className="action-btn" onClick={() => { setShowWorkspaceModal(true); setSidebarOpen(false); }} title="Add Workspace">
                 <Plus size={16} />
               </button>
             </div>
 
-            <div className="workspace-list flex flex-col gap-3">
+            <div className="workspace-list flex flex-col gap-0">
               {workspaces.map(w => (
-                <div key={w.id} className="group p-4 rounded-xl border border-white/5 bg-slate-900/10 backdrop-blur-md hover:border-purple-500/25 hover:bg-slate-900/40 transition-all duration-300 shadow-md hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] relative overflow-hidden flex flex-col gap-2">
+                <div key={w.id} className="group p-4 border-b border-white/5 bg-slate-900/10 backdrop-blur-md hover:bg-slate-900/40 transition-all duration-300 relative overflow-hidden flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 font-medium truncate">
                       <Folder size={16} className="text-sky-400 shrink-0" />
