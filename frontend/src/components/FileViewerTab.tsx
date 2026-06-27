@@ -90,9 +90,22 @@ export function FileViewerTab({ filePath, token }: FileViewerTabProps) {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-2 p-8">
-        <div className="animate-spin rounded-full h-6 w-6 border-2 border-purple-500 border-t-transparent" />
-        <span className="text-sm font-medium">Reading file...</span>
+      <div className="flex flex-col h-full bg-[#030408] overflow-hidden animate-pulse">
+        {/* Skeleton Header */}
+        <div className="flex items-center justify-between px-4 py-2 bg-slate-950/80 border-b border-white/5 shrink-0">
+          <div className="h-4 w-48 bg-slate-900 rounded" />
+          <div className="h-6 w-16 bg-slate-900 rounded" />
+        </div>
+        
+        {/* Skeleton Code Lines */}
+        <div className="flex-1 p-4 font-mono text-xs space-y-3">
+          {[70, 85, 40, 60, 90, 30, 75, 50, 80, 45, 65, 35].map((width, idx) => (
+            <div key={idx} className="flex gap-4 items-center">
+              <div className="w-12 h-3 bg-slate-900/60 rounded shrink-0" />
+              <div className="h-3 bg-slate-900/40 rounded" style={{ width: `${width}%` }} />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
