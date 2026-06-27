@@ -32,7 +32,7 @@ class PtyTerminal implements ITerminal {
       rows: rows || 24,
       cwd: cwd || os.homedir(),
       env: process.env as Record<string, string>,
-      useConpty: false
+      useConpty: true
     });
   }
 
