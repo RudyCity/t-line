@@ -620,26 +620,26 @@ export default function App() {
         </div>
 
         {activeSessionsToImport.length > 0 && (
-          <div className="mx-4 mt-4 p-3 bg-purple-950/40 border border-purple-500/30 rounded-lg flex items-center justify-between z-30 shrink-0">
+          <div className="mx-4 mt-4 p-3 bg-purple-950/40 border border-purple-500/30 rounded-lg flex flex-col md:flex-row md:items-start md:items-center justify-between gap-3 z-30 shrink-0">
             <div className="flex items-center gap-3">
-              <span className="h-2 w-2 rounded-full bg-purple-500 animate-pulse shadow-[0_0_6px_#a855f7]" />
+              <span className="h-2 w-2 rounded-full bg-purple-500 animate-pulse shrink-0 shadow-[0_0_6px_#a855f7]" />
               <span className="text-xs text-purple-200">
                 Ditemukan <strong>{activeSessionsToImport.length}</strong> sesi terminal aktif di latar belakang (misal dari desktop).
               </span>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full md:w-auto justify-end shrink-0">
               <button 
                 onClick={() => {
                   importActiveSessions(activeSessionsToImport);
                   setActiveSessionsToImport([]);
                 }}
-                className="px-3 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition-all cursor-pointer shadow-md shadow-purple-600/10"
+                className="px-3 py-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition-all cursor-pointer shadow-md shadow-purple-600/10 whitespace-nowrap"
               >
                 Muat Sesi Aktif
               </button>
               <button 
                 onClick={() => setActiveSessionsToImport([])}
-                className="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium transition-all cursor-pointer"
+                className="px-2.5 py-1.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium transition-all cursor-pointer whitespace-nowrap"
               >
                 Abaikan
               </button>

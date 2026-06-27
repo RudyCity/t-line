@@ -1,6 +1,6 @@
 {
   "name": "desktop",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "Electron desktop wrapper for t-line",
   "main": "main.js",
   "scripts": {

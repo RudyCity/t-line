@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.2.4] - 2026-06-27
+
+### Fixed
+- **Mobile & Tablet Responsive Buttons**: Made the active sessions alert banner container use `flex-col md:flex-row` and added `whitespace-nowrap` to the action buttons to prevent text wrapping on narrow screen sizes. Also updated the welcome dashboard buttons container (`EmptyDashboard.tsx`) to use `flex-col sm:flex-row` to stack cleanly on mobile screen sizes.
+
 ## [1.2.3] - 2026-06-27
 
 ### Added

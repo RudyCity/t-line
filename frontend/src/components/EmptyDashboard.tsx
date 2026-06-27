@@ -29,11 +29,11 @@ export function EmptyDashboard({
           <p className="text-sm text-slate-400 max-w-sm mb-8 leading-relaxed">
             Register workspaces, view git branch/worktree checkouts, and launch terminal instances inside specific project directories.
           </p>
-          <div className="flex gap-4">
-            <button className="btn btn-primary shadow-lg shadow-purple-500/10 hover:shadow-[0_0_15px_rgba(168,85,247,0.45)] transition-all duration-300 animate-pulse cursor-pointer" onClick={() => setShowWorkspaceModal(true)}>
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <button className="btn btn-primary w-full sm:w-auto shadow-lg shadow-purple-500/10 hover:shadow-[0_0_15px_rgba(168,85,247,0.45)] transition-all duration-300 animate-pulse cursor-pointer" onClick={() => setShowWorkspaceModal(true)}>
               Add Workspace Folder
             </button>
-            <button className="btn btn-secondary border border-white/5 hover:border-white/10 cursor-pointer" onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')}>
+            <button className="btn btn-secondary w-full sm:w-auto border border-white/5 hover:border-white/10 cursor-pointer" onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')}>
               Open Terminal
             </button>
           </div>
