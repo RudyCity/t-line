@@ -14,6 +14,7 @@
   },
   "build": {
     "appId": "com.tline.manager",
+    "publish": null,
     "productName": "t-line",
     "directories": {
       "output": "dist-exe"
