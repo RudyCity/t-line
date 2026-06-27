@@ -26,33 +26,7 @@ import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal } 
 import { FileExplorer, GitChanges } from './components/FilePanel';
 import { useTunnel } from './hooks/useTunnel';
 import { useWorkspaces } from './hooks/useWorkspaces';
-
-// Types
-interface WorktreeInfo {
-  path: string;
-  commit: string;
-  branch?: string;
-  isMain: boolean;
-  isDirty?: boolean;
-}
-
-interface WorkspaceInfo {
-  id: string;
-  name: string;
-  path: string;
-  isGit: boolean;
-  worktrees: WorktreeInfo[];
-  defaultShell?: string;
-}
-
-interface TerminalTab {
-  id: string;
-  name: string;
-  cwd?: string;
-  shellType?: string;
-  type?: 'terminal' | 'file';
-  filePath?: string;
-}
+import { useTerminals, WorkspaceInfo } from './hooks/useTerminals';
 
 
 
@@ -64,10 +38,6 @@ export default function App() {
   const [password, setPassword] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
-  const [terminalFontSize, setTerminalFontSize] = useState<number>(() => {
-    const saved = localStorage.getItem('tline-terminal-font-size');
-    return saved ? parseInt(saved, 10) : 12;
-  });
 
   // Connection states
   const [wsConnected, setWsConnected] = useState<boolean>(false);
@@ -136,19 +106,22 @@ export default function App() {
   const [activePanel, setActivePanel] = useState<'workspaces' | 'explorer' | 'changes'>('workspaces');
   const [panelWorkspace, setPanelWorkspace] = useState<WorkspaceInfo | null>(null);
 
-  // Terminal tab states
-  const [terminals, setTerminals] = useState<TerminalTab[]>(() => {
-    try {
-      const saved = localStorage.getItem('tline-terminals');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [activeTabId, setActiveTabId] = useState<string>(() => {
-    return localStorage.getItem('tline-active-tab-id') || '';
-  });
-  const [defaultShell, setDefaultShell] = useState<string>('powershell');
+  // Terminal state management hook
+  const {
+    terminals,
+    setTerminals,
+    activeTabId,
+    setActiveTabId,
+    terminalFontSize,
+    defaultShell,
+    setDefaultShell,
+    handleZoomIn,
+    handleZoomOut,
+    openTerminal,
+    openFileTab,
+    closeTerminal,
+    handleTitleChange
+  } = useTerminals(workspaces, () => setSidebarOpen(false));
 
   // Lifecycle
   useEffect(() => {
@@ -195,17 +168,7 @@ export default function App() {
     document.addEventListener('mouseup', stopDrag);
   };
 
-  useEffect(() => {
-    localStorage.setItem('tline-terminals', JSON.stringify(terminals));
-  }, [terminals]);
 
-  useEffect(() => {
-    localStorage.setItem('tline-active-tab-id', activeTabId);
-  }, [activeTabId]);
-
-  useEffect(() => {
-    localStorage.setItem('tline-terminal-font-size', terminalFontSize.toString());
-  }, [terminalFontSize]);
 
   // Auto-select workspace logic when workspaces or activePanel changes
   useEffect(() => {
@@ -366,63 +329,7 @@ export default function App() {
     };
   };
 
-  const handleZoomIn = () => {
-    setTerminalFontSize(prev => Math.min(prev + 1, 24));
-  };
 
-  const handleZoomOut = () => {
-    setTerminalFontSize(prev => Math.max(prev - 1, 8));
-  };
-
-  const openTerminal = (name: string, cwd: string, shellType?: string) => {
-    const id = `term-${Date.now()}`;
-    const activeShell = shellType || defaultShell;
-    
-    let tabName = name;
-    if (name === 'Shell' && cwd) {
-      const matchedWorkspace = workspaces.find(w => w.path === cwd);
-      if (matchedWorkspace) {
-        tabName = `Shell (${matchedWorkspace.name})`;
-      }
-    }
-
-    const newTab: TerminalTab = { id, name: tabName, cwd, shellType: activeShell, type: 'terminal' };
-    setTerminals(prev => [...prev, newTab]);
-    setActiveTabId(id);
-    setSidebarOpen(false);
-  };
-
-  const openFileTab = (filePath: string, name: string) => {
-    const existing = terminals.find(t => t.type === 'file' && t.filePath === filePath);
-    if (existing) {
-      setActiveTabId(existing.id);
-      return;
-    }
-
-    const id = `file-${Date.now()}`;
-    const newTab: TerminalTab = {
-      id,
-      name,
-      type: 'file',
-      filePath
-    };
-
-    setTerminals(prev => [...prev, newTab]);
-    setActiveTabId(id);
-  };
-
-  const closeTerminal = (id: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    wsManager.unsubscribe(id);
-    
-    setTerminals(prev => {
-      const filtered = prev.filter(t => t.id !== id);
-      if (activeTabId === id && filtered.length > 0) {
-        setActiveTabId(filtered[filtered.length - 1].id);
-      }
-      return filtered;
-    });
-  };
 
 
 
@@ -837,7 +744,13 @@ export default function App() {
                   {t.type === 'file' ? (
                     <FileViewerTab filePath={t.filePath || ''} token={localStorage.getItem('token') || ''} />
                   ) : (
-                    <TerminalInstance tab={t as any} active={activeTabId === t.id} wsConnected={wsConnected} fontSize={terminalFontSize} />
+                    <TerminalInstance 
+                      tab={t as any} 
+                      active={activeTabId === t.id} 
+                      wsConnected={wsConnected} 
+                      fontSize={terminalFontSize} 
+                      onTitleChange={(title) => handleTitleChange(t.id, title)} 
+                    />
                   )}
                 </div>
               ))}

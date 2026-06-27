@@ -15,12 +15,18 @@ interface TerminalInstanceProps {
   active: boolean;
   wsConnected: boolean;
   fontSize: number;
+  onTitleChange?: (title: string) => void;
 }
 
-export function TerminalInstance({ tab, active, wsConnected, fontSize }: TerminalInstanceProps) {
+export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleChange }: TerminalInstanceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+  const onTitleChangeRef = useRef(onTitleChange);
+
+  useEffect(() => {
+    onTitleChangeRef.current = onTitleChange;
+  }, [onTitleChange]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -77,6 +83,11 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize }: Termina
       } else if (payload.type === 'exit') {
         term.write('\r\n\r\n[Process Exited]\r\n');
       }
+    });
+
+    // Listen to title changes from the terminal shell
+    term.onTitleChange((title) => {
+      onTitleChangeRef.current?.(title);
     });
 
     // Listen to user keyboard entries
