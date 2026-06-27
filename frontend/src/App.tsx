@@ -194,6 +194,20 @@ export default function App() {
     }
   }, [terminals, splitState.isSplit, splitState.secondaryTabId, closeSplit]);
 
+  // Swap tabs if activeTabId becomes the secondary split tab to prevent duplicate rendering
+  useEffect(() => {
+    if (splitState.isSplit && activeTabId === splitState.secondaryTabId) {
+      const otherTab = terminals.find(t => t.id !== activeTabId);
+      if (otherTab) {
+        if (splitState.direction === 'horizontal') {
+          splitHorizontal(otherTab.id);
+        } else {
+          splitVertical(otherTab.id);
+        }
+      }
+    }
+  }, [activeTabId, splitState.isSplit, splitState.secondaryTabId, splitState.direction, terminals, splitHorizontal, splitVertical]);
+
 
   // Lifecycle
   useEffect(() => {
@@ -845,8 +859,16 @@ export default function App() {
                   onDrop={(e) => {
                     e.preventDefault();
                     const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
-                    if (draggedId && draggedId !== activeTabId) {
-                      splitHorizontal(draggedId);
+                    if (draggedId) {
+                      if (draggedId === activeTabId) {
+                        const nextActive = getSecondaryTabId();
+                        if (nextActive) {
+                          setActiveTabId(nextActive);
+                          splitHorizontal(draggedId);
+                        }
+                      } else {
+                        splitHorizontal(draggedId);
+                      }
                     }
                     document.body.classList.remove('tab-dragging');
                   }}
@@ -866,8 +888,16 @@ export default function App() {
                   onDrop={(e) => {
                     e.preventDefault();
                     const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
-                    if (draggedId && draggedId !== activeTabId) {
-                      splitHorizontal(draggedId);
+                    if (draggedId) {
+                      if (draggedId === activeTabId) {
+                        const nextActive = getSecondaryTabId();
+                        if (nextActive) {
+                          setActiveTabId(nextActive);
+                          splitHorizontal(draggedId);
+                        }
+                      } else {
+                        splitHorizontal(draggedId);
+                      }
                     }
                     document.body.classList.remove('tab-dragging');
                   }}
@@ -887,8 +917,16 @@ export default function App() {
                   onDrop={(e) => {
                     e.preventDefault();
                     const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
-                    if (draggedId && draggedId !== activeTabId) {
-                      splitVertical(draggedId);
+                    if (draggedId) {
+                      if (draggedId === activeTabId) {
+                        const nextActive = getSecondaryTabId();
+                        if (nextActive) {
+                          setActiveTabId(nextActive);
+                          splitVertical(draggedId);
+                        }
+                      } else {
+                        splitVertical(draggedId);
+                      }
                     }
                     document.body.classList.remove('tab-dragging');
                   }}
@@ -908,14 +946,23 @@ export default function App() {
                   onDrop={(e) => {
                     e.preventDefault();
                     const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
-                    if (draggedId && draggedId !== activeTabId) {
-                      splitVertical(draggedId);
+                    if (draggedId) {
+                      if (draggedId === activeTabId) {
+                        const nextActive = getSecondaryTabId();
+                        if (nextActive) {
+                          setActiveTabId(nextActive);
+                          splitVertical(draggedId);
+                        }
+                      } else {
+                        splitVertical(draggedId);
+                      }
                     }
                     document.body.classList.remove('tab-dragging');
                   }}
                 >
                   <span>Split Bottom</span>
                 </div>
+
               </div>
 
               {/* Primary Pane */}
