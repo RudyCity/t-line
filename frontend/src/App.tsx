@@ -648,7 +648,7 @@ export default function App() {
         )}
 
         {/* Dynamic Panels */}
-        <div className="content-area" style={{ padding: tabs.length === 0 ? '16px' : '0', gap: '0' }}>
+        <div className={`content-area ${tabs.length > 0 ? 'content-area-tabs' : 'content-area-empty'}`}>
           {tabs.length === 0 ? (
             
             // Empty Dashboard Welcome View
@@ -662,7 +662,7 @@ export default function App() {
           ) : (
             
             // Terminals View — supports split pane and drag-and-drop splitting
-            <div className="terminal-container" style={{ flex: 1, border: 'none', borderRadius: 0, padding: 0, display: 'flex', flexDirection: 'row', position: 'relative' }}>
+            <div className="terminal-container">
               {/* Drop Zones Overlay for Drag and Drop Splitting */}
               <div className="drag-drop-overlay">
                 {/* Left Zone */}

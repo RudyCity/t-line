@@ -332,6 +332,16 @@ a {
   gap: 16px;
 }
 
+.content-area-empty {
+  padding: 16px;
+  gap: 0;
+}
+
+.content-area-tabs {
+  padding: 16px;
+  gap: 0;
+}
+
 /* Multi-Terminal Tab Bar */
 .tab-bar {
   display: flex;
@@ -398,6 +408,8 @@ a {
   position: relative;
   overflow: hidden;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: row;
 }
 
 .terminal-element {
@@ -1110,6 +1122,16 @@ a {
     gap: 8px;
   }
   
+  .content-area-empty {
+    padding: 8px;
+    gap: 0;
+  }
+  
+  .content-area-tabs {
+    padding: 0px;
+    gap: 0;
+  }
+  
   .tab-bar {
     padding: 2px;
     gap: 4px;
@@ -1122,8 +1144,10 @@ a {
   }
   
   .terminal-container {
-    padding: 6px;
-    border-radius: 8px;
+    padding: 0px;
+    border-radius: 0px;
+    border: none;
+    box-shadow: none;
   }
   
   /* Make modals fill screen width on mobile */

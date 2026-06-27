@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.2] - 2026-06-28
+
+### Added
+- **Responsive & Minimalist Terminal Spacing**: Refactored the terminal content area classes and container padding. Added mobile-first overrides that remove boundaries, borders, and paddings for a highly minimalist experience on small screens while keeping terminal layouts edge-to-edge.
+- **Desktop Padding Area**: Added a beautiful 16px desktop padding area around the terminal container to restore the premium rounded-border look when tabs/terminals are active on desktop.
+- **Responsive Welcome Dashboard**: Optimized `EmptyDashboard` layout with responsive paddings, margins, button sizes, and icon scaling to ensure a compact, minimalist experience on mobile.
+
 ## [1.3.1] - 2026-06-27
 
 ### Fixed
