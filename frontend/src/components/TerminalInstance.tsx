@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
+import { WebLinksAddon } from 'xterm-addon-web-links';
 import { wsManager } from '../services/websocket';
 
 interface TerminalTab {
@@ -31,15 +32,29 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Instantiate Terminal
+    // Instantiate Terminal with enhanced behavior (superagent-style)
     const term = new Terminal({
       cursorBlink: true,
       fontSize: fontSize,
-      fontFamily: 'JetBrains Mono, Courier New, monospace',
+      fontFamily: 'JetBrains Mono, Fira Code, Courier New, monospace',
+      lineHeight: 1.2,
+      letterSpacing: 0,
+      scrollback: 10000,           // Large scrollback buffer (like superagent)
+      scrollOnUserInput: true,     // Scroll to bottom when user types
+      fastScrollModifier: 'shift', // Shift+scroll = fast scroll
+      fastScrollSensitivity: 5,
+      smoothScrollDuration: 0,     // No animation lag on scroll
+      allowProposedApi: true,      // Enable proposed API for link support
+      macOptionIsMeta: true,
+      rightClickSelectsWord: true, // Right-click selects word (superagent behavior)
       theme: {
         background: '#000000',
         foreground: '#f8fafc',
         cursor: '#a855f7',
+        cursorAccent: '#000000',
+        selectionBackground: 'rgba(168, 85, 247, 0.3)',
+        selectionForeground: '#ffffff',
+        selectionInactiveBackground: 'rgba(168, 85, 247, 0.15)',
         black: '#1e293b',
         red: '#ef4444',
         green: '#10b981',
@@ -59,11 +74,20 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
       }
     });
 
+    // --- Addons ---
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
-    
+
+    // WebLinksAddon: makes URLs clickable in the terminal (like superagent)
+    const webLinksAddon = new WebLinksAddon((_, uri) => {
+      window.open(uri, '_blank', 'noopener,noreferrer');
+    }, {
+      urlRegex: /(?:https?|ftp):\/\/(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_+.~#?&/=]*)/
+    });
+    term.loadAddon(webLinksAddon);
+
     term.open(containerRef.current);
-    
+
     // Slight timeout to let DOM render completely, then fit
     setTimeout(() => {
       try {
