@@ -21,7 +21,7 @@ export interface ITerminal {
   getProcessName(): string;
 }
 
-// node-pty based terminal implementation
+// ── node-pty based terminal ────────────────────────────────
 class PtyTerminal implements ITerminal {
   private ptyProcess: any;
 
@@ -32,47 +32,30 @@ class PtyTerminal implements ITerminal {
       rows: rows || 24,
       cwd: cwd || os.homedir(),
       env: process.env as Record<string, string>,
-      // Disable ConPTY on Windows: avoids "AttachConsole failed" error
-      // when running inside Electron (no real console window available).
-      // Falls back to the stable winpty backend instead.
       useConpty: false
     });
   }
 
-  write(data: string): void {
-    this.ptyProcess.write(data);
-  }
+  write(data: string): void { this.ptyProcess.write(data); }
 
   resize(cols: number, rows: number): void {
-    try {
-      this.ptyProcess.resize(cols, rows);
-    } catch (e) {
+    try { this.ptyProcess.resize(cols, rows); } catch (e) {
       console.error('Error resizing pty:', e);
     }
   }
 
-  onData(cb: (data: string) => void): void {
-    this.ptyProcess.onData(cb);
-  }
+  onData(cb: (data: string) => void): void { this.ptyProcess.onData(cb); }
 
   onExit(cb: (code: number) => void): void {
     this.ptyProcess.onExit(({ exitCode }: { exitCode: number }) => cb(exitCode));
   }
 
-  kill(): void {
-    this.ptyProcess.kill();
-  }
-
-  getPid(): number {
-    return this.ptyProcess.pid;
-  }
-
-  getProcessName(): string {
-    return this.ptyProcess.process;
-  }
+  kill(): void { this.ptyProcess.kill(); }
+  getPid(): number { return this.ptyProcess.pid; }
+  getProcessName(): string { return this.ptyProcess.process; }
 }
 
-// child_process.spawn fallback terminal implementation
+// ── child_process.spawn fallback ──────────────────────────
 class SpawnTerminal implements ITerminal {
   private child: ChildProcessWithoutNullStreams;
   private pid: number;
@@ -81,19 +64,15 @@ class SpawnTerminal implements ITerminal {
     this.child = spawnProcess(shell, args, {
       cwd: cwd || os.homedir(),
       env: process.env,
-      shell: true // Run inside a shell to allow cmd/powershell execution correctly
+      shell: true
     });
     this.pid = this.child.pid || 0;
-    
-    // Set encoding
     this.child.stdout.setEncoding('utf8');
     this.child.stderr.setEncoding('utf8');
   }
 
   write(data: string): void {
-    if (this.child.stdin.writable) {
-      this.child.stdin.write(data);
-    }
+    if (this.child.stdin.writable) { this.child.stdin.write(data); }
   }
 
   resize(cols: number, rows: number): void {
@@ -109,20 +88,15 @@ class SpawnTerminal implements ITerminal {
     this.child.on('exit', (code) => cb(code || 0));
   }
 
-  kill(): void {
-    this.child.kill();
-  }
-
-  getPid(): number {
-    return this.pid;
-  }
-
-  getProcessName(): string {
-    return 'Shell';
-  }
+  kill(): void { this.child.kill(); }
+  getPid(): number { return this.pid; }
+  getProcessName(): string { return 'Shell'; }
 }
 
-// Session wrapper for terminal re-attaching
+// ── Session wrapper ────────────────────────────────────────
+const OUTPUT_BUFFER_MAX_LINES = 500;
+const OUTPUT_BUFFER_MAX_BYTES = 128 * 1024; // 128 KB
+
 interface TerminalSession {
   terminal: ITerminal;
   sender: ((data: string) => void) | null;
@@ -131,14 +105,15 @@ interface TerminalSession {
   isDetached: boolean;
   shellType: string;
   cwd: string;
+  /** Rolling output buffer for replay on reconnect */
+  outputBuffer: string;
 }
 
-// Main Terminal Manager
+// ── Main Terminal Manager ──────────────────────────────────
 export class TerminalManager {
   private terminals = new Map<string, ITerminal>();
   private sessions = new Map<string, TerminalSession>();
 
-  // Helper to find Git Bash executable on Windows
   private getGitBashPath(): string {
     const defaultPaths = [
       'C:\\Program Files\\Git\\bin\\bash.exe',
@@ -156,29 +131,19 @@ export class TerminalManager {
     let shell = '';
     let args: string[] = [];
 
-    // Map shell types
     if (isWin) {
       switch (shellType) {
         case 'cmd':
-          shell = 'cmd.exe';
-          args = [];
-          break;
+          shell = 'cmd.exe'; args = []; break;
         case 'gitbash':
-          shell = this.getGitBashPath();
-          args = ['--login', '-i'];
-          break;
+          shell = this.getGitBashPath(); args = ['--login', '-i']; break;
         case 'wsl':
-          shell = 'wsl.exe';
-          args = [];
-          break;
+          shell = 'wsl.exe'; args = []; break;
         case 'powershell':
         default:
-          shell = 'powershell.exe';
-          args = ['-NoLogo'];
-          break;
+          shell = 'powershell.exe'; args = ['-NoLogo']; break;
       }
     } else {
-      // Unix shells mapping
       shell = shellType === 'wsl' ? 'bash' : (shellType === 'cmd' ? 'sh' : 'bash');
       args = [];
     }
@@ -193,21 +158,32 @@ export class TerminalManager {
 
     this.terminals.set(id, terminal);
 
-    // Register Session
     const session: TerminalSession = {
       terminal,
       sender: null,
       cleanupTimeout: null,
       isDetached: false,
       shellType,
-      cwd: normalizedCwd
+      cwd: normalizedCwd,
+      outputBuffer: '',
     };
     this.sessions.set(id, session);
 
-    // Stream listeners
+    // Stream data → sender + append to output buffer
     terminal.onData((data) => {
       const activeSess = this.sessions.get(id);
-      if (activeSess && activeSess.sender) {
+      if (!activeSess) return;
+
+      // Append to rolling buffer (trim if too large)
+      activeSess.outputBuffer += data;
+      if (activeSess.outputBuffer.length > OUTPUT_BUFFER_MAX_BYTES) {
+        // Keep only the last OUTPUT_BUFFER_MAX_BYTES characters
+        activeSess.outputBuffer = activeSess.outputBuffer.slice(
+          activeSess.outputBuffer.length - OUTPUT_BUFFER_MAX_BYTES
+        );
+      }
+
+      if (activeSess.sender) {
         activeSess.sender(data);
       }
     });
@@ -215,9 +191,7 @@ export class TerminalManager {
     terminal.onExit((code) => {
       const activeSess = this.sessions.get(id);
       if (activeSess) {
-        if (activeSess.onExit) {
-          activeSess.onExit(code);
-        }
+        if (activeSess.onExit) activeSess.onExit(code);
         if (activeSess.cleanupTimeout) clearTimeout(activeSess.cleanupTimeout);
         this.sessions.delete(id);
         this.terminals.delete(id);
@@ -231,14 +205,23 @@ export class TerminalManager {
     return this.terminals.get(id);
   }
 
-  // Bind/Re-bind client socket callback
+  /** Get the output buffer for replay on reconnect */
+  getOutputBuffer(id: string): string {
+    return this.sessions.get(id)?.outputBuffer ?? '';
+  }
+
+  /** Clear output buffer (after replay) */
+  clearOutputBuffer(id: string): void {
+    const session = this.sessions.get(id);
+    if (session) session.outputBuffer = '';
+  }
+
   setSender(id: string, sender: ((data: string) => void) | null, onExit?: ((code: number) => void) | null) {
     const session = this.sessions.get(id);
     if (session) {
       session.sender = sender;
       if (onExit !== undefined) session.onExit = onExit;
       if (sender) {
-        // Reconnected: cancel cleanup timer
         if (session.cleanupTimeout) {
           clearTimeout(session.cleanupTimeout);
           session.cleanupTimeout = null;
@@ -249,7 +232,7 @@ export class TerminalManager {
     }
   }
 
-  // Put terminal into detached state (keep alive for 60s)
+  /** Detach session: keep alive for 30s (reduced from 60s) */
   detachSession(id: string) {
     const session = this.sessions.get(id);
     if (session) {
@@ -258,11 +241,11 @@ export class TerminalManager {
       if (session.cleanupTimeout) clearTimeout(session.cleanupTimeout);
 
       session.cleanupTimeout = setTimeout(() => {
-        console.log(`PTY Session ${id} was detached for 60s. Cleaning up terminal process.`);
+        console.log(`PTY Session ${id} was detached for 30s. Cleaning up terminal process.`);
         this.removeTerminal(id);
-      }, 60000);
-      
-      console.log(`PTY Session ${id} detached. Keeping alive for 60 seconds.`);
+      }, 30000); // ← Reduced from 60s to 30s
+
+      console.log(`PTY Session ${id} detached. Keeping alive for 30 seconds.`);
     }
   }
 
@@ -275,9 +258,7 @@ export class TerminalManager {
     const session = this.sessions.get(id);
     if (session) {
       if (session.cleanupTimeout) clearTimeout(session.cleanupTimeout);
-      try {
-        session.terminal.kill();
-      } catch (e) {
+      try { session.terminal.kill(); } catch (e) {
         console.error(`Error killing terminal ${id}:`, e);
       }
       this.sessions.delete(id);

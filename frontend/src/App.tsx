@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Folder, 
   GitBranch, 
@@ -16,7 +16,9 @@ import {
   Settings,
   FileCode,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  Columns2,
+  Rows2
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { TerminalInstance } from './components/TerminalInstance';
@@ -27,6 +29,9 @@ import { FileExplorer, GitChanges } from './components/FilePanel';
 import { useTunnel } from './hooks/useTunnel';
 import { useWorkspaces } from './hooks/useWorkspaces';
 import { useTerminals, WorkspaceInfo } from './hooks/useTerminals';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useSplitPane } from './hooks/useSplitPane';
+
 
 
 
@@ -122,6 +127,62 @@ export default function App() {
     closeTerminal,
     handleTitleChange
   } = useTerminals(workspaces, () => setSidebarOpen(false));
+
+  // Split Pane Hook
+  const {
+    splitState,
+    splitHorizontal,
+    splitVertical,
+    closeSplit,
+    startResizeSplit
+  } = useSplitPane();
+
+  // Helper: get a secondary tab for split (the tab after active, or the first different one)
+  const getSecondaryTabId = useCallback(() => {
+    const termTabs = terminals.filter(t => t.type === 'terminal');
+    if (termTabs.length < 2) return '';
+    const currentIdx = termTabs.findIndex(t => t.id === activeTabId);
+    if (currentIdx === -1) return termTabs[0].id;
+    return termTabs[(currentIdx + 1) % termTabs.length].id;
+  }, [terminals, activeTabId]);
+
+  // Keyboard Shortcuts
+  const hasModals = showWorkspaceModal || showWorktreeModal || showTunnelModal || showSettingsModal;
+  useKeyboardShortcuts({
+    enabled: isAuthenticated && !hasModals,
+    onNewTerminal: () => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || ''),
+    onCloseTab: () => {
+      if (activeTabId) closeTerminal(activeTabId);
+    },
+    onNextTab: () => {
+      const idx = terminals.findIndex(t => t.id === activeTabId);
+      if (idx !== -1 && terminals.length > 1) {
+        setActiveTabId(terminals[(idx + 1) % terminals.length].id);
+      }
+    },
+    onPrevTab: () => {
+      const idx = terminals.findIndex(t => t.id === activeTabId);
+      if (idx !== -1 && terminals.length > 1) {
+        setActiveTabId(terminals[(idx - 1 + terminals.length) % terminals.length].id);
+      }
+    },
+    onJumpToTab: (index) => {
+      if (terminals[index]) setActiveTabId(terminals[index].id);
+    },
+    onSplitHorizontal: () => {
+      const secId = getSecondaryTabId();
+      if (secId) splitHorizontal(secId);
+      else openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '');
+    },
+    onSplitVertical: () => {
+      const secId = getSecondaryTabId();
+      if (secId) splitVertical(secId);
+      else openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '');
+    },
+    onZoomIn: handleZoomIn,
+    onZoomOut: handleZoomOut,
+  });
+
 
   // Lifecycle
   useEffect(() => {
@@ -665,14 +726,51 @@ export default function App() {
                   </div>
                 );
               })}
-              <button 
-                className="action-btn shrink-0" 
-                onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')} 
-                title="New terminal"
+              {/* New Terminal button */}
+              <button
+                className="action-btn shrink-0"
+                onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')}
+                title="New terminal (Ctrl+T)"
                 style={{ marginLeft: '6px' }}
               >
                 <Plus size={14} />
               </button>
+
+              {/* Split Pane toggle buttons */}
+              {terminals.filter(t => t.type === 'terminal').length >= 2 && (
+                <>
+                  <button
+                    className={`action-btn shrink-0 ${splitState.isSplit && splitState.direction === 'horizontal' ? 'text-purple-400' : ''}`}
+                    onClick={() => {
+                      if (splitState.isSplit && splitState.direction === 'horizontal') {
+                        closeSplit();
+                      } else {
+                        const secId = getSecondaryTabId();
+                        if (secId) splitHorizontal(secId);
+                      }
+                    }}
+                    title="Split Horizontal (Ctrl+Shift+D)"
+                    style={{ marginLeft: '4px' }}
+                  >
+                    <Columns2 size={14} />
+                  </button>
+                  <button
+                    className={`action-btn shrink-0 ${splitState.isSplit && splitState.direction === 'vertical' ? 'text-purple-400' : ''}`}
+                    onClick={() => {
+                      if (splitState.isSplit && splitState.direction === 'vertical') {
+                        closeSplit();
+                      } else {
+                        const secId = getSecondaryTabId();
+                        if (secId) splitVertical(secId);
+                      }
+                    }}
+                    title="Split Vertical (Ctrl+Shift+E)"
+                  >
+                    <Rows2 size={14} />
+                  </button>
+                </>
+              )}
+
             </div>
           )}
 
@@ -740,27 +838,69 @@ export default function App() {
             
           ) : (
             
-            // Terminals Terminal View - fully flush/nempel
-            <div className="terminal-container" style={{ flex: 1, border: 'none', borderRadius: 0, padding: 0 }}>
-              {terminals.map(t => (
-                <div 
-                  key={t.id} 
-                  style={{ display: activeTabId === t.id ? 'block' : 'none', width: '100%', height: '100%' }}
-                >
-                  {t.type === 'file' ? (
-                    <FileViewerTab filePath={t.filePath || ''} token={localStorage.getItem('token') || ''} />
-                  ) : (
-                    <TerminalInstance 
-                      tab={t as any} 
-                      active={activeTabId === t.id} 
-                      wsConnected={wsConnected} 
-                      fontSize={terminalFontSize} 
-                      onTitleChange={(title) => handleTitleChange(t.id, title)} 
+            // Terminals View — supports split pane
+            <div className="terminal-container" style={{ flex: 1, border: 'none', borderRadius: 0, padding: 0, display: 'flex', flexDirection: splitState.direction === 'vertical' ? 'column' : 'row' }}>
+              {/* Primary Pane */}
+              <div style={{ flex: splitState.isSplit ? `0 0 ${splitState.splitRatio}%` : '1', position: 'relative', overflow: 'hidden', minWidth: 0, minHeight: 0 }}>
+                {terminals.map(t => (
+                  <div
+                    key={t.id}
+                    style={{ display: activeTabId === t.id ? 'block' : 'none', width: '100%', height: '100%' }}
+                  >
+                    {t.type === 'file' ? (
+                      <FileViewerTab filePath={t.filePath || ''} token={localStorage.getItem('token') || ''} />
+                    ) : (
+                      <TerminalInstance
+                        tab={t as any}
+                        active={activeTabId === t.id && (!splitState.isSplit || t.id !== splitState.secondaryTabId)}
+                        wsConnected={wsConnected}
+                        fontSize={terminalFontSize}
+                        onTitleChange={(title) => handleTitleChange(t.id, title)}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Split Resizer + Secondary Pane */}
+              {splitState.isSplit && (() => {
+                const secondaryTab = terminals.find(t => t.id === splitState.secondaryTabId);
+                if (!secondaryTab) return null;
+                return (
+                  <>
+                    {/* Resize handle */}
+                    <div
+                      onMouseDown={startResizeSplit}
+                      style={{
+                        flexShrink: 0,
+                        width: splitState.direction === 'horizontal' ? '4px' : '100%',
+                        height: splitState.direction === 'vertical' ? '4px' : '100%',
+                        background: 'rgba(168,85,247,0.15)',
+                        cursor: splitState.direction === 'horizontal' ? 'col-resize' : 'row-resize',
+                        transition: 'background 0.15s',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(168,85,247,0.4)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(168,85,247,0.15)')}
                     />
-                  )}
-                </div>
-              ))}
+                    {/* Secondary pane */}
+                    <div style={{ flex: `0 0 ${100 - splitState.splitRatio}%`, position: 'relative', overflow: 'hidden', minWidth: 0, minHeight: 0 }}>
+                      {secondaryTab.type === 'file' ? (
+                        <FileViewerTab filePath={secondaryTab.filePath || ''} token={localStorage.getItem('token') || ''} />
+                      ) : (
+                        <TerminalInstance
+                          tab={secondaryTab as any}
+                          active={true}
+                          wsConnected={wsConnected}
+                          fontSize={terminalFontSize}
+                          onTitleChange={(title) => handleTitleChange(secondaryTab.id, title)}
+                        />
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
+
           )}
         </div>
       </div>
@@ -824,8 +964,9 @@ export default function App() {
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1.5 font-medium text-slate-300">
             <span className="h-2 w-2 rounded-full bg-purple-500 shadow-[0_0_6px_#a855f7]" />
-            <span>t-line v1.0.6</span>
+            <span>t-line v1.1.3</span>
           </span>
+
           {panelWorkspace && (
             <span className="text-[11px] font-mono text-slate-500 hidden sm:flex items-center gap-2">
               <span>Workspace: {panelWorkspace.name}</span>

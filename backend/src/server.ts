@@ -655,18 +655,25 @@ wss.on('connection', (ws: WebSocket) => {
               }
             }
           );
-          
-          // Micro delay, then output confirmation
+
+          // Replay output buffer so client sees what was missed while detached
+          const buffer = terminalManager.getOutputBuffer(id);
+          terminalManager.clearOutputBuffer(id);
+
           setTimeout(() => {
             if (ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ 
-                type: 'data', 
-                id, 
-                data: '\r\n\x1b[1;35m[t-line: Session Re-attached]\x1b[0m\r\n' 
+              // First replay any buffered output
+              if (buffer) {
+                ws.send(JSON.stringify({ type: 'replay', id, data: buffer }));
+              }
+              // Then show re-attach indicator
+              ws.send(JSON.stringify({
+                type: 'data',
+                id,
+                data: '\r\n\x1b[1;35m[t-line: Session Re-attached]\x1b[0m\r\n'
               }));
             }
           }, 100);
-          
         } else {
           // Remove old terminal if exists (safety)
           terminalManager.removeTerminal(id);
