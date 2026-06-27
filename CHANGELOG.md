@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.2.5] - 2026-06-27
+
+### Added
+- **Hide Keyboard Button**: Added a dedicated `✕` button to the far right of the mobile virtual keyboard's modifier toolbar. Clicking this button hides the touch virtual keyboard directly from the interface.
+
 ## [1.2.4] - 2026-06-27
 
 ### Fixed

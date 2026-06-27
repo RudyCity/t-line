@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 
 export interface MobileKeyboardProps {
   onKeyInput: (data: string) => void;
+  onClose?: () => void;
 }
 
-export function MobileKeyboard({ onKeyInput }: MobileKeyboardProps): React.JSX.Element {
+export function MobileKeyboard({ onKeyInput, onClose }: MobileKeyboardProps): React.JSX.Element {
   const [isSymbolMode, setIsSymbolMode] = useState(false);
   const [isShiftActive, setIsShiftActive] = useState(false);
   const [isCtrlActive, setIsCtrlActive] = useState(false);
@@ -154,6 +155,16 @@ export function MobileKeyboard({ onKeyInput }: MobileKeyboardProps): React.JSX.E
             →
           </button>
         </div>
+
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="w-8 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded text-[11px] text-red-400 font-bold cursor-pointer active:bg-red-600 active:text-white flex items-center justify-center ml-1 shrink-0"
+            title="Hide Keyboard"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Main Keys Rows */}

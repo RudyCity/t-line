@@ -824,7 +824,7 @@ export default function App() {
           )}
 
           {showMobileKeyboard && tabs.length > 0 && tabs.find(t => t.id === activeTabId)?.type === 'terminal' && (
-            <MobileKeyboard onKeyInput={handleMobileKeyInput} />
+            <MobileKeyboard onKeyInput={handleMobileKeyInput} onClose={() => setShowMobileKeyboard(false)} />
           )}
         </div>
       </div>
