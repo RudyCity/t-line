@@ -136,6 +136,42 @@ export default function App() {
     localStorage.setItem('tline-active-tab-id', activeTabId);
   }, [activeTabId]);
 
+  // Auto-select workspace logic when workspaces or activePanel changes
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    if (workspaces.length === 0) {
+      setPanelWorkspace(null);
+      return;
+    }
+
+    if (workspaces.length === 1) {
+      if (!panelWorkspace || panelWorkspace.id !== workspaces[0].id) {
+        setPanelWorkspace(workspaces[0]);
+      }
+      return;
+    }
+
+    // Multiple workspaces case
+    if (activePanel === 'explorer') {
+      if (!panelWorkspace || !workspaces.some(w => w.id === panelWorkspace.id)) {
+        setPanelWorkspace(workspaces[0]);
+      }
+    } else if (activePanel === 'changes') {
+      // For changes tab, prefer git-enabled workspace
+      const isCurrentGit = panelWorkspace && workspaces.find(w => w.id === panelWorkspace.id)?.isGit;
+      if (!panelWorkspace || !isCurrentGit || !workspaces.some(w => w.id === panelWorkspace.id)) {
+        const firstGit = workspaces.find(w => w.isGit);
+        if (firstGit) {
+          setPanelWorkspace(firstGit);
+        } else {
+          setPanelWorkspace(workspaces[0]);
+        }
+      }
+    }
+  }, [workspaces, activePanel, panelWorkspace, isAuthenticated]);
+
+
   const checkAuth = async () => {
     try {
       // Check query params first for token (Electron Integration)
@@ -577,7 +613,7 @@ export default function App() {
       <div className="title-bar">
         <div className="title-bar-logo">
           <TerminalIcon size={14} style={{ color: 'var(--color-primary)' }} />
-          <span>t-line Workspace Manager <span style={{ opacity: 0.5, fontSize: '0.75rem', fontWeight: 'normal', marginLeft: '6px' }}>v1.0.1</span></span>
+          <span>t-line Workspace Manager <span style={{ opacity: 0.5, fontSize: '0.75rem', fontWeight: 'normal', marginLeft: '6px' }}>v1.0.3</span></span>
         </div>
         {(window as any).electron && (
           <div className="title-bar-controls">
@@ -598,7 +634,7 @@ export default function App() {
             <TerminalIcon size={18} />
           </div>
           <span className="logo-text">t-line</span>
-          <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', fontWeight: 500, color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)', marginLeft: '8px', alignSelf: 'center' }}>v1.0.1</span>
+          <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', fontWeight: 500, color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)', marginLeft: '8px', alignSelf: 'center' }}>v1.0.3</span>
         </div>
 
         {/* Sidebar Panel Tabs */}
@@ -719,6 +755,24 @@ export default function App() {
           {/* ── File Explorer Panel ── */}
           {activePanel === 'explorer' && (
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              {workspaces.length > 0 && (
+                <div className="workspace-select-bar">
+                  <span className="select-bar-label">Workspace:</span>
+                  <select
+                    value={panelWorkspace?.id || ''}
+                    onChange={(e) => {
+                      const ws = workspaces.find(w => w.id === e.target.value);
+                      if (ws) setPanelWorkspace(ws);
+                    }}
+                    className="workspace-select-dropdown"
+                  >
+                    <option value="" disabled>Select Workspace...</option>
+                    {workspaces.map(w => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {panelWorkspace ? (
                 <FileExplorer
                   rootPath={panelWorkspace.path}
@@ -727,7 +781,7 @@ export default function App() {
               ) : (
                 <div className="panel-empty" style={{ flex: 1 }}>
                   <FolderTree size={24} style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
-                  <span>Click the <FolderTree size={12} style={{ display: 'inline' }} /> icon on a workspace to browse files</span>
+                  <span>No workspace selected</span>
                 </div>
               )}
             </div>
@@ -736,7 +790,25 @@ export default function App() {
           {/* ── Git Changes Panel ── */}
           {activePanel === 'changes' && (
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-              {panelWorkspace ? (
+              {workspaces.filter(w => w.isGit).length > 0 && (
+                <div className="workspace-select-bar">
+                  <span className="select-bar-label">Workspace:</span>
+                  <select
+                    value={panelWorkspace?.id || ''}
+                    onChange={(e) => {
+                      const ws = workspaces.find(w => w.id === e.target.value);
+                      if (ws) setPanelWorkspace(ws);
+                    }}
+                    className="workspace-select-dropdown"
+                  >
+                    <option value="" disabled>Select Workspace...</option>
+                    {workspaces.filter(w => w.isGit).map(w => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {panelWorkspace && panelWorkspace.isGit ? (
                 <GitChanges
                   workspaceId={panelWorkspace.id}
                   token={localStorage.getItem('token') || ''}
@@ -744,11 +816,12 @@ export default function App() {
               ) : (
                 <div className="panel-empty" style={{ flex: 1 }}>
                   <GitCompare size={24} style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
-                  <span>Click the <GitCompare size={12} style={{ display: 'inline' }} /> icon on a git workspace</span>
+                  <span>No Git workspace selected</span>
                 </div>
               )}
             </div>
           )}
+
 
         {/* Cloudflare Tunnel Widget */}
         </div>
