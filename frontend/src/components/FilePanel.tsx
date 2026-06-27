@@ -32,6 +32,7 @@ interface TreeNode extends FsItem {
 interface ExplorerProps {
   rootPath: string;
   token: string;
+  onFileClick?: (path: string, name: string) => void;
 }
 
 async function fetchExplore(dirPath: string, token: string): Promise<FsItem[]> {
@@ -153,7 +154,7 @@ function TreeNodeItem({
   );
 }
 
-export function FileExplorer({ rootPath, token }: ExplorerProps) {
+export function FileExplorer({ rootPath, token, onFileClick }: ExplorerProps) {
   const [roots, setRoots] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<{ path: string; name: string; content: string } | null>(null);
@@ -174,6 +175,10 @@ export function FileExplorer({ rootPath, token }: ExplorerProps) {
   useEffect(() => { load(); }, [load]);
 
   const handleFileClick = useCallback(async (path: string, name: string) => {
+    if (onFileClick) {
+      onFileClick(path, name);
+      return;
+    }
     setPreviewLoading(true);
     setPreview(null);
     try {
@@ -184,7 +189,7 @@ export function FileExplorer({ rootPath, token }: ExplorerProps) {
     } finally {
       setPreviewLoading(false);
     }
-  }, [token]);
+  }, [token, onFileClick]);
 
   return (
     <div className="panel-container">

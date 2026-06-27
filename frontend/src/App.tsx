@@ -13,10 +13,12 @@ import {
   Menu as MenuIcon,
   GitCompare,
   FolderTree,
-  Settings
+  Settings,
+  FileCode
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { TerminalInstance } from './components/TerminalInstance';
+import { FileViewerTab } from './components/FileViewerTab';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
 import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal } from './components/Modals';
 import { FileExplorer, GitChanges } from './components/FilePanel';
@@ -44,8 +46,10 @@ interface WorkspaceInfo {
 interface TerminalTab {
   id: string;
   name: string;
-  cwd: string;
-  shellType: string;
+  cwd?: string;
+  shellType?: string;
+  type?: 'terminal' | 'file';
+  filePath?: string;
 }
 
 
@@ -329,10 +333,38 @@ export default function App() {
   const openTerminal = (name: string, cwd: string, shellType?: string) => {
     const id = `term-${Date.now()}`;
     const activeShell = shellType || defaultShell;
-    const newTab = { id, name, cwd, shellType: activeShell };
+    
+    let tabName = name;
+    if (name === 'Shell' && cwd) {
+      const matchedWorkspace = workspaces.find(w => w.path === cwd);
+      if (matchedWorkspace) {
+        tabName = `Shell (${matchedWorkspace.name})`;
+      }
+    }
+
+    const newTab: TerminalTab = { id, name: tabName, cwd, shellType: activeShell, type: 'terminal' };
     setTerminals(prev => [...prev, newTab]);
     setActiveTabId(id);
     setSidebarOpen(false);
+  };
+
+  const openFileTab = (filePath: string, name: string) => {
+    const existing = terminals.find(t => t.type === 'file' && t.filePath === filePath);
+    if (existing) {
+      setActiveTabId(existing.id);
+      return;
+    }
+
+    const id = `file-${Date.now()}`;
+    const newTab: TerminalTab = {
+      id,
+      name,
+      type: 'file',
+      filePath
+    };
+
+    setTerminals(prev => [...prev, newTab]);
+    setActiveTabId(id);
   };
 
   const closeTerminal = (id: string, e?: React.MouseEvent) => {
@@ -405,7 +437,7 @@ export default function App() {
             <TerminalIcon size={18} />
           </div>
           <span className="logo-text">t-line</span>
-          <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', fontWeight: 500, color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)', marginLeft: '8px', alignSelf: 'center' }}>v1.0.3</span>
+          <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', fontWeight: 500, color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)', marginLeft: '8px', alignSelf: 'center' }}>v1.0.6</span>
         </div>
 
         {/* Sidebar Panel Tabs */}
@@ -548,6 +580,7 @@ export default function App() {
                 <FileExplorer
                   rootPath={panelWorkspace.path}
                   token={localStorage.getItem('token') || ''}
+                  onFileClick={openFileTab}
                 />
               ) : (
                 <div className="panel-empty" style={{ flex: 1 }}>
@@ -729,7 +762,7 @@ export default function App() {
                     <button className="btn btn-primary shadow-lg shadow-purple-500/10 hover:shadow-[0_0_15px_rgba(168,85,247,0.45)] transition-all duration-300" onClick={() => setShowWorkspaceModal(true)}>
                       Add Workspace Folder
                     </button>
-                    <button className="btn btn-secondary border border-white/5 hover:border-white/10" onClick={() => openTerminal('Global Shell', '')}>
+                    <button className="btn btn-secondary border border-white/5 hover:border-white/10" onClick={() => openTerminal('Global Shell', panelWorkspace?.path || workspaces[0]?.path || '')}>
                       Open Terminal
                     </button>
                   </div>
@@ -742,19 +775,28 @@ export default function App() {
             // Terminals Terminal View
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', gap: '12px' }}>
               <div className="tab-bar">
-                {terminals.map(t => (
-                  <div 
-                    key={t.id} 
-                    className={`tab ${activeTabId === t.id ? 'tab-active' : ''}`}
-                    onClick={() => setActiveTabId(t.id)}
-                  >
-                    <TerminalIcon size={14} style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
-                    <span>{t.name}</span>
-                    <span style={{ fontSize: '0.65rem', opacity: 0.6, fontFamily: 'var(--font-mono)' }}>({t.shellType === 'powershell' ? 'ps' : t.shellType})</span>
-                    <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)}>×</span>
-                  </div>
-                ))}
-                <button className="action-btn" style={{ marginLeft: '4px' }} onClick={() => openTerminal('Shell', '')} title="New terminal">
+                {terminals.map(t => {
+                  const isFile = t.type === 'file';
+                  return (
+                    <div 
+                      key={t.id} 
+                      className={`tab ${activeTabId === t.id ? 'tab-active' : ''}`}
+                      onClick={() => setActiveTabId(t.id)}
+                    >
+                      {isFile ? (
+                        <FileCode size={14} style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
+                      ) : (
+                        <TerminalIcon size={14} style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
+                      )}
+                      <span>{t.name}</span>
+                      {!isFile && (
+                        <span style={{ fontSize: '0.65rem', opacity: 0.6, fontFamily: 'var(--font-mono)' }}>({t.shellType === 'powershell' ? 'ps' : t.shellType})</span>
+                      )}
+                      <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)}>×</span>
+                    </div>
+                  );
+                })}
+                <button className="action-btn" style={{ marginLeft: '4px' }} onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')} title="New terminal">
                   <Plus size={16} />
                 </button>
 
@@ -791,7 +833,11 @@ export default function App() {
                     key={t.id} 
                     style={{ display: activeTabId === t.id ? 'block' : 'none', width: '100%', height: '100%' }}
                   >
-                    <TerminalInstance tab={t} active={activeTabId === t.id} wsConnected={wsConnected} />
+                    {t.type === 'file' ? (
+                      <FileViewerTab filePath={t.filePath || ''} token={localStorage.getItem('token') || ''} />
+                    ) : (
+                      <TerminalInstance tab={t as any} active={activeTabId === t.id} wsConnected={wsConnected} />
+                    )}
                   </div>
                 ))}
               </div>
