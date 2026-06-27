@@ -694,9 +694,14 @@ export default function App() {
             </span>
           </div>
 
+          {/* Left Divider if there are tabs */}
+          {terminals.length > 0 && (
+            <div className="window-controls-separator shrink-0" style={{ margin: '0 12px', height: '16px' }} />
+          )}
+
           {/* Integrated Tab Bar */}
           {terminals.length > 0 && (
-            <div className="flex items-center gap-2 flex-1 overflow-x-auto mx-6 h-full" style={{ scrollbarWidth: 'none', WebkitAppRegion: 'no-drag' } as any}>
+            <div className="flex items-center gap-2 flex-1 overflow-x-auto mx-3 h-full" style={{ scrollbarWidth: 'none', WebkitAppRegion: 'no-drag' } as any}>
               {terminals.map(t => {
                 const isFile = t.type === 'file';
                 return (
@@ -778,6 +783,11 @@ export default function App() {
                 <option value="wsl">WSL (Linux)</option>
               </select>
             </div>
+          )}
+
+          {/* Right Divider if there are tabs */}
+          {terminals.length > 0 && (
+            <div className="window-controls-separator shrink-0" style={{ margin: '0 12px', height: '16px' }} />
           )}
 
           <div className="top-bar-actions flex items-center gap-3 shrink-0">
