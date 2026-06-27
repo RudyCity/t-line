@@ -14,9 +14,10 @@ interface TerminalInstanceProps {
   tab: TerminalTab;
   active: boolean;
   wsConnected: boolean;
+  fontSize: number;
 }
 
-export function TerminalInstance({ tab, active, wsConnected }: TerminalInstanceProps) {
+export function TerminalInstance({ tab, active, wsConnected, fontSize }: TerminalInstanceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -27,7 +28,7 @@ export function TerminalInstance({ tab, active, wsConnected }: TerminalInstanceP
     // Instantiate Terminal
     const term = new Terminal({
       cursorBlink: true,
-      fontSize: 14,
+      fontSize: fontSize,
       fontFamily: 'JetBrains Mono, Courier New, monospace',
       theme: {
         background: '#000000',
@@ -139,6 +140,22 @@ export function TerminalInstance({ tab, active, wsConnected }: TerminalInstanceP
       }, 50);
     }
   }, [active]);
+
+  // Dynamic font size updates
+  useEffect(() => {
+    if (terminalRef.current && fitAddonRef.current) {
+      try {
+        terminalRef.current.options.fontSize = fontSize;
+        setTimeout(() => {
+          try {
+            fitAddonRef.current?.fit();
+          } catch (e) {}
+        }, 50);
+      } catch (e) {
+        console.error('Error changing terminal font size:', e);
+      }
+    }
+  }, [fontSize]);
 
   return <div ref={containerRef} className="terminal-element" />;
 }

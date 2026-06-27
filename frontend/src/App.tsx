@@ -14,7 +14,9 @@ import {
   GitCompare,
   FolderTree,
   Settings,
-  FileCode
+  FileCode,
+  ZoomIn,
+  ZoomOut
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { TerminalInstance } from './components/TerminalInstance';
@@ -62,6 +64,10 @@ export default function App() {
   const [password, setPassword] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
+  const [terminalFontSize, setTerminalFontSize] = useState<number>(() => {
+    const saved = localStorage.getItem('tline-terminal-font-size');
+    return saved ? parseInt(saved, 10) : 12;
+  });
 
   // Connection states
   const [wsConnected, setWsConnected] = useState<boolean>(false);
@@ -196,6 +202,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('tline-active-tab-id', activeTabId);
   }, [activeTabId]);
+
+  useEffect(() => {
+    localStorage.setItem('tline-terminal-font-size', terminalFontSize.toString());
+  }, [terminalFontSize]);
 
   // Auto-select workspace logic when workspaces or activePanel changes
   useEffect(() => {
@@ -341,6 +351,14 @@ export default function App() {
 
 
   // Terminals management
+  const handleZoomIn = () => {
+    setTerminalFontSize(prev => Math.min(prev + 1, 24));
+  };
+
+  const handleZoomOut = () => {
+    setTerminalFontSize(prev => Math.max(prev - 1, 8));
+  };
+
   const openTerminal = (name: string, cwd: string, shellType?: string) => {
     const id = `term-${Date.now()}`;
     const activeShell = shellType || defaultShell;
@@ -769,8 +787,21 @@ export default function App() {
                   <Plus size={16} />
                 </button>
 
+                {/* Zoom Controls */}
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', borderRight: '1px solid var(--border-color)', paddingRight: '12px', marginRight: '4px' }}>
+                  <button className="action-btn" onClick={handleZoomOut} title="Zoom Out Terminal font" style={{ padding: '2px 4px' }}>
+                    <ZoomOut size={13} />
+                  </button>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', minWidth: '32px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                    {terminalFontSize}px
+                  </span>
+                  <button className="action-btn" onClick={handleZoomIn} title="Zoom In Terminal font" style={{ padding: '2px 4px' }}>
+                    <ZoomIn size={13} />
+                  </button>
+                </div>
+
                 {/* Shell Type Selector dropdown */}
-                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Shell:</span>
                   <select 
                     value={defaultShell} 
@@ -805,7 +836,7 @@ export default function App() {
                     {t.type === 'file' ? (
                       <FileViewerTab filePath={t.filePath || ''} token={localStorage.getItem('token') || ''} />
                     ) : (
-                      <TerminalInstance tab={t as any} active={activeTabId === t.id} wsConnected={wsConnected} />
+                      <TerminalInstance tab={t as any} active={activeTabId === t.id} wsConnected={wsConnected} fontSize={terminalFontSize} />
                     )}
                   </div>
                 ))}
