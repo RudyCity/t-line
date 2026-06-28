@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.50] - 2026-06-28
+
+### Fixed
+- **Mobile Keyboard Auto-Popup**: Stopped the virtual touch keyboard from automatically opening when tapping/clicking inside the terminal area on mobile. The keyboard now only opens when explicitly toggled using the dedicated Keyboard icon in the top-bar.
+
 ## [1.3.49] - 2026-06-28
 
 ### Fixed

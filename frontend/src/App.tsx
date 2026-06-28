@@ -1092,11 +1092,6 @@ export default function App() {
                       closePane={closePane}
                       splitFocusedTerminal={splitFocusedTerminal}
                       hasMultiplePanes={activeTab.layout.type === 'split'}
-                      onTerminalFocus={() => {
-                        if (window.innerWidth <= 768) {
-                          setShowMobileKeyboard(true);
-                        }
-                      }}
                       refreshTriggers={refreshTriggers}
                     />
                   );
