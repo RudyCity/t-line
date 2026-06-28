@@ -1115,6 +1115,14 @@ a {
     display: none !important;
   }
 
+  .top-bar {
+    padding: 0 12px;
+  }
+
+  .top-bar .action-btn {
+    padding: 6px;
+  }
+
   .sidebar {
     position: fixed;
     top: 0; /* no title bar above it now */

@@ -602,7 +602,7 @@ export default function App() {
               onClick={() => setShowMobileKeyboard(v => !v)}
               title="Toggle virtual touch keyboard"
             >
-              <Keyboard size={16} />
+              <Keyboard size={18} />
             </button>
             <button className="action-btn desktop-only" onClick={() => setShowShortcutModal(true)} title="Keyboard Shortcuts">
               <Keyboard size={16} />
@@ -618,7 +618,7 @@ export default function App() {
               onClick={() => setRightMenuOpen(!rightMenuOpen)} 
               title="Toggle Menu"
             >
-              <MoreVertical size={16} />
+              <MoreVertical size={18} />
             </button>
             {(window as any).electron && (
               <>

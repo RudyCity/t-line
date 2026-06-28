@@ -51,7 +51,7 @@ export function RightSidebar({
           <div className="flex justify-between items-center mb-1">
             <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Active Tabs</span>
             <button
-              className="px-2 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+              className="px-2.5 py-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
               onClick={() => {
                 openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '');
                 onClose();

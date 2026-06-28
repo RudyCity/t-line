@@ -4,6 +4,12 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.7] - 2026-06-28
+
+### Fixed
+- **Mobile Top-Bar & Icon Alignments**: Increased size of Keyboard and MoreVertical toggle icons to `18px` in mobile view to align with other icons. Adjusted top-bar margins and padding to `12px`, and increased action buttons' touch target paddings to `6px`.
+- **Right Drawer Touch Enhancements**: Adjusted padding on mobile "New Tab" button in RightSidebar.
+
 ## [1.3.6] - 2026-06-28
 
 ### Fixed
