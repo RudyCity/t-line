@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.68] - 2026-06-28
+
+### Fixed
+- **ANSI Black Color Invisible in Terminal**: The xterm.js theme had `black` set to `#1e293b` (near-identical to the `#000000` terminal background), making any program output using ANSI color 0 completely invisible. Changed `black` to `#4a5568` and `brightBlack` to `#718096` so all 16 ANSI colors are clearly readable on the dark background.
+
+---
+
 ## [1.3.67] - 2026-06-28
 
 ### Fixed
