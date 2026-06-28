@@ -128,8 +128,28 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
   const onTitleChangeRef = useRef(onTitleChange);
   const onFocusRef = useRef(onFocus);
   const [showSearch, setShowSearch] = useState(false);
+  const isFirstRender = useRef(true);
 
   const actualFontSize = window.innerWidth <= 768 ? 8 : fontSize;
+
+  const debouncedFit = useCallback(
+    (() => {
+      let timeoutId: NodeJS.Timeout;
+      return () => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          try {
+            if (containerRef.current && containerRef.current.clientWidth > 0 && containerRef.current.clientHeight > 0) {
+              fitAddonRef.current?.fit();
+            }
+          } catch (e) {
+            console.error('Debounced fit failed:', e);
+          }
+        }, 50);
+      };
+    })(),
+    []
+  );
 
   useEffect(() => {
     onTitleChangeRef.current = onTitleChange;
@@ -213,12 +233,11 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
       term.textarea.setAttribute('inputmode', 'none');
     }
 
-    setTimeout(() => {
-      try { fitAddon.fit(); } catch (e) { console.error('Initial fit failed:', e); }
-    }, 100);
-
     terminalRef.current = term;
     fitAddonRef.current = fitAddon;
+
+    // Call debouncedFit on initialization
+    debouncedFit();
 
     // ── WebSocket subscriptions ──────────────────────────
     wsManager.subscribe(tab.id, (payload) => {
@@ -248,11 +267,7 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
 
     // ── Window and Container resize ──────────────────────
     const handleResize = () => {
-      try {
-        if (containerRef.current && containerRef.current.clientWidth > 0 && containerRef.current.clientHeight > 0) {
-          fitAddon.fit();
-        }
-      } catch (e) {}
+      debouncedFit();
     };
     window.addEventListener('resize', handleResize);
 
@@ -293,7 +308,7 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
       }
       term.dispose();
     };
-  }, [tab.id]);
+  }, [tab.id, debouncedFit]);
 
   // ── WebSocket reconnect or activation → send init ────────
   useEffect(() => {
@@ -310,25 +325,30 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
 
   // ── Active tab: refit + focus ────────────────────────────
   useEffect(() => {
-    if (active && fitAddonRef.current) {
-      setTimeout(() => {
-        try { fitAddonRef.current?.fit(); } catch (e) {}
+    if (active) {
+      debouncedFit();
+      const timer = setTimeout(() => {
         terminalRef.current?.focus();
-      }, 50);
+      }, 80);
+      return () => clearTimeout(timer);
     }
-  }, [active]);
+  }, [active, debouncedFit]);
 
   // ── Font size ────────────────────────────────────────────
   useEffect(() => {
-    if (terminalRef.current && fitAddonRef.current) {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (terminalRef.current) {
       try {
         terminalRef.current.options.fontSize = actualFontSize;
-        setTimeout(() => { try { fitAddonRef.current?.fit(); } catch (e) {} }, 50);
+        debouncedFit();
       } catch (e) {
         console.error('Error changing terminal font size:', e);
       }
     }
-  }, [actualFontSize]);
+  }, [actualFontSize, debouncedFit]);
 
   // ── Search toggle keyboard (Ctrl+F when terminal is focused) ─
   useEffect(() => {
