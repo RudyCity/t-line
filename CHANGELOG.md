@@ -4,6 +4,15 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.47] - 2026-06-28
+
+### Added
+- **Workspace Edit Settings Feature**: Added capability to edit existing workspace configurations directly from the workspace list.
+  - Users can now change the **Default Terminal Shell** and configure an optional **Custom Display Name** for any workspace.
+  - Added `PUT /api/workspaces` backend endpoint to update workspace configurations.
+  - Added a new `<WorkspaceEditModal>` settings dialog.
+  - Added a settings edit button in the workspace list (and the mobile actions dropdown).
+
 ## [1.3.46] - 2026-06-28
 
 ### Added

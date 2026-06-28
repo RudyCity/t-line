@@ -8,7 +8,8 @@ import {
   Trash2,
   GitBranch,
   MoreVertical,
-  Check
+  Check,
+  Settings
 } from 'lucide-react';
 import { WorkspaceInfo, TabData, WorkspaceActiveTabMap, getTerminalIds } from '../hooks/useTerminals';
 
@@ -26,6 +27,7 @@ export interface WorkspaceListProps {
   openTerminal: (name: string, path: string, shell?: string) => void;
   handleRemoveWorkspace: (path: string) => void;
   handleRemoveWorktree: (repoPath: string, wtPath: string) => void;
+  onEditWorkspace: (ws: WorkspaceInfo) => void;
 }
 
 /** Detects if the screen is in "mobile" mode (< 768px) */
@@ -48,6 +50,7 @@ interface WorkspaceActionsProps {
   handleOpenWorktreeModal: (w: WorkspaceInfo) => void;
   openTerminal: (name: string, path: string, shell?: string) => void;
   handleRemoveWorkspace: (path: string) => void;
+  onEditWorkspace: (ws: WorkspaceInfo) => void;
 }
 
 function WorkspaceActions({
@@ -57,7 +60,8 @@ function WorkspaceActions({
   setActivePanel,
   handleOpenWorktreeModal,
   openTerminal,
-  handleRemoveWorkspace
+  handleRemoveWorkspace,
+  onEditWorkspace
 }: WorkspaceActionsProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -112,6 +116,14 @@ function WorkspaceActions({
         {isMobile && <span className="ws-dropdown-label">Open Terminal</span>}
       </button>
       <button
+        className="action-btn"
+        onClick={(e) => { e.stopPropagation(); onEditWorkspace(w); setOpen(false); }}
+        title="Edit workspace settings"
+      >
+        <Settings size={13} />
+        {isMobile && <span className="ws-dropdown-label">Settings</span>}
+      </button>
+      <button
         className="action-btn action-btn-danger"
         onClick={(e) => { e.stopPropagation(); handleRemoveWorkspace(w.path); setOpen(false); }}
         title="Remove workspace"
@@ -162,7 +174,8 @@ export function WorkspaceList({
   handleOpenWorktreeModal,
   openTerminal,
   handleRemoveWorkspace,
-  handleRemoveWorktree
+  handleRemoveWorktree,
+  onEditWorkspace
 }: WorkspaceListProps): React.JSX.Element {
   const isMobile = useIsMobile();
 
@@ -229,6 +242,7 @@ export function WorkspaceList({
                 handleOpenWorktreeModal={handleOpenWorktreeModal}
                 openTerminal={openTerminal}
                 handleRemoveWorkspace={handleRemoveWorkspace}
+                onEditWorkspace={onEditWorkspace}
               />
             </div>
 

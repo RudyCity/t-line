@@ -28,6 +28,7 @@ interface SidebarContentPanelProps {
   changedFiles?: GitFileStatus[];
   gitStatusLoading?: boolean;
   refreshGitStatus?: () => void;
+  onEditWorkspace?: (ws: WorkspaceInfo) => void;
 }
 
 export function SidebarContentPanel({
@@ -53,7 +54,8 @@ export function SidebarContentPanel({
   onWorktreeClick,
   changedFiles = [],
   gitStatusLoading = false,
-  refreshGitStatus
+  refreshGitStatus,
+  onEditWorkspace
 }: SidebarContentPanelProps) {
   return (
     <div 
@@ -153,6 +155,7 @@ export function SidebarContentPanel({
             openTerminal={openTerminal}
             handleRemoveWorkspace={handleRemoveWorkspace}
             handleRemoveWorktree={handleRemoveWorktree}
+            onEditWorkspace={onEditWorkspace || (() => {})}
           />
 
           {workspaces.length === 0 && (

@@ -37,6 +37,7 @@ function runGit(args: string[], cwd: string): Promise<string> {
 export interface WorkspaceConfig {
   path: string;
   defaultShell?: string;
+  name?: string;
 }
 
 // Get workspaces list from config
@@ -51,7 +52,8 @@ export function getWorkspaces(): WorkspaceConfig[] {
     }
     return {
       path: path.normalize(item.path),
-      defaultShell: item.defaultShell || 'powershell'
+      defaultShell: item.defaultShell || 'powershell',
+      name: item.name
     };
   });
 }
@@ -96,6 +98,33 @@ export function removeWorkspace(dirPath: string): { success: boolean; workspaces
   saveConfig(config);
 
   return { success: true, workspaces: getWorkspaces() };
+}
+
+// Update workspace config
+export function updateWorkspace(dirPath: string, updates: { defaultShell?: string; name?: string }): { success: boolean; workspaces: WorkspaceConfig[] } {
+  const config = loadConfig();
+  if (!config) return { success: false, workspaces: [] };
+
+  const rawWorkspaces: any[] = (config as any).workspaces || [];
+  const normalizedPath = path.normalize(dirPath);
+
+  const idx = rawWorkspaces.findIndex((w: any) => {
+    const p = typeof w === 'string' ? w : w.path;
+    return path.normalize(p) === normalizedPath;
+  });
+
+  if (idx !== -1) {
+    const existing = typeof rawWorkspaces[idx] === 'string' ? { path: rawWorkspaces[idx] } : rawWorkspaces[idx];
+    rawWorkspaces[idx] = {
+      ...existing,
+      ...updates
+    };
+    (config as any).workspaces = rawWorkspaces;
+    saveConfig(config);
+    return { success: true, workspaces: getWorkspaces() };
+  }
+
+  return { success: false, workspaces: getWorkspaces() };
 }
 
 // Parse 'git worktree list --porcelain' output
@@ -146,7 +175,7 @@ async function isWorktreeDirty(worktreePath: string): Promise<boolean> {
 // Retrieve details for a workspace
 export async function getWorkspaceInfo(workspace: WorkspaceConfig): Promise<WorkspaceInfo> {
   const normalizedPath = path.normalize(workspace.path);
-  const name = path.basename(normalizedPath) || normalizedPath;
+  const name = workspace.name || path.basename(normalizedPath) || normalizedPath;
   const isGit = fs.existsSync(path.join(normalizedPath, '.git'));
   
   let worktrees: WorktreeInfo[] = [];

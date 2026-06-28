@@ -19,6 +19,7 @@ import {
   getWorkspaces, 
   addWorkspace, 
   removeWorkspace, 
+  updateWorkspace,
   getWorkspaceInfo, 
   addWorktree, 
   removeWorktree,
@@ -227,6 +228,19 @@ app.delete('/api/workspaces', authMiddleware, (req, res) => {
   }
   const result = removeWorkspace(dirPath);
   res.json(result);
+});
+
+app.put('/api/workspaces', authMiddleware, (req, res) => {
+  const { path: dirPath, defaultShell, name } = req.body;
+  if (!dirPath) {
+    return res.status(400).json({ error: 'Directory path is required.' });
+  }
+  const result = updateWorkspace(dirPath, { defaultShell, name });
+  if (result.success) {
+    res.json(result);
+  } else {
+    res.status(404).json({ error: 'Workspace not found.' });
+  }
 });
 
 app.get('/api/workspaces/:id/branches', authMiddleware, async (req, res) => {

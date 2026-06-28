@@ -18,7 +18,7 @@ import {
 import { wsManager } from './services/websocket';
 import { FileViewerTab } from './components/FileViewerTab';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
-import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal, ConfirmModal } from './components/Modals';
+import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal, ConfirmModal, WorkspaceEditModal } from './components/Modals';
 import { useTunnel } from './hooks/useTunnel';
 import { useWorkspaces } from './hooks/useWorkspaces';
 import { useTerminals, WorkspaceInfo, getTerminalIds } from './hooks/useTerminals';
@@ -98,6 +98,8 @@ export default function App() {
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [rightMenuOpen, setRightMenuOpen] = useState<boolean>(false);
   const [showShortcutModal, setShowShortcutModal] = useState<boolean>(false);
+  const [showEditWorkspaceModal, setShowEditWorkspaceModal] = useState<boolean>(false);
+  const [editingWorkspace, setEditingWorkspace] = useState<WorkspaceInfo | null>(null);
 
   const [showMobileKeyboard, setShowMobileKeyboard] = useState<boolean>(false);
 
@@ -132,7 +134,8 @@ export default function App() {
     gitLoading,
     handleOpenWorktreeModal,
     handleAddWorktree,
-    handleRemoveWorktree
+    handleRemoveWorktree,
+    handleUpdateWorkspace
   } = useWorkspaces(isAuthenticated, localStorage.getItem('token'), showAlert);
 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
@@ -308,6 +311,20 @@ export default function App() {
       'Remove',
       'Cancel'
     );
+  };
+
+  const handleOpenEditWorkspaceModal = (workspace: WorkspaceInfo) => {
+    setEditingWorkspace(workspace);
+    setShowEditWorkspaceModal(true);
+  };
+
+  const handleUpdateWorkspaceSubmit = async (updates: { defaultShell: string; name: string }) => {
+    if (!editingWorkspace) return;
+    const success = await handleUpdateWorkspace(editingWorkspace.path, updates);
+    if (success) {
+      setShowEditWorkspaceModal(false);
+      setEditingWorkspace(null);
+    }
   };
 
   const getWorkspaceForTab = (tabId: string): WorkspaceInfo | null => {
@@ -846,6 +863,7 @@ export default function App() {
             changedFiles={changedFiles}
             gitStatusLoading={gitStatusLoading}
             refreshGitStatus={() => fetchGitStatus(true)}
+            onEditWorkspace={handleOpenEditWorkspaceModal}
           />
         )}
       </div>
@@ -1152,6 +1170,16 @@ export default function App() {
       <ShortcutHelpModal
         show={showShortcutModal}
         onClose={() => setShowShortcutModal(false)}
+      />
+
+      <WorkspaceEditModal
+        show={showEditWorkspaceModal}
+        onClose={() => {
+          setShowEditWorkspaceModal(false);
+          setEditingWorkspace(null);
+        }}
+        onSubmit={handleUpdateWorkspaceSubmit}
+        workspace={editingWorkspace}
       />
 
       {confirmDialog && (

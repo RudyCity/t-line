@@ -228,6 +228,29 @@ export function useWorkspaces(
     }
   };
 
+  const handleUpdateWorkspace = async (workspacePath: string, updates: { defaultShell?: string; name?: string }): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/workspaces', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ path: workspacePath, ...updates })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        fetchWorkspaces();
+        return true;
+      } else {
+        showAlert('Workspace Error', data.error || 'Failed to update workspace.');
+      }
+    } catch (e) {
+      showAlert('Workspace Error', 'Error occurred updating workspace.');
+    }
+    return false;
+  };
+
   return {
     workspaces,
     fetchWorkspaces,
@@ -258,6 +281,7 @@ export function useWorkspaces(
     gitLoading,
     handleOpenWorktreeModal,
     handleAddWorktree,
-    handleRemoveWorktree
+    handleRemoveWorktree,
+    handleUpdateWorkspace
   };
 }

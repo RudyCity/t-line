@@ -1,6 +1,7 @@
 import React from 'react';
 import { Folder, Loader2, Info, Shield, Eye, EyeOff } from 'lucide-react';
 import { FormField, Input, Select, TextArea, Button } from './Form';
+import { WorkspaceInfo } from '../hooks/useWorkspaces';
 
 interface WorkspaceAddModalProps {
   show: boolean;
@@ -898,6 +899,89 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </Button>
         </div>
       </div>
+    </div>
+  );
+};
+
+interface WorkspaceEditModalProps {
+  show: boolean;
+  onClose: () => void;
+  onSubmit: (updates: { defaultShell: string; name: string }) => void;
+  workspace: WorkspaceInfo | null;
+}
+
+export const WorkspaceEditModal: React.FC<WorkspaceEditModalProps> = ({
+  show,
+  onClose,
+  onSubmit,
+  workspace
+}) => {
+  const [name, setName] = React.useState('');
+  const [defaultShell, setDefaultShell] = React.useState('powershell');
+
+  React.useEffect(() => {
+    if (workspace) {
+      setName(workspace.name || '');
+      setDefaultShell(workspace.defaultShell || 'powershell');
+    }
+  }, [workspace, show]);
+
+  if (!show) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({ name, defaultShell });
+  };
+
+  const shellOptions = [
+    { value: 'powershell', label: 'PowerShell' },
+    { value: 'cmd', label: 'Command Prompt (cmd)' },
+    { value: 'bash', label: 'Git Bash / Bash' },
+    { value: 'wsl', label: 'WSL Default' }
+  ];
+
+  return (
+    <div className="modal-overlay">
+      <form onSubmit={handleSubmit} className="modal-content glass-panel" style={{ maxWidth: '420px' }}>
+        <div className="modal-header">
+          <h3 className="modal-title">Edit Workspace Settings</h3>
+          <button 
+            type="button" 
+            className="action-btn" 
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </div>
+        
+        <FormField label="Display Name">
+          <Input 
+            type="text" 
+            placeholder="e.g. My Awesome Project" 
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            autoFocus
+          />
+        </FormField>
+
+        <FormField label="Default Terminal Shell">
+          <Select 
+            value={defaultShell}
+            onChange={(e) => setDefaultShell(e.target.value)}
+            options={shellOptions}
+          />
+        </FormField>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px' }}>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary">
+            Save Changes
+          </Button>
+        </div>
+      </form>
     </div>
   );
 };
