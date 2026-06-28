@@ -4,6 +4,17 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.16] - 2026-06-28
+
+### Added
+- **Modern Footer Redesign**: Reorganized the footer status bar (`Footer.tsx`) with a premium, space-efficient, and responsive layout:
+  - Added new visual icons for Workspace (`Folder`) and Network (`Globe`) to align with design standards.
+  - Implemented glassmorphism styling (`backdrop-blur-md bg-[#080b13]/90 border-t border-white/10 shadow-[0_-2px_10px_rgba(0,0,0,0.3)]`).
+  - Added micro-interaction animations such as hover scaling on zoom controls and translation animations on action buttons.
+  - Re-styled the default HTML select element with a custom background, borders, and a custom SVG chevron icon indicator to match other premium elements.
+  - Formatted active Cloudflare Tunnel statuses into unified badges with subtle glowing dropshadows.
+  - Integrated mobile-responsive styles to automatically hide labels/text descriptions and collapse elements, avoiding vertical overlaps on small screen widths.
+
 ## [1.3.15] - 2026-06-28
 
 ### Fixed

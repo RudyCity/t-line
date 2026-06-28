@@ -1,5 +1,5 @@
 import React from 'react';
-import { GitBranch, ZoomIn, ZoomOut, ExternalLink, Copy, Check, Info } from 'lucide-react';
+import { GitBranch, ZoomIn, ZoomOut, ExternalLink, Copy, Check, Info, Terminal, Folder, Globe } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 
 export interface FooterProps {
@@ -59,32 +59,40 @@ export function Footer({
       isMain: activeWt.isMain
     };
   };
+
   return (
-    <footer className="app-footer flex items-center justify-between px-[20px] py-2 border-t border-white/5 bg-slate-950/85 text-xs text-slate-400 select-none shrink-0 h-9 z-20">
-      <div className="flex items-center gap-4">
-        <span className="flex items-center gap-1.5 font-medium text-slate-300">
-          <span className="h-2 w-2 rounded-full bg-purple-500 shadow-[0_0_6px_#a855f7]" />
-          <span>t-line v1.1.3</span>
+    <footer className="app-footer flex items-center justify-between px-4 border-t border-white/10 bg-[#080b13]/90 backdrop-blur-md text-xs text-slate-400 select-none shrink-0 h-9 z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.3)]">
+      {/* Left Section: Version & Workspace */}
+      <div className="flex items-center gap-3">
+        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 font-sans text-[10px] font-semibold tracking-wider hover:bg-purple-500/20 hover:border-purple-500/35 transition-all duration-200 cursor-pointer">
+          <span className="h-1.5 w-1.5 rounded-full bg-purple-400 shadow-[0_0_6px_#a855f7] animate-pulse" />
+          <span>t-line v1.3.16</span>
         </span>
 
         {panelWorkspace && (
-          <span className="text-[11px] font-mono text-slate-500 hidden sm:flex items-center gap-2">
-            <span>Workspace: {panelWorkspace.name}</span>
+          <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono text-slate-500">
             <span className="text-slate-700">|</span>
-            <span className="text-slate-400 font-sans text-xs truncate max-w-[200px]" title={panelWorkspace.path}>
-              {panelWorkspace.path}
+            <span className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors duration-150 cursor-pointer" title={panelWorkspace.path}>
+              <Folder size={11} className="text-purple-400" />
+              <span className="font-semibold text-slate-300 truncate max-w-[120px]">{panelWorkspace.name}</span>
             </span>
+            
             {(() => {
               const activeBranch = getWorkspaceActiveBranch(panelWorkspace);
               if (!activeBranch) return null;
               return (
                 <>
                   <span className="text-slate-700">|</span>
-                  <span className="flex items-center gap-1 text-[11px] text-purple-400 font-sans" title={activeBranch.isDirty ? "Uncommitted changes" : "Git Branch"}>
+                  <span 
+                    className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded font-sans text-[11px] transition-all duration-150 ${
+                      activeBranch.isDirty 
+                        ? 'bg-amber-500/5 border border-amber-500/20 text-amber-300 hover:bg-amber-500/10 hover:border-amber-500/30' 
+                        : 'bg-slate-900/60 border border-white/5 text-slate-300 hover:border-white/10 hover:bg-slate-900'
+                    }`} 
+                    title={activeBranch.isDirty ? "Uncommitted changes" : "Git Branch"}
+                  >
                     <GitBranch size={11} className={activeBranch.isMain ? 'text-purple-400' : 'text-emerald-400'} />
-                    <span className={activeBranch.isDirty ? 'text-amber-400 font-medium' : ''}>
-                      {activeBranch.name}
-                    </span>
+                    <span className="font-medium">{activeBranch.name}</span>
                     {activeBranch.isDirty && (
                       <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_6px_#f59e0b]" />
                     )}
@@ -92,127 +100,141 @@ export function Footer({
                 </>
               );
             })()}
-          </span>
+          </div>
         )}
       </div>
 
-      {/* Zoom & Shell Controls (Dashboard Pill) */}
-      <div className="flex items-center gap-3 bg-white/5 px-2.5 py-1 rounded border border-white/5">
+      {/* Center Section: Zoom & Shell Controls (Dashboard Pill) */}
+      <div className="flex items-center gap-3 bg-white/5 hover:bg-white/10 px-3 py-1 rounded-full border border-white/5 hover:border-white/10 transition-all duration-200 shadow-inner">
         {/* Zoom controls */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <button 
-            className="action-btn text-slate-400 hover:text-white" 
+            className="text-slate-400 hover:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none" 
             onClick={handleZoomOut} 
             title="Zoom Out Terminal font"
-            style={{ padding: '1px', display: 'flex', alignItems: 'center' }}
           >
-            <ZoomOut size={11} />
+            <ZoomOut size={12} />
           </button>
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '24px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+          <span className="text-[10px] bg-slate-950/60 px-1.5 py-0.5 rounded font-mono font-semibold text-purple-300 min-w-[28px] text-center border border-white/5">
             {terminalFontSize}px
           </span>
           <button 
-            className="action-btn text-slate-400 hover:text-white" 
+            className="text-slate-400 hover:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none" 
             onClick={handleZoomIn} 
             title="Zoom In Terminal font"
-            style={{ padding: '1px', display: 'flex', alignItems: 'center' }}
           >
-            <ZoomIn size={11} />
+            <ZoomIn size={12} />
           </button>
         </div>
 
-        <div style={{ width: '1px', height: '12px', background: 'rgba(255,255,255,0.08)' }} />
+        <div className="w-px h-3.5 bg-white/10" />
 
         {/* Shell Selector */}
         <div className="flex items-center gap-1.5">
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Shell:</span>
+          <Terminal size={11} className="text-slate-400" />
           <select 
             value={defaultShell} 
             onChange={(e) => setDefaultShell(e.target.value)}
-            style={{ 
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-main)',
-              fontSize: '0.65rem', 
-              fontFamily: 'var(--font-mono)',
-              fontWeight: 600,
-              cursor: 'pointer',
-              padding: '0',
-              outline: 'none'
-            }}
+            className="bg-transparent border-none text-slate-300 font-mono font-semibold text-[10px] cursor-pointer outline-none focus:ring-0 select-none py-0 pr-4 pl-0 transition-colors duration-150 hover:text-white"
             title="Default Shell for new tabs"
+            style={{ 
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='rgba(148,163,184,0.8)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
+              backgroundPosition: 'right center',
+              backgroundRepeat: 'no-repeat',
+              backgroundSize: '8px 8px',
+            }}
           >
-            <option value="powershell" style={{ background: '#0e111a', color: 'var(--text-main)' }}>powershell</option>
-            <option value="cmd" style={{ background: '#0e111a', color: 'var(--text-main)' }}>cmd</option>
-            <option value="gitbash" style={{ background: '#0e111a', color: 'var(--text-main)' }}>gitbash</option>
-            <option value="wsl" style={{ background: '#0e111a', color: 'var(--text-main)' }}>wsl</option>
+            <option value="powershell" className="bg-[#0b0e14] text-slate-300">powershell</option>
+            <option value="cmd" className="bg-[#0b0e14] text-slate-300">cmd</option>
+            <option value="gitbash" className="bg-[#0b0e14] text-slate-300">gitbash</option>
+            <option value="wsl" className="bg-[#0b0e14] text-slate-300">wsl</option>
           </select>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] text-slate-500">Cloudflare Tunnel:</span>
-          <span className="flex items-center gap-1.5 font-medium px-2 py-0.5 rounded bg-white/5 text-[11px]">
+      {/* Right Section: Cloudflare Tunnel & Status */}
+      <div className="flex items-center gap-2.5">
+        {/* Cloudflare Tunnel status */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-slate-500 hidden md:inline-block">Cloudflare Tunnel:</span>
+          
+          <span className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono border ${
+            tunnelLoading 
+              ? 'bg-sky-500/5 border-sky-500/20 text-sky-400' 
+              : (tunnelStatus.active 
+                  ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.05)]' 
+                  : 'bg-slate-900/60 border-white/5 text-slate-500')
+          }`}>
             {tunnelLoading ? (
               <span className="h-1.5 w-1.5 rounded-full border border-sky-400/30 border-t-sky-400 animate-spin" />
             ) : (
-              <span className={`h-1.5 w-1.5 rounded-full ${tunnelStatus.active ? 'bg-emerald-400 animate-pulse shadow-[0_0_6px_#34d399]' : 'bg-red-400 shadow-[0_0_6px_#f87171]'}`} />
+              <span className={`h-1.5 w-1.5 rounded-full ${
+                tunnelStatus.active 
+                  ? 'bg-emerald-400 animate-pulse shadow-[0_0_6px_#10b981]' 
+                  : 'bg-slate-600'
+              }`} />
             )}
-            <span className={tunnelLoading ? 'text-sky-400' : (tunnelStatus.active ? 'text-emerald-400' : 'text-red-400')}>
-              {tunnelLoading ? (tunnelStatus.active ? 'Stopping...' : 'Starting...') : (tunnelStatus.active ? 'Active' : 'Inactive')}
+            <span className="font-semibold">
+              {tunnelLoading 
+                ? (tunnelStatus.active ? 'Stopping...' : 'Starting...') 
+                : (tunnelStatus.active ? 'Active' : 'Inactive')}
             </span>
           </span>
         </div>
 
+        {/* Active Tunnel URL Info */}
         {tunnelStatus.active && tunnelStatus.url && (
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[11px] text-sky-400 max-w-[200px] truncate" title={tunnelStatus.url}>
-              {tunnelStatus.url}
+          <div className="flex items-center gap-1.5 bg-sky-950/20 border border-sky-500/20 px-2 py-0.5 rounded-md text-[10px] font-mono text-sky-400 shadow-[0_0_8px_rgba(14,165,233,0.05)]">
+            <Globe size={11} className="text-sky-400 animate-pulse" />
+            <span className="max-w-[140px] md:max-w-[200px] truncate" title={tunnelStatus.url}>
+              {tunnelStatus.url.replace(/^https?:\/\//, '')}
             </span>
-            <a 
-              href={tunnelStatus.url} 
-              target="_blank" 
-              rel="noreferrer" 
-              className="flex items-center gap-1 text-[10px] text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded transition-all duration-150"
-            >
-              <span>Open</span>
-              <ExternalLink size={10} />
-            </a>
-            <button 
-              onClick={handleCopy}
-              className="flex items-center gap-1 text-[10px] text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded transition-all duration-150 cursor-pointer"
-              title="Copy tunnel URL"
-            >
-              {copied ? (
-                <>
-                  <span>Copied</span>
-                  <Check size={10} className="text-emerald-400" />
-                </>
-              ) : (
-                <>
-                  <span>Copy</span>
-                  <Copy size={10} />
-                </>
-              )}
-            </button>
-            {tunnelStatus.type === 'quick' && (
-              <span 
-                className="text-slate-500 hover:text-slate-300 transition-colors cursor-help flex items-center" 
-                title="Tip: Newly created trycloudflare URLs can take 5-15 seconds for DNS to propagate. If you see 'Site can't be reached', wait a few seconds and reload."
+            
+            <div className="w-px h-2.5 bg-sky-500/20" />
+            
+            <div className="flex items-center gap-1">
+              <a 
+                href={tunnelStatus.url} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="text-slate-400 hover:text-sky-300 p-0.5 rounded transition-colors duration-150 flex items-center justify-center"
+                title="Open Tunnel URL"
               >
-                <Info size={12} />
-              </span>
-            )}
+                <ExternalLink size={10} />
+              </a>
+              <button 
+                onClick={handleCopy}
+                className="text-slate-400 hover:text-purple-300 p-0.5 rounded transition-colors duration-150 flex items-center justify-center cursor-pointer"
+                title="Copy Tunnel URL"
+              >
+                {copied ? (
+                  <Check size={10} className="text-emerald-400" />
+                ) : (
+                  <Copy size={10} />
+                )}
+              </button>
+              {tunnelStatus.type === 'quick' && (
+                <span 
+                  className="text-slate-500 hover:text-slate-300 transition-colors cursor-help flex items-center p-0.5" 
+                  title="Tip: Newly created trycloudflare URLs can take 5-15 seconds for DNS to propagate. If you see 'Site can't be reached', wait a few seconds and reload."
+                >
+                  <Info size={11} />
+                </span>
+              )}
+            </div>
           </div>
         )}
 
+        {/* Action Buttons */}
         <div className="flex items-center gap-1.5">
           {tunnelStatus.active ? (
             <button 
               onClick={handleStopTunnel}
               disabled={tunnelLoading}
-              className={`px-2 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-[10px] font-medium transition-all ${tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              className={`px-2.5 py-0.5 rounded-full border border-red-500/25 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-[10px] font-medium transition-all duration-150 hover:-translate-y-[0.5px] active:translate-y-0 ${
+                tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+              }`}
             >
               Stop
             </button>
@@ -221,14 +243,18 @@ export function Footer({
               <button 
                 onClick={() => handleStartTunnel('quick')}
                 disabled={tunnelLoading}
-                className={`px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-medium transition-all ${tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                className={`px-2.5 py-0.5 rounded-full border border-purple-500/25 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 hover:text-purple-200 text-[10px] font-medium transition-all duration-150 hover:-translate-y-[0.5px] active:translate-y-0 ${
+                  tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                }`}
               >
                 Quick URL
               </button>
               <button 
                 onClick={() => handleStartTunnel('token')}
                 disabled={tunnelLoading}
-                className={`px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-medium transition-all ${tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                className={`px-2.5 py-0.5 rounded-full border border-white/10 bg-slate-900/60 hover:bg-slate-800 text-slate-300 hover:text-white text-[10px] font-medium transition-all duration-150 hover:-translate-y-[0.5px] active:translate-y-0 ${
+                  tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                }`}
               >
                 Custom
               </button>
