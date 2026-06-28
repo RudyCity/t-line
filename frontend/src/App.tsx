@@ -104,6 +104,7 @@ export default function App() {
 
   const [showMobileKeyboard, setShowMobileKeyboard] = useState<boolean>(false);
   const [activeTooltip, setActiveTooltip] = useState<{ id: string; x: number; y: number; title: string; branch?: string; path: string } | null>(null);
+  const [tabContextMenu, setTabContextMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
 
   // Workspaces Hook
   const {
@@ -756,6 +757,81 @@ export default function App() {
     });
   };
 
+  const handleTabContextMenu = (e: React.MouseEvent, tabId: string) => {
+    e.preventDefault();
+    setTabContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      tabId
+    });
+  };
+
+  useEffect(() => {
+    if (!tabContextMenu) return;
+    const closeMenu = () => setTabContextMenu(null);
+    window.addEventListener('click', closeMenu);
+    return () => window.removeEventListener('click', closeMenu);
+  }, [tabContextMenu]);
+
+  const handleCloseOtherTabs = (tabId: string) => {
+    setTabs(prevTabs => {
+      const remainingTabs = prevTabs.filter(t => t.id === tabId || t.workspaceId !== panelWorkspace?.id);
+      const closedTabs = prevTabs.filter(t => t.id !== tabId && t.workspaceId === panelWorkspace?.id);
+      const closedTermIds: string[] = [];
+      closedTabs.forEach(t => {
+        if (t.type === 'terminal' && t.layout) {
+          const termIds = getTerminalIds(t.layout);
+          termIds.forEach(id => {
+            wsManager.unsubscribe(id);
+            closedTermIds.push(id);
+          });
+        }
+      });
+
+      if (closedTermIds.length > 0) {
+        setTerminalInstances(prev => {
+          const next = { ...prev };
+          closedTermIds.forEach(id => delete next[id]);
+          return next;
+        });
+      }
+
+      if (!remainingTabs.some(t => t.id === activeTabId)) {
+        setActiveTabId(tabId);
+      }
+
+      return remainingTabs;
+    });
+  };
+
+  const handleCloseAllTabs = () => {
+    setTabs(prevTabs => {
+      const remainingTabs = prevTabs.filter(t => t.workspaceId !== panelWorkspace?.id);
+      const closedTabs = prevTabs.filter(t => t.workspaceId === panelWorkspace?.id);
+      const closedTermIds: string[] = [];
+      closedTabs.forEach(t => {
+        if (t.type === 'terminal' && t.layout) {
+          const termIds = getTerminalIds(t.layout);
+          termIds.forEach(id => {
+            wsManager.unsubscribe(id);
+            closedTermIds.push(id);
+          });
+        }
+      });
+
+      if (closedTermIds.length > 0) {
+        setTerminalInstances(prev => {
+          const next = { ...prev };
+          closedTermIds.forEach(id => delete next[id]);
+          return next;
+        });
+      }
+
+      setActiveTabId('');
+      return remainingTabs;
+    });
+  };
+
   if (loading) {
     return (
       <div className="auth-wrapper">
@@ -1025,6 +1101,7 @@ export default function App() {
                     onClick={(e) => handleTabClick(e, t)}
                     onMouseEnter={(e) => handleTabMouseEnter(e, t)}
                     onMouseLeave={handleTabMouseLeave}
+                    onContextMenu={(e) => handleTabContextMenu(e, t.id)}
                   >
                     {!isFile && branch && (
                       <span className="tab-branch-prefix shrink-0">
@@ -1291,6 +1368,60 @@ export default function App() {
             </div>
           )}
           <div className="tab-tooltip-path">{activeTooltip.path}</div>
+        </div>
+      )}
+
+      {tabContextMenu && (
+        <div 
+          className="terminal-context-menu"
+          style={{
+            position: 'fixed',
+            top: tabContextMenu.y,
+            left: tabContextMenu.x,
+            zIndex: 1000
+          }}
+        >
+          <button
+            onClick={() => closeTerminal(tabContextMenu.tabId)}
+            className="terminal-context-menu-item"
+          >
+            <span>Close Tab</span>
+          </button>
+          <button
+            onClick={() => handleCloseOtherTabs(tabContextMenu.tabId)}
+            className="terminal-context-menu-item"
+          >
+            <span>Close Other Tabs</span>
+          </button>
+          <button
+            onClick={handleCloseAllTabs}
+            className="terminal-context-menu-item"
+          >
+            <span>Close All Tabs</span>
+          </button>
+          {tabs.find(t => t.id === tabContextMenu.tabId)?.type === 'terminal' && (
+            <>
+              <div className="terminal-context-menu-separator" />
+              <button
+                onClick={() => {
+                  setActiveTabId(tabContextMenu.tabId);
+                  setTimeout(() => splitFocusedTerminal('vertical'), 50);
+                }}
+                className="terminal-context-menu-item"
+              >
+                <span>Split Pane Vertically</span>
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTabId(tabContextMenu.tabId);
+                  setTimeout(() => splitFocusedTerminal('horizontal'), 50);
+                }}
+                className="terminal-context-menu-item"
+              >
+                <span>Split Pane Horizontally</span>
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
