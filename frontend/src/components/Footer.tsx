@@ -1,5 +1,5 @@
 import React from 'react';
-import { GitBranch, ZoomIn, ZoomOut, ExternalLink } from 'lucide-react';
+import { GitBranch, ZoomIn, ZoomOut, ExternalLink, Copy, Check } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 
 export interface FooterProps {
@@ -30,6 +30,19 @@ export function Footer({
   handleStartTunnel,
   handleStopTunnel
 }: FooterProps): React.JSX.Element {
+  const [copied, setCopied] = React.useState(false);
+
+  const handleCopy = async () => {
+    if (!tunnelStatus.url) return;
+    try {
+      await navigator.clipboard.writeText(tunnelStatus.url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
   const getWorkspaceActiveBranch = (workspace: WorkspaceInfo | null): { name: string; isDirty: boolean; isMain: boolean } | null => {
     if (!workspace || !workspace.isGit || !workspace.worktrees || workspace.worktrees.length === 0) return null;
     
@@ -160,6 +173,23 @@ export function Footer({
               <span>Open</span>
               <ExternalLink size={10} />
             </a>
+            <button 
+              onClick={handleCopy}
+              className="flex items-center gap-1 text-[10px] text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded transition-all duration-150 cursor-pointer"
+              title="Copy tunnel URL"
+            >
+              {copied ? (
+                <>
+                  <span>Copied</span>
+                  <Check size={10} className="text-emerald-400" />
+                </>
+              ) : (
+                <>
+                  <span>Copy</span>
+                  <Copy size={10} />
+                </>
+              )}
+            </button>
           </div>
         )}
 
