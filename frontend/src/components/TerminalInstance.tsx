@@ -356,6 +356,10 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
         onTitleChangeRef.current?.(payload.title);
       } else if (payload.type === 'exit') {
         term.write('\r\n\r\n[Process Exited]\r\n');
+      } else if (payload.type === 're-attached') {
+        window.dispatchEvent(new CustomEvent('tline-toast', {
+          detail: { message: 'Session Re-attached' }
+        }));
       }
     });
 

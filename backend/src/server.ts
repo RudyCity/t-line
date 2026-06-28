@@ -687,9 +687,8 @@ wss.on('connection', (ws: WebSocket) => {
               }
               // Then show re-attach indicator
               ws.send(JSON.stringify({
-                type: 'data',
-                id,
-                data: '\r\n\x1b[1;35m[t-line: Session Re-attached]\x1b[0m\r\n'
+                type: 're-attached',
+                id
               }));
             }
           }, 100);

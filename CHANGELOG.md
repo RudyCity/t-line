@@ -4,6 +4,14 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.45] - 2026-06-28
+
+### Changed
+- **Sleek Session Re-attached Toast**: Replaced the annoying raw `[t-line: Session Re-attached]` terminal text stream with a clean, responsive bottom toast notification.
+  - Desktop/Tablet: Displays at the bottom-left corner above the status bar.
+  - Mobile: Displays at the bottom-center.
+  - Automatic dismissal after 3 seconds with smooth slide-up and fade-out animations.
+
 ## [1.3.44] - 2026-06-28
 
 ### Added
