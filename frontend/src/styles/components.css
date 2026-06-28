@@ -343,6 +343,21 @@
   flex-shrink: 0;
 }
 
+.tab-branch-prefix {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #fbbf24;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.tab-branch-separator {
+  opacity: 0.3;
+  margin: 0 2px;
+  color: var(--text-muted);
+}
+
 .tab-close {
   flex-shrink: 0;
   display: flex;

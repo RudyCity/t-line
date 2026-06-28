@@ -1017,6 +1017,7 @@ export default function App() {
                 const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
                 const shellType = focusedInst?.shellType || '';
                 const displayName = isFile ? t.name : (focusedInst?.name || t.name);
+                const branch = getTabGitBranch(t);
                 return (
                   <div 
                     key={t.id} 
@@ -1025,6 +1026,13 @@ export default function App() {
                     onMouseEnter={(e) => handleTabMouseEnter(e, t)}
                     onMouseLeave={handleTabMouseLeave}
                   >
+                    {!isFile && branch && (
+                      <span className="tab-branch-prefix shrink-0">
+                        <GitBranch size={10} />
+                        <span>{branch}</span>
+                        <span className="tab-branch-separator">|</span>
+                      </span>
+                    )}
                     {isFile ? (
                       <FileCode size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                     ) : (
