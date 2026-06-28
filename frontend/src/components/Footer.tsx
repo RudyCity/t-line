@@ -70,7 +70,7 @@ export function Footer({
       <div className="flex items-center gap-3">
         <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 font-sans text-[10px] font-semibold tracking-wider hover:bg-purple-500/20 hover:border-purple-500/35 transition-all duration-200 cursor-pointer">
           <span className="h-1.5 w-1.5 rounded-full bg-purple-400 shadow-[0_0_6px_#a855f7] animate-pulse" />
-          <span>t-line v1.3.17</span>
+          <span>t-line v1.3.42</span>
         </span>
 
         {panelWorkspace && (
@@ -108,8 +108,8 @@ export function Footer({
         )}
       </div>
 
-      {/* Center Section: Zoom & Shell Controls (Dashboard Pill) */}
-      <div className="flex items-center gap-3 bg-white/5 hover:bg-white/10 px-3 py-1 rounded-full border border-white/5 hover:border-white/10 transition-all duration-200 shadow-inner">
+      {/* Center Section: Zoom & Shell Controls (Dashboard Pill) — hidden on mobile */}
+      <div className="hidden sm:flex items-center gap-3 bg-white/5 hover:bg-white/10 px-3 py-1 rounded-full border border-white/5 hover:border-white/10 transition-all duration-200 shadow-inner">
         {/* Zoom controls */}
         <div className="flex items-center gap-2">
           <button 
@@ -170,8 +170,8 @@ export function Footer({
         )}
       </div>
 
-      {/* Right Section: Cloudflare Tunnel & Status */}
-      <div className="flex items-center gap-2.5">
+      {/* Right Section: Cloudflare Tunnel & Status — hidden on mobile */}
+      <div className="hidden sm:flex items-center gap-2.5">
         {/* Cloudflare Tunnel status */}
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] text-slate-500 hidden md:inline-block">Cloudflare Tunnel:</span>

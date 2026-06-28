@@ -581,6 +581,17 @@ export default function App() {
         terminalInstances={terminalInstances}
         setShowSettingsModal={setShowSettingsModal}
         handleLogout={handleLogout}
+        terminalFontSize={terminalFontSize}
+        defaultShell={defaultShell}
+        setDefaultShell={setDefaultShell}
+        handleZoomIn={handleZoomIn}
+        handleZoomOut={handleZoomOut}
+        activeTabType={tabs.find(t => t.id === activeTabId)?.type || null}
+        onRefreshTerminal={() => refreshTerminal(tabs.find(t => t.id === activeTabId)?.focusedTerminalId || '')}
+        tunnelStatus={tunnelStatus}
+        tunnelLoading={tunnelLoading}
+        handleStartTunnel={handleStartTunnel}
+        handleStopTunnel={handleStopTunnel}
       />
 
       {/* Main Panel */}
