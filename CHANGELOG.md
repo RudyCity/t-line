@@ -4,6 +4,14 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.64] - 2026-06-28
+
+### Changed
+- **Taskbar Icon White Background Fix**: Generated a new high-quality `T+` PNG icon with a solid dark indigo background (#0f172a) filling the entire 512x512 canvas. This replaces the transparent-corner version to prevent Windows from rendering white backgrounds in the corners.
+- **Sidebar Header Logo Scaling**: Increased the size of the inline vector `TPlusLogo` SVG component inside the sidebar header from 16px to 22px for better readability and a more premium, balanced appearance.
+
+---
+
 ## [1.3.63] - 2026-06-28
 
 ### Changed
