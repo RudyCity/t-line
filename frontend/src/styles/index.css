@@ -464,12 +464,14 @@ a {
   align-items: center;
   justify-content: center;
   z-index: 100;
+  -webkit-app-region: no-drag;
 }
 
 .modal-content {
   width: 100%;
   max-width: 480px;
   padding: 24px;
+  -webkit-app-region: no-drag;
 }
 
 .modal-header {

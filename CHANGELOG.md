@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.18] - 2026-06-28
+
+### Fixed
+- **Modal Overlay App-Region Interaction**: Added `-webkit-app-region: no-drag` to `.modal-overlay` and `.modal-content` in CSS. This resolves an issue in Electron frameless windows where clicks on the modal (which sits on top of draggable title/topbar zones) were intercepted as window drag events by the OS, preventing input fields (like the master password fields in settings) from receiving focus and keyboard input.
+
 ## [1.3.17] - 2026-06-28
 
 ### Fixed
