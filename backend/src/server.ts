@@ -60,6 +60,35 @@ function saveIpRules() {
   }
 }
 
+const LOGIN_BLOCKS_FILE = path.join(os.homedir(), '.tline-login-blocks.json');
+let loginBlocks: Record<string, { blockedAt: number; attempts: number }> = {};
+
+try {
+  if (fs.existsSync(LOGIN_BLOCKS_FILE)) {
+    loginBlocks = JSON.parse(fs.readFileSync(LOGIN_BLOCKS_FILE, 'utf8'));
+  }
+} catch (e) {
+  console.error('Failed to load login blocks:', e);
+}
+
+function saveLoginBlocks() {
+  try {
+    fs.writeFileSync(LOGIN_BLOCKS_FILE, JSON.stringify(loginBlocks, null, 2));
+  } catch (e) {
+    console.error('Failed to save login blocks:', e);
+  }
+}
+
+// In-memory tracker for temporary failed attempts
+let failedAttempts: Record<string, number> = {};
+
+function isTunnelRequest(req: express.Request): boolean {
+  if (req.headers['cf-connecting-ip']) return true;
+  const ip = getClientIp(req);
+  const isLocal = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip === 'localhost';
+  return !isLocal;
+}
+
 function getClientIp(req: express.Request): string {
   const cfIp = req.headers['cf-connecting-ip'];
   if (cfIp && typeof cfIp === 'string') return cfIp;
@@ -126,7 +155,7 @@ app.use((req, res, next) => {
   }
 
   // Block check
-  if (ipRules[ip] === 'block') {
+  if (ipRules[ip] === 'block' || loginBlocks[ip]) {
     return res.status(403).json({ error: 'Access denied: your IP has been blocked.' });
   }
 
@@ -161,12 +190,43 @@ app.post('/api/auth/setup', (req, res) => {
 
 app.post('/api/auth/login', (req, res) => {
   const { password } = req.body;
+  const ip = getClientIp(req);
+
+  if (loginBlocks[ip]) {
+    return res.status(403).json({ error: 'Your IP has been blocked due to too many failed login attempts.' });
+  }
+
   if (!password) {
     return res.status(400).json({ error: 'Password is required.' });
   }
+
   if (verifyMasterPassword(password)) {
+    delete failedAttempts[ip];
     return res.json({ success: true, token: generateToken({ role: 'admin' }) });
   }
+
+  if (isTunnelRequest(req)) {
+    failedAttempts[ip] = (failedAttempts[ip] || 0) + 1;
+    const remaining = 3 - failedAttempts[ip];
+
+    if (failedAttempts[ip] >= 3) {
+      loginBlocks[ip] = {
+        blockedAt: Date.now(),
+        attempts: failedAttempts[ip]
+      };
+      saveLoginBlocks();
+
+      ipRules[ip] = 'block';
+      saveIpRules();
+
+      delete failedAttempts[ip];
+
+      return res.status(403).json({ error: 'Too many failed login attempts. Your IP has been blocked.' });
+    }
+
+    return res.status(401).json({ error: `Invalid master password. ${remaining} attempts remaining.` });
+  }
+
   res.status(401).json({ error: 'Invalid master password.' });
 });
 
@@ -334,7 +394,8 @@ app.post('/api/worktrees/remove', authMiddleware, async (req, res) => {
 app.get('/api/security/connections', authMiddleware, (req, res) => {
   res.json({
     accesses: recentAccesses,
-    rules: ipRules
+    rules: ipRules,
+    loginBlocks: loginBlocks
   });
 });
 
@@ -353,9 +414,14 @@ app.post('/api/security/rules', authMiddleware, (req, res) => {
     ipRules[ip] = 'block';
   } else {
     delete ipRules[ip];
+    if (loginBlocks[ip]) {
+      delete loginBlocks[ip];
+      saveLoginBlocks();
+    }
+    delete failedAttempts[ip];
   }
   saveIpRules();
-  res.json({ success: true, rules: ipRules });
+  res.json({ success: true, rules: ipRules, loginBlocks: loginBlocks });
 });
 
 // ----------------------------------------------------
@@ -607,7 +673,7 @@ server.on('upgrade', (request, socket, head) => {
     }
   }
 
-  if (ipRules[ip] === 'block') {
+  if (ipRules[ip] === 'block' || loginBlocks[ip]) {
     socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
     socket.destroy();
     return;

@@ -4,6 +4,17 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.57] - 2026-06-28
+
+### Added
+- **3-Strikes Tunnel Login Protection**: Restricted failed login attempts from external tunnel requests (Cloudflare Tunnels or other external proxy headers) to a maximum of 3. If exceeded, the offending IP address is automatically blocked.
+- **Login Block List UI**: Added a dedicated section under the settings modal's Access Control tab, displaying real-time blocked login attempts with metadata (timestamp and failed attempts) and direct "Unblock" action support.
+
+### Changed
+- **Modals Codebase Refactoring**: Extracted and separated the `SettingsModal` code into [SettingsModal.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SettingsModal.tsx) to improve modularity and adhere strictly to the 1000-line file length limit.
+
+---
+
 ## [1.3.56] - 2026-06-28
 
 ### Added
