@@ -200,7 +200,7 @@ export function WorkspaceList({
         return (
           <div
             key={w.id}
-            className={`group p-3 rounded-lg border backdrop-blur-md transition-all duration-300 relative overflow-hidden flex flex-col gap-2 cursor-pointer ${
+            className={`group p-3 rounded-lg border backdrop-blur-md transition-all duration-300 relative flex flex-col gap-2 cursor-pointer ${
               isActive
                 ? 'bg-purple-500/10 border-purple-500/30 shadow-[0_0_12px_rgba(168,85,247,0.08)]'
                 : 'border-white/5 bg-slate-900/10 hover:bg-slate-900/40 hover:border-purple-500/20'

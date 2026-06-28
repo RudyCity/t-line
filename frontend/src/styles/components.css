@@ -136,23 +136,23 @@
   background: rgba(239, 68, 68, 0.1);
 }
 
-/* Workspace Action Dropdown Menu (Mobile Only) */
+/* Workspace Action Dropdown Menu */
 .ws-dropdown-menu {
   position: absolute;
   right: 0;
   top: 100%;
-  margin-top: 6px;
-  background: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(12px);
+  margin-top: 4px;
+  background: rgba(15, 23, 42, 0.98);
+  backdrop-filter: blur(16px);
   border: 1px solid rgba(168, 85, 247, 0.25);
   border-radius: 8px;
   padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  z-index: 50;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
-  min-width: 150px;
+  z-index: 100;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(168, 85, 247, 0.08);
+  min-width: 160px;
   animation: wsDropdownFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
