@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.37] - 2026-06-28
+
+### Removed
+- **Drag-and-Drop Tab Features**: Completely disabled HTML5 drag-and-drop actions on tabs (both tab reordering and drag-and-drop splitting), removing all overlay layers, drag states, refs, and unused local bindings to simplify layout orchestration and align with built-in button split options.
+
 ## [1.3.36] - 2026-06-28
 
 ### Removed

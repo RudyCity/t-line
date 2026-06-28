@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Folder, 
   Plus, 
@@ -51,8 +51,7 @@ export default function App() {
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [rightMenuOpen, setRightMenuOpen] = useState<boolean>(false);
   const [showShortcutModal, setShowShortcutModal] = useState<boolean>(false);
-  const draggedTabIdRef = useRef<string | null>(null);
-  const [dragOverZone, setDragOverZone] = useState<'left' | 'right' | 'top' | 'bottom' | null>(null);
+
   const [showMobileKeyboard, setShowMobileKeyboard] = useState<boolean>(false);
 
   // Workspaces Hook
@@ -134,7 +133,7 @@ export default function App() {
     refreshTriggers
   } = useTerminals(workspaces, () => setSidebarOpen(false));
 
-  const { startResizing, handleMergeTab } = useLayoutHelpers(
+  const { startResizing } = useLayoutHelpers(
     sidebarWidth,
     setSidebarWidth,
     tabs,
@@ -203,19 +202,7 @@ export default function App() {
     }
   };
 
-  const handleReorderTabs = (draggedId: string, targetId: string) => {
-    if (draggedId === targetId) return;
-    setTabs(prev => {
-      const next = [...prev];
-      const draggedIndex = next.findIndex(t => t.id === draggedId);
-      const targetIndex = next.findIndex(t => t.id === targetId);
-      if (draggedIndex === -1 || targetIndex === -1) return prev;
 
-      const [removed] = next.splice(draggedIndex, 1);
-      next.splice(targetIndex, 0, removed);
-      return next;
-    });
-  };
 
   // Keyboard Shortcuts
   const hasModals = showWorkspaceModal || showWorktreeModal || showTunnelModal || showSettingsModal;
@@ -639,27 +626,6 @@ export default function App() {
                     key={t.id} 
                     className={`tab ${activeTabId === t.id ? 'tab-active' : ''}`}
                     onClick={() => setActiveTabId(t.id)}
-                    draggable
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData('text/plain', t.id);
-                      draggedTabIdRef.current = t.id;
-                      document.body.classList.add('tab-dragging');
-                    }}
-                    onDragEnd={() => {
-                      draggedTabIdRef.current = null;
-                      document.body.classList.remove('tab-dragging');
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
-                      if (draggedId && draggedId !== t.id) {
-                        handleReorderTabs(draggedId, t.id);
-                      }
-                      document.body.classList.remove('tab-dragging');
-                    }}
                     style={{ 
                       height: '32px', 
                       padding: '0 12px', 
@@ -671,7 +637,7 @@ export default function App() {
                       background: activeTabId === t.id ? 'rgba(168, 85, 247, 0.08)' : 'transparent',
                       border: activeTabId === t.id ? '1px solid rgba(168, 85, 247, 0.25)' : '1px solid transparent',
                       color: activeTabId === t.id ? '#c084fc' : 'var(--text-muted)',
-                      cursor: 'grab',
+                      cursor: 'pointer',
                       whiteSpace: 'nowrap'
                     }}
                   >
@@ -770,129 +736,7 @@ export default function App() {
             
             // Terminals View — supports split pane and drag-and-drop splitting
             <div className="terminal-container">
-              {/* Drop Zones Overlay for Drag and Drop Splitting */}
-              <div className="drag-drop-overlay">
-                {/* Left Zone */}
-                <div
-                  className="drag-drop-zone"
-                  style={{
-                    position: 'absolute', left: 0, top: 0, bottom: 0, width: '25%',
-                    borderRight: dragOverZone === 'left' ? '2.5px solid rgba(168,85,247,0.85)' : '2px dashed rgba(168,85,247,0.4)',
-                    background: dragOverZone === 'left' ? 'rgba(168,85,247,0.12)' : 'rgba(168,85,247,0.03)',
-                    boxShadow: dragOverZone === 'left' ? 'inset 15px 0 30px -15px rgba(168,85,247,0.25)' : 'none',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.2s ease-in-out',
-                    color: dragOverZone === 'left' ? '#c084fc' : 'rgba(168,85,247,0.5)',
-                    fontWeight: dragOverZone === 'left' ? 'bold' : 'normal',
-                    fontSize: '12px'
-                  }}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDragEnter={() => setDragOverZone('left')}
-                  onDragLeave={() => setDragOverZone(null)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setDragOverZone(null);
-                    const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
-                    if (draggedId) {
-                      handleMergeTab(draggedId, 'horizontal');
-                    }
-                    document.body.classList.remove('tab-dragging');
-                  }}
-                >
-                  <span style={{ writingMode: 'vertical-lr' }}>Split Left</span>
-                </div>
 
-                {/* Right Zone */}
-                <div
-                  className="drag-drop-zone"
-                  style={{
-                    position: 'absolute', right: 0, top: 0, bottom: 0, width: '25%',
-                    borderLeft: dragOverZone === 'right' ? '2.5px solid rgba(168,85,247,0.85)' : '2px dashed rgba(168,85,247,0.4)',
-                    background: dragOverZone === 'right' ? 'rgba(168,85,247,0.12)' : 'rgba(168,85,247,0.03)',
-                    boxShadow: dragOverZone === 'right' ? 'inset -15px 0 30px -15px rgba(168,85,247,0.25)' : 'none',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.2s ease-in-out',
-                    color: dragOverZone === 'right' ? '#c084fc' : 'rgba(168,85,247,0.5)',
-                    fontWeight: dragOverZone === 'right' ? 'bold' : 'normal',
-                    fontSize: '12px'
-                  }}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDragEnter={() => setDragOverZone('right')}
-                  onDragLeave={() => setDragOverZone(null)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setDragOverZone(null);
-                    const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
-                    if (draggedId) {
-                      handleMergeTab(draggedId, 'horizontal');
-                    }
-                    document.body.classList.remove('tab-dragging');
-                  }}
-                >
-                  <span style={{ writingMode: 'vertical-lr' }}>Split Right</span>
-                </div>
-
-                {/* Top Zone */}
-                <div
-                  className="drag-drop-zone"
-                  style={{
-                    position: 'absolute', left: '25%', right: '25%', top: 0, height: '25%',
-                    borderBottom: dragOverZone === 'top' ? '2.5px solid rgba(168,85,247,0.85)' : '2px dashed rgba(168,85,247,0.4)',
-                    background: dragOverZone === 'top' ? 'rgba(168,85,247,0.12)' : 'rgba(168,85,247,0.03)',
-                    boxShadow: dragOverZone === 'top' ? 'inset 0 15px 30px -15px rgba(168,85,247,0.25)' : 'none',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.2s ease-in-out',
-                    color: dragOverZone === 'top' ? '#c084fc' : 'rgba(168,85,247,0.5)',
-                    fontWeight: dragOverZone === 'top' ? 'bold' : 'normal',
-                    fontSize: '12px'
-                  }}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDragEnter={() => setDragOverZone('top')}
-                  onDragLeave={() => setDragOverZone(null)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setDragOverZone(null);
-                    const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
-                    if (draggedId) {
-                      handleMergeTab(draggedId, 'vertical');
-                    }
-                    document.body.classList.remove('tab-dragging');
-                  }}
-                >
-                  <span>Split Top</span>
-                </div>
-
-                {/* Bottom Zone */}
-                <div
-                  className="drag-drop-zone"
-                  style={{
-                    position: 'absolute', left: '25%', right: '25%', bottom: 0, height: '25%',
-                    borderTop: dragOverZone === 'bottom' ? '2.5px solid rgba(168,85,247,0.85)' : '2px dashed rgba(168,85,247,0.4)',
-                    background: dragOverZone === 'bottom' ? 'rgba(168,85,247,0.12)' : 'rgba(168,85,247,0.03)',
-                    boxShadow: dragOverZone === 'bottom' ? 'inset 0 -15px 30px -15px rgba(168,85,247,0.25)' : 'none',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.2s ease-in-out',
-                    color: dragOverZone === 'bottom' ? '#c084fc' : 'rgba(168,85,247,0.5)',
-                    fontWeight: dragOverZone === 'bottom' ? 'bold' : 'normal',
-                    fontSize: '12px'
-                  }}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDragEnter={() => setDragOverZone('bottom')}
-                  onDragLeave={() => setDragOverZone(null)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setDragOverZone(null);
-                    const draggedId = e.dataTransfer.getData('text/plain') || draggedTabIdRef.current;
-                    if (draggedId) {
-                      handleMergeTab(draggedId, 'vertical');
-                    }
-                    document.body.classList.remove('tab-dragging');
-                  }}
-                >
-                  <span>Split Bottom</span>
-                </div>
-
-              </div>
 
               {(() => {
                 const activeTab = tabs.find(t => t.id === activeTabId);
