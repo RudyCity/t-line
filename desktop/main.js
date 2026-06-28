@@ -270,6 +270,14 @@ function updateTrayMenu() {
     },
     { type: 'separator' },
     { 
+      label: 'Restart Desktop', 
+      click: () => {
+        isQuitting = true;
+        app.relaunch();
+        app.quit();
+      } 
+    },
+    { 
       label: 'Quit', 
       click: () => {
         isQuitting = true;
