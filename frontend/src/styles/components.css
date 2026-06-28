@@ -287,12 +287,12 @@
 }
 
 .tab {
-  height: 32px;
-  padding: 0 10px;
+  height: 28px;
+  padding: 0 8px;
   border-radius: 6px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   font-size: 0.75rem;
   background: transparent;
   border: 1px solid transparent;

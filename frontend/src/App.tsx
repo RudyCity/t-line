@@ -1173,7 +1173,7 @@ export default function App() {
               
               {(window as any).electron && (
                 <>
-                  <div style={{ width: '1px', height: '14px', background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
+                  <div style={{ width: '1px', height: '10px', background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
                   <button type="button" className="window-control-btn" onClick={() => (window as any).electron.minimize()} title="Minimize">
                     <span style={{ fontSize: '10px' }}>—</span>
                   </button>
