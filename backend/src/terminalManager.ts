@@ -7,6 +7,65 @@ let pty: any = null;
 try {
   pty = require('node-pty');
   console.log('Successfully loaded native node-pty for pseudo-terminal support.');
+
+  // Monkeypatch node-pty to prevent AttachConsole errors on Windows when cleaning up terminals.
+  if (os.platform() === 'win32') {
+    try {
+      const windowsPtyAgentPath = require.resolve('node-pty/lib/windowsPtyAgent');
+      const { WindowsPtyAgent } = require(windowsPtyAgentPath);
+      if (WindowsPtyAgent && WindowsPtyAgent.prototype) {
+        const child_process = require('child_process');
+
+        WindowsPtyAgent.prototype._getConsoleProcessList = function () {
+          const _this = this;
+          return new Promise((resolve) => {
+            let resolved = false;
+            const safeResolve = (list: number[]) => {
+              if (resolved) return;
+              resolved = true;
+              clearTimeout(timeout);
+              resolve(list);
+            };
+
+            const agentPath = path.join(
+              path.dirname(windowsPtyAgentPath),
+              'conpty_console_list_agent'
+            );
+
+            const agent = child_process.fork(
+              agentPath,
+              [_this._innerPid.toString()],
+              { silent: true }
+            );
+
+            agent.on('message', (message: any) => {
+              if (message && message.consoleProcessList) {
+                safeResolve(message.consoleProcessList);
+              }
+            });
+
+            agent.on('exit', () => {
+              safeResolve([_this._innerPid]);
+            });
+
+            agent.on('error', () => {
+              safeResolve([_this._innerPid]);
+            });
+
+            const timeout = setTimeout(() => {
+              try {
+                agent.kill();
+              } catch (e) {}
+              safeResolve([_this._innerPid]);
+            }, 2000);
+          });
+        };
+        console.log('Successfully monkeypatched node-pty conpty_console_list_agent to prevent AttachConsole errors.');
+      }
+    } catch (e) {
+      console.warn('Failed to monkeypatch node-pty console process list helper:', e);
+    }
+  }
 } catch (e) {
   console.warn('Native node-pty not available. Falling back to child_process.spawn.');
 }

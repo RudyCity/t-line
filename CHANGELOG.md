@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.8] - 2026-06-28
+
+### Fixed
+- **node-pty AttachConsole Crash**: Added a try-catch block to `node-pty`'s internal console process list agent and monkeypatched `node-pty`'s `WindowsPtyAgent` constructor in `terminalManager.ts` to run the console process list fork silently on Windows. This suppresses distracting and noisy uncaught `AttachConsole failed` stack traces in the backend log console during terminal process cleanup.
+
 ## [1.3.7] - 2026-06-28
 
 ### Fixed
