@@ -12,7 +12,9 @@ import {
   FileCode,
   Keyboard,
   MoreVertical,
-  HelpCircle
+  HelpCircle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { FileViewerTab } from './components/FileViewerTab';
@@ -565,13 +567,25 @@ export default function App() {
         )}
       </div>
 
-      {/* Resize Handle */}
-      {!sidebarCollapsed && (
-        <div 
-          className="sidebar-resizer" 
-          onMouseDown={startResizing} 
-        />
-      )}
+      {/* Resize Handle / Divider */}
+      <div 
+        className={`sidebar-resizer ${sidebarCollapsed ? 'sidebar-resizer-collapsed' : ''}`}
+        onMouseDown={sidebarCollapsed ? undefined : startResizing}
+        style={{ cursor: sidebarCollapsed ? 'default' : 'col-resize' }}
+      >
+        <button 
+          className="sidebar-toggle-arrow-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            const newVal = !sidebarCollapsed;
+            setSidebarCollapsed(newVal);
+            localStorage.setItem('tline-sidebar-collapsed', newVal.toString());
+          }}
+          title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          {sidebarCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+        </button>
+      </div>
 
       {sidebarOpen && (
         <div className="sidebar-overlay md:hidden" onClick={() => setSidebarOpen(false)} />
@@ -603,16 +617,8 @@ export default function App() {
         <div className="top-bar flex items-center justify-between">
           <div className="top-bar-info flex items-center gap-4 shrink-0">
             <button 
-              className="action-btn" 
-              onClick={() => {
-                if (window.innerWidth <= 768) {
-                  setSidebarOpen(!sidebarOpen);
-                } else {
-                  const newVal = !sidebarCollapsed;
-                  setSidebarCollapsed(newVal);
-                  localStorage.setItem('tline-sidebar-collapsed', newVal.toString());
-                }
-              }}
+              className="action-btn mobile-only" 
+              onClick={() => setSidebarOpen(!sidebarOpen)}
               title="Toggle Sidebar"
             >
               <MenuIcon size={18} />

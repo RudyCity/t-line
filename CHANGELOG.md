@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.36] - 2026-06-28
+
+### Added
+- **Floating Arrow Toggle Button on Divider Line**: Replaced the desktop top-bar hamburger toggle with a floating, circular chevron-left/right toggle button positioned exactly on the vertical resizer divider between the sidebar and the main panel. Hovering over it highlights and expands the button cleanly with smooth transition scaling and purple glowing box-shadow.
+
 ## [1.3.35] - 2026-06-28
 
 ### Added
