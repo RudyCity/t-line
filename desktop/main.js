@@ -583,6 +583,11 @@ ipcMain.handle('select-directory', async () => {
   return result.filePaths[0];
 });
 
+ipcMain.handle('open-folder', async (_, folderPath) => {
+  const { shell } = require('electron');
+  await shell.openPath(folderPath);
+});
+
 ipcMain.handle('is-window-maximized', () => {
   return mainWindow ? mainWindow.isMaximized() : false;
 });

@@ -127,7 +127,16 @@ export function Footer({
         {panelWorkspace && (
           <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono text-slate-500">
             <span className="text-slate-700">|</span>
-            <span className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors duration-150 cursor-pointer" title={activeTabPath || panelWorkspace.path}>
+            <span
+              className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors duration-150 cursor-pointer"
+              title={`Open in Explorer: ${activeTabPath || panelWorkspace.path}`}
+              onClick={() => {
+                const folderPath = activeTabPath || panelWorkspace.path;
+                if ((window as any).electron?.openFolder) {
+                  (window as any).electron.openFolder(folderPath);
+                }
+              }}
+            >
               <Folder size={11} className="text-purple-400" />
               <span className="font-semibold text-slate-300 truncate max-w-[250px]">{getRelativeActivePath(panelWorkspace, activeTabPath)}</span>
             </span>
