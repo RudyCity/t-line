@@ -621,6 +621,7 @@ export default function App() {
                 const isFile = t.type === 'file';
                 const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
                 const shellType = focusedInst?.shellType || '';
+                const displayName = isFile ? t.name : (focusedInst?.name || t.name);
                 return (
                   <div 
                     key={t.id} 
@@ -646,7 +647,7 @@ export default function App() {
                     ) : (
                       <TerminalIcon size={13} style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                     )}
-                    <span>{t.name}</span>
+                    <span>{displayName}</span>
                     {shellType && (
                       <span style={{ fontSize: '0.65rem', opacity: 0.6, fontFamily: 'var(--font-mono)' }}>({shellType === 'powershell' ? 'ps' : shellType})</span>
                     )}

@@ -4,6 +4,12 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.39] - 2026-06-28
+
+### Fixed
+- **Tab real process name display**: Tab now shows the live active process name (e.g., `node`, `python`, `git`) instead of the static initial name. When the shell returns to idle (process name matches shellType), the tab name reverts to the original workspace-based name. Uses `focusedInst.name` from `terminalInstances` instead of static `t.name` in `App.tsx` tab rendering.
+- **initialName tracking**: Added optional `initialName` field to `TerminalInstanceData` to preserve the original tab name across process title overrides.
+
 ## [1.3.38] - 2026-06-28
 
 ### Fixed

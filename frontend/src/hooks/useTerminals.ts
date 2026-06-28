@@ -21,6 +21,7 @@ export interface WorkspaceInfo {
 export interface TerminalInstanceData {
   id: string;
   name: string;
+  initialName?: string;
   cwd: string;
   shellType: string;
 }
@@ -153,6 +154,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
             instances[t.id] = {
               id: t.id,
               name: t.name,
+              initialName: t.name,
               cwd: t.cwd || '',
               shellType: t.shellType || 'powershell'
             };
@@ -212,6 +214,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     const newInstance: TerminalInstanceData = {
       id: termId,
       name: tabName,
+      initialName: tabName,
       cwd,
       shellType: activeShell
     };
@@ -340,7 +343,8 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
       const newTermId = `term-${Date.now()}`;
       const newInstance: TerminalInstanceData = {
         id: newTermId,
-        name: focusedInstance.name,
+        name: focusedInstance.initialName || focusedInstance.name,
+        initialName: focusedInstance.initialName || focusedInstance.name,
         cwd: focusedInstance.cwd,
         shellType: focusedInstance.shellType
       };
@@ -384,17 +388,27 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
 
   const handleTitleChange = useCallback((id: string, title: string) => {
     if (!title || !title.trim()) return;
+    const cleanTitle = title.trim();
     setTerminalInstances(prev => {
       if (!prev[id]) return prev;
+      const inst = prev[id];
+      // If the incoming title matches the shell name (idle state), revert to initialName
+      const isShellIdle = inst.shellType &&
+        (cleanTitle.toLowerCase() === inst.shellType.toLowerCase() ||
+         cleanTitle.toLowerCase() === 'powershell' && inst.shellType === 'powershell' ||
+         cleanTitle.toLowerCase() === 'cmd' && inst.shellType === 'cmd' ||
+         cleanTitle.toLowerCase() === 'bash' && inst.shellType === 'bash');
+      const resolvedName = isShellIdle ? (inst.initialName || inst.name) : cleanTitle;
       return {
         ...prev,
-        [id]: { ...prev[id], name: title.trim() }
+        [id]: { ...inst, name: resolvedName }
       };
     });
     setTabs(prev =>
       prev.map(t => {
         if (t.type === 'terminal' && t.focusedTerminalId === id) {
-          return { ...t, name: title.trim() };
+          // Tab name is derived live from terminalInstances, no need to update here
+          return t;
         }
         return t;
       })
@@ -409,6 +423,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
           next[s.id] = {
             id: s.id,
             name: `Terminal (${s.shellType === 'powershell' ? 'ps' : s.shellType})`,
+            initialName: `Terminal (${s.shellType === 'powershell' ? 'ps' : s.shellType})`,
             cwd: s.cwd,
             shellType: s.shellType
           };
