@@ -44,7 +44,6 @@ function useIsMobile(): boolean {
 
 interface WorkspaceActionsProps {
   w: WorkspaceInfo;
-  isMobile: boolean;
   setPanelWorkspace: (ws: WorkspaceInfo | null) => void;
   setActivePanel: (panel: 'workspaces' | 'explorer' | 'changes') => void;
   handleOpenWorktreeModal: (w: WorkspaceInfo) => void;
@@ -55,7 +54,6 @@ interface WorkspaceActionsProps {
 
 function WorkspaceActions({
   w,
-  isMobile,
   setPanelWorkspace,
   setActivePanel,
   handleOpenWorktreeModal,
@@ -228,7 +226,6 @@ export function WorkspaceList({
 
               <WorkspaceActions
                 w={w}
-                isMobile={isMobile}
                 setPanelWorkspace={setPanelWorkspace}
                 setActivePanel={setActivePanel}
                 handleOpenWorktreeModal={handleOpenWorktreeModal}
