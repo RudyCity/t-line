@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.63] - 2026-06-28
+
+### Changed
+- **Unified Sidebar Brand Logo**: Replaced the generic Lucide terminal icon in the sidebar header with the inline vector `TPlusLogo` SVG component, unifying the app UI branding with the taskbar and system tray icons.
+
+---
+
 ## [1.3.62] - 2026-06-28
 
 ### Added
