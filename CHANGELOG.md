@@ -4,6 +4,12 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.55] - 2026-06-28
+
+### Added
+- **Chrome-Like Shrinking Tabs**: Added flexible shrinking layouts for terminal and file tabs in the topbar tab list. When many tabs are open, they dynamically shrink down in width (down to 36px), hiding inactive close buttons and labels gracefully.
+- **Sleek Custom Tooltips**: Implemented custom floating glassmorphic tooltips containing the full tab name/type and working directory/file path when a tab is hovered or clicked.
+
 ## [1.3.54] - 2026-06-28
 
 ### Fixed

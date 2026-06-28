@@ -102,6 +102,7 @@ export default function App() {
   const [editingWorkspace, setEditingWorkspace] = useState<WorkspaceInfo | null>(null);
 
   const [showMobileKeyboard, setShowMobileKeyboard] = useState<boolean>(false);
+  const [activeTooltip, setActiveTooltip] = useState<{ id: string; x: number; y: number; title: string; path: string } | null>(null);
 
   // Workspaces Hook
   const {
@@ -688,6 +689,43 @@ export default function App() {
     }
   };
 
+  const handleTabMouseEnter = (e: React.MouseEvent<HTMLDivElement>, t: any) => {
+    const isFile = t.type === 'file';
+    const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
+    const shellType = focusedInst?.shellType || '';
+    const displayName = isFile ? t.name : (focusedInst?.name || t.name);
+    const path = isFile ? (t.filePath || '') : (focusedInst?.cwd || t.cwd || '');
+    const rect = e.currentTarget.getBoundingClientRect();
+    setActiveTooltip({
+      id: t.id,
+      x: rect.left + rect.width / 2,
+      y: rect.bottom + 8,
+      title: isFile ? `File: ${displayName}` : `Terminal: ${displayName}${shellType ? ` (${shellType})` : ''}`,
+      path
+    });
+  };
+
+  const handleTabMouseLeave = () => {
+    setActiveTooltip(null);
+  };
+
+  const handleTabClick = (e: React.MouseEvent<HTMLDivElement>, t: any) => {
+    setActiveTabId(t.id);
+    const isFile = t.type === 'file';
+    const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
+    const shellType = focusedInst?.shellType || '';
+    const displayName = isFile ? t.name : (focusedInst?.name || t.name);
+    const path = isFile ? (t.filePath || '') : (focusedInst?.cwd || t.cwd || '');
+    const rect = e.currentTarget.getBoundingClientRect();
+    setActiveTooltip({
+      id: t.id,
+      x: rect.left + rect.width / 2,
+      y: rect.bottom + 8,
+      title: isFile ? `File: ${displayName}` : `Terminal: ${displayName}${shellType ? ` (${shellType})` : ''}`,
+      path
+    });
+  };
+
   if (loading) {
     return (
       <div className="auth-wrapper">
@@ -943,7 +981,7 @@ export default function App() {
 
           {/* Integrated Tab Bar */}
           {filteredTabs.length > 0 && (
-            <div className="flex items-center gap-2 flex-1 overflow-x-auto mx-3 h-full desktop-only" style={{ scrollbarWidth: 'none', WebkitAppRegion: 'no-drag' } as any}>
+            <div className="chrome-tabs-container mx-3 desktop-only" style={{ WebkitAppRegion: 'no-drag' } as any}>
               {filteredTabs.map(t => {
                 const isFile = t.type === 'file';
                 const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
@@ -953,32 +991,22 @@ export default function App() {
                   <div 
                     key={t.id} 
                     className={`tab ${activeTabId === t.id ? 'tab-active' : ''}`}
-                    onClick={() => setActiveTabId(t.id)}
-                    style={{ 
-                      height: '32px', 
-                      padding: '0 12px', 
-                      borderRadius: '6px', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px', 
-                      fontSize: '0.75rem', 
-                      background: activeTabId === t.id ? 'rgba(168, 85, 247, 0.08)' : 'transparent',
-                      border: activeTabId === t.id ? '1px solid rgba(168, 85, 247, 0.25)' : '1px solid transparent',
-                      color: activeTabId === t.id ? '#c084fc' : 'var(--text-muted)',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap'
-                    }}
+                    onClick={(e) => handleTabClick(e, t)}
+                    onMouseEnter={(e) => handleTabMouseEnter(e, t)}
+                    onMouseLeave={handleTabMouseLeave}
                   >
                     {isFile ? (
-                      <FileCode size={13} style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
+                      <FileCode size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                     ) : (
-                      <TerminalIcon size={13} style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
+                      <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                     )}
-                    <span>{displayName}</span>
-                    {shellType && (
-                      <span style={{ fontSize: '0.65rem', opacity: 0.6, fontFamily: 'var(--font-mono)' }}>({shellType === 'powershell' ? 'ps' : shellType})</span>
-                    )}
-                    <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)} style={{ marginLeft: '6px', fontSize: '11px', opacity: 0.6 }}>×</span>
+                    <span className="tab-title-container">
+                      <span className="tab-title">{displayName}</span>
+                      {shellType && (
+                        <span className="tab-shell-type">({shellType === 'powershell' ? 'ps' : shellType})</span>
+                      )}
+                    </span>
+                    <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)}>×</span>
                   </div>
                 );
               })}
@@ -991,8 +1019,6 @@ export default function App() {
               >
                 <Plus size={14} />
               </button>
-
-
             </div>
           )}
 
@@ -1206,6 +1232,23 @@ export default function App() {
         onRefreshTerminal={() => refreshTerminal(tabs.find(t => t.id === activeTabId)?.focusedTerminalId || '')}
         activeTabPath={getActiveTabPath()}
       />
+
+      {activeTooltip && (
+        <div 
+          className="tab-tooltip"
+          style={{
+            position: 'fixed',
+            left: `${activeTooltip.x}px`,
+            top: `${activeTooltip.y}px`,
+            transform: 'translateX(-50%)',
+            zIndex: 9999,
+            pointerEvents: 'none'
+          }}
+        >
+          <div className="tab-tooltip-title">{activeTooltip.title}</div>
+          <div className="tab-tooltip-path">{activeTooltip.path}</div>
+        </div>
+      )}
     </div>
   );
 }

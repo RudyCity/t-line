@@ -275,33 +275,36 @@
   }
 }
 
-/* Multi-Terminal Tab Bar */
-.tab-bar {
+/* Multi-Terminal Tab Bar (Chrome-like shrinking tabs) */
+.chrome-tabs-container {
   display: flex;
   align-items: center;
-  gap: 6px;
-  overflow-x: auto;
-  padding: 4px;
-  border-bottom: 1px solid var(--border-color);
-  background: rgba(15, 23, 42, 0.15);
-  border-radius: 8px;
-  margin-bottom: 4px;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .tab {
-  padding: 6px 12px;
+  height: 32px;
+  padding: 0 10px;
   border-radius: 6px;
-  background: transparent;
-  -webkit-app-region: no-drag;
-  border: 1px solid transparent;
-  font-size: 0.8rem;
-  font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 6px;
+  font-size: 0.75rem;
+  background: transparent;
+  border: 1px solid transparent;
   color: var(--text-muted);
+  cursor: pointer;
+  min-width: 36px;
+  max-width: 160px;
+  flex: 1 1 140px;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-app-region: no-drag;
 }
 
 .tab:hover {
@@ -313,22 +316,97 @@
   background: rgba(168, 85, 247, 0.08) !important;
   border-color: rgba(168, 85, 247, 0.25) !important;
   color: #c084fc !important;
-  box-shadow: 0 0 12px rgba(168, 85, 247, 0.1);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.05);
+}
+
+.tab-title-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.tab-shell-type {
+  font-size: 0.65rem;
+  opacity: 0.6;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
 }
 
 .tab-close {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
   width: 14px;
   height: 14px;
-  font-size: 10px;
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+  margin-left: auto;
+}
+
+.tab:hover .tab-close,
+.tab-active .tab-close {
+  opacity: 0.6;
 }
 
 .tab-close:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--color-danger);
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: var(--color-danger) !important;
+  opacity: 1 !important;
+}
+
+/* Tab Tooltip */
+.tab-tooltip {
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #f1f5f9;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 12px rgba(168, 85, 247, 0.25);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 320px;
+  animation: fadeInTooltip 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tab-tooltip-title {
+  font-weight: 600;
+  color: #c084fc;
+}
+
+.tab-tooltip-path {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  word-break: break-all;
+}
+
+@keyframes fadeInTooltip {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 
 /* Terminal Host Container */
