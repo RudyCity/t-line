@@ -341,9 +341,6 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     terminalRef.current = term;
     fitAddonRef.current = fitAddon;
 
-    // Call debouncedFit on initialization
-    debouncedFit();
-
     // ── WebSocket subscriptions ──────────────────────────
     wsManager.subscribe(tab.id, (payload) => {
       if (payload.type === 'data') {
@@ -374,6 +371,9 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     term.onResize(({ cols, rows }) => {
       wsManager.send(JSON.stringify({ type: 'resize', id: tab.id, cols, rows }));
     });
+
+    // Call debouncedFit on initialization after registering listeners
+    debouncedFit();
 
     // ── Window and Container resize ──────────────────────
     const handleResize = () => {

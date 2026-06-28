@@ -671,6 +671,16 @@ wss.on('connection', (ws: WebSocket) => {
         
         if (existingTerm) {
           activeTerminals.add(id);
+
+          // Ensure the existing terminal process size matches the client's current grid dimensions
+          if (cols && rows) {
+            try {
+              existingTerm.resize(cols, rows);
+            } catch (err) {
+              console.error(`Failed to resize existing terminal ${id}:`, err);
+            }
+          }
+
           let stopPolling: (() => void) | null = null;
           stopPolling = startTitlePolling(id, existingTerm);
 

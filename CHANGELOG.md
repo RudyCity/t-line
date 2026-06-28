@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.51] - 2026-06-28
+
+### Fixed
+- **Terminal Grid Sizing Sync**: Resolved an issue where clicking and scrolling in interactive TUI applications (like `superagent`) did not work or was misaligned.
+  - Added resize execution to backend `init` message handler, ensuring that re-attaching/opening a terminal updates the PTY grid size to match the frontend `xterm.js` viewport.
+  - Adjusted frontend `TerminalInstance` initialization to call the initial `debouncedFit` after registering the `onResize` listener, capturing and sending the initial grid dimensions to the PTY backend.
+
 ## [1.3.50] - 2026-06-28
 
 ### Fixed
