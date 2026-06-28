@@ -4,6 +4,15 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.56] - 2026-06-28
+
+### Added
+- **Backend Reconnection & Control Dashboard**: Implemented a beautiful, self-contained connection error page that is displayed in the desktop window whenever the backend service is stopped, starting, or fails to respond.
+- **Automated Reconnect Ping**: The error page automatically check/pings the local backend server every 2 seconds via native Electron IPC handlers, automatically reloading the main app once the connection is restored.
+- **Direct Backend Window Controls**: Enabled starting, restarting, and manual retrying of the local backend service using action buttons directly inside the Electron window, synced with real-time status updates from the main process.
+
+---
+
 ## [1.3.55] - 2026-06-28
 
 ### Added

@@ -18,6 +18,16 @@ let bypassToken = null;
 let activeSessions = [];
 let workspaces = [];
 
+function updateBackendStatus(newStatus) {
+  if (backendStatus !== newStatus) {
+    backendStatus = newStatus;
+    updateTrayMenu();
+    if (mainWindow) {
+      mainWindow.webContents.send('backend-status-change', backendStatus);
+    }
+  }
+}
+
 const BYPASS_TOKEN_FILE = path.join(os.homedir(), '.tline-bypass-token');
 
 function isBackendRunning(port) {
@@ -233,8 +243,7 @@ function startBackend() {
 
   console.log(`Spawning backend: ${cmd} ${args.join(' ')}`);
   
-  backendStatus = 'starting';
-  updateTrayMenu();
+  updateBackendStatus('starting');
 
   backendProcess = spawn(cmd, args, {
     cwd: projectRoot,
@@ -257,8 +266,7 @@ function startBackend() {
 
     // Parse when the server is ready
     if (output.includes('Workspace Server running on port') || output.includes('running on port')) {
-      backendStatus = 'running';
-      updateTrayMenu();
+      updateBackendStatus('running');
       
       // Delay slightly to ensure server socket is fully listening
       setTimeout(() => {
@@ -280,12 +288,11 @@ function startBackend() {
   backendProcess.on('close', (code) => {
     console.log(`Backend process exited with code ${code}`);
     backendProcess = null;
-    backendStatus = 'stopped';
-    updateTrayMenu();
+    updateBackendStatus('stopped');
     
     // If window is open, reload with stopped state
     if (mainWindow && !isQuitting) {
-      mainWindow.loadURL('data:text/html,<html><body style="background:#0b0f19;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;user-select:none;"><div style="text-align:center;"><h2>Backend is stopped</h2><p>Start the backend from the system tray to continue.</p></div></body></html>');
+      mainWindow.loadFile(path.join(__dirname, 'connection-error.html'));
     }
   });
 }
@@ -294,8 +301,7 @@ function stopBackend() {
   if (!backendProcess) return;
   console.log('Stopping backend process...');
   
-  backendStatus = 'stopped';
-  updateTrayMenu();
+  updateBackendStatus('stopped');
   
   try {
     if (process.platform === 'win32') {
@@ -311,7 +317,7 @@ function stopBackend() {
   backendProcess = null;
   
   if (mainWindow) {
-    mainWindow.loadURL('data:text/html,<html><body style="background:#0b0f19;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;user-select:none;"><div style="text-align:center;"><h2>Backend is stopped</h2><p>Start the backend from the system tray to continue.</p></div></body></html>');
+    mainWindow.loadFile(path.join(__dirname, 'connection-error.html'));
   }
 }
 
@@ -322,7 +328,7 @@ function restartBackend() {
   }, 1500);
 }
 
-function createWindow(url) {
+function createWindow(urlOrPath) {
   if (mainWindow) return;
 
   const iconPath = path.join(__dirname, 'icon.png');
@@ -349,7 +355,19 @@ function createWindow(url) {
     return { action: 'deny' };
   });
 
-  mainWindow.loadURL(url);
+  // Handle connection or loading failures
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    if (validatedURL.startsWith('http://localhost:3999') || validatedURL.startsWith('http://127.0.0.1:3999')) {
+      console.log(`Failed to load backend URL ${validatedURL} (${errorDescription}). Loading local reconnect page.`);
+      mainWindow.loadFile(path.join(__dirname, 'connection-error.html'));
+    }
+  });
+
+  if (urlOrPath.startsWith('http:') || urlOrPath.startsWith('https:') || urlOrPath.startsWith('data:')) {
+    mainWindow.loadURL(urlOrPath);
+  } else {
+    mainWindow.loadFile(urlOrPath);
+  }
   mainWindow.maximize();
 
   mainWindow.on('close', (event) => {
@@ -489,7 +507,7 @@ function showWindow() {
       const url = bypassToken ? `http://localhost:3999/?token=${bypassToken}` : 'http://localhost:3999/';
       createWindow(url);
     } else {
-      createWindow('data:text/html,<html><body style="background:#0b0f19;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;user-select:none;"><div style="text-align:center;"><h2>Backend is stopped</h2><p>Start the backend from the system tray to continue.</p></div></body></html>');
+      createWindow(path.join(__dirname, 'connection-error.html'));
     }
     return;
   }
@@ -587,6 +605,40 @@ ipcMain.on('window-close', () => {
   if (mainWindow) mainWindow.close();
 });
 
+ipcMain.on('start-backend', () => {
+  startBackend();
+});
+
+ipcMain.on('restart-backend', () => {
+  restartBackend();
+});
+
+ipcMain.handle('get-backend-status', () => {
+  return backendStatus;
+});
+
+ipcMain.handle('check-connection', async () => {
+  const port = 3999;
+  const running = await isBackendRunning(port);
+  if (running) {
+    updateBackendStatus('running');
+    try {
+      if (fs.existsSync(BYPASS_TOKEN_FILE)) {
+        bypassToken = fs.readFileSync(BYPASS_TOKEN_FILE, 'utf8').trim();
+      }
+    } catch (e) {}
+    const url = bypassToken ? `http://localhost:3999/?token=${bypassToken}` : 'http://localhost:3999/';
+    if (mainWindow) {
+      const currentUrl = mainWindow.webContents.getURL();
+      if (!currentUrl.startsWith('http')) {
+        mainWindow.loadURL(url);
+      }
+    }
+    return true;
+  }
+  return false;
+});
+
 app.on('ready', async () => {
   createMenu();
   createTray();
@@ -595,8 +647,7 @@ app.on('ready', async () => {
   const alreadyRunning = await isBackendRunning(port);
   if (alreadyRunning) {
     console.log(`Backend is already running on port ${port}. Connecting directly...`);
-    backendStatus = 'running';
-    updateTrayMenu();
+    updateBackendStatus('running');
     
     try {
       if (fs.existsSync(BYPASS_TOKEN_FILE)) {
@@ -646,14 +697,13 @@ app.on('ready', async () => {
     if (backendStatus !== 'starting') {
       if (newStatus !== backendStatus || sessionsChanged) {
         const statusTransition = (newStatus !== backendStatus);
-        backendStatus = newStatus;
-        updateTrayMenu();
+        updateBackendStatus(newStatus);
         
         if (statusTransition) {
           // If it transitioned to stopped, show the stopped message
           if (backendStatus === 'stopped') {
             if (mainWindow) {
-              mainWindow.loadURL('data:text/html,<html><body style="background:#0b0f19;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;user-select:none;"><div style="text-align:center;"><h2>Backend is stopped</h2><p>Start the backend from the system tray to continue.</p></div></body></html>');
+              mainWindow.loadFile(path.join(__dirname, 'connection-error.html'));
             }
           }
           
@@ -677,8 +727,7 @@ app.on('ready', async () => {
     } else {
       // If we are starting, but the backend is now detected as running, update state
       if (running) {
-        backendStatus = 'running';
-        updateTrayMenu();
+        updateBackendStatus('running');
       }
     }
   }, 5000);

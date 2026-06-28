@@ -1,6 +1,6 @@
 {
   "name": "desktop",
-  "version": "1.3.48",
+  "version": "1.3.49",
   "description": "Electron desktop wrapper for t-line",
   "main": "main.js",
   "scripts": {
@@ -22,6 +22,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "connection-error.html",
       "package.json",
       "icon.png",
       "../backend/dist/**/*",

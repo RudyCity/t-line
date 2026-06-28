@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>t-line Connection Status</title>
+  <style>
+    /* Premium CSS Theme & Resets */
+    :root {
+      --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --bg-main: #05070c;
+      --bg-card: rgba(17, 24, 39, 0.45);
+      --border-color: rgba(255, 255, 255, 0.06);
+      --border-glow: rgba(168, 85, 247, 0.15);
+      
+      --color-primary: #a855f7;
+      --color-primary-hover: #c084fc;
+      --color-primary-glow: rgba(168, 85, 247, 0.35);
+      
+      --color-success: #10b981;
+      --color-warning: #f59e0b;
+      --color-danger: #ef4444;
+      --color-info: #0ea5e9;
+
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+      background-image: 
+        radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        radial-gradient(at 0% 0%, rgba(168, 85, 247, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.04) 0px, transparent 50%);
+      background-size: 24px 24px, 100% 100%, 100% 100%;
+    }
+
+    /* Custom Titlebar for Frameless Window */
+    .titlebar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 40px;
+      background: #090c14;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      user-select: none;
+      -webkit-app-region: drag;
+      padding: 0 16px;
+      z-index: 100;
+    }
+
+    .titlebar-drag {
+      display: flex;
+      align-items: center;
+      flex: 1;
+      height: 100%;
+    }
+
+    .app-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .window-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      -webkit-app-region: no-drag;
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      padding: 2px;
+    }
+
+    .window-control-btn {
+      width: 24px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 11px;
+      transition: all 0.15s ease;
+      border-radius: 4px;
+    }
+
+    .window-control-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+    }
+
+    .window-control-btn-close:hover {
+      background: var(--color-danger) !important;
+      color: white !important;
+    }
+
+    /* Main Container & Layout */
+    .main-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 520px;
+      padding: 40px;
+      box-shadow: var(--glass-shadow);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.5s ease;
+    }
+
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--color-primary), var(--color-info), transparent);
+      opacity: 0.6;
+    }
+
+    /* Pulse Status Icon */
+    .status-badge {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .status-pulse {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: var(--color-primary);
+      opacity: 0.15;
+      animation: pulse-ring 2.5s cubic-bezier(0.215, 0.610, 0.355, 1) infinite;
+      transition: background-color 0.5s ease;
+    }
+
+    .status-icon-inner {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: rgba(17, 24, 39, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-primary);
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+      transition: color 0.5s ease, border-color 0.5s ease;
+      z-index: 2;
+    }
+
+    .status-icon-inner svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    /* Status-Specific Theme Modifications */
+    .theme-stopped {
+      --color-primary: var(--color-warning);
+      --color-primary-hover: #fbbf24;
+    }
+    .theme-starting {
+      --color-primary: #a855f7;
+      --color-primary-hover: #c084fc;
+    }
+    .theme-running {
+      --color-primary: var(--color-info);
+      --color-primary-hover: #38bdf8;
+    }
+
+    /* Typography */
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+      padding: 0 10px;
+    }
+
+    /* Buttons */
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .btn {
+      width: 100%;
+      height: 42px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+    }
+
+    .btn-primary {
+      background: var(--color-primary);
+      border: none;
+      color: #000;
+      box-shadow: 0 4px 14px 0 rgba(168, 85, 247, 0.2);
+    }
+
+    .btn-primary:hover {
+      background: var(--color-primary-hover);
+      box-shadow: 0 6px 20px 0 rgba(168, 85, 247, 0.35);
+      transform: translateY(-1px);
+    }
+    
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-secondary:active {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    /* Status Bar Footer */
+    .status-footer {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-color);
+      border-radius: 30px;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      box-shadow: 0 0 8px var(--color-primary);
+      position: relative;
+    }
+
+    /* Spin Animation */
+    .animate-spin {
+      animation: spin 1.2s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse-ring {
+      0% { transform: scale(0.7); opacity: 0.5; }
+      80%, 100% { transform: scale(1.3); opacity: 0; }
+    }
+  </style>
+  <!-- Outfit Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="theme-starting">
+
+  <!-- Titlebar -->
+  <div class="titlebar">
+    <div class="titlebar-drag">
+      <span class="app-title">t-line Workspace Manager</span>
+    </div>
+    <div class="window-controls">
+      <button type="button" class="window-control-btn" id="btn-minimize" title="Minimize">—</button>
+      <button type="button" class="window-control-btn" id="btn-maximize" title="Maximize">▢</button>
+      <button type="button" class="window-control-btn window-control-btn-close" id="btn-close" title="Close">✕</button>
+    </div>
+  </div>
+
+  <!-- Content Container -->
+  <div class="main-container">
+    <div class="glass-card" id="card">
+      
+      <!-- Icon & Pulse Indicator -->
+      <div class="status-badge">
+        <div class="status-pulse" id="pulse"></div>
+        <div class="status-icon-inner" id="icon-container">
+          <svg id="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Text Status -->
+      <h1 id="status-title">Connecting to Backend...</h1>
+      <p id="status-desc">Starting the t-line local backend service. This should only take a few seconds.</p>
+
+      <!-- Control Actions -->
+      <div class="button-group">
+        <button class="btn btn-primary" id="btn-action" style="display: none;"></button>
+        <button class="btn btn-secondary" id="btn-restart-action" style="display: none;">Restart Backend</button>
+        <button class="btn btn-secondary" id="btn-retry">Retry Connection</button>
+      </div>
+
+      <!-- Realtime Status Footer -->
+      <div class="status-footer">
+        <span class="status-dot" id="footer-dot"></span>
+        <span id="footer-text">Syncing Status...</span>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // SVGs for different states
+    const SVG_SPINNER = `<svg class="animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
+    const SVG_ALERT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+    const SVG_CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+
+    // Dom Elements
+    const body = document.body;
+    const card = document.getElementById('card');
+    const pulse = document.getElementById('pulse');
+    const iconContainer = document.getElementById('icon-container');
+    const statusTitle = document.getElementById('status-title');
+    const statusDesc = document.getElementById('status-desc');
+    const btnAction = document.getElementById('btn-action');
+    const btnRestartAction = document.getElementById('btn-restart-action');
+    const btnRetry = document.getElementById('btn-retry');
+    const footerText = document.getElementById('footer-text');
+    const footerDot = document.getElementById('footer-dot');
+    
+    const btnMinimize = document.getElementById('btn-minimize');
+    const btnMaximize = document.getElementById('btn-maximize');
+    const btnClose = document.getElementById('btn-close');
+
+    let isChecking = false;
+
+    // Apply window controls
+    if (window.electron) {
+      btnMinimize.addEventListener('click', () => window.electron.minimize());
+      btnMaximize.addEventListener('click', () => window.electron.maximize());
+      btnClose.addEventListener('click', () => window.electron.close());
+
+      // Track maximization state to update button text/icon
+      window.electron.isMaximized().then(max => updateMaximizeButton(max));
+      window.electron.onMaximizedChange(max => updateMaximizeButton(max));
+    }
+
+    function updateMaximizeButton(isMaximized) {
+      btnMaximize.innerText = isMaximized ? '❐' : '▢';
+    }
+
+    // Set page content based on current backendStatus
+    function updateUI(status) {
+      body.className = ''; // Reset classes
+      btnAction.style.display = 'none';
+      btnRestartAction.style.display = 'none';
+
+      if (status === 'stopped') {
+        body.classList.add('theme-stopped');
+        iconContainer.innerHTML = SVG_ALERT;
+        statusTitle.innerText = 'Backend is Stopped';
+        statusDesc.innerText = 'The local backend service is currently not running. Start the backend to access your workspaces.';
+        
+        btnAction.innerText = 'Start Backend';
+        btnAction.className = 'btn btn-primary';
+        btnAction.style.display = 'flex';
+        
+        footerText.innerText = 'Status: Stopped';
+      } else if (status === 'starting') {
+        body.classList.add('theme-starting');
+        iconContainer.innerHTML = SVG_SPINNER;
+        statusTitle.innerText = 'Connecting to Backend...';
+        statusDesc.innerText = 'Starting the t-line local backend service. This should only take a few seconds.';
+        
+        btnRestartAction.style.display = 'flex';
+        footerText.innerText = 'Status: Starting...';
+      } else if (status === 'running') {
+        body.classList.add('theme-running');
+        iconContainer.innerHTML = SVG_SPINNER;
+        statusTitle.innerText = 'Backend is Responsive';
+        statusDesc.innerText = 'Backend is running but loading your workspace sessions. Retrying connection...';
+        
+        btnRestartAction.style.display = 'flex';
+        footerText.innerText = 'Status: Initializing App...';
+      }
+    }
+
+    // Ping / check connection logic
+    async function checkConnection(force = false) {
+      if (isChecking && !force) return;
+      isChecking = true;
+
+      const originalBtnText = btnRetry.innerText;
+      if (force) {
+        btnRetry.innerText = 'Checking...';
+        btnRetry.disabled = true;
+      }
+
+      try {
+        if (window.electron) {
+          const connected = await window.electron.checkConnection();
+          if (connected) {
+            // Success! The main process will redirect us shortly.
+            iconContainer.innerHTML = SVG_CHECK;
+            statusTitle.innerText = 'Connected!';
+            statusDesc.innerText = 'Loading Workspace Manager...';
+            footerText.innerText = 'Status: Connected';
+          }
+        }
+      } catch (err) {
+        console.error('Error checking connection:', err);
+      } finally {
+        isChecking = false;
+        if (force) {
+          btnRetry.innerText = originalBtnText;
+          btnRetry.disabled = false;
+        }
+      }
+    }
+
+    // Trigger actions via electron bridge
+    if (window.electron) {
+      // Get initial status
+      window.electron.getBackendStatus().then(status => {
+        updateUI(status);
+        checkConnection();
+      });
+
+      // Handle real-time status change broadcast
+      window.electron.onBackendStatusChange((newStatus) => {
+        updateUI(newStatus);
+        if (newStatus === 'running') {
+          checkConnection();
+        }
+      });
+
+      // Bind actions
+      btnAction.addEventListener('click', () => {
+        window.electron.startBackend();
+      });
+
+      btnRestartAction.addEventListener('click', () => {
+        window.electron.restartBackend();
+      });
+
+      btnRetry.addEventListener('click', () => {
+        checkConnection(true);
+      });
+    }
+
+    // Background polling loop
+    setInterval(() => {
+      checkConnection();
+    }, 2000);
+  </script>
+</body>
+</html>

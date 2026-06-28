@@ -12,5 +12,16 @@ contextBridge.exposeInMainWorld('electron', {
     return () => {
       ipcRenderer.removeListener('window-maximized-change', listener);
     };
+  },
+  startBackend: () => ipcRenderer.send('start-backend'),
+  restartBackend: () => ipcRenderer.send('restart-backend'),
+  getBackendStatus: () => ipcRenderer.invoke('get-backend-status'),
+  checkConnection: () => ipcRenderer.invoke('check-connection'),
+  onBackendStatusChange: (callback) => {
+    const listener = (event, value) => callback(value);
+    ipcRenderer.on('backend-status-change', listener);
+    return () => {
+      ipcRenderer.removeListener('backend-status-change', listener);
+    };
   }
 });
