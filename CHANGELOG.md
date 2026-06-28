@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.66] - 2026-06-28
+
+### Fixed
+- **Worktree Delete Permission Denied**: When removing a git worktree, the app now automatically closes all terminal tabs and file tabs whose path is inside that worktree **before** issuing the backend delete command. This releases any OS-level file locks held by open terminal processes, preventing the `Permission denied: failed to delete '<path>'` error on Windows.
+
+---
+
 ## [1.3.65] - 2026-06-28
 
 ### Changed

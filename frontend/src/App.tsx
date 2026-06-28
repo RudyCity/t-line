@@ -334,7 +334,38 @@ export default function App() {
       'Remove Worktree',
       `Are you sure you want to remove the worktree at ${wtPath}? This will delete the checked-out files but keep the branch.`,
       () => {
-        handleRemoveWorktree(wsId, wtPath);
+        // Find and close any tabs / terminals pointing to this worktree to release OS locks
+        const normWtPath = wtPath.toLowerCase().replace(/\\/g, '/');
+        const isPathInWt = (p: string) => {
+          const normP = p.toLowerCase().replace(/\\/g, '/');
+          return normP === normWtPath || normP.startsWith(normWtPath + '/');
+        };
+
+        const tabsToClose = tabs.filter(t => {
+          if (t.type === 'file' && t.filePath && isPathInWt(t.filePath)) {
+            return true;
+          }
+          if (t.type === 'terminal' && t.layout) {
+            const termIds = getTerminalIds(t.layout);
+            return termIds.some(id => {
+              const inst = terminalInstances[id];
+              const cwd = inst?.cwd || '';
+              return cwd && isPathInWt(cwd);
+            });
+          }
+          return false;
+        });
+
+        if (tabsToClose.length > 0) {
+          tabsToClose.forEach(t => {
+            closeTerminal(t.id);
+          });
+        }
+
+        // Add a slight delay before triggering backend removal to allow terminal processes to exit completely
+        setTimeout(() => {
+          handleRemoveWorktree(wsId, wtPath);
+        }, 500);
       },
       'danger',
       'Remove',
