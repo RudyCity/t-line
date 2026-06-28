@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.62] - 2026-06-28
+
+### Added
+- **T+ SVG and PNG Logo**: Designed and wrote a scalable vector graphics (SVG) version of the brand logo at `desktop/icon.svg`, and generated a matching premium high-resolution `T+` PNG at `desktop/icon.png` for unified tray and taskbar support.
+
+---
+
 ## [1.3.61] - 2026-06-28
 
 ### Added
