@@ -1,4 +1,4 @@
-# t-line — Workspace Manager `v1.1.1`
+# t-line — Workspace Manager `v1.3.67`
 
 > A modern, premium local developer dashboard for managing workspaces, Git Worktrees, and multiple terminal instances — built with an Obsidian Dark aesthetic.
 
@@ -12,6 +12,8 @@
 - **Dynamic tab titles** — tab names update in real-time to reflect the active foreground process via backend process-name polling (every 1,000ms), working around WinPTY limitations on Windows.
 - **Zoom controls** — in/out font size with persistent storage, docked in the status bar footer.
 - **Default shell selector** — choose your preferred shell, persisted across sessions.
+- **Compact tab bar** — tabs shrink gracefully; close button is hidden on small inactive tabs to prevent accidental closure (mirrors Chrome tab UX).
+- **Custom tooltips** — hovering a narrow tab shows the full tab title; tooltips are properly cleaned up on tab close or context menu open.
 
 ### 💾 Persistent Tab State
 - Terminal tabs, active tab ID, working directories (`cwd`), and shell types are saved in `localStorage` and restored across window reloads and backend restarts.
@@ -21,13 +23,21 @@
 - Track and list active Git worktrees with their checkout paths.
 - Quickly create new worktree branches from the UI.
 - Real-time **dirty index detection** with pulsing alerts.
+- **Dirty file count badge** — shows exact count of uncommitted changes/untracked files next to each dirty branch in the sidebar.
 - **Git branch status in footer** — shows active branch (or worktree name), with uncommitted change warnings.
+- **Safe worktree deletion** — auto-closes all terminal and file tabs inside the worktree before deleting; falls back to `fs.rmSync` + `git worktree prune` if Git cannot acquire the file lock (e.g. antivirus hold).
 
 ### 📁 File Explorer & Editor Tabs
 - Browse host drive letters and folder structures directly in the sidebar.
 - Click any file to open it as a dedicated **editor tab** alongside terminal tabs, with line numbering, dark styling, and a Copy button.
 - Explorer and Changes panels feature **full-bleed layout** — flush to all edges.
 - **Auto-selects workspace** — if only one workspace is tracked, it is automatically selected. Switching panels auto-selects the first available or Git-enabled workspace.
+
+### 🗂️ Workspace Actions Dropdown
+- All workspace action buttons (rename, delete, open in Explorer, etc.) are collapsed into a **three-dot (⋮) dropdown menu** on all screen sizes for a cleaner card layout.
+- Dropdown is rendered in a **portal** to escape parent `overflow: hidden` containers.
+- **Click workspace path in footer** to instantly open that directory in Windows Explorer.
+- **Full path tooltip** on the workspace path text for quick reference.
 
 ### 🔐 Security & Authentication
 - Protect your backend with a **Master Password** (bcrypt-hashed, stored in `~/.tline-config.json`).
@@ -49,6 +59,7 @@
 - **Dynamic Maximize/Restore icon** — toggles between `▢` and `❐` based on actual window state.
 - Draggable header region for native window movement.
 - Electron controls are only visible when running inside Electron (hidden in browser).
+- **Custom T+ brand logo** — unified SVG/PNG icon used in sidebar header, system tray, and taskbar with a dark indigo background for clean Windows rendering.
 
 ### ⚙️ Smart Backend Detection
 - On desktop launch, a TCP port check on `3999` determines if the backend is already running.
