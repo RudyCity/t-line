@@ -484,63 +484,85 @@ export default function App() {
         <div 
           className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}
           style={{
-            width: sidebarCollapsed ? 0 : `${sidebarWidth}px`,
-            minWidth: sidebarCollapsed ? 0 : `${sidebarWidth}px`
+            width: sidebarCollapsed ? '48px' : `${sidebarWidth}px`,
+            minWidth: sidebarCollapsed ? '48px' : `${sidebarWidth}px`
           }}
         >
         
-        <div className="sidebar-header" style={{ padding: '12px 16px', gap: '8px' }}>
+        <div className="sidebar-header" style={{ padding: sidebarCollapsed ? '12px 0' : '12px 16px', gap: '8px', justifyContent: sidebarCollapsed ? 'center' : 'flex-start' }}>
           <TerminalIcon size={16} className="text-purple-400 shrink-0" />
-          <span className="logo-text" style={{ fontSize: '1.05rem', fontWeight: 600 }}>t-line</span>
+          {!sidebarCollapsed && (
+            <span className="logo-text" style={{ fontSize: '1.05rem', fontWeight: 600 }}>t-line</span>
+          )}
         </div>
 
         {/* Sidebar Panel Tabs */}
-        <div className="sidebar-panel-tabs">
+        <div className="sidebar-panel-tabs" style={{ flexDirection: sidebarCollapsed ? 'column' : 'row' }}>
           <button
             className={`sidebar-panel-tab ${activePanel === 'workspaces' ? 'active' : ''}`}
-            onClick={() => setActivePanel('workspaces')}
+            onClick={() => {
+              setActivePanel('workspaces');
+              if (sidebarCollapsed) {
+                setSidebarCollapsed(false);
+                localStorage.setItem('tline-sidebar-collapsed', 'false');
+              }
+            }}
             title="Workspaces"
           >
             <Folder size={15} />
-            <span>Workspaces</span>
+            {!sidebarCollapsed && <span>Workspaces</span>}
           </button>
           <button
             className={`sidebar-panel-tab ${activePanel === 'explorer' ? 'active' : ''}`}
-            onClick={() => setActivePanel('explorer')}
+            onClick={() => {
+              setActivePanel('explorer');
+              if (sidebarCollapsed) {
+                setSidebarCollapsed(false);
+                localStorage.setItem('tline-sidebar-collapsed', 'false');
+              }
+            }}
             title="File Explorer"
           >
             <FolderTree size={15} />
-            <span>Explorer</span>
+            {!sidebarCollapsed && <span>Explorer</span>}
           </button>
           <button
             className={`sidebar-panel-tab ${activePanel === 'changes' ? 'active' : ''}`}
-            onClick={() => setActivePanel('changes')}
+            onClick={() => {
+              setActivePanel('changes');
+              if (sidebarCollapsed) {
+                setSidebarCollapsed(false);
+                localStorage.setItem('tline-sidebar-collapsed', 'false');
+              }
+            }}
             title="Git Changes"
           >
             <GitCompare size={15} />
-            <span>Changes</span>
+            {!sidebarCollapsed && <span>Changes</span>}
           </button>
         </div>
 
-        <SidebarContentPanel
-          activePanel={activePanel}
-          setActivePanel={setActivePanel}
-          workspaces={workspaces}
-          panelWorkspace={panelWorkspace}
-          setPanelWorkspace={setPanelWorkspace}
-          tabs={tabs}
-          setActiveTabId={setActiveTabId}
-          activeTabId={activeTabId}
-          terminalInstances={terminalInstances}
-          setShowWorkspaceModal={setShowWorkspaceModal}
-          setSidebarOpen={setSidebarOpen}
-          handleOpenWorktreeModal={handleOpenWorktreeModal}
-          openTerminal={openTerminal}
-          handleRemoveWorkspace={handleRemoveWorkspace}
-          handleRemoveWorktree={handleRemoveWorktree}
-          openFileTab={openFileTab}
-          closeTerminal={closeTerminal}
-        />
+        {!sidebarCollapsed && (
+          <SidebarContentPanel
+            activePanel={activePanel}
+            setActivePanel={setActivePanel}
+            workspaces={workspaces}
+            panelWorkspace={panelWorkspace}
+            setPanelWorkspace={setPanelWorkspace}
+            tabs={tabs}
+            setActiveTabId={setActiveTabId}
+            activeTabId={activeTabId}
+            terminalInstances={terminalInstances}
+            setShowWorkspaceModal={setShowWorkspaceModal}
+            setSidebarOpen={setSidebarOpen}
+            handleOpenWorktreeModal={handleOpenWorktreeModal}
+            openTerminal={openTerminal}
+            handleRemoveWorkspace={handleRemoveWorkspace}
+            handleRemoveWorktree={handleRemoveWorktree}
+            openFileTab={openFileTab}
+            closeTerminal={closeTerminal}
+          />
+        )}
       </div>
 
       {/* Resize Handle */}

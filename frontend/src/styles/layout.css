@@ -74,9 +74,24 @@
 
 /* Collapsed Sidebar */
 .sidebar.sidebar-collapsed {
-  width: 0 !important;
-  min-width: 0 !important;
-  border-right: none !important;
+  width: 48px !important;
+  min-width: 48px !important;
+  border-right: 1px solid var(--border-color) !important;
+}
+
+.sidebar-collapsed .sidebar-panel-tabs {
+  border-bottom: none;
+}
+
+.sidebar-collapsed .sidebar-panel-tab {
+  border-bottom: none;
+  border-left: 2px solid transparent;
+  height: 48px;
+  flex: none;
+}
+
+.sidebar-collapsed .sidebar-panel-tab.active {
+  border-left-color: var(--color-primary);
 }
 
 /* Sidebar Panel Tabs */

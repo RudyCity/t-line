@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.35] - 2026-06-28
+
+### Added
+- **Icon-Only Collapsed Sidebar**: Refactored the collapsed sidebar behavior to transition into a 48px vertical icon-only Activity Bar instead of hiding completely. Clicking any collapsed icon switches the active tab view and automatically expands the sidebar panel. Active tabs in collapsed mode feature a left purple indicator bar.
+
 ## [1.3.34] - 2026-06-28
 
 ### Changed
