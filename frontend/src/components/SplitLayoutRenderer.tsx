@@ -64,17 +64,17 @@ export function SplitLayoutRenderer({
         
         {/* Floating action bar at top-right of each pane */}
         <div 
-          className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover/pane:opacity-100 transition-opacity duration-200 z-50 bg-[#0f111a]/85 backdrop-blur-md border border-purple-500/25 rounded-md p-1 shadow-lg"
+          className="absolute top-2 right-2 flex items-center gap-1.5 opacity-100 lg:opacity-0 lg:group-hover/pane:opacity-100 transition-opacity duration-200 z-50 bg-[#0f111a]/85 backdrop-blur-md border border-purple-500/25 rounded-md p-1.5 lg:p-1 shadow-lg"
           onClick={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
         >
           <button
             type="button"
             title="Split Horizontal (Alt+D)"
             onClick={() => splitFocusedTerminal('horizontal')}
-            className="text-slate-400 hover:text-purple-400 hover:bg-white/5 rounded p-1 transition-colors flex items-center justify-center cursor-pointer"
-            style={{ width: '20px', height: '20px' }}
+            className="w-7 h-7 lg:w-5 lg:h-5 text-slate-400 hover:text-purple-400 hover:bg-white/5 rounded p-1.5 lg:p-1 transition-colors flex items-center justify-center cursor-pointer"
           >
-            <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
+            <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 lg:w-3 lg:h-3" fill="currentColor">
               <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm6.5 1v8h1V4z" />
             </svg>
           </button>
@@ -82,10 +82,9 @@ export function SplitLayoutRenderer({
             type="button"
             title="Split Vertical (Alt+E)"
             onClick={() => splitFocusedTerminal('vertical')}
-            className="text-slate-400 hover:text-purple-400 hover:bg-white/5 rounded p-1 transition-colors flex items-center justify-center cursor-pointer"
-            style={{ width: '20px', height: '20px' }}
+            className="w-7 h-7 lg:w-5 lg:h-5 text-slate-400 hover:text-purple-400 hover:bg-white/5 rounded p-1.5 lg:p-1 transition-colors flex items-center justify-center cursor-pointer"
           >
-            <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
+            <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 lg:w-3 lg:h-3" fill="currentColor">
               <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm1 5.5h12v-1H2z" />
             </svg>
           </button>
@@ -94,10 +93,9 @@ export function SplitLayoutRenderer({
               type="button"
               title="Close Pane (Alt+W)"
               onClick={() => closePane(node.terminalId)}
-              className="text-slate-400 hover:text-red-400 hover:bg-white/5 rounded p-1 transition-colors flex items-center justify-center cursor-pointer"
-              style={{ width: '20px', height: '20px' }}
+              className="w-7 h-7 lg:w-5 lg:h-5 text-slate-400 hover:text-red-400 hover:bg-white/5 rounded p-1.5 lg:p-1 transition-colors flex items-center justify-center cursor-pointer"
             >
-              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 lg:w-3 lg:h-3" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 3l10 10M13 3L3 13" />
               </svg>
             </button>

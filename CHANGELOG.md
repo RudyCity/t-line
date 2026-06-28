@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.12] - 2026-06-28
+
+### Added
+- **Responsive Terminal Split Actions**: Modified the floating action bar in `SplitLayoutRenderer.tsx` to be always visible on mobile and tablet screen sizes (`opacity-100 lg:opacity-0 lg:group-hover/pane:opacity-100`) because hover events do not exist on touch devices. Enlarged the touch target size of the action buttons from `20px` to `28px` (`w-7 h-7 lg:w-5 lg:h-5`) and increased icon sizes on mobile and tablet viewports to make them touch-friendly. Added `onTouchEnd` event stop propagation to prevent touch event leaks.
+
 ## [1.3.11] - 2026-06-28
 
 ### Fixed
