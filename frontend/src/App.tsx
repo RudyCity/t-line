@@ -600,6 +600,19 @@ export default function App() {
     );
   }
 
+  const getActiveTabPath = (): string => {
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    if (!activeTab) return '';
+    if (activeTab.type === 'file' && activeTab.filePath) {
+      return activeTab.filePath;
+    }
+    if (activeTab.type === 'terminal' && activeTab.focusedTerminalId) {
+      const inst = terminalInstances[activeTab.focusedTerminalId];
+      return inst?.cwd || '';
+    }
+    return '';
+  };
+
   const filteredTabs = tabs.filter(t => t.workspaceId === panelWorkspace?.id);
 
   return (
@@ -1007,6 +1020,7 @@ export default function App() {
         handleStopTunnel={handleStopTunnel}
         activeTabType={tabs.find(t => t.id === activeTabId)?.type || null}
         onRefreshTerminal={() => refreshTerminal(tabs.find(t => t.id === activeTabId)?.focusedTerminalId || '')}
+        activeTabPath={getActiveTabPath()}
       />
     </div>
   );

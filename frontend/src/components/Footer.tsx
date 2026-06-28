@@ -20,6 +20,7 @@ export interface FooterProps {
   handleStopTunnel: () => void;
   activeTabType?: 'terminal' | 'file' | null;
   onRefreshTerminal?: () => void;
+  activeTabPath?: string;
 }
 
 export function Footer({
@@ -34,7 +35,8 @@ export function Footer({
   handleStopTunnel,
   tunnelLoading,
   activeTabType,
-  onRefreshTerminal
+  onRefreshTerminal,
+  activeTabPath
 }: FooterProps): React.JSX.Element {
   const [copied, setCopied] = React.useState(false);
 
@@ -49,12 +51,28 @@ export function Footer({
     }
   };
 
-  const getWorkspaceActiveBranch = (workspace: WorkspaceInfo | null): { name: string; isDirty: boolean; isMain: boolean } | null => {
+  const getWorkspaceActiveBranch = (
+    workspace: WorkspaceInfo | null,
+    tabPath?: string
+  ): { name: string; isDirty: boolean; isMain: boolean } | null => {
     if (!workspace || !workspace.isGit || !workspace.worktrees || workspace.worktrees.length === 0) return null;
     
-    const activeWt = workspace.worktrees.find(wt => wt.path === workspace.path) 
-      || workspace.worktrees.find(wt => wt.isMain) 
-      || workspace.worktrees[0];
+    const isPathInWorktree = (filePath: string, wtPath: string) => {
+      const normFile = filePath.toLowerCase().replace(/\\/g, '/');
+      const normWt = wtPath.toLowerCase().replace(/\\/g, '/');
+      return normFile === normWt || normFile.startsWith(normWt + '/');
+    };
+
+    let activeWt = null;
+    if (tabPath) {
+      activeWt = workspace.worktrees.find(wt => isPathInWorktree(tabPath, wt.path));
+    }
+
+    if (!activeWt) {
+      activeWt = workspace.worktrees.find(wt => wt.path === workspace.path) 
+        || workspace.worktrees.find(wt => wt.isMain) 
+        || workspace.worktrees[0];
+    }
       
     if (!activeWt) return null;
     return {
@@ -62,6 +80,37 @@ export function Footer({
       isDirty: !!activeWt.isDirty,
       isMain: activeWt.isMain
     };
+  };
+
+  const getRelativeActivePath = (
+    workspace: WorkspaceInfo | null,
+    tabPath?: string
+  ): string => {
+    if (!workspace) return '';
+    if (!tabPath) return workspace.name;
+
+    const normTab = tabPath.toLowerCase().replace(/\\/g, '/');
+    
+    if (workspace.worktrees) {
+      for (const wt of workspace.worktrees) {
+        const normWt = wt.path.toLowerCase().replace(/\\/g, '/');
+        if (normTab === normWt || normTab.startsWith(normWt + '/')) {
+          const rel = tabPath.slice(wt.path.length).replace(/\\/g, '/');
+          const cleanRel = rel.startsWith('/') ? rel.slice(1) : rel;
+          const prefix = wt.isMain ? workspace.name : `${workspace.name} (${wt.branch || 'wt'})`;
+          return cleanRel ? `${prefix}/${cleanRel}` : prefix;
+        }
+      }
+    }
+
+    const normWS = workspace.path.toLowerCase().replace(/\\/g, '/');
+    if (normTab.startsWith(normWS)) {
+      const rel = tabPath.slice(workspace.path.length).replace(/\\/g, '/');
+      const cleanRel = rel.startsWith('/') ? rel.slice(1) : rel;
+      return cleanRel ? `${workspace.name}/${cleanRel}` : workspace.name;
+    }
+
+    return workspace.name;
   };
 
   return (
@@ -76,13 +125,13 @@ export function Footer({
         {panelWorkspace && (
           <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono text-slate-500">
             <span className="text-slate-700">|</span>
-            <span className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors duration-150 cursor-pointer" title={panelWorkspace.path}>
+            <span className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors duration-150 cursor-pointer" title={activeTabPath || panelWorkspace.path}>
               <Folder size={11} className="text-purple-400" />
-              <span className="font-semibold text-slate-300 truncate max-w-[120px]">{panelWorkspace.name}</span>
+              <span className="font-semibold text-slate-300 truncate max-w-[250px]">{getRelativeActivePath(panelWorkspace, activeTabPath)}</span>
             </span>
             
             {(() => {
-              const activeBranch = getWorkspaceActiveBranch(panelWorkspace);
+              const activeBranch = getWorkspaceActiveBranch(panelWorkspace, activeTabPath);
               if (!activeBranch) return null;
               return (
                 <>
