@@ -47,7 +47,7 @@ export function SplitLayoutRenderer({
           height: '100%',
           position: 'relative',
           border: 'none',
-          background: isFocused ? 'rgba(168, 85, 247, 0.02)' : 'transparent',
+          background: 'transparent',
           boxSizing: 'border-box',
           overflow: 'hidden'
         }}
@@ -64,6 +64,7 @@ export function SplitLayoutRenderer({
             onTerminalFocus?.();
           }}
           refreshTrigger={refreshTriggers?.[term.id] || 0}
+          isFocusedPane={isFocused && hasMultiplePanes}
         />
         
         {/* Floating action bar at top-right of each pane */}

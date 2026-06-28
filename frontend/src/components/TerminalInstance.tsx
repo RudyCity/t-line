@@ -4,6 +4,8 @@ import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { SearchAddon } from 'xterm-addon-search';
 import { Unicode11Addon } from 'xterm-addon-unicode11';
+import { CanvasAddon } from '@xterm/addon-canvas';
+import { ImageAddon } from '@xterm/addon-image';
 import { wsManager } from '../services/websocket';
 
 interface TerminalTab {
@@ -21,9 +23,11 @@ interface TerminalInstanceProps {
   onTitleChange?: (title: string) => void;
   onFocus?: () => void;
   refreshTrigger?: number;
+  isFocusedPane?: boolean;
+  pid?: number;
 }
 
-// ── Search Bar Sub-Component ──────────────────────────────
+// ── Search Bar Sub-Component ──────────────────────────────────
 interface SearchBarProps {
   searchAddon: SearchAddon | null;
   onClose: () => void;
@@ -34,6 +38,7 @@ function TerminalSearchBar({ searchAddon, onClose }: SearchBarProps) {
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [regex, setRegex] = useState(false);
   const [resultMsg, setResultMsg] = useState('');
+  const [notFound, setNotFound] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -43,13 +48,27 @@ function TerminalSearchBar({ searchAddon, onClose }: SearchBarProps) {
   const doSearch = useCallback((term: string, forward = true) => {
     if (!searchAddon || !term) {
       setResultMsg('');
+      setNotFound(false);
       return;
     }
-    const opts = { caseSensitive, regex };
+    const opts = { caseSensitive, regex, decorations: {
+      matchBackground: 'rgba(168,85,247,0.3)',
+      matchBorder: 'rgba(168,85,247,0.8)',
+      matchOverviewRuler: '#a855f7',
+      activeMatchBackground: 'rgba(168,85,247,0.6)',
+      activeMatchBorder: '#c084fc',
+      activeMatchColorOverviewRuler: '#c084fc',
+    }};
     const found = forward
       ? searchAddon.findNext(term, opts)
       : searchAddon.findPrevious(term, opts);
-    setResultMsg(found ? '' : 'No results');
+    if (!found) {
+      setResultMsg('No results');
+      setNotFound(true);
+    } else {
+      setResultMsg('');
+      setNotFound(false);
+    }
   }, [searchAddon, caseSensitive, regex]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -63,81 +82,283 @@ function TerminalSearchBar({ searchAddon, onClose }: SearchBarProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
     setQuery(v);
+    setNotFound(false);
     if (!v) { searchAddon?.clearDecorations?.(); setResultMsg(''); }
     else doSearch(v, true);
   };
 
   return (
-    <div style={{
-      position: 'absolute', top: 0, right: '12px', zIndex: 100,
-      display: 'flex', alignItems: 'center', gap: '6px',
-      background: 'rgba(15,17,26,0.97)',
-      border: '1px solid rgba(168,85,247,0.35)',
-      borderTop: 'none', borderRadius: '0 0 8px 8px',
-      padding: '6px 10px', boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-      backdropFilter: 'blur(12px)'
-    }}>
-      <input
-        ref={inputRef}
-        value={query}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        placeholder="Find in terminal…"
-        style={{
-          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '4px', color: '#f1f5f9', fontSize: '12px',
-          padding: '3px 8px', outline: 'none', width: '180px', fontFamily: 'var(--font-mono)'
-        }}
-      />
-      {resultMsg && (
-        <span style={{ fontSize: '10px', color: '#f87171' }}>{resultMsg}</span>
-      )}
-      <button
-        title="Case sensitive (Alt+C)"
-        onClick={() => setCaseSensitive(v => !v)}
-        style={{
-          background: caseSensitive ? 'rgba(168,85,247,0.3)' : 'transparent',
-          border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px',
-          color: caseSensitive ? '#c084fc' : '#64748b', fontSize: '11px',
-          padding: '2px 6px', cursor: 'pointer'
-        }}>Aa</button>
-      <button
-        title="Use regex (Alt+R)"
-        onClick={() => setRegex(v => !v)}
-        style={{
-          background: regex ? 'rgba(168,85,247,0.3)' : 'transparent',
-          border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px',
-          color: regex ? '#c084fc' : '#64748b', fontSize: '11px',
-          padding: '2px 6px', cursor: 'pointer'
-        }}>.*</button>
-      <button title="Previous (Shift+Enter)" onClick={() => doSearch(query, false)}
-        style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '13px', padding: '2px 4px' }}>↑</button>
-      <button title="Next (Enter)" onClick={() => doSearch(query, true)}
-        style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '13px', padding: '2px 4px' }}>↓</button>
-      <button title="Close (Esc)" onClick={onClose}
-        style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px', padding: '2px 4px' }}>×</button>
+    <div className="terminal-search-bar">
+      <div className="terminal-search-input-wrap">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: '#64748b', flexShrink: 0 }}>
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder="Find in terminal…"
+          className={`terminal-search-input${notFound ? ' terminal-search-input-error' : ''}`}
+        />
+        {resultMsg && (
+          <span className="terminal-search-no-result">{resultMsg}</span>
+        )}
+      </div>
+
+      <div className="terminal-search-toggles">
+        <button
+          title="Case sensitive (Alt+C)"
+          onClick={() => setCaseSensitive(v => !v)}
+          className={`terminal-search-toggle${caseSensitive ? ' active' : ''}`}
+        >Aa</button>
+        <button
+          title="Use regex (Alt+R)"
+          onClick={() => setRegex(v => !v)}
+          className={`terminal-search-toggle${regex ? ' active' : ''}`}
+        >.*</button>
+      </div>
+
+      <div className="terminal-search-nav">
+        <button title="Previous (Shift+Enter)" onClick={() => doSearch(query, false)} className="terminal-search-nav-btn">↑</button>
+        <button title="Next (Enter)" onClick={() => doSearch(query, true)} className="terminal-search-nav-btn">↓</button>
+      </div>
+
+      <button title="Close (Esc)" onClick={onClose} className="terminal-search-close">×</button>
     </div>
   );
 }
 
-// ── Main Terminal Instance ────────────────────────────────
-export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleChange, onFocus, refreshTrigger }: TerminalInstanceProps) {
+// ── Smart Paste Confirm ────────────────────────────────────────
+interface SmartPasteProps {
+  text: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function SmartPasteConfirm({ text, onConfirm, onCancel }: SmartPasteProps) {
+  const lines = text.split('\n');
+  const preview = lines.slice(0, 3).join('\n') + (lines.length > 3 ? `\n… (+${lines.length - 3} more lines)` : '');
+
+  return (
+    <div className="smart-paste-overlay">
+      <div className="smart-paste-box">
+        <div className="smart-paste-header">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <span>Paste {lines.length} lines?</span>
+        </div>
+        <pre className="smart-paste-preview">{preview}</pre>
+        <div className="smart-paste-actions">
+          <button onClick={onCancel} className="smart-paste-btn-cancel">Cancel</button>
+          <button onClick={onConfirm} className="smart-paste-btn-confirm">Paste</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Terminal Status Bar ────────────────────────────────────────
+interface StatusBarProps {
+  shellType: string;
+  wsConnected: boolean;
+  cursorCol: number;
+  cursorRow: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onClear: () => void;
+  onSearch: () => void;
+  fontSize: number;
+  pid?: number;
+}
+
+function TerminalStatusBar({
+  shellType, wsConnected, cursorCol, cursorRow,
+  onZoomIn, onZoomOut, onClear, onSearch, fontSize, pid
+}: StatusBarProps) {
+  const shellLabel: Record<string, string> = {
+    powershell: 'PS',
+    cmd: 'CMD',
+    bash: 'Bash',
+    gitbash: 'Git Bash',
+    wsl: 'WSL',
+  };
+
+  return (
+    <div className="terminal-status-bar">
+      <div className="terminal-status-left">
+        <span className={`terminal-status-dot${wsConnected ? ' connected' : ''}`} />
+        <span className="terminal-status-shell">{shellLabel[shellType] || shellType}</span>
+        {pid && pid > 0 && (
+          <span className="terminal-status-pid" title="Process ID">PID {pid}</span>
+        )}
+      </div>
+      <div className="terminal-status-right">
+        <span className="terminal-status-cursor" title="Cursor position">
+          {cursorCol}:{cursorRow}
+        </span>
+        <div className="terminal-status-divider" />
+        <button className="terminal-status-btn" title="Search (Ctrl+Shift+F)" onClick={onSearch}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+        </button>
+        <button className="terminal-status-btn" title="Clear terminal" onClick={onClear}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/>
+          </svg>
+        </button>
+        <div className="terminal-status-divider" />
+        <button className="terminal-status-btn" title="Zoom out" onClick={onZoomOut}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <circle cx="11" cy="11" r="8"/><line x1="8" y1="11" x2="14" y2="11"/>
+          </svg>
+        </button>
+        <span className="terminal-status-fontsize">{fontSize}px</span>
+        <button className="terminal-status-btn" title="Zoom in" onClick={onZoomIn}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <circle cx="11" cy="11" r="8"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Premium Context Menu ───────────────────────────────────────
+interface ContextMenuProps {
+  x: number;
+  y: number;
+  hasSelection: boolean;
+  onCopy: () => void;
+  onPaste: () => void;
+  onSelectAll: () => void;
+  onClear: () => void;
+  onSearch: () => void;
+  onClose: () => void;
+}
+
+function TerminalContextMenu({ x, y, hasSelection, onCopy, onPaste, onSelectAll, onClear, onSearch, onClose }: ContextMenuProps) {
+  useEffect(() => {
+    const close = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('.terminal-ctx-menu') === null) {
+        onClose();
+      }
+    };
+    window.addEventListener('mousedown', close, true);
+    return () => window.removeEventListener('mousedown', close, true);
+  }, [onClose]);
+
+  const items = [
+    {
+      label: 'Copy',
+      shortcut: 'Ctrl+C',
+      disabled: !hasSelection,
+      onClick: onCopy,
+      icon: (
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+      )
+    },
+    {
+      label: 'Paste',
+      shortcut: 'Ctrl+V',
+      disabled: false,
+      onClick: onPaste,
+      icon: (
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>
+        </svg>
+      )
+    },
+    { separator: true },
+    {
+      label: 'Select All',
+      shortcut: 'Ctrl+A',
+      disabled: false,
+      onClick: onSelectAll,
+      icon: (
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
+        </svg>
+      )
+    },
+    {
+      label: 'Find…',
+      shortcut: 'Ctrl+⇧+F',
+      disabled: false,
+      onClick: onSearch,
+      icon: (
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+      )
+    },
+    { separator: true },
+    {
+      label: 'Clear',
+      shortcut: '',
+      disabled: false,
+      onClick: onClear,
+      danger: true,
+      icon: (
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+        </svg>
+      )
+    }
+  ] as Array<{ separator?: boolean; label?: string; shortcut?: string; disabled?: boolean; danger?: boolean; onClick?: () => void; icon?: React.ReactNode }>;
+
+  return (
+    <div
+      className="terminal-ctx-menu"
+      style={{ position: 'fixed', top: y, left: x, zIndex: 1000 }}
+    >
+      {items.map((item, i) =>
+        item.separator ? (
+          <div key={i} className="terminal-ctx-separator" />
+        ) : (
+          <button
+            key={i}
+            onClick={item.onClick}
+            disabled={item.disabled}
+            className={`terminal-ctx-item${item.danger ? ' danger' : ''}`}
+          >
+            <span className="terminal-ctx-icon">{item.icon}</span>
+            <span className="terminal-ctx-label">{item.label}</span>
+            {item.shortcut && (
+              <span className="terminal-ctx-shortcut">{item.shortcut}</span>
+            )}
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
+// ── Main Terminal Instance ─────────────────────────────────────
+export function TerminalInstance({
+  tab, active, wsConnected, fontSize,
+  onTitleChange, onFocus, refreshTrigger,
+  isFocusedPane = false, pid
+}: TerminalInstanceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
   const onTitleChangeRef = useRef(onTitleChange);
   const onFocusRef = useRef(onFocus);
+
   const [showSearch, setShowSearch] = useState(false);
   const isFirstRender = useRef(true);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [hasSelection, setHasSelection] = useState(false);
+  const [cursorPos, setCursorPos] = useState({ col: 1, row: 1 });
+  const [smartPasteText, setSmartPasteText] = useState<string | null>(null);
 
-  // ── RAF write-batch queue ─────────────────────────────────
-  // Data arriving from the WebSocket is pushed here and flushed in a single
-  // requestAnimationFrame callback, so xterm.js only repaints once per frame
-  // (≈16ms) instead of on every individual WS message. This eliminates the
-  // blink/flicker seen when AI agents stream rapid output (spinners, TUI redraws).
+  // ── RAF write-batch queue ──────────────────────────────────
   const writeQueueRef = useRef<string[]>([]);
   const rafHandleRef = useRef<number | null>(null);
 
@@ -159,17 +380,6 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
   }, []);
 
   useEffect(() => {
-    if (!contextMenu) return;
-    const closeMenu = () => setContextMenu(null);
-    window.addEventListener('click', closeMenu);
-    window.addEventListener('contextmenu', closeMenu);
-    return () => {
-      window.removeEventListener('click', closeMenu);
-      window.removeEventListener('contextmenu', closeMenu);
-    };
-  }, [contextMenu]);
-
-  useEffect(() => {
     if (!active) return;
     const interval = setInterval(() => {
       if (terminalRef.current) {
@@ -185,18 +395,13 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     if (terminalRef.current) {
       setHasSelection(terminalRef.current.hasSelection());
     }
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY
-    });
+    setContextMenu({ x: e.clientX, y: e.clientY });
   };
 
   const handleCopy = () => {
     if (terminalRef.current) {
       const selected = terminalRef.current.getSelection();
-      if (selected) {
-        navigator.clipboard.writeText(selected);
-      }
+      if (selected) navigator.clipboard.writeText(selected);
     }
     setContextMenu(null);
   };
@@ -205,6 +410,13 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     try {
       const text = await navigator.clipboard.readText();
       if (text && terminalRef.current) {
+        const lines = text.split('\n');
+        if (lines.length >= 3) {
+          // Smart paste: show confirmation for multi-line content
+          setSmartPasteText(text);
+          setContextMenu(null);
+          return;
+        }
         wsManager.send(JSON.stringify({ type: 'data', id: tab.id, data: text }));
       }
     } catch (err) {
@@ -212,6 +424,13 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     }
     setContextMenu(null);
   };
+
+  const confirmSmartPaste = useCallback(() => {
+    if (smartPasteText && terminalRef.current) {
+      wsManager.send(JSON.stringify({ type: 'data', id: tab.id, data: smartPasteText }));
+    }
+    setSmartPasteText(null);
+  }, [smartPasteText, tab.id]);
 
   const handleSelectAll = () => {
     if (terminalRef.current) {
@@ -221,12 +440,15 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     setContextMenu(null);
   };
 
-  const handleClear = () => {
-    if (terminalRef.current) {
-      terminalRef.current.clear();
-    }
+  const handleClear = useCallback(() => {
+    if (terminalRef.current) terminalRef.current.clear();
     setContextMenu(null);
-  };
+  }, []);
+
+  const handleSearchOpen = useCallback(() => {
+    setShowSearch(true);
+    setContextMenu(null);
+  }, []);
 
   const actualFontSize = window.innerWidth <= 768 ? 8 : fontSize;
 
@@ -261,13 +483,8 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     []
   );
 
-  useEffect(() => {
-    onTitleChangeRef.current = onTitleChange;
-  }, [onTitleChange]);
-
-  useEffect(() => {
-    onFocusRef.current = onFocus;
-  }, [onFocus]);
+  useEffect(() => { onTitleChangeRef.current = onTitleChange; }, [onTitleChange]);
+  useEffect(() => { onFocusRef.current = onFocus; }, [onFocus]);
 
   const closeSearch = useCallback(() => {
     setShowSearch(false);
@@ -275,12 +492,13 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     terminalRef.current?.focus();
   }, []);
 
+  // ── Terminal Initialization ────────────────────────────────
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // ── Instantiate Terminal ─────────────────────────────
     const term = new Terminal({
       cursorBlink: true,
+      cursorStyle: 'block',
       fontSize: actualFontSize,
       fontFamily: 'JetBrains Mono, Fira Code, Courier New, monospace',
       lineHeight: 1.2,
@@ -293,6 +511,7 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
       allowProposedApi: true,
       macOptionIsMeta: true,
       rightClickSelectsWord: true,
+      overviewRulerWidth: 10,
       theme: {
         background: '#000000',
         foreground: '#f8fafc',
@@ -316,11 +535,11 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
         brightBlue: '#60a5fa',
         brightMagenta: '#c084fc',
         brightCyan: '#22d3ee',
-        brightWhite: '#f1f5f9'
+        brightWhite: '#f1f5f9',
       }
     });
 
-    // ── Addons ───────────────────────────────────────────
+    // ── Addons ─────────────────────────────────────────────
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
 
@@ -337,7 +556,19 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     term.loadAddon(searchAddon);
     searchAddonRef.current = searchAddon;
 
+    // Image protocol addon (sixel / iTerm2 inline images)
+    const imageAddon = new ImageAddon();
+    term.loadAddon(imageAddon);
+
     term.open(containerRef.current);
+
+    // ── Canvas GPU renderer (load after open) ────────────
+    try {
+      const canvasAddon = new CanvasAddon();
+      term.loadAddon(canvasAddon);
+    } catch (e) {
+      console.warn('Canvas renderer not available, using default DOM renderer:', e);
+    }
 
     if (term.textarea) {
       term.textarea.setAttribute('inputmode', 'none');
@@ -346,13 +577,17 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     terminalRef.current = term;
     fitAddonRef.current = fitAddon;
 
-    // ── WebSocket subscriptions ──────────────────────────
+    // ── Cursor position tracking ───────────────────────────
+    term.onCursorMove(() => {
+      const buf = term.buffer.active;
+      setCursorPos({ col: buf.cursorX + 1, row: buf.cursorY + 1 });
+    });
+
+    // ── WebSocket subscriptions ────────────────────────────
     wsManager.subscribe(tab.id, (payload) => {
       if (payload.type === 'data') {
-        // Use RAF-batched write to prevent xterm repaint on every WS message
         scheduleWrite(payload.data);
       } else if (payload.type === 'replay') {
-        // Buffer replay on reconnect — batch write silently
         scheduleWrite(payload.data);
       } else if (payload.type === 'title') {
         onTitleChangeRef.current?.(payload.title);
@@ -377,23 +612,18 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
       wsManager.send(JSON.stringify({ type: 'resize', id: tab.id, cols, rows }));
     });
 
-    // Call debouncedFit on initialization after registering listeners
     debouncedFit();
 
-    // ── Window and Container resize ──────────────────────
-    const handleResize = () => {
-      debouncedFit();
-    };
+    // ── Window and Container resize ────────────────────────
+    const handleResize = () => { debouncedFit(); };
     window.addEventListener('resize', handleResize);
 
-    const resizeObserver = new ResizeObserver(() => {
-      handleResize();
-    });
+    const resizeObserver = new ResizeObserver(() => { handleResize(); });
     if (containerRef.current) {
       resizeObserver.observe(containerRef.current);
     }
 
-    // ── Capturing focus triggers for click/touch (bypassing xterm stopPropagation) ──
+    // ── Focus triggers ─────────────────────────────────────
     const handleFocusTrigger = (e: Event) => {
       const target = e.target as HTMLElement;
       if (target.closest('input') || target.closest('button') || target.closest('select') || target.closest('a')) {
@@ -421,14 +651,11 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
         container.removeEventListener('click', handleFocusTrigger, true);
         container.removeEventListener('touchend', handleFocusTrigger, true);
       }
-      // Cancel any pending RAF write to avoid writing to disposed terminal
       if (rafHandleRef.current !== null) {
         cancelAnimationFrame(rafHandleRef.current);
         rafHandleRef.current = null;
         writeQueueRef.current = [];
       }
-      
-      // Suspend sending terminal updates to backend, remove listener, and nullify ref
       wsManager.send(JSON.stringify({ type: 'suspend', id: tab.id }));
       wsManager.removeListener(tab.id);
       terminalRef.current = null;
@@ -436,7 +663,7 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     };
   }, [tab.id, debouncedFit, scheduleWrite]);
 
-  // ── WebSocket reconnect or activation → send init ────────
+  // ── WS reconnect / activate → init ────────────────────────
   useEffect(() => {
     if (active && wsConnected && terminalRef.current) {
       const term = terminalRef.current;
@@ -448,44 +675,21 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     }
   }, [active, wsConnected, tab.id, tab.cwd, tab.shellType]);
 
-  // ── Manual refresh trigger with normalize trick ─────────────
-  // Kirim resize kecil dulu (shrink), delay, lalu restore ke ukuran asli.
-  // Ini memaksa PTY + aplikasi TUI (Claude Code, Antigravity CLI, dll)
-  // yang menggunakan alternate screen buffer untuk redraw ulang dengan benar.
+  // ── Manual refresh trigger ─────────────────────────────────
   useEffect(() => {
     if (refreshTrigger && refreshTrigger > 0 && terminalRef.current && wsConnected) {
       const term = terminalRef.current;
-
-      // Ambil ukuran aktual terminal saat ini
       const actualCols = term.cols || 80;
       const actualRows = term.rows || 24;
-
-      // Step 1: Shrink — kirim ukuran kecil ke PTY backend untuk trigger SIGWINCH
       const SHRINK_COLS = Math.max(20, Math.floor(actualCols / 2));
       const SHRINK_ROWS = Math.max(5, Math.floor(actualRows / 2));
-      wsManager.send(JSON.stringify({
-        type: 'resize', id: tab.id, cols: SHRINK_COLS, rows: SHRINK_ROWS
-      }));
+      wsManager.send(JSON.stringify({ type: 'resize', id: tab.id, cols: SHRINK_COLS, rows: SHRINK_ROWS }));
 
-      // Step 2: Restore ke ukuran asli setelah delay singkat
-      // PTY + TUI apps akan menerima SIGWINCH kedua dan redraw ke ukuran benar
       const restoreTimer = setTimeout(() => {
         if (!terminalRef.current || !wsConnected) return;
-
-        // Reset visual buffer xterm
         terminalRef.current.reset();
-
-        // Restore ukuran terminal ke backend
-        wsManager.send(JSON.stringify({
-          type: 'resize', id: tab.id, cols: actualCols, rows: actualRows
-        }));
-
-        // Re-init untuk replay buffer dari backend
-        wsManager.send(JSON.stringify({
-          type: 'init', id: tab.id, cwd: tab.cwd, cols: actualCols, rows: actualRows, shellType: tab.shellType
-        }));
-
-        // Re-fit xterm agar sinkron dengan container
+        wsManager.send(JSON.stringify({ type: 'resize', id: tab.id, cols: actualCols, rows: actualRows }));
+        wsManager.send(JSON.stringify({ type: 'init', id: tab.id, cwd: tab.cwd, cols: actualCols, rows: actualRows, shellType: tab.shellType }));
         debouncedFit();
       }, 120);
 
@@ -493,24 +697,18 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     }
   }, [refreshTrigger, wsConnected, tab.id, tab.cwd, tab.shellType, debouncedFit]);
 
-
-  // ── Active tab: refit + focus ────────────────────────────
+  // ── Active tab: refit + focus ──────────────────────────────
   useEffect(() => {
     if (active) {
       debouncedFit();
-      const timer = setTimeout(() => {
-        terminalRef.current?.focus();
-      }, 80);
+      const timer = setTimeout(() => { terminalRef.current?.focus(); }, 80);
       return () => clearTimeout(timer);
     }
   }, [active, debouncedFit]);
 
-  // ── Font size ────────────────────────────────────────────
+  // ── Font size ──────────────────────────────────────────────
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
     if (terminalRef.current) {
       try {
         terminalRef.current.options.fontSize = actualFontSize;
@@ -521,7 +719,7 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     }
   }, [actualFontSize, debouncedFit]);
 
-  // ── Search toggle keyboard (Ctrl+F when terminal is focused) ─
+  // ── Search toggle keyboard (Ctrl+Shift+F) ─────────────────
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (!active) return;
@@ -536,21 +734,26 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
 
   const handleTerminalFocus = (e: React.MouseEvent | React.TouchEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest('input') || target.closest('button') || target.closest('select') || target.closest('a')) {
-      return;
-    }
+    if (target.closest('input') || target.closest('button') || target.closest('select') || target.closest('a')) return;
     if (terminalRef.current) {
       terminalRef.current.focus();
-      if (terminalRef.current.textarea) {
-        terminalRef.current.textarea.focus();
-      }
+      if (terminalRef.current.textarea) terminalRef.current.textarea.focus();
       onFocusRef.current?.();
     }
   };
 
+  // Zoom handlers from status bar — need to bubble up via events
+  const handleZoomIn = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('tline-zoom', { detail: { direction: 'in' } }));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('tline-zoom', { detail: { direction: 'out' } }));
+  }, []);
+
   return (
-    <div 
-      style={{ position: 'relative', width: '100%', height: '100%' }}
+    <div
+      className={`terminal-pane-root${isFocusedPane ? ' terminal-pane-focused' : ''}`}
       onClick={handleTerminalFocus}
       onTouchEnd={handleTerminalFocus}
       onContextMenu={handleContextMenu}
@@ -558,45 +761,42 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
       {showSearch && (
         <TerminalSearchBar searchAddon={searchAddonRef.current} onClose={closeSearch} />
       )}
+
       <div ref={containerRef} className="terminal-element" />
 
+      <TerminalStatusBar
+        shellType={tab.shellType}
+        wsConnected={wsConnected}
+        cursorCol={cursorPos.col}
+        cursorRow={cursorPos.row}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onClear={handleClear}
+        onSearch={handleSearchOpen}
+        fontSize={actualFontSize}
+        pid={pid}
+      />
+
       {contextMenu && (
-        <div 
-          className="terminal-context-menu"
-          style={{
-            position: 'fixed',
-            top: contextMenu.y,
-            left: contextMenu.x,
-            zIndex: 1000
-          }}
-        >
-          <button
-            onClick={handleCopy}
-            disabled={!hasSelection}
-            className="terminal-context-menu-item"
-          >
-            <span>Copy</span>
-          </button>
-          <button
-            onClick={handlePaste}
-            className="terminal-context-menu-item"
-          >
-            <span>Paste</span>
-          </button>
-          <div className="terminal-context-menu-separator" />
-          <button
-            onClick={handleSelectAll}
-            className="terminal-context-menu-item"
-          >
-            <span>Select All</span>
-          </button>
-          <button
-            onClick={handleClear}
-            className="terminal-context-menu-item"
-          >
-            <span>Clear Terminal</span>
-          </button>
-        </div>
+        <TerminalContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          hasSelection={hasSelection}
+          onCopy={handleCopy}
+          onPaste={handlePaste}
+          onSelectAll={handleSelectAll}
+          onClear={handleClear}
+          onSearch={handleSearchOpen}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      {smartPasteText && (
+        <SmartPasteConfirm
+          text={smartPasteText}
+          onConfirm={confirmSmartPaste}
+          onCancel={() => setSmartPasteText(null)}
+        />
       )}
     </div>
   );

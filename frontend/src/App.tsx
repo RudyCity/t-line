@@ -259,8 +259,21 @@ export default function App() {
     return () => clearInterval(interval);
   }, [panelWorkspace, fetchGitStatus]);
 
+  // Listen to zoom events dispatched from terminal status bar
+  useEffect(() => {
+    const handleZoomEvent = (e: Event) => {
+      const detail = (e as CustomEvent<{ direction: 'in' | 'out' }>).detail;
+      if (detail?.direction === 'in') handleZoomIn();
+      else if (detail?.direction === 'out') handleZoomOut();
+    };
+    window.addEventListener('tline-zoom', handleZoomEvent);
+    return () => window.removeEventListener('tline-zoom', handleZoomEvent);
+  }, [handleZoomIn, handleZoomOut]);
+
+
   // Handle workspace removal and close all associated terminal and file tabs
   const handleRemoveWorkspace = (workspacePath: string) => {
+
     showConfirm(
       'Remove Workspace',
       'Are you sure you want to remove this workspace from tracking? (Files will not be deleted)',

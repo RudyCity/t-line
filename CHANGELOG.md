@@ -4,7 +4,21 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
-## [1.3.69] - 2026-06-29
+## [1.3.70] - 2026-06-29
+
+### Added
+- **xterm — Canvas GPU Renderer**: Terminal now uses `@xterm/addon-canvas` Canvas-based renderer instead of the default DOM renderer, delivering significantly smoother scrolling and rendering, especially during rapid streaming output from AI agents and build logs.
+- **xterm — Image Protocol Support**: Added `@xterm/addon-image` enabling inline image rendering in the terminal via sixel and iTerm2 inline image protocol. CLI tools that output images (e.g., `viu`, image previews) will now render inline.
+- **xterm — Terminal Status Bar**: A compact translucent status bar now appears at the bottom of each terminal pane showing: shell type (PS/CMD/Bash/etc.), WebSocket connection dot (green/red), cursor position (col:row), font size, and inline zoom in/out and clear/search buttons.
+- **xterm — Premium Context Menu**: Right-click context menu redesigned with icons for each action, keyboard shortcut hints (Copy, Paste, Select All, Find…, Clear), scale-in animation, and a distinct danger style for destructive actions.
+- **xterm — Smart Paste Warning**: Pasting 3 or more lines now shows an inline confirmation dialog with a preview of the content, preventing accidental multi-line pastes in interactive shells.
+- **xterm — Upgraded Search Bar**: Search overlay now uses a slide-down animation, a grouped input wrapper with search icon, better visual toggle buttons for case-sensitive and regex modes, and distinct red styling when no results are found.
+- **xterm — Split Pane Focus Ring**: In split-pane layouts, the currently focused terminal pane is highlighted with a violet glow border animation, making it immediately clear which pane is active.
+- **xterm — Zoom from Status Bar**: Zoom in/out buttons in the status bar fire a `tline-zoom` custom event, wired to the same zoom handlers as keyboard shortcuts, so font size can be adjusted directly from the terminal bar.
+
+---
+
+
 
 ### Changed
 - **Workspace Panel — Branch Collapse**: Branch/worktree list per workspace is now collapsed when there are more than 3 entries. A "+N more branches" toggle button appears to expand/collapse the full list, keeping the panel compact.
