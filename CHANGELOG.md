@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.25] - 2026-06-28
+
+### Added
+- **Auto-Close Tabs on Workspace Removal**: Updated `handleRemoveWorkspace` in `App.tsx` to automatically close all active terminal and file tabs that belong to the workspace being removed. This performs websocket unsubscriptions, deletes terminal instances from state, and safely updates the active tab focus.
+
 ## [1.3.24] - 2026-06-28
 
 ### Fixed

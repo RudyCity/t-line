@@ -120,8 +120,8 @@ export function useWorkspaces(isAuthenticated: boolean, token: string | null) {
     }
   };
 
-  const handleRemoveWorkspace = async (workspacePath: string) => {
-    if (!confirm('Are you sure you want to remove this workspace from tracking? (Files will not be deleted)')) return;
+  const handleRemoveWorkspace = async (workspacePath: string): Promise<boolean> => {
+    if (!confirm('Are you sure you want to remove this workspace from tracking? (Files will not be deleted)')) return false;
 
     try {
       const res = await fetch('/api/workspaces', {
@@ -135,10 +135,12 @@ export function useWorkspaces(isAuthenticated: boolean, token: string | null) {
       const data = await res.json();
       if (data.success) {
         fetchWorkspaces();
+        return true;
       }
     } catch (e) {
       console.error('Error removing workspace:', e);
     }
+    return false;
   };
 
   const handleOpenWorktreeModal = async (workspace: WorkspaceInfo) => {

@@ -20,7 +20,7 @@ import { SetupSecurityForm, LoginForm } from './components/AuthForms';
 import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal } from './components/Modals';
 import { useTunnel } from './hooks/useTunnel';
 import { useWorkspaces } from './hooks/useWorkspaces';
-import { useTerminals, WorkspaceInfo } from './hooks/useTerminals';
+import { useTerminals, WorkspaceInfo, getTerminalIds } from './hooks/useTerminals';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { SplitLayoutRenderer } from './components/SplitLayoutRenderer';
 import { Footer } from './components/Footer';
@@ -73,7 +73,7 @@ export default function App() {
     fetchDirectoryList,
     handleFolderBrowse,
     handleAddWorkspace,
-    handleRemoveWorkspace,
+    handleRemoveWorkspace: rawHandleRemoveWorkspace,
     showWorktreeModal,
     setShowWorktreeModal,
     newWorktreePath,
@@ -139,6 +139,67 @@ export default function App() {
     setTabs,
     activeTabId
   );
+
+  // Handle workspace removal and close all associated terminal and file tabs
+  const handleRemoveWorkspace = async (workspacePath: string) => {
+    const success = await rawHandleRemoveWorkspace(workspacePath);
+    if (success) {
+      const isPathInWorkspace = (filePath: string, wsPath: string) => {
+        const normFile = filePath.toLowerCase().replace(/\\/g, '/');
+        const normWS = wsPath.toLowerCase().replace(/\\/g, '/');
+        return normFile === normWS || normFile.startsWith(normWS + '/');
+      };
+
+      setTabs(prevTabs => {
+        const tabsToClose = prevTabs.filter(tab => {
+          if (tab.type === 'file' && tab.filePath) {
+            return isPathInWorkspace(tab.filePath, workspacePath);
+          }
+          if (tab.type === 'terminal' && tab.layout) {
+            const termIds = getTerminalIds(tab.layout);
+            return termIds.some(id => {
+              const inst = terminalInstances[id];
+              return inst && isPathInWorkspace(inst.cwd, workspacePath);
+            });
+          }
+          return false;
+        });
+
+        if (tabsToClose.length === 0) return prevTabs;
+
+        const closedTermIds: string[] = [];
+        tabsToClose.forEach(tab => {
+          if (tab.type === 'terminal' && tab.layout) {
+            const termIds = getTerminalIds(tab.layout);
+            termIds.forEach(id => {
+              wsManager.unsubscribe(id);
+              closedTermIds.push(id);
+            });
+          }
+        });
+
+        if (closedTermIds.length > 0) {
+          setTerminalInstances(prevInstances => {
+            const next = { ...prevInstances };
+            closedTermIds.forEach(id => delete next[id]);
+            return next;
+          });
+        }
+
+        const remainingTabs = prevTabs.filter(t => !tabsToClose.some(c => c.id === t.id));
+
+        if (tabsToClose.some(c => c.id === activeTabId)) {
+          if (remainingTabs.length > 0) {
+            setActiveTabId(remainingTabs[remainingTabs.length - 1].id);
+          } else {
+            setActiveTabId('');
+          }
+        }
+
+        return remainingTabs;
+      });
+    }
+  };
 
   // Keyboard Shortcuts
   const hasModals = showWorkspaceModal || showWorktreeModal || showTunnelModal || showSettingsModal;
