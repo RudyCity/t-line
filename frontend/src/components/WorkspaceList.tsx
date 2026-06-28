@@ -238,7 +238,7 @@ export function WorkspaceList({
               />
             </div>
 
-            <div className="text-[10px] text-slate-500 font-mono truncate">{w.path}</div>
+            <div className="text-[10px] text-slate-500 font-mono truncate" title={w.path}>{w.path}</div>
 
             {/* Tree-like display if there are worktrees */}
             {w.isGit && w.worktrees.length > 0 && (
