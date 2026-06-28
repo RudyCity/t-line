@@ -133,6 +133,31 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [hasSelection, setHasSelection] = useState(false);
 
+  // ── RAF write-batch queue ─────────────────────────────────
+  // Data arriving from the WebSocket is pushed here and flushed in a single
+  // requestAnimationFrame callback, so xterm.js only repaints once per frame
+  // (≈16ms) instead of on every individual WS message. This eliminates the
+  // blink/flicker seen when AI agents stream rapid output (spinners, TUI redraws).
+  const writeQueueRef = useRef<string[]>([]);
+  const rafHandleRef = useRef<number | null>(null);
+
+  const scheduleWrite = useCallback((data: string) => {
+    writeQueueRef.current.push(data);
+    if (rafHandleRef.current === null) {
+      rafHandleRef.current = requestAnimationFrame(() => {
+        rafHandleRef.current = null;
+        const term = terminalRef.current;
+        if (!term || writeQueueRef.current.length === 0) {
+          writeQueueRef.current = [];
+          return;
+        }
+        const combined = writeQueueRef.current.join('');
+        writeQueueRef.current = [];
+        term.write(combined);
+      });
+    }
+  }, []);
+
   useEffect(() => {
     if (!contextMenu) return;
     const closeMenu = () => setContextMenu(null);
@@ -322,10 +347,11 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     // ── WebSocket subscriptions ──────────────────────────
     wsManager.subscribe(tab.id, (payload) => {
       if (payload.type === 'data') {
-        term.write(payload.data);
+        // Use RAF-batched write to prevent xterm repaint on every WS message
+        scheduleWrite(payload.data);
       } else if (payload.type === 'replay') {
-        // Buffer replay on reconnect — write silently
-        term.write(payload.data);
+        // Buffer replay on reconnect — batch write silently
+        scheduleWrite(payload.data);
       } else if (payload.type === 'title') {
         onTitleChangeRef.current?.(payload.title);
       } else if (payload.type === 'exit') {
@@ -386,9 +412,15 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
         container.removeEventListener('click', handleFocusTrigger, true);
         container.removeEventListener('touchend', handleFocusTrigger, true);
       }
+      // Cancel any pending RAF write to avoid writing to disposed terminal
+      if (rafHandleRef.current !== null) {
+        cancelAnimationFrame(rafHandleRef.current);
+        rafHandleRef.current = null;
+        writeQueueRef.current = [];
+      }
       term.dispose();
     };
-  }, [tab.id, debouncedFit]);
+  }, [tab.id, debouncedFit, scheduleWrite]);
 
   // ── WebSocket reconnect or activation → send init ────────
   useEffect(() => {

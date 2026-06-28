@@ -4,6 +4,14 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.41] - 2026-06-28
+
+### Fixed
+- **Terminal Blink/Flicker saat AI Agent Berjalan**: Eliminasi blinking yang terjadi ketika menjalankan AI coding agents (superagent, Claude Code, Antigravity CLI, dll) yang menghasilkan output streaming cepat (spinner, TUI redraws).
+  - **Backend (`terminalManager.ts`)**: Tambah mekanisme **batch-flush 16ms** — data output PTY sekarang dikumpulkan dalam `pendingFlushChunks` lalu dikirim ke WebSocket sekaligus setiap 16ms (≈ 1 frame @60fps), menggantikan model lama yang mengirim setiap chunk PTY secara individual (ratusan WS messages/detik).
+  - **Frontend (`TerminalInstance.tsx`)**: Tambah **RAF write-queue** — data WebSocket yang datang dikumpulkan dalam `writeQueueRef` lalu di-flush ke `term.write()` dalam satu `requestAnimationFrame`, memastikan xterm.js hanya repaint sekali per frame, bukan setiap kali data WS tiba.
+  - Cleanup `cancelAnimationFrame` ditambahkan pada unmount untuk mencegah write ke terminal yang sudah di-dispose.
+
 ## [1.3.40] - 2026-06-28
 
 ### Improved

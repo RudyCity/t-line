@@ -156,6 +156,13 @@ class SpawnTerminal implements ITerminal {
 const OUTPUT_BUFFER_MAX_LINES = 500;
 const OUTPUT_BUFFER_MAX_BYTES = 128 * 1024; // 128 KB
 
+/**
+ * FLUSH_INTERVAL_MS: How often to batch-flush PTY output to the WebSocket sender.
+ * 16ms ≈ one 60fps frame. Grouping rapid PTY chunks into one WS message per frame
+ * eliminates the blink/flicker caused by xterm.js repainting on every individual write.
+ */
+const FLUSH_INTERVAL_MS = 16;
+
 interface TerminalSession {
   terminal: ITerminal;
   sender: ((data: string) => void) | null;
@@ -167,7 +174,11 @@ interface TerminalSession {
   /** Rolling output buffer for replay on reconnect */
   outputBufferChunks: string[];
   outputBufferLength: number;
+  /** Batch-flush: accumulate PTY chunks before sending to WS sender */
+  pendingFlushChunks: string[];
+  flushTimer: NodeJS.Timeout | null;
 }
+
 
 // ── Main Terminal Manager ──────────────────────────────────
 export class TerminalManager {
@@ -227,14 +238,40 @@ export class TerminalManager {
       cwd: normalizedCwd,
       outputBufferChunks: [],
       outputBufferLength: 0,
+      pendingFlushChunks: [],
+      flushTimer: null,
     };
     this.sessions.set(id, session);
 
-    // Stream data → sender + append to output buffer
+    // ── Batch-flush helper ─────────────────────────────────
+    // Instead of forwarding each PTY chunk immediately (causing xterm to repaint
+    // hundreds of times per second during AI agent streaming), we accumulate
+    // chunks and send them as one combined message every FLUSH_INTERVAL_MS.
+    const scheduleFlush = () => {
+      const activeSess = this.sessions.get(id);
+      if (!activeSess || activeSess.flushTimer !== null) return;
+
+      activeSess.flushTimer = setTimeout(() => {
+        const sess = this.sessions.get(id);
+        if (!sess) return;
+        sess.flushTimer = null;
+        if (sess.pendingFlushChunks.length === 0) return;
+
+        const combined = sess.pendingFlushChunks.join('');
+        sess.pendingFlushChunks = [];
+
+        if (sess.sender) {
+          sess.sender(combined);
+        }
+      }, FLUSH_INTERVAL_MS);
+    };
+
+    // Stream data → output buffer + schedule batched send
     terminal.onData((data) => {
       const activeSess = this.sessions.get(id);
       if (!activeSess) return;
 
+      // Always append to rolling replay buffer
       activeSess.outputBufferChunks.push(data);
       activeSess.outputBufferLength += data.length;
 
@@ -247,7 +284,9 @@ export class TerminalManager {
       }
 
       if (activeSess.sender) {
-        activeSess.sender(data);
+        // Accumulate chunk into pending flush queue
+        activeSess.pendingFlushChunks.push(data);
+        scheduleFlush();
       }
     });
 
@@ -325,6 +364,8 @@ export class TerminalManager {
     const session = this.sessions.get(id);
     if (session) {
       if (session.cleanupTimeout) clearTimeout(session.cleanupTimeout);
+      if (session.flushTimer) clearTimeout(session.flushTimer);
+      session.pendingFlushChunks = [];
       try { session.terminal.kill(); } catch (e) {
         console.error(`Error killing terminal ${id}:`, e);
       }
