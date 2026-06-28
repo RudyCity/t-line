@@ -239,6 +239,46 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     return undefined;
   }, [workspaces]);
 
+  // Automatically resolve/heal workspaceId for tabs when workspaces are loaded
+  useEffect(() => {
+    if (workspaces.length === 0 || tabs.length === 0) return;
+
+    let changed = false;
+    const updatedTabs = tabs.map(tab => {
+      if (tab.workspaceId) {
+        const exists = workspaces.some(w => w.id === tab.workspaceId);
+        if (exists) return tab;
+      }
+
+      let targetPath = '';
+      if (tab.type === 'file' && tab.filePath) {
+        targetPath = tab.filePath;
+      } else if (tab.type === 'terminal' && tab.layout) {
+        const termIds = getTerminalIds(tab.layout);
+        for (const id of termIds) {
+          const inst = terminalInstances[id];
+          if (inst && inst.cwd) {
+            targetPath = inst.cwd;
+            break;
+          }
+        }
+      }
+
+      if (targetPath) {
+        const wsId = findWorkspaceIdForPath(targetPath);
+        if (wsId && wsId !== tab.workspaceId) {
+          changed = true;
+          return { ...tab, workspaceId: wsId };
+        }
+      }
+      return tab;
+    });
+
+    if (changed) {
+      setTabs(updatedTabs);
+    }
+  }, [workspaces, tabs, terminalInstances, findWorkspaceIdForPath]);
+
   const openTerminal = useCallback((name: string, cwd: string, shellType?: string) => {
     const tabId = `tab-${Date.now()}`;
     const termId = `term-${Date.now()}`;
