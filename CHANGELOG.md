@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.6] - 2026-06-28
+
+### Fixed
+- **Custom Keyboard Padding**: Increased the bottom padding of the virtual touch keyboard on mobile devices to `24px` to prevent overlapping with native gesture bars and home indicator areas.
+
 ## [1.3.5] - 2026-06-28
 
 ### Added
