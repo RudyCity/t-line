@@ -4,6 +4,12 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.19] - 2026-06-28
+
+### Fixed
+- **CSS Reset Specificity**: Wrapped the universal CSS reset (`* { margin: 0; padding: 0; }`) and default element styles (`body`, `button`, `input`, `a`, etc.) inside Tailwind CSS's `@layer base` block. This prevents unlayered CSS resets from overriding layered Tailwind utility classes (like `.px-4` or `.md:px-4`) under standard CSS Cascade Layer rules.
+- **index.css Modularization**: Refactored the large, 1,311-line `index.css` file by splitting it into modular, smaller stylesheets (`base.css`, `layout.css`, `components.css`) to adhere to the project's strict 1,000-line file length limit.
+
 ## [1.3.18] - 2026-06-28
 
 ### Fixed

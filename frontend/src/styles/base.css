@@ -1,0 +1,97 @@
+@layer base {
+  /* Design Tokens & Theme Variables */
+  :root {
+    --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Premium Dark Palette */
+    --bg-main: #05070c;
+    --bg-sidebar: #090c14;
+    --bg-card: rgba(17, 24, 39, 0.45);
+    --bg-card-hover: rgba(31, 41, 55, 0.55);
+    --border-color: rgba(255, 255, 255, 0.06);
+    --border-glow: rgba(168, 85, 247, 0.15);
+
+    /* Neon Accents */
+    --color-primary: #a855f7; /* Violet */
+    --color-primary-hover: #c084fc;
+    --color-primary-glow: rgba(168, 85, 247, 0.35);
+    
+    --color-success: #10b981; /* Emerald */
+    --color-warning: #f59e0b; /* Amber */
+    --color-danger: #ef4444;  /* Red */
+    --color-info: #0ea5e9;    /* Sky Blue */
+
+    /* Text Colors */
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dark: #64748b;
+
+    /* Glassmorphism details */
+    --blur-amount: 16px;
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+
+    /* Sizes */
+    --sidebar-width: 320px;
+    --topbar-height: 56px;
+  }
+
+  /* Global Reset */
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    -webkit-font-smoothing: antialiased;
+    background-image: 
+      radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      radial-gradient(at 0% 0%, rgba(168, 85, 247, 0.08) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.04) 0px, transparent 50%);
+    background-size: 24px 24px, 100% 100%, 100% 100%;
+  }
+
+  button, input, select, textarea {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* Custom Scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* Keyframes */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
