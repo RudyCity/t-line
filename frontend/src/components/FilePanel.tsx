@@ -33,6 +33,8 @@ interface ExplorerProps {
   rootPath: string;
   token: string;
   onFileClick?: (path: string, name: string) => void;
+  changedFiles?: GitFileStatus[];
+  onRefresh?: () => void;
 }
 
 async function fetchExplore(dirPath: string, token: string): Promise<FsItem[]> {
@@ -74,16 +76,63 @@ function getFileIcon(name: string) {
   return iconMap[ext] ?? { color: 'var(--text-muted)' };
 }
 
+function getRelativePath(rootPath: string, itemPath: string): string {
+  const normRoot = rootPath.replace(/\\/g, '/').replace(/\/$/, '');
+  const normItem = itemPath.replace(/\\/g, '/');
+  
+  if (normItem.startsWith(normRoot)) {
+    return normItem.slice(normRoot.length).replace(/^\//, '');
+  }
+  return normItem;
+}
+
+const statusConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  modified: {
+    label: 'modif',
+    color: '#fbbf24',
+    bg: 'rgba(251, 191, 36, 0.1)',
+    border: '1px solid rgba(251, 191, 36, 0.2)'
+  },
+  added: {
+    label: 'baru',
+    color: '#4ade80',
+    bg: 'rgba(74, 222, 128, 0.1)',
+    border: '1px solid rgba(74, 222, 128, 0.2)'
+  },
+  untracked: {
+    label: 'baru',
+    color: '#4ade80',
+    bg: 'rgba(74, 222, 128, 0.1)',
+    border: '1px solid rgba(74, 222, 128, 0.2)'
+  },
+  deleted: {
+    label: 'hapus',
+    color: '#f87171',
+    bg: 'rgba(248, 113, 113, 0.1)',
+    border: '1px solid rgba(248, 113, 113, 0.2)'
+  },
+  renamed: {
+    label: 'rename',
+    color: '#a78bfa',
+    bg: 'rgba(167, 139, 250, 0.1)',
+    border: '1px solid rgba(167, 139, 250, 0.2)'
+  }
+};
+
 function TreeNodeItem({
   node,
   depth,
   token,
-  onFileClick
+  onFileClick,
+  rootPath,
+  changedFiles = []
 }: {
   node: TreeNode;
   depth: number;
   token: string;
   onFileClick: (path: string, name: string) => void;
+  rootPath: string;
+  changedFiles?: GitFileStatus[];
 }) {
   const [expanded, setExpanded] = useState(false);
   const [children, setChildren] = useState<TreeNode[]>([]);
@@ -111,6 +160,19 @@ function TreeNodeItem({
   const iconColor = !node.isDirectory ? getFileIcon(node.name).color : undefined;
   const indent = depth * 14;
 
+  const relPath = getRelativePath(rootPath, node.path).toLowerCase();
+  
+  const fileGitStatus = !node.isDirectory 
+    ? changedFiles.find(f => f.path.replace(/\\/g, '/').toLowerCase() === relPath)
+    : null;
+
+  const dirChangesCount = node.isDirectory
+    ? changedFiles.filter(f => {
+        const fPath = f.path.replace(/\\/g, '/').toLowerCase();
+        return fPath.startsWith(relPath + '/');
+      }).length
+    : 0;
+
   return (
     <div>
       <button
@@ -136,6 +198,51 @@ function TreeNodeItem({
           <File size={14} style={{ color: iconColor, flexShrink: 0 }} />
         )}
         <span className="explorer-item-name">{node.name}</span>
+
+        {!node.isDirectory && fileGitStatus && statusConfig[fileGitStatus.status] && (
+          <span
+            style={{
+              fontSize: '0.62rem',
+              fontWeight: 700,
+              padding: '1px 5px',
+              borderRadius: '4px',
+              textTransform: 'lowercase',
+              display: 'inline-flex',
+              alignItems: 'center',
+              lineHeight: 1,
+              color: statusConfig[fileGitStatus.status].color,
+              background: statusConfig[fileGitStatus.status].bg,
+              border: statusConfig[fileGitStatus.status].border,
+              flexShrink: 0
+            }}
+          >
+            {statusConfig[fileGitStatus.status].label}
+          </span>
+        )}
+
+        {node.isDirectory && dirChangesCount > 0 && (
+          <span
+            style={{
+              fontSize: '0.62rem',
+              fontWeight: 700,
+              padding: '1px 4px',
+              borderRadius: '999px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: '14px',
+              height: '14px',
+              lineHeight: 1,
+              color: '#fbbf24',
+              background: 'rgba(251, 191, 36, 0.15)',
+              border: '1px solid rgba(251, 191, 36, 0.2)',
+              flexShrink: 0
+            }}
+            title={`${dirChangesCount} changed file(s) inside`}
+          >
+            {dirChangesCount}
+          </span>
+        )}
       </button>
       {expanded && children.length > 0 && (
         <div>
@@ -146,6 +253,8 @@ function TreeNodeItem({
               depth={depth + 1}
               token={token}
               onFileClick={onFileClick}
+              rootPath={rootPath}
+              changedFiles={changedFiles}
             />
           ))}
         </div>
@@ -154,7 +263,13 @@ function TreeNodeItem({
   );
 }
 
-export function FileExplorer({ rootPath, token, onFileClick }: ExplorerProps) {
+export function FileExplorer({
+  rootPath,
+  token,
+  onFileClick,
+  changedFiles = [],
+  onRefresh
+}: ExplorerProps) {
   const [roots, setRoots] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<{ path: string; name: string; content: string } | null>(null);
@@ -165,12 +280,13 @@ export function FileExplorer({ rootPath, token, onFileClick }: ExplorerProps) {
     try {
       const items = await fetchExplore(rootPath, token);
       setRoots(items.map(i => ({ ...i })));
+      if (onRefresh) onRefresh();
     } catch {
       // ignore
     } finally {
       setLoading(false);
     }
-  }, [rootPath, token]);
+  }, [rootPath, token, onRefresh]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -221,6 +337,8 @@ export function FileExplorer({ rootPath, token, onFileClick }: ExplorerProps) {
                   depth={0}
                   token={token}
                   onFileClick={handleFileClick}
+                  rootPath={rootPath}
+                  changedFiles={changedFiles}
                 />
               ))
             )}
@@ -266,6 +384,9 @@ export interface GitFileStatus {
 interface GitChangesProps {
   workspaceId: string;
   token: string;
+  files: GitFileStatus[];
+  loading: boolean;
+  onRefresh: () => void;
 }
 
 function StatusIcon({ status }: { status: GitFileStatus['status'] }) {
@@ -313,31 +434,16 @@ function parseDiff(diff: string): { header: string; hunks: { header: string; lin
   return { header, hunks };
 }
 
-export function GitChanges({ workspaceId, token }: GitChangesProps) {
-  const [files, setFiles] = useState<GitFileStatus[]>([]);
-  const [loading, setLoading] = useState(false);
+export function GitChanges({
+  workspaceId,
+  token,
+  files,
+  loading,
+  onRefresh
+}: GitChangesProps) {
   const [selectedFile, setSelectedFile] = useState<GitFileStatus | null>(null);
   const [diff, setDiff] = useState<string>('');
   const [diffLoading, setDiffLoading] = useState(false);
-
-  const fetchStatus = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/workspaces/${workspaceId}/git/status`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setFiles(data);
-      }
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }, [workspaceId, token]);
-
-  useEffect(() => { fetchStatus(); }, [fetchStatus]);
 
   const handleFileSelect = useCallback(async (file: GitFileStatus) => {
     setSelectedFile(file);
@@ -383,7 +489,7 @@ export function GitChanges({ workspaceId, token }: GitChangesProps) {
             </span>
             <button
               className="action-btn"
-              onClick={fetchStatus}
+              onClick={onRefresh}
               title="Refresh"
               disabled={loading}
             >

@@ -2,7 +2,7 @@ import React from 'react';
 import { Plus, Terminal as TerminalIcon, FileCode, FolderTree, GitCompare } from 'lucide-react';
 import { TabData, TerminalInstanceData, WorkspaceInfo } from '../hooks/useTerminals';
 import { WorkspaceList } from './WorkspaceList';
-import { FileExplorer, GitChanges } from './FilePanel';
+import { FileExplorer, GitChanges, GitFileStatus } from './FilePanel';
 
 interface SidebarContentPanelProps {
   activePanel: 'workspaces' | 'explorer' | 'changes' | 'tabs';
@@ -25,6 +25,9 @@ interface SidebarContentPanelProps {
   workspaceActiveTab: Record<string, string>;
   onWorkspaceClick: (wsId: string) => void;
   onWorktreeClick: (wsId: string, wtPath: string) => void;
+  changedFiles?: GitFileStatus[];
+  gitStatusLoading?: boolean;
+  refreshGitStatus?: () => void;
 }
 
 export function SidebarContentPanel({
@@ -47,7 +50,10 @@ export function SidebarContentPanel({
   closeTerminal,
   workspaceActiveTab,
   onWorkspaceClick,
-  onWorktreeClick
+  onWorktreeClick,
+  changedFiles = [],
+  gitStatusLoading = false,
+  refreshGitStatus
 }: SidebarContentPanelProps) {
   return (
     <div 
@@ -183,6 +189,8 @@ export function SidebarContentPanel({
               rootPath={panelWorkspace.path}
               token={localStorage.getItem('token') || ''}
               onFileClick={openFileTab}
+              changedFiles={changedFiles}
+              onRefresh={refreshGitStatus}
             />
           ) : (
             <div className="panel-empty" style={{ flex: 1 }}>
@@ -218,6 +226,9 @@ export function SidebarContentPanel({
             <GitChanges
               workspaceId={panelWorkspace.id}
               token={localStorage.getItem('token') || ''}
+              files={changedFiles}
+              loading={gitStatusLoading}
+              onRefresh={refreshGitStatus || (() => {})}
             />
           ) : (
             <div className="panel-empty" style={{ flex: 1 }}>

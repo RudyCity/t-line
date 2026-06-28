@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { GitFileStatus } from './components/FilePanel';
 import { 
   Folder, 
   Plus, 
@@ -142,6 +143,43 @@ export default function App() {
     setTabs,
     activeTabId
   );
+
+  const [changedFiles, setChangedFiles] = useState<GitFileStatus[]>([]);
+  const [gitStatusLoading, setGitStatusLoading] = useState<boolean>(false);
+
+  const fetchGitStatus = useCallback(async (showLoading = false) => {
+    if (!panelWorkspace || !panelWorkspace.isGit) {
+      setChangedFiles([]);
+      return;
+    }
+    if (showLoading) setGitStatusLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/workspaces/${panelWorkspace.id}/git/status`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setChangedFiles(data);
+      }
+    } catch (e) {
+      console.error('Error fetching git status:', e);
+    } finally {
+      if (showLoading) setGitStatusLoading(false);
+    }
+  }, [panelWorkspace]);
+
+  useEffect(() => {
+    fetchGitStatus(true);
+  }, [panelWorkspace, fetchGitStatus]);
+
+  useEffect(() => {
+    if (!panelWorkspace || !panelWorkspace.isGit) return;
+    const interval = setInterval(() => {
+      fetchGitStatus(false);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [panelWorkspace, fetchGitStatus]);
 
   // Handle workspace removal and close all associated terminal and file tabs
   const handleRemoveWorkspace = async (workspacePath: string) => {
@@ -677,8 +715,41 @@ export default function App() {
             }}
             title="Git Changes"
           >
-            <GitCompare size={15} />
-            {!sidebarCollapsed && <span>Changes</span>}
+            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <GitCompare size={15} />
+              {sidebarCollapsed && changedFiles.length > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '-6px',
+                    right: '-8px',
+                    background: 'var(--color-primary)',
+                    color: 'white',
+                    fontSize: '0.55rem',
+                    fontWeight: 700,
+                    borderRadius: '999px',
+                    padding: '0 4px',
+                    minWidth: '12px',
+                    height: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: 1,
+                    border: '1.5px solid #1e1e24'
+                  }}
+                >
+                  {changedFiles.length}
+                </span>
+              )}
+            </div>
+            {!sidebarCollapsed && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                Changes
+                {changedFiles.length > 0 && (
+                  <span className="changes-badge">{changedFiles.length}</span>
+                )}
+              </span>
+            )}
           </button>
         </div>
 
@@ -704,6 +775,9 @@ export default function App() {
             workspaceActiveTab={workspaceActiveTab}
             onWorkspaceClick={handleWorkspaceClick}
             onWorktreeClick={handleWorktreeClick}
+            changedFiles={changedFiles}
+            gitStatusLoading={gitStatusLoading}
+            refreshGitStatus={() => fetchGitStatus(true)}
           />
         )}
       </div>
@@ -911,7 +985,11 @@ export default function App() {
                 if (!activeTab) return null;
                 if (activeTab.type === 'file') {
                   return (
-                    <FileViewerTab filePath={activeTab.filePath || ''} token={localStorage.getItem('token') || ''} />
+                    <FileViewerTab
+                      filePath={activeTab.filePath || ''}
+                      token={localStorage.getItem('token') || ''}
+                      onSave={() => fetchGitStatus(false)}
+                    />
                   );
                 }
                 if (activeTab.type === 'terminal' && activeTab.layout) {

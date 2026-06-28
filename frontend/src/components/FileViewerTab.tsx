@@ -5,6 +5,7 @@ import Editor from '@monaco-editor/react';
 interface FileViewerTabProps {
   filePath: string;
   token: string;
+  onSave?: () => void;
 }
 
 function getLanguageFromPath(filePath: string): string {
@@ -48,7 +49,7 @@ function getLanguageFromPath(filePath: string): string {
   }
 }
 
-export function FileViewerTab({ filePath, token }: FileViewerTabProps) {
+export function FileViewerTab({ filePath, token, onSave }: FileViewerTabProps) {
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   
@@ -115,6 +116,7 @@ export function FileViewerTab({ filePath, token }: FileViewerTabProps) {
           }
           setContent(editedContent);
           setSaveSuccess(true);
+          onSave?.();
           setTimeout(() => setSaveSuccess(false), 1500);
         } catch (e: any) {
           setSaveError(e.message || 'Error saving file');

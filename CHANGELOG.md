@@ -4,6 +4,17 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.44] - 2026-06-28
+
+### Added
+- **Git Status Badges on Changes Tab**: Added real-time changed files count badges to the Git Changes tab button. When the sidebar is expanded, a count pill is displayed; when the sidebar is collapsed, a small circular notification badge is displayed on the top right of the GitCompare icon.
+- **Git Status Badges in Workspace Explorer**: Files and folders in the workspace file tree now display Git status badges.
+  - Files display badges like `modif` (for modified), `baru` (for untracked/added), `rename` (for renamed), or `hapus` (for deleted), styled with transparent background colors and borders.
+  - Folders display a right-aligned count of changed files inside the directory.
+- **Auto Git Status Synchronization**:
+  - Global `changedFiles` state managed at `App.tsx` and refreshed using a silent 5-second polling loop.
+  - Immediate refetch when saving files in the Monaco Editor or manually refreshing Explorer/Changes panels.
+
 ## [1.3.43] - 2026-06-28
 
 ### Added
