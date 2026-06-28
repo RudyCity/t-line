@@ -10,6 +10,7 @@ export interface FooterProps {
     type: 'quick' | 'token' | 'none';
     error: string | null;
   };
+  tunnelLoading: boolean;
   terminalFontSize: number;
   defaultShell: string;
   setDefaultShell: (val: string) => void;
@@ -28,7 +29,8 @@ export function Footer({
   handleZoomIn,
   handleZoomOut,
   handleStartTunnel,
-  handleStopTunnel
+  handleStopTunnel,
+  tunnelLoading
 }: FooterProps): React.JSX.Element {
   const [copied, setCopied] = React.useState(false);
 
@@ -152,9 +154,13 @@ export function Footer({
         <div className="flex items-center gap-2">
           <span className="text-[11px] text-slate-500">Cloudflare Tunnel:</span>
           <span className="flex items-center gap-1.5 font-medium px-2 py-0.5 rounded bg-white/5 text-[11px]">
-            <span className={`h-1.5 w-1.5 rounded-full ${tunnelStatus.active ? 'bg-emerald-400 animate-pulse shadow-[0_0_6px_#34d399]' : 'bg-red-400 shadow-[0_0_6px_#f87171]'}`} />
-            <span className={tunnelStatus.active ? 'text-emerald-400' : 'text-red-400'}>
-              {tunnelStatus.active ? 'Active' : 'Inactive'}
+            {tunnelLoading ? (
+              <span className="h-1.5 w-1.5 rounded-full border border-sky-400/30 border-t-sky-400 animate-spin" />
+            ) : (
+              <span className={`h-1.5 w-1.5 rounded-full ${tunnelStatus.active ? 'bg-emerald-400 animate-pulse shadow-[0_0_6px_#34d399]' : 'bg-red-400 shadow-[0_0_6px_#f87171]'}`} />
+            )}
+            <span className={tunnelLoading ? 'text-sky-400' : (tunnelStatus.active ? 'text-emerald-400' : 'text-red-400')}>
+              {tunnelLoading ? (tunnelStatus.active ? 'Stopping...' : 'Starting...') : (tunnelStatus.active ? 'Active' : 'Inactive')}
             </span>
           </span>
         </div>
@@ -193,11 +199,12 @@ export function Footer({
           </div>
         )}
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           {tunnelStatus.active ? (
             <button 
               onClick={handleStopTunnel}
-              className="px-2 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-[10px] font-medium transition-all cursor-pointer"
+              disabled={tunnelLoading}
+              className={`px-2 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-[10px] font-medium transition-all ${tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
               Stop
             </button>
@@ -205,13 +212,15 @@ export function Footer({
             <>
               <button 
                 onClick={() => handleStartTunnel('quick')}
-                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-medium transition-all cursor-pointer"
+                disabled={tunnelLoading}
+                className={`px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-medium transition-all ${tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
               >
                 Quick URL
               </button>
               <button 
                 onClick={() => handleStartTunnel('token')}
-                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-medium transition-all cursor-pointer"
+                disabled={tunnelLoading}
+                className={`px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-medium transition-all ${tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
               >
                 Custom
               </button>

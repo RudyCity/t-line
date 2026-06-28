@@ -268,6 +268,7 @@ interface TunnelSetupModalProps {
   onSubmit: (e: React.FormEvent) => void;
   tunnelToken: string;
   setTunnelToken: (val: string) => void;
+  loading?: boolean;
 }
 
 export const TunnelSetupModal: React.FC<TunnelSetupModalProps> = ({
@@ -275,7 +276,8 @@ export const TunnelSetupModal: React.FC<TunnelSetupModalProps> = ({
   onClose,
   onSubmit,
   tunnelToken,
-  setTunnelToken
+  setTunnelToken,
+  loading = false
 }) => {
   if (!show) return null;
 
@@ -284,7 +286,7 @@ export const TunnelSetupModal: React.FC<TunnelSetupModalProps> = ({
       <form onSubmit={onSubmit} className="modal-content glass-panel" style={{ maxWidth: '520px' }}>
         <div className="modal-header">
           <h3 className="modal-title">Cloudflare Named Tunnel</h3>
-          <button type="button" className="action-btn" onClick={onClose}>×</button>
+          <button type="button" className="action-btn" onClick={onClose} disabled={loading}>×</button>
         </div>
         
         <FormField label="Cloudflare Tunnel Token">
@@ -294,13 +296,21 @@ export const TunnelSetupModal: React.FC<TunnelSetupModalProps> = ({
             value={tunnelToken}
             onChange={(e) => setTunnelToken(e.target.value)}
             required
+            disabled={loading}
             style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', resize: 'none' }}
           />
         </FormField>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit">Start Named Tunnel</Button>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>
+          <Button type="submit" disabled={loading || !tunnelToken}>
+            {loading ? (
+              <span className="flex items-center gap-1.5 justify-center">
+                <Loader2 size={12} className="animate-spin" />
+                Starting...
+              </span>
+            ) : 'Start Named Tunnel'}
+          </Button>
         </div>
       </form>
     </div>

@@ -97,6 +97,7 @@ export default function App() {
     setShowTunnelModal,
     tunnelToken,
     setTunnelToken,
+    tunnelLoading,
     fetchTunnelStatus,
     handleStartTunnel,
     handleStartTokenTunnel,
@@ -893,6 +894,7 @@ export default function App() {
         onSubmit={handleStartTokenTunnel}
         tunnelToken={tunnelToken}
         setTunnelToken={setTunnelToken}
+        loading={tunnelLoading}
       />
 
       <SettingsModal
@@ -910,6 +912,7 @@ export default function App() {
       <Footer
         panelWorkspace={panelWorkspace}
         tunnelStatus={tunnelStatus}
+        tunnelLoading={tunnelLoading}
         terminalFontSize={terminalFontSize}
         defaultShell={defaultShell}
         setDefaultShell={setDefaultShell}

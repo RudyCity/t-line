@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.13] - 2026-06-28
+
+### Added
+- **Cloudflare Tunnel Start/Stop Loading Feedbacks**: Added a reactive `tunnelLoading` state inside the `useTunnel` hook. The Cloudflare Tunnel status badge in `Footer.tsx` now shows a blue spinning loader and displays `Starting...` or `Stopping...` while operations are in progress. Disabled all tunnel control buttons (Quick URL, Custom, Stop) during loading to prevent race conditions. Also integrated the loading feedback with a rotating spinner inside the submit button and disabled forms inside `TunnelSetupModal` (`Modals.tsx`).
+
 ## [1.3.12] - 2026-06-28
 
 ### Added

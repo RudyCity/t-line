@@ -16,6 +16,7 @@ export function useTunnel(isAuthenticated: boolean) {
   });
   const [showTunnelModal, setShowTunnelModal] = useState<boolean>(false);
   const [tunnelToken, setTunnelToken] = useState<string>('');
+  const [tunnelLoading, setTunnelLoading] = useState<boolean>(false);
 
   const fetchTunnelStatus = async () => {
     try {
@@ -43,6 +44,7 @@ export function useTunnel(isAuthenticated: boolean) {
       return;
     }
     
+    setTunnelLoading(true);
     try {
       const res = await fetch('/api/tunnel/start', {
         method: 'POST',
@@ -54,12 +56,14 @@ export function useTunnel(isAuthenticated: boolean) {
       });
       const data = await res.json();
       if (data.success) {
-        fetchTunnelStatus();
+        await fetchTunnelStatus();
       } else {
         alert(data.error);
       }
     } catch (e) {
       alert('Failed to start quick tunnel.');
+    } finally {
+      setTunnelLoading(false);
     }
   };
 
@@ -67,6 +71,7 @@ export function useTunnel(isAuthenticated: boolean) {
     e.preventDefault();
     if (!tunnelToken) return;
 
+    setTunnelLoading(true);
     try {
       const res = await fetch('/api/tunnel/start', {
         method: 'POST',
@@ -80,16 +85,19 @@ export function useTunnel(isAuthenticated: boolean) {
       if (data.success) {
         setShowTunnelModal(false);
         setTunnelToken('');
-        fetchTunnelStatus();
+        await fetchTunnelStatus();
       } else {
         alert(data.error);
       }
     } catch (e) {
       alert('Failed to start named tunnel.');
+    } finally {
+      setTunnelLoading(false);
     }
   };
 
   const handleStopTunnel = async () => {
+    setTunnelLoading(true);
     try {
       const res = await fetch('/api/tunnel/stop', {
         method: 'POST',
@@ -97,10 +105,12 @@ export function useTunnel(isAuthenticated: boolean) {
       });
       const data = await res.json();
       if (data.success) {
-        fetchTunnelStatus();
+        await fetchTunnelStatus();
       }
     } catch (e) {
       console.error('Failed to stop tunnel:', e);
+    } finally {
+      setTunnelLoading(false);
     }
   };
 
@@ -110,6 +120,7 @@ export function useTunnel(isAuthenticated: boolean) {
     setShowTunnelModal,
     tunnelToken,
     setTunnelToken,
+    tunnelLoading,
     fetchTunnelStatus,
     handleStartTunnel,
     handleStartTokenTunnel,
