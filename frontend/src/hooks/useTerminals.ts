@@ -439,12 +439,23 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     setTerminalInstances(prev => {
       if (!prev[id]) return prev;
       const inst = prev[id];
-      // If the incoming title matches the shell name (idle state), revert to initialName
-      const isShellIdle = inst.shellType &&
+      // Check if title is a directory path or executable path (startup/idle noise)
+      const isPathOrExe = cleanTitle.includes('\\') ||
+        cleanTitle.includes('/') ||
+        /^[a-zA-Z]:/.test(cleanTitle) ||
+        cleanTitle.toLowerCase().includes('.exe') ||
+        cleanTitle.toLowerCase() === 'select powershell' ||
+        cleanTitle.toLowerCase() === 'select cmd' ||
+        cleanTitle.toLowerCase() === 'select administrator: cmd' ||
+        cleanTitle.toLowerCase() === 'administrator: cmd' ||
+        cleanTitle.toLowerCase() === 'windows powershell';
+
+      // If the incoming title matches the shell name or is path/exe noise, revert to initialName
+      const isShellIdle = isPathOrExe || (inst.shellType &&
         (cleanTitle.toLowerCase() === inst.shellType.toLowerCase() ||
          cleanTitle.toLowerCase() === 'powershell' && inst.shellType === 'powershell' ||
          cleanTitle.toLowerCase() === 'cmd' && inst.shellType === 'cmd' ||
-         cleanTitle.toLowerCase() === 'bash' && inst.shellType === 'bash');
+         cleanTitle.toLowerCase() === 'bash' && inst.shellType === 'bash'));
       const resolvedName = isShellIdle ? (inst.initialName || inst.name) : cleanTitle;
       return {
         ...prev,
