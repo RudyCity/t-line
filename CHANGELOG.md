@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.53] - 2026-06-28
+
+### Changed
+- **Selected Workspace Coloring Consistency**: Prioritized active/selected workspace styling (purple) over git dirty status coloring (amber) in `WorkspaceList.tsx`. The active/selected workspace will now always remain consistently purple, while other inactive workspaces will turn amber when they have uncommitted changes.
+
 ## [1.3.52] - 2026-06-28
 
 ### Removed

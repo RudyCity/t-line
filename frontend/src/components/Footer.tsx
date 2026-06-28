@@ -121,7 +121,7 @@ export function Footer({
       <div className="flex items-center gap-3">
         <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 font-sans text-[10px] font-semibold tracking-wider hover:bg-purple-500/20 hover:border-purple-500/35 transition-all duration-200 cursor-pointer">
           <span className="h-1.5 w-1.5 rounded-full bg-purple-400 shadow-[0_0_6px_#a855f7]" />
-          <span>t-line v1.3.52</span>
+          <span>t-line v1.3.53</span>
         </span>
 
         {panelWorkspace && (
