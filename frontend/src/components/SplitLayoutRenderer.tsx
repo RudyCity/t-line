@@ -46,7 +46,7 @@ export function SplitLayoutRenderer({
           width: '100%',
           height: '100%',
           position: 'relative',
-          border: isFocused ? '1px solid rgba(168, 85, 247, 0.4)' : '1px solid transparent',
+          border: 'none',
           background: isFocused ? 'rgba(168, 85, 247, 0.02)' : 'transparent',
           boxSizing: 'border-box',
           overflow: 'hidden'
