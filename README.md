@@ -1,6 +1,6 @@
 # t-line — Workspace Manager `v1.3.67`
 
-> A modern, premium local developer dashboard for managing workspaces, Git Worktrees, and multiple terminal instances — built with an Obsidian Dark aesthetic.
+> An **online terminal** and premium workspace manager — run multi-shell PTY sessions directly in your browser, manage Git Worktrees, and expose your terminal remotely via Cloudflare Tunnel. Built with an Obsidian Dark aesthetic.
 
 ---
 
