@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.61] - 2026-06-28
+
+### Added
+- **Premium Application Icon Asset**: Created a custom premium glowing purple developer logo featuring a stylized 't' merging with a Git branch/terminal line, replacing `desktop/icon.png` to serve as the unified icon for both the taskbar/window and the system tray.
+
+---
+
 ## [1.3.60] - 2026-06-28
 
 ### Changed
