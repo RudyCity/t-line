@@ -4,6 +4,17 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.69] - 2026-06-29
+
+### Changed
+- **Workspace Panel — Branch Collapse**: Branch/worktree list per workspace is now collapsed when there are more than 3 entries. A "+N more branches" toggle button appears to expand/collapse the full list, keeping the panel compact.
+- **Workspace Panel — Compact Card Design**: Workspace cards are now more minimal with tighter padding, smaller font sizes, and less vertical gap. Replaced the old ad-hoc Tailwind utility classes with dedicated `.ws-card`, `.ws-card-active`, `.ws-card-dirty`, and `.ws-card-idle` CSS classes.
+- **Workspace Panel — Search Bar**: Added a real-time search input at the top of the workspace list. Filters workspaces by name or path as you type, with a clear (×) button and focus highlight.
+- **Workspace Panel — Dirty-First Sort**: Workspaces with uncommitted changes (dirty worktrees) are automatically sorted to the top of the list so they are immediately visible without scrolling.
+- **Workspace Panel — Dirty Count Pill**: If a workspace has uncommitted changes, a compact amber badge showing the total dirty file count is now displayed inline next to the workspace name.
+
+---
+
 ## [1.3.68] - 2026-06-28
 
 ### Fixed

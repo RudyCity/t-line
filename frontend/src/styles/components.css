@@ -22,13 +22,151 @@
   -webkit-text-fill-color: transparent;
 }
 
-/* Workspace List & Tree Items */
+/* ── Workspace Root Container ── */
+.workspace-list-root {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Search Bar ── */
+.ws-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 12px 10px;
+  padding: 5px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 7px;
+  transition: border-color 0.2s;
+}
+
+.ws-search-bar:focus-within {
+  border-color: rgba(168, 85, 247, 0.4);
+  background: rgba(168, 85, 247, 0.05);
+}
+
+.ws-search-icon {
+  color: rgba(148, 163, 184, 0.5);
+  flex-shrink: 0;
+}
+
+.ws-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.72rem;
+  color: var(--text-main);
+  font-family: inherit;
+  min-width: 0;
+}
+
+.ws-search-input::placeholder {
+  color: rgba(148, 163, 184, 0.35);
+}
+
+.ws-search-clear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(148, 163, 184, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 3px;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+
+.ws-search-clear:hover {
+  color: var(--text-main);
+}
+
+/* ── Workspace Cards ── */
 .workspace-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
+/* Compact card base */
+.ws-card {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.ws-card-idle {
+  border-color: rgba(255, 255, 255, 0.05);
+  background: rgba(15, 23, 42, 0.1);
+}
+
+.ws-card-idle:hover {
+  background: rgba(15, 23, 42, 0.4);
+  border-color: rgba(168, 85, 247, 0.18);
+}
+
+.ws-card-active {
+  background: rgba(168, 85, 247, 0.08);
+  border-color: rgba(168, 85, 247, 0.28);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.07);
+}
+
+.ws-card-dirty {
+  border-color: rgba(245, 158, 11, 0.2);
+  background: rgba(245, 158, 11, 0.04);
+}
+
+.ws-card-dirty:hover {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+/* Path row */
+.ws-path-row {
+  font-size: 0.65rem;
+  color: rgba(100, 116, 139, 0.7);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 1px;
+}
+
+/* Dirty changes count pill next to name */
+.ws-dirty-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245, 158, 11, 0.22);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 8px;
+  padding: 0 5px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  height: 14px;
+  line-height: 1;
+}
+
+/* Empty search state */
+.ws-empty-search {
+  text-align: center;
+  padding: 16px 12px;
+  color: rgba(148, 163, 184, 0.5);
+  font-size: 0.75rem;
+}
+
+/* ── Workspace Tree / Branch List ── */
 .workspace-item {
   padding: 12px;
   border-radius: 8px;
@@ -89,12 +227,39 @@
   gap: 6px;
 }
 
-.badge {
-  font-size: 0.65rem;
+/* Branch expand / collapse toggle */
+.ws-branch-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 20px;
+  margin-top: 2px;
   padding: 2px 6px;
-  border-radius: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(148, 163, 184, 0.5);
+  font-size: 0.65rem;
   font-weight: 600;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
+}
+
+.ws-branch-toggle:hover {
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.1);
+}
+
+/* Badges */
+.badge {
+  font-size: 0.6rem;
+  padding: 1px 5px;
+  border-radius: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .badge-main {
@@ -108,7 +273,7 @@
 }
 
 .badge-dirty {
-  background: rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.22);
   color: #fbbf24;
 }
 
@@ -200,10 +365,10 @@
   color: #c084fc;
   border: 1px solid rgba(168, 85, 247, 0.4);
   border-radius: 50%;
-  width: 16px;
-  height: 16px;
-  margin-left: 4px;
-  font-size: 8px;
+  width: 14px;
+  height: 14px;
+  margin-left: 2px;
+  font-size: 7px;
 }
 
 /* Tree Layout Connector for Git Worktrees */
