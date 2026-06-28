@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.31] - 2026-06-28
+
+### Changed
+- **Edge-to-Edge Terminal Layout (No padding/borders)**: Removed the padding, rounding, shadows, and borders from `.terminal-container` and `.terminal-element` in `components.css`. The terminal canvas now sits completely flush and edge-to-edge (nempel ke kanan dan kiri) in its parent pane for a maximized, premium view.
+
 ## [1.3.30] - 2026-06-28
 
 ### Added
