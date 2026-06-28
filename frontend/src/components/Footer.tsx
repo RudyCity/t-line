@@ -1,5 +1,5 @@
 import React from 'react';
-import { GitBranch, ZoomIn, ZoomOut, ExternalLink, Copy, Check } from 'lucide-react';
+import { GitBranch, ZoomIn, ZoomOut, ExternalLink, Copy, Check, Info } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 
 export interface FooterProps {
@@ -196,6 +196,14 @@ export function Footer({
                 </>
               )}
             </button>
+            {tunnelStatus.type === 'quick' && (
+              <span 
+                className="text-slate-500 hover:text-slate-300 transition-colors cursor-help flex items-center" 
+                title="Tip: Newly created trycloudflare URLs can take 5-15 seconds for DNS to propagate. If you see 'Site can't be reached', wait a few seconds and reload."
+              >
+                <Info size={12} />
+              </span>
+            )}
           </div>
         )}
 
