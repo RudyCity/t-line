@@ -717,6 +717,7 @@ export default function App() {
   };
 
   const handleTabMouseEnter = (e: React.MouseEvent<HTMLDivElement>, t: any) => {
+    if (tabContextMenu) return;
     const isFile = t.type === 'file';
     const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
     const shellType = focusedInst?.shellType || '';
@@ -738,27 +739,15 @@ export default function App() {
     setActiveTooltip(null);
   };
 
-  const handleTabClick = (e: React.MouseEvent<HTMLDivElement>, t: any) => {
+  const handleTabClick = (t: any) => {
     setActiveTabId(t.id);
-    const isFile = t.type === 'file';
-    const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
-    const shellType = focusedInst?.shellType || '';
-    const displayName = isFile ? t.name : (focusedInst?.name || t.name);
-    const path = isFile ? (t.filePath || '') : (focusedInst?.cwd || t.cwd || '');
-    const branch = getTabGitBranch(t);
-    const rect = e.currentTarget.getBoundingClientRect();
-    setActiveTooltip({
-      id: t.id,
-      x: rect.left + rect.width / 2,
-      y: rect.bottom + 8,
-      title: isFile ? `File: ${displayName}` : `Terminal: ${displayName}${shellType ? ` (${shellType})` : ''}`,
-      branch: branch || undefined,
-      path
-    });
+    setActiveTooltip(null);
   };
 
   const handleTabContextMenu = (e: React.MouseEvent, tabId: string) => {
     e.preventDefault();
+    e.stopPropagation();
+    setActiveTooltip(null);
     setTabContextMenu({
       x: e.clientX,
       y: e.clientY,
@@ -770,8 +759,18 @@ export default function App() {
     if (!tabContextMenu) return;
     const closeMenu = () => setTabContextMenu(null);
     window.addEventListener('click', closeMenu);
-    return () => window.removeEventListener('click', closeMenu);
+    window.addEventListener('contextmenu', closeMenu);
+    return () => {
+      window.removeEventListener('click', closeMenu);
+      window.removeEventListener('contextmenu', closeMenu);
+    };
   }, [tabContextMenu]);
+
+  useEffect(() => {
+    if (activeTooltip && !tabs.some(t => t.id === activeTooltip.id)) {
+      setActiveTooltip(null);
+    }
+  }, [tabs, activeTooltip]);
 
   const handleCloseOtherTabs = (tabId: string) => {
     setTabs(prevTabs => {
@@ -1098,7 +1097,7 @@ export default function App() {
                   <div 
                     key={t.id} 
                     className={`tab ${activeTabId === t.id ? 'tab-active' : ''}`}
-                    onClick={(e) => handleTabClick(e, t)}
+                    onClick={() => handleTabClick(t)}
                     onMouseEnter={(e) => handleTabMouseEnter(e, t)}
                     onMouseLeave={handleTabMouseLeave}
                     onContextMenu={(e) => handleTabContextMenu(e, t.id)}
@@ -1355,7 +1354,7 @@ export default function App() {
         activeTabPath={getActiveTabPath()}
       />
 
-      {activeTooltip && (
+      {activeTooltip && !tabContextMenu && (
         <div 
           className="tab-tooltip"
           style={{

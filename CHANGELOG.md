@@ -4,6 +4,14 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.58] - 2026-06-28
+
+### Fixed
+- **Stuck Tooltip Bug**: Fixed custom tab tooltips occasionally getting stuck on the screen when a tab is closed, clicked, or when a context menu is open. Added an automatic cleanup effect based on active tabs list changes.
+- **Context Menu Interaction**: Prevented event bubbling on tab and terminal right-clicks, and registered window listeners for `contextmenu` to close open menus when right-clicking elsewhere.
+
+---
+
 ## [1.3.57] - 2026-06-28
 
 ### Added

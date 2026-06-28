@@ -162,7 +162,11 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     if (!contextMenu) return;
     const closeMenu = () => setContextMenu(null);
     window.addEventListener('click', closeMenu);
-    return () => window.removeEventListener('click', closeMenu);
+    window.addEventListener('contextmenu', closeMenu);
+    return () => {
+      window.removeEventListener('click', closeMenu);
+      window.removeEventListener('contextmenu', closeMenu);
+    };
   }, [contextMenu]);
 
   useEffect(() => {
@@ -177,6 +181,7 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (terminalRef.current) {
       setHasSelection(terminalRef.current.hasSelection());
     }
