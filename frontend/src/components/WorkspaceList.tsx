@@ -194,7 +194,8 @@ export function WorkspaceList({
         
         // Find main worktree and other worktrees
         const mainWt = w.worktrees.find(wt => wt.isMain);
-        const otherWts = w.worktrees.filter(wt => !wt.isMain);
+        const hasExtraWorktrees = w.isGit && w.worktrees.length > 1;
+        const sortedWts = [...w.worktrees].sort((a, b) => (a.isMain ? -1 : b.isMain ? 1 : 0));
 
         return (
           <div
@@ -216,8 +217,8 @@ export function WorkspaceList({
                   {w.name}
                 </span>
 
-                {/* Show main branch name next to workspace name */}
-                {w.isGit && mainWt && (
+                {/* Show main branch name next to workspace name ONLY if there are no extra worktrees */}
+                {w.isGit && mainWt && !hasExtraWorktrees && (
                   <span 
                     className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 border ${
                       isActive 
@@ -254,11 +255,11 @@ export function WorkspaceList({
 
             <div className="text-[10px] text-slate-500 font-mono truncate">{w.path}</div>
 
-            {/* Tree-like display if there are other worktrees */}
-            {w.isGit && otherWts.length > 0 && (
+            {/* Tree-like display if there are worktrees */}
+            {hasExtraWorktrees && (
               <div className="mt-1 flex flex-col">
-                {otherWts.map((wt, idx) => {
-                  const isLast = idx === otherWts.length - 1;
+                {sortedWts.map((wt, idx) => {
+                  const isLast = idx === sortedWts.length - 1;
                   
                   // Check if this worktree is currently active (has the focused tab)
                   const isWtActive = activeTabId && tabs.some(t => t.id === activeTabId && (
@@ -268,7 +269,6 @@ export function WorkspaceList({
                       return inst && isPathInWorktree(inst.cwd, wt.path);
                     }))
                   ));
-
 
                   return (
                     <div
@@ -285,18 +285,24 @@ export function WorkspaceList({
                           }`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            onWorktreeClick(w.id, wt.path);
+                            if (wt.isMain) {
+                              onWorkspaceClick(w.id);
+                            } else {
+                              onWorktreeClick(w.id, wt.path);
+                            }
                           }}
                         >
                           <div className="flex items-center gap-1.5 truncate flex-1 min-w-0" title={wt.path}>
-                            <GitBranch size={11} className={wt.isDirty ? 'text-amber-400 shrink-0' : 'text-emerald-400 shrink-0'} />
+                            <GitBranch size={11} className={wt.isDirty ? 'text-amber-400 shrink-0' : (wt.isMain ? 'text-purple-400 shrink-0' : 'text-emerald-400 shrink-0')} />
                             <span className={`truncate ${wt.isDirty ? 'text-amber-400' : (isWtActive ? 'text-purple-200' : 'text-slate-400')}`}>
                               {wt.branch || 'detached'}
                             </span>
                             {wt.isDirty && (
                               <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_6px_#f59e0b] shrink-0" title="Uncommitted changes" />
                             )}
-                            <span className="badge badge-worktree shrink-0">wt</span>
+                            <span className={`badge ${wt.isMain ? 'badge-main' : 'badge-worktree'} shrink-0`}>
+                              {wt.isMain ? 'main' : 'wt'}
+                            </span>
                             {isWtActive && (
                               <span className="ws-active-badge shrink-0" style={{ width: '12px', height: '12px', fontSize: '6px' }} title="Active worktree tab">
                                 <Check size={8} strokeWidth={3} />
@@ -307,18 +313,20 @@ export function WorkspaceList({
                           <div className={`flex gap-1 shrink-0 ${isMobile ? '' : 'opacity-0 group-hover/item:opacity-100 transition-opacity duration-150'}`}>
                             <button
                               className="action-btn"
-                              onClick={(e) => { e.stopPropagation(); openTerminal(`${w.name} (${wt.branch || 'detached'})`, wt.path, w.defaultShell); }}
+                              onClick={(e) => { e.stopPropagation(); openTerminal(wt.isMain ? w.name : `${w.name} (${wt.branch || 'detached'})`, wt.path, w.defaultShell); }}
                               title={`Open terminal here (${w.defaultShell || 'default'})`}
                             >
                               <TerminalIcon size={11} />
                             </button>
-                            <button
-                              className="action-btn action-btn-danger"
-                              onClick={(e) => { e.stopPropagation(); handleRemoveWorktree(w.path, wt.path); }}
-                              title="Delete worktree"
-                            >
-                              <Trash2 size={11} />
-                            </button>
+                            {!wt.isMain && (
+                              <button
+                                className="action-btn action-btn-danger"
+                                onClick={(e) => { e.stopPropagation(); handleRemoveWorktree(w.path, wt.path); }}
+                                title="Delete worktree"
+                              >
+                                <Trash2 size={11} />
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
