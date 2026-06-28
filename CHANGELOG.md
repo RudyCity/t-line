@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.60] - 2026-06-28
+
+### Changed
+- **Accidental Closure Prevention for Small Tabs**: Added a CSS container query so that when tabs shrink in width (under 75px), the close button is completely hidden on hover for inactive tabs. This avoids accidental clicks and exactly matches Google Chrome's tab behavior.
+
+---
+
 ## [1.3.59] - 2026-06-28
 
 ### Added

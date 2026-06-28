@@ -310,6 +310,7 @@
   position: relative;
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   -webkit-app-region: no-drag;
+  container-type: inline-size;
 }
 
 .tab:hover {
@@ -382,6 +383,13 @@
 .tab-active .tab-close {
   width: 14px;
   opacity: 0.6;
+}
+
+@container (max-width: 75px) {
+  .tab:not(.tab-active):hover .tab-close {
+    width: 0 !important;
+    opacity: 0 !important;
+  }
 }
 
 .tab-close:hover {
