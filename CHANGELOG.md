@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.46] - 2026-06-28
+
+### Added
+- **Unified Custom Confirm/Alert Modals**: Replaced all browser-native `alert()` and `confirm()` prompts with a clean, unified custom `<ConfirmModal>` component to keep design consistency and premium dark mode experience.
+  - Modals support custom titles, custom messages, customizable confirm/cancel action labels, and theme variants (e.g. Danger red for deletion).
+  - Native confirmation requests (like Workspace or Worktree deletions) and API errors now display in the new modal.
+
 ## [1.3.45] - 2026-06-28
 
 ### Changed

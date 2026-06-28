@@ -7,7 +7,10 @@ export interface TunnelStatus {
   error: string | null;
 }
 
-export function useTunnel(isAuthenticated: boolean) {
+export function useTunnel(
+  isAuthenticated: boolean,
+  showAlert: (title: string, message: string) => void
+) {
   const [tunnelStatus, setTunnelStatus] = useState<TunnelStatus>({
     active: false,
     url: null,
@@ -58,10 +61,10 @@ export function useTunnel(isAuthenticated: boolean) {
       if (data.success) {
         await fetchTunnelStatus();
       } else {
-        alert(data.error);
+        showAlert('Tunnel Error', data.error);
       }
     } catch (e) {
-      alert('Failed to start quick tunnel.');
+      showAlert('Tunnel Error', 'Failed to start quick tunnel.');
     } finally {
       setTunnelLoading(false);
     }
@@ -87,10 +90,10 @@ export function useTunnel(isAuthenticated: boolean) {
         setTunnelToken('');
         await fetchTunnelStatus();
       } else {
-        alert(data.error);
+        showAlert('Tunnel Error', data.error);
       }
     } catch (e) {
-      alert('Failed to start named tunnel.');
+      showAlert('Tunnel Error', 'Failed to start named tunnel.');
     } finally {
       setTunnelLoading(false);
     }

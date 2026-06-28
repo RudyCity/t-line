@@ -322,13 +322,15 @@ interface SettingsModalProps {
   onClose: () => void;
   token: string;
   workspacesCount: number;
+  showAlert: (title: string, message: string) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   show,
   onClose,
   token,
-  workspacesCount
+  workspacesCount,
+  showAlert
 }) => {
   const [activeTab, setActiveTab] = React.useState<'general' | 'security' | 'connections'>('general');
   const [currentPassword, setCurrentPassword] = React.useState('');
@@ -389,10 +391,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         fetchConnections();
       } else {
         const errData = await res.json();
-        alert(errData.error || 'Failed to update rule');
+        showAlert('Security Rule Error', errData.error || 'Failed to update rule');
       }
     } catch (e) {
-      alert('Error updating security rule.');
+      showAlert('Security Rule Error', 'Error updating security rule.');
     }
   };
 
@@ -834,6 +836,66 @@ export const ShortcutHelpModal: React.FC<ShortcutHelpModalProps> = ({ show, onCl
           }}>
             💡 <strong style={{ color: 'var(--text-main)' }}>Tip:</strong> Shortcut menggunakan <kbd style={{ padding: '1px 5px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', fontSize: '10px' }}>Alt</kbd> agar tidak konflik dengan shortcut browser Chrome/Firefox.
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface ConfirmModalProps {
+  show: boolean;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  variant?: 'primary' | 'secondary' | 'danger';
+  isAlert?: boolean;
+  onConfirm: () => void;
+  onCancel?: () => void;
+}
+
+export const ConfirmModal: React.FC<ConfirmModalProps> = ({
+  show,
+  title,
+  message,
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  variant = 'primary',
+  isAlert = false,
+  onConfirm,
+  onCancel
+}) => {
+  if (!show) return null;
+
+  return (
+    <div className="modal-overlay" style={{ zIndex: 9999 }}>
+      <div className="modal-content glass-panel" style={{ maxWidth: '400px' }}>
+        <div className="modal-header">
+          <h3 className="modal-title">{title}</h3>
+          <button 
+            type="button" 
+            className="action-btn" 
+            onClick={onCancel || onConfirm}
+          >
+            ×
+          </button>
+        </div>
+        <div style={{ marginBottom: '24px', fontSize: '0.85rem', color: 'var(--text-main)', lineHeight: 1.5 }}>
+          {message}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+          {!isAlert && onCancel && (
+            <Button type="button" variant="secondary" onClick={onCancel}>
+              {cancelLabel}
+            </Button>
+          )}
+          <Button 
+            type="button" 
+            variant={variant} 
+            onClick={onConfirm}
+          >
+            {isAlert ? 'OK' : confirmLabel}
+          </Button>
         </div>
       </div>
     </div>

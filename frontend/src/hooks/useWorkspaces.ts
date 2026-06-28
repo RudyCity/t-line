@@ -17,7 +17,11 @@ export interface WorkspaceInfo {
   defaultShell?: string;
 }
 
-export function useWorkspaces(isAuthenticated: boolean, token: string | null) {
+export function useWorkspaces(
+  isAuthenticated: boolean,
+  token: string | null,
+  showAlert: (title: string, message: string) => void
+) {
   const [workspaces, setWorkspaces] = useState<WorkspaceInfo[]>([]);
   const [showWorkspaceModal, setShowWorkspaceModal] = useState<boolean>(false);
   const [newWorkspacePath, setNewWorkspacePath] = useState<string>('');
@@ -67,7 +71,7 @@ export function useWorkspaces(isAuthenticated: boolean, token: string | null) {
         setExplorerParent(data.parentPath);
         setExplorerDirs(data.directories);
       } else {
-        alert(data.error);
+        showAlert('Folder Explorer Error', data.error);
       }
     } catch (e) {
       console.error('Failed to list directories:', e);
@@ -113,15 +117,14 @@ export function useWorkspaces(isAuthenticated: boolean, token: string | null) {
         setShowFolderExplorer(false);
         fetchWorkspaces();
       } else {
-        alert(data.error || 'Failed to add workspace.');
+        showAlert('Workspace Error', data.error || 'Failed to add workspace.');
       }
     } catch (e) {
-      alert('Error occurred adding workspace.');
+      showAlert('Workspace Error', 'Error occurred adding workspace.');
     }
   };
 
   const handleRemoveWorkspace = async (workspacePath: string): Promise<boolean> => {
-    if (!confirm('Are you sure you want to remove this workspace from tracking? (Files will not be deleted)')) return false;
 
     try {
       const res = await fetch('/api/workspaces', {
@@ -191,17 +194,16 @@ export function useWorkspaces(isAuthenticated: boolean, token: string | null) {
         setShowWorktreeModal(false);
         fetchWorkspaces();
       } else {
-        alert(data.output || 'Failed to create worktree.');
+        showAlert('Worktree Error', data.output || 'Failed to create worktree.');
       }
     } catch (e) {
-      alert('Error occurred adding worktree.');
+      showAlert('Worktree Error', 'Error occurred adding worktree.');
     } finally {
       setGitLoading(false);
     }
   };
 
   const handleRemoveWorktree = async (repoPath: string, worktreePath: string) => {
-    if (!confirm(`Are you sure you want to remove the worktree at ${worktreePath}? This will delete the checked-out files but keep the branch.`)) return;
 
     setGitLoading(true);
     try {
@@ -217,7 +219,7 @@ export function useWorkspaces(isAuthenticated: boolean, token: string | null) {
       if (data.success) {
         fetchWorkspaces();
       } else {
-        alert(data.output || 'Failed to remove worktree.');
+        showAlert('Worktree Error', data.output || 'Failed to remove worktree.');
       }
     } catch (e) {
       console.error('Error removing worktree:', e);

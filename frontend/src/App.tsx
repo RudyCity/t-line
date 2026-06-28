@@ -18,7 +18,7 @@ import {
 import { wsManager } from './services/websocket';
 import { FileViewerTab } from './components/FileViewerTab';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
-import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal } from './components/Modals';
+import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal, ConfirmModal } from './components/Modals';
 import { useTunnel } from './hooks/useTunnel';
 import { useWorkspaces } from './hooks/useWorkspaces';
 import { useTerminals, WorkspaceInfo, getTerminalIds } from './hooks/useTerminals';
@@ -49,6 +49,52 @@ export default function App() {
     const saved = localStorage.getItem('tline-sidebar-collapsed');
     return saved === 'true';
   });
+
+  // Unified Alert/Confirm Dialog State
+  const [confirmDialog, setConfirmDialog] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    variant?: 'primary' | 'secondary' | 'danger';
+    isAlert?: boolean;
+    onConfirm: () => void;
+    onCancel?: () => void;
+  } | null>(null);
+
+  const showAlert = useCallback((title: string, message: string) => {
+    setConfirmDialog({
+      show: true,
+      title,
+      message,
+      isAlert: true,
+      onConfirm: () => setConfirmDialog(null)
+    });
+  }, []);
+
+  const showConfirm = useCallback((
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    variant: 'primary' | 'secondary' | 'danger' = 'primary',
+    confirmLabel = 'Confirm',
+    cancelLabel = 'Cancel'
+  ) => {
+    setConfirmDialog({
+      show: true,
+      title,
+      message,
+      confirmLabel,
+      cancelLabel,
+      variant,
+      onConfirm: () => {
+        onConfirm();
+        setConfirmDialog(null);
+      },
+      onCancel: () => setConfirmDialog(null)
+    });
+  }, []);
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [rightMenuOpen, setRightMenuOpen] = useState<boolean>(false);
   const [showShortcutModal, setShowShortcutModal] = useState<boolean>(false);
@@ -87,7 +133,7 @@ export default function App() {
     handleOpenWorktreeModal,
     handleAddWorktree,
     handleRemoveWorktree
-  } = useWorkspaces(isAuthenticated, localStorage.getItem('token'));
+  } = useWorkspaces(isAuthenticated, localStorage.getItem('token'), showAlert);
 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
@@ -103,7 +149,7 @@ export default function App() {
     handleStartTunnel,
     handleStartTokenTunnel,
     handleStopTunnel
-  } = useTunnel(isAuthenticated);
+  } = useTunnel(isAuthenticated, showAlert);
 
   // Active panel state: 'workspaces' | 'explorer' | 'changes'
   const [activePanel, setActivePanel] = useState<'workspaces' | 'explorer' | 'changes' | 'tabs'>('workspaces');
@@ -182,64 +228,86 @@ export default function App() {
   }, [panelWorkspace, fetchGitStatus]);
 
   // Handle workspace removal and close all associated terminal and file tabs
-  const handleRemoveWorkspace = async (workspacePath: string) => {
-    const success = await rawHandleRemoveWorkspace(workspacePath);
-    if (success) {
-      const isPathInWorkspace = (filePath: string, wsPath: string) => {
-        const normFile = filePath.toLowerCase().replace(/\\/g, '/');
-        const normWS = wsPath.toLowerCase().replace(/\\/g, '/');
-        return normFile === normWS || normFile.startsWith(normWS + '/');
-      };
+  const handleRemoveWorkspace = (workspacePath: string) => {
+    showConfirm(
+      'Remove Workspace',
+      'Are you sure you want to remove this workspace from tracking? (Files will not be deleted)',
+      async () => {
+        const success = await rawHandleRemoveWorkspace(workspacePath);
+        if (success) {
+          const isPathInWorkspace = (filePath: string, wsPath: string) => {
+            const normFile = filePath.toLowerCase().replace(/\\/g, '/');
+            const normWS = wsPath.toLowerCase().replace(/\\/g, '/');
+            return normFile === normWS || normFile.startsWith(normWS + '/');
+          };
 
-      setTabs(prevTabs => {
-        const tabsToClose = prevTabs.filter(tab => {
-          if (tab.type === 'file' && tab.filePath) {
-            return isPathInWorkspace(tab.filePath, workspacePath);
-          }
-          if (tab.type === 'terminal' && tab.layout) {
-            const termIds = getTerminalIds(tab.layout);
-            return termIds.some(id => {
-              const inst = terminalInstances[id];
-              return inst && isPathInWorkspace(inst.cwd, workspacePath);
+          setTabs(prevTabs => {
+            const tabsToClose = prevTabs.filter(tab => {
+              if (tab.type === 'file' && tab.filePath) {
+                return isPathInWorkspace(tab.filePath, workspacePath);
+              }
+              if (tab.type === 'terminal' && tab.layout) {
+                const termIds = getTerminalIds(tab.layout);
+                return termIds.some(id => {
+                  const inst = terminalInstances[id];
+                  return inst && isPathInWorkspace(inst.cwd, workspacePath);
+                });
+              }
+              return false;
             });
-          }
-          return false;
-        });
 
-        if (tabsToClose.length === 0) return prevTabs;
+            if (tabsToClose.length === 0) return prevTabs;
 
-        const closedTermIds: string[] = [];
-        tabsToClose.forEach(tab => {
-          if (tab.type === 'terminal' && tab.layout) {
-            const termIds = getTerminalIds(tab.layout);
-            termIds.forEach(id => {
-              wsManager.unsubscribe(id);
-              closedTermIds.push(id);
+            const closedTermIds: string[] = [];
+            tabsToClose.forEach(tab => {
+              if (tab.type === 'terminal' && tab.layout) {
+                const termIds = getTerminalIds(tab.layout);
+                termIds.forEach(id => {
+                  wsManager.unsubscribe(id);
+                  closedTermIds.push(id);
+                });
+              }
             });
-          }
-        });
 
-        if (closedTermIds.length > 0) {
-          setTerminalInstances(prevInstances => {
-            const next = { ...prevInstances };
-            closedTermIds.forEach(id => delete next[id]);
-            return next;
+            if (closedTermIds.length > 0) {
+              setTerminalInstances(prevInstances => {
+                const next = { ...prevInstances };
+                closedTermIds.forEach(id => delete next[id]);
+                return next;
+              });
+            }
+
+            const remainingTabs = prevTabs.filter(t => !tabsToClose.some(c => c.id === t.id));
+
+            if (tabsToClose.some(c => c.id === activeTabId)) {
+              if (remainingTabs.length > 0) {
+                setActiveTabId(remainingTabs[remainingTabs.length - 1].id);
+              } else {
+                setActiveTabId('');
+              }
+            }
+
+            return remainingTabs;
           });
         }
+      },
+      'danger',
+      'Remove',
+      'Cancel'
+    );
+  };
 
-        const remainingTabs = prevTabs.filter(t => !tabsToClose.some(c => c.id === t.id));
-
-        if (tabsToClose.some(c => c.id === activeTabId)) {
-          if (remainingTabs.length > 0) {
-            setActiveTabId(remainingTabs[remainingTabs.length - 1].id);
-          } else {
-            setActiveTabId('');
-          }
-        }
-
-        return remainingTabs;
-      });
-    }
+  const handleRemoveWorktreeWrapped = (wsId: string, wtPath: string) => {
+    showConfirm(
+      'Remove Worktree',
+      `Are you sure you want to remove the worktree at ${wtPath}? This will delete the checked-out files but keep the branch.`,
+      () => {
+        handleRemoveWorktree(wsId, wtPath);
+      },
+      'danger',
+      'Remove',
+      'Cancel'
+    );
   };
 
   const getWorkspaceForTab = (tabId: string): WorkspaceInfo | null => {
@@ -769,7 +837,7 @@ export default function App() {
             handleOpenWorktreeModal={handleOpenWorktreeModal}
             openTerminal={openTerminal}
             handleRemoveWorkspace={handleRemoveWorkspace}
-            handleRemoveWorktree={handleRemoveWorktree}
+            handleRemoveWorktree={handleRemoveWorktreeWrapped}
             openFileTab={openFileTab}
             closeTerminal={closeTerminal}
             workspaceActiveTab={workspaceActiveTab}
@@ -1078,12 +1146,27 @@ export default function App() {
         onClose={() => setShowSettingsModal(false)}
         token={localStorage.getItem('token') || ''}
         workspacesCount={workspaces.length}
+        showAlert={showAlert}
       />
 
       <ShortcutHelpModal
         show={showShortcutModal}
         onClose={() => setShowShortcutModal(false)}
       />
+
+      {confirmDialog && (
+        <ConfirmModal
+          show={confirmDialog.show}
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmLabel={confirmDialog.confirmLabel}
+          cancelLabel={confirmDialog.cancelLabel}
+          variant={confirmDialog.variant}
+          isAlert={confirmDialog.isAlert}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={confirmDialog.onCancel}
+        />
+      )}
 
       <Footer
         panelWorkspace={panelWorkspace}
