@@ -86,7 +86,7 @@ function WorkspaceActions({
           title="New Worktree branch"
         >
           <GitFork size={13} />
-          {isMobile && <span className="ws-dropdown-label">New Worktree</span>}
+          <span className="ws-dropdown-label">New Worktree</span>
         </button>
       )}
       {w.isGit && (
@@ -96,7 +96,7 @@ function WorkspaceActions({
           title="Git Changes"
         >
           <GitCompare size={13} />
-          {isMobile && <span className="ws-dropdown-label">Git Changes</span>}
+          <span className="ws-dropdown-label">Git Changes</span>
         </button>
       )}
       <button
@@ -105,7 +105,7 @@ function WorkspaceActions({
         title="Browse Files"
       >
         <FolderTree size={13} />
-        {isMobile && <span className="ws-dropdown-label">Browse Files</span>}
+        <span className="ws-dropdown-label">Browse Files</span>
       </button>
       <button
         className="action-btn"
@@ -113,7 +113,7 @@ function WorkspaceActions({
         title={`Open terminal (${w.defaultShell || 'default'})`}
       >
         <TerminalIcon size={13} />
-        {isMobile && <span className="ws-dropdown-label">Open Terminal</span>}
+        <span className="ws-dropdown-label">Open Terminal</span>
       </button>
       <button
         className="action-btn"
@@ -121,7 +121,7 @@ function WorkspaceActions({
         title="Edit workspace settings"
       >
         <Settings size={13} />
-        {isMobile && <span className="ws-dropdown-label">Settings</span>}
+        <span className="ws-dropdown-label">Settings</span>
       </button>
       <button
         className="action-btn action-btn-danger"
@@ -129,34 +129,26 @@ function WorkspaceActions({
         title="Remove workspace"
       >
         <Trash2 size={13} />
-        {isMobile && <span className="ws-dropdown-label">Remove</span>}
+        <span className="ws-dropdown-label">Remove</span>
       </button>
     </>
   );
 
-  if (isMobile) {
-    return (
-      <div className="relative" ref={menuRef}>
-        <button
-          className="action-btn"
-          onClick={(e) => { e.stopPropagation(); setOpen(v => !v); }}
-          title="More actions"
-        >
-          <MoreVertical size={15} />
-        </button>
-        {open && (
-          <div className="ws-dropdown-menu" onClick={(e) => e.stopPropagation()}>
-            {actionButtons}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Desktop/Tablet: always-visible buttons
+  // Always use a three-dot dropdown menu (mobile & desktop)
   return (
-    <div className="flex gap-1 shrink-0">
-      {actionButtons}
+    <div className="relative" ref={menuRef}>
+      <button
+        className="action-btn"
+        onClick={(e) => { e.stopPropagation(); setOpen(v => !v); }}
+        title="More actions"
+      >
+        <MoreVertical size={15} />
+      </button>
+      {open && (
+        <div className="ws-dropdown-menu" onClick={(e) => e.stopPropagation()}>
+          {actionButtons}
+        </div>
+      )}
     </div>
   );
 }
