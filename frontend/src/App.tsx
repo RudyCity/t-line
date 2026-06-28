@@ -116,6 +116,8 @@ export default function App() {
     setTerminalInstances,
     activeTabId,
     setActiveTabId,
+    workspaceActiveTab,
+    setWorkspaceActiveTab,
     terminalFontSize,
     defaultShell,
     setDefaultShell,
@@ -200,6 +202,92 @@ export default function App() {
         return remainingTabs;
       });
     }
+  };
+
+  const getWorkspaceForTab = (tabId: string): WorkspaceInfo | null => {
+    const tab = tabs.find(t => t.id === tabId);
+    if (!tab) return null;
+    
+    const isPathInWorkspace = (filePath: string, wsPath: string) => {
+      const normFile = filePath.toLowerCase().replace(/\\/g, '/');
+      const normWS = wsPath.toLowerCase().replace(/\\/g, '/');
+      return normFile === normWS || normFile.startsWith(normWS + '/');
+    };
+
+    if (tab.type === 'file' && tab.filePath) {
+      const matched = workspaces.find(w => isPathInWorkspace(tab.filePath!, w.path));
+      if (matched) return matched;
+    } else if (tab.type === 'terminal' && tab.layout) {
+      const termIds = getTerminalIds(tab.layout);
+      if (tab.focusedTerminalId) {
+        const inst = terminalInstances[tab.focusedTerminalId];
+        if (inst && inst.cwd) {
+          const matched = workspaces.find(w => isPathInWorkspace(inst.cwd, w.path));
+          if (matched) return matched;
+        }
+      }
+      for (const id of termIds) {
+        const inst = terminalInstances[id];
+        if (inst && inst.cwd) {
+          const matched = workspaces.find(w => isPathInWorkspace(inst.cwd, w.path));
+          if (matched) return matched;
+        }
+      }
+    }
+    return null;
+  };
+
+  // Update workspace's last active tab when activeTabId changes
+  useEffect(() => {
+    if (!activeTabId) return;
+    const ws = getWorkspaceForTab(activeTabId);
+    if (ws) {
+      setWorkspaceActiveTab(ws.id, activeTabId);
+    }
+  }, [activeTabId, tabs, terminalInstances, workspaces]);
+
+  const handleWorkspaceClick = (workspaceId: string) => {
+    const ws = workspaces.find(w => w.id === workspaceId);
+    if (!ws) return;
+
+    setPanelWorkspace(ws);
+
+    // 1. Try to restore last active tab from memory
+    const savedTabId = workspaceActiveTab[workspaceId];
+    if (savedTabId && tabs.some(t => t.id === savedTabId)) {
+      setActiveTabId(savedTabId);
+      setSidebarOpen(false);
+      return;
+    }
+
+    // 2. Try to find any open tab that matches this workspace
+    const isPathInWorkspace = (filePath: string, wsPath: string) => {
+      const normFile = filePath.toLowerCase().replace(/\\/g, '/');
+      const normWS = wsPath.toLowerCase().replace(/\\/g, '/');
+      return normFile === normWS || normFile.startsWith(normWS + '/');
+    };
+
+    const matchedTab = tabs.find(tab => {
+      if (tab.type === 'file' && tab.filePath) {
+        return isPathInWorkspace(tab.filePath, ws.path);
+      }
+      if (tab.type === 'terminal' && tab.layout) {
+        const termIds = getTerminalIds(tab.layout);
+        return termIds.some(id => {
+          const inst = terminalInstances[id];
+          return inst && isPathInWorkspace(inst.cwd, ws.path);
+        });
+      }
+      return false;
+    });
+
+    if (matchedTab) {
+      setActiveTabId(matchedTab.id);
+    } else {
+      // 3. Fallback: open a new terminal tab in this workspace
+      openTerminal('Shell', ws.path);
+    }
+    setSidebarOpen(false);
   };
 
 
@@ -548,6 +636,8 @@ export default function App() {
             handleRemoveWorktree={handleRemoveWorktree}
             openFileTab={openFileTab}
             closeTerminal={closeTerminal}
+            workspaceActiveTab={workspaceActiveTab}
+            onWorkspaceClick={handleWorkspaceClick}
           />
         )}
       </div>

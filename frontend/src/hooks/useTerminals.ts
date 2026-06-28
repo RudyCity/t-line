@@ -47,6 +47,9 @@ export interface TabData {
   focusedTerminalId?: string;
 }
 
+/** Maps workspaceId → last active tabId for that workspace */
+export type WorkspaceActiveTabMap = Record<string, string>;
+
 // ── Helper functions for Tree operations ───────────────────
 
 export function getTerminalIds(node: SplitLayoutNode): string[] {
@@ -173,6 +176,23 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
   });
 
   const [defaultShell, setDefaultShell] = useState<string>('powershell');
+
+  const [workspaceActiveTab, setWorkspaceActiveTabState] = useState<WorkspaceActiveTabMap>(() => {
+    try {
+      const saved = localStorage.getItem('tline-workspace-active-tab');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const setWorkspaceActiveTab = useCallback((wsId: string, tabId: string) => {
+    setWorkspaceActiveTabState(prev => {
+      const next = { ...prev, [wsId]: tabId };
+      localStorage.setItem('tline-workspace-active-tab', JSON.stringify(next));
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('tline-tabs-v2', JSON.stringify(tabs));
@@ -478,6 +498,8 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     setTerminalInstances,
     activeTabId,
     setActiveTabId,
+    workspaceActiveTab,
+    setWorkspaceActiveTab,
     terminalFontSize,
     setTerminalFontSize,
     defaultShell,

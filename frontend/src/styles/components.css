@@ -131,6 +131,76 @@
   background: rgba(239, 68, 68, 0.1);
 }
 
+/* Workspace Action Dropdown Menu (Mobile Only) */
+.ws-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 6px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 50;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  min-width: 150px;
+  animation: wsDropdownFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes wsDropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ws-dropdown-menu .action-btn {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  border-radius: 6px;
+}
+
+.ws-dropdown-menu .action-btn:hover {
+  color: var(--text-main);
+  background: rgba(168, 85, 247, 0.15);
+}
+
+.ws-dropdown-menu .action-btn-danger:hover {
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.ws-dropdown-label {
+  font-weight: 500;
+}
+
+/* Active Workspace Indicator */
+.ws-active-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  font-size: 8px;
+}
+
 /* Welcome Card Layout & Spacing */
 .welcome-card-outer {
   display: flex;

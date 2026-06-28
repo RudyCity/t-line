@@ -22,6 +22,8 @@ interface SidebarContentPanelProps {
   handleRemoveWorktree: (wsId: string, path: string) => void;
   openFileTab: (filePath: string, name: string) => void;
   closeTerminal: (id: string, e: React.MouseEvent) => void;
+  workspaceActiveTab: Record<string, string>;
+  onWorkspaceClick: (wsId: string) => void;
 }
 
 export function SidebarContentPanel({
@@ -41,7 +43,9 @@ export function SidebarContentPanel({
   handleRemoveWorkspace,
   handleRemoveWorktree,
   openFileTab,
-  closeTerminal
+  closeTerminal,
+  workspaceActiveTab,
+  onWorkspaceClick
 }: SidebarContentPanelProps) {
   return (
     <div 
@@ -129,6 +133,10 @@ export function SidebarContentPanel({
 
           <WorkspaceList
             workspaces={workspaces}
+            tabs={tabs}
+            activeTabId={activeTabId}
+            workspaceActiveTab={workspaceActiveTab}
+            onWorkspaceClick={onWorkspaceClick}
             setPanelWorkspace={setPanelWorkspace}
             setActivePanel={setActivePanel}
             handleOpenWorktreeModal={handleOpenWorktreeModal}

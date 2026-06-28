@@ -4,6 +4,17 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.43] - 2026-06-28
+
+### Added
+- **Per-Workspace Active Tab Memory**: Klik workspace di sidebar sekarang otomatis memindahkan fokus ke tab terakhir yang aktif di workspace tersebut. Jika tidak ada tab yang aktif, akan memilih tab pertama workspace, atau membuka shell baru di direktori workspace tersebut.
+- **Tanda Checkmark pada Workspace Aktif**: Workspace yang tab-nya sedang aktif kini memiliki tanda checkmark (✓) dan style visual ungu yang mempertegas focus workspace saat ini.
+
+### Improved
+- **Responsive Workspace Actions**:
+  - Pada layar mobile (`< 768px`): Tombol aksi workspace (delete, worktrees, git changes, browse files, terminal) disatukan ke dalam menu dropdown titik tiga (`⋮`) yang responsif dan ringkas.
+  - Pada layar tablet/desktop (`≥ 768px`): Semua tombol aksi selalu ditampilkan secara langsung tanpa memerlukan efek hover.
+
 ## [1.3.41] - 2026-06-28
 
 ### Fixed
