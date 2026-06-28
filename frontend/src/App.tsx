@@ -922,7 +922,7 @@ export default function App() {
         >
         
         <div className="sidebar-header" style={{ padding: sidebarCollapsed ? '12px 0' : '12px 16px', gap: '8px', justifyContent: sidebarCollapsed ? 'center' : 'flex-start' }}>
-          <TPlusLogo size={22} />
+          <TPlusLogo size={28} />
           {!sidebarCollapsed && (
             <span className="logo-text" style={{ fontSize: '1.05rem', fontWeight: 600 }}>t-line</span>
           )}

@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.65] - 2026-06-28
+
+### Changed
+- **Enlarged Sidebar Logo**: Increased the `TPlusLogo` component size in the sidebar header to 28px (up from 22px) for a much clearer and more prominent visual presence.
+
+---
+
 ## [1.3.64] - 2026-06-28
 
 ### Changed
