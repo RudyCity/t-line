@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.38] - 2026-06-28
+
+### Fixed
+- **Mobile Side Menu z-index overlap**: Increased z-index of mobile sidebar, right sidebar (`z-index: 90`), and sidebar overlay (`z-index: 80`) in `layout.css` to sit cleanly above terminal split pane floating control bars (`z-index: 50`) on mobile screens.
+
 ## [1.3.37] - 2026-06-28
 
 ### Removed
