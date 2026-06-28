@@ -130,7 +130,8 @@ export default function App() {
     focusTerminal,
     handleTitleChange,
     importActiveSessions,
-    restartTerminal
+    refreshTerminal,
+    refreshTriggers
   } = useTerminals(workspaces, () => setSidebarOpen(false));
 
   const { startResizing, handleMergeTab } = useLayoutHelpers(
@@ -899,6 +900,7 @@ export default function App() {
                           setShowMobileKeyboard(true);
                         }
                       }}
+                      refreshTriggers={refreshTriggers}
                     />
                   );
                 }
@@ -984,7 +986,7 @@ export default function App() {
         handleStartTunnel={handleStartTunnel}
         handleStopTunnel={handleStopTunnel}
         activeTabType={tabs.find(t => t.id === activeTabId)?.type || null}
-        onRefreshTerminal={() => restartTerminal(activeTabId)}
+        onRefreshTerminal={() => refreshTerminal(tabs.find(t => t.id === activeTabId)?.focusedTerminalId || '')}
       />
     </div>
   );

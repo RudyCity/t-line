@@ -20,6 +20,7 @@ interface TerminalInstanceProps {
   fontSize: number;
   onTitleChange?: (title: string) => void;
   onFocus?: () => void;
+  refreshTrigger?: number;
 }
 
 // ── Search Bar Sub-Component ──────────────────────────────
@@ -120,7 +121,7 @@ function TerminalSearchBar({ searchAddon, onClose }: SearchBarProps) {
 }
 
 // ── Main Terminal Instance ────────────────────────────────
-export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleChange, onFocus }: TerminalInstanceProps) {
+export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleChange, onFocus, refreshTrigger }: TerminalInstanceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -388,6 +389,22 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
       }));
     }
   }, [active, wsConnected, tab.id, tab.cwd, tab.shellType]);
+
+  // ── Manual refresh trigger (non-destructive) ──────────────
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0 && terminalRef.current && wsConnected) {
+      const term = terminalRef.current;
+      term.reset(); // Clear frontend buffer visually
+
+      const cols = term.cols || 80;
+      const rows = term.rows || 24;
+
+      // Resend init payload to trigger buffer replay from backend
+      wsManager.send(JSON.stringify({
+        type: 'init', id: tab.id, cwd: tab.cwd, cols, rows, shellType: tab.shellType
+      }));
+    }
+  }, [refreshTrigger, wsConnected, tab.id, tab.cwd, tab.shellType]);
 
 
   // ── Active tab: refit + focus ────────────────────────────

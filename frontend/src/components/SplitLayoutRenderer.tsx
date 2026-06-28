@@ -16,6 +16,7 @@ export interface SplitLayoutRendererProps {
   splitFocusedTerminal: (direction: 'horizontal' | 'vertical') => void;
   hasMultiplePanes: boolean;
   onTerminalFocus?: () => void;
+  refreshTriggers?: Record<string, number>;
 }
 
 export function SplitLayoutRenderer({
@@ -30,7 +31,8 @@ export function SplitLayoutRenderer({
   closePane,
   splitFocusedTerminal,
   hasMultiplePanes,
-  onTerminalFocus
+  onTerminalFocus,
+  refreshTriggers
 }: SplitLayoutRendererProps): React.JSX.Element | null {
   if (node.type === 'leaf') {
     const term = terminalInstances[node.terminalId];
@@ -60,6 +62,7 @@ export function SplitLayoutRenderer({
             focusTerminal(node.terminalId);
             onTerminalFocus?.();
           }}
+          refreshTrigger={refreshTriggers?.[term.id] || 0}
         />
         
         {/* Floating action bar at top-right of each pane */}
@@ -121,6 +124,7 @@ export function SplitLayoutRenderer({
           splitFocusedTerminal={splitFocusedTerminal}
           hasMultiplePanes={hasMultiplePanes}
           onTerminalFocus={onTerminalFocus}
+          refreshTriggers={refreshTriggers}
         />
       </Panel>
       <PanelResizeHandle
@@ -145,6 +149,7 @@ export function SplitLayoutRenderer({
           splitFocusedTerminal={splitFocusedTerminal}
           hasMultiplePanes={hasMultiplePanes}
           onTerminalFocus={onTerminalFocus}
+          refreshTriggers={refreshTriggers}
         />
       </Panel>
     </PanelGroup>

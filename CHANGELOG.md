@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.29] - 2026-06-28
+
+### Fixed
+- **Non-Destructive Terminal Refresh**: Refactored the terminal refresh button handler in `App.tsx` and `useTerminals.ts` to be non-destructive. Clicking the button now calls `term.reset()` to clear the frontend canvas visually and triggers a websocket `init` re-attach. This forces the backend to replay its session history buffer rather than killing the active shell process, preserving all background processes and build tasks.
+
 ## [1.3.28] - 2026-06-28
 
 ### Added
