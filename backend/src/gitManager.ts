@@ -251,22 +251,56 @@ export async function addWorktree(
   }
 }
 
-// Remove a git worktree
+// Remove a git worktree — with Windows Permission Denied fallback
 export async function removeWorktree(repoPath: string, worktreePath: string, force: boolean): Promise<{ success: boolean; output: string }> {
-  try {
-    const normalizedRepo = path.normalize(repoPath);
-    const normalizedWorktree = path.normalize(worktreePath);
-    
-    const args = ['worktree', 'remove'];
-    if (force) {
-      args.push('--force');
-    }
-    args.push(normalizedWorktree);
+  const normalizedRepo = path.normalize(repoPath);
+  const normalizedWorktree = path.normalize(worktreePath);
 
+  // Step 1: Try git worktree remove (--force)
+  try {
+    const args = ['worktree', 'remove'];
+    if (force) args.push('--force');
+    args.push(normalizedWorktree);
     const output = await runGit(args, normalizedRepo);
     return { success: true, output };
-  } catch (error: any) {
-    return { success: false, output: error.message };
+  } catch (gitError: any) {
+    const msg: string = gitError.message || '';
+
+    // Step 2: If git failed with a permission/lock error, manually delete the folder
+    // then prune the worktree metadata so Git stays consistent
+    const isPermissionError = msg.toLowerCase().includes('permission') ||
+      msg.toLowerCase().includes('failed to delete') ||
+      msg.toLowerCase().includes('unable to');
+
+    if (!isPermissionError) {
+      return { success: false, output: msg };
+    }
+
+    try {
+      // Force-remove directory tree via Node.js (bypasses the git shell limitation)
+      if (fs.existsSync(normalizedWorktree)) {
+        // On Windows, read-only .git files can block deletion — clear read-only flags first
+        const clearReadOnly = (dirPath: string) => {
+          try {
+            const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+            for (const entry of entries) {
+              const full = path.join(dirPath, entry.name);
+              try { fs.chmodSync(full, 0o666); } catch {}
+              if (entry.isDirectory()) clearReadOnly(full);
+            }
+          } catch {}
+        };
+        clearReadOnly(normalizedWorktree);
+        fs.rmSync(normalizedWorktree, { recursive: true, force: true });
+      }
+
+      // Prune the now-missing worktree from git's internal registry
+      await runGit(['worktree', 'prune'], normalizedRepo);
+
+      return { success: true, output: 'Worktree forcefully removed via filesystem fallback and git metadata pruned.' };
+    } catch (fsError: any) {
+      return { success: false, output: `Git error: ${msg} | Filesystem fallback error: ${fsError.message}` };
+    }
   }
 }
 

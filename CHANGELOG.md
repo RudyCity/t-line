@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.67] - 2026-06-28
+
+### Fixed
+- **Worktree Delete Backend Fallback**: If `git worktree remove --force` still fails with a Permission Denied/lock error (e.g. held by antivirus or File Explorer), the backend now falls back to: (1) clear read-only flags on all files in the directory, (2) force-delete the folder tree via `fs.rmSync`, then (3) run `git worktree prune` to clean up Git's internal registry. This ensures the worktree is always fully removed even when Git itself cannot acquire the necessary file lock.
+
+---
+
 ## [1.3.66] - 2026-06-28
 
 ### Fixed
