@@ -1143,22 +1143,13 @@ export default function App() {
             <div className="window-controls-separator shrink-0 desktop-only" style={{ margin: '0 12px', height: '16px' }} />
           )}
 
-          <div className="top-bar-actions flex items-center gap-3 shrink-0">
+          <div className="top-bar-actions flex items-center gap-2 shrink-0">
             <button 
               className={`action-btn mobile-only ${showMobileKeyboard ? 'text-purple-400 bg-purple-500/10' : ''}`}
               onClick={() => setShowMobileKeyboard(v => !v)}
               title="Toggle virtual touch keyboard"
             >
               <Keyboard size={18} />
-            </button>
-            <button className="action-btn desktop-only" onClick={() => setShowShortcutModal(true)} title="Keyboard Shortcuts">
-              <HelpCircle size={16} />
-            </button>
-            <button className="action-btn desktop-only" onClick={() => setShowSettingsModal(true)} title="Settings">
-              <Settings size={16} />
-            </button>
-            <button className="action-btn desktop-only" onClick={handleLogout} title="Log out">
-              <LogOut size={16} />
             </button>
             <button 
               className="action-btn mobile-only" 
@@ -1167,23 +1158,39 @@ export default function App() {
             >
               <MoreVertical size={18} />
             </button>
-            {(window as any).electron && (
-              <>
-                <div className="window-controls-separator" style={{ margin: '0 12px' }} />
-                <div className="window-controls flex items-center">
-                  <button type="button" className="window-control-btn" onClick={() => (window as any).electron.minimize()} title="Minimize">—</button>
+
+            {/* Unified Control Pill */}
+            <div className="window-controls flex items-center bg-slate-950/20 border border-white/5 rounded-lg p-0.5 desktop-only" style={{ WebkitAppRegion: 'no-drag' } as any}>
+              <button type="button" className="window-control-btn" onClick={() => setShowShortcutModal(true)} title="Keyboard Shortcuts">
+                <HelpCircle size={13} />
+              </button>
+              <button type="button" className="window-control-btn" onClick={() => setShowSettingsModal(true)} title="Settings">
+                <Settings size={13} />
+              </button>
+              <button type="button" className="window-control-btn" onClick={handleLogout} title="Log out">
+                <LogOut size={13} />
+              </button>
+              
+              {(window as any).electron && (
+                <>
+                  <div style={{ width: '1px', height: '14px', background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
+                  <button type="button" className="window-control-btn" onClick={() => (window as any).electron.minimize()} title="Minimize">
+                    <span style={{ fontSize: '10px' }}>—</span>
+                  </button>
                   <button 
                     type="button" 
                     className="window-control-btn" 
                     onClick={() => (window as any).electron.maximize()} 
                     title={isMaximized ? "Restore" : "Maximize"}
                   >
-                    {isMaximized ? "❐" : "▢"}
+                    <span style={{ fontSize: '10px' }}>{isMaximized ? "❐" : "▢"}</span>
                   </button>
-                  <button type="button" className="window-control-btn window-control-btn-close" onClick={() => (window as any).electron.close()} title="Close">✕</button>
-                </div>
-              </>
-            )}
+                  <button type="button" className="window-control-btn window-control-btn-close" onClick={() => (window as any).electron.close()} title="Close">
+                    <span style={{ fontSize: '10px' }}>✕</span>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
