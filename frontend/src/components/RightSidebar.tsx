@@ -158,7 +158,7 @@ export function RightSidebar({
         </div>
 
         {/* ─── Terminal Controls (mobile only) ─── */}
-        <div className="flex flex-col gap-3 pt-4 border-t border-white/5 sm:hidden">
+        <div className="flex flex-col gap-3 pt-4 border-t border-white/5">
           <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Terminal Controls</span>
 
           {/* Font size */}
@@ -216,7 +216,7 @@ export function RightSidebar({
         </div>
 
         {/* ─── Cloudflare Tunnel (mobile only) ─── */}
-        <div className="flex flex-col gap-3 pt-4 border-t border-white/5 sm:hidden">
+        <div className="flex flex-col gap-3 pt-4 border-t border-white/5">
           <div className="flex items-center justify-between mb-1">
             <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Cloudflare Tunnel</span>
             {/* Status badge */}
