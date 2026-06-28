@@ -263,9 +263,34 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
       resizeObserver.observe(containerRef.current);
     }
 
+    // ── Capturing focus triggers for click/touch (bypassing xterm stopPropagation) ──
+    const handleFocusTrigger = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('input') || target.closest('button') || target.closest('select') || target.closest('a')) {
+        return;
+      }
+      if (terminalRef.current) {
+        terminalRef.current.focus();
+        if (terminalRef.current.textarea) {
+          terminalRef.current.textarea.focus();
+        }
+        onFocusRef.current?.();
+      }
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('click', handleFocusTrigger, true);
+      container.addEventListener('touchend', handleFocusTrigger, true);
+    }
+
     return () => {
       window.removeEventListener('resize', handleResize);
       resizeObserver.disconnect();
+      if (container) {
+        container.removeEventListener('click', handleFocusTrigger, true);
+        container.removeEventListener('touchend', handleFocusTrigger, true);
+      }
       term.dispose();
     };
   }, [tab.id]);

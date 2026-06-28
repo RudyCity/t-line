@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.10] - 2026-06-28
+
+### Fixed
+- **Mobile Terminal Click Focus & Virtual Keyboard**: Added capturing phase event listeners for click and touch events on the terminal container inside `TerminalInstance.tsx` to bypass `xterm.js`'s event propagation blocking (`stopPropagation`). Also wrapped the terminal instance's focus callback inside `SplitLayoutRenderer.tsx` to ensure `focusTerminal` is always invoked when the user taps on a terminal pane on mobile, reliably toggling the virtual touch keyboard.
+
 ## [1.3.9] - 2026-06-28
 
 ### Added

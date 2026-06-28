@@ -56,7 +56,10 @@ export function SplitLayoutRenderer({
           wsConnected={wsConnected}
           fontSize={terminalFontSize}
           onTitleChange={(title) => handleTitleChange(term.id, title)}
-          onFocus={onTerminalFocus}
+          onFocus={() => {
+            focusTerminal(node.terminalId);
+            onTerminalFocus?.();
+          }}
         />
         
         {/* Floating action bar at top-right of each pane */}
