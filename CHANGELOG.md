@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.20] - 2026-06-28
+
+### Added
+- **Full Screen Mobile Modals**: Styled dialog modals (`.modal-overlay` and `.modal-content`) to take up the full width and height of the screen (edge-to-edge, zero margin, zero border-radius) on mobile devices to optimize display space and styling.
+
 ## [1.3.19] - 2026-06-28
 
 ### Fixed
