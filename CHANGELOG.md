@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.54] - 2026-06-28
+
+### Fixed
+- **Inactive Workspace Main Branch Icon Color**: Ensured that the `GitBranch` icon for the `main` branch of an inactive workspace is rendered in gray (`text-slate-500`) instead of purple. This aligns it with the gray/slate color of the inactive branch name text, preventing inactive workspaces from appearing partially selected.
+
 ## [1.3.53] - 2026-06-28
 
 ### Changed

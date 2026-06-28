@@ -286,7 +286,7 @@ export function WorkspaceList({
                           }}
                         >
                           <div className="flex items-center gap-1.5 truncate flex-1 min-w-0" title={wt.path}>
-                            <GitBranch size={11} className={isWtActive ? 'text-purple-400 shrink-0' : (wt.isDirty ? 'text-amber-400 shrink-0' : (wt.isMain ? 'text-purple-400 shrink-0' : 'text-emerald-400 shrink-0'))} />
+                            <GitBranch size={11} className={isWtActive ? 'text-purple-400 shrink-0' : (wt.isDirty ? 'text-amber-400 shrink-0' : 'text-slate-500 shrink-0')} />
                             <span className={`truncate ${isWtActive ? 'text-purple-200' : (wt.isDirty ? 'text-amber-400' : 'text-slate-400')}`}>
                               {wt.branch || 'detached'}
                             </span>
