@@ -290,9 +290,6 @@ export function WorkspaceList({
                             <span className={`truncate ${wt.isDirty ? 'text-amber-400' : (isWtActive ? 'text-purple-200' : 'text-slate-400')}`}>
                               {wt.branch || 'detached'}
                             </span>
-                            {wt.isDirty && (
-                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_6px_#f59e0b] shrink-0" title="Uncommitted changes" />
-                            )}
                             <span className={`badge ${wt.isMain ? 'badge-main' : 'badge-worktree'} shrink-0`}>
                               {wt.isMain ? 'main' : 'wt'}
                             </span>

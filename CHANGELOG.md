@@ -4,6 +4,12 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.52] - 2026-06-28
+
+### Removed
+- **Blinking Git Dirty Status Dots**: Removed the redundant blinking amber/orange dots next to git branch names in the workspace sidebar list and footer. Dirty status continues to be indicated by the text and branch icon turning amber.
+- **Blinking Version Dot**: Removed the blinking animation from the purple application version indicator in the footer and updated the hardcoded version text from `v1.3.42` to the current version `v1.3.51` (which will be bumped to `v1.3.52` in release).
+
 ## [1.3.51] - 2026-06-28
 
 ### Fixed
