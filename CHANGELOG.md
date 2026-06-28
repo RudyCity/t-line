@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.17] - 2026-06-28
+
+### Fixed
+- **Footer Horizontal Padding Adjustment**: Increased horizontal padding on the left and right sides of the footer (`Footer.tsx`) from `px-4` (16px) to `px-6` (24px) to give elements more breathing room and prevent a cramped layout near the screen boundaries.
+
 ## [1.3.16] - 2026-06-28
 
 ### Added
