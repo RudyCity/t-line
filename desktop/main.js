@@ -15,6 +15,8 @@ let tray = null;
 let isQuitting = false;
 let hasShownMinimizeNotification = false;
 let bypassToken = null;
+let activeSessions = [];
+let workspaces = [];
 
 const BYPASS_TOKEN_FILE = path.join(os.homedir(), '.tline-bypass-token');
 
@@ -64,6 +66,150 @@ function isBackendRunning(port) {
 
     check('localhost');
   });
+}
+
+function getActiveTerminals(port) {
+  return new Promise((resolve) => {
+    if (!bypassToken) {
+      try {
+        if (fs.existsSync(BYPASS_TOKEN_FILE)) {
+          bypassToken = fs.readFileSync(BYPASS_TOKEN_FILE, 'utf8').trim();
+        }
+      } catch (e) {}
+    }
+
+    const headers = {};
+    if (bypassToken) {
+      headers['Authorization'] = `Bearer ${bypassToken}`;
+    }
+
+    const check = (host) => {
+      const req = http.request({
+        host: host,
+        port: port,
+        path: '/api/terminals/active',
+        method: 'GET',
+        headers: headers,
+        timeout: 800
+      }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            if (Array.isArray(parsed)) {
+              resolve(parsed);
+            } else {
+              resolve([]);
+            }
+          } catch (e) {
+            resolve([]);
+          }
+        });
+      });
+
+      req.on('error', () => {
+        if (host === 'localhost') {
+          check('127.0.0.1');
+        } else {
+          resolve([]);
+        }
+      });
+      req.on('timeout', () => {
+        req.destroy();
+        if (host === 'localhost') {
+          check('127.0.0.1');
+        } else {
+          resolve([]);
+        }
+      });
+      req.end();
+    };
+
+    check('localhost');
+  });
+}
+
+function getWorkspaces(port) {
+  return new Promise((resolve) => {
+    if (!bypassToken) {
+      try {
+        if (fs.existsSync(BYPASS_TOKEN_FILE)) {
+          bypassToken = fs.readFileSync(BYPASS_TOKEN_FILE, 'utf8').trim();
+        }
+      } catch (e) {}
+    }
+
+    const headers = {};
+    if (bypassToken) {
+      headers['Authorization'] = `Bearer ${bypassToken}`;
+    }
+
+    const check = (host) => {
+      const req = http.request({
+        host: host,
+        port: port,
+        path: '/api/workspaces',
+        method: 'GET',
+        headers: headers,
+        timeout: 800
+      }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            if (Array.isArray(parsed)) {
+              resolve(parsed);
+            } else {
+              resolve([]);
+            }
+          } catch (e) {
+            resolve([]);
+          }
+        });
+      });
+
+      req.on('error', () => {
+        if (host === 'localhost') {
+          check('127.0.0.1');
+        } else {
+          resolve([]);
+        }
+      });
+      req.on('timeout', () => {
+        req.destroy();
+        if (host === 'localhost') {
+          check('127.0.0.1');
+        } else {
+          resolve([]);
+        }
+      });
+      req.end();
+    };
+
+    check('localhost');
+  });
+}
+
+function getWorkspaceForPath(workspacesList, cwd) {
+  if (!cwd) return null;
+  const normCwd = cwd.toLowerCase().replace(/\\/g, '/');
+  
+  let bestMatch = null;
+  let maxLen = 0;
+  
+  for (const ws of workspacesList) {
+    if (!ws || !ws.path) continue;
+    const normWS = ws.path.toLowerCase().replace(/\\/g, '/');
+    if (normCwd === normWS || normCwd.startsWith(normWS + '/')) {
+      if (ws.path.length > maxLen) {
+        maxLen = ws.path.length;
+        bestMatch = ws;
+      }
+    }
+  }
+  return bestMatch;
 }
 
 function startBackend() {
@@ -248,7 +394,7 @@ function updateTrayMenu() {
   else if (backendStatus === 'starting') statusText = 'Starting...';
   else if (backendStatus === 'stopped') statusText = 'Stopped';
   
-  const contextMenu = Menu.buildFromTemplate([
+  const menuTemplate = [
     { label: `t-line: ${statusText}`, enabled: false },
     { type: 'separator' },
     { label: 'Show Dashboard', click: () => showWindow() },
@@ -267,25 +413,73 @@ function updateTrayMenu() {
       label: 'Restart Backend', 
       enabled: backendStatus === 'running',
       click: () => restartBackend() 
-    },
-    { type: 'separator' },
-    { 
-      label: 'Restart Desktop', 
-      click: () => {
-        isQuitting = true;
-        app.relaunch();
-        app.quit();
-      } 
-    },
-    { 
-      label: 'Quit', 
-      click: () => {
-        isQuitting = true;
-        app.quit();
-      } 
     }
-  ]);
-  
+  ];
+
+  // Group and list active terminal PTY sessions by workspace
+  if (backendStatus === 'running' && Array.isArray(workspaces) && Array.isArray(activeSessions) && activeSessions.length > 0) {
+    menuTemplate.push({ type: 'separator' });
+    menuTemplate.push({ label: 'Active PTY Sessions:', enabled: false });
+
+    workspaces.forEach(ws => {
+      if (!ws || !ws.path) return;
+      const wsTerms = activeSessions.filter(t => {
+        if (!t || !t.cwd) return false;
+        const match = getWorkspaceForPath(workspaces, t.cwd);
+        return match && match.path === ws.path;
+      });
+
+      if (wsTerms.length > 0) {
+        const submenuItems = wsTerms.map(t => {
+          const separatorChar = process.platform === 'win32' ? '\\' : '/';
+          const folderName = t.cwd ? t.cwd.substring(t.cwd.lastIndexOf(separatorChar) + 1) : '';
+          return {
+            label: `[PID ${t.pid}] ${t.shellType} (${folderName || 'Root'})`,
+            click: () => showWindow()
+          };
+        });
+
+        menuTemplate.push({
+          label: `${ws.name} (${wsTerms.length})`,
+          submenu: submenuItems
+        });
+      }
+    });
+
+    const orphanTerms = activeSessions.filter(t => {
+      if (!t || !t.cwd) return false;
+      return !getWorkspaceForPath(workspaces, t.cwd);
+    });
+    if (orphanTerms.length > 0) {
+      const submenuItems = orphanTerms.map(t => ({
+        label: `[PID ${t.pid}] ${t.shellType}`,
+        click: () => showWindow()
+      }));
+      menuTemplate.push({
+        label: `Other Sessions (${orphanTerms.length})`,
+        submenu: submenuItems
+      });
+    }
+  }
+
+  menuTemplate.push({ type: 'separator' });
+  menuTemplate.push({ 
+    label: 'Restart Desktop', 
+    click: () => {
+      isQuitting = true;
+      app.relaunch();
+      app.quit();
+    } 
+  });
+  menuTemplate.push({ 
+    label: 'Quit', 
+    click: () => {
+      isQuitting = true;
+      app.quit();
+    } 
+  });
+
+  const contextMenu = Menu.buildFromTemplate(menuTemplate);
   tray.setContextMenu(contextMenu);
 }
 
@@ -423,32 +617,60 @@ app.on('ready', async () => {
     const running = await isBackendRunning(port);
     const newStatus = running ? 'running' : 'stopped';
     
+    let sessionsChanged = false;
+    if (running) {
+      try {
+        const [terms, wsList] = await Promise.all([
+          getActiveTerminals(port),
+          getWorkspaces(port)
+        ]);
+        const oldState = JSON.stringify({ activeSessions, workspaces });
+        const newState = JSON.stringify({ activeSessions: terms, workspaces: wsList });
+        if (oldState !== newState) {
+          activeSessions = terms;
+          workspaces = wsList;
+          sessionsChanged = true;
+        }
+      } catch (e) {
+        console.error('Error fetching tray terminals:', e);
+      }
+    } else {
+      if (activeSessions.length > 0 || workspaces.length > 0) {
+        activeSessions = [];
+        workspaces = [];
+        sessionsChanged = true;
+      }
+    }
+
     // Only update if not starting (to avoid conflict during startup phase)
     if (backendStatus !== 'starting') {
-      if (newStatus !== backendStatus) {
+      if (newStatus !== backendStatus || sessionsChanged) {
+        const statusTransition = (newStatus !== backendStatus);
         backendStatus = newStatus;
         updateTrayMenu();
         
-        // If it transitioned to stopped, show the stopped message
-        if (backendStatus === 'stopped') {
-          if (mainWindow) {
-            mainWindow.loadURL('data:text/html,<html><body style="background:#0b0f19;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;user-select:none;"><div style="text-align:center;"><h2>Backend is stopped</h2><p>Start the backend from the system tray to continue.</p></div></body></html>');
-          }
-        }
-        
-        // If it transitioned to running, reload/open window
-        if (backendStatus === 'running') {
-          try {
-            if (fs.existsSync(BYPASS_TOKEN_FILE)) {
-              bypassToken = fs.readFileSync(BYPASS_TOKEN_FILE, 'utf8').trim();
+        if (statusTransition) {
+          // If it transitioned to stopped, show the stopped message
+          if (backendStatus === 'stopped') {
+            if (mainWindow) {
+              mainWindow.loadURL('data:text/html,<html><body style="background:#0b0f19;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;user-select:none;"><div style="text-align:center;"><h2>Backend is stopped</h2><p>Start the backend from the system tray to continue.</p></div></body></html>');
             }
-          } catch (e) {}
+          }
           
-          const url = bypassToken ? `http://localhost:3999/?token=${bypassToken}` : 'http://localhost:3999/';
-          if (mainWindow) {
-            mainWindow.loadURL(url);
-          } else {
-            createWindow(url);
+          // If it transitioned to running, reload/open window
+          if (backendStatus === 'running') {
+            try {
+              if (fs.existsSync(BYPASS_TOKEN_FILE)) {
+                bypassToken = fs.readFileSync(BYPASS_TOKEN_FILE, 'utf8').trim();
+              }
+            } catch (e) {}
+            
+            const url = bypassToken ? `http://localhost:3999/?token=${bypassToken}` : 'http://localhost:3999/';
+            if (mainWindow) {
+              mainWindow.loadURL(url);
+            } else {
+              createWindow(url);
+            }
           }
         }
       }

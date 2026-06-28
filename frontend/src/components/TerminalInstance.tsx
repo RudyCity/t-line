@@ -129,6 +129,73 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
   const onFocusRef = useRef(onFocus);
   const [showSearch, setShowSearch] = useState(false);
   const isFirstRender = useRef(true);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [hasSelection, setHasSelection] = useState(false);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const closeMenu = () => setContextMenu(null);
+    window.addEventListener('click', closeMenu);
+    return () => window.removeEventListener('click', closeMenu);
+  }, [contextMenu]);
+
+  useEffect(() => {
+    if (!active) return;
+    const interval = setInterval(() => {
+      if (terminalRef.current) {
+        setHasSelection(terminalRef.current.hasSelection());
+      }
+    }, 400);
+    return () => clearInterval(interval);
+  }, [active]);
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (terminalRef.current) {
+      setHasSelection(terminalRef.current.hasSelection());
+    }
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY
+    });
+  };
+
+  const handleCopy = () => {
+    if (terminalRef.current) {
+      const selected = terminalRef.current.getSelection();
+      if (selected) {
+        navigator.clipboard.writeText(selected);
+      }
+    }
+    setContextMenu(null);
+  };
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && terminalRef.current) {
+        wsManager.send(JSON.stringify({ type: 'data', id: tab.id, data: text }));
+      }
+    } catch (err) {
+      console.error('Failed to paste:', err);
+    }
+    setContextMenu(null);
+  };
+
+  const handleSelectAll = () => {
+    if (terminalRef.current) {
+      terminalRef.current.selectAll();
+      setHasSelection(true);
+    }
+    setContextMenu(null);
+  };
+
+  const handleClear = () => {
+    if (terminalRef.current) {
+      terminalRef.current.clear();
+    }
+    setContextMenu(null);
+  };
 
   const actualFontSize = window.innerWidth <= 768 ? 8 : fontSize;
 
@@ -382,11 +449,51 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
       style={{ position: 'relative', width: '100%', height: '100%' }}
       onClick={handleTerminalFocus}
       onTouchEnd={handleTerminalFocus}
+      onContextMenu={handleContextMenu}
     >
       {showSearch && (
         <TerminalSearchBar searchAddon={searchAddonRef.current} onClose={closeSearch} />
       )}
       <div ref={containerRef} className="terminal-element" />
+
+      {contextMenu && (
+        <div 
+          className="terminal-context-menu"
+          style={{
+            position: 'fixed',
+            top: contextMenu.y,
+            left: contextMenu.x,
+            zIndex: 1000
+          }}
+        >
+          <button
+            onClick={handleCopy}
+            disabled={!hasSelection}
+            className="terminal-context-menu-item"
+          >
+            <span>Copy</span>
+          </button>
+          <button
+            onClick={handlePaste}
+            className="terminal-context-menu-item"
+          >
+            <span>Paste</span>
+          </button>
+          <div className="terminal-context-menu-separator" />
+          <button
+            onClick={handleSelectAll}
+            className="terminal-context-menu-item"
+          >
+            <span>Select All</span>
+          </button>
+          <button
+            onClick={handleClear}
+            className="terminal-context-menu-item"
+          >
+            <span>Clear Terminal</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
