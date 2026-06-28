@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.21] - 2026-06-28
+
+### Added
+- **Full Screen Mobile Login/Auth Screen**: Styled `.auth-wrapper` and `.auth-card` to match the full-screen layout on mobile (stretching edge-to-edge, zero margin, zero border-radius) while centering form content vertically for a premium user experience.
+
 ## [1.3.20] - 2026-06-28
 
 ### Added

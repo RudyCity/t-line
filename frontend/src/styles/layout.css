@@ -432,6 +432,25 @@
     flex-direction: column;
     overflow-y: auto;
   }
+
+  /* Make auth/login cards fill screen on mobile */
+  .auth-wrapper {
+    align-items: stretch !important;
+    justify-content: stretch !important;
+  }
+
+  .auth-card {
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 100vh !important;
+    border-radius: 0 !important;
+    padding: 32px 20px !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
 }
 
 /* Drag and Drop Split Zones */
