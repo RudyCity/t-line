@@ -6,6 +6,7 @@ export interface WorktreeInfo {
   branch?: string;
   isMain: boolean;
   isDirty?: boolean;
+  dirtyCount?: number;
 }
 
 export interface WorkspaceInfo {

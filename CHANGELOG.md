@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.59] - 2026-06-28
+
+### Added
+- **Dirty Files Count Badge**: Added an amber number badge next to dirty git branches/worktrees in the sidebar tree view, showing the exact count of uncommitted changes/untracked files.
+
+---
+
 ## [1.3.58] - 2026-06-28
 
 ### Fixed

@@ -9,6 +9,7 @@ interface WorktreeInfo {
   branch?: string;
   isMain: boolean;
   isDirty: boolean;
+  dirtyCount?: number;
 }
 
 interface WorkspaceInfo {
@@ -163,12 +164,16 @@ export function parseWorktreePorcelain(porcelain: string): WorktreeInfo[] {
 }
 
 // Check if a worktree has uncommitted changes
-async function isWorktreeDirty(worktreePath: string): Promise<boolean> {
+async function isWorktreeDirty(worktreePath: string): Promise<{ isDirty: boolean; dirtyCount: number }> {
   try {
     const output = await runGit(['status', '--porcelain'], worktreePath);
-    return output.trim().length > 0;
+    const lines = output.split('\n').filter(line => line.trim().length > 0);
+    return {
+      isDirty: lines.length > 0,
+      dirtyCount: lines.length
+    };
   } catch (e) {
-    return false;
+    return { isDirty: false, dirtyCount: 0 };
   }
 }
 
@@ -188,23 +193,25 @@ export async function getWorkspaceInfo(workspace: WorkspaceConfig): Promise<Work
       // Check dirty status for each worktree sequentially to prevent resource contention
       const resolvedWorktrees: WorktreeInfo[] = [];
       for (const wt of parsedWorktrees) {
-        const isDirty = await isWorktreeDirty(wt.path);
+        const { isDirty, dirtyCount } = await isWorktreeDirty(wt.path);
         resolvedWorktrees.push({
           ...wt,
-          isDirty
+          isDirty,
+          dirtyCount
         });
       }
       worktrees = resolvedWorktrees;
     } catch (e) {
       console.error(`Error listing worktrees in ${normalizedPath}:`, e);
       // Fallback: create a mock worktree representing the main repo if list fails
-      const isDirty = await isWorktreeDirty(normalizedPath);
+      const { isDirty, dirtyCount } = await isWorktreeDirty(normalizedPath);
       worktrees = [{
         path: normalizedPath,
         commit: 'unknown',
         branch: 'unknown',
         isMain: true,
-        isDirty
+        isDirty,
+        dirtyCount
       }];
     }
   }

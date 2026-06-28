@@ -107,6 +107,11 @@
   color: #38bdf8;
 }
 
+.badge-dirty {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fbbf24;
+}
+
 /* Actions Row */
 .action-btn {
   background: none;
