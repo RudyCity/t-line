@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.5] - 2026-06-28
+
+### Added
+- **Mobile Right Drawer Menu**: Relocated active tabs, settings, and logout options on mobile screens to a dedicated right side slide-out drawer menu.
+- **Top-Bar Menu Toggle Button**: Added a new menu action button (vertical dots icon) in the top-right of the navigation bar on mobile screens to open the right drawer.
+- **Top-Bar Cleanup**: Hid settings and logout buttons from the top bar on mobile, moving them cleanly to the new right menu drawer.
+
 ## [1.3.4] - 2026-06-28
 
 ### Fixed

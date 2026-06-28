@@ -10,7 +10,8 @@ import {
   FolderTree,
   Settings,
   FileCode,
-  Keyboard
+  Keyboard,
+  MoreVertical
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { FileViewerTab } from './components/FileViewerTab';
@@ -26,6 +27,7 @@ import { EmptyDashboard } from './components/EmptyDashboard';
 import { MobileKeyboard } from './components/MobileKeyboard';
 import { useLayoutHelpers } from './hooks/useLayoutHelpers';
 import { SidebarContentPanel } from './components/SidebarContentPanel';
+import { RightSidebar } from './components/RightSidebar';
 
 export default function App() {
   const [setupRequired, setSetupRequired] = useState<boolean | null>(null);
@@ -46,6 +48,7 @@ export default function App() {
     return saved === 'true';
   });
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
+  const [rightMenuOpen, setRightMenuOpen] = useState<boolean>(false);
   const [showShortcutModal, setShowShortcutModal] = useState<boolean>(false);
   const draggedTabIdRef = useRef<string | null>(null);
   const [dragOverZone, setDragOverZone] = useState<'left' | 'right' | 'top' | 'bottom' | null>(null);
@@ -415,14 +418,6 @@ export default function App() {
         {/* Sidebar Panel Tabs */}
         <div className="sidebar-panel-tabs">
           <button
-            className={`sidebar-panel-tab mobile-only ${activePanel === 'tabs' ? 'active' : ''}`}
-            onClick={() => setActivePanel('tabs')}
-            title="Active Tabs"
-          >
-            <TerminalIcon size={15} />
-            <span>Tabs</span>
-          </button>
-          <button
             className={`sidebar-panel-tab ${activePanel === 'workspaces' ? 'active' : ''}`}
             onClick={() => setActivePanel('workspaces')}
             title="Workspaces"
@@ -480,6 +475,25 @@ export default function App() {
       {sidebarOpen && (
         <div className="sidebar-overlay md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
+
+      {rightMenuOpen && (
+        <div className="sidebar-overlay md:hidden" onClick={() => setRightMenuOpen(false)} />
+      )}
+
+      <RightSidebar
+        isOpen={rightMenuOpen}
+        onClose={() => setRightMenuOpen(false)}
+        tabs={tabs}
+        activeTabId={activeTabId}
+        setActiveTabId={setActiveTabId}
+        openTerminal={openTerminal}
+        closeTerminal={closeTerminal}
+        workspaces={workspaces}
+        panelWorkspace={panelWorkspace}
+        terminalInstances={terminalInstances}
+        setShowSettingsModal={setShowSettingsModal}
+        handleLogout={handleLogout}
+      />
 
       {/* Main Panel */}
       <div className="main-panel">
@@ -593,11 +607,18 @@ export default function App() {
             <button className="action-btn desktop-only" onClick={() => setShowShortcutModal(true)} title="Keyboard Shortcuts">
               <Keyboard size={16} />
             </button>
-            <button className="action-btn" onClick={() => setShowSettingsModal(true)} title="Settings">
+            <button className="action-btn desktop-only" onClick={() => setShowSettingsModal(true)} title="Settings">
               <Settings size={16} />
             </button>
-            <button className="action-btn" onClick={handleLogout} title="Log out">
+            <button className="action-btn desktop-only" onClick={handleLogout} title="Log out">
               <LogOut size={16} />
+            </button>
+            <button 
+              className="action-btn mobile-only" 
+              onClick={() => setRightMenuOpen(!rightMenuOpen)} 
+              title="Toggle Menu"
+            >
+              <MoreVertical size={16} />
             </button>
             {(window as any).electron && (
               <>
