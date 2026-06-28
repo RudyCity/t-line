@@ -64,7 +64,7 @@ export function SplitLayoutRenderer({
         
         {/* Floating action bar at top-right of each pane */}
         <div 
-          className="absolute top-2 right-2 flex items-center gap-1.5 opacity-100 lg:opacity-0 lg:group-hover/pane:opacity-100 transition-opacity duration-200 z-50 bg-[#0f111a]/85 backdrop-blur-md border border-purple-500/25 rounded-md p-1.5 lg:p-1 shadow-lg"
+          className="absolute bottom-2 right-2 top-auto lg:top-2 lg:right-2 lg:bottom-auto flex items-center gap-1.5 opacity-100 lg:opacity-0 lg:group-hover/pane:opacity-100 transition-opacity duration-200 z-50 bg-[#0f111a]/85 backdrop-blur-md border border-purple-500/25 rounded-md p-1.5 lg:p-1 shadow-lg"
           onClick={(e) => e.stopPropagation()}
           onTouchEnd={(e) => e.stopPropagation()}
         >
