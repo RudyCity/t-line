@@ -20,33 +20,49 @@ const BYPASS_TOKEN_FILE = path.join(os.homedir(), '.tline-bypass-token');
 
 function isBackendRunning(port) {
   return new Promise((resolve) => {
-    const req = http.request({
-      host: '127.0.0.1',
-      port: port,
-      path: '/api/auth/setup-status',
-      method: 'GET',
-      timeout: 1000
-    }, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          resolve(parsed && typeof parsed.setupRequired === 'boolean');
-        } catch (e) {
+    const check = (host) => {
+      const req = http.request({
+        host: host,
+        port: port,
+        path: '/api/auth/setup-status',
+        method: 'GET',
+        timeout: 800
+      }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed && typeof parsed.setupRequired === 'boolean') {
+              resolve(true);
+            } else {
+              resolve(false);
+            }
+          } catch (e) {
+            resolve(false);
+          }
+        });
+      });
+
+      req.on('error', () => {
+        if (host === 'localhost') {
+          check('127.0.0.1');
+        } else {
           resolve(false);
         }
       });
-    });
+      req.on('timeout', () => {
+        req.destroy();
+        if (host === 'localhost') {
+          check('127.0.0.1');
+        } else {
+          resolve(false);
+        }
+      });
+      req.end();
+    };
 
-    req.on('error', () => {
-      resolve(false);
-    });
-    req.on('timeout', () => {
-      req.destroy();
-      resolve(false);
-    });
-    req.end();
+    check('localhost');
   });
 }
 
@@ -393,6 +409,49 @@ app.on('ready', async () => {
   } else {
     startBackend();
   }
+
+  // Periodic polling check to update status in real-time
+  setInterval(async () => {
+    const running = await isBackendRunning(port);
+    const newStatus = running ? 'running' : 'stopped';
+    
+    // Only update if not starting (to avoid conflict during startup phase)
+    if (backendStatus !== 'starting') {
+      if (newStatus !== backendStatus) {
+        backendStatus = newStatus;
+        updateTrayMenu();
+        
+        // If it transitioned to stopped, show the stopped message
+        if (backendStatus === 'stopped') {
+          if (mainWindow) {
+            mainWindow.loadURL('data:text/html,<html><body style="background:#0b0f19;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;user-select:none;"><div style="text-align:center;"><h2>Backend is stopped</h2><p>Start the backend from the system tray to continue.</p></div></body></html>');
+          }
+        }
+        
+        // If it transitioned to running, reload/open window
+        if (backendStatus === 'running') {
+          try {
+            if (fs.existsSync(BYPASS_TOKEN_FILE)) {
+              bypassToken = fs.readFileSync(BYPASS_TOKEN_FILE, 'utf8').trim();
+            }
+          } catch (e) {}
+          
+          const url = bypassToken ? `http://localhost:3999/?token=${bypassToken}` : 'http://localhost:3999/';
+          if (mainWindow) {
+            mainWindow.loadURL(url);
+          } else {
+            createWindow(url);
+          }
+        }
+      }
+    } else {
+      // If we are starting, but the backend is now detected as running, update state
+      if (running) {
+        backendStatus = 'running';
+        updateTrayMenu();
+      }
+    }
+  }, 5000);
 });
 
 app.on('window-all-closed', () => {

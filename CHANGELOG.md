@@ -4,6 +4,12 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.24] - 2026-06-28
+
+### Fixed
+- **System Tray Backend Detection**: Enhanced the backend detection mechanism in `desktop/main.js` by checking `localhost` first, and falling back to `127.0.0.1` on error or timeout. This resolves connection check failures on systems where the loopback interfaces resolve to different IP families (IPv4 vs IPv6).
+- **Real-Time Status Polling**: Implemented a periodic 5-second polling interval in the Electron main process to check the backend's status. The system tray will now dynamically update its status and enable/disable menu items in real-time, even if the backend process is started or stopped manually outside of Electron.
+
 ## [1.3.23] - 2026-06-28
 
 ### Added
