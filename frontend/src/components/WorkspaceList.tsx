@@ -10,14 +10,16 @@ import {
   MoreVertical,
   Check
 } from 'lucide-react';
-import { WorkspaceInfo, TabData, WorkspaceActiveTabMap } from '../hooks/useTerminals';
+import { WorkspaceInfo, TabData, WorkspaceActiveTabMap, getTerminalIds } from '../hooks/useTerminals';
 
 export interface WorkspaceListProps {
   workspaces: WorkspaceInfo[];
   tabs: TabData[];
   activeTabId: string;
+  terminalInstances: Record<string, any>;
   workspaceActiveTab: WorkspaceActiveTabMap;
   onWorkspaceClick: (wsId: string) => void;
+  onWorktreeClick: (wsId: string, wtPath: string) => void; // <-- New prop
   setPanelWorkspace: (ws: WorkspaceInfo | null) => void;
   setActivePanel: (panel: 'workspaces' | 'explorer' | 'changes') => void;
   handleOpenWorktreeModal: (w: WorkspaceInfo) => void;
@@ -151,8 +153,10 @@ export function WorkspaceList({
   workspaces,
   tabs,
   activeTabId,
+  terminalInstances,
   workspaceActiveTab,
   onWorkspaceClick,
+  onWorktreeClick,
   setPanelWorkspace,
   setActivePanel,
   handleOpenWorktreeModal,
@@ -162,11 +166,15 @@ export function WorkspaceList({
 }: WorkspaceListProps): React.JSX.Element {
   const isMobile = useIsMobile();
 
+  // Helper to normalize path matching
+  const isPathInWorktree = (filePath: string, wtPath: string) => {
+    const normFile = filePath.toLowerCase().replace(/\\/g, '/');
+    const normWt = wtPath.toLowerCase().replace(/\\/g, '/');
+    return normFile === normWt || normFile.startsWith(normWt + '/');
+  };
+
   /**
    * Determine which workspace currently "owns" the active tab.
-   * A workspace owns a tab if:
-   *  - The tab is a terminal whose CWD starts with the workspace path
-   *  - OR the workspace's saved active tab ID matches the current activeTabId
    */
   const activeWorkspaceId = React.useMemo(() => {
     const activeTab = tabs.find(t => t.id === activeTabId);
@@ -183,6 +191,10 @@ export function WorkspaceList({
     <div className="workspace-list flex flex-col gap-2.5 px-3">
       {workspaces.map(w => {
         const isActive = activeWorkspaceId === w.id;
+        
+        // Find main worktree and other worktrees
+        const mainWt = w.worktrees.find(wt => wt.isMain);
+        const otherWts = w.worktrees.filter(wt => !wt.isMain);
 
         return (
           <div
@@ -194,8 +206,8 @@ export function WorkspaceList({
             }`}
             onClick={() => onWorkspaceClick(w.id)}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 font-medium truncate min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 font-medium truncate min-w-0 flex-1">
                 <Folder size={16} className={isActive ? 'text-purple-400 shrink-0' : 'text-sky-400 shrink-0'} />
                 <span
                   className={`text-sm font-semibold tracking-wide truncate ${isActive ? 'text-purple-200' : 'text-slate-100'}`}
@@ -203,6 +215,25 @@ export function WorkspaceList({
                 >
                   {w.name}
                 </span>
+
+                {/* Show main branch name next to workspace name */}
+                {w.isGit && mainWt && (
+                  <span 
+                    className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 border ${
+                      isActive 
+                        ? 'bg-purple-500/15 text-purple-300 border-purple-500/20' 
+                        : 'bg-slate-800 text-slate-400 border-slate-700'
+                    }`}
+                    title={`Main branch: ${mainWt.branch}`}
+                  >
+                    <GitBranch size={10} className="shrink-0" />
+                    <span className="max-w-[80px] truncate">{mainWt.branch}</span>
+                    {mainWt.isDirty && (
+                      <span className="h-1 w-1 rounded-full bg-amber-500 animate-pulse ml-0.5" />
+                    )}
+                  </span>
+                )}
+
                 {isActive && (
                   <span className="ws-active-badge shrink-0" title="Active workspace tab">
                     <Check size={10} strokeWidth={3} />
@@ -223,46 +254,77 @@ export function WorkspaceList({
 
             <div className="text-[10px] text-slate-500 font-mono truncate">{w.path}</div>
 
-            {w.isGit && w.worktrees.length > 0 && (
-              <div className="mt-2 pl-2 border-l border-dashed border-white/10 flex flex-col gap-1.5">
-                {w.worktrees.map(wt => (
-                  <div
-                    key={wt.path}
-                    className="flex items-center justify-between py-1 px-1.5 rounded-md hover:bg-white/5 transition-all text-xs cursor-pointer group/item"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="flex items-center gap-2 truncate" title={wt.path}>
-                      <GitBranch size={12} className={wt.isMain ? 'text-purple-400' : 'text-emerald-400'} />
-                      <span className={`truncate ${wt.isDirty ? 'text-amber-400 font-medium' : (wt.isMain ? 'text-slate-200' : 'text-slate-400')}`}>
-                        {wt.branch || 'detached'}
-                      </span>
-                      {wt.isDirty && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_6px_#f59e0b]" title="Uncommitted changes" />
-                      )}
-                      <span className={`badge ${wt.isMain ? 'badge-main' : 'badge-worktree'}`}>
-                        {wt.isMain ? 'main' : 'wt'}
-                      </span>
-                    </div>
-                    <div className={`flex gap-1 shrink-0 ${isMobile ? '' : 'opacity-0 group-hover/item:opacity-100 transition-opacity duration-150'}`}>
-                      <button
-                        className="action-btn"
-                        onClick={(e) => { e.stopPropagation(); openTerminal(`${w.name} (${wt.branch || 'detached'})`, wt.path, w.defaultShell); }}
-                        title={`Open terminal here (${w.defaultShell || 'default'})`}
-                      >
-                        <TerminalIcon size={11} />
-                      </button>
-                      {!wt.isMain && (
-                        <button
-                          className="action-btn action-btn-danger"
-                          onClick={(e) => { e.stopPropagation(); handleRemoveWorktree(w.path, wt.path); }}
-                          title="Delete worktree"
+            {/* Tree-like display if there are other worktrees */}
+            {w.isGit && otherWts.length > 0 && (
+              <div className="mt-1 flex flex-col">
+                {otherWts.map((wt, idx) => {
+                  const isLast = idx === otherWts.length - 1;
+                  
+                  // Check if this worktree is currently active (has the focused tab)
+                  const isWtActive = activeTabId && tabs.some(t => t.id === activeTabId && (
+                    (t.type === 'file' && t.filePath && isPathInWorktree(t.filePath, wt.path)) ||
+                    (t.type === 'terminal' && t.layout && getTerminalIds(t.layout).some(id => {
+                      const inst = terminalInstances[id];
+                      return inst && isPathInWorktree(inst.cwd, wt.path);
+                    }))
+                  ));
+
+
+                  return (
+                    <div
+                      key={wt.path}
+                      className={`tree-connector-wrapper ${isLast ? 'tree-item-last' : ''}`}
+                    >
+                      <div className="tree-connector" />
+                      <div className="tree-item-content">
+                        <div
+                          className={`flex items-center justify-between py-1 px-1.5 rounded-md hover:bg-white/5 transition-all text-xs cursor-pointer group/item ${
+                            isWtActive 
+                              ? 'bg-purple-500/10 text-purple-300 font-semibold border border-purple-500/20' 
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onWorktreeClick(w.id, wt.path);
+                          }}
                         >
-                          <Trash2 size={11} />
-                        </button>
-                      )}
+                          <div className="flex items-center gap-1.5 truncate flex-1 min-w-0" title={wt.path}>
+                            <GitBranch size={11} className={wt.isDirty ? 'text-amber-400 shrink-0' : 'text-emerald-400 shrink-0'} />
+                            <span className={`truncate ${wt.isDirty ? 'text-amber-400' : (isWtActive ? 'text-purple-200' : 'text-slate-400')}`}>
+                              {wt.branch || 'detached'}
+                            </span>
+                            {wt.isDirty && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_6px_#f59e0b] shrink-0" title="Uncommitted changes" />
+                            )}
+                            <span className="badge badge-worktree shrink-0">wt</span>
+                            {isWtActive && (
+                              <span className="ws-active-badge shrink-0" style={{ width: '12px', height: '12px', fontSize: '6px' }} title="Active worktree tab">
+                                <Check size={8} strokeWidth={3} />
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className={`flex gap-1 shrink-0 ${isMobile ? '' : 'opacity-0 group-hover/item:opacity-100 transition-opacity duration-150'}`}>
+                            <button
+                              className="action-btn"
+                              onClick={(e) => { e.stopPropagation(); openTerminal(`${w.name} (${wt.branch || 'detached'})`, wt.path, w.defaultShell); }}
+                              title={`Open terminal here (${w.defaultShell || 'default'})`}
+                            >
+                              <TerminalIcon size={11} />
+                            </button>
+                            <button
+                              className="action-btn action-btn-danger"
+                              onClick={(e) => { e.stopPropagation(); handleRemoveWorktree(w.path, wt.path); }}
+                              title="Delete worktree"
+                            >
+                              <Trash2 size={11} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

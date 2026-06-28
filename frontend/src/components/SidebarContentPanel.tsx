@@ -24,6 +24,7 @@ interface SidebarContentPanelProps {
   closeTerminal: (id: string, e: React.MouseEvent) => void;
   workspaceActiveTab: Record<string, string>;
   onWorkspaceClick: (wsId: string) => void;
+  onWorktreeClick: (wsId: string, wtPath: string) => void;
 }
 
 export function SidebarContentPanel({
@@ -45,7 +46,8 @@ export function SidebarContentPanel({
   openFileTab,
   closeTerminal,
   workspaceActiveTab,
-  onWorkspaceClick
+  onWorkspaceClick,
+  onWorktreeClick
 }: SidebarContentPanelProps) {
   return (
     <div 
@@ -135,8 +137,10 @@ export function SidebarContentPanel({
             workspaces={workspaces}
             tabs={tabs}
             activeTabId={activeTabId}
+            terminalInstances={terminalInstances}
             workspaceActiveTab={workspaceActiveTab}
             onWorkspaceClick={onWorkspaceClick}
+            onWorktreeClick={onWorktreeClick}
             setPanelWorkspace={setPanelWorkspace}
             setActivePanel={setActivePanel}
             handleOpenWorktreeModal={handleOpenWorktreeModal}

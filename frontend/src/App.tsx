@@ -295,6 +295,42 @@ export default function App() {
     setSidebarOpen(false);
   };
 
+  const handleWorktreeClick = (workspaceId: string, wtPath: string) => {
+    const ws = workspaces.find(w => w.id === workspaceId);
+    if (!ws) return;
+
+    setPanelWorkspace(ws);
+
+    const isPathInWorktree = (filePath: string, path: string) => {
+      const normFile = filePath.toLowerCase().replace(/\\/g, '/');
+      const normPath = path.toLowerCase().replace(/\\/g, '/');
+      return normFile === normPath || normFile.startsWith(normPath + '/');
+    };
+
+    const matchedTab = tabs.find(tab => {
+      if (tab.type === 'file' && tab.filePath) {
+        return isPathInWorktree(tab.filePath, wtPath);
+      }
+      if (tab.type === 'terminal' && tab.layout) {
+        const termIds = getTerminalIds(tab.layout);
+        return termIds.some(id => {
+          const inst = terminalInstances[id];
+          return inst && isPathInWorktree(inst.cwd, wtPath);
+        });
+      }
+      return false;
+    });
+
+    if (matchedTab) {
+      setActiveTabId(matchedTab.id);
+    } else {
+      const wt = ws.worktrees.find(w => w.path === wtPath);
+      const name = `${ws.name} (${wt?.branch || 'worktree'})`;
+      openTerminal(name, wtPath, ws.defaultShell);
+    }
+    setSidebarOpen(false);
+  };
+
 
 
   // Keyboard Shortcuts
@@ -654,6 +690,7 @@ export default function App() {
             closeTerminal={closeTerminal}
             workspaceActiveTab={workspaceActiveTab}
             onWorkspaceClick={handleWorkspaceClick}
+            onWorktreeClick={handleWorktreeClick}
           />
         )}
       </div>

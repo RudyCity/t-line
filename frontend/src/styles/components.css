@@ -201,6 +201,48 @@
   font-size: 8px;
 }
 
+/* Tree Layout Connector for Git Worktrees */
+.tree-connector-wrapper {
+  display: flex;
+  position: relative;
+}
+
+.tree-connector {
+  position: relative;
+  width: 20px;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+.tree-connector::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  border-left: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+.tree-item-last .tree-connector::before {
+  bottom: 50%;
+}
+
+.tree-connector::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  width: 8px;
+  height: 1px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+.tree-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
 /* Welcome Card Layout & Spacing */
 .welcome-card-outer {
   display: flex;
