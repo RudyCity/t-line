@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.40] - 2026-06-28
+
+### Improved
+- **Terminal Refresh Normalize Trick**: Ubah logic refresh terminal dari simple `reset + init` menjadi **shrink → restore** sequence. Saat tombol refresh diklik, PTY backend menerima resize kecil (setengah ukuran asli) terlebih dahulu, lalu setelah 120ms dikembalikan ke ukuran asli. Ini memaksa PTY mengirim dua sinyal SIGWINCH sehingga aplikasi TUI yang berjalan di alternate screen buffer (seperti Claude Code, Antigravity CLI, dll) melakukan **full redraw** dengan posisi yang benar, bukan sekadar resize visual saja.
+
 ## [1.3.39] - 2026-06-28
 
 ### Fixed

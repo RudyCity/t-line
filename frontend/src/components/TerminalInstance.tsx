@@ -402,21 +402,50 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
     }
   }, [active, wsConnected, tab.id, tab.cwd, tab.shellType]);
 
-  // ── Manual refresh trigger (non-destructive) ──────────────
+  // ── Manual refresh trigger with normalize trick ─────────────
+  // Kirim resize kecil dulu (shrink), delay, lalu restore ke ukuran asli.
+  // Ini memaksa PTY + aplikasi TUI (Claude Code, Antigravity CLI, dll)
+  // yang menggunakan alternate screen buffer untuk redraw ulang dengan benar.
   useEffect(() => {
     if (refreshTrigger && refreshTrigger > 0 && terminalRef.current && wsConnected) {
       const term = terminalRef.current;
-      term.reset(); // Clear frontend buffer visually
 
-      const cols = term.cols || 80;
-      const rows = term.rows || 24;
+      // Ambil ukuran aktual terminal saat ini
+      const actualCols = term.cols || 80;
+      const actualRows = term.rows || 24;
 
-      // Resend init payload to trigger buffer replay from backend
+      // Step 1: Shrink — kirim ukuran kecil ke PTY backend untuk trigger SIGWINCH
+      const SHRINK_COLS = Math.max(20, Math.floor(actualCols / 2));
+      const SHRINK_ROWS = Math.max(5, Math.floor(actualRows / 2));
       wsManager.send(JSON.stringify({
-        type: 'init', id: tab.id, cwd: tab.cwd, cols, rows, shellType: tab.shellType
+        type: 'resize', id: tab.id, cols: SHRINK_COLS, rows: SHRINK_ROWS
       }));
+
+      // Step 2: Restore ke ukuran asli setelah delay singkat
+      // PTY + TUI apps akan menerima SIGWINCH kedua dan redraw ke ukuran benar
+      const restoreTimer = setTimeout(() => {
+        if (!terminalRef.current || !wsConnected) return;
+
+        // Reset visual buffer xterm
+        terminalRef.current.reset();
+
+        // Restore ukuran terminal ke backend
+        wsManager.send(JSON.stringify({
+          type: 'resize', id: tab.id, cols: actualCols, rows: actualRows
+        }));
+
+        // Re-init untuk replay buffer dari backend
+        wsManager.send(JSON.stringify({
+          type: 'init', id: tab.id, cwd: tab.cwd, cols: actualCols, rows: actualRows, shellType: tab.shellType
+        }));
+
+        // Re-fit xterm agar sinkron dengan container
+        debouncedFit();
+      }, 120);
+
+      return () => clearTimeout(restoreTimer);
     }
-  }, [refreshTrigger, wsConnected, tab.id, tab.cwd, tab.shellType]);
+  }, [refreshTrigger, wsConnected, tab.id, tab.cwd, tab.shellType, debouncedFit]);
 
 
   // ── Active tab: refit + focus ────────────────────────────
