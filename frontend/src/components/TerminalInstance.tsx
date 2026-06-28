@@ -422,6 +422,11 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
         rafHandleRef.current = null;
         writeQueueRef.current = [];
       }
+      
+      // Suspend sending terminal updates to backend, remove listener, and nullify ref
+      wsManager.send(JSON.stringify({ type: 'suspend', id: tab.id }));
+      wsManager.removeListener(tab.id);
+      terminalRef.current = null;
       term.dispose();
     };
   }, [tab.id, debouncedFit, scheduleWrite]);

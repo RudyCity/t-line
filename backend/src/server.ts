@@ -743,6 +743,8 @@ wss.on('connection', (ws: WebSocket) => {
       } else if (type === 'close') {
         terminalManager.removeTerminal(id);
         activeTerminals.delete(id);
+      } else if (type === 'suspend') {
+        terminalManager.setSender(id, null);
       }
     } catch (e) {
       console.error('WS Message parsing error:', e);

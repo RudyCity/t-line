@@ -4,6 +4,14 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.49] - 2026-06-28
+
+### Fixed
+- **Terminal Workspace/Tab Switch Freeze**: Fixed a bug where switching workspaces/tabs while running a highly active CLI tool (like `agy` or `claude code`) in a terminal causes the React UI to freeze.
+  - Implemented a `suspend` message to temporarily detach the terminal session sender on the backend when its tab is unmounted, keeping the PTY process and buffer alive in the background without wasting network bandwidth and CPU.
+  - Added a `removeListener` method to the WebSocket client to clean up message handlers.
+  - Properly nullified `terminalRef.current` in the cleanup function of `TerminalInstance` to ensure any queued requestAnimationFrame writes return early instead of attempting to write to a disposed terminal.
+
 ## [1.3.48] - 2026-06-28
 
 ### Changed

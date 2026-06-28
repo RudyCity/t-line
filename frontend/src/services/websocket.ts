@@ -89,6 +89,10 @@ class TerminalWebSocketManager {
     this.send(JSON.stringify({ type: 'close', id }));
   }
 
+  removeListener(id: string) {
+    this.listeners.delete(id);
+  }
+
   send(message: string) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(message);
