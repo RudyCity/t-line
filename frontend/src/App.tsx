@@ -11,7 +11,8 @@ import {
   Settings,
   FileCode,
   Keyboard,
-  MoreVertical
+  MoreVertical,
+  HelpCircle
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { FileViewerTab } from './components/FileViewerTab';
@@ -606,7 +607,7 @@ export default function App() {
               <Keyboard size={18} />
             </button>
             <button className="action-btn desktop-only" onClick={() => setShowShortcutModal(true)} title="Keyboard Shortcuts">
-              <Keyboard size={16} />
+              <HelpCircle size={16} />
             </button>
             <button className="action-btn desktop-only" onClick={() => setShowSettingsModal(true)} title="Settings">
               <Settings size={16} />
