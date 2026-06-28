@@ -48,7 +48,8 @@ export function SplitLayoutRenderer({
           position: 'relative',
           border: isFocused ? '1px solid rgba(168, 85, 247, 0.4)' : '1px solid transparent',
           background: isFocused ? 'rgba(168, 85, 247, 0.02)' : 'transparent',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          overflow: 'hidden'
         }}
         className="group/pane"
       >

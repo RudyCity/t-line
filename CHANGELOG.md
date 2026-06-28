@@ -4,6 +4,12 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.33] - 2026-06-28
+
+### Fixed
+- **Multi-Stage Fit to Prevent Overflow**: Updated `debouncedFit` in `TerminalInstance.tsx` to run instantly and at sequential delays (50ms, 150ms, 300ms, 500ms) to cleanly capture window state maximization, split-pane resizes, and sidebar transitions.
+- **Hidden Overflow on Pane Wrapper**: Added `overflow: 'hidden'` to the terminal leaf wrapper `div` in `SplitLayoutRenderer.tsx` to prevent the xterm canvas scrollbar or canvas viewport from overflowing the pane.
+
 ## [1.3.32] - 2026-06-28
 
 ### Changed

@@ -202,18 +202,30 @@ export function TerminalInstance({ tab, active, wsConnected, fontSize, onTitleCh
 
   const debouncedFit = useCallback(
     (() => {
-      let timeoutId: NodeJS.Timeout;
+      let timeouts: NodeJS.Timeout[] = [];
       return () => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-          try {
-            if (containerRef.current && containerRef.current.clientWidth > 0 && containerRef.current.clientHeight > 0) {
-              fitAddonRef.current?.fit();
-            }
-          } catch (e) {
-            console.error('Debounced fit failed:', e);
+        try {
+          if (containerRef.current && containerRef.current.clientWidth > 0 && containerRef.current.clientHeight > 0) {
+            fitAddonRef.current?.fit();
           }
-        }, 50);
+        } catch (e) {}
+
+        timeouts.forEach(clearTimeout);
+        timeouts = [];
+
+        const intervals = [50, 150, 300, 500];
+        intervals.forEach(ms => {
+          const tid = setTimeout(() => {
+            try {
+              if (containerRef.current && containerRef.current.clientWidth > 0 && containerRef.current.clientHeight > 0) {
+                fitAddonRef.current?.fit();
+              }
+            } catch (e) {
+              console.error('Interval fit failed:', e);
+            }
+          }, ms);
+          timeouts.push(tid);
+        });
       };
     })(),
     []
