@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.34] - 2026-06-28
+
+### Changed
+- **Seamless Tab-Terminal Theme Merge**: Changed `.top-bar` background to `#0b0f19` and removed `border-bottom` in `layout.css` to allow the top bar/tab area to blend seamlessly into the terminal view as a single cohesive dark slate surface.
+
 ## [1.3.33] - 2026-06-28
 
 ### Fixed

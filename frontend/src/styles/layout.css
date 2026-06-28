@@ -128,12 +128,12 @@
 .top-bar {
   height: var(--topbar-height);
   min-height: var(--topbar-height);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: none;
   padding: 0 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(15, 23, 42, 0.2);
+  background: #0b0f19;
 }
 
 .top-bar-info {
