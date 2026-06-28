@@ -8,6 +8,7 @@ import {
   Loader2, 
   Menu as MenuIcon,
   GitCompare,
+  GitBranch,
   FolderTree,
   Settings,
   FileCode,
@@ -102,7 +103,7 @@ export default function App() {
   const [editingWorkspace, setEditingWorkspace] = useState<WorkspaceInfo | null>(null);
 
   const [showMobileKeyboard, setShowMobileKeyboard] = useState<boolean>(false);
-  const [activeTooltip, setActiveTooltip] = useState<{ id: string; x: number; y: number; title: string; path: string } | null>(null);
+  const [activeTooltip, setActiveTooltip] = useState<{ id: string; x: number; y: number; title: string; branch?: string; path: string } | null>(null);
 
   // Workspaces Hook
   const {
@@ -689,18 +690,45 @@ export default function App() {
     }
   };
 
+  const getTabGitBranch = (t: any): string | null => {
+    const isFile = t.type === 'file';
+    const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
+    const path = isFile ? (t.filePath || '') : (focusedInst?.cwd || t.cwd || '');
+    if (!path) return null;
+
+    const normPath = path.toLowerCase().replace(/\\/g, '/');
+
+    const isUnder = (parent: string, child: string) => {
+      const normParent = parent.toLowerCase().replace(/\\/g, '/');
+      return child === normParent || child.startsWith(normParent + '/');
+    };
+
+    for (const w of workspaces) {
+      if (w.isGit) {
+        for (const wt of w.worktrees) {
+          if (isUnder(wt.path, normPath)) {
+            return wt.branch || 'detached';
+          }
+        }
+      }
+    }
+    return null;
+  };
+
   const handleTabMouseEnter = (e: React.MouseEvent<HTMLDivElement>, t: any) => {
     const isFile = t.type === 'file';
     const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
     const shellType = focusedInst?.shellType || '';
     const displayName = isFile ? t.name : (focusedInst?.name || t.name);
     const path = isFile ? (t.filePath || '') : (focusedInst?.cwd || t.cwd || '');
+    const branch = getTabGitBranch(t);
     const rect = e.currentTarget.getBoundingClientRect();
     setActiveTooltip({
       id: t.id,
       x: rect.left + rect.width / 2,
       y: rect.bottom + 8,
       title: isFile ? `File: ${displayName}` : `Terminal: ${displayName}${shellType ? ` (${shellType})` : ''}`,
+      branch: branch || undefined,
       path
     });
   };
@@ -716,12 +744,14 @@ export default function App() {
     const shellType = focusedInst?.shellType || '';
     const displayName = isFile ? t.name : (focusedInst?.name || t.name);
     const path = isFile ? (t.filePath || '') : (focusedInst?.cwd || t.cwd || '');
+    const branch = getTabGitBranch(t);
     const rect = e.currentTarget.getBoundingClientRect();
     setActiveTooltip({
       id: t.id,
       x: rect.left + rect.width / 2,
       y: rect.bottom + 8,
       title: isFile ? `File: ${displayName}` : `Terminal: ${displayName}${shellType ? ` (${shellType})` : ''}`,
+      branch: branch || undefined,
       path
     });
   };
@@ -1246,6 +1276,12 @@ export default function App() {
           }}
         >
           <div className="tab-tooltip-title">{activeTooltip.title}</div>
+          {activeTooltip.branch && (
+            <div className="tab-tooltip-branch">
+              <GitBranch size={10} className="shrink-0" />
+              <span>{activeTooltip.branch}</span>
+            </div>
+          )}
           <div className="tab-tooltip-path">{activeTooltip.path}</div>
         </div>
       )}

@@ -398,6 +398,16 @@
   word-break: break-all;
 }
 
+.tab-tooltip-branch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  color: #fbbf24;
+  font-weight: 500;
+  margin-top: 1px;
+}
+
 @keyframes fadeInTooltip {
   from {
     opacity: 0;
