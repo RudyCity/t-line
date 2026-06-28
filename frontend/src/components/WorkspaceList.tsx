@@ -192,9 +192,6 @@ export function WorkspaceList({
       {workspaces.map(w => {
         const isActive = activeWorkspaceId === w.id;
         
-        // Find main worktree and other worktrees
-        const mainWt = w.worktrees.find(wt => wt.isMain);
-        const hasExtraWorktrees = w.isGit && w.worktrees.length > 1;
         const sortedWts = [...w.worktrees].sort((a, b) => (a.isMain ? -1 : b.isMain ? 1 : 0));
 
         return (
@@ -217,24 +214,6 @@ export function WorkspaceList({
                   {w.name}
                 </span>
 
-                {/* Show main branch name next to workspace name ONLY if there are no extra worktrees */}
-                {w.isGit && mainWt && !hasExtraWorktrees && (
-                  <span 
-                    className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 border ${
-                      isActive 
-                        ? 'bg-purple-500/15 text-purple-300 border-purple-500/20' 
-                        : 'bg-slate-800 text-slate-400 border-slate-700'
-                    }`}
-                    title={`Main branch: ${mainWt.branch}`}
-                  >
-                    <GitBranch size={10} className="shrink-0" />
-                    <span className="max-w-[80px] truncate">{mainWt.branch}</span>
-                    {mainWt.isDirty && (
-                      <span className="h-1 w-1 rounded-full bg-amber-500 animate-pulse ml-0.5" />
-                    )}
-                  </span>
-                )}
-
                 {isActive && (
                   <span className="ws-active-badge shrink-0" title="Active workspace tab">
                     <Check size={10} strokeWidth={3} />
@@ -256,7 +235,7 @@ export function WorkspaceList({
             <div className="text-[10px] text-slate-500 font-mono truncate">{w.path}</div>
 
             {/* Tree-like display if there are worktrees */}
-            {hasExtraWorktrees && (
+            {w.isGit && w.worktrees.length > 0 && (
               <div className="mt-1 flex flex-col">
                 {sortedWts.map((wt, idx) => {
                   const isLast = idx === sortedWts.length - 1;
