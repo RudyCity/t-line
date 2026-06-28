@@ -1,4 +1,4 @@
-# t-line — Workspace Manager `v1.3.67`
+# t-line — Workspace Manager `v1.3.67` [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > An **online terminal** and premium workspace manager — run multi-shell PTY sessions directly in your browser, manage Git Worktrees, and expose your terminal remotely via Cloudflare Tunnel. Built with an Obsidian Dark aesthetic.
 
@@ -163,4 +163,6 @@ t-line/
 
 ## License
 
-Private / Proprietary. Developed for local workspace orchestration.
+MIT License — Copyright © 2026 [Rudy H.](mailto:hrudy715@gmail.com)
+
+See the [LICENSE](LICENSE) file for full details.
