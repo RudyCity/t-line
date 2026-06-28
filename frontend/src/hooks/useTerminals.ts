@@ -45,6 +45,7 @@ export interface TabData {
   filePath?: string;
   layout?: SplitLayoutNode;
   focusedTerminalId?: string;
+  workspaceId?: string;
 }
 
 /** Maps workspaceId → last active tabId for that workspace */
@@ -218,6 +219,26 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     setTerminalFontSize(prev => Math.max(prev - 1, 8));
   }, []);
 
+  const findWorkspaceIdForPath = useCallback((path: string): string | undefined => {
+    if (!path) return undefined;
+    const normPath = path.toLowerCase().replace(/\\/g, '/');
+    for (const ws of workspaces) {
+      const normWsPath = ws.path.toLowerCase().replace(/\\/g, '/');
+      if (normPath === normWsPath || normPath.startsWith(normWsPath + '/')) {
+        return ws.id;
+      }
+      if (ws.worktrees) {
+        for (const wt of ws.worktrees) {
+          const normWtPath = wt.path.toLowerCase().replace(/\\/g, '/');
+          if (normPath === normWtPath || normPath.startsWith(normWtPath + '/')) {
+            return ws.id;
+          }
+        }
+      }
+    }
+    return undefined;
+  }, [workspaces]);
+
   const openTerminal = useCallback((name: string, cwd: string, shellType?: string) => {
     const tabId = `tab-${Date.now()}`;
     const termId = `term-${Date.now()}`;
@@ -239,19 +260,22 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
       shellType: activeShell
     };
 
+    const wsId = findWorkspaceIdForPath(cwd);
+
     const newTab: TabData = {
       id: tabId,
       name: tabName,
       type: 'terminal',
       layout: { type: 'leaf', terminalId: termId },
-      focusedTerminalId: termId
+      focusedTerminalId: termId,
+      workspaceId: wsId
     };
 
     setTerminalInstances(prev => ({ ...prev, [termId]: newInstance }));
     setTabs(prev => [...prev, newTab]);
     setActiveTabId(tabId);
     onTerminalOpen?.();
-  }, [defaultShell, workspaces, onTerminalOpen]);
+  }, [defaultShell, workspaces, onTerminalOpen, findWorkspaceIdForPath]);
 
   const openFileTab = useCallback((filePath: string, name: string) => {
     const existing = tabs.find(t => t.type === 'file' && t.filePath === filePath);
@@ -262,17 +286,20 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     }
 
     const tabId = `file-${Date.now()}`;
+    const wsId = findWorkspaceIdForPath(filePath);
+
     const newTab: TabData = {
       id: tabId,
       name,
       type: 'file',
-      filePath
+      filePath,
+      workspaceId: wsId
     };
 
     setTabs(prev => [...prev, newTab]);
     setActiveTabId(tabId);
     onTerminalOpen?.();
-  }, [tabs, onTerminalOpen]);
+  }, [tabs, onTerminalOpen, findWorkspaceIdForPath]);
 
   const closeTerminal = useCallback((tabId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -466,12 +493,14 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
         if (!exists) {
           const tabId = `tab-${Date.now()}-${s.id}`;
           if (!firstNewTabId) firstNewTabId = tabId;
+          const wsId = findWorkspaceIdForPath(s.cwd);
           nextTabs.push({
             id: tabId,
             name: `Terminal (${s.shellType === 'powershell' ? 'ps' : s.shellType})`,
             type: 'terminal',
             layout: { type: 'leaf', terminalId: s.id },
-            focusedTerminalId: s.id
+            focusedTerminalId: s.id,
+            workspaceId: wsId
           });
         }
       });
@@ -481,7 +510,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
       }
       return nextTabs;
     });
-  }, []);
+  }, [findWorkspaceIdForPath]);
 
   const refreshTerminal = useCallback((terminalId: string) => {
     if (!terminalId) return;

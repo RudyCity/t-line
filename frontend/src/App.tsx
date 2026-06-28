@@ -207,6 +207,11 @@ export default function App() {
   const getWorkspaceForTab = (tabId: string): WorkspaceInfo | null => {
     const tab = tabs.find(t => t.id === tabId);
     if (!tab) return null;
+
+    if (tab.workspaceId) {
+      const matched = workspaces.find(w => w.id === tab.workspaceId);
+      if (matched) return matched;
+    }
     
     const isPathInWorkspace = (filePath: string, wsPath: string) => {
       const normFile = filePath.toLowerCase().replace(/\\/g, '/');
@@ -308,14 +313,23 @@ export default function App() {
       }
     },
     onNextTab: () => {
-      const idx = tabs.findIndex(t => t.id === activeTabId);
-      if (idx !== -1 && tabs.length > 1) setActiveTabId(tabs[(idx + 1) % tabs.length].id);
+      const activeWorkspaceTabs = tabs.filter(t => t.workspaceId === panelWorkspace?.id);
+      const idx = activeWorkspaceTabs.findIndex(t => t.id === activeTabId);
+      if (idx !== -1 && activeWorkspaceTabs.length > 1) {
+        setActiveTabId(activeWorkspaceTabs[(idx + 1) % activeWorkspaceTabs.length].id);
+      }
     },
     onPrevTab: () => {
-      const idx = tabs.findIndex(t => t.id === activeTabId);
-      if (idx !== -1 && tabs.length > 1) setActiveTabId(tabs[(idx - 1 + tabs.length) % tabs.length].id);
+      const activeWorkspaceTabs = tabs.filter(t => t.workspaceId === panelWorkspace?.id);
+      const idx = activeWorkspaceTabs.findIndex(t => t.id === activeTabId);
+      if (idx !== -1 && activeWorkspaceTabs.length > 1) {
+        setActiveTabId(activeWorkspaceTabs[(idx - 1 + activeWorkspaceTabs.length) % activeWorkspaceTabs.length].id);
+      }
     },
-    onJumpToTab: (index) => { if (tabs[index]) setActiveTabId(tabs[index].id); },
+    onJumpToTab: (index) => {
+      const activeWorkspaceTabs = tabs.filter(t => t.workspaceId === panelWorkspace?.id);
+      if (activeWorkspaceTabs[index]) setActiveTabId(activeWorkspaceTabs[index].id);
+    },
     onSplitHorizontal: () => splitFocusedTerminal('horizontal'),
     onSplitVertical: () => splitFocusedTerminal('vertical'),
     onZoomIn: handleZoomIn,
@@ -550,6 +564,8 @@ export default function App() {
     );
   }
 
+  const filteredTabs = tabs.filter(t => t.workspaceId === panelWorkspace?.id);
+
   return (
     <div className="app-container">
       
@@ -624,7 +640,7 @@ export default function App() {
             workspaces={workspaces}
             panelWorkspace={panelWorkspace}
             setPanelWorkspace={setPanelWorkspace}
-            tabs={tabs}
+            tabs={filteredTabs}
             setActiveTabId={setActiveTabId}
             activeTabId={activeTabId}
             terminalInstances={terminalInstances}
@@ -661,7 +677,7 @@ export default function App() {
       <RightSidebar
         isOpen={rightMenuOpen}
         onClose={() => setRightMenuOpen(false)}
-        tabs={tabs}
+        tabs={filteredTabs}
         activeTabId={activeTabId}
         setActiveTabId={setActiveTabId}
         openTerminal={openTerminal}
@@ -711,14 +727,14 @@ export default function App() {
           </div>
 
           {/* Left Divider if there are tabs */}
-          {tabs.length > 0 && (
+          {filteredTabs.length > 0 && (
             <div className="window-controls-separator shrink-0 desktop-only" style={{ margin: '0 12px', height: '16px' }} />
           )}
 
           {/* Integrated Tab Bar */}
-          {tabs.length > 0 && (
+          {filteredTabs.length > 0 && (
             <div className="flex items-center gap-2 flex-1 overflow-x-auto mx-3 h-full desktop-only" style={{ scrollbarWidth: 'none', WebkitAppRegion: 'no-drag' } as any}>
-              {tabs.map(t => {
+              {filteredTabs.map(t => {
                 const isFile = t.type === 'file';
                 const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
                 const shellType = focusedInst?.shellType || '';
@@ -772,7 +788,7 @@ export default function App() {
 
 
           {/* Right Divider if there are tabs */}
-          {tabs.length > 0 && (
+          {filteredTabs.length > 0 && (
             <div className="window-controls-separator shrink-0 desktop-only" style={{ margin: '0 12px', height: '16px' }} />
           )}
 
@@ -823,8 +839,8 @@ export default function App() {
 
 
         {/* Dynamic Panels */}
-        <div className={`content-area ${tabs.length > 0 ? 'content-area-tabs' : 'content-area-empty'}`}>
-          {tabs.length === 0 ? (
+        <div className={`content-area ${filteredTabs.length > 0 ? 'content-area-tabs' : 'content-area-empty'}`}>
+          {filteredTabs.length === 0 ? (
             
             // Empty Dashboard Welcome View
             <EmptyDashboard
