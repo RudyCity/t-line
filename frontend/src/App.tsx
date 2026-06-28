@@ -129,7 +129,8 @@ export default function App() {
     splitFocusedTerminal,
     focusTerminal,
     handleTitleChange,
-    importActiveSessions
+    importActiveSessions,
+    restartTerminal
   } = useTerminals(workspaces, () => setSidebarOpen(false));
 
   const { startResizing, handleMergeTab } = useLayoutHelpers(
@@ -982,6 +983,8 @@ export default function App() {
         handleZoomOut={handleZoomOut}
         handleStartTunnel={handleStartTunnel}
         handleStopTunnel={handleStopTunnel}
+        activeTabType={tabs.find(t => t.id === activeTabId)?.type || null}
+        onRefreshTerminal={() => restartTerminal(activeTabId)}
       />
     </div>
   );

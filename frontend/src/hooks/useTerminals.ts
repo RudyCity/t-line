@@ -446,6 +446,62 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     });
   }, []);
 
+  const restartTerminal = useCallback((tabId: string) => {
+    setTabs(prevTabs => {
+      const tabIndex = prevTabs.findIndex(t => t.id === tabId);
+      if (tabIndex === -1) return prevTabs;
+
+      const tab = prevTabs[tabIndex];
+      if (tab.type !== 'terminal' || !tab.focusedTerminalId) return prevTabs;
+
+      const oldTermId = tab.focusedTerminalId;
+      const newTermId = `term-${Date.now()}`;
+
+      // 1. Unsubscribe/kill old session on backend
+      wsManager.unsubscribe(oldTermId);
+
+      // 2. Clone old instance config to new ID
+      setTerminalInstances(prevInstances => {
+        const next = { ...prevInstances };
+        const oldInstance = next[oldTermId];
+        if (oldInstance) {
+          next[newTermId] = {
+            id: newTermId,
+            name: oldInstance.name,
+            cwd: oldInstance.cwd,
+            shellType: oldInstance.shellType
+          };
+          delete next[oldTermId];
+        }
+        return next;
+      });
+
+      // 3. Swap node terminalId in layout
+      const newTabs = [...prevTabs];
+      const updateNode = (node: any): any => {
+        if (node.type === 'leaf') {
+          if (node.terminalId === oldTermId) {
+            return { ...node, terminalId: newTermId };
+          }
+          return node;
+        }
+        return {
+          ...node,
+          first: updateNode(node.first),
+          second: updateNode(node.second)
+        };
+      };
+
+      newTabs[tabIndex] = {
+        ...tab,
+        focusedTerminalId: newTermId,
+        layout: tab.layout ? updateNode(tab.layout) : { type: 'leaf', terminalId: newTermId }
+      };
+
+      return newTabs;
+    });
+  }, []);
+
   return {
     tabs,
     setTabs,
@@ -466,6 +522,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     splitFocusedTerminal,
     focusTerminal,
     handleTitleChange,
-    importActiveSessions
+    importActiveSessions,
+    restartTerminal
   };
 }

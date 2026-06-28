@@ -1,5 +1,5 @@
 import React from 'react';
-import { GitBranch, ZoomIn, ZoomOut, ExternalLink, Copy, Check, Info, Terminal, Folder, Globe } from 'lucide-react';
+import { GitBranch, ZoomIn, ZoomOut, ExternalLink, Copy, Check, Info, Terminal, Folder, Globe, RefreshCw } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 
 export interface FooterProps {
@@ -18,6 +18,8 @@ export interface FooterProps {
   handleZoomOut: () => void;
   handleStartTunnel: (type: 'quick' | 'token') => void;
   handleStopTunnel: () => void;
+  activeTabType?: 'terminal' | 'file' | null;
+  onRefreshTerminal?: () => void;
 }
 
 export function Footer({
@@ -30,7 +32,9 @@ export function Footer({
   handleZoomOut,
   handleStartTunnel,
   handleStopTunnel,
-  tunnelLoading
+  tunnelLoading,
+  activeTabType,
+  onRefreshTerminal
 }: FooterProps): React.JSX.Element {
   const [copied, setCopied] = React.useState(false);
 
@@ -151,6 +155,19 @@ export function Footer({
             <option value="wsl" className="bg-[#0b0e14] text-slate-300">wsl</option>
           </select>
         </div>
+
+        {activeTabType === 'terminal' && onRefreshTerminal && (
+          <>
+            <div className="w-px h-3.5 bg-white/10" />
+            <button
+              onClick={onRefreshTerminal}
+              className="text-slate-400 hover:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none"
+              title="Restart current terminal process"
+            >
+              <RefreshCw size={11} className="hover:rotate-45 transition-transform duration-200" />
+            </button>
+          </>
+        )}
       </div>
 
       {/* Right Section: Cloudflare Tunnel & Status */}

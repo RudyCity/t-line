@@ -4,6 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.27] - 2026-06-28
+
+### Added
+- **Refresh Terminal Button in Footer**: Added a Refresh/Restart Terminal button to the footer's layout control pill. When clicked, it terminates the active terminal session process on the backend and initiates a fresh terminal shell in the same workspace directory without closing/reopening the tab manually.
+
 ## [1.3.26] - 2026-06-28
 
 ### Added
