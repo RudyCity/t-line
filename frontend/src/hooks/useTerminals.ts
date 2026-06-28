@@ -448,7 +448,10 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
         cleanTitle.toLowerCase() === 'select cmd' ||
         cleanTitle.toLowerCase() === 'select administrator: cmd' ||
         cleanTitle.toLowerCase() === 'administrator: cmd' ||
-        cleanTitle.toLowerCase() === 'windows powershell';
+        cleanTitle.toLowerCase() === 'windows powershell' ||
+        cleanTitle.toLowerCase() === 'xterm-color' ||
+        cleanTitle.toLowerCase() === 'xterm-256color' ||
+        cleanTitle.toLowerCase() === 'xterm';
 
       // If the incoming title matches the shell name or is path/exe noise, revert to initialName
       const isShellIdle = isPathOrExe || (inst.shellType &&
