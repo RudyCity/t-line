@@ -1,6 +1,6 @@
 import React from 'react';
 import { Info, Shield, Eye, EyeOff, RefreshCw, Download, CheckCircle, XCircle, Loader2, ArrowUpCircle, Palette } from 'lucide-react';
-import { FormField, Input, Button } from './Form';
+import { FormField, Input, Button, Select } from './Form';
 import { THEMES, UI_FONTS, MONO_FONTS } from '../hooks/useThemeAndFonts';
 
 export interface SettingsModalProps {
@@ -487,56 +487,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 {/* Fonts Row */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>UI Font Family</label>
-                    <select
+                  <FormField label="UI Font Family" className="mb-0">
+                    <Select
                       value={fontSans}
                       onChange={(e) => setFontSans(e.target.value)}
-                      style={{
-                        padding: '6px 8px',
-                        borderRadius: '6px',
-                        background: 'rgba(0, 0, 0, 0.2)',
-                        border: '1px solid var(--border-color)',
-                        fontSize: '0.75rem',
-                        outline: 'none',
-                        cursor: 'pointer',
-                        color: 'var(--text-main)'
-                      }}
-                    >
-                      {Object.keys(UI_FONTS).map(f => (
-                        <option key={f} value={f}>{f}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Terminal Font Family</label>
-                    <select
+                      options={Object.keys(UI_FONTS).map(f => ({ value: f, label: f }))}
+                    />
+                  </FormField>
+                  <FormField label="Terminal Font Family" className="mb-0">
+                    <Select
                       value={fontMono}
                       onChange={(e) => setFontMono(e.target.value)}
-                      style={{
-                        padding: '6px 8px',
-                        borderRadius: '6px',
-                        background: 'rgba(0, 0, 0, 0.2)',
-                        border: '1px solid var(--border-color)',
-                        fontSize: '0.75rem',
-                        outline: 'none',
-                        cursor: 'pointer',
-                        color: 'var(--text-main)'
-                      }}
-                    >
-                      {Object.keys(MONO_FONTS).map(f => (
-                        <option key={f} value={f}>{f}</option>
-                      ))}
-                    </select>
-                  </div>
+                      options={Object.keys(MONO_FONTS).map(f => ({ value: f, label: f }))}
+                    />
+                  </FormField>
                 </div>
 
                 {/* Terminal Font Size Slider */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Terminal Font Size</label>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-main)', fontFamily: 'var(--font-mono)' }}>{terminalFontSize}px</span>
-                  </div>
+                <FormField label={`Terminal Font Size (${terminalFontSize}px)`} className="mb-0">
                   <input
                     type="range"
                     min="8"
@@ -549,7 +517,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       cursor: 'pointer'
                     }}
                   />
-                </div>
+                </FormField>
 
               </div>
               
