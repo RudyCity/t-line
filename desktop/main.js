@@ -241,33 +241,33 @@ function startBackend() {
     ? path.join(__dirname, '..') 
     : path.join(__dirname, '..', '..', 'app.asar.unpacked');
   
-  // Decide how to start the backend depending on build state
-  let cmd, args;
-  
-  if (isDev) {
-    // In development, spawn the ts-node process using npm workspace run
-    cmd = 'npm';
-    args = ['run', 'dev:backend'];
-  } else {
-    // In production, spawn Electron itself as a Node process to run the backend script
-    cmd = process.execPath;
-    args = [path.join(projectRoot, 'backend', 'dist', 'server.js')];
-  }
-
-  console.log(`Spawning backend: ${cmd} ${args.join(' ')}`);
-  
   updateBackendStatus('starting');
 
   const spawnEnv = { ...process.env, PORT: '3999' };
-  if (!isDev) {
-    spawnEnv.ELECTRON_RUN_AS_NODE = '1';
-  }
 
-  backendProcess = spawn(cmd, args, {
-    cwd: projectRoot,
-    shell: isDev,
-    env: spawnEnv
-  });
+  if (isDev) {
+    // In development, spawn the ts-node process using npm workspace run
+    const cmd = 'npm';
+    const args = ['run', 'dev:backend'];
+    console.log(`Spawning backend: ${cmd} ${args.join(' ')}`);
+
+    backendProcess = spawn(cmd, args, {
+      cwd: projectRoot,
+      shell: true,
+      env: spawnEnv
+    });
+  } else {
+    // In production, spawn using Electron's utilityProcess to guarantee compatibility and portability
+    const scriptPath = path.join(projectRoot, 'backend', 'dist', 'server.js');
+    console.log(`Spawning backend (production utilityProcess): ${scriptPath}`);
+
+    const { utilityProcess } = require('electron');
+    backendProcess = utilityProcess.fork(scriptPath, [], {
+      cwd: projectRoot,
+      env: spawnEnv,
+      stdio: 'pipe'
+    });
+  }
 
   let token = null;
 

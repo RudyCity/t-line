@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.80] - 2026-06-29
+
+### Fixed
+- **Portable Build Backend Spawning (utilityProcess)**: Resolved a critical uncaught exception (`Error: spawn ... ENOENT`) that occurred exclusively in packaged portable builds. Migrated the backend process spawning mechanism from manual OS execution via `child_process.spawn(process.execPath)` to Electron's official `utilityProcess.fork` API. This leverages Electron's internal helper process architecture, preventing file permission/existence failures under the temporary directories used by portable NSIS wrappers.
+
+---
+
 ## [1.3.79] - 2026-06-29
 
 ### Fixed
