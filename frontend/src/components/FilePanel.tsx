@@ -88,31 +88,31 @@ function getRelativePath(rootPath: string, itemPath: string): string {
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {
   modified: {
-    label: 'modif',
+    label: 'M',
     color: '#fbbf24',
     bg: 'rgba(251, 191, 36, 0.1)',
     border: '1px solid rgba(251, 191, 36, 0.2)'
   },
   added: {
-    label: 'baru',
+    label: 'A',
     color: '#4ade80',
     bg: 'rgba(74, 222, 128, 0.1)',
     border: '1px solid rgba(74, 222, 128, 0.2)'
   },
   untracked: {
-    label: 'baru',
+    label: 'U',
     color: '#4ade80',
     bg: 'rgba(74, 222, 128, 0.1)',
     border: '1px solid rgba(74, 222, 128, 0.2)'
   },
   deleted: {
-    label: 'hapus',
+    label: 'D',
     color: '#f87171',
     bg: 'rgba(248, 113, 113, 0.1)',
     border: '1px solid rgba(248, 113, 113, 0.2)'
   },
   renamed: {
-    label: 'rename',
+    label: 'R',
     color: '#a78bfa',
     bg: 'rgba(167, 139, 250, 0.1)',
     border: '1px solid rgba(167, 139, 250, 0.2)'
@@ -206,7 +206,6 @@ function TreeNodeItem({
               fontWeight: 700,
               padding: '1px 5px',
               borderRadius: '4px',
-              textTransform: 'lowercase',
               display: 'inline-flex',
               alignItems: 'center',
               lineHeight: 1,
