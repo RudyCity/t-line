@@ -172,17 +172,14 @@ interface StatusBarProps {
   wsConnected: boolean;
   cursorCol: number;
   cursorRow: number;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
   onClear: () => void;
   onSearch: () => void;
-  fontSize: number;
   pid?: number;
 }
 
 function TerminalStatusBar({
   shellType, wsConnected, cursorCol, cursorRow,
-  onZoomIn, onZoomOut, onClear, onSearch, fontSize, pid
+  onClear, onSearch, pid
 }: StatusBarProps) {
   const shellLabel: Record<string, string> = {
     powershell: 'PS',
@@ -214,18 +211,6 @@ function TerminalStatusBar({
         <button className="terminal-status-btn" title="Clear terminal" onClick={onClear}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/>
-          </svg>
-        </button>
-        <div className="terminal-status-divider" />
-        <button className="terminal-status-btn" title="Zoom out" onClick={onZoomOut}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <circle cx="11" cy="11" r="8"/><line x1="8" y1="11" x2="14" y2="11"/>
-          </svg>
-        </button>
-        <span className="terminal-status-fontsize">{fontSize}px</span>
-        <button className="terminal-status-btn" title="Zoom in" onClick={onZoomIn}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <circle cx="11" cy="11" r="8"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
           </svg>
         </button>
       </div>
@@ -802,18 +787,12 @@ export function TerminalInstance({
     }
   };
 
-  // Zoom handlers from status bar — need to bubble up via events
-  const handleZoomIn = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('tline-zoom', { detail: { direction: 'in' } }));
-  }, []);
 
-  const handleZoomOut = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('tline-zoom', { detail: { direction: 'out' } }));
-  }, []);
 
   return (
     <div
       className={`terminal-pane-root${isFocusedPane ? ' terminal-pane-focused' : ''}`}
+      style={{ backgroundColor: themeBackground || '#0b0f19' }}
       onClick={handleTerminalFocus}
       onTouchEnd={handleTerminalFocus}
       onContextMenu={handleContextMenu}
@@ -822,18 +801,19 @@ export function TerminalInstance({
         <TerminalSearchBar searchAddon={searchAddonRef.current} onClose={closeSearch} />
       )}
 
-      <div ref={containerRef} className="terminal-element" />
+      <div 
+        ref={containerRef} 
+        className="terminal-element" 
+        style={{ backgroundColor: themeBackground || '#0b0f19' }}
+      />
 
       <TerminalStatusBar
         shellType={tab.shellType}
         wsConnected={wsConnected}
         cursorCol={cursorPos.col}
         cursorRow={cursorPos.row}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
         onClear={handleClear}
         onSearch={handleSearchOpen}
-        fontSize={actualFontSize}
         pid={localPid}
       />
 
