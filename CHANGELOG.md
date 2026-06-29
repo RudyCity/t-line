@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.72] - 2026-06-29
+
+### Changed
+- **Documentation Overhaul**: Redesigned and rewrote the primary project README to emphasize marketing appeal, highlighting key value propositions, user pain points solved, high-performance GPU Canvas rendering, and Git Worktrees workflow benefits. Added the visual application preview showcase in the documentation.
+
+---
+
 ## [1.3.71] - 2026-06-29
 
 ### Fixed

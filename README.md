@@ -1,168 +1,120 @@
-# t-line — Workspace Manager `v1.3.67` [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+# t-line — Premium Workspace Manager & Git Worktree Orchestrator `v1.3.72`
 
-> An **online terminal** and premium workspace manager — run multi-shell PTY sessions directly in your browser, manage Git Worktrees, and expose your terminal remotely via Cloudflare Tunnel. Built with an Obsidian Dark aesthetic.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
----
+> A high-performance, developer-first workspace dashboard. Run GPU-accelerated multi-shell PTY terminals, visualize and manage Git Worktrees, browse and edit code, and securely share your workspace remotely via Cloudflare Tunnel. All inside a sleek Obsidian Dark interface.
 
-## Features
-
-### 🖥️ PTY Terminal Multiplexer
-- Spawn and manage multiple terminal tabs (PowerShell, CMD, Git Bash, WSL) as independent pseudo-terminal sessions.
-- Terminals auto-open in the active workspace directory.
-- **Dynamic tab titles** — tab names update in real-time to reflect the active foreground process via backend process-name polling (every 1,000ms), working around WinPTY limitations on Windows.
-- **Zoom controls** — in/out font size with persistent storage, docked in the status bar footer.
-- **Default shell selector** — choose your preferred shell, persisted across sessions.
-- **Compact tab bar** — tabs shrink gracefully; close button is hidden on small inactive tabs to prevent accidental closure (mirrors Chrome tab UX).
-- **Custom tooltips** — hovering a narrow tab shows the full tab title; tooltips are properly cleaned up on tab close or context menu open.
-
-### 💾 Persistent Tab State
-- Terminal tabs, active tab ID, working directories (`cwd`), and shell types are saved in `localStorage` and restored across window reloads and backend restarts.
-- State is automatically cleared on logout.
-
-### 🌿 Git Worktrees Automation
-- Track and list active Git worktrees with their checkout paths.
-- Quickly create new worktree branches from the UI.
-- Real-time **dirty index detection** with pulsing alerts.
-- **Dirty file count badge** — shows exact count of uncommitted changes/untracked files next to each dirty branch in the sidebar.
-- **Git branch status in footer** — shows active branch (or worktree name), with uncommitted change warnings.
-- **Safe worktree deletion** — auto-closes all terminal and file tabs inside the worktree before deleting; falls back to `fs.rmSync` + `git worktree prune` if Git cannot acquire the file lock (e.g. antivirus hold).
-
-### 📁 File Explorer & Editor Tabs
-- Browse host drive letters and folder structures directly in the sidebar.
-- Click any file to open it as a dedicated **editor tab** alongside terminal tabs, with line numbering, dark styling, and a Copy button.
-- Explorer and Changes panels feature **full-bleed layout** — flush to all edges.
-- **Auto-selects workspace** — if only one workspace is tracked, it is automatically selected. Switching panels auto-selects the first available or Git-enabled workspace.
-
-### 🗂️ Workspace Actions Dropdown
-- All workspace action buttons (rename, delete, open in Explorer, etc.) are collapsed into a **three-dot (⋮) dropdown menu** on all screen sizes for a cleaner card layout.
-- Dropdown is rendered in a **portal** to escape parent `overflow: hidden` containers.
-- **Click workspace path in footer** to instantly open that directory in Windows Explorer.
-- **Full path tooltip** on the workspace path text for quick reference.
-
-### 🔐 Security & Authentication
-- Protect your backend with a **Master Password** (bcrypt-hashed, stored in `~/.tline-config.json`).
-- **Ephemeral bypass token** — written to `~/.tline-bypass-token` on startup, deleted on exit. Lets the Electron desktop client authenticate automatically without requiring the master password.
-- **Tunnel Access Control** — IP rule manager and request logger. Block/unblock client IPs and restrict WebSocket terminal upgrades. Includes a self-blocking fail-safe to prevent accidental lockout.
-
-### 🌐 Remote Tunneling (Cloudflare)
-- Expose your dashboard remotely via **Cloudflare Tunnel** — supports Quick URL or Custom Token modes, docked in the bottom status bar.
-
-### 🖱️ System Tray Integration
-- The desktop app hides to the system tray on close instead of exiting.
-- System tray context menu supports **Start / Stop / Restart backend** process controls.
-- Notifies the user (cross-platform) on first hide.
-- Shows a fallback state page in the main window when the backend is stopped.
-
-### 🪟 Frameless Electron Desktop Client
-- Custom borderless window with native Minimize, Maximize, and Close via IPC bridge.
-- Window **launches maximized** by default.
-- **Dynamic Maximize/Restore icon** — toggles between `▢` and `❐` based on actual window state.
-- Draggable header region for native window movement.
-- Electron controls are only visible when running inside Electron (hidden in browser).
-- **Custom T+ brand logo** — unified SVG/PNG icon used in sidebar header, system tray, and taskbar with a dark indigo background for clean Windows rendering.
-
-### ⚙️ Smart Backend Detection
-- On desktop launch, a TCP port check on `3999` determines if the backend is already running.
-- If already running, skips spawning a new process and connects directly — prevents port conflicts.
-
-### 📐 Resizable & Collapsible Layout
-- Draggable divider between sidebar and main content panel — width stored in `localStorage`.
-- Sidebar can be fully collapsed (to width `0`) on both desktop and mobile.
-- **Merged Tab Bar** — terminal tabs, zoom controls, and shell selector are integrated into the top window header to maximize vertical space.
-- **Vertical header dividers** cleanly isolate the tab bar from status details and window controls.
-
-### ⚙️ Settings Modal
-- View system version and details.
-- Update the master password directly from the UI.
+![t-line Interface Preview](preview.png)
 
 ---
 
-## Technology Stack
+## ⚡ The Developer's Context-Switching Solution
 
-| Layer | Technology |
-|---|---|
-| **Frontend** | React (TypeScript) + Vite + Tailwind CSS v4 + xterm.js + Lucide Icons |
-| **Backend** | Node.js + Express + WebSocket (`ws`) + `node-pty` |
-| **Desktop** | Electron (custom borderless frame + preload IPC bridge) |
-| **Packaging** | `electron-builder` → standalone `.exe` installer / portable |
+Modern software engineering requires juggling multiple branches, repositories, and terminals. **t-line** solves the cognitive load of context-switching by combining Git Worktree automation, terminal multiplexing, and remote workspace sharing into a unified, lightweight, local-first application. 
+
+### Why use t-line?
+* **Adopt Git Worktrees without CLI friction**: Work on multiple features concurrently in isolated directories without stashing or breaking your flow.
+* **Instant, Secure Remote Access**: Share your local environment with clients or team members in one click via built-in Cloudflare Tunnel support.
+* **Ultra-Fast Terminals**: Custom GPU-accelerated xterm.js terminals reduce lag and render smooth graphics.
+* **Beautiful Obsidian Dark Aesthetic**: Optimized for long coding sessions with an elegant, frameless UI.
 
 ---
 
-## Getting Started
+## 🚀 Key Features & Value Proposition
+
+### 🖥️ GPU-Accelerated Multi-Shell PTY Terminal
+* **Concurrent Terminals**: Spawn and manage multiple sessions across PowerShell, CMD, Git Bash, or WSL.
+* **GPU Canvas Renderer**: Built-in `@xterm/addon-canvas` rendering delivers lightning-fast scrolling and reduces CPU utilization.
+* **Dynamic Process Polling**: Automatically polls background process names to update tab titles dynamically, solving native WinPTY title resolution limits on Windows.
+* **Interactive Tooling & Images**: Support for `@xterm/addon-image` allows terminal previews and inline image rendering via sixel/iTerm2.
+* **Developer Safety Filters**: Smart paste warnings prevent accidental multi-line executions in active shells.
+* **Focus Ring Highlight**: Visually track active panes with a soft glowing purple focus ring.
+
+### 🌿 Visual Git Worktrees Management
+* **Real-time Dirty Indexing**: Instantly flags modified or untracked files with glowing amber indicators and uncommitted change badges.
+* **Dirty-First Auto-Sorting**: Workspaces with active modifications are automatically floated to the top of the sidebar.
+* **Safety Lock Pruning**: Automatically shuts down terminal tabs and file locks associated with a worktree before removal. Falls back to direct file-system removal and manual registry pruning if files are locked.
+
+### 📁 Unified Workspace Explorer & Editor
+* **Full-Bleed UI**: Clean borderless sidebar layout maximizing screen real estate.
+* **Built-in Monaco Editor**: View and modify codebase files directly in editor tabs alongside terminal panes, complete with copy shortcuts and clean formatting.
+* **Auto-Focus Selection**: Automatically selects the first active or Git-enabled workspace on switch.
+
+### 🌐 Secure Cloudflare Tunneling & ACL
+* **One-Click Share**: Instantly expose the dashboard using Quick URL or a Custom Tunnel token.
+* **Access Control List (ACL)**: Detailed connection loggers let you monitor incoming requests, block specific IPs, or restrict WebSocket terminal access with built-in lockout protection.
+
+### 🪟 Native Electron Desktop Integration
+* **Frameless App**: Draggable borderless UI that launches maximized with custom system control actions.
+* **Tray Minimization**: Minimize to taskbar/system tray on window close, with tray context menu backend lifecycle control.
+* **Single Instance Safety**: Detects active backend instances on port `3999` to prevent port binding conflicts.
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technologies Used |
+| :--- | :--- |
+| **Frontend** | React (TS), Vite, Tailwind CSS v4, Monaco Editor, xterm.js + Canvas / WebLinks / Image addons |
+| **Backend** | Node.js, Express, WebSocket (`ws`), `node-pty`, `bcryptjs` |
+| **Desktop** | Electron, Electron-Builder (Installer/Portable EXE) |
+
+---
+
+## 🏃 Quick Start
 
 ### Prerequisites
-- [Node.js](https://nodejs.org/) LTS
-- Git configured in your system PATH
-- Windows (primary target; WSL supported for terminal sessions)
+* [Node.js](https://nodejs.org/) (LTS recommended)
+* Git configured in your system PATH
+* Windows 10/11 (Primary target OS)
 
-### 1. Install Dependencies
-Run from the repository root:
+### 1. Install Project Dependencies
+Run from the root directory:
 ```powershell
 npm install
 ```
 
-### 2. Development Mode
-Launches the backend Express server (port `3999`) and the Vite frontend dev server (port `5173`) concurrently:
+### 2. Run in Development Mode
+Launches the Express backend (`3999`) and Vite frontend (`5173`) concurrently with hot reloading:
 ```powershell
 npm run dev
 ```
 
-### 3. Electron Desktop Client
-Starts the backend and opens the Electron window with automatic authentication. Skips backend spawn if already running on port `3999`:
+### 3. Launch Electron Desktop Client
+Runs the full Electron application, bypassing backend spawn if port `3999` is already in use:
 ```powershell
 npm run desktop
 ```
 
 ### 4. Build Standalone Installer (`.exe`)
-Compiles all packages and produces a Windows installer + portable app inside `desktop/dist-exe/`:
+Compiles frontend assets, transpiles TypeScript, and packages the app using `electron-builder` inside `desktop/dist-exe/`:
 ```powershell
 npm run build:exe
 ```
 
 ---
 
-## Workspace Scripts Reference
-
-| Script | Description |
-|---|---|
-| `npm run dev` | Start backend + frontend in watch mode |
-| `npm run dev:backend` | Start backend only |
-| `npm run dev:frontend` | Start frontend only |
-| `npm run desktop` | Launch Electron desktop client |
-| `npm run build:exe` | Build full standalone `.exe` package |
-
----
-
-## Storage & Configuration
-
-| Data | Location |
-|---|---|
-| Master password hash, security keys, tracked workspaces | `C:\Users\<username>\.tline-config.json` |
-| Ephemeral desktop bypass token | `C:\Users\<username>\.tline-bypass-token` *(auto-deleted on exit)* |
-| Terminal tabs state (cwd, shell type, active tab) | Browser / Chromium `localStorage` |
-| Sidebar width, terminal font size | Browser / Chromium `localStorage` |
-
----
-
-## Architecture Overview
+## 📂 Architecture Directory
 
 ```
 t-line/
-├── backend/          # Express + node-pty server (port 3999)
-├── frontend/         # React + Vite SPA
+├── backend/          # Express + WebSockets + node-pty server (Port 3999)
+├── frontend/         # React + Vite SPA (Vite + Tailwind CSS v4)
 │   └── src/
 │       ├── hooks/    # Custom React hooks (useTerminals, useTunnel, useWorkspaces)
 │       └── components/
-├── desktop/          # Electron wrapper + system tray + electron-builder config
-└── package.json      # Root npm workspaces config
+├── desktop/          # Electron wrapper, IPC bridge, Tray, & build configs
+├── preview.png       # Desktop application preview image
+└── package.json      # Root monorepo workspace configuration
 ```
 
-> **Code quality rule**: No source file may exceed **1,000 lines**. All oversized files are refactored into modular sub-components or hooks.
+> [!IMPORTANT]
+> **Code Quality Constraint**: To maintain high maintainability, no source code file in this repository is allowed to exceed **1,000 lines**. Oversized files are refactored into modular hooks or sub-components.
 
 ---
 
-## License
+## 📄 License & Attribution
 
-MIT License — Copyright © 2026 [Rudy H.](mailto:hrudy715@gmail.com)
+Distributed under the MIT License. See [LICENSE](LICENSE) for details.
 
-See the [LICENSE](LICENSE) file for full details.
+Copyright © 2026 [Rudy H.](mailto:hrudy715@gmail.com)
