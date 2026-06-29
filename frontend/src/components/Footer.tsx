@@ -135,7 +135,14 @@ export function Footer({
 
   return (
     <>
-      <footer className="app-footer flex items-center justify-between px-6 border-t border-white/10 bg-[#080b13]/90 backdrop-blur-md text-xs text-slate-400 select-none shrink-0 h-9 z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.3)]">
+      <footer 
+        className="app-footer flex items-center justify-between px-6 border-t backdrop-blur-md text-xs select-none shrink-0 h-9 z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.3)]"
+        style={{
+          backgroundColor: 'color-mix(in srgb, var(--bg-sidebar) 90%, transparent)',
+          borderTopColor: 'var(--border-color)',
+          color: 'var(--text-muted)'
+        }}
+      >
       {/* Left Section: Version & RAM Stats */}
       <div className="flex items-center gap-3">
         {updateAvailable ? (
@@ -150,30 +157,63 @@ export function Footer({
             <span>t-line v{appVersion} (Update: v{latestVersion})</span>
           </a>
         ) : (
-          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 font-sans text-[10px] font-semibold tracking-wider hover:bg-purple-500/20 hover:border-purple-500/35 transition-all duration-200 cursor-pointer">
-            <span className="h-1.5 w-1.5 rounded-full bg-purple-400 shadow-[0_0_6px_#a855f7]" />
+          <span 
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded-full font-sans text-[10px] font-semibold tracking-wider transition-all duration-200 cursor-pointer"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--color-primary) 10%, transparent)',
+              borderColor: 'color-mix(in srgb, var(--color-primary) 20%, transparent)',
+              color: 'var(--color-primary)'
+            }}
+          >
+            <span 
+              className="h-1.5 w-1.5 rounded-full"
+              style={{
+                backgroundColor: 'var(--color-primary)',
+                boxShadow: '0 0 6px var(--color-primary)'
+              }}
+            />
             <span>t-line v{appVersion || '1.3.73'}</span>
           </span>
         )}
 
         {/* System Resource Stats */}
         {systemStats && (
-          <div className="hidden md:flex items-center gap-1.5 bg-slate-900/60 hover:bg-slate-800/80 px-2.5 py-1 rounded-full border border-white/5 hover:border-white/10 transition-all duration-200 shadow-inner cursor-default relative group">
-            <Cpu size={11} className="text-purple-400 animate-pulse" />
-            <span className="font-sans text-[10px] font-semibold text-slate-400">RAM</span>
-            <span className="text-white/10 font-sans text-[10px] font-normal">|</span>
-            <span className="font-mono text-[10px] font-semibold text-purple-300">B: {formatBytes(systemStats.backend.rss)}</span>
+          <div 
+            className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all duration-200 shadow-inner cursor-default relative group"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--bg-main) 60%, transparent)',
+              borderColor: 'var(--border-color)',
+              borderWidth: '1px'
+            }}
+          >
+            <Cpu size={11} className="animate-pulse" style={{ color: 'var(--color-primary)' }} />
+            <span className="font-sans text-[10px] font-semibold" style={{ color: 'var(--text-muted)' }}>RAM</span>
+            <span className="font-sans text-[10px] font-normal" style={{ color: 'var(--border-color)' }}>|</span>
+            <span className="font-mono text-[10px] font-semibold" style={{ color: 'var(--color-primary)' }}>B: {formatBytes(systemStats.backend.rss)}</span>
             {systemStats.desktop && (
               <>
-                <span className="text-white/10 font-sans text-[10px] font-normal">|</span>
+                <span className="font-sans text-[10px] font-normal" style={{ color: 'var(--border-color)' }}>|</span>
                 <span className="font-mono text-[10px] font-semibold text-emerald-300">D: {formatBytes(systemStats.desktop.desktopTotal)}</span>
               </>
             )}
 
             {/* Hover Tooltip Dropup */}
-            <div className="absolute bottom-full mb-2 left-0 hidden group-hover:flex flex-col w-56 bg-[#0b0f17] border border-white/15 rounded-lg p-3 shadow-[0_10px_25px_rgba(0,0,0,0.5)] z-50 pointer-events-none text-slate-300 font-sans">
-              <h4 className="text-[11px] font-bold text-white mb-2 pb-1 border-b border-white/10 flex items-center gap-1.5">
-                <Cpu size={12} className="text-purple-400" />
+            <div 
+              className="absolute bottom-full mb-2 left-0 hidden group-hover:flex flex-col w-56 border rounded-lg p-3 shadow-[0_10px_25px_rgba(0,0,0,0.5)] z-50 pointer-events-none font-sans"
+              style={{
+                backgroundColor: 'var(--bg-sidebar)',
+                borderColor: 'var(--border-color)',
+                color: 'var(--text-muted)'
+              }}
+            >
+              <h4 
+                className="text-[11px] font-bold mb-2 pb-1 border-b flex items-center gap-1.5"
+                style={{
+                  color: 'var(--text-main)',
+                  borderBottomColor: 'var(--border-color)'
+                }}
+              >
+                <Cpu size={12} style={{ color: 'var(--color-primary)' }} />
                 System Resources
               </h4>
               
@@ -291,34 +331,35 @@ export function Footer({
             </button>
           </div>
 
-          <div className="w-px h-3.5 bg-white/10" />
+          <div className="w-px h-3.5 bg-[var(--border-color)]" />
 
           {/* Shell Selector */}
           <div className="flex items-center gap-1.5">
             <Terminal size={11} className="text-slate-400" />
             <select 
-              value={defaultShell} 
-              onChange={(e) => setDefaultShell(e.target.value)}
-              className="bg-transparent border-none text-slate-300 font-mono font-semibold text-[10px] cursor-pointer outline-none focus:ring-0 select-none py-0 pr-4 pl-0 transition-colors duration-150 hover:text-white"
-              title="Default Shell for new tabs"
-              style={{ 
-                appearance: 'none',
-                backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='rgba(148,163,184,0.8)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
-                backgroundPosition: 'right center',
-                backgroundRepeat: 'no-repeat',
-                backgroundSize: '8px 8px',
-              }}
-            >
-              <option value="powershell" className="bg-[#0b0e14] text-slate-300">powershell</option>
-              <option value="cmd" className="bg-[#0b0e14] text-slate-300">cmd</option>
-              <option value="gitbash" className="bg-[#0b0e14] text-slate-300">gitbash</option>
-              <option value="wsl" className="bg-[#0b0e14] text-slate-300">wsl</option>
-            </select>
+               value={defaultShell} 
+               onChange={(e) => setDefaultShell(e.target.value)}
+               className="bg-transparent border-none font-mono font-semibold text-[10px] cursor-pointer outline-none focus:ring-0 select-none py-0 pr-4 pl-0 transition-colors duration-150 hover:text-[var(--text-main)]"
+               title="Default Shell for new tabs"
+               style={{ 
+                 appearance: 'none',
+                 backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='rgba(148,163,184,0.8)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
+                 backgroundPosition: 'right center',
+                 backgroundRepeat: 'no-repeat',
+                 backgroundSize: '8px 8px',
+                 color: 'var(--text-muted)'
+               }}
+             >
+               <option value="powershell" className="bg-[var(--bg-sidebar)] text-[var(--text-main)]">powershell</option>
+               <option value="cmd" className="bg-[var(--bg-sidebar)] text-[var(--text-main)]">cmd</option>
+               <option value="gitbash" className="bg-[var(--bg-sidebar)] text-[var(--text-main)]">gitbash</option>
+               <option value="wsl" className="bg-[var(--bg-sidebar)] text-[var(--text-main)]">wsl</option>
+             </select>
           </div>
 
           {activeTabType === 'terminal' && onRefreshTerminal && (
             <>
-              <div className="w-px h-3.5 bg-white/10" />
+              <div className="w-px h-3.5 bg-[var(--border-color)]" />
               <button
                 onClick={onRefreshTerminal}
                 className="text-slate-400 hover:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none"

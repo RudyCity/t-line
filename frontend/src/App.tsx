@@ -793,6 +793,8 @@ export default function App() {
                         fetchGitStatus(false);
                         fetchWorkspaces();
                       }}
+                      theme={theme}
+                      themeBackground={THEMES[theme]?.bgMain}
                     />
                   );
                 }

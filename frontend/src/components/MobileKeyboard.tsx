@@ -84,9 +84,11 @@ export function MobileKeyboard({ onKeyInput, onClose }: MobileKeyboardProps): Re
 
   return (
     <div 
-      className="mobile-keyboard border-t border-purple-500/10 bg-[#07090f]/95 p-2 select-none z-45 flex flex-col gap-1.5 w-full shrink-0"
+      className="mobile-keyboard border-t p-2 select-none z-45 flex flex-col gap-1.5 w-full shrink-0"
       style={{
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)'
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',
+        backgroundColor: 'color-mix(in srgb, var(--bg-sidebar) 95%, transparent)',
+        borderTopColor: 'color-mix(in srgb, var(--color-primary) 10%, transparent)'
       }}
     >
       {/* Modifier Toolbar Row */}

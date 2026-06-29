@@ -124,15 +124,15 @@ export function RightSidebar({
                   }}
                   className={`flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-purple-600/10 border-purple-500/30 text-purple-200 shadow-sm'
-                      : 'bg-slate-900/40 border-white/5 text-slate-400 hover:bg-slate-800/40'
+                      ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)] shadow-sm'
+                      : 'bg-[var(--bg-card)]/50 border-[var(--border-color)] text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]'
                   }`}
                 >
                   <div className="flex items-center gap-2.5 overflow-hidden">
                     {isFile ? (
-                      <FileCode size={13} className={isActive ? 'text-purple-400' : 'text-slate-400'} />
+                      <FileCode size={13} className={isActive ? 'text-[var(--color-primary)]' : 'text-[var(--text-muted)]'} />
                     ) : (
-                      <TerminalIcon size={13} className={isActive ? 'text-purple-400' : 'text-slate-400'} />
+                      <TerminalIcon size={13} className={isActive ? 'text-[var(--color-primary)]' : 'text-[var(--text-muted)]'} />
                     )}
                     <span className="text-xs font-semibold truncate">{t.name}</span>
                     {shellType && (
@@ -152,32 +152,32 @@ export function RightSidebar({
               );
             })}
             {tabs.length === 0 && (
-              <div className="text-center py-8 text-xs text-slate-500 font-medium">No active tabs</div>
+              <div className="text-center py-8 text-xs text-[var(--text-muted)] font-medium">No active tabs</div>
             )}
           </div>
         </div>
 
         {/* ─── Terminal Controls (mobile only) ─── */}
-        <div className="flex flex-col gap-3 pt-4 border-t border-white/5">
-          <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Terminal Controls</span>
+        <div className="flex flex-col gap-3 pt-4 border-t border-[var(--border-color)]">
+          <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] font-bold">Terminal Controls</span>
 
           {/* Font size */}
-          <div className="flex items-center justify-between p-3 rounded-lg border bg-slate-900/40 border-white/5">
-            <span className="text-xs text-slate-400 font-medium">Font Size</span>
+          <div className="flex items-center justify-between p-3 rounded-lg border bg-[var(--bg-card)] border-[var(--border-color)]">
+            <span className="text-xs text-[var(--text-muted)] font-medium">Font Size</span>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleZoomOut}
-                className="text-slate-400 hover:text-white active:scale-95 transition-all cursor-pointer p-1 rounded flex items-center justify-center"
+                className="text-[var(--text-muted)] hover:text-[var(--text-main)] active:scale-95 transition-all cursor-pointer p-1 rounded flex items-center justify-center"
                 title="Zoom Out"
               >
                 <ZoomOut size={14} />
               </button>
-              <span className="text-[11px] bg-slate-950/60 px-2 py-0.5 rounded font-mono font-semibold text-purple-300 min-w-[36px] text-center border border-white/5">
+              <span className="text-[11px] bg-[var(--bg-main)]/60 px-2 py-0.5 rounded font-mono font-semibold text-[var(--color-primary)] min-w-[36px] text-center border border-[var(--border-color)]">
                 {terminalFontSize}px
               </span>
               <button
                 onClick={handleZoomIn}
-                className="text-slate-400 hover:text-white active:scale-95 transition-all cursor-pointer p-1 rounded flex items-center justify-center"
+                className="text-[var(--text-muted)] hover:text-[var(--text-main)] active:scale-95 transition-all cursor-pointer p-1 rounded flex items-center justify-center"
                 title="Zoom In"
               >
                 <ZoomIn size={14} />
@@ -186,20 +186,25 @@ export function RightSidebar({
           </div>
 
           {/* Shell Selector */}
-          <div className="flex items-center justify-between p-3 rounded-lg border bg-slate-900/40 border-white/5">
-            <span className="text-xs text-slate-400 font-medium flex items-center gap-1.5">
-              <TerminalIcon size={12} className="text-slate-500" />
+          <div className="flex items-center justify-between p-3 rounded-lg border bg-[var(--bg-card)]/50 border-[var(--border-color)]">
+            <span className="text-xs text-[var(--text-muted)] font-medium flex items-center gap-1.5">
+              <TerminalIcon size={12} className="text-[var(--text-muted)]" />
               Default Shell
             </span>
             <select
               value={defaultShell}
               onChange={(e) => setDefaultShell(e.target.value)}
-              className="bg-slate-950 border border-white/10 text-slate-300 font-mono font-semibold text-xs cursor-pointer outline-none rounded px-2 py-1 transition-colors hover:text-white"
+              className="border text-xs cursor-pointer outline-none rounded px-2 py-1 transition-colors"
+              style={{
+                backgroundColor: 'var(--bg-main)',
+                borderColor: 'var(--border-color)',
+                color: 'var(--text-muted)'
+              }}
             >
-              <option value="powershell" className="bg-[#0b0e14] text-slate-300">powershell</option>
-              <option value="cmd" className="bg-[#0b0e14] text-slate-300">cmd</option>
-              <option value="gitbash" className="bg-[#0b0e14] text-slate-300">gitbash</option>
-              <option value="wsl" className="bg-[#0b0e14] text-slate-300">wsl</option>
+              <option value="powershell" className="bg-[var(--bg-sidebar)] text-[var(--text-main)]">powershell</option>
+              <option value="cmd" className="bg-[var(--bg-sidebar)] text-[var(--text-main)]">cmd</option>
+              <option value="gitbash" className="bg-[var(--bg-sidebar)] text-[var(--text-main)]">gitbash</option>
+              <option value="wsl" className="bg-[var(--bg-sidebar)] text-[var(--text-main)]">wsl</option>
             </select>
           </div>
 
@@ -207,31 +212,35 @@ export function RightSidebar({
           {activeTabType === 'terminal' && onRefreshTerminal && (
             <button
               onClick={() => { onRefreshTerminal(); onClose(); }}
-              className="flex items-center gap-3 p-3 rounded-lg border bg-slate-900/40 border-white/5 text-slate-300 hover:bg-slate-800/40 transition-all text-xs font-medium cursor-pointer w-full text-left"
+              className="flex items-center gap-3 p-3 rounded-lg border text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-all text-xs font-medium cursor-pointer w-full text-left"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
+                borderColor: 'var(--border-color)',
+              }}
             >
-              <RefreshCw size={13} className="text-slate-400" />
+              <RefreshCw size={13} className="text-[var(--text-muted)]" />
               <span>Restart Terminal</span>
             </button>
           )}
         </div>
 
         {/* ─── Cloudflare Tunnel (mobile only) ─── */}
-        <div className="flex flex-col gap-3 pt-4 border-t border-white/5">
+        <div className="flex flex-col gap-3 pt-4 border-t border-[var(--border-color)]">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Cloudflare Tunnel</span>
+            <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] font-bold">Cloudflare Tunnel</span>
             {/* Status badge */}
             <span className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono border ${
               tunnelLoading
                 ? 'bg-sky-500/5 border-sky-500/20 text-sky-400'
                 : (tunnelStatus.active
                     ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'
-                    : 'bg-slate-900/60 border-white/5 text-slate-500')
+                    : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)]')
             }`}>
               {tunnelLoading ? (
                 <span className="h-1.5 w-1.5 rounded-full border border-sky-400/30 border-t-sky-400 animate-spin" />
               ) : (
                 <span className={`h-1.5 w-1.5 rounded-full ${
-                  tunnelStatus.active ? 'bg-emerald-400 animate-pulse shadow-[0_0_6px_#10b981]' : 'bg-slate-600'
+                  tunnelStatus.active ? 'bg-emerald-400 animate-pulse shadow-[0_0_6px_#10b981]' : 'bg-[var(--text-dark)]'
                 }`} />
               )}
               <span className="font-semibold">
@@ -261,7 +270,7 @@ export function RightSidebar({
                 </a>
                 <button
                   onClick={handleCopy}
-                  className="text-slate-400 hover:text-purple-300 p-1 rounded transition-colors flex items-center cursor-pointer"
+                  className="text-slate-400 hover:text-[var(--color-primary)] p-1 rounded transition-colors flex items-center cursor-pointer"
                   title="Copy Tunnel URL"
                 >
                   {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
@@ -295,7 +304,7 @@ export function RightSidebar({
                 <button
                   onClick={() => handleStartTunnel('quick')}
                   disabled={tunnelLoading}
-                  className={`flex-1 py-2 rounded-lg border border-purple-500/25 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 hover:text-purple-200 text-xs font-medium transition-all ${
+                  className={`flex-1 py-2 rounded-lg border border-[var(--color-primary)]/25 bg-[var(--color-primary)]/10 hover:bg-[var(--color-primary)]/20 text-[var(--color-primary)] text-xs font-medium transition-all ${
                     tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                   }`}
                 >
@@ -304,7 +313,7 @@ export function RightSidebar({
                 <button
                   onClick={() => handleStartTunnel('token')}
                   disabled={tunnelLoading}
-                  className={`flex-1 py-2 rounded-lg border border-white/10 bg-slate-900/60 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-medium transition-all ${
+                  className={`flex-1 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] text-xs font-medium transition-all ${
                     tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                   }`}
                 >
@@ -316,20 +325,27 @@ export function RightSidebar({
         </div>
 
         {/* Quick Actions Section */}
-        <div className="flex flex-col gap-2 pt-4 border-t border-white/5">
-          <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Actions</span>
+        <div className="flex flex-col gap-2 pt-4 border-t border-[var(--border-color)]">
+          <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] font-bold mb-1">Actions</span>
           <button
-            className="flex items-center gap-3 p-3 rounded-lg border bg-slate-900/40 border-white/5 text-slate-300 hover:bg-slate-800/40 transition-all text-xs font-medium cursor-pointer w-full text-left"
+            className="flex items-center gap-3 p-3 rounded-lg border text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-all text-xs font-medium cursor-pointer w-full text-left"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--bg-card) 50%, transparent)',
+              borderColor: 'var(--border-color)'
+            }}
             onClick={() => {
               setShowSettingsModal(true);
               onClose();
             }}
           >
-            <Settings size={14} className="text-slate-400" />
+            <Settings size={14} className="text-[var(--text-muted)]" />
             <span>Settings</span>
           </button>
           <button
-            className="flex items-center gap-3 p-3 rounded-lg border bg-slate-900/40 border-white/5 text-red-400 hover:bg-red-950/20 border-red-500/10 transition-all text-xs font-medium cursor-pointer w-full text-left"
+            className="flex items-center gap-3 p-3 rounded-lg border text-red-400 hover:bg-red-950/20 border-red-500/10 transition-all text-xs font-medium cursor-pointer w-full text-left"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--bg-card) 50%, transparent)',
+            }}
             onClick={() => {
               handleLogout();
               onClose();

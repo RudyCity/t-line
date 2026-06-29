@@ -6,6 +6,8 @@ interface FileViewerTabProps {
   filePath: string;
   token: string;
   onSave?: () => void;
+  theme?: string;
+  themeBackground?: string;
 }
 
 function getLanguageFromPath(filePath: string): string {
@@ -49,7 +51,7 @@ function getLanguageFromPath(filePath: string): string {
   }
 }
 
-export function FileViewerTab({ filePath, token, onSave }: FileViewerTabProps) {
+export function FileViewerTab({ filePath, token, onSave, theme, themeBackground }: FileViewerTabProps) {
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   
@@ -100,6 +102,22 @@ export function FileViewerTab({ filePath, token, onSave }: FileViewerTabProps) {
     };
   }, [filePath, token]);
 
+  // Monaco Editor theme effect
+  useEffect(() => {
+    const monacoObj = (window as any).monaco;
+    if (monacoObj) {
+      monacoObj.editor.defineTheme('t-line-theme', {
+        base: theme === 'light' ? 'vs' : 'vs-dark',
+        inherit: true,
+        rules: [],
+        colors: {
+          'editor.background': themeBackground || '#030408',
+        }
+      });
+      monacoObj.editor.setTheme('t-line-theme');
+    }
+  }, [theme, themeBackground]);
+
   // Debounced Auto-Save Effect
   useEffect(() => {
     if (content === null || editedContent === content) return;
@@ -145,11 +163,11 @@ export function FileViewerTab({ filePath, token, onSave }: FileViewerTabProps) {
 
   const handleEditorDidMount = (_editor: any, monaco: any) => {
     monaco.editor.defineTheme('t-line-theme', {
-      base: 'vs-dark',
+      base: theme === 'light' ? 'vs' : 'vs-dark',
       inherit: true,
       rules: [],
       colors: {
-        'editor.background': '#030408',
+        'editor.background': themeBackground || '#030408',
       }
     });
     monaco.editor.setTheme('t-line-theme');
@@ -159,9 +177,9 @@ export function FileViewerTab({ filePath, token, onSave }: FileViewerTabProps) {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-full bg-[#030408] overflow-hidden animate-pulse">
+      <div className="flex flex-col h-full bg-[var(--bg-main)] overflow-hidden animate-pulse">
         {/* Skeleton Header */}
-        <div className="flex items-center justify-between px-4 py-2 bg-slate-950/80 border-b border-white/5 shrink-0">
+        <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0">
           <div className="h-4 w-48 bg-slate-900 rounded" />
           <div className="h-6 w-16 bg-slate-900 rounded" />
         </div>
@@ -180,9 +198,9 @@ export function FileViewerTab({ filePath, token, onSave }: FileViewerTabProps) {
   }
 
   return (
-    <div className="flex flex-col flex-1 w-full h-full bg-[#030408] overflow-hidden">
+    <div className="flex flex-col flex-1 w-full h-full bg-[var(--bg-main)] overflow-hidden">
       {/* File Header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-950/80 border-b border-white/5 shrink-0">
+      <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0">
         <div className="flex items-center gap-2 truncate">
           <FileCode size={14} className="text-purple-400 shrink-0" />
           <span className="text-xs font-mono text-slate-300 truncate" title={filePath}>
@@ -230,13 +248,13 @@ export function FileViewerTab({ filePath, token, onSave }: FileViewerTabProps) {
           height="100%"
           width="100%"
           language={getLanguageFromPath(filePath)}
-          theme="vs-dark"
+          theme="t-line-theme"
           value={editedContent}
           onChange={(value) => setEditedContent(value || '')}
           onMount={handleEditorDidMount}
           loading={
-            <div className="absolute inset-0 flex items-center justify-center bg-[#030408]">
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-purple-500 border-t-transparent" />
+            <div className="absolute inset-0 flex items-center justify-center bg-[var(--bg-main)]">
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-[var(--color-primary)] border-t-transparent" />
             </div>
           }
           options={{
