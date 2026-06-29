@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.86] - 2026-06-29
+
+### Changed
+- **Minimalist Welcome Dashboard**: Redesigned the Empty Dashboard welcome page to be sleek and minimalist: removed the heavy colorful background gradients and glow behind the card; removed the pulsing animation (`animate-pulse`) from the primary CTA button and the Folder icon; simplified the card layout with a clean border (`border-white/5`) and a subtle dark-slate background (`bg-[#090c14]/40`).
+
+---
+
 ## [1.3.85] - 2026-06-29
 
 ### Added
