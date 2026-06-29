@@ -376,7 +376,8 @@ export function useWorkspaceHandlers({
     if (matchedTab) {
       setActiveTabId(matchedTab.id);
     } else {
-      const wt = ws.worktrees.find(w => w.path === wtPath);
+      const wts = ws.worktrees || [];
+      const wt = wts.find(w => w.path === wtPath);
       const name = `${ws.name} (${wt?.branch || 'worktree'})`;
       openTerminal(name, wtPath, ws.defaultShell);
     }

@@ -218,7 +218,10 @@ function WorktreeList({
   const [expanded, setExpanded] = useState(false);
 
   const sortedWts = useMemo(
-    () => [...w.worktrees].sort((a, b) => (a.isMain ? -1 : b.isMain ? 1 : 0)),
+    () => {
+      const wts = w.worktrees || [];
+      return [...wts].sort((a, b) => (a.isMain ? -1 : b.isMain ? 1 : 0));
+    },
     [w.worktrees]
   );
 
@@ -228,7 +231,7 @@ function WorktreeList({
 
   const hiddenCount = sortedWts.length - BRANCH_LIMIT;
 
-  if (!w.isGit || w.worktrees.length === 0) return null;
+  if (!w.isGit || !w.worktrees || w.worktrees.length === 0) return null;
 
   return (
     <div className="mt-0.5 flex flex-col">
@@ -448,8 +451,10 @@ export function WorkspaceList({
    * then filter by search query.
    */
   const displayedWorkspaces = useMemo(() => {
-    const hasDirty = (w: WorkspaceInfo) =>
-      w.worktrees.some(wt => wt.isDirty && (wt.dirtyCount ?? 0) > 0);
+    const hasDirty = (w: WorkspaceInfo) => {
+      const wts = w.worktrees || [];
+      return wts.some(wt => wt.isDirty && (wt.dirtyCount ?? 0) > 0);
+    };
 
     const q = search.trim().toLowerCase();
     const filtered = q
@@ -494,7 +499,8 @@ export function WorkspaceList({
       <div className="workspace-list flex flex-col gap-1.5 px-3">
         {displayedWorkspaces.map(w => {
           const isActive = activeWorkspaceId === w.id;
-          const totalDirty = w.worktrees.reduce((acc, wt) => acc + (wt.dirtyCount ?? 0), 0);
+          const wts = w.worktrees || [];
+          const totalDirty = wts.reduce((acc, wt) => acc + (wt.dirtyCount ?? 0), 0);
           const hasDirtyChanges = totalDirty > 0;
           const isDropdownOpen = openDropdownId === w.id;
 
