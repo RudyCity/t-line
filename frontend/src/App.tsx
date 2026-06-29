@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, Fragment } from 'react';
+import { useState, useEffect, useMemo, Fragment, useRef } from 'react';
 import { 
   Folder, 
   Plus, 
@@ -330,6 +330,67 @@ export default function App() {
       fetchDashboardData();
     }
   }, [isAuthenticated]);
+
+  const prevActiveTabIdRef = useRef<string>('');
+  const prevActiveTabPathRef = useRef<string>('');
+
+  // Synchronize active workspace, worktree path, and tab name with the active tab's context
+  useEffect(() => {
+    if (!activeTabId || workspaces.length === 0) return;
+
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    if (!activeTab) return;
+
+    const ws = workspaces.find(w => w.id === activeTab.workspaceId);
+    if (!ws) return;
+
+    // Calculate current active tab path
+    let activeTabPath = '';
+    if (activeTab.type === 'file' && activeTab.filePath) {
+      activeTabPath = activeTab.filePath;
+    } else if (activeTab.type === 'terminal' && activeTab.layout) {
+      const focusedId = activeTab.focusedTerminalId;
+      const inst = focusedId ? terminalInstances[focusedId] : null;
+      if (inst && inst.cwd) {
+        activeTabPath = inst.cwd;
+      }
+    }
+
+    const hasTabIdChanged = activeTabId !== prevActiveTabIdRef.current;
+    const hasTabPathChanged = activeTabPath && activeTabPath !== prevActiveTabPathRef.current;
+
+    if (hasTabIdChanged || hasTabPathChanged) {
+      prevActiveTabIdRef.current = activeTabId;
+      if (activeTabPath) {
+        prevActiveTabPathRef.current = activeTabPath;
+      }
+
+      // Sync workspace selection
+      if (!panelWorkspace || panelWorkspace.id !== ws.id) {
+        setPanelWorkspace(ws);
+      }
+
+      // Sync worktree path selection
+      const matchedWtPath = getTabWorktreePath(activeTab, ws, terminalInstances);
+      const wtObj = ws.worktrees?.find(wt => wt.path === matchedWtPath);
+      const targetWtPath = (wtObj && !wtObj.isMain) ? matchedWtPath : null;
+
+      if (panelWorktreePath !== targetWtPath) {
+        setPanelWorktreePath(targetWtPath);
+      }
+
+      // Dynamically sync terminal tab title with the current worktree branch name
+      if (activeTab.type === 'terminal') {
+        const expectedName = matchedWtPath 
+          ? `${ws.name} (${wtObj?.branch || 'worktree'})`
+          : ws.name;
+        
+        if (activeTab.name !== expectedName) {
+          setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, name: expectedName } : t));
+        }
+      }
+    }
+  }, [activeTabId, tabs, workspaces, terminalInstances, panelWorkspace, panelWorktreePath, setTabs]);
 
 
   useEffect(() => {

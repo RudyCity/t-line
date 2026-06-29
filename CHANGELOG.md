@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.113] - 2026-06-29
+
+### Added
+- **Bidirectional Tab and Sidebar Workspace/Worktree Synchronization**:
+  - Implemented a `useEffect` hook in `App.tsx` utilizing a `useRef` to track previous tab state changes.
+  - Automatically switches the active sidebar workspace and selected worktree branch when switching between tabs.
+  - Automatically updates the sidebar context when a terminal shell's working directory (CWD) changes.
+  - Automatically updates active terminal tab titles dynamically if the Git branch of the worktree changes.
+
+---
+
 ## [1.3.112] - 2026-06-29
 
 ### Fixed
