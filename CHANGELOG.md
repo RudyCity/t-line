@@ -2,6 +2,19 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.102] - 2026-06-29
+
+### Added
+- **Appearance Settings**: Added an "Appearance" tab inside the SettingsModal allowing rich customization of themes, colors, and fonts:
+  - **Theme Presets**: Switch between *Default Dark*, *Dracula*, *Cyberpunk Neon*, *Forest Green*, *Nord Frost*, and *Light Mode*.
+  - **Color Customization**: Choose from 7 curated accent colors or specify any custom color using a native color picker. Accent colors dynamically derive states like glows, borders, shadows, and radial grid backgrounds via CSS `color-mix()`.
+  - **UI Font Selection**: Customize the main UI font family (Outfit, Inter, or System Default). Loaded new font families via Google Fonts in `index.html`.
+  - **Terminal Font Selection**: Customize the terminal/editor font family (JetBrains Mono, Fira Code, Source Code Pro, Courier New, or System Monospace).
+  - **Terminal Font Size Settings**: Control the terminal font size dynamically through a range slider.
+  - **Unified xterm.js styling**: Updated terminal instances to dynamically update font families, cursor colors, selection backgrounds, and theme colors on changes.
+
+---
+
 ## [1.3.101] - 2026-06-29
 
 ### Removed

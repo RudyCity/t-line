@@ -1,6 +1,7 @@
 import React from 'react';
-import { Info, Shield, Eye, EyeOff, RefreshCw, Download, CheckCircle, XCircle, Loader2, ArrowUpCircle } from 'lucide-react';
+import { Info, Shield, Eye, EyeOff, RefreshCw, Download, CheckCircle, XCircle, Loader2, ArrowUpCircle, Palette } from 'lucide-react';
 import { FormField, Input, Button } from './Form';
+import { THEMES, UI_FONTS, MONO_FONTS } from '../hooks/useThemeAndFonts';
 
 export interface SettingsModalProps {
   show: boolean;
@@ -11,6 +12,16 @@ export interface SettingsModalProps {
   appVersion?: string;
   updateAvailable?: boolean;
   latestVersion?: string;
+  theme?: string;
+  setTheme?: (t: string) => void;
+  accentColor?: string;
+  setAccentColor?: (c: string) => void;
+  fontSans?: string;
+  setFontSans?: (f: string) => void;
+  fontMono?: string;
+  setFontMono?: (f: string) => void;
+  terminalFontSize?: number;
+  setTerminalFontSize?: (s: number) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -21,9 +32,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   showAlert,
   appVersion,
   updateAvailable,
-  latestVersion
+  latestVersion,
+  theme = 'default',
+  setTheme = () => {},
+  accentColor = '#a855f7',
+  setAccentColor = () => {},
+  fontSans = 'Outfit',
+  setFontSans = () => {},
+  fontMono = 'JetBrains Mono',
+  setFontMono = () => {},
+  terminalFontSize = 12,
+  setTerminalFontSize = () => {}
 }) => {
-  const [activeTab, setActiveTab] = React.useState<'general' | 'security' | 'connections'>('general');
+  const [activeTab, setActiveTab] = React.useState<'general' | 'appearance' | 'security' | 'connections'>('general');
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
@@ -200,6 +221,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
           <button
             type="button"
+            className={`sidebar-panel-tab ${activeTab === 'appearance' ? 'active' : ''}`}
+            onClick={() => setActiveTab('appearance')}
+            style={{ padding: '12px' }}
+          >
+            <Palette size={14} />
+            <span>Appearance</span>
+          </button>
+          <button
+            type="button"
             className={`sidebar-panel-tab ${activeTab === 'security' ? 'active' : ''}`}
             onClick={() => setActiveTab('security')}
             style={{ padding: '12px' }}
@@ -330,13 +360,199 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '8px' }}>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Client OS Platform</span>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-main)' }}>
                     {window.navigator.userAgent.includes('Windows') ? 'Windows' : 'Unix-like'}
                   </span>
                 </div>
               </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
+                <Button type="button" onClick={onClose}>Close</Button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'appearance' && (
+            <div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                
+                {/* Theme Selector */}
+                <div>
+                  <h4 style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>
+                    Theme Preset
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                    {Object.entries(THEMES).map(([key, preset]) => {
+                      const isSelected = theme === key;
+                      return (
+                        <div
+                          key={key}
+                          onClick={() => setTheme(key)}
+                          style={{
+                            padding: '8px 10px',
+                            borderRadius: '8px',
+                            background: isSelected ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
+                            border: isSelected ? '1.5px solid var(--color-primary)' : '1.5px solid var(--border-color)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            transition: 'all 0.2s ease',
+                            boxShadow: isSelected ? '0 0 8px var(--color-primary-glow)' : 'none'
+                          }}
+                        >
+                          <span style={{ fontSize: '0.75rem', fontWeight: isSelected ? 600 : 400, color: isSelected ? 'var(--text-main)' : 'var(--text-muted)' }}>
+                            {preset.name}
+                          </span>
+                          <div style={{ display: 'flex', gap: '3px' }}>
+                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: preset.bgMain, border: '1px solid rgba(255,255,255,0.1)' }} />
+                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: preset.bgSidebar, border: '1px solid rgba(255,255,255,0.1)' }} />
+                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: preset.defaultAccent, border: '1px solid rgba(255,255,255,0.1)' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Accent Color Selector */}
+                <div>
+                  <h4 style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>
+                    Primary Accent Color
+                  </h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                    {[
+                      { name: 'Violet', value: '#a855f7' },
+                      { name: 'Blue', value: '#3b82f6' },
+                      { name: 'Emerald', value: '#10b981' },
+                      { name: 'Amber', value: '#f59e0b' },
+                      { name: 'Rose', value: '#ef4444' },
+                      { name: 'Cyan', value: '#06b6d4' },
+                      { name: 'Indigo', value: '#6366f1' },
+                    ].map(preset => {
+                      const isSelected = accentColor.toLowerCase() === preset.value.toLowerCase();
+                      return (
+                        <button
+                          key={preset.value}
+                          type="button"
+                          onClick={() => setAccentColor(preset.value)}
+                          style={{
+                            width: '22px',
+                            height: '22px',
+                            borderRadius: '50%',
+                            background: preset.value,
+                            border: isSelected ? '2px solid #ffffff' : '1px solid rgba(255,255,255,0.2)',
+                            cursor: 'pointer',
+                            padding: 0,
+                            boxShadow: isSelected ? `0 0 6px ${preset.value}` : 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'transform 0.1s ease',
+                            transform: isSelected ? 'scale(1.1)' : 'none',
+                          }}
+                          title={preset.name}
+                        >
+                          {isSelected && (
+                            <span style={{ color: '#ffffff', fontSize: '9px', fontWeight: 'bold' }}>✓</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                    
+                    {/* Custom Color Input */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '4px' }}>
+                      <input
+                        type="color"
+                        value={accentColor}
+                        onChange={(e) => setAccentColor(e.target.value)}
+                        style={{
+                          width: '22px',
+                          height: '22px',
+                          padding: 0,
+                          border: 'none',
+                          borderRadius: '50%',
+                          background: 'none',
+                          cursor: 'pointer'
+                        }}
+                        title="Custom Color"
+                      />
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                        {accentColor.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fonts Row */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>UI Font Family</label>
+                    <select
+                      value={fontSans}
+                      onChange={(e) => setFontSans(e.target.value)}
+                      style={{
+                        padding: '6px 8px',
+                        borderRadius: '6px',
+                        background: 'rgba(0, 0, 0, 0.2)',
+                        border: '1px solid var(--border-color)',
+                        fontSize: '0.75rem',
+                        outline: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-main)'
+                      }}
+                    >
+                      {Object.keys(UI_FONTS).map(f => (
+                        <option key={f} value={f}>{f}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Terminal Font Family</label>
+                    <select
+                      value={fontMono}
+                      onChange={(e) => setFontMono(e.target.value)}
+                      style={{
+                        padding: '6px 8px',
+                        borderRadius: '6px',
+                        background: 'rgba(0, 0, 0, 0.2)',
+                        border: '1px solid var(--border-color)',
+                        fontSize: '0.75rem',
+                        outline: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-main)'
+                      }}
+                    >
+                      {Object.keys(MONO_FONTS).map(f => (
+                        <option key={f} value={f}>{f}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Terminal Font Size Slider */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Terminal Font Size</label>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-main)', fontFamily: 'var(--font-mono)' }}>{terminalFontSize}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="8"
+                    max="24"
+                    value={terminalFontSize}
+                    onChange={(e) => setTerminalFontSize(Number(e.target.value))}
+                    style={{
+                      width: '100%',
+                      accentColor: 'var(--color-primary)',
+                      cursor: 'pointer'
+                    }}
+                  />
+                </div>
+
+              </div>
+              
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
                 <Button type="button" onClick={onClose}>Close</Button>
               </div>

@@ -27,6 +27,10 @@ interface TerminalInstanceProps {
   refreshTrigger?: number;
   isFocusedPane?: boolean;
   pid?: number;
+  fontFamily?: string;
+  accentColor?: string;
+  themeBackground?: string;
+  themeForeground?: string;
 }
 
 // ── Search Bar Sub-Component ──────────────────────────────────
@@ -344,7 +348,8 @@ function TerminalContextMenu({ x, y, hasSelection, onCopy, onPaste, onSelectAll,
 export function TerminalInstance({
   tab, active, wsConnected, fontSize,
   onTitleChange, onActiveProcessesChange, onFocus, refreshTrigger,
-  isFocusedPane = false, pid
+  isFocusedPane = false, pid,
+  fontFamily, accentColor, themeBackground, themeForeground
 }: TerminalInstanceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -355,7 +360,6 @@ export function TerminalInstance({
   const onFocusRef = useRef(onFocus);
 
   const [showSearch, setShowSearch] = useState(false);
-  const isFirstRender = useRef(true);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [hasSelection, setHasSelection] = useState(false);
   const [cursorPos, setCursorPos] = useState({ col: 1, row: 1 });
@@ -510,7 +514,7 @@ export function TerminalInstance({
       cursorBlink: true,
       cursorStyle: 'block',
       fontSize: actualFontSize,
-      fontFamily: 'JetBrains Mono, Fira Code, Courier New, monospace',
+      fontFamily: fontFamily || 'JetBrains Mono, Fira Code, Courier New, monospace',
       lineHeight: 1.2,
       letterSpacing: 0,
       scrollback: 3000, // Reduced from 10000 to save memory per terminal tab
@@ -523,13 +527,13 @@ export function TerminalInstance({
       rightClickSelectsWord: true,
       overviewRulerWidth: 10,
       theme: {
-        background: '#000000',
-        foreground: '#f8fafc',
-        cursor: '#a855f7',
-        cursorAccent: '#000000',
-        selectionBackground: 'rgba(168, 85, 247, 0.3)',
+        background: themeBackground || '#000000',
+        foreground: themeForeground || '#f8fafc',
+        cursor: accentColor || '#a855f7',
+        cursorAccent: themeBackground || '#000000',
+        selectionBackground: accentColor ? `color-mix(in srgb, ${accentColor} 30%, transparent)` : 'rgba(168, 85, 247, 0.3)',
         selectionForeground: '#ffffff',
-        selectionInactiveBackground: 'rgba(168, 85, 247, 0.15)',
+        selectionInactiveBackground: accentColor ? `color-mix(in srgb, ${accentColor} 15%, transparent)` : 'rgba(168, 85, 247, 0.15)',
         black: '#4a5568',
         red: '#ef4444',
         green: '#10b981',
@@ -720,18 +724,54 @@ export function TerminalInstance({
     }
   }, [active, debouncedFit]);
 
-  // ── Font size ──────────────────────────────────────────────
+  // ── Font size & Family ──────────────────────────────────────
   useEffect(() => {
-    if (isFirstRender.current) { isFirstRender.current = false; return; }
     if (terminalRef.current) {
       try {
         terminalRef.current.options.fontSize = actualFontSize;
-        debouncedFit();
+        if (fontFamily) {
+          terminalRef.current.options.fontFamily = fontFamily;
+        }
       } catch (e) {
-        console.error('Error changing terminal font size:', e);
+        console.error('Error changing terminal font settings:', e);
       }
     }
-  }, [actualFontSize, debouncedFit]);
+  }, [actualFontSize, fontFamily, debouncedFit]);
+
+  // ── Theme colors ───────────────────────────────────────────
+  useEffect(() => {
+    if (terminalRef.current) {
+      try {
+        terminalRef.current.options.theme = {
+          background: themeBackground || '#000000',
+          foreground: themeForeground || '#f8fafc',
+          cursor: accentColor || '#a855f7',
+          cursorAccent: themeBackground || '#000000',
+          selectionBackground: accentColor ? `color-mix(in srgb, ${accentColor} 30%, transparent)` : 'rgba(168, 85, 247, 0.3)',
+          selectionForeground: '#ffffff',
+          selectionInactiveBackground: accentColor ? `color-mix(in srgb, ${accentColor} 15%, transparent)` : 'rgba(168, 85, 247, 0.15)',
+          black: '#4a5568',
+          red: '#ef4444',
+          green: '#10b981',
+          yellow: '#f59e0b',
+          blue: '#3b82f6',
+          magenta: '#a855f7',
+          cyan: '#06b6d4',
+          white: '#cbd5e1',
+          brightBlack: '#718096',
+          brightRed: '#f87171',
+          brightGreen: '#34d399',
+          brightYellow: '#fbbf24',
+          brightBlue: '#60a5fa',
+          brightMagenta: '#c084fc',
+          brightCyan: '#22d3ee',
+          brightWhite: '#f1f5f9',
+        };
+      } catch (e) {
+        console.error('Error updating terminal theme:', e);
+      }
+    }
+  }, [accentColor, themeBackground, themeForeground]);
 
   // ── Search toggle keyboard (Ctrl+Shift+F) ─────────────────
   useEffect(() => {

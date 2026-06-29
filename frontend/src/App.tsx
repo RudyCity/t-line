@@ -23,6 +23,7 @@ import { useTunnel } from './hooks/useTunnel';
 import { useSystemStats } from './hooks/useSystemStats';
 import { useWorkspaces } from './hooks/useWorkspaces';
 import { useUpdateChecker } from './hooks/useUpdateChecker';
+import { useThemeAndFonts } from './hooks/useThemeAndFonts';
 import { useTabUiHandlers } from './hooks/useTabUiHandlers';
 import { useAuth } from './hooks/useAuth';
 import { useTerminals, WorkspaceInfo } from './hooks/useTerminals';
@@ -42,6 +43,19 @@ import { TPlusLogo } from './components/TPlusLogo';
 import { TabTooltip, TabContextMenu } from './components/TabUiComponents';
 
 export default function App() {
+  const {
+    theme,
+    setTheme,
+    accentColor,
+    setAccentColor,
+    fontSans,
+    setFontSans,
+    fontMono,
+    setFontMono,
+    THEMES,
+    MONO_FONTS
+  } = useThemeAndFonts();
+
   const {
     setupRequired,
     isAuthenticated,
@@ -152,6 +166,7 @@ export default function App() {
     workspaceActiveTab,
     setWorkspaceActiveTab,
     terminalFontSize,
+    setTerminalFontSize,
     defaultShell,
     setDefaultShell,
     handleZoomIn,
@@ -797,6 +812,10 @@ export default function App() {
                       splitFocusedTerminal={splitFocusedTerminal}
                       hasMultiplePanes={activeTab.layout.type === 'split'}
                       refreshTriggers={refreshTriggers}
+                      fontFamily={MONO_FONTS[fontMono as keyof typeof MONO_FONTS]}
+                      accentColor={accentColor}
+                      themeBackground={THEMES[theme]?.bgMain}
+                      themeForeground={THEMES[theme]?.textMain}
                     />
                   );
                 }
@@ -867,6 +886,16 @@ export default function App() {
         appVersion={appVersion}
         updateAvailable={updateAvailable}
         latestVersion={latestVersion}
+        theme={theme}
+        setTheme={setTheme}
+        accentColor={accentColor}
+        setAccentColor={setAccentColor}
+        fontSans={fontSans}
+        setFontSans={setFontSans}
+        fontMono={fontMono}
+        setFontMono={setFontMono}
+        terminalFontSize={terminalFontSize}
+        setTerminalFontSize={setTerminalFontSize}
       />
 
       <ShortcutHelpModal

@@ -18,6 +18,10 @@ export interface SplitLayoutRendererProps {
   hasMultiplePanes: boolean;
   onTerminalFocus?: () => void;
   refreshTriggers?: Record<string, number>;
+  fontFamily?: string;
+  accentColor?: string;
+  themeBackground?: string;
+  themeForeground?: string;
 }
 
 export function SplitLayoutRenderer({
@@ -34,7 +38,11 @@ export function SplitLayoutRenderer({
   splitFocusedTerminal,
   hasMultiplePanes,
   onTerminalFocus,
-  refreshTriggers
+  refreshTriggers,
+  fontFamily,
+  accentColor,
+  themeBackground,
+  themeForeground
 }: SplitLayoutRendererProps): React.JSX.Element | null {
   if (node.type === 'leaf') {
     const term = terminalInstances[node.terminalId];
@@ -68,6 +76,10 @@ export function SplitLayoutRenderer({
           }}
           refreshTrigger={refreshTriggers?.[term.id] || 0}
           isFocusedPane={isFocused && hasMultiplePanes}
+          fontFamily={fontFamily}
+          accentColor={accentColor}
+          themeBackground={themeBackground}
+          themeForeground={themeForeground}
         />
         
         {/* Floating action bar at top-right of each pane */}
@@ -131,6 +143,10 @@ export function SplitLayoutRenderer({
           hasMultiplePanes={hasMultiplePanes}
           onTerminalFocus={onTerminalFocus}
           refreshTriggers={refreshTriggers}
+          fontFamily={fontFamily}
+          accentColor={accentColor}
+          themeBackground={themeBackground}
+          themeForeground={themeForeground}
         />
       </Panel>
       <PanelResizeHandle
@@ -157,6 +173,10 @@ export function SplitLayoutRenderer({
           hasMultiplePanes={hasMultiplePanes}
           onTerminalFocus={onTerminalFocus}
           refreshTriggers={refreshTriggers}
+          fontFamily={fontFamily}
+          accentColor={accentColor}
+          themeBackground={themeBackground}
+          themeForeground={themeForeground}
         />
       </Panel>
     </PanelGroup>
