@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { GitFileStatus } from './components/FilePanel';
 import { 
   Folder, 
@@ -23,6 +23,9 @@ import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, S
 import { useTunnel } from './hooks/useTunnel';
 import { useSystemStats } from './hooks/useSystemStats';
 import { useWorkspaces } from './hooks/useWorkspaces';
+import { useUpdateChecker } from './hooks/useUpdateChecker';
+import { useTabUiHandlers } from './hooks/useTabUiHandlers';
+import { useAuth } from './hooks/useAuth';
 import { useTerminals, WorkspaceInfo, getTerminalIds } from './hooks/useTerminals';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { SplitLayoutRenderer } from './components/SplitLayoutRenderer';
@@ -61,11 +64,17 @@ const TPlusLogo = ({ size = 16 }: { size?: number }) => (
 );
 
 export default function App() {
-  const [setupRequired, setSetupRequired] = useState<boolean | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [authError, setAuthError] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(true);
+  const {
+    setupRequired,
+    isAuthenticated,
+    authError,
+    password,
+    setPassword,
+    loading,
+    handleSetup,
+    handleLogin,
+    handleLogout
+  } = useAuth();
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
 
   const [wsConnected, setWsConnected] = useState<boolean>(false);
@@ -131,63 +140,12 @@ export default function App() {
   const [editingWorkspace, setEditingWorkspace] = useState<WorkspaceInfo | null>(null);
 
   const [showMobileKeyboard, setShowMobileKeyboard] = useState<boolean>(false);
-  const [appVersion, setAppVersion] = useState<string>('1.3.73');
-  const [latestVersion, setLatestVersion] = useState<string>('');
-  const [updateAvailable, setUpdateAvailable] = useState<boolean>(false);
-
-  const isVersionGreater = (latest: string, current: string): boolean => {
-    const lParts = latest.split('.').map(Number);
-    const cParts = current.split('.').map(Number);
-    for (let i = 0; i < Math.max(lParts.length, cParts.length); i++) {
-      const l = lParts[i] || 0;
-      const c = cParts[i] || 0;
-      if (l > c) return true;
-      if (l < c) return false;
-    }
-    return false;
-  };
-
-  const checkUpdates = async (currentVer: string) => {
-    try {
-      const res = await fetch('https://api.github.com/repos/RudyCity/t-line/releases/latest');
-      if (!res.ok) return;
-      const data = await res.json();
-      const latest = data.tag_name;
-      if (!latest) return;
-      const cleanLatest = latest.startsWith('v') ? latest.slice(1) : latest;
-      const cleanCurrent = currentVer.startsWith('v') ? currentVer.slice(1) : currentVer;
-      
-      if (isVersionGreater(cleanLatest, cleanCurrent)) {
-        setLatestVersion(cleanLatest);
-        setUpdateAvailable(true);
-        
-        // Dispatch toast notification after a small delay
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('tline-toast', {
-            detail: { message: `New Update Available: v${cleanLatest}! Click the version badge in the footer to download.` }
-          }));
-        }, 3000);
-      }
-    } catch (err) {
-      console.error('Failed to check for updates:', err);
-    }
-  };
-
-  const fetchLocalVersion = async () => {
-    try {
-      const res = await fetch('/api/system/version');
-      const data = await res.json();
-      if (data.version) {
-        setAppVersion(data.version);
-        checkUpdates(data.version);
-      }
-    } catch (e) {
-      console.error('Failed to fetch local version:', e);
-      checkUpdates('1.3.73');
-    }
-  };
-  const [activeTooltip, setActiveTooltip] = useState<{ id: string; x: number; y: number; title: string; branch?: string; path: string } | null>(null);
-  const [tabContextMenu, setTabContextMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
+  const {
+    appVersion,
+    latestVersion,
+    updateAvailable,
+    fetchLocalVersion
+  } = useUpdateChecker();
 
   // Workspaces Hook
   const {
@@ -275,6 +233,27 @@ export default function App() {
     refreshTerminal,
     refreshTriggers
   } = useTerminals(workspaces, () => setSidebarOpen(false));
+
+  const {
+    activeTooltip,
+    tabContextMenu,
+    getTabGitBranch,
+    handleTabMouseEnter,
+    handleTabMouseLeave,
+    handleTabClick,
+    handleTabContextMenu,
+    handleCloseOtherTabs,
+    handleCloseAllTabs
+  } = useTabUiHandlers({
+    tabs,
+    setTabs,
+    activeTabId,
+    setActiveTabId,
+    terminalInstances,
+    setTerminalInstances,
+    workspaces,
+    panelWorkspace
+  });
 
   const { startResizing } = useLayoutHelpers(
     sidebarWidth,
@@ -633,7 +612,6 @@ export default function App() {
 
   // Lifecycle
   useEffect(() => {
-    checkAuth();
     fetchLocalVersion();
 
     if ((window as any).electron) {
@@ -688,105 +666,8 @@ export default function App() {
     }
   }, [workspaces, activePanel, panelWorkspace, isAuthenticated]);
 
-  const checkAuth = async () => {
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlToken = urlParams.get('token');
-      if (urlToken) {
-        localStorage.setItem('token', urlToken);
-        wsManager.setToken(urlToken);
-      }
-
-      const token = localStorage.getItem('token');
-      
-      // 1. Check setup status
-      const setupRes = await fetch('/api/auth/setup-status');
-      const setupData = await setupRes.json();
-      setSetupRequired(setupData.setupRequired);
-
-      if (setupData.setupRequired) {
-        setLoading(false);
-        return;
-      }
-
-      // 2. Verify token if exists
-      if (token) {
-        const verifyRes = await fetch('/api/auth/verify', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const verifyData = await verifyRes.json();
-        if (verifyData.valid) {
-          setIsAuthenticated(true);
-        } else {
-          localStorage.removeItem('token');
-        }
-      }
-    } catch (e) {
-      console.error('Auth check failed:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSetup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError('');
-    if (password.length < 6) {
-      setAuthError('Password must be at least 6 characters.');
-      return;
-    }
-    try {
-      const res = await fetch('/api/auth/setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
-      });
-      const data = await res.json();
-      if (data.success) {
-        localStorage.setItem('token', data.token);
-        wsManager.setToken(data.token);
-        setIsAuthenticated(true);
-        setSetupRequired(false);
-      } else {
-        setAuthError(data.error);
-      }
-    } catch (e) {
-      setAuthError('Failed to execute setup.');
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError('');
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
-      });
-      const data = await res.json();
-      if (data.success) {
-        localStorage.setItem('token', data.token);
-        wsManager.setToken(data.token);
-        setIsAuthenticated(true);
-      } else {
-        setAuthError(data.error);
-      }
-    } catch (e) {
-      setAuthError('Failed to execute login.');
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('tline-tabs-v2');
-    localStorage.removeItem('tline-terminal-instances-v2');
-    localStorage.removeItem('tline-active-tab-id');
-    setTabs([]);
-    setTerminalInstances({});
-    setActiveTabId('');
-    setIsAuthenticated(false);
-    setPassword('');
+  const triggerLogout = () => {
+    handleLogout(setTabs, setTerminalInstances, setActiveTabId);
   };
 
   const checkActiveSessions = async () => {
@@ -823,147 +704,6 @@ export default function App() {
       }));
     }
   };
-
-  const getTabGitBranch = (t: any): string | null => {
-    const isFile = t.type === 'file';
-    const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
-    const path = isFile ? (t.filePath || '') : (focusedInst?.cwd || t.cwd || '');
-    if (!path) return null;
-
-    const normPath = path.toLowerCase().replace(/\\/g, '/');
-
-    const isUnder = (parent: string, child: string) => {
-      const normParent = parent.toLowerCase().replace(/\\/g, '/');
-      return child === normParent || child.startsWith(normParent + '/');
-    };
-
-    for (const w of workspaces) {
-      if (w.isGit) {
-        for (const wt of w.worktrees) {
-          if (isUnder(wt.path, normPath)) {
-            return wt.branch || 'detached';
-          }
-        }
-      }
-    }
-    return null;
-  };
-
-  const handleTabMouseEnter = (e: React.MouseEvent<HTMLDivElement>, t: any) => {
-    if (tabContextMenu) return;
-    const isFile = t.type === 'file';
-    const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
-    const shellType = focusedInst?.shellType || '';
-    const displayName = isFile ? t.name : (focusedInst?.name || t.name);
-    const path = isFile ? (t.filePath || '') : (focusedInst?.cwd || t.cwd || '');
-    const branch = getTabGitBranch(t);
-    const rect = e.currentTarget.getBoundingClientRect();
-    setActiveTooltip({
-      id: t.id,
-      x: rect.left + rect.width / 2,
-      y: rect.bottom + 8,
-      title: isFile ? `File: ${displayName}` : `Terminal: ${displayName}${shellType ? ` (${shellType})` : ''}`,
-      branch: branch || undefined,
-      path
-    });
-  };
-
-  const handleTabMouseLeave = () => {
-    setActiveTooltip(null);
-  };
-
-  const handleTabClick = (t: any) => {
-    setActiveTabId(t.id);
-    setActiveTooltip(null);
-  };
-
-  const handleTabContextMenu = (e: React.MouseEvent, tabId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setActiveTooltip(null);
-    setTabContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      tabId
-    });
-  };
-
-  useEffect(() => {
-    if (!tabContextMenu) return;
-    const closeMenu = () => setTabContextMenu(null);
-    window.addEventListener('click', closeMenu);
-    window.addEventListener('contextmenu', closeMenu);
-    return () => {
-      window.removeEventListener('click', closeMenu);
-      window.removeEventListener('contextmenu', closeMenu);
-    };
-  }, [tabContextMenu]);
-
-  useEffect(() => {
-    if (activeTooltip && !tabs.some(t => t.id === activeTooltip.id)) {
-      setActiveTooltip(null);
-    }
-  }, [tabs, activeTooltip]);
-
-  const handleCloseOtherTabs = (tabId: string) => {
-    setTabs(prevTabs => {
-      const remainingTabs = prevTabs.filter(t => t.id === tabId || t.workspaceId !== panelWorkspace?.id);
-      const closedTabs = prevTabs.filter(t => t.id !== tabId && t.workspaceId === panelWorkspace?.id);
-      const closedTermIds: string[] = [];
-      closedTabs.forEach(t => {
-        if (t.type === 'terminal' && t.layout) {
-          const termIds = getTerminalIds(t.layout);
-          termIds.forEach(id => {
-            wsManager.unsubscribe(id);
-            closedTermIds.push(id);
-          });
-        }
-      });
-
-      if (closedTermIds.length > 0) {
-        setTerminalInstances(prev => {
-          const next = { ...prev };
-          closedTermIds.forEach(id => delete next[id]);
-          return next;
-        });
-      }
-
-      if (!remainingTabs.some(t => t.id === activeTabId)) {
-        setActiveTabId(tabId);
-      }
-
-      return remainingTabs;
-    });
-  };
-
-  const handleCloseAllTabs = () => {
-    setTabs(prevTabs => {
-      const remainingTabs = prevTabs.filter(t => t.workspaceId !== panelWorkspace?.id);
-      const closedTabs = prevTabs.filter(t => t.workspaceId === panelWorkspace?.id);
-      const closedTermIds: string[] = [];
-      closedTabs.forEach(t => {
-        if (t.type === 'terminal' && t.layout) {
-          const termIds = getTerminalIds(t.layout);
-          termIds.forEach(id => {
-            wsManager.unsubscribe(id);
-            closedTermIds.push(id);
-          });
-        }
-      });
-
-      if (closedTermIds.length > 0) {
-        setTerminalInstances(prev => {
-          const next = { ...prev };
-          closedTermIds.forEach(id => delete next[id]);
-          return next;
-        });
-      }
-
-      setActiveTabId('');
-      return remainingTabs;
-    });
-  };
-
   if (loading) {
     return (
       <div className="auth-wrapper">
@@ -1175,7 +915,7 @@ export default function App() {
         panelWorkspace={panelWorkspace}
         terminalInstances={terminalInstances}
         setShowSettingsModal={setShowSettingsModal}
-        handleLogout={handleLogout}
+        handleLogout={triggerLogout}
         terminalFontSize={terminalFontSize}
         defaultShell={defaultShell}
         setDefaultShell={setDefaultShell}
@@ -1302,7 +1042,7 @@ export default function App() {
               <button type="button" className="action-btn" onClick={() => setShowSettingsModal(true)} title="Settings">
                 <Settings size={14} />
               </button>
-              <button type="button" className="action-btn text-slate-400 hover:text-rose-400" onClick={handleLogout} title="Log out">
+              <button type="button" className="action-btn text-slate-400 hover:text-rose-400" onClick={triggerLogout} title="Log out">
                 <LogOut size={14} />
               </button>
             </div>

@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.97] - 2026-06-29
+
+### Refactored
+- **Code Modularization (App.tsx)**: Refactored the core frontend `App.tsx` file to improve maintainability and strictly conform to the 1,000-line limit:
+  - Extracted update checking and GitHub release checks to a new custom hook `useUpdateChecker.ts`.
+  - Extracted tab context menus, tooltips, and tab closure actions to a new custom hook `useTabUiHandlers.ts`.
+  - Extracted authentication lifecycle, login, and setup checks to a new custom hook `useAuth.ts`.
+  - Reduced `App.tsx` file size from 1,582 lines to 1,222 lines.
+
+---
+
 ## [1.3.96] - 2026-06-29
 
 ### Fixed
