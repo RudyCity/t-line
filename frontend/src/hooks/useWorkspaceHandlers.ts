@@ -320,16 +320,6 @@ export function useWorkspaceHandlers({
     const ws = workspaces.find(w => w.id === workspaceId);
     if (!ws) return;
 
-    // Toggle behavior: if this workspace is active and the main branch is selected, toggle it off!
-    const isMainSelected = panelWorkspace?.id === ws.id && (panelWorktreePath === ws.path || panelWorktreePath === null);
-    if (isMainSelected) {
-      setPanelWorkspace(null);
-      setPanelWorktreePath(null);
-      setActiveTabId('');
-      setSidebarOpen(false);
-      return;
-    }
-
     setPanelWorkspace(ws);
     setPanelWorktreePath(ws.path); // Select master/main!
 

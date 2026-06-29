@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.116] - 2026-06-29
+
+### Changed
+- **Workspace Card Non-Toggling Behavior**: Removed toggle-off deselection from parent workspace card clicks, ensuring that parent workspace selections remain persistent and always select their main branch (`master`/`main` via `ws.path`) unconditionally. Toggle-off deselection continues to work for sub-worktree items.
+
+---
+
 ## [1.3.115] - 2026-06-29
 
 ### Changed
