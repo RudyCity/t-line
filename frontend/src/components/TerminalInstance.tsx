@@ -28,6 +28,7 @@ interface TerminalInstanceProps {
   isFocusedPane?: boolean;
   pid?: number;
   fontFamily?: string;
+  fontWeight?: string;
   accentColor?: string;
   themeBackground?: string;
   themeForeground?: string;
@@ -349,7 +350,7 @@ export function TerminalInstance({
   tab, active, wsConnected, fontSize,
   onTitleChange, onActiveProcessesChange, onFocus, refreshTrigger,
   isFocusedPane = false, pid,
-  fontFamily, accentColor, themeBackground, themeForeground
+  fontFamily, fontWeight, accentColor, themeBackground, themeForeground
 }: TerminalInstanceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -515,9 +516,11 @@ export function TerminalInstance({
       cursorStyle: 'block',
       fontSize: actualFontSize,
       fontFamily: fontFamily || 'JetBrains Mono, Fira Code, Courier New, monospace',
+      fontWeight: (fontWeight || 'normal') as any,
+      fontWeightBold: 'bold',
       lineHeight: 1.2,
       letterSpacing: 0,
-      scrollback: 3000, // Reduced from 10000 to save memory per terminal tab
+      scrollback: 3000,
       scrollOnUserInput: true,
       fastScrollModifier: 'shift',
       fastScrollSensitivity: 5,
@@ -724,7 +727,7 @@ export function TerminalInstance({
     }
   }, [active, debouncedFit]);
 
-  // ── Font size & Family ──────────────────────────────────────
+  // ── Font size, Family & Weight ──────────────────────────────
   useEffect(() => {
     if (terminalRef.current) {
       try {
@@ -732,11 +735,14 @@ export function TerminalInstance({
         if (fontFamily) {
           terminalRef.current.options.fontFamily = fontFamily;
         }
+        if (fontWeight) {
+          terminalRef.current.options.fontWeight = fontWeight as any;
+        }
       } catch (e) {
         console.error('Error changing terminal font settings:', e);
       }
     }
-  }, [actualFontSize, fontFamily, debouncedFit]);
+  }, [actualFontSize, fontFamily, fontWeight, debouncedFit]);
 
   // ── Theme colors ───────────────────────────────────────────
   useEffect(() => {

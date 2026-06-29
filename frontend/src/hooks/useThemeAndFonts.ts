@@ -149,6 +149,14 @@ export function useThemeAndFonts() {
     return localStorage.getItem('tline-font-mono') || 'JetBrains Mono';
   });
 
+  const [fontSansWeight, setFontSansWeightState] = useState<string>(() => {
+    return localStorage.getItem('tline-font-sans-weight') || '400';
+  });
+
+  const [fontMonoWeight, setFontMonoWeightState] = useState<string>(() => {
+    return localStorage.getItem('tline-font-mono-weight') || '400';
+  });
+
   const setTheme = (newTheme: string) => {
     if (THEMES[newTheme]) {
       setThemeState(newTheme);
@@ -174,6 +182,16 @@ export function useThemeAndFonts() {
     localStorage.setItem('tline-font-mono', fontName);
   };
 
+  const setFontSansWeight = (weight: string) => {
+    setFontSansWeightState(weight);
+    localStorage.setItem('tline-font-sans-weight', weight);
+  };
+
+  const setFontMonoWeight = (weight: string) => {
+    setFontMonoWeightState(weight);
+    localStorage.setItem('tline-font-mono-weight', weight);
+  };
+
   useEffect(() => {
     const root = document.documentElement;
     const preset = THEMES[theme] || THEMES.default;
@@ -191,6 +209,8 @@ export function useThemeAndFonts() {
     const fontMonoValue = MONO_FONTS[fontMono as keyof typeof MONO_FONTS] || MONO_FONTS['JetBrains Mono'];
     root.style.setProperty('--font-sans', fontSansValue);
     root.style.setProperty('--font-mono', fontMonoValue);
+    root.style.setProperty('--font-sans-weight', fontSansWeight);
+    root.style.setProperty('--font-mono-weight', fontMonoWeight);
 
     root.style.setProperty('--accent-color', accentColor);
     root.style.setProperty('--color-primary', accentColor);
@@ -218,7 +238,7 @@ export function useThemeAndFonts() {
       '--bg-radial-glow2',
       `color-mix(in srgb, ${preset.textMain} 4%, transparent)`
     );
-  }, [theme, accentColor, fontSans, fontMono]);
+  }, [theme, accentColor, fontSans, fontMono, fontSansWeight, fontMonoWeight]);
 
   return {
     theme,
@@ -229,6 +249,10 @@ export function useThemeAndFonts() {
     setFontSans,
     fontMono,
     setFontMono,
+    fontSansWeight,
+    setFontSansWeight,
+    fontMonoWeight,
+    setFontMonoWeight,
     THEMES,
     UI_FONTS,
     MONO_FONTS,

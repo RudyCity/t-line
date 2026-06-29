@@ -11,6 +11,10 @@ All notable changes to the **t-line** workspace manager project will be document
   - Replaced all native `<select>` dropdowns across the application with the custom select component, including `Modals.tsx` (workspace/branch/shell settings), `SettingsModal.tsx` (font families), `RightSidebar.tsx` (sidebar shell switcher), and `Footer.tsx` (status bar shell switcher with upward `'top'` alignment and `'minimal'` visual styling).
   - Added a search filter input directly inside the UI and Terminal font select dropdowns for quick font lookups.
   - Added several new premium UI and Monospace font variants, including `Geist Sans`, `SF Pro`, `Plus Jakarta Sans`, `Lato`, `Open Sans`, `Nunito`, `Sora`, `DM Sans`, `Geist Mono`, `SF Mono`, `Cascadia Code`, `IBM Plex Mono`, `Inconsolata`, and `Hack`.
+- **Font Weight Control**:
+  - Added `UI Font Weight` and `Terminal Font Weight` dropdowns in Settings (Light/Regular/Medium/Semibold/Bold).
+  - UI font weight is applied globally to the app via `--font-sans-weight` CSS variable on the `body` element.
+  - Terminal font weight is piped from `useThemeAndFonts` → `App.tsx` → `SplitLayoutRenderer` → `TerminalInstance` and passed as `fontWeight` to Xterm.js, with live reactive updates.
 
 ---
 

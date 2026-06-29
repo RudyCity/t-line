@@ -20,6 +20,10 @@ export interface SettingsModalProps {
   setFontSans?: (f: string) => void;
   fontMono?: string;
   setFontMono?: (f: string) => void;
+  fontSansWeight?: string;
+  setFontSansWeight?: (w: string) => void;
+  fontMonoWeight?: string;
+  setFontMonoWeight?: (w: string) => void;
   terminalFontSize?: number;
   setTerminalFontSize?: (s: number) => void;
 }
@@ -41,6 +45,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   setFontSans = () => {},
   fontMono = 'JetBrains Mono',
   setFontMono = () => {},
+  fontSansWeight = '400',
+  setFontSansWeight = () => {},
+  fontMonoWeight = '400',
+  setFontMonoWeight = () => {},
   terminalFontSize = 12,
   setTerminalFontSize = () => {}
 }) => {
@@ -501,6 +509,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       onChange={(val) => setFontMono(val)}
                       options={Object.keys(MONO_FONTS).map(f => ({ value: f, label: f }))}
                       searchable={true}
+                    />
+                  </FormField>
+                </div>
+
+                {/* Font Weights Row */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginTop: '12px' }}>
+                  <FormField label="UI Font Weight" className="mb-0">
+                    <Select
+                      value={fontSansWeight}
+                      onChange={(val) => setFontSansWeight(val)}
+                      options={[
+                        { value: '300', label: 'Light (300)' },
+                        { value: '400', label: 'Regular (400)' },
+                        { value: '500', label: 'Medium (500)' },
+                        { value: '600', label: 'Semibold (600)' },
+                        { value: '700', label: 'Bold (700)' }
+                      ]}
+                    />
+                  </FormField>
+                  <FormField label="Terminal Font Weight" className="mb-0">
+                    <Select
+                      value={fontMonoWeight}
+                      onChange={(val) => setFontMonoWeight(val)}
+                      options={[
+                        { value: '300', label: 'Light (300)' },
+                        { value: '400', label: 'Regular (400)' },
+                        { value: '500', label: 'Medium (500)' },
+                        { value: '600', label: 'Semibold (600)' },
+                        { value: '700', label: 'Bold (700)' }
+                      ]}
                     />
                   </FormField>
                 </div>

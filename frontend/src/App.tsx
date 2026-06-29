@@ -53,6 +53,10 @@ export default function App() {
     setFontSans,
     fontMono,
     setFontMono,
+    fontSansWeight,
+    setFontSansWeight,
+    fontMonoWeight,
+    setFontMonoWeight,
     THEMES,
     MONO_FONTS
   } = useThemeAndFonts();
@@ -1034,6 +1038,7 @@ export default function App() {
                       hasMultiplePanes={activeTab.layout.type === 'split'}
                       refreshTriggers={refreshTriggers}
                       fontFamily={MONO_FONTS[fontMono as keyof typeof MONO_FONTS]}
+                      fontWeight={fontMonoWeight}
                       accentColor={accentColor}
                       themeBackground={THEMES[theme]?.bgMain}
                       themeForeground={THEMES[theme]?.textMain}
@@ -1117,6 +1122,10 @@ export default function App() {
         setFontSans={setFontSans}
         fontMono={fontMono}
         setFontMono={setFontMono}
+        fontSansWeight={fontSansWeight}
+        setFontSansWeight={setFontSansWeight}
+        fontMonoWeight={fontMonoWeight}
+        setFontMonoWeight={setFontMonoWeight}
         terminalFontSize={terminalFontSize}
         setTerminalFontSize={setTerminalFontSize}
       />

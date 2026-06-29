@@ -19,6 +19,7 @@ export interface SplitLayoutRendererProps {
   onTerminalFocus?: () => void;
   refreshTriggers?: Record<string, number>;
   fontFamily?: string;
+  fontWeight?: string;
   accentColor?: string;
   themeBackground?: string;
   themeForeground?: string;
@@ -40,6 +41,7 @@ export function SplitLayoutRenderer({
   onTerminalFocus,
   refreshTriggers,
   fontFamily,
+  fontWeight,
   accentColor,
   themeBackground,
   themeForeground
@@ -77,6 +79,7 @@ export function SplitLayoutRenderer({
           refreshTrigger={refreshTriggers?.[term.id] || 0}
           isFocusedPane={isFocused && hasMultiplePanes}
           fontFamily={fontFamily}
+          fontWeight={fontWeight}
           accentColor={accentColor}
           themeBackground={themeBackground}
           themeForeground={themeForeground}
@@ -144,6 +147,7 @@ export function SplitLayoutRenderer({
           onTerminalFocus={onTerminalFocus}
           refreshTriggers={refreshTriggers}
           fontFamily={fontFamily}
+          fontWeight={fontWeight}
           accentColor={accentColor}
           themeBackground={themeBackground}
           themeForeground={themeForeground}
@@ -174,6 +178,7 @@ export function SplitLayoutRenderer({
           onTerminalFocus={onTerminalFocus}
           refreshTriggers={refreshTriggers}
           fontFamily={fontFamily}
+          fontWeight={fontWeight}
           accentColor={accentColor}
           themeBackground={themeBackground}
           themeForeground={themeForeground}
