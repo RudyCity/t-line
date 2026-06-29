@@ -4,6 +4,14 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.73] - 2026-06-29
+
+### Added
+- **Multi-Platform CI/CD Release Workflow**: Created a GitHub Actions workflow `.github/workflows/release.yml` that builds and compiles Windows, macOS, and Linux releases in the cloud automatically.
+- **macOS & Linux Build Configurations**: Added new build targets for `mac` (`dmg`, `zip`) and `linux` (`AppImage`, `deb`) to the `desktop` configurations.
+
+---
+
 ## [1.3.72] - 2026-06-29
 
 ### Changed

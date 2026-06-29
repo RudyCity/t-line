@@ -1,4 +1,4 @@
-# t-line — Premium Workspace Manager & Git Worktree Orchestrator `v1.3.72`
+# t-line — Premium Workspace Manager & Git Worktree Orchestrator `v1.3.73`
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
