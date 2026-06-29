@@ -448,7 +448,9 @@ export default function App() {
   };
 
   const filteredTabs = useMemo(() => {
-    if (!panelWorkspace) return [];
+    if (!panelWorkspace) {
+      return tabs.filter(t => !t.workspaceId);
+    }
     const wsTabs = tabs.filter(t => t.workspaceId === panelWorkspace.id);
 
     if (panelWorktreePath) {
@@ -466,8 +468,9 @@ export default function App() {
     // The sorting order matches the order of worktrees in panelWorkspace.worktrees.
     const getTabWtIndex = (t: TabData) => {
       const wtPath = getTabWorktreePath(t, panelWorkspace, terminalInstances);
-      if (!wtPath) return panelWorkspace.worktrees.length; // place tabs without a worktree at the end
-      return panelWorkspace.worktrees.findIndex(wt => wt.path === wtPath);
+      const wts = panelWorkspace.worktrees || [];
+      if (!wtPath) return wts.length; // place tabs without a worktree at the end
+      return wts.findIndex(wt => wt.path === wtPath);
     };
 
     return [...wsTabs].sort((a, b) => getTabWtIndex(a) - getTabWtIndex(b));

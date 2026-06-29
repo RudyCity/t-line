@@ -38,7 +38,8 @@ export const getTabWorktreePath = (
 
   if (!tabPath) return null;
 
-  const sortedWts = [...workspace.worktrees].sort((a, b) => b.path.length - a.path.length);
+  const wts = workspace.worktrees || [];
+  const sortedWts = [...wts].sort((a, b) => b.path.length - a.path.length);
   for (const wt of sortedWts) {
     if (isPathInWorktree(tabPath, wt.path)) {
       return wt.path;
