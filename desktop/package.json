@@ -1,7 +1,12 @@
 {
   "name": "desktop",
-  "version": "1.3.74",
+  "version": "1.3.75",
   "description": "Electron desktop wrapper for t-line",
+  "author": {
+    "name": "Rudy H.",
+    "email": "hrudy715@gmail.com"
+  },
+  "homepage": "https://github.com/RudyCity/t-line",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -49,7 +54,8 @@
       "target": [
         "AppImage",
         "deb"
-      ]
+      ],
+      "maintainer": "Rudy H. <hrudy715@gmail.com>"
     },
     "asar": true
   }

@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.75] - 2026-06-29
+
+### Fixed
+- **Linux Packaging Metadata Validation**: Added required packaging fields (`author`, `homepage`, and `maintainer`) inside `desktop/package.json` to resolve build failures for Debian/Linux targets on GitHub Actions.
+
+---
+
 ## [1.3.74] - 2026-06-29
 
 ### Added
