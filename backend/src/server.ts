@@ -30,7 +30,6 @@ import {
 } from './gitManager';
 import { terminalManager, getActiveProcessesForPid } from './terminalManager';
 import { tunnelManager } from './tunnelManager';
-import { mcpRouter, handleMcpWebSocket } from './mcp';
 
 dotenv.config();
 
@@ -39,7 +38,6 @@ const port = process.env.PORT || 3999;
 
 app.use(cors());
 app.use(express.json());
-app.use('/api/mcp', mcpRouter);
 
 // ----------------------------------------------------
 // Cloudflare Tunnel & IP Access Rules Manager
@@ -694,7 +692,6 @@ const server = http.createServer(app);
 // WebSocket Server (PTY Multiplexer)
 // ----------------------------------------------------
 const wss = new WebSocketServer({ noServer: true });
-const mcpWss = new WebSocketServer({ noServer: true });
 
 server.on('upgrade', (request, socket, head) => {
   // IP block check for WebSocket
@@ -727,15 +724,9 @@ server.on('upgrade', (request, socket, head) => {
     return;
   }
 
-  if (pathname === '/api/mcp/ws') {
-    mcpWss.handleUpgrade(request, socket, head, (ws) => {
-      handleMcpWebSocket(ws, request);
-    });
-  } else {
-    wss.handleUpgrade(request, socket, head, (ws) => {
-      wss.emit('connection', ws, request);
-    });
-  }
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit('connection', ws, request);
+  });
 });
 
 wss.on('connection', (ws: WebSocket) => {

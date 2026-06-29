@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.101] - 2026-06-29
+
+### Removed
+- **Model Context Protocol (MCP)**: Cleaned up and completely removed the MCP Server integration, SSE/WS endpoints, proxy stdio bridge, and MCP Settings dashboard/logs panel from both the frontend and backend.
+
+---
+
 ## [1.3.100] - 2026-06-29
 
 ### Refactored
