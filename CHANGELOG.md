@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.118] - 2026-06-29
+
+### Removed
+- **Removed Branch Prefix from Tab Buttons**: Removed the inline git branch badge prefix (`master | `) inside the individual tab buttons in the tab bar for a cleaner and more compact interface.
+
+---
+
 ## [1.3.117] - 2026-06-29
 
 ### Changed

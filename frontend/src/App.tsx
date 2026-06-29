@@ -789,13 +789,6 @@ export default function App() {
                         onMouseLeave={handleTabMouseLeave}
                         onContextMenu={(e) => handleTabContextMenu(e, t.id)}
                       >
-                        {!isFile && branch && (
-                          <span className="tab-branch-prefix shrink-0">
-                            <GitBranch size={10} />
-                            <span>{branch}</span>
-                            <span className="tab-branch-separator">|</span>
-                          </span>
-                        )}
                         {isFile ? (
                           <FileCode size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                         ) : (
