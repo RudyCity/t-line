@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.119] - 2026-06-29
+
+### Added
+- **Tabs Dropdown Switcher Menu**: Added a tab dropdown list switcher with a chevron-down icon next to the "New Tab" button in the tab bar. This dropdown appears when there are 2 or more active tabs, allowing the user to quickly view, switch between, or close tabs directly from the list.
+
+---
+
 ## [1.3.118] - 2026-06-29
 
 ### Removed
