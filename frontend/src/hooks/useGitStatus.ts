@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { GitFileStatus } from '../components/FilePanel';
 import { WorkspaceInfo } from './useTerminals';
 
-export function useGitStatus(panelWorkspace: WorkspaceInfo | null) {
+export function useGitStatus(panelWorkspace: WorkspaceInfo | null, panelWorktreePath: string | null) {
   const [changedFiles, setChangedFiles] = useState<GitFileStatus[]>([]);
   const [gitStatusLoading, setGitStatusLoading] = useState<boolean>(false);
 
@@ -14,7 +14,8 @@ export function useGitStatus(panelWorkspace: WorkspaceInfo | null) {
     if (showLoading) setGitStatusLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/workspaces/${panelWorkspace.id}/git/status`, {
+      const queryParam = panelWorktreePath ? `?worktreePath=${encodeURIComponent(panelWorktreePath)}` : '';
+      const res = await fetch(`/api/workspaces/${panelWorkspace.id}/git/status${queryParam}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -26,11 +27,11 @@ export function useGitStatus(panelWorkspace: WorkspaceInfo | null) {
     } finally {
       if (showLoading) setGitStatusLoading(false);
     }
-  }, [panelWorkspace]);
+  }, [panelWorkspace, panelWorktreePath]);
 
   useEffect(() => {
     fetchGitStatus(true);
-  }, [panelWorkspace, fetchGitStatus]);
+  }, [panelWorkspace, panelWorktreePath, fetchGitStatus]);
 
   useEffect(() => {
     if (!panelWorkspace || !panelWorkspace.isGit) return;
@@ -38,7 +39,7 @@ export function useGitStatus(panelWorkspace: WorkspaceInfo | null) {
       fetchGitStatus(false);
     }, 5000);
     return () => clearInterval(interval);
-  }, [panelWorkspace, fetchGitStatus]);
+  }, [panelWorkspace, panelWorktreePath, fetchGitStatus]);
 
   return {
     changedFiles,

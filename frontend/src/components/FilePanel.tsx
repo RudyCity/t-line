@@ -386,6 +386,7 @@ interface GitChangesProps {
   files: GitFileStatus[];
   loading: boolean;
   onRefresh: () => void;
+  worktreePath?: string | null;
 }
 
 function StatusIcon({ status }: { status: GitFileStatus['status'] }) {
@@ -438,7 +439,8 @@ export function GitChanges({
   token,
   files,
   loading,
-  onRefresh
+  onRefresh,
+  worktreePath
 }: GitChangesProps) {
   const [selectedFile, setSelectedFile] = useState<GitFileStatus | null>(null);
   const [diff, setDiff] = useState<string>('');
@@ -457,8 +459,9 @@ export function GitChanges({
     }
     setDiffLoading(true);
     try {
+      const queryParam = worktreePath ? `&worktreePath=${encodeURIComponent(worktreePath)}` : '';
       const res = await fetch(
-        `/api/workspaces/${workspaceId}/git/diff?filePath=${encodeURIComponent(file.path)}`,
+        `/api/workspaces/${workspaceId}/git/diff?filePath=${encodeURIComponent(file.path)}${queryParam}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (res.ok) {
@@ -470,7 +473,7 @@ export function GitChanges({
     } finally {
       setDiffLoading(false);
     }
-  }, [workspaceId, token]);
+  }, [workspaceId, token, worktreePath]);
 
   const parsed = diff ? parseDiff(diff) : null;
 

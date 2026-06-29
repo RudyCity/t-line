@@ -198,7 +198,7 @@ export function SidebarContentPanel({
           )}
           {panelWorkspace ? (
             <FileExplorer
-              rootPath={panelWorkspace.path}
+              rootPath={panelWorktreePath || panelWorkspace.path}
               token={localStorage.getItem('token') || ''}
               onFileClick={openFileTab}
               changedFiles={changedFiles}
@@ -241,6 +241,7 @@ export function SidebarContentPanel({
               files={changedFiles}
               loading={gitStatusLoading}
               onRefresh={refreshGitStatus || (() => {})}
+              worktreePath={panelWorktreePath}
             />
           ) : (
             <div className="panel-empty" style={{ flex: 1 }}>

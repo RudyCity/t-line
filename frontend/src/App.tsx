@@ -215,7 +215,7 @@ export default function App() {
   );
 
   // Git status state via hook
-  const { changedFiles, gitStatusLoading, fetchGitStatus } = useGitStatus(panelWorkspace);
+  const { changedFiles, gitStatusLoading, fetchGitStatus } = useGitStatus(panelWorkspace, panelWorktreePath);
 
   // Listen to zoom events dispatched from terminal status bar
   useEffect(() => {

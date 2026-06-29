@@ -2,6 +2,19 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.104] - 2026-06-29
+
+### Added
+- **Worktree Active Branch Integration**:
+  - Integrated file explorer (`FileExplorer`) and git changes (`GitChanges`) to automatically load directories and git status / diffs matching the active worktree selection.
+  - Added support in backend workspace git status and diff routes to process a `worktreePath` parameter.
+
+### Fixed
+- **Null/Undefined Safeguards**: Safeguarded all workspace worktree loops and checks to fall back safely to an empty array when uninitialized, preventing browser runtime crashes.
+- **React Hook Rules**: Fixed React Error #310 by moving the `filteredTabs` `useMemo` definition above the early return conditions inside `App.tsx`.
+
+---
+
 ## [1.3.103] - 2026-06-29
 
 ### Added
