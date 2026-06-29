@@ -1,5 +1,5 @@
 import React from 'react';
-import { Info, Shield, Eye, EyeOff } from 'lucide-react';
+import { Info, Shield, Eye, EyeOff, RefreshCw, Download, CheckCircle, XCircle, Loader2, ArrowUpCircle } from 'lucide-react';
 import { FormField, Input, Button } from './Form';
 
 export interface SettingsModalProps {
@@ -33,6 +33,45 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [showCurrentPassword, setShowCurrentPassword] = React.useState(false);
   const [showNewPassword, setShowNewPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+
+  // Update check state
+  type UpdateCheckStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'up-to-date' | 'error' | 'dev';
+  const [updateCheckStatus, setUpdateCheckStatus] = React.useState<UpdateCheckStatus>('idle');
+  const [updateCheckVersion, setUpdateCheckVersion] = React.useState<string | null>(null);
+  const [updateCheckPercent, setUpdateCheckPercent] = React.useState<number>(0);
+  const [updateCheckError, setUpdateCheckError] = React.useState<string | null>(null);
+
+  const isElectron = typeof window !== 'undefined' && !!(window as any).electron;
+
+  // Listen to global update-status events from main process
+  React.useEffect(() => {
+    if (!isElectron) return;
+    const electron = (window as any).electron;
+    if (typeof electron.onUpdateStatus !== 'function') return;
+    const unlisten = electron.onUpdateStatus((payload: any) => {
+      if (payload.status === 'checking')   setUpdateCheckStatus('checking');
+      if (payload.status === 'available')  { setUpdateCheckStatus('available');  setUpdateCheckVersion(payload.version ?? null); }
+      if (payload.status === 'downloading'){ setUpdateCheckStatus('downloading'); setUpdateCheckPercent(payload.percent ?? 0); setUpdateCheckVersion(payload.version ?? null); }
+      if (payload.status === 'ready')      { setUpdateCheckStatus('ready');       setUpdateCheckVersion(payload.version ?? null); }
+      if (payload.status === 'not-available') setUpdateCheckStatus('up-to-date');
+      if (payload.status === 'error')      { setUpdateCheckStatus('error');       setUpdateCheckError(payload.message ?? 'Unknown error'); }
+    });
+    return unlisten;
+  }, [isElectron]);
+
+  const handleCheckForUpdates = React.useCallback(async () => {
+    if (!isElectron) return;
+    setUpdateCheckStatus('checking');
+    setUpdateCheckError(null);
+    setUpdateCheckVersion(null);
+    const result = await (window as any).electron.checkForUpdates();
+    if (result?.status === 'dev') setUpdateCheckStatus('dev');
+  }, [isElectron]);
+
+  const handleInstallUpdate = React.useCallback(() => {
+    if (!isElectron) return;
+    (window as any).electron.installUpdate();
+  }, [isElectron]);
 
   // Access Control State
   const [connections, setConnections] = React.useState<any[]>([]);
@@ -206,7 +245,88 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Backend Connection</span>
                   <span style={{ fontSize: '0.8rem', color: 'var(--color-success)', fontWeight: 'bold' }}>Active</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '8px' }}>
+
+              {/* Software Update Row */}
+              {isElectron && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '8px' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Software Update</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Status badge */}
+                    {updateCheckStatus === 'checking' && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#94a3b8' }}>
+                        <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                        Checking…
+                      </span>
+                    )}
+                    {updateCheckStatus === 'up-to-date' && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#34d399' }}>
+                        <CheckCircle size={12} />
+                        Up to date
+                      </span>
+                    )}
+                    {updateCheckStatus === 'available' && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#a855f7' }}>
+                        <ArrowUpCircle size={12} />
+                        {updateCheckVersion ? `v${updateCheckVersion} available` : 'Available'}
+                      </span>
+                    )}
+                    {updateCheckStatus === 'downloading' && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#60a5fa' }}>
+                        <Download size={12} />
+                        Downloading… {updateCheckPercent}%
+                      </span>
+                    )}
+                    {updateCheckStatus === 'ready' && (
+                      <button
+                        id="settings-install-update-btn"
+                        type="button"
+                        onClick={handleInstallUpdate}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '4px',
+                          fontSize: '0.75rem', fontWeight: 600,
+                          padding: '3px 10px', borderRadius: '6px',
+                          background: 'rgba(168, 85, 247, 0.2)',
+                          border: '1px solid rgba(168, 85, 247, 0.4)',
+                          color: '#c084fc', cursor: 'pointer'
+                        }}
+                      >
+                        <RefreshCw size={11} />
+                        Restart &amp; Install{updateCheckVersion ? ` v${updateCheckVersion}` : ''}
+                      </button>
+                    )}
+                    {updateCheckStatus === 'error' && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#f87171' }} title={updateCheckError ?? ''}>
+                        <XCircle size={12} />
+                        Failed
+                      </span>
+                    )}
+                    {updateCheckStatus === 'dev' && (
+                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Dev mode</span>
+                    )}
+                    {/* Check button — shown except while checking or downloading */}
+                    {updateCheckStatus !== 'checking' && updateCheckStatus !== 'downloading' && updateCheckStatus !== 'ready' && (
+                      <button
+                        id="settings-check-update-btn"
+                        type="button"
+                        onClick={handleCheckForUpdates}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '4px',
+                          fontSize: '0.75rem', fontWeight: 500,
+                          padding: '3px 10px', borderRadius: '6px',
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          color: '#94a3b8', cursor: 'pointer'
+                        }}
+                      >
+                        <RefreshCw size={11} />
+                        Check
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '8px' }}>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Client OS Platform</span>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-main)' }}>
                     {window.navigator.userAgent.includes('Windows') ? 'Windows' : 'Unix-like'}

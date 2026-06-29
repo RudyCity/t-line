@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.88] - 2026-06-29
+
+### Added
+- **Manual Update Check in Settings**: Added a "Software Update" row in the Settings → General tab with a **Check** button that triggers `electron-updater` to immediately check GitHub Releases for a new version. The row displays contextual status badges: *Checking…* (spinner), *Up to date* (green checkmark), *vX.X.X available* (purple), *Downloading… N%* (blue), and *Failed* (red with tooltip). When an update is downloaded and ready, the button becomes **Restart & Install vX.X.X**, directly triggering `quitAndInstall`. The row is only rendered inside the Electron desktop environment (hidden in browser).
+
+---
+
 ## [1.3.87] - 2026-06-29
 
 ### Added
