@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { 
   Folder, 
   Plus, 
@@ -26,7 +26,7 @@ import { useUpdateChecker } from './hooks/useUpdateChecker';
 import { useThemeAndFonts } from './hooks/useThemeAndFonts';
 import { useTabUiHandlers } from './hooks/useTabUiHandlers';
 import { useAuth } from './hooks/useAuth';
-import { useTerminals, WorkspaceInfo } from './hooks/useTerminals';
+import { useTerminals, WorkspaceInfo, TabData } from './hooks/useTerminals';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { SplitLayoutRenderer } from './components/SplitLayoutRenderer';
 import { Footer } from './components/Footer';
@@ -38,7 +38,7 @@ import { RightSidebar } from './components/RightSidebar';
 import { UpdateNotification } from './components/UpdateNotification';
 import { useGitStatus } from './hooks/useGitStatus';
 import { useConfirmDialog } from './hooks/useConfirmDialog';
-import { useWorkspaceHandlers } from './hooks/useWorkspaceHandlers';
+import { useWorkspaceHandlers, isPathInWorktree, getTabWorktreePath } from './hooks/useWorkspaceHandlers';
 import { TPlusLogo } from './components/TPlusLogo';
 import { TabTooltip, TabContextMenu } from './components/TabUiComponents';
 
@@ -154,6 +154,7 @@ export default function App() {
   // Active panel state: 'workspaces' | 'explorer' | 'changes'
   const [activePanel, setActivePanel] = useState<'workspaces' | 'explorer' | 'changes' | 'tabs'>('workspaces');
   const [panelWorkspace, setPanelWorkspace] = useState<WorkspaceInfo | null>(null);
+  const [panelWorktreePath, setPanelWorktreePath] = useState<string | null>(null);
 
   // Terminal state management hook
   const {
@@ -257,7 +258,10 @@ export default function App() {
     closeTerminal,
     setPanelWorkspace,
     showConfirm,
-    setSidebarOpen
+    setSidebarOpen,
+    panelWorkspace,
+    panelWorktreePath,
+    setPanelWorktreePath
   });
 
 
@@ -443,7 +447,31 @@ export default function App() {
     return '';
   };
 
-  const filteredTabs = tabs.filter(t => t.workspaceId === panelWorkspace?.id);
+  const filteredTabs = useMemo(() => {
+    if (!panelWorkspace) return [];
+    const wsTabs = tabs.filter(t => t.workspaceId === panelWorkspace.id);
+
+    if (panelWorktreePath) {
+      // In worktree mode, filter tabs to show only those belonging to that specific worktree
+      return wsTabs.filter(t => {
+        const isFile = t.type === 'file';
+        const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
+        const path = isFile ? (t.filePath || '') : (focusedInst?.cwd || '');
+        if (!path) return false;
+        return isPathInWorktree(path, panelWorktreePath);
+      });
+    }
+
+    // In workspace mode (panelWorktreePath === null), display all tabs but group them by worktree.
+    // The sorting order matches the order of worktrees in panelWorkspace.worktrees.
+    const getTabWtIndex = (t: TabData) => {
+      const wtPath = getTabWorktreePath(t, panelWorkspace, terminalInstances);
+      if (!wtPath) return panelWorkspace.worktrees.length; // place tabs without a worktree at the end
+      return panelWorkspace.worktrees.findIndex(wt => wt.path === wtPath);
+    };
+
+    return [...wsTabs].sort((a, b) => getTabWtIndex(a) - getTabWtIndex(b));
+  }, [tabs, panelWorkspace, panelWorktreePath, terminalInstances]);
 
   return (
     <div className="app-container">
@@ -574,6 +602,7 @@ export default function App() {
             onEditWorkspace={handleOpenEditWorkspaceModal}
             deletingWorkspacePaths={deletingWorkspacePaths}
             deletingWorktreePaths={deletingWorktreePaths}
+            panelWorktreePath={panelWorktreePath}
           />
         )}
       </div>
@@ -654,43 +683,57 @@ export default function App() {
           {/* Integrated Tab Bar */}
           {filteredTabs.length > 0 && (
             <div className="chrome-tabs-container mx-3 desktop-only" style={{ WebkitAppRegion: 'no-drag' } as any}>
-              {filteredTabs.map(t => {
-                const isFile = t.type === 'file';
-                const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
-                const shellType = focusedInst?.shellType || '';
-                const displayName = isFile ? t.name : (focusedInst?.name || t.name);
-                const branch = getTabGitBranch(t);
-                return (
-                  <div 
-                    key={t.id} 
-                    className={`tab ${activeTabId === t.id ? 'tab-active' : ''}`}
-                    onClick={() => handleTabClick(t)}
-                    onMouseEnter={(e) => handleTabMouseEnter(e, t)}
-                    onMouseLeave={handleTabMouseLeave}
-                    onContextMenu={(e) => handleTabContextMenu(e, t.id)}
-                  >
-                    {!isFile && branch && (
-                      <span className="tab-branch-prefix shrink-0">
-                        <GitBranch size={10} />
-                        <span>{branch}</span>
-                        <span className="tab-branch-separator">|</span>
-                      </span>
-                    )}
-                    {isFile ? (
-                      <FileCode size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
-                    ) : (
-                      <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
-                    )}
-                    <span className="tab-title-container">
-                      <span className="tab-title">{displayName}</span>
-                      {shellType && (
-                        <span className="tab-shell-type">({shellType === 'powershell' ? 'ps' : shellType})</span>
+              {(() => {
+                let prevBranch: string | null = null;
+                return filteredTabs.map(t => {
+                  const isFile = t.type === 'file';
+                  const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
+                  const shellType = focusedInst?.shellType || '';
+                  const displayName = isFile ? t.name : (focusedInst?.name || t.name);
+                  const branch = getTabGitBranch(t);
+
+                  const showGroupHeader = panelWorktreePath === null && branch && branch !== prevBranch;
+                  prevBranch = branch || null;
+
+                  return (
+                    <Fragment key={t.id}>
+                      {showGroupHeader && (
+                        <div className="tab-group-badge" title={`Branch: ${branch}`}>
+                          <GitBranch size={10} />
+                          <span>{branch}</span>
+                        </div>
                       )}
-                    </span>
-                    <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)}>×</span>
-                  </div>
-                );
-              })}
+                      <div 
+                        className={`tab ${activeTabId === t.id ? 'tab-active' : ''}`}
+                        onClick={() => handleTabClick(t)}
+                        onMouseEnter={(e) => handleTabMouseEnter(e, t)}
+                        onMouseLeave={handleTabMouseLeave}
+                        onContextMenu={(e) => handleTabContextMenu(e, t.id)}
+                      >
+                        {!isFile && branch && (
+                          <span className="tab-branch-prefix shrink-0">
+                            <GitBranch size={10} />
+                            <span>{branch}</span>
+                            <span className="tab-branch-separator">|</span>
+                          </span>
+                        )}
+                        {isFile ? (
+                          <FileCode size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
+                        ) : (
+                          <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
+                        )}
+                        <span className="tab-title-container">
+                          <span className="tab-title">{displayName}</span>
+                          {shellType && (
+                            <span className="tab-shell-type">({shellType === 'powershell' ? 'ps' : shellType})</span>
+                          )}
+                        </span>
+                        <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)}>×</span>
+                      </div>
+                    </Fragment>
+                  );
+                });
+              })()}
               {/* New Terminal button */}
               <button
                 className="action-btn shrink-0"

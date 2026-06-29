@@ -1,6 +1,51 @@
 import { useState, useEffect, useCallback } from 'react';
-import { WorkspaceInfo, getTerminalIds } from './useTerminals';
+import { WorkspaceInfo, TabData, getTerminalIds } from './useTerminals';
 import { wsManager } from '../services/websocket';
+
+export const isPathInWorktree = (filePath: string, wtPath: string): boolean => {
+  const normFile = filePath.toLowerCase().replace(/\\/g, '/');
+  const normWt = wtPath.toLowerCase().replace(/\\/g, '/');
+  return normFile === normWt || normFile.startsWith(normWt + '/');
+};
+
+export const getTabWorktreePath = (
+  tab: TabData,
+  workspace: WorkspaceInfo,
+  terminalInstances: Record<string, any>
+): string | null => {
+  const isFile = tab.type === 'file';
+  let tabPath = '';
+  if (isFile) {
+    tabPath = tab.filePath || '';
+  } else if (tab.layout) {
+    if (tab.focusedTerminalId) {
+      const inst = terminalInstances[tab.focusedTerminalId];
+      if (inst && inst.cwd) {
+        tabPath = inst.cwd;
+      }
+    }
+    if (!tabPath) {
+      const termIds = getTerminalIds(tab.layout);
+      for (const id of termIds) {
+        const inst = terminalInstances[id];
+        if (inst && inst.cwd) {
+          tabPath = inst.cwd;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!tabPath) return null;
+
+  const sortedWts = [...workspace.worktrees].sort((a, b) => b.path.length - a.path.length);
+  for (const wt of sortedWts) {
+    if (isPathInWorktree(tabPath, wt.path)) {
+      return wt.path;
+    }
+  }
+  return null;
+};
 
 interface WorkspaceHandlersProps {
   rawHandleRemoveWorkspace: (workspacePath: string) => Promise<boolean>;
@@ -27,6 +72,9 @@ interface WorkspaceHandlersProps {
     cancelLabel?: string
   ) => void;
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  panelWorkspace: WorkspaceInfo | null;
+  panelWorktreePath: string | null;
+  setPanelWorktreePath: (path: string | null) => void;
 }
 
 export function useWorkspaceHandlers({
@@ -46,7 +94,10 @@ export function useWorkspaceHandlers({
   closeTerminal,
   setPanelWorkspace,
   showConfirm,
-  setSidebarOpen
+  setSidebarOpen,
+  panelWorkspace,
+  panelWorktreePath,
+  setPanelWorktreePath
 }: WorkspaceHandlersProps) {
   const [showEditWorkspaceModal, setShowEditWorkspaceModal] = useState<boolean>(false);
   const [editingWorkspace, setEditingWorkspace] = useState<WorkspaceInfo | null>(null);
@@ -223,14 +274,44 @@ export function useWorkspaceHandlers({
     const ws = getWorkspaceForTab(activeTabId);
     if (ws) {
       setWorkspaceActiveTab(ws.id, activeTabId);
+
+      // Auto-update workspace selection if it differs
+      if (panelWorkspace?.id !== ws.id) {
+        setPanelWorkspace(ws);
+        setPanelWorktreePath(null);
+      } else {
+        // If we are in Worktree Mode and the active tab belongs to a different worktree of the current workspace,
+        // sync the selected worktree path so it's not hidden.
+        if (panelWorktreePath !== null) {
+          const tab = tabs.find(t => t.id === activeTabId);
+          if (tab) {
+            const wtPath = getTabWorktreePath(tab, ws, terminalInstances);
+            if (wtPath && wtPath !== panelWorktreePath) {
+              setPanelWorktreePath(wtPath);
+            }
+          }
+        }
+      }
     }
-  }, [activeTabId, tabs, terminalInstances, workspaces, getWorkspaceForTab, setWorkspaceActiveTab]);
+  }, [
+    activeTabId,
+    tabs,
+    terminalInstances,
+    workspaces,
+    getWorkspaceForTab,
+    setWorkspaceActiveTab,
+    panelWorkspace,
+    panelWorktreePath,
+    setPanelWorkspace,
+    setPanelWorktreePath
+  ]);
 
   const handleWorkspaceClick = useCallback((workspaceId: string) => {
     const ws = workspaces.find(w => w.id === workspaceId);
     if (!ws) return;
 
     setPanelWorkspace(ws);
+    setPanelWorktreePath(null); // Clear selected worktree path to show all!
 
     // 1. Try to restore last active tab from memory
     const savedTabId = workspaceActiveTab[workspaceId];
@@ -268,19 +349,14 @@ export function useWorkspaceHandlers({
       openTerminal('Shell', ws.path);
     }
     setSidebarOpen(false);
-  }, [workspaces, workspaceActiveTab, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setSidebarOpen]);
+  }, [workspaces, workspaceActiveTab, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);
 
   const handleWorktreeClick = useCallback((workspaceId: string, wtPath: string) => {
     const ws = workspaces.find(w => w.id === workspaceId);
     if (!ws) return;
 
     setPanelWorkspace(ws);
-
-    const isPathInWorktree = (filePath: string, path: string) => {
-      const normFile = filePath.toLowerCase().replace(/\\/g, '/');
-      const normPath = path.toLowerCase().replace(/\\/g, '/');
-      return normFile === normPath || normFile.startsWith(normPath + '/');
-    };
+    setPanelWorktreePath(wtPath); // Set active worktree path!
 
     const matchedTab = tabs.find(tab => {
       if (tab.type === 'file' && tab.filePath) {
@@ -304,7 +380,7 @@ export function useWorkspaceHandlers({
       openTerminal(name, wtPath, ws.defaultShell);
     }
     setSidebarOpen(false);
-  }, [workspaces, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setSidebarOpen]);
+  }, [workspaces, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);
 
   return {
     editingWorkspace,

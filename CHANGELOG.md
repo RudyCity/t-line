@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.103] - 2026-06-29
+
+### Added
+- **Worktree Filtering & Grouping**:
+  - Filter tabs in the top tab bar to only display active worktree tabs when a specific worktree branch is selected.
+  - Display all tabs grouped/sorted by worktree branches with a beautiful themed `.tab-group-badge` in the top bar when the parent workspace itself is clicked.
+  - Automatically sync the active worktree selection when switching tabs.
+  - Removed the active checkmark icon from active worktree tree items in the sidebar list (retaining the selection highlight), while keeping the checkmark on the main workspace tree item layout.
+
+---
+
 ## [1.3.102] - 2026-06-29
 
 ### Added

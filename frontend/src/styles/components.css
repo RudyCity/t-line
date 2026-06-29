@@ -1911,3 +1911,23 @@
   color: #94a3b8;
 }
 
+/* Tab Group Badge for Worktree branches in top tab bar */
+.tab-group-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  height: 22px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
+  white-space: nowrap;
+  margin: 0 4px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+

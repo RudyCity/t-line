@@ -57,6 +57,7 @@ export interface WorkspaceListProps {
   onEditWorkspace: (ws: WorkspaceInfo) => void;
   deletingWorkspacePaths?: string[];
   deletingWorktreePaths?: string[];
+  panelWorktreePath?: string | null;
 }
 
 /** Detects if the screen is in "mobile" mode (< 768px) */
@@ -197,6 +198,7 @@ interface WorktreeListProps {
   onWorktreeClick: (wsId: string, wtPath: string) => void;
   isPathInWorktree: (filePath: string, wtPath: string) => boolean;
   deletingWorktreePaths?: string[];
+  panelWorktreePath: string | null;
 }
 
 function WorktreeList({
@@ -210,7 +212,8 @@ function WorktreeList({
   onWorkspaceClick,
   onWorktreeClick,
   isPathInWorktree,
-  deletingWorktreePaths = []
+  deletingWorktreePaths = [],
+  panelWorktreePath
 }: WorktreeListProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -232,13 +235,14 @@ function WorktreeList({
       {visibleWts.map((wt, idx) => {
         const isLast = idx === visibleWts.length - 1 && (expanded || sortedWts.length <= BRANCH_LIMIT);
 
-        const isWtActive = activeTabId && tabs.some(t => t.id === activeTabId && (
+        const isSelectedWt = panelWorktreePath === wt.path;
+        const isWtActive = isSelectedWt || (panelWorktreePath === null && activeTabId && tabs.some(t => t.id === activeTabId && (
           (t.type === 'file' && t.filePath && isPathInWorktree(t.filePath, wt.path)) ||
           (t.type === 'terminal' && t.layout && getTerminalIds(t.layout).some(id => {
             const inst = terminalInstances[id];
             return inst && isPathInWorktree(inst.cwd, wt.path);
           }))
-        ));
+        )));
 
         const wtProcesses = getRunningProcessesForPath(wt.path, terminalInstances);
         const hasWtRunning = wtProcesses.length > 0;
@@ -328,11 +332,7 @@ function WorktreeList({
                   <span className={`badge ${wt.isMain ? 'badge-main' : 'badge-worktree'} shrink-0 text-[9px] px-1 py-0`}>
                     {wt.isMain ? 'main' : 'wt'}
                   </span>
-                  {isWtActive && (
-                    <span className="ws-active-badge shrink-0" style={{ width: '11px', height: '11px', fontSize: '6px' }} title="Active worktree tab">
-                      <Check size={7} strokeWidth={3} />
-                    </span>
-                  )}
+                  {/* Active worktree badge check icon removed */}
 
                   {/* Compact process badges for worktree */}
                   {isWtClaudeActive && (
@@ -420,7 +420,8 @@ export function WorkspaceList({
   handleRemoveWorktree,
   onEditWorkspace,
   deletingWorkspacePaths = [],
-  deletingWorktreePaths = []
+  deletingWorktreePaths = [],
+  panelWorktreePath = null
 }: WorkspaceListProps): React.JSX.Element {
   const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
@@ -616,6 +617,7 @@ export function WorkspaceList({
                 onWorktreeClick={onWorktreeClick}
                 isPathInWorktree={isPathInWorktree}
                 deletingWorktreePaths={deletingWorktreePaths}
+                panelWorktreePath={panelWorktreePath}
               />
             </div>
           );
