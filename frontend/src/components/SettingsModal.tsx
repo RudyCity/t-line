@@ -1,5 +1,5 @@
 import React from 'react';
-import { Info, Shield, Eye, EyeOff, RefreshCw, Download, CheckCircle, XCircle, Loader2, ArrowUpCircle } from 'lucide-react';
+import { Info, Shield, Eye, EyeOff, RefreshCw, Download, CheckCircle, XCircle, Loader2, ArrowUpCircle, Cpu, Copy, Check } from 'lucide-react';
 import { FormField, Input, Button } from './Form';
 
 export interface SettingsModalProps {
@@ -23,7 +23,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   updateAvailable,
   latestVersion
 }) => {
-  const [activeTab, setActiveTab] = React.useState<'general' | 'security' | 'connections'>('general');
+  const [activeTab, setActiveTab] = React.useState<'general' | 'security' | 'connections' | 'mcp'>('general');
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
@@ -78,6 +78,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [ipRules, setIpRules] = React.useState<Record<string, string>>({});
   const [loginBlocks, setLoginBlocks] = React.useState<Record<string, any>>({});
 
+  // MCP State
+  const [mcpLogs, setMcpLogs] = React.useState<any[]>([]);
+  const [mcpSessionsCount, setMcpSessionsCount] = React.useState<number>(0);
+  const [mcpSseUrl, setMcpSseUrl] = React.useState<string>('');
+  const [mcpStdioPath, setMcpStdioPath] = React.useState<string>('');
+  const [copiedText, setCopiedText] = React.useState<string | null>(null);
+
   const fetchConnections = async () => {
     try {
       const res = await fetch('/api/security/connections', {
@@ -94,13 +101,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
+  const fetchMcpStats = async () => {
+    try {
+      const res = await fetch('/api/mcp/logs', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMcpLogs(data.logs || []);
+        setMcpSessionsCount(data.sessionsCount || 0);
+        setMcpSseUrl(data.sseUrl || '');
+        setMcpStdioPath(data.stdioPath || '');
+      }
+    } catch (e) {
+      console.error('Failed to fetch MCP stats:', e);
+    }
+  };
+
   React.useEffect(() => {
     if (show) {
       fetchConnections();
+      fetchMcpStats();
       
-      // Auto-refresh logs every 10 seconds if Access Control tab is open
-      if (activeTab === 'connections') {
-        const interval = setInterval(fetchConnections, 10000);
+      // Auto-refresh logs if Connections or MCP tab is open
+      if (activeTab === 'connections' || activeTab === 'mcp') {
+        const interval = setInterval(() => {
+          fetchConnections();
+          fetchMcpStats();
+        }, 5000);
         return () => clearInterval(interval);
       }
     }
@@ -211,6 +239,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           >
             <Shield size={14} />
             <span>Access Control</span>
+          </button>
+          <button
+            type="button"
+            className={`sidebar-panel-tab ${activeTab === 'mcp' ? 'active' : ''}`}
+            onClick={() => setActiveTab('mcp')}
+            style={{ padding: '12px' }}
+          >
+            <Cpu size={14} />
+            <span>MCP Server</span>
           </button>
         </div>
 
@@ -542,6 +579,155 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               )}
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
+                <Button type="button" onClick={onClose}>Close</Button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'mcp' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(168, 85, 247, 0.05)', border: '1px solid rgba(168, 85, 247, 0.1)', padding: '10px', borderRadius: '8px' }}>
+                <Cpu size={16} className="text-purple-400 shrink-0" />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                  Model Context Protocol (MCP) lets external AI tools (like Claude Desktop or Cursor) securely read/write files, manage Git worktrees, and run permitted workspace commands.
+                </span>
+              </div>
+
+              {/* Status Stats */}
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ flex: 1, padding: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: '6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#10b981', marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+                    Running
+                  </div>
+                </div>
+                <div style={{ flex: 1, padding: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: '6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Active Clients</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '4px' }}>
+                    {mcpSessionsCount}
+                  </div>
+                </div>
+              </div>
+
+              {/* Configuration Section */}
+              <div>
+                <h4 style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-main)' }}>
+                  Integrate with AI Assistants
+                </h4>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {/* Option 1: Claude Desktop */}
+                  <div style={{ padding: '10px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-main)' }}>Claude Desktop (Recommended)</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const config = JSON.stringify({
+                            mcpServers: {
+                              "t-line": {
+                                "command": "node",
+                                "args": [mcpStdioPath]
+                              }
+                            }
+                          }, null, 2);
+                          navigator.clipboard.writeText(config);
+                          setCopiedText('claude');
+                          setTimeout(() => setCopiedText(null), 2000);
+                        }}
+                        className="btn btn-secondary"
+                        style={{ padding: '2px 6px', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '4px', height: '22px', borderRadius: '4px', cursor: 'pointer' }}
+                        title="Copy Claude Config JSON"
+                      >
+                        {copiedText === 'claude' ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
+                        <span>{copiedText === 'claude' ? 'Copied' : 'Copy JSON'}</span>
+                      </button>
+                    </div>
+                    <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', margin: '0 0 6px 0' }}>
+                      Paste this config in <code style={{ color: 'var(--color-primary)', fontFamily: 'var(--font-mono)' }}>%APPDATA%/Claude/claude_desktop_config.json</code>:
+                    </p>
+                    <pre style={{ margin: 0, padding: '8px', background: 'rgba(0,0,0,0.3)', borderRadius: '4px', fontSize: '0.65rem', fontFamily: 'var(--font-mono)', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.03)', color: 'var(--text-muted)' }}>
+{`{
+  "mcpServers": {
+    "t-line": {
+      "command": "node",
+      "args": [
+        "${mcpStdioPath || '.../backend/dist/mcp-stdio.js'}"
+      ]
+    }
+  }
+}`}
+                    </pre>
+                  </div>
+
+                  {/* Option 2: Cursor / Direct SSE */}
+                  <div style={{ padding: '10px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-main)' }}>Cursor (SSE)</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const url = `${mcpSseUrl}?token=${token}`;
+                          navigator.clipboard.writeText(url);
+                          setCopiedText('cursor');
+                          setTimeout(() => setCopiedText(null), 2000);
+                        }}
+                        className="btn btn-secondary"
+                        style={{ padding: '2px 6px', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '4px', height: '22px', borderRadius: '4px', cursor: 'pointer' }}
+                        title="Copy SSE URL"
+                      >
+                        {copiedText === 'cursor' ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
+                        <span>{copiedText === 'cursor' ? 'Copied URL' : 'Copy URL'}</span>
+                      </button>
+                    </div>
+                    <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', margin: '0' }}>
+                      In Cursor Settings &gt; Features &gt; MCP &gt; Add New MCP Server. Choose type <code style={{ color: 'var(--color-primary)' }}>SSE</code> and enter the URL.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* MCP Tool Logs */}
+              <div>
+                <h4 style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-main)' }}>
+                  Recent MCP Requests Audit
+                </h4>
+                <div style={{ maxHeight: '140px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '6px', background: 'rgba(0,0,0,0.1)' }}>
+                  {mcpLogs.length === 0 ? (
+                    <div style={{ fontSize: '0.75rem', padding: '16px', color: 'var(--text-muted)', textAlign: 'center' }}>
+                      No MCP requests logged yet.
+                    </div>
+                  ) : (
+                    mcpLogs.map(log => {
+                      const isError = log.status === 'error';
+                      const dateStr = new Date(log.timestamp).toLocaleTimeString();
+                      return (
+                        <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.03)', fontSize: '0.75rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontWeight: 600, color: isError ? 'var(--color-danger)' : 'var(--text-main)' }}>
+                                {log.toolName ? `tool: ${log.toolName}` : `method: ${log.method}`}
+                              </span>
+                              <span style={{ fontSize: '0.6rem', opacity: 0.6 }}>({log.durationMs ? `${log.durationMs}ms` : 'pending'})</span>
+                            </div>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }} className="truncate">
+                              Client: {log.client} • {dateStr}
+                            </span>
+                            {log.errorDetail && (
+                              <span style={{ fontSize: '0.65rem', color: 'var(--color-danger)', whiteSpace: 'pre-wrap', marginTop: '2px' }}>
+                                Error: {log.errorDetail}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
                 <Button type="button" onClick={onClose}>Close</Button>
               </div>
             </div>
