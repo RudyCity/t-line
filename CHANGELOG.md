@@ -4,6 +4,14 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.71] - 2026-06-29
+
+### Fixed
+- **Workspace Actions Dropdown Overlap**: Fixed a CSS stacking context bug where subsequent workspace cards overlapped and obscured the open dropdown menu of preceding workspace cards. Lifted the dropdown menu's open state to the parent `WorkspaceList` component and introduced a conditional `.ws-card-dropdown-open` class that sets a higher `z-index` (50) on the active card, ensuring the dropdown menu renders on top of all sibling cards.
+- **Single-Dropdown Policy**: Managing the open dropdown state in the parent ensures only one workspace dropdown can be open at a time, automatically closing any open dropdown when another is toggled.
+
+---
+
 ## [1.3.70] - 2026-06-29
 
 ### Added

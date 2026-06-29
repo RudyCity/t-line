@@ -131,6 +131,10 @@
   border-color: rgba(245, 158, 11, 0.3);
 }
 
+.ws-card-dropdown-open {
+  z-index: 50;
+}
+
 /* Path row */
 .ws-path-row {
   font-size: 0.65rem;

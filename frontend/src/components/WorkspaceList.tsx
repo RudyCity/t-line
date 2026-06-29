@@ -54,6 +54,8 @@ interface WorkspaceActionsProps {
   openTerminal: (name: string, path: string, shell?: string) => void;
   handleRemoveWorkspace: (path: string) => void;
   onEditWorkspace: (ws: WorkspaceInfo) => void;
+  open: boolean;
+  setOpen: (open: boolean) => void;
 }
 
 function WorkspaceActions({
@@ -63,9 +65,10 @@ function WorkspaceActions({
   handleOpenWorktreeModal,
   openTerminal,
   handleRemoveWorkspace,
-  onEditWorkspace
+  onEditWorkspace,
+  open,
+  setOpen
 }: WorkspaceActionsProps) {
-  const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -77,7 +80,7 @@ function WorkspaceActions({
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  }, [open, setOpen]);
 
   const actionButtons = (
     <>
@@ -140,7 +143,7 @@ function WorkspaceActions({
     <div className="relative" ref={menuRef}>
       <button
         className="action-btn"
-        onClick={(e) => { e.stopPropagation(); setOpen(v => !v); }}
+        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
         title="More actions"
       >
         <MoreVertical size={15} />
@@ -318,6 +321,7 @@ export function WorkspaceList({
   const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   // Helper to normalize path matching
   const isPathInWorktree = (filePath: string, wtPath: string) => {
@@ -392,6 +396,7 @@ export function WorkspaceList({
           const isActive = activeWorkspaceId === w.id;
           const totalDirty = w.worktrees.reduce((acc, wt) => acc + (wt.dirtyCount ?? 0), 0);
           const hasDirtyChanges = totalDirty > 0;
+          const isDropdownOpen = openDropdownId === w.id;
 
           return (
             <div
@@ -402,7 +407,7 @@ export function WorkspaceList({
                   : hasDirtyChanges
                   ? 'ws-card-dirty'
                   : 'ws-card-idle'
-              }`}
+              } ${isDropdownOpen ? 'ws-card-dropdown-open' : ''}`}
               onClick={() => onWorkspaceClick(w.id)}
             >
               {/* Header row */}
@@ -440,6 +445,8 @@ export function WorkspaceList({
                   openTerminal={openTerminal}
                   handleRemoveWorkspace={handleRemoveWorkspace}
                   onEditWorkspace={onEditWorkspace}
+                  open={isDropdownOpen}
+                  setOpen={(isOpen) => setOpenDropdownId(isOpen ? w.id : null)}
                 />
               </div>
 
