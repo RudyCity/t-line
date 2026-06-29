@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.110] - 2026-06-29
+
+### Changed
+- **Worktree Folder Naming**: Renamed default folder for workspace worktrees from `.worktree/` to `.worktrees/` (plural) based on user preference.
+
+---
+
 ## [1.3.109] - 2026-06-29
 
 ### Changed

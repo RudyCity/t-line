@@ -74,7 +74,7 @@ export function useWorkspaces(
   useEffect(() => {
     if (!showWorktreeModal || !selectedRepoPath) return;
     const sep = selectedRepoPath.includes('\\') ? '\\' : '/';
-    const baseDir = `${selectedRepoPath}${sep}.worktree`;
+    const baseDir = `${selectedRepoPath}${sep}.worktrees`;
     
     const targetBranch = isNewBranch ? newWorktreeBranch : (newLocalBranchName || newWorktreeBranch);
     const folderName = targetBranch ? targetBranch.replace(/[\/\\]/g, '-') : 'new-worktree';
@@ -181,7 +181,7 @@ export function useWorkspaces(
   const handleOpenWorktreeModal = async (workspace: WorkspaceInfo) => {
     setSelectedRepoPath(workspace.path);
     const sep = workspace.path.includes('\\') ? '\\' : '/';
-    const worktreeBaseDir = `${workspace.path}${sep}.worktree`;
+    const worktreeBaseDir = `${workspace.path}${sep}.worktrees`;
     setNewWorktreePath(`${worktreeBaseDir}${sep}new-worktree`);
     setNewWorktreeBranch('');
     setIsNewBranch(false);
