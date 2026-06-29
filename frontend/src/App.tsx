@@ -379,12 +379,9 @@ export default function App() {
         setPanelWorktreePath(targetWtPath);
       }
 
-      // Dynamically sync terminal tab title with the current worktree branch name
+      // Dynamically sync terminal tab title with the workspace name
       if (activeTab.type === 'terminal') {
-        const expectedName = matchedWtPath 
-          ? `${ws.name} (${wtObj?.branch || 'worktree'})`
-          : ws.name;
-        
+        const expectedName = ws.name;
         if (activeTab.name !== expectedName) {
           setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, name: expectedName } : t));
         }

@@ -376,10 +376,7 @@ export function useWorkspaceHandlers({
     if (matchedTab) {
       setActiveTabId(matchedTab.id);
     } else {
-      const wts = ws.worktrees || [];
-      const wt = wts.find(w => w.path === wtPath);
-      const name = `${ws.name} (${wt?.branch || 'worktree'})`;
-      openTerminal(name, wtPath, ws.defaultShell);
+      openTerminal(ws.name, wtPath, ws.defaultShell);
     }
     setSidebarOpen(false);
   }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);

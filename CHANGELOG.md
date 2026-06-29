@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.117] - 2026-06-29
+
+### Changed
+- **Removed Branch Suffix from Tab Titles**: Removed the branch name suffix (` (branch)`) from terminal tab titles. Terminal tabs now display only the clean workspace name, while the branch name remains visible in the header and footer status indicators.
+
+---
+
 ## [1.3.116] - 2026-06-29
 
 ### Changed
