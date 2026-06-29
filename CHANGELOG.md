@@ -4,6 +4,19 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.90] - 2026-06-29
+
+### Fixed
+- **CI Build Fix**: Overhauled GitHub Actions `release.yml` to properly handle native module compilation across all platforms:
+  - Added `setup-python@v5` (Python 3.11) required by `node-pty` native build
+  - Added Linux build tools (`build-essential`, `libx11-dev`, `libxkbfile-dev`, `libsecret-1-dev`)
+  - Added macOS Xcode CLI tools setup
+  - Added `electron-rebuild` step to rebuild `node-pty` against the correct Electron ABI
+  - Added `fail-fast: false` so all 3 platform jobs run independently
+  - Added `GH_TOKEN` env for `electron-builder` publish step
+
+---
+
 ## [1.3.89] - 2026-06-29
 
 ### Fixed
