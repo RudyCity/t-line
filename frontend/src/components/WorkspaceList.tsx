@@ -269,11 +269,32 @@ function WorktreeList({
             <div className="tree-connector" />
             <div className="tree-item-content">
               <div
-                className={`flex items-center justify-between py-0.5 px-1.5 rounded-md hover:bg-white/5 transition-all text-xs cursor-pointer group/item ${
-                  isWtActive
-                    ? 'bg-purple-500/10 text-purple-300 font-semibold border border-purple-500/20'
-                    : 'text-slate-400 hover:text-slate-200'
+                className={`flex items-center justify-between py-0.5 px-1.5 rounded-md transition-all text-xs cursor-pointer group/item ${
+                  isWtActive ? 'font-semibold border' : ''
                 }`}
+                style={{
+                  backgroundColor: isWtActive 
+                    ? 'color-mix(in srgb, var(--color-primary) 10%, transparent)' 
+                    : 'transparent',
+                  borderColor: isWtActive 
+                    ? 'color-mix(in srgb, var(--color-primary) 20%, transparent)' 
+                    : 'transparent',
+                  color: isWtActive 
+                    ? 'var(--color-primary)' 
+                    : 'var(--text-muted)'
+                }}
+                onMouseOver={(e) => {
+                  if (!isWtActive) {
+                    e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)';
+                    e.currentTarget.style.color = 'var(--text-main)';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!isWtActive) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'var(--text-muted)';
+                  }
+                }}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (wt.isMain) {
@@ -285,12 +306,23 @@ function WorktreeList({
               >
                 <div className="flex items-center gap-1.5 truncate flex-1 min-w-0" title={wt.path}>
                   <div className="relative flex items-center shrink-0">
-                    <GitBranch size={10} className={isWtActive ? 'text-purple-400 shrink-0' : (wt.isDirty ? 'text-amber-400 shrink-0' : 'text-slate-500 shrink-0')} />
+                    <GitBranch 
+                      size={10} 
+                      className="shrink-0" 
+                      style={{
+                        color: isWtActive ? 'var(--color-primary)' : (wt.isDirty ? '#f59e0b' : 'var(--text-muted)')
+                      }}
+                    />
                     {hasWtRunning && (
                       <span className="absolute -bottom-0.5 -right-0.5 ws-active-dot" style={{ width: '4px', height: '4px', boxShadow: '0 0 4px #10b981' }} title="Active processes running in terminal" />
                     )}
                   </div>
-                  <span className={`truncate text-[11px] ${isWtActive ? 'text-purple-200' : (wt.isDirty ? 'text-amber-400' : 'text-slate-400')}`}>
+                  <span 
+                    className="truncate text-[11px]"
+                    style={{
+                      color: isWtActive ? 'var(--color-primary)' : (wt.isDirty ? '#f59e0b' : 'var(--text-muted)')
+                    }}
+                  >
                     {wt.branch || 'detached'}
                   </span>
                   <span className={`badge ${wt.isMain ? 'badge-main' : 'badge-worktree'} shrink-0 text-[9px] px-1 py-0`}>
@@ -501,14 +533,20 @@ export function WorkspaceList({
                   <div className="relative flex items-center shrink-0">
                     <Folder
                       size={14}
-                      className={`shrink-0 ${isActive ? 'text-purple-400' : hasDirtyChanges ? 'text-amber-400' : 'text-sky-400'}`}
+                      className="shrink-0"
+                      style={{
+                        color: isActive ? 'var(--color-primary)' : (hasDirtyChanges ? '#f59e0b' : 'var(--text-muted)')
+                      }}
                     />
                     {hasRunning && (
                       <span className="absolute -bottom-0.5 -right-0.5 ws-active-dot" title="Active processes running in terminal" />
                     )}
                   </div>
                   <span
-                    className={`text-[12px] font-semibold tracking-wide truncate ${isActive ? 'text-purple-200' : 'text-slate-100'}`}
+                    className="text-[12px] font-semibold tracking-wide truncate"
+                    style={{
+                      color: isActive ? 'var(--color-primary)' : 'var(--text-main)'
+                    }}
                     title={w.path}
                   >
                     {w.name}
