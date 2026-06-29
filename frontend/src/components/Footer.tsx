@@ -136,7 +136,7 @@ export function Footer({
   return (
     <>
       <footer 
-        className="app-footer flex items-center justify-between px-6 border-t backdrop-blur-md text-xs select-none shrink-0 h-9 z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.3)]"
+        className="app-footer flex items-center justify-between px-6 border-t backdrop-blur-md text-xs select-none shrink-0 h-9 z-20"
         style={{
           backgroundColor: 'color-mix(in srgb, var(--bg-sidebar) 90%, transparent)',
           borderTopColor: 'var(--border-color)',
