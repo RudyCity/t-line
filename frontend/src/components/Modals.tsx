@@ -236,7 +236,7 @@ export const WorktreeAddModal: React.FC<WorktreeAddModalProps> = ({
               type="text" 
               placeholder="e.g. feature-login" 
               value={newWorktreeBranch}
-              onChange={(e) => setNewWorktreeBranch(e.target.value)}
+              onChange={(e) => setNewWorktreeBranch(e.target.value.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9_\-\.\/]/g, ''))}
               required
               disabled={gitLoading}
             />
@@ -260,7 +260,7 @@ export const WorktreeAddModal: React.FC<WorktreeAddModalProps> = ({
               type="text" 
               placeholder="Leave empty to use existing branch name" 
               value={newLocalBranchName}
-              onChange={(e) => setNewLocalBranchName(e.target.value)}
+              onChange={(e) => setNewLocalBranchName(e.target.value.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9_\-\.\/]/g, ''))}
               disabled={gitLoading}
             />
           </FormField>

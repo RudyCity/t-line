@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.108] - 2026-06-29
+
+### Added
+- **Branch Name Input Sanitization**: Automatically sanitize input values for new branch names and custom local branch names in the "Create Git Worktree" modal, converting whitespace to hyphens and stripping special characters invalid in Git reference formats.
+
+---
+
 ## [1.3.107] - 2026-06-29
 
 ### Added
