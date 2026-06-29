@@ -2,6 +2,19 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.99] - 2026-06-29
+
+### Added
+- **Model Context Protocol (MCP) Server**: Exposes workspace data, file operations, git worktrees, and terminal execution capabilities directly to external AI assistants.
+  - Implemented custom JSON-RPC 2.0 message processor and SSE endpoints (`/api/mcp/sse`, `/api/mcp/message`).
+  - Added 7 specialized tools: `list_workspaces`, `get_workspace_details`, `run_command`, `read_file`, `write_file`, `create_worktree`, and `remove_worktree`.
+  - Enforced security filters verifying that all file operations and command executions reside strictly inside configured workspaces.
+  - Protected endpoints by requiring active session token validation.
+- **MCP Stdio Proxy Bridge**: Created a lightweight stdio-to-WebSocket proxy (`mcp-stdio.ts`) allowing stdio-only clients like Claude Desktop to bridge directly into the running backend.
+- **MCP Dashboard & Settings Tab**: Designed a premium, interactive tab inside the `SettingsModal` displaying connection status, active client stats, copy-paste config guides for Claude Desktop and Cursor, and a live-updating audit log of tool calls.
+
+---
+
 ## [1.3.98] - 2026-06-29
 
 ### Added
