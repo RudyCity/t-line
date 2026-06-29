@@ -238,8 +238,8 @@ function startBackend() {
 
   const isDev = !app.isPackaged;
   const projectRoot = isDev 
-    ? path.join(__dirname, '..') 
-    : path.join(__dirname, '..', '..', 'app.asar.unpacked');
+    ? path.join(app.getAppPath(), '..') 
+    : app.getAppPath();
   
   updateBackendStatus('starting');
 
@@ -263,15 +263,34 @@ function startBackend() {
 
     const { utilityProcess } = require('electron');
     backendProcess = utilityProcess.fork(scriptPath, [], {
-      cwd: projectRoot,
       env: spawnEnv,
       stdio: 'pipe'
     });
   }
 
   let token = null;
+  const logFile = path.join(app.getPath('userData'), 'backend_run.log');
+  try {
+    fs.writeFileSync(logFile, `Backend Spawn Log - ${new Date().toISOString()}\n`);
+  } catch (err) {}
+
+  backendProcess.on('spawn', () => {
+    try {
+      fs.appendFileSync(logFile, `[spawned]\n`);
+    } catch (e) {}
+  });
+
+  backendProcess.on('error', (err) => {
+    try {
+      fs.appendFileSync(logFile, `[error] ${err.message}\n${err.stack}\n`);
+    } catch (e) {}
+  });
 
   backendProcess.stdout.on('data', (data) => {
+    try {
+      fs.appendFileSync(logFile, `[stdout] ${data.toString()}`);
+    } catch (err) {}
+
     const output = data.toString();
     console.log(`[backend-stdout] ${output.trim()}`);
 
@@ -300,10 +319,16 @@ function startBackend() {
   });
 
   backendProcess.stderr.on('data', (data) => {
+    try {
+      fs.appendFileSync(logFile, `[stderr] ${data.toString()}`);
+    } catch (err) {}
     console.error(`[backend-stderr] ${data.toString().trim()}`);
   });
 
   backendProcess.on('close', (code) => {
+    try {
+      fs.appendFileSync(logFile, `[close] exited with code ${code}\n`);
+    } catch (err) {}
     console.log(`Backend process exited with code ${code}`);
     backendProcess = null;
     updateBackendStatus('stopped');

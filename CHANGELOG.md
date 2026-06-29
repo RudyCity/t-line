@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.81] - 2026-06-29
+
+### Fixed
+- **Monorepo Packaging & Internal Asset Resolution**: Resolved a major packaging issue where external `backend` and `frontend` assets were excluded from compiled builds due to `electron-builder` limitations. Created a cross-platform asset copying pipeline (`copy-assets.js`) to move assets inside the `desktop` workspace directory before compilation. Rewrote `projectRoot` resolution to use `app.getAppPath()` to guarantee path correctness, allowing the utility process to execute directly from within the `app.asar` archive and resolve production dependencies seamlessly.
+
+---
+
 ## [1.3.80] - 2026-06-29
 
 ### Fixed
