@@ -771,6 +771,8 @@ wss.on('connection', (ws: WebSocket) => {
 
           setTimeout(() => {
             if (ws.readyState === WebSocket.OPEN) {
+              // Send PID
+              ws.send(JSON.stringify({ type: 'pid', id, pid: existingTerm.getPid() }));
               // First replay any buffered output
               if (buffer) {
                 ws.send(JSON.stringify({ type: 'replay', id, data: buffer }));
@@ -802,6 +804,13 @@ wss.on('connection', (ws: WebSocket) => {
               }
             }
           );
+
+          // Send PID immediately
+          setTimeout(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'pid', id, pid: term.getPid() }));
+            }
+          }, 50);
         }
 
       } else if (type === 'data') {

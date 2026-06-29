@@ -357,6 +357,12 @@ export function TerminalInstance({
   const [hasSelection, setHasSelection] = useState(false);
   const [cursorPos, setCursorPos] = useState({ col: 1, row: 1 });
   const [smartPasteText, setSmartPasteText] = useState<string | null>(null);
+  const [localPid, setLocalPid] = useState<number | undefined>(pid);
+
+  useEffect(() => {
+    setLocalPid(pid);
+  }, [pid]);
+
 
   // ── RAF write-batch queue ──────────────────────────────────
   const writeQueueRef = useRef<string[]>([]);
@@ -591,6 +597,8 @@ export function TerminalInstance({
         scheduleWrite(payload.data);
       } else if (payload.type === 'title') {
         onTitleChangeRef.current?.(payload.title);
+      } else if (payload.type === 'pid') {
+        setLocalPid(payload.pid);
       } else if (payload.type === 'exit') {
         term.write('\r\n\r\n[Process Exited]\r\n');
       } else if (payload.type === 're-attached') {
@@ -774,7 +782,7 @@ export function TerminalInstance({
         onClear={handleClear}
         onSearch={handleSearchOpen}
         fontSize={actualFontSize}
-        pid={pid}
+        pid={localPid}
       />
 
       {contextMenu && (
