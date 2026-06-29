@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.78] - 2026-06-29
+
+### Optimized
+- **Monorepo Bundle Size & Hoisting Resolution**: Fixed a critical packaging issue where backend dependencies (like `express`, `ws`, and `node-pty`) were missing from the production package because of npm workspaces hoisting. Declared the backend production dependencies directly inside `desktop/package.json`. This prompts `electron-builder` to bundle only the required production dependencies and automatically exclude all heavy `devDependencies` (like `typescript`, `ts-node-dev`, and types), resolving execution crashes on clean systems and optimizing the bundle size.
+
+---
+
 ## [1.3.77] - 2026-06-29
 
 ### Fixed
