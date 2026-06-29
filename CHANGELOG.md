@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.115] - 2026-06-29
+
+### Changed
+- **Workspace & Worktree Selection and Toggle-Off Behavior**:
+  - Modified workspace parent card click behavior so that clicking a workspace directly selects its main branch (`master`/`main` via `ws.path`) instead of leaving the path unselected.
+  - Implemented toggle-off (deselect) behavior: clicking an already selected workspace or worktree in the sidebar clears the selection (setting `panelWorkspace = null` and `panelWorktreePath = null`), hiding active workspace tabs and displaying a clean welcome dashboard.
+  - Refactored `filteredTabs` and active tab synchronization in `App.tsx` to handle isolation of nested worktree paths when the main branch (`ws.path`) is selected.
+  - Removed unused variable declarations to fix build compiler warnings.
+
+---
+
 ## [1.3.114] - 2026-06-29
 
 ### Fixed

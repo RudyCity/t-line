@@ -38,7 +38,7 @@ import { RightSidebar } from './components/RightSidebar';
 import { UpdateNotification } from './components/UpdateNotification';
 import { useGitStatus } from './hooks/useGitStatus';
 import { useConfirmDialog } from './hooks/useConfirmDialog';
-import { useWorkspaceHandlers, isPathInWorktree, getTabWorktreePath } from './hooks/useWorkspaceHandlers';
+import { useWorkspaceHandlers, getTabWorktreePath } from './hooks/useWorkspaceHandlers';
 import { TPlusLogo } from './components/TPlusLogo';
 import { TabTooltip, TabContextMenu } from './components/TabUiComponents';
 
@@ -373,7 +373,7 @@ export default function App() {
       // Sync worktree path selection
       const matchedWtPath = getTabWorktreePath(activeTab, ws, terminalInstances);
       const wtObj = ws.worktrees?.find(wt => wt.path === matchedWtPath);
-      const targetWtPath = (wtObj && !wtObj.isMain) ? matchedWtPath : null;
+      const targetWtPath = (wtObj && !wtObj.isMain) ? matchedWtPath : ws.path;
 
       if (panelWorktreePath !== targetWtPath) {
         setPanelWorktreePath(targetWtPath);
@@ -433,11 +433,17 @@ export default function App() {
     if (panelWorktreePath) {
       // In worktree mode, filter tabs to show only those belonging to that specific worktree
       return wsTabs.filter(t => {
-        const isFile = t.type === 'file';
-        const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
-        const path = isFile ? (t.filePath || '') : (focusedInst?.cwd || '');
-        if (!path) return false;
-        return isPathInWorktree(path, panelWorktreePath);
+        const matchedWtPath = getTabWorktreePath(t, panelWorkspace, terminalInstances);
+        const wtObj = panelWorkspace.worktrees?.find(wt => wt.path === matchedWtPath);
+        const isMainTab = !matchedWtPath || (wtObj && wtObj.isMain);
+        
+        const targetWtObj = panelWorkspace.worktrees?.find(wt => wt.path === panelWorktreePath);
+        const isTargetMain = !panelWorktreePath || (targetWtObj && targetWtObj.isMain);
+        
+        if (isTargetMain) {
+          return isMainTab;
+        }
+        return matchedWtPath === panelWorktreePath;
       });
     }
 

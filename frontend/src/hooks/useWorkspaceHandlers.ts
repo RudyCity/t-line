@@ -89,7 +89,6 @@ export function useWorkspaceHandlers({
   setTerminalInstances,
   activeTabId,
   setActiveTabId,
-  workspaceActiveTab,
   setWorkspaceActiveTab,
   openTerminal,
   closeTerminal,
@@ -321,33 +320,29 @@ export function useWorkspaceHandlers({
     const ws = workspaces.find(w => w.id === workspaceId);
     if (!ws) return;
 
-    setPanelWorkspace(ws);
-    setPanelWorktreePath(null); // Clear selected worktree path to show all!
-
-    // 1. Try to restore last active tab from memory
-    const savedTabId = workspaceActiveTab[workspaceId];
-    if (savedTabId && tabs.some(t => t.id === savedTabId)) {
-      setActiveTabId(savedTabId);
+    // Toggle behavior: if this workspace is active and the main branch is selected, toggle it off!
+    const isMainSelected = panelWorkspace?.id === ws.id && (panelWorktreePath === ws.path || panelWorktreePath === null);
+    if (isMainSelected) {
+      setPanelWorkspace(null);
+      setPanelWorktreePath(null);
+      setActiveTabId('');
       setSidebarOpen(false);
       return;
     }
 
-    // 2. Try to find any open tab that matches this workspace
-    const isPathInWorkspace = (filePath: string, wsPath: string) => {
-      const normFile = filePath.toLowerCase().replace(/\\/g, '/');
-      const normWS = wsPath.toLowerCase().replace(/\\/g, '/');
-      return normFile === normWS || normFile.startsWith(normWS + '/');
-    };
+    setPanelWorkspace(ws);
+    setPanelWorktreePath(ws.path); // Select master/main!
 
+    // Find any open tab that matches the main branch/workspace path
     const matchedTab = tabs.find(tab => {
       if (tab.type === 'file' && tab.filePath) {
-        return isPathInWorkspace(tab.filePath, ws.path);
+        return isPathInWorktree(tab.filePath, ws.path);
       }
       if (tab.type === 'terminal' && tab.layout) {
         const termIds = getTerminalIds(tab.layout);
         return termIds.some(id => {
           const inst = terminalInstances[id];
-          return inst && isPathInWorkspace(inst.cwd, ws.path);
+          return inst && isPathInWorktree(inst.cwd, ws.path);
         });
       }
       return false;
@@ -356,15 +351,23 @@ export function useWorkspaceHandlers({
     if (matchedTab) {
       setActiveTabId(matchedTab.id);
     } else {
-      // 3. Fallback: open a new terminal tab in this workspace
-      openTerminal('Shell', ws.path);
+      openTerminal(ws.name, ws.path, ws.defaultShell);
     }
     setSidebarOpen(false);
-  }, [workspaces, workspaceActiveTab, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);
+  }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);
 
   const handleWorktreeClick = useCallback((workspaceId: string, wtPath: string) => {
     const ws = workspaces.find(w => w.id === workspaceId);
     if (!ws) return;
+
+    // Toggle behavior: if this worktree is already active, clicking it again toggles it off!
+    if (panelWorkspace?.id === ws.id && panelWorktreePath === wtPath) {
+      setPanelWorkspace(null);
+      setPanelWorktreePath(null);
+      setActiveTabId('');
+      setSidebarOpen(false);
+      return;
+    }
 
     setPanelWorkspace(ws);
     setPanelWorktreePath(wtPath); // Set active worktree path!
@@ -389,7 +392,7 @@ export function useWorkspaceHandlers({
       openTerminal(name, wtPath, ws.defaultShell);
     }
     setSidebarOpen(false);
-  }, [workspaces, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);
+  }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);
 
   return {
     editingWorkspace,
