@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.89] - 2026-06-29
+
+### Fixed
+- **Build Fix**: Removed unused `React` import in `UpdateNotification.tsx` that caused a TypeScript `TS6133` error and broke the GitHub Actions CI build on all platforms.
+
+---
+
 ## [1.3.88] - 2026-06-29
 
 ### Added

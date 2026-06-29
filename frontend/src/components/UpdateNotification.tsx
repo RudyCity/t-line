@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Download, RefreshCw, CheckCircle, XCircle, Loader2, ArrowUpCircle, X } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
