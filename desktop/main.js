@@ -237,7 +237,9 @@ function startBackend() {
   if (backendStatus !== 'stopped') return;
 
   const isDev = !app.isPackaged;
-  const projectRoot = path.join(__dirname, '..');
+  const projectRoot = isDev 
+    ? path.join(__dirname, '..') 
+    : path.join(__dirname, '..', '..', 'app.asar.unpacked');
   
   // Decide how to start the backend depending on build state
   let cmd, args;
@@ -263,7 +265,7 @@ function startBackend() {
 
   backendProcess = spawn(cmd, args, {
     cwd: projectRoot,
-    shell: true,
+    shell: isDev,
     env: spawnEnv
   });
 

@@ -1,6 +1,6 @@
 {
   "name": "desktop",
-  "version": "1.3.78",
+  "version": "1.3.79",
   "description": "Electron desktop wrapper for t-line",
   "author": {
     "name": "Rudy H.",
@@ -65,7 +65,10 @@
       ],
       "maintainer": "Rudy H. <hrudy715@gmail.com>"
     },
-    "asar": true
+    "asar": true,
+    "asarUnpack": [
+      "backend/**/*"
+    ]
   }
 }
 

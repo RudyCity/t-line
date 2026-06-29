@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.79] - 2026-06-29
+
+### Fixed
+- **Unpacked Physical Path & Shell Escape Resolution**: Resolved backend startup failure in packaged builds caused by Windows cmd shell whitespace splitting in directories containing spaces. Re-enabled `asarUnpack` for `backend/**/*` inside `desktop/package.json` to generate clean physical file locations, configured `desktop/main.js` to dynamically map `projectRoot` to `app.asar.unpacked`, and disabled `shell` spawning for binary executables in production. This guarantees backend processes spawn seamlessly under any folder path.
+
+---
+
 ## [1.3.78] - 2026-06-29
 
 ### Optimized
