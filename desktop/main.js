@@ -8,6 +8,17 @@ const http = require('http');
 // Disable hardware acceleration to prevent GPU process crash (error code -1073741819)
 app.disableHardwareAcceleration();
 
+// Enforce single instance lock
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+  process.exit(0);
+}
+
+app.on('second-instance', () => {
+  showWindow();
+});
+
 let mainWindow = null;
 let backendProcess = null;
 let backendStatus = 'stopped'; // 'stopped' | 'starting' | 'running'

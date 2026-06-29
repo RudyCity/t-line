@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.76] - 2026-06-29
+
+### Fixed
+- **Single Instance Focus Lock**: Integrated Electron `requestSingleInstanceLock` and `second-instance` event handlers in `desktop/main.js`. This resolves the issue where opening the executable again when it was already running in the background (minimized to the tray) did not show the window, by immediately focusing and restoring the existing application instance.
+
+---
+
 ## [1.3.75] - 2026-06-29
 
 ### Fixed
