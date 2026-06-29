@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.109] - 2026-06-29
+
+### Changed
+- **Default Worktree Folder Location**: Changed the default base directory for new git worktrees to be created inside a `.worktree` folder within the workspace root itself (e.g., `<workspace-path>/.worktree/<branch-name>`) instead of a sibling folder.
+- **Dynamic Path Synchronization**: Added a `useEffect` hook in `useWorkspaces.ts` to dynamically sync the default worktree checkout path segment to match the typed or selected branch name in real-time.
+
+---
+
 ## [1.3.108] - 2026-06-29
 
 ### Added

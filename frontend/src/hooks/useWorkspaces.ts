@@ -70,6 +70,23 @@ export function useWorkspaces(
     return () => clearInterval(interval);
   }, [isAuthenticated, fetchWorkspaces]);
 
+  // Dynamically update the default worktree path based on the selected/entered branch name
+  useEffect(() => {
+    if (!showWorktreeModal || !selectedRepoPath) return;
+    const sep = selectedRepoPath.includes('\\') ? '\\' : '/';
+    const baseDir = `${selectedRepoPath}${sep}.worktree`;
+    
+    const targetBranch = isNewBranch ? newWorktreeBranch : (newLocalBranchName || newWorktreeBranch);
+    const folderName = targetBranch ? targetBranch.replace(/[\/\\]/g, '-') : 'new-worktree';
+    
+    setNewWorktreePath(prev => {
+      if (!prev || prev.startsWith(baseDir)) {
+        return `${baseDir}${sep}${folderName}`;
+      }
+      return prev;
+    });
+  }, [isNewBranch, newWorktreeBranch, newLocalBranchName, selectedRepoPath, showWorktreeModal]);
+
   const fetchDirectoryList = async (targetPath = '') => {
     try {
       const res = await fetch(`/api/fs/list?path=${encodeURIComponent(targetPath)}`, {
@@ -163,9 +180,9 @@ export function useWorkspaces(
 
   const handleOpenWorktreeModal = async (workspace: WorkspaceInfo) => {
     setSelectedRepoPath(workspace.path);
-    const parentDir = workspace.path.substring(0, workspace.path.lastIndexOf(window.navigator.userAgent.includes('Windows') ? '\\' : '/'));
-    const worktreeBaseDir = `${parentDir}/${workspace.name}-worktrees`;
-    setNewWorktreePath(`${worktreeBaseDir}/new-worktree`);
+    const sep = workspace.path.includes('\\') ? '\\' : '/';
+    const worktreeBaseDir = `${workspace.path}${sep}.worktree`;
+    setNewWorktreePath(`${worktreeBaseDir}${sep}new-worktree`);
     setNewWorktreeBranch('');
     setIsNewBranch(false);
     setNewLocalBranchName('');
