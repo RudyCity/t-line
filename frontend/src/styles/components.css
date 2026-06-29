@@ -1624,3 +1624,9 @@
   border-color: rgba(245, 158, 11, 0.6);
 }
 
+/* Custom terminal mouse cursor behavior */
+.terminal-element .xterm-screen {
+  cursor: default;
+}
+
+
