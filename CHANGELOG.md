@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.84] - 2026-06-29
+
+### Changed
+- **Minimalist Header Height & Control Pill Design**: Reduced desktop top-bar height (`--topbar-height`) from 56px to 40px to maximize vertical editor/terminal space. Eliminated the solid dark wrapper background and border on the right action control pill. Separated application action buttons (Help, Settings, Logout) from window actions (Minimize, Maximize, Close), styling them as borderless transparent icons that blend seamlessly into the header background.
+
+---
+
 ## [1.3.83] - 2026-06-29
 
 ### Changed
