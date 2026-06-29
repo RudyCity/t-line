@@ -293,11 +293,6 @@ function WorktreeList({
                   <span className={`truncate text-[11px] ${isWtActive ? 'text-purple-200' : (wt.isDirty ? 'text-amber-400' : 'text-slate-400')}`}>
                     {wt.branch || 'detached'}
                   </span>
-                  {wt.isDirty && wt.dirtyCount !== undefined && wt.dirtyCount > 0 && (
-                    <span className="badge badge-dirty shrink-0 text-[9px] px-1 py-0" title={`${wt.dirtyCount} uncommitted changes`}>
-                      {wt.dirtyCount}
-                    </span>
-                  )}
                   <span className={`badge ${wt.isMain ? 'badge-main' : 'badge-worktree'} shrink-0 text-[9px] px-1 py-0`}>
                     {wt.isMain ? 'main' : 'wt'}
                   </span>
@@ -525,11 +520,6 @@ export function WorkspaceList({
                     </span>
                   )}
 
-                  {hasDirtyChanges && !isActive && (
-                    <span className="ws-dirty-count shrink-0" title={`${totalDirty} uncommitted changes`}>
-                      {totalDirty}
-                    </span>
-                  )}
 
                   {/* Active processes badges */}
                   {isClaudeActive && (
