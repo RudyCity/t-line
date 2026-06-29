@@ -268,9 +268,10 @@ export function Footer({
       {/* Center Section: Workspace Context & Zoom/Shell Controls — hidden on mobile */}
       <div className="hidden sm:flex items-center gap-4">
         {panelWorkspace && (
-          <div className="flex items-center gap-2 text-[11px] font-mono text-slate-500">
+          <div className="flex items-center gap-2 text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>
             <span
-              className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors duration-150 cursor-pointer"
+              className="flex items-center gap-1.5 transition-colors duration-150 cursor-pointer"
+              style={{ color: 'var(--text-main)' }}
               title={`Open in Explorer: ${activeTabPath || panelWorkspace.path}`}
               onClick={() => {
                 const folderPath = activeTabPath || panelWorkspace.path;
@@ -279,8 +280,8 @@ export function Footer({
                 }
               }}
             >
-              <Folder size={11} className="text-purple-400" />
-              <span className="font-semibold text-slate-300 truncate max-w-[180px]">{getRelativeActivePath(panelWorkspace, activeTabPath)}</span>
+              <Folder size={11} style={{ color: 'var(--color-primary)' }} />
+              <span className="font-semibold truncate max-w-[180px]">{getRelativeActivePath(panelWorkspace, activeTabPath)}</span>
             </span>
             
             {(() => {
@@ -288,16 +289,23 @@ export function Footer({
               if (!activeBranch) return null;
               return (
                 <>
-                  <span className="text-slate-700">|</span>
+                  <span style={{ color: 'var(--border-color)' }}>|</span>
                   <span 
-                    className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded font-sans text-[11px] transition-all duration-150 ${
-                      activeBranch.isDirty 
-                        ? 'bg-amber-500/5 border border-amber-500/20 text-amber-300 hover:bg-amber-500/10 hover:border-amber-500/30' 
-                        : 'bg-slate-900/60 border border-white/5 text-slate-300 hover:border-white/10 hover:bg-slate-900'
-                    }`} 
+                    className="flex items-center gap-1.5 px-1.5 py-0.5 rounded font-sans text-[11px] transition-all duration-150 border"
+                    style={{
+                      backgroundColor: activeBranch.isDirty 
+                        ? 'rgba(245, 158, 11, 0.08)' 
+                        : 'color-mix(in srgb, var(--bg-main) 60%, transparent)',
+                      borderColor: activeBranch.isDirty 
+                        ? 'rgba(245, 158, 11, 0.25)' 
+                        : 'var(--border-color)',
+                      color: activeBranch.isDirty 
+                        ? '#f59e0b' 
+                        : 'var(--text-main)'
+                    }}
                     title={activeBranch.isDirty ? "Uncommitted changes" : "Git Branch"}
                   >
-                    <GitBranch size={11} className={activeBranch.isMain ? 'text-purple-400' : 'text-emerald-400'} />
+                    <GitBranch size={11} style={{ color: activeBranch.isMain ? 'var(--color-primary)' : '#10b981' }} />
                     <span className="font-medium">{activeBranch.name}</span>
                   </span>
                 </>
@@ -306,24 +314,44 @@ export function Footer({
           </div>
         )}
 
-        {panelWorkspace && <div className="w-px h-3.5 bg-white/10" />}
+        {panelWorkspace && <div className="w-px h-3.5" style={{ backgroundColor: 'var(--border-color)' }} />}
 
         {/* Zoom & Shell Controls (Dashboard Pill) */}
-        <div className="flex items-center gap-3 bg-white/5 hover:bg-white/10 px-3 py-1 rounded-full border border-white/5 hover:border-white/10 transition-all duration-200 shadow-inner">
+        <div 
+          className="flex items-center gap-3 px-3 py-1 rounded-full transition-all duration-200 shadow-inner"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--bg-main) 30%, transparent)',
+            borderColor: 'var(--border-color)',
+            borderWidth: '1px'
+          }}
+        >
           {/* Zoom controls */}
           <div className="flex items-center gap-2">
             <button 
-              className="text-slate-400 hover:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none" 
+              className="hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none" 
+              style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
+              onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
+              onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
               onClick={handleZoomOut} 
               title="Zoom Out Terminal font"
             >
               <ZoomOut size={12} />
             </button>
-            <span className="text-[10px] bg-slate-950/60 px-1.5 py-0.5 rounded font-mono font-semibold text-purple-300 min-w-[28px] text-center border border-white/5">
+            <span 
+              className="text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold min-w-[28px] text-center border"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--bg-main) 60%, transparent)',
+                borderColor: 'var(--border-color)',
+                color: 'var(--color-primary)'
+              }}
+            >
               {terminalFontSize}px
             </span>
             <button 
-              className="text-slate-400 hover:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none" 
+              className="hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none" 
+              style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
+              onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
+              onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
               onClick={handleZoomIn} 
               title="Zoom In Terminal font"
             >
@@ -335,25 +363,25 @@ export function Footer({
 
           {/* Shell Selector */}
           <div className="flex items-center gap-1.5">
-            <Terminal size={11} className="text-slate-400" />
+            <Terminal size={11} style={{ color: 'var(--text-muted)' }} />
             <select 
                value={defaultShell} 
                onChange={(e) => setDefaultShell(e.target.value)}
-               className="bg-transparent border-none font-mono font-semibold text-[10px] cursor-pointer outline-none focus:ring-0 select-none py-0 pr-4 pl-0 transition-colors duration-150 hover:text-[var(--text-main)]"
+               className="bg-transparent border-none font-mono font-semibold text-[10px] cursor-pointer outline-none focus:ring-0 select-none py-0 pr-4 pl-0 transition-colors duration-150"
                title="Default Shell for new tabs"
                style={{ 
                  appearance: 'none',
-                 backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='rgba(148,163,184,0.8)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
+                 backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
                  backgroundPosition: 'right center',
                  backgroundRepeat: 'no-repeat',
                  backgroundSize: '8px 8px',
-                 color: 'var(--text-muted)'
+                 color: 'var(--text-main)'
                }}
              >
-               <option value="powershell" className="bg-[var(--bg-sidebar)] text-[var(--text-main)]">powershell</option>
-               <option value="cmd" className="bg-[var(--bg-sidebar)] text-[var(--text-main)]">cmd</option>
-               <option value="gitbash" className="bg-[var(--bg-sidebar)] text-[var(--text-main)]">gitbash</option>
-               <option value="wsl" className="bg-[var(--bg-sidebar)] text-[var(--text-main)]">wsl</option>
+               <option value="powershell" style={{ backgroundColor: 'var(--bg-sidebar)', color: 'var(--text-main)' }}>powershell</option>
+               <option value="cmd" style={{ backgroundColor: 'var(--bg-sidebar)', color: 'var(--text-main)' }}>cmd</option>
+               <option value="gitbash" style={{ backgroundColor: 'var(--bg-sidebar)', color: 'var(--text-main)' }}>gitbash</option>
+               <option value="wsl" style={{ backgroundColor: 'var(--bg-sidebar)', color: 'var(--text-main)' }}>wsl</option>
              </select>
           </div>
 
@@ -362,7 +390,10 @@ export function Footer({
               <div className="w-px h-3.5 bg-[var(--border-color)]" />
               <button
                 onClick={onRefreshTerminal}
-                className="text-slate-400 hover:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none"
+                className="hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none"
+                style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
+                onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
+                onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
                 title="Restart current terminal process"
               >
                 <RefreshCw size={11} className="hover:rotate-45 transition-transform duration-200" />
@@ -376,23 +407,38 @@ export function Footer({
       <div className="hidden sm:flex items-center gap-2.5">
         {/* Cloudflare Tunnel status */}
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-slate-500 hidden md:inline-block">Cloudflare Tunnel:</span>
+          <span className="text-[10px] hidden md:inline-block" style={{ color: 'var(--text-muted)' }}>Cloudflare Tunnel:</span>
           
-          <span className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono border ${
-            tunnelLoading 
-              ? 'bg-sky-500/5 border-sky-500/20 text-sky-400' 
-              : (tunnelStatus.active 
-                  ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.05)]' 
-                  : 'bg-slate-900/60 border-white/5 text-slate-500')
-          }`}>
+          <span 
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono border"
+            style={{
+              backgroundColor: tunnelLoading 
+                ? 'rgba(14, 165, 233, 0.08)' 
+                : (tunnelStatus.active 
+                    ? 'rgba(16, 185, 129, 0.08)' 
+                    : 'color-mix(in srgb, var(--bg-main) 60%, transparent)'),
+              borderColor: tunnelLoading 
+                ? 'rgba(14, 165, 233, 0.25)' 
+                : (tunnelStatus.active 
+                    ? 'rgba(16, 185, 129, 0.25)' 
+                    : 'var(--border-color)'),
+              color: tunnelLoading 
+                ? '#38bdf8' 
+                : (tunnelStatus.active 
+                    ? '#10b981' 
+                    : 'var(--text-muted)')
+            }}
+          >
             {tunnelLoading ? (
               <span className="h-1.5 w-1.5 rounded-full border border-sky-400/30 border-t-sky-400 animate-spin" />
             ) : (
-              <span className={`h-1.5 w-1.5 rounded-full ${
-                tunnelStatus.active 
-                  ? 'bg-emerald-400 animate-pulse shadow-[0_0_6px_#10b981]' 
-                  : 'bg-slate-600'
-              }`} />
+              <span 
+                className="h-1.5 w-1.5 rounded-full" 
+                style={{
+                  backgroundColor: tunnelStatus.active ? '#10b981' : 'var(--text-muted)',
+                  boxShadow: tunnelStatus.active ? '0 0 6px #10b981' : 'none'
+                }}
+              />
             )}
             <span className="font-semibold">
               {tunnelLoading 
@@ -404,27 +450,40 @@ export function Footer({
 
         {/* Active Tunnel URL Info */}
         {tunnelStatus.active && tunnelStatus.url && (
-          <div className="flex items-center gap-1.5 bg-sky-950/20 border border-sky-500/20 px-2 py-0.5 rounded-md text-[10px] font-mono text-sky-400 shadow-[0_0_8px_rgba(14,165,233,0.05)]">
-            <Globe size={11} className="text-sky-400 animate-pulse" />
+          <div 
+            className="flex items-center gap-1.5 border px-2 py-0.5 rounded-md text-[10px] font-mono shadow-[0_0_8px_rgba(14,165,233,0.05)]"
+            style={{
+              backgroundColor: 'rgba(14, 165, 233, 0.08)',
+              borderColor: 'rgba(14, 165, 233, 0.25)',
+              color: '#38bdf8'
+            }}
+          >
+            <Globe size={11} className="animate-pulse" style={{ color: '#38bdf8' }} />
             <span className="max-w-[140px] md:max-w-[200px] truncate" title={tunnelStatus.url}>
               {tunnelStatus.url.replace(/^https?:\/\//, '')}
             </span>
             
-            <div className="w-px h-2.5 bg-sky-500/20" />
+            <div className="w-px h-2.5" style={{ backgroundColor: 'rgba(14, 165, 233, 0.25)' }} />
             
             <div className="flex items-center gap-1">
               <a 
                 href={tunnelStatus.url} 
                 target="_blank" 
                 rel="noreferrer" 
-                className="text-slate-400 hover:text-sky-300 p-0.5 rounded transition-colors duration-150 flex items-center justify-center"
+                className="p-0.5 rounded transition-colors duration-150 flex items-center justify-center"
+                style={{ color: 'var(--text-muted)' }}
+                onMouseOver={(e) => e.currentTarget.style.color = '#38bdf8'}
+                onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
                 title="Open Tunnel URL"
               >
                 <ExternalLink size={10} />
               </a>
               <button 
                 onClick={handleCopy}
-                className="text-slate-400 hover:text-purple-300 p-0.5 rounded transition-colors duration-150 flex items-center justify-center cursor-pointer"
+                className="p-0.5 rounded transition-colors duration-150 flex items-center justify-center cursor-pointer"
+                style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
+                onMouseOver={(e) => e.currentTarget.style.color = 'var(--color-primary)'}
+                onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
                 title="Copy Tunnel URL"
               >
                 {copied ? (
@@ -435,7 +494,10 @@ export function Footer({
               </button>
               {tunnelStatus.type === 'quick' && (
                 <span 
-                  className="text-slate-500 hover:text-slate-300 transition-colors cursor-help flex items-center p-0.5" 
+                  className="transition-colors cursor-help flex items-center p-0.5" 
+                  style={{ color: 'var(--text-muted)' }}
+                  onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
+                  onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
                   title="Tip: Newly created trycloudflare URLs can take 5-15 seconds for DNS to propagate. If you see 'Site can't be reached', wait a few seconds and reload."
                 >
                   <Info size={11} />
@@ -471,9 +533,24 @@ export function Footer({
               <button 
                 onClick={() => handleStartTunnel('token')}
                 disabled={tunnelLoading}
-                className={`px-2.5 py-0.5 rounded-full border border-white/10 bg-slate-900/60 hover:bg-slate-800 text-slate-300 hover:text-white text-[10px] font-medium transition-all duration-150 hover:-translate-y-[0.5px] active:translate-y-0 ${
+                className={`px-2.5 py-0.5 rounded-full border text-[10px] font-medium transition-all duration-150 hover:-translate-y-[0.5px] active:translate-y-0 ${
                   tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                 }`}
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--bg-main) 30%, transparent)',
+                  borderColor: 'var(--border-color)',
+                  color: 'var(--text-main)'
+                }}
+                onMouseOver={(e) => {
+                  if (!tunnelLoading) {
+                    e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--bg-main) 50%, transparent)';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!tunnelLoading) {
+                    e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--bg-main) 30%, transparent)';
+                  }
+                }}
               >
                 Custom
               </button>
