@@ -490,15 +490,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <FormField label="UI Font Family" className="mb-0">
                     <Select
                       value={fontSans}
-                      onChange={(e) => setFontSans(e.target.value)}
+                      onChange={(val) => setFontSans(val)}
                       options={Object.keys(UI_FONTS).map(f => ({ value: f, label: f }))}
+                      searchable={true}
                     />
                   </FormField>
                   <FormField label="Terminal Font Family" className="mb-0">
                     <Select
                       value={fontMono}
-                      onChange={(e) => setFontMono(e.target.value)}
+                      onChange={(val) => setFontMono(val)}
                       options={Object.keys(MONO_FONTS).map(f => ({ value: f, label: f }))}
+                      searchable={true}
                     />
                   </FormField>
                 </div>

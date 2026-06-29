@@ -3,6 +3,7 @@ import { GitBranch, ZoomIn, ZoomOut, ExternalLink, Copy, Check, Info, Terminal, 
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { Toast } from './Toast';
 import { SystemStats } from '../hooks/useSystemStats';
+import { Select } from './Form';
 
 // Helper function to format bytes into readable units
 function formatBytes(bytes: number, decimals: number = 1): string {
@@ -374,25 +375,19 @@ export function Footer({
           {/* Shell Selector */}
           <div className="flex items-center gap-1.5">
             <Terminal size={11} style={{ color: 'var(--text-muted)' }} />
-            <select 
+            <Select 
                value={defaultShell} 
-               onChange={(e) => setDefaultShell(e.target.value)}
-               className="bg-transparent border-none font-mono font-semibold text-[10px] cursor-pointer outline-none focus:ring-0 select-none py-0 pr-4 pl-0 transition-colors duration-150"
-               title="Default Shell for new tabs"
-               style={{ 
-                 appearance: 'none',
-                 backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
-                 backgroundPosition: 'right center',
-                 backgroundRepeat: 'no-repeat',
-                 backgroundSize: '8px 8px',
-                 color: 'var(--text-main)'
-               }}
-             >
-               <option value="powershell" style={{ backgroundColor: 'var(--bg-sidebar)', color: 'var(--text-main)' }}>powershell</option>
-               <option value="cmd" style={{ backgroundColor: 'var(--bg-sidebar)', color: 'var(--text-main)' }}>cmd</option>
-               <option value="gitbash" style={{ backgroundColor: 'var(--bg-sidebar)', color: 'var(--text-main)' }}>gitbash</option>
-               <option value="wsl" style={{ backgroundColor: 'var(--bg-sidebar)', color: 'var(--text-main)' }}>wsl</option>
-             </select>
+               onChange={(val) => setDefaultShell(val)}
+               align="top"
+               variant="minimal"
+               className="w-20"
+               options={[
+                 { value: 'powershell', label: 'powershell' },
+                 { value: 'cmd', label: 'cmd' },
+                 { value: 'gitbash', label: 'gitbash' },
+                 { value: 'wsl', label: 'wsl' }
+               ]}
+            />
           </div>
 
           {activeTabType === 'terminal' && onRefreshTerminal && (

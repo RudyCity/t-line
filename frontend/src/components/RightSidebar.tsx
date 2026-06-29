@@ -4,6 +4,7 @@ import {
   ZoomIn, ZoomOut, Globe, ExternalLink, Copy, Check, Info, RefreshCw
 } from 'lucide-react';
 import { TabData, TerminalInstanceData, WorkspaceInfo } from '../hooks/useTerminals';
+import { Select } from './Form';
 
 interface RightSidebarProps {
   isOpen: boolean;
@@ -191,21 +192,17 @@ export function RightSidebar({
               <TerminalIcon size={12} className="text-[var(--text-muted)]" />
               Default Shell
             </span>
-            <select
+            <Select
               value={defaultShell}
-              onChange={(e) => setDefaultShell(e.target.value)}
-              className="border text-xs cursor-pointer outline-none rounded px-2 py-1 transition-colors"
-              style={{
-                backgroundColor: 'var(--bg-main)',
-                borderColor: 'var(--border-color)',
-                color: 'var(--text-muted)'
-              }}
-            >
-              <option value="powershell" className="bg-[var(--bg-sidebar)] text-[var(--text-main)]">powershell</option>
-              <option value="cmd" className="bg-[var(--bg-sidebar)] text-[var(--text-main)]">cmd</option>
-              <option value="gitbash" className="bg-[var(--bg-sidebar)] text-[var(--text-main)]">gitbash</option>
-              <option value="wsl" className="bg-[var(--bg-sidebar)] text-[var(--text-main)]">wsl</option>
-            </select>
+              onChange={(val) => setDefaultShell(val)}
+              className="w-32 text-xs"
+              options={[
+                { value: 'powershell', label: 'powershell' },
+                { value: 'cmd', label: 'cmd' },
+                { value: 'gitbash', label: 'gitbash' },
+                { value: 'wsl', label: 'wsl' }
+              ]}
+            />
           </div>
 
           {/* Refresh Terminal */}

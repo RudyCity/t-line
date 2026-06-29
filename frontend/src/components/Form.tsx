@@ -14,34 +14,11 @@ export const Input: React.FC<InputProps> = ({ className = '', ...props }) => {
   );
 };
 
-interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  className?: string;
-  options: { value: string; label: string; disabled?: boolean }[];
-}
+import { CustomSelect, CustomSelectProps, SelectOption } from './CustomSelect';
 
-export const Select: React.FC<SelectProps> = ({ className = '', options, ...props }) => {
-  return (
-    <select
-      className={`form-input w-full border border-[var(--border-color)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] focus:outline-none focus:border-[var(--color-primary)]/50 focus:ring-1 focus:ring-[var(--color-primary)]/25 transition-all duration-200 cursor-pointer ${className}`}
-      style={{
-        backgroundColor: 'var(--bg-main)',
-        appearance: 'none',
-        backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
-        backgroundPosition: 'right 12px center',
-        backgroundRepeat: 'no-repeat',
-        backgroundSize: '10px 10px',
-        paddingRight: '32px'
-      }}
-      {...props}
-    >
-      {options.map((opt) => (
-        <option key={opt.value} value={opt.value} disabled={opt.disabled} style={{ backgroundColor: 'var(--bg-sidebar)', color: 'var(--text-main)' }}>
-          {opt.label}
-        </option>
-      ))}
-    </select>
-  );
-};
+export type SelectProps = CustomSelectProps;
+export const Select = CustomSelect;
+export type { SelectOption };
 
 interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   className?: string;

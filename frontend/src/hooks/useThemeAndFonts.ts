@@ -102,6 +102,14 @@ export const UI_FONTS = {
   Roboto: "'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   Montserrat: "'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   Ubuntu: "'Ubuntu', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  'Geist Sans': "'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  'SF Pro': "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, sans-serif",
+  'Plus Jakarta Sans': "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  'Lato': "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  'Open Sans': "'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  'Nunito': "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  'Sora': "'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  'DM Sans': "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   System: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
 };
 
@@ -111,6 +119,13 @@ export const MONO_FONTS = {
   'Source Code Pro': "'Source Code Pro', monospace",
   'Ubuntu Mono': "'Ubuntu Mono', monospace",
   'Courier New': "'Courier New', Courier, monospace",
+  'Geist Mono': "'Geist Mono', 'JetBrains Mono', 'Fira Code', monospace",
+  'SF Mono': "'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace",
+  'Cascadia Code': "'Cascadia Code', 'Segoe UI Mono', Consolas, monospace",
+  'IBM Plex Mono': "'IBM Plex Mono', 'Courier New', monospace",
+  'Inconsolata': "'Inconsolata', monospace",
+  'Hack': "'Hack', monospace",
+  'Roboto Mono': "'Roboto Mono', monospace",
   System: "monospace",
 };
 

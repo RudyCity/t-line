@@ -138,7 +138,7 @@ export const WorkspaceAddModal: React.FC<WorkspaceAddModalProps> = ({
         <FormField label="Default Shell for Workspace">
           <Select 
             value={newWorkspaceShell} 
-            onChange={(e) => setNewWorkspaceShell(e.target.value)}
+            onChange={(val) => setNewWorkspaceShell(val)}
             options={[
               { value: 'powershell', label: 'PowerShell' },
               { value: 'cmd', label: 'Command Prompt (CMD)' },
@@ -243,7 +243,7 @@ export const WorktreeAddModal: React.FC<WorktreeAddModalProps> = ({
           ) : (
             <Select 
               value={newWorktreeBranch}
-              onChange={(e) => setNewWorktreeBranch(e.target.value)}
+              onChange={(val) => setNewWorktreeBranch(val)}
               required
               disabled={gitLoading}
               options={[
@@ -613,7 +613,7 @@ export const WorkspaceEditModal: React.FC<WorkspaceEditModalProps> = ({
         <FormField label="Default Terminal Shell">
           <Select 
             value={defaultShell}
-            onChange={(e) => setDefaultShell(e.target.value)}
+            onChange={(val) => setDefaultShell(val)}
             options={shellOptions}
           />
         </FormField>

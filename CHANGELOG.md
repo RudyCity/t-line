@@ -2,6 +2,18 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.121] - 2026-06-29
+
+### Added
+- **Premium Custom Select Component**:
+  - Implemented a custom glassmorphic select dropdown component with full keyboard navigation (arrows, Enter, Space, Escape) and click-outside closing behavior.
+  - Added support for search/filtering, icons, and descriptions in options.
+  - Replaced all native `<select>` dropdowns across the application with the custom select component, including `Modals.tsx` (workspace/branch/shell settings), `SettingsModal.tsx` (font families), `RightSidebar.tsx` (sidebar shell switcher), and `Footer.tsx` (status bar shell switcher with upward `'top'` alignment and `'minimal'` visual styling).
+  - Added a search filter input directly inside the UI and Terminal font select dropdowns for quick font lookups.
+  - Added several new premium UI and Monospace font variants, including `Geist Sans`, `SF Pro`, `Plus Jakarta Sans`, `Lato`, `Open Sans`, `Nunito`, `Sora`, `DM Sans`, `Geist Mono`, `SF Mono`, `Cascadia Code`, `IBM Plex Mono`, `Inconsolata`, and `Hack`.
+
+---
+
 ## [1.3.120] - 2026-06-29
 
 ### Added
