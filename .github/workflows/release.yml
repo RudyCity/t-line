@@ -29,26 +29,8 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: Setup Python (for node-pty native build)
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install build tools (Linux)
-        if: runner.os == 'Linux'
-        run: sudo apt-get install -y build-essential libx11-dev libxkbfile-dev libsecret-1-dev
-
-      - name: Install build tools (macOS)
-        if: runner.os == 'macOS'
-        run: xcode-select --install || true
-
       - name: Install Dependencies
         run: npm install
-
-      - name: Rebuild native modules for Electron
-        run: npx electron-rebuild -f -w node-pty --module-dir desktop
-        env:
-          npm_config_msvs_version: '2022'
 
       - name: Build Frontend
         run: npm run build:frontend

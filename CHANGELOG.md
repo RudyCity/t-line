@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.91] - 2026-06-29
+
+### Fixed
+- **CI Build Fix**: Reverted workflow back to the original simple structure without native builder rebuild workarounds (removed `electron-rebuild` and extra python setup steps that caused lockfile/compromised conflicts during npm execution), letting `electron-builder` natively handle compiling `node-pty`.
+
 ---
 
 ## [1.3.90] - 2026-06-29

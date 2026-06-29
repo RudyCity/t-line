@@ -1,6 +1,6 @@
 {
   "name": "desktop",
-  "version": "1.3.90",
+  "version": "1.3.91",
   "description": "Electron desktop wrapper for t-line",
   "author": {
     "name": "Rudy H.",
