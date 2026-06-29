@@ -334,10 +334,9 @@ export default function App() {
       return;
     }
 
-    if (workspaces.length === 1) {
-      if (!panelWorkspace || panelWorkspace.id !== workspaces[0].id) {
-        setPanelWorkspace(workspaces[0]);
-      }
+    // Default to the first workspace if none is active or if the active one no longer exists
+    if (!panelWorkspace || !workspaces.some(w => w.id === panelWorkspace.id)) {
+      setPanelWorkspace(workspaces[0]);
       return;
     }
 
