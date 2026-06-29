@@ -252,7 +252,8 @@ export async function addWorktree(
   repoPath: string, 
   worktreePath: string, 
   branchName: string, 
-  newBranch: boolean
+  newBranch: boolean,
+  newBranchName?: string
 ): Promise<{ success: boolean; output: string }> {
   try {
     const normalizedRepo = path.normalize(repoPath);
@@ -261,6 +262,8 @@ export async function addWorktree(
     const args = ['worktree', 'add'];
     if (newBranch) {
       args.push('-b', branchName, normalizedWorktree);
+    } else if (newBranchName) {
+      args.push('-b', newBranchName, normalizedWorktree, branchName);
     } else {
       args.push(normalizedWorktree, branchName);
     }
@@ -273,7 +276,11 @@ export async function addWorktree(
       try {
         const normalizedRepo = path.normalize(repoPath);
         const normalizedWorktree = path.normalize(worktreePath);
-        const detachArgs = ['worktree', 'add', '--detach', normalizedWorktree, branchName];
+        
+        // If they specify a custom local branch name but it fails (unlikely to fail on 'already used' unless the new name is in use),
+        // or if checking out existing branch directly fails:
+        const targetBranch = newBranchName || branchName;
+        const detachArgs = ['worktree', 'add', '--detach', normalizedWorktree, targetBranch];
         const output = await runGit(detachArgs, normalizedRepo);
         clearWorkspaceCache();
         return { 

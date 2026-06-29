@@ -175,6 +175,8 @@ interface WorktreeAddModalProps {
   setNewWorktreeBranch: (val: string) => void;
   repoBranches: string[];
   gitLoading: boolean;
+  newLocalBranchName: string;
+  setNewLocalBranchName: (val: string) => void;
 }
 
 export const WorktreeAddModal: React.FC<WorktreeAddModalProps> = ({
@@ -188,7 +190,9 @@ export const WorktreeAddModal: React.FC<WorktreeAddModalProps> = ({
   newWorktreeBranch,
   setNewWorktreeBranch,
   repoBranches,
-  gitLoading
+  gitLoading,
+  newLocalBranchName,
+  setNewLocalBranchName
 }) => {
   if (!show) return null;
 
@@ -249,6 +253,18 @@ export const WorktreeAddModal: React.FC<WorktreeAddModalProps> = ({
             />
           )}
         </FormField>
+
+        {!isNewBranch && (
+          <FormField label="Custom Local Branch Name (optional)">
+            <Input 
+              type="text" 
+              placeholder="Leave empty to use existing branch name" 
+              value={newLocalBranchName}
+              onChange={(e) => setNewLocalBranchName(e.target.value)}
+              disabled={gitLoading}
+            />
+          </FormField>
+        )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
           <Button type="button" variant="secondary" onClick={onClose} disabled={gitLoading}>

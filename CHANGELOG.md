@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.107] - 2026-06-29
+
+### Added
+- **Custom Local Branch Name for Existing Branches**: Added an optional text input in the "Create Git Worktree" modal allowing users to define a custom local branch name when tracking an existing remote or local branch.
+
+---
+
 ## [1.3.106] - 2026-06-29
 
 ### Added

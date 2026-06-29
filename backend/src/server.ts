@@ -397,12 +397,12 @@ app.get('/api/workspaces/:id/git/diff', authMiddleware, async (req, res) => {
 });
 
 app.post('/api/worktrees/add', authMiddleware, async (req, res) => {
-  const { repoPath, worktreePath, branchName, newBranch } = req.body;
+  const { repoPath, worktreePath, branchName, newBranch, newBranchName } = req.body;
   if (!repoPath || !worktreePath || !branchName) {
     return res.status(400).json({ error: 'repoPath, worktreePath, and branchName are required.' });
   }
   
-  const result = await addWorktree(repoPath, worktreePath, branchName, !!newBranch);
+  const result = await addWorktree(repoPath, worktreePath, branchName, !!newBranch, newBranchName);
   if (result.success) {
     res.json(result);
   } else {

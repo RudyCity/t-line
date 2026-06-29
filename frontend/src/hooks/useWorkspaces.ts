@@ -37,6 +37,7 @@ export function useWorkspaces(
   const [newWorktreePath, setNewWorktreePath] = useState<string>('');
   const [newWorktreeBranch, setNewWorktreeBranch] = useState<string>('');
   const [isNewBranch, setIsNewBranch] = useState<boolean>(false);
+  const [newLocalBranchName, setNewLocalBranchName] = useState<string>('');
   const [repoBranches, setRepoBranches] = useState<string[]>([]);
   const [gitLoading, setGitLoading] = useState<boolean>(false);
   const [deletingWorkspacePaths, setDeletingWorkspacePaths] = useState<string[]>([]);
@@ -167,6 +168,7 @@ export function useWorkspaces(
     setNewWorktreePath(`${worktreeBaseDir}/new-worktree`);
     setNewWorktreeBranch('');
     setIsNewBranch(false);
+    setNewLocalBranchName('');
     setShowWorktreeModal(true);
     setGitLoading(true);
 
@@ -200,7 +202,8 @@ export function useWorkspaces(
           repoPath: selectedRepoPath,
           worktreePath: newWorktreePath,
           branchName: newWorktreeBranch,
-          newBranch: isNewBranch
+          newBranch: isNewBranch,
+          newBranchName: newLocalBranchName
         })
       });
       const data = await res.json();
@@ -295,6 +298,8 @@ export function useWorkspaces(
     setNewWorktreeBranch,
     isNewBranch,
     setIsNewBranch,
+    newLocalBranchName,
+    setNewLocalBranchName,
     repoBranches,
     gitLoading,
     deletingWorkspacePaths,

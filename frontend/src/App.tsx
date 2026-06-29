@@ -122,6 +122,8 @@ export default function App() {
     setNewWorktreeBranch,
     isNewBranch,
     setIsNewBranch,
+    newLocalBranchName,
+    setNewLocalBranchName,
     repoBranches,
     gitLoading,
     handleOpenWorktreeModal,
@@ -913,6 +915,8 @@ export default function App() {
         setNewWorktreeBranch={setNewWorktreeBranch}
         repoBranches={repoBranches}
         gitLoading={gitLoading}
+        newLocalBranchName={newLocalBranchName}
+        setNewLocalBranchName={setNewLocalBranchName}
       />
 
       <TunnelSetupModal
