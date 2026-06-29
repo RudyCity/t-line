@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.95] - 2026-06-29
+
+### Added
+- **Git Spawning Optimization (RAM & CPU)**: Added an 8-second memory caching mechanism to `getWorkspaceInfo` in the backend. Since the Electron app polls workspace info every 5 seconds, this completely stops the backend from constantly spawning slow and resource-heavy `git status` and `git worktree list` child processes in the background. The cache is automatically cleared when workspaces or worktrees are added, removed, or updated.
+
+---
+
 ## [1.3.94] - 2026-06-29
 
 ### Added

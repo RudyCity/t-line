@@ -77,6 +77,7 @@ export function addWorkspace(dirPath: string, defaultShell = 'powershell'): { su
     rawWorkspaces.push({ path: normalizedPath, defaultShell });
     (config as any).workspaces = rawWorkspaces;
     saveConfig(config);
+    clearWorkspaceCache();
   }
 
   return { success: true, workspaces: getWorkspaces() };
@@ -97,6 +98,7 @@ export function removeWorkspace(dirPath: string): { success: boolean; workspaces
   
   (config as any).workspaces = rawWorkspaces;
   saveConfig(config);
+  clearWorkspaceCache();
 
   return { success: true, workspaces: getWorkspaces() };
 }
@@ -122,6 +124,7 @@ export function updateWorkspace(dirPath: string, updates: { defaultShell?: strin
     };
     (config as any).workspaces = rawWorkspaces;
     saveConfig(config);
+    clearWorkspaceCache();
     return { success: true, workspaces: getWorkspaces() };
   }
 
@@ -177,9 +180,24 @@ async function isWorktreeDirty(worktreePath: string): Promise<{ isDirty: boolean
   }
 }
 
+const infoCache = new Map<string, { info: WorkspaceInfo; timestamp: number }>();
+const INFO_CACHE_TTL_MS = 8000; // 8 seconds (spans the 5s polling loop to prevent multiple Git process spawns)
+
+export function clearWorkspaceCache(): void {
+  infoCache.clear();
+}
+
 // Retrieve details for a workspace
 export async function getWorkspaceInfo(workspace: WorkspaceConfig): Promise<WorkspaceInfo> {
   const normalizedPath = path.normalize(workspace.path);
+  const cacheKey = normalizedPath;
+  const now = Date.now();
+  
+  const cached = infoCache.get(cacheKey);
+  if (cached && (now - cached.timestamp < INFO_CACHE_TTL_MS)) {
+    return cached.info;
+  }
+
   const name = workspace.name || path.basename(normalizedPath) || normalizedPath;
   const isGit = fs.existsSync(path.join(normalizedPath, '.git'));
   
@@ -216,7 +234,7 @@ export async function getWorkspaceInfo(workspace: WorkspaceConfig): Promise<Work
     }
   }
 
-  return {
+  const info: WorkspaceInfo = {
     id: Buffer.from(normalizedPath).toString('base64'),
     name,
     path: normalizedPath,
@@ -224,6 +242,9 @@ export async function getWorkspaceInfo(workspace: WorkspaceConfig): Promise<Work
     worktrees,
     defaultShell: workspace.defaultShell || 'powershell'
   };
+
+  infoCache.set(cacheKey, { info, timestamp: now });
+  return info;
 }
 
 // Add a new git worktree
@@ -245,6 +266,7 @@ export async function addWorktree(
     }
 
     const output = await runGit(args, normalizedRepo);
+    clearWorkspaceCache();
     return { success: true, output };
   } catch (error: any) {
     return { success: false, output: error.message };
@@ -262,6 +284,7 @@ export async function removeWorktree(repoPath: string, worktreePath: string, for
     if (force) args.push('--force');
     args.push(normalizedWorktree);
     const output = await runGit(args, normalizedRepo);
+    clearWorkspaceCache();
     return { success: true, output };
   } catch (gitError: any) {
     const msg: string = gitError.message || '';
@@ -296,6 +319,7 @@ export async function removeWorktree(repoPath: string, worktreePath: string, for
 
       // Prune the now-missing worktree from git's internal registry
       await runGit(['worktree', 'prune'], normalizedRepo);
+      clearWorkspaceCache();
 
       return { success: true, output: 'Worktree forcefully removed via filesystem fallback and git metadata pruned.' };
     } catch (fsError: any) {
