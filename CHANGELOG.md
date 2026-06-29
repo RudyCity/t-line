@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.112] - 2026-06-29
+
+### Fixed
+- **Worktree Active Highlight Styling in Sidebar**:
+  - Propagated the `panelWorkspace` prop down to the `WorkspaceList` and `WorktreeList` components.
+  - Fixed active workspace card highlighting by tracking both tab active state and user-selected workspace panel state (`panelWorkspace?.id === w.id`).
+  - Corrected `isSelectedWt` logic in the worktree list so that the main branch is highlighted when `panelWorktreePath` is null (representing the main workspace view) only for the active workspace.
+
+---
+
 ## [1.3.111] - 2026-06-29
 
 ### Added

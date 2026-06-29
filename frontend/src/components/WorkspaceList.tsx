@@ -57,7 +57,8 @@ export interface WorkspaceListProps {
   onEditWorkspace: (ws: WorkspaceInfo) => void;
   deletingWorkspacePaths?: string[];
   deletingWorktreePaths?: string[];
-  panelWorktreePath?: string | null;
+  panelWorktreePath: string | null;
+  panelWorkspace?: WorkspaceInfo | null;
 }
 
 /** Detects if the screen is in "mobile" mode (< 768px) */
@@ -199,6 +200,7 @@ interface WorktreeListProps {
   isPathInWorktree: (filePath: string, wtPath: string) => boolean;
   deletingWorktreePaths?: string[];
   panelWorktreePath: string | null;
+  panelWorkspace?: WorkspaceInfo | null;
 }
 
 function WorktreeList({
@@ -213,7 +215,8 @@ function WorktreeList({
   onWorktreeClick,
   isPathInWorktree,
   deletingWorktreePaths = [],
-  panelWorktreePath
+  panelWorktreePath,
+  panelWorkspace
 }: WorktreeListProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -238,7 +241,7 @@ function WorktreeList({
       {visibleWts.map((wt, idx) => {
         const isLast = idx === visibleWts.length - 1 && (expanded || sortedWts.length <= BRANCH_LIMIT);
 
-        const isSelectedWt = panelWorktreePath === wt.path;
+        const isSelectedWt = panelWorktreePath === wt.path || (wt.isMain && panelWorktreePath === null && panelWorkspace?.id === w.id);
         const isWtActive = isSelectedWt || (panelWorktreePath === null && activeTabId && tabs.some(t => t.id === activeTabId && (
           (t.type === 'file' && t.filePath && isPathInWorktree(t.filePath, wt.path)) ||
           (t.type === 'terminal' && t.layout && getTerminalIds(t.layout).some(id => {
@@ -424,7 +427,8 @@ export function WorkspaceList({
   onEditWorkspace,
   deletingWorkspacePaths = [],
   deletingWorktreePaths = [],
-  panelWorktreePath = null
+  panelWorktreePath = null,
+  panelWorkspace = null
 }: WorkspaceListProps): React.JSX.Element {
   const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
@@ -498,7 +502,7 @@ export function WorkspaceList({
       {/* ── Workspace cards ── */}
       <div className="workspace-list flex flex-col gap-1.5 px-3">
         {displayedWorkspaces.map(w => {
-          const isActive = activeWorkspaceId === w.id;
+          const isActive = (panelWorkspace?.id === w.id) || (activeWorkspaceId === w.id);
           const wts = w.worktrees || [];
           const totalDirty = wts.reduce((acc, wt) => acc + (wt.dirtyCount ?? 0), 0);
           const hasDirtyChanges = totalDirty > 0;
@@ -624,6 +628,7 @@ export function WorkspaceList({
                 isPathInWorktree={isPathInWorktree}
                 deletingWorktreePaths={deletingWorktreePaths}
                 panelWorktreePath={panelWorktreePath}
+                panelWorkspace={panelWorkspace}
               />
             </div>
           );

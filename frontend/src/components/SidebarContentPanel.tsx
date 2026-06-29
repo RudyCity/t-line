@@ -165,6 +165,7 @@ export function SidebarContentPanel({
             deletingWorkspacePaths={deletingWorkspacePaths}
             deletingWorktreePaths={deletingWorktreePaths}
             panelWorktreePath={panelWorktreePath}
+            panelWorkspace={panelWorkspace}
           />
 
           {workspaces.length === 0 && (
