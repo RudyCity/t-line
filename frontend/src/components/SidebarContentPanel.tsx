@@ -32,6 +32,7 @@ interface SidebarContentPanelProps {
   deletingWorkspacePaths?: string[];
   deletingWorktreePaths?: string[];
   panelWorktreePath?: string | null;
+  fsChangeTrigger?: number;
 }
 
 export function SidebarContentPanel({
@@ -61,7 +62,8 @@ export function SidebarContentPanel({
   onEditWorkspace,
   deletingWorkspacePaths = [],
   deletingWorktreePaths = [],
-  panelWorktreePath = null
+  panelWorktreePath = null,
+  fsChangeTrigger = 0
 }: SidebarContentPanelProps) {
   return (
     <div 
@@ -204,6 +206,7 @@ export function SidebarContentPanel({
               onFileClick={openFileTab}
               changedFiles={changedFiles}
               onRefresh={refreshGitStatus}
+              refreshTrigger={fsChangeTrigger}
             />
           ) : (
             <div className="panel-empty" style={{ flex: 1 }}>

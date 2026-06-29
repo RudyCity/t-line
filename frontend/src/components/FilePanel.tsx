@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Folder,
   FolderOpen,
@@ -35,6 +35,7 @@ interface ExplorerProps {
   onFileClick?: (path: string, name: string) => void;
   changedFiles?: GitFileStatus[];
   onRefresh?: () => void;
+  refreshTrigger?: number;
 }
 
 async function fetchExplore(dirPath: string, token: string): Promise<FsItem[]> {
@@ -125,7 +126,8 @@ function TreeNodeItem({
   token,
   onFileClick,
   rootPath,
-  changedFiles = []
+  changedFiles = [],
+  refreshTrigger = 0
 }: {
   node: TreeNode;
   depth: number;
@@ -133,10 +135,28 @@ function TreeNodeItem({
   onFileClick: (path: string, name: string) => void;
   rootPath: string;
   changedFiles?: GitFileStatus[];
+  refreshTrigger?: number;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [children, setChildren] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const lastTriggerRef = useRef(refreshTrigger);
+
+  useEffect(() => {
+    if (expanded && refreshTrigger !== lastTriggerRef.current) {
+      lastTriggerRef.current = refreshTrigger;
+      const reloadChildren = async () => {
+        try {
+          const items = await fetchExplore(node.path, token);
+          setChildren(items.map(i => ({ ...i })));
+        } catch {
+          // ignore
+        }
+      };
+      reloadChildren();
+    }
+  }, [refreshTrigger, expanded, node.path, token]);
 
   const toggle = useCallback(async () => {
     if (!node.isDirectory) {
@@ -254,6 +274,7 @@ function TreeNodeItem({
               onFileClick={onFileClick}
               rootPath={rootPath}
               changedFiles={changedFiles}
+              refreshTrigger={refreshTrigger}
             />
           ))}
         </div>
@@ -267,18 +288,21 @@ export function FileExplorer({
   token,
   onFileClick,
   changedFiles = [],
-  onRefresh
+  onRefresh,
+  refreshTrigger = 0
 }: ExplorerProps) {
   const [roots, setRoots] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<{ path: string; name: string; content: string } | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [localTrigger, setLocalTrigger] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const items = await fetchExplore(rootPath, token);
       setRoots(items.map(i => ({ ...i })));
+      setLocalTrigger(prev => prev + 1);
       if (onRefresh) onRefresh();
     } catch {
       // ignore
@@ -288,6 +312,14 @@ export function FileExplorer({
   }, [rootPath, token, onRefresh]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      load();
+    }
+  }, [refreshTrigger, load]);
+
+  const combinedTrigger = refreshTrigger + localTrigger;
 
   const handleFileClick = useCallback(async (path: string, name: string) => {
     if (onFileClick) {
@@ -338,6 +370,7 @@ export function FileExplorer({
                   onFileClick={handleFileClick}
                   rootPath={rootPath}
                   changedFiles={changedFiles}
+                  refreshTrigger={combinedTrigger}
                 />
               ))
             )}

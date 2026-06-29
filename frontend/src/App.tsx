@@ -239,6 +239,22 @@ export default function App() {
     return () => window.removeEventListener('tline-zoom', handleZoomEvent);
   }, [handleZoomIn, handleZoomOut]);
 
+  const [fsChangeTrigger, setFsChangeTrigger] = useState<number>(0);
+
+  // Global WebSocket listener for file system changes
+  useEffect(() => {
+    wsManager.subscribe('global', (payload) => {
+      if (payload.type === 'fs-change') {
+        fetchGitStatus(false);
+        fetchWorkspaces();
+        setFsChangeTrigger(prev => prev + 1);
+      }
+    });
+    return () => {
+      wsManager.removeListener('global');
+    };
+  }, [fetchGitStatus, fetchWorkspaces]);
+
 
   // Workspace and worktree handlers hook
   const {
@@ -681,6 +697,7 @@ export default function App() {
             deletingWorkspacePaths={deletingWorkspacePaths}
             deletingWorktreePaths={deletingWorktreePaths}
             panelWorktreePath={panelWorktreePath}
+            fsChangeTrigger={fsChangeTrigger}
           />
         )}
       </div>

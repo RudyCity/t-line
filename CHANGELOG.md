@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.120] - 2026-06-29
+
+### Added
+- **Real-time Workspace and Git Status Sync**:
+  - Implemented recursive workspace file system watching using Node's native `fs.watch` to detect file additions, deletions, renames, and modifications.
+  - Added debounced (300ms) WebSocket broadcast triggers on file changes to notify the client-side UI of changes.
+  - Implemented cascading, state-preserving updates in the File Explorer tree view so that expanded folders automatically reload their updated contents without collapsing.
+  - Automatically refreshes Git status changed files and badges in the sidebar when any file system changes are detected.
+
+---
+
 ## [1.3.119] - 2026-06-29
 
 ### Added

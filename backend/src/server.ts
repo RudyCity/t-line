@@ -312,6 +312,7 @@ app.post('/api/workspaces', authMiddleware, (req, res) => {
     return res.status(400).json({ error: 'Valid directory path is required.' });
   }
   const result = addWorkspace(dirPath, defaultShell);
+  updateWorkspaceWatchers();
   res.json(result);
 });
 
@@ -321,6 +322,7 @@ app.delete('/api/workspaces', authMiddleware, (req, res) => {
     return res.status(400).json({ error: 'Directory path is required.' });
   }
   const result = removeWorkspace(dirPath);
+  updateWorkspaceWatchers();
   res.json(result);
 });
 
@@ -331,6 +333,7 @@ app.put('/api/workspaces', authMiddleware, (req, res) => {
   }
   const result = updateWorkspace(dirPath, { defaultShell, name });
   if (result.success) {
+    updateWorkspaceWatchers();
     res.json(result);
   } else {
     res.status(404).json({ error: 'Workspace not found.' });
@@ -732,7 +735,57 @@ server.on('upgrade', (request, socket, head) => {
   });
 });
 
+const activeWebSockets = new Set<WebSocket>();
+const fsWatchers = new Map<string, fs.FSWatcher>();
+let fileChangeDebounceTimer: NodeJS.Timeout | null = null;
+
+function handleFileChange(filename: string) {
+  if (fileChangeDebounceTimer) clearTimeout(fileChangeDebounceTimer);
+  fileChangeDebounceTimer = setTimeout(() => {
+    clearWorkspaceCache();
+    const payload = JSON.stringify({ id: 'global', type: 'fs-change', filename });
+    for (const ws of activeWebSockets) {
+      if (ws.readyState === WebSocket.OPEN) ws.send(payload);
+    }
+  }, 300);
+}
+
+function updateWorkspaceWatchers() {
+  try {
+    const workspaces = getWorkspaces();
+    const pathsToKeep = new Set(workspaces.map(w => path.normalize(w.path)));
+
+    for (const watchedPath of fsWatchers.keys()) {
+      if (!pathsToKeep.has(watchedPath)) {
+        fsWatchers.get(watchedPath)?.close();
+        fsWatchers.delete(watchedPath);
+      }
+    }
+
+    for (const ws of workspaces) {
+      const normalized = path.normalize(ws.path);
+      if (!fsWatchers.has(normalized) && fs.existsSync(normalized)) {
+        try {
+          const watcher = fs.watch(normalized, { recursive: true }, (event, filename) => {
+            if (filename) {
+              const parts = filename.split(path.sep);
+              if (['node_modules', '.git', 'dist', 'dist-exe', '.agents'].some(p => parts.includes(p))) return;
+              handleFileChange(filename);
+            }
+          });
+          fsWatchers.set(normalized, watcher);
+        } catch (err) {
+          console.error(`Failed to watch workspace ${normalized}:`, err);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error updating workspace watchers:', err);
+  }
+}
+
 wss.on('connection', (ws: WebSocket) => {
+  activeWebSockets.add(ws);
   const activeTerminals = new Set<string>();
 
   // Helper to start process title polling and active process detection
@@ -905,6 +958,7 @@ wss.on('connection', (ws: WebSocket) => {
   });
 
   ws.on('close', () => {
+    activeWebSockets.delete(ws);
     // Put active terminals spawned by this connection into detached state (keep-alive)
     for (const termId of activeTerminals) {
       terminalManager.detachSession(termId);
@@ -919,4 +973,5 @@ server.listen(port, () => {
   console.log(`t-line Workspace Server running on port ${port}`);
   console.log(`Bypass Token: ${localBypassToken}`);
   console.log(`========================================`);
+  updateWorkspaceWatchers();
 });
