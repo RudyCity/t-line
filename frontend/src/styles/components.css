@@ -1232,14 +1232,14 @@
 
 /* ── Premium Terminal Context Menu ── */
 .terminal-ctx-menu {
-  background: rgba(9, 12, 20, 0.98);
-  border: 1px solid rgba(168, 85, 247, 0.2);
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 5px;
   min-width: 180px;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--border-color);
   animation: ctxMenuIn 0.12s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -1257,7 +1257,7 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-family: inherit;
   font-size: 11.5px;
   font-weight: 450;
@@ -1267,8 +1267,8 @@
 }
 
 .terminal-ctx-item:hover:not(:disabled) {
-  background: rgba(168, 85, 247, 0.14);
-  color: #e2d9f3;
+  background: var(--bg-card-hover);
+  color: var(--text-main);
 }
 
 .terminal-ctx-item.danger:hover:not(:disabled) {
@@ -1277,7 +1277,7 @@
 }
 
 .terminal-ctx-item:disabled {
-  color: #334155;
+  color: var(--border-color);
   cursor: not-allowed;
 }
 
@@ -1296,14 +1296,14 @@
 
 .terminal-ctx-shortcut {
   font-size: 10px;
-  color: #475569;
+  color: var(--text-muted);
   font-family: var(--font-mono);
   white-space: nowrap;
 }
 
 .terminal-ctx-separator {
   height: 1px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--border-color);
   margin: 4px 0;
 }
 

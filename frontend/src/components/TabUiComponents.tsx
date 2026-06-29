@@ -68,7 +68,7 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
 
   return (
     <div 
-      className="terminal-context-menu"
+      className="terminal-ctx-menu"
       style={{
         position: 'fixed',
         top: tabContextMenu.y,
@@ -78,42 +78,42 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
     >
       <button
         onClick={() => closeTerminal(tabContextMenu.tabId)}
-        className="terminal-context-menu-item"
+        className="terminal-ctx-item"
       >
-        <span>Close Tab</span>
+        <span className="terminal-ctx-label">Close Tab</span>
       </button>
       <button
         onClick={() => handleCloseOtherTabs(tabContextMenu.tabId)}
-        className="terminal-context-menu-item"
+        className="terminal-ctx-item"
       >
-        <span>Close Other Tabs</span>
+        <span className="terminal-ctx-label">Close Other Tabs</span>
       </button>
       <button
         onClick={handleCloseAllTabs}
-        className="terminal-context-menu-item"
+        className="terminal-ctx-item"
       >
-        <span>Close All Tabs</span>
+        <span className="terminal-ctx-label">Close All Tabs</span>
       </button>
       {targetTab?.type === 'terminal' && (
         <>
-          <div className="terminal-context-menu-separator" />
+          <div className="terminal-ctx-separator" />
           <button
             onClick={() => {
               setActiveTabId(tabContextMenu.tabId);
               setTimeout(() => splitFocusedTerminal('vertical'), 50);
             }}
-            className="terminal-context-menu-item"
+            className="terminal-ctx-item"
           >
-            <span>Split Pane Vertically</span>
+            <span className="terminal-ctx-label">Split Pane Vertically</span>
           </button>
           <button
             onClick={() => {
               setActiveTabId(tabContextMenu.tabId);
               setTimeout(() => splitFocusedTerminal('horizontal'), 50);
             }}
-            className="terminal-context-menu-item"
+            className="terminal-ctx-item"
           >
-            <span>Split Pane Horizontally</span>
+            <span className="terminal-ctx-label">Split Pane Horizontally</span>
           </button>
         </>
       )}
