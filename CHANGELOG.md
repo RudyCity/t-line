@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.83] - 2026-06-29
+
+### Changed
+- **Footer Status Bar Layout Reorganization**: Relayouted footer items into cleaner, logically grouped sections: Left Section displays metadata (application version and the RAM resource usage statistics pill); Center Section groups active Workspace directory context, active Git branch status badge, and terminal font zoom & shell selection controls; Right Section is dedicated to Cloudflare Tunnel status, URL, and actions. This prevents screen crowding when tunnels are active or workspace paths are long.
+
+---
+
 ## [1.3.82] - 2026-06-29
 
 ### Added

@@ -136,7 +136,7 @@ export function Footer({
   return (
     <>
       <footer className="app-footer flex items-center justify-between px-6 border-t border-white/10 bg-[#080b13]/90 backdrop-blur-md text-xs text-slate-400 select-none shrink-0 h-9 z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.3)]">
-      {/* Left Section: Version & Workspace */}
+      {/* Left Section: Version & RAM Stats */}
       <div className="flex items-center gap-3">
         {updateAvailable ? (
           <a
@@ -156,112 +156,7 @@ export function Footer({
           </span>
         )}
 
-        {panelWorkspace && (
-          <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono text-slate-500">
-            <span className="text-slate-700">|</span>
-            <span
-              className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors duration-150 cursor-pointer"
-              title={`Open in Explorer: ${activeTabPath || panelWorkspace.path}`}
-              onClick={() => {
-                const folderPath = activeTabPath || panelWorkspace.path;
-                if ((window as any).electron?.openFolder) {
-                  (window as any).electron.openFolder(folderPath);
-                }
-              }}
-            >
-              <Folder size={11} className="text-purple-400" />
-              <span className="font-semibold text-slate-300 truncate max-w-[250px]">{getRelativeActivePath(panelWorkspace, activeTabPath)}</span>
-            </span>
-            
-            {(() => {
-              const activeBranch = getWorkspaceActiveBranch(panelWorkspace, activeTabPath);
-              if (!activeBranch) return null;
-              return (
-                <>
-                  <span className="text-slate-700">|</span>
-                  <span 
-                    className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded font-sans text-[11px] transition-all duration-150 ${
-                      activeBranch.isDirty 
-                        ? 'bg-amber-500/5 border border-amber-500/20 text-amber-300 hover:bg-amber-500/10 hover:border-amber-500/30' 
-                        : 'bg-slate-900/60 border border-white/5 text-slate-300 hover:border-white/10 hover:bg-slate-900'
-                    }`} 
-                    title={activeBranch.isDirty ? "Uncommitted changes" : "Git Branch"}
-                  >
-                    <GitBranch size={11} className={activeBranch.isMain ? 'text-purple-400' : 'text-emerald-400'} />
-                    <span className="font-medium">{activeBranch.name}</span>
-                  </span>
-                </>
-              );
-            })()}
-          </div>
-        )}
-      </div>
-
-      {/* Center Section: Zoom & Shell Controls (Dashboard Pill) — hidden on mobile */}
-      <div className="hidden sm:flex items-center gap-3 bg-white/5 hover:bg-white/10 px-3 py-1 rounded-full border border-white/5 hover:border-white/10 transition-all duration-200 shadow-inner">
-        {/* Zoom controls */}
-        <div className="flex items-center gap-2">
-          <button 
-            className="text-slate-400 hover:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none" 
-            onClick={handleZoomOut} 
-            title="Zoom Out Terminal font"
-          >
-            <ZoomOut size={12} />
-          </button>
-          <span className="text-[10px] bg-slate-950/60 px-1.5 py-0.5 rounded font-mono font-semibold text-purple-300 min-w-[28px] text-center border border-white/5">
-            {terminalFontSize}px
-          </span>
-          <button 
-            className="text-slate-400 hover:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none" 
-            onClick={handleZoomIn} 
-            title="Zoom In Terminal font"
-          >
-            <ZoomIn size={12} />
-          </button>
-        </div>
-
-        <div className="w-px h-3.5 bg-white/10" />
-
-        {/* Shell Selector */}
-        <div className="flex items-center gap-1.5">
-          <Terminal size={11} className="text-slate-400" />
-          <select 
-            value={defaultShell} 
-            onChange={(e) => setDefaultShell(e.target.value)}
-            className="bg-transparent border-none text-slate-300 font-mono font-semibold text-[10px] cursor-pointer outline-none focus:ring-0 select-none py-0 pr-4 pl-0 transition-colors duration-150 hover:text-white"
-            title="Default Shell for new tabs"
-            style={{ 
-              appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='rgba(148,163,184,0.8)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
-              backgroundPosition: 'right center',
-              backgroundRepeat: 'no-repeat',
-              backgroundSize: '8px 8px',
-            }}
-          >
-            <option value="powershell" className="bg-[#0b0e14] text-slate-300">powershell</option>
-            <option value="cmd" className="bg-[#0b0e14] text-slate-300">cmd</option>
-            <option value="gitbash" className="bg-[#0b0e14] text-slate-300">gitbash</option>
-            <option value="wsl" className="bg-[#0b0e14] text-slate-300">wsl</option>
-          </select>
-        </div>
-
-        {activeTabType === 'terminal' && onRefreshTerminal && (
-          <>
-            <div className="w-px h-3.5 bg-white/10" />
-            <button
-              onClick={onRefreshTerminal}
-              className="text-slate-400 hover:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none"
-              title="Restart current terminal process"
-            >
-              <RefreshCw size={11} className="hover:rotate-45 transition-transform duration-200" />
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Right Section: Cloudflare Tunnel & Status — hidden on mobile */}
-      <div className="hidden sm:flex items-center gap-2.5">
-        {/* System Resource Stats - hidden on mobile/small screen */}
+        {/* System Resource Stats */}
         {systemStats && (
           <div className="hidden md:flex items-center gap-1.5 bg-slate-900/60 hover:bg-slate-800/80 px-2.5 py-1 rounded-full border border-white/5 hover:border-white/10 transition-all duration-200 shadow-inner cursor-default relative group">
             <Cpu size={11} className="text-purple-400 animate-pulse" />
@@ -276,7 +171,7 @@ export function Footer({
             )}
 
             {/* Hover Tooltip Dropup */}
-            <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex flex-col w-56 bg-[#0b0f17] border border-white/15 rounded-lg p-3 shadow-[0_10px_25px_rgba(0,0,0,0.5)] z-50 pointer-events-none text-slate-300 font-sans">
+            <div className="absolute bottom-full mb-2 left-0 hidden group-hover:flex flex-col w-56 bg-[#0b0f17] border border-white/15 rounded-lg p-3 shadow-[0_10px_25px_rgba(0,0,0,0.5)] z-50 pointer-events-none text-slate-300 font-sans">
               <h4 className="text-[11px] font-bold text-white mb-2 pb-1 border-b border-white/10 flex items-center gap-1.5">
                 <Cpu size={12} className="text-purple-400" />
                 System Resources
@@ -328,7 +223,116 @@ export function Footer({
             </div>
           </div>
         )}
+      </div>
 
+      {/* Center Section: Workspace Context & Zoom/Shell Controls — hidden on mobile */}
+      <div className="hidden sm:flex items-center gap-4">
+        {panelWorkspace && (
+          <div className="flex items-center gap-2 text-[11px] font-mono text-slate-500">
+            <span
+              className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors duration-150 cursor-pointer"
+              title={`Open in Explorer: ${activeTabPath || panelWorkspace.path}`}
+              onClick={() => {
+                const folderPath = activeTabPath || panelWorkspace.path;
+                if ((window as any).electron?.openFolder) {
+                  (window as any).electron.openFolder(folderPath);
+                }
+              }}
+            >
+              <Folder size={11} className="text-purple-400" />
+              <span className="font-semibold text-slate-300 truncate max-w-[180px]">{getRelativeActivePath(panelWorkspace, activeTabPath)}</span>
+            </span>
+            
+            {(() => {
+              const activeBranch = getWorkspaceActiveBranch(panelWorkspace, activeTabPath);
+              if (!activeBranch) return null;
+              return (
+                <>
+                  <span className="text-slate-700">|</span>
+                  <span 
+                    className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded font-sans text-[11px] transition-all duration-150 ${
+                      activeBranch.isDirty 
+                        ? 'bg-amber-500/5 border border-amber-500/20 text-amber-300 hover:bg-amber-500/10 hover:border-amber-500/30' 
+                        : 'bg-slate-900/60 border border-white/5 text-slate-300 hover:border-white/10 hover:bg-slate-900'
+                    }`} 
+                    title={activeBranch.isDirty ? "Uncommitted changes" : "Git Branch"}
+                  >
+                    <GitBranch size={11} className={activeBranch.isMain ? 'text-purple-400' : 'text-emerald-400'} />
+                    <span className="font-medium">{activeBranch.name}</span>
+                  </span>
+                </>
+              );
+            })()}
+          </div>
+        )}
+
+        {panelWorkspace && <div className="w-px h-3.5 bg-white/10" />}
+
+        {/* Zoom & Shell Controls (Dashboard Pill) */}
+        <div className="flex items-center gap-3 bg-white/5 hover:bg-white/10 px-3 py-1 rounded-full border border-white/5 hover:border-white/10 transition-all duration-200 shadow-inner">
+          {/* Zoom controls */}
+          <div className="flex items-center gap-2">
+            <button 
+              className="text-slate-400 hover:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none" 
+              onClick={handleZoomOut} 
+              title="Zoom Out Terminal font"
+            >
+              <ZoomOut size={12} />
+            </button>
+            <span className="text-[10px] bg-slate-950/60 px-1.5 py-0.5 rounded font-mono font-semibold text-purple-300 min-w-[28px] text-center border border-white/5">
+              {terminalFontSize}px
+            </span>
+            <button 
+              className="text-slate-400 hover:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none" 
+              onClick={handleZoomIn} 
+              title="Zoom In Terminal font"
+            >
+              <ZoomIn size={12} />
+            </button>
+          </div>
+
+          <div className="w-px h-3.5 bg-white/10" />
+
+          {/* Shell Selector */}
+          <div className="flex items-center gap-1.5">
+            <Terminal size={11} className="text-slate-400" />
+            <select 
+              value={defaultShell} 
+              onChange={(e) => setDefaultShell(e.target.value)}
+              className="bg-transparent border-none text-slate-300 font-mono font-semibold text-[10px] cursor-pointer outline-none focus:ring-0 select-none py-0 pr-4 pl-0 transition-colors duration-150 hover:text-white"
+              title="Default Shell for new tabs"
+              style={{ 
+                appearance: 'none',
+                backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='rgba(148,163,184,0.8)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
+                backgroundPosition: 'right center',
+                backgroundRepeat: 'no-repeat',
+                backgroundSize: '8px 8px',
+              }}
+            >
+              <option value="powershell" className="bg-[#0b0e14] text-slate-300">powershell</option>
+              <option value="cmd" className="bg-[#0b0e14] text-slate-300">cmd</option>
+              <option value="gitbash" className="bg-[#0b0e14] text-slate-300">gitbash</option>
+              <option value="wsl" className="bg-[#0b0e14] text-slate-300">wsl</option>
+            </select>
+          </div>
+
+          {activeTabType === 'terminal' && onRefreshTerminal && (
+            <>
+              <div className="w-px h-3.5 bg-white/10" />
+              <button
+                onClick={onRefreshTerminal}
+                className="text-slate-400 hover:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none"
+                title="Restart current terminal process"
+              >
+                <RefreshCw size={11} className="hover:rotate-45 transition-transform duration-200" />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Right Section: Cloudflare Tunnel & Status — hidden on mobile */}
+      <div className="hidden sm:flex items-center gap-2.5">
         {/* Cloudflare Tunnel status */}
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] text-slate-500 hidden md:inline-block">Cloudflare Tunnel:</span>
