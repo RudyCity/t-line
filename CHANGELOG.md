@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.92] - 2026-06-29
+
+### Fixed
+- **CI Build & Release**: Removed the redundant `softprops/action-gh-release@v2` step from `release.yml`. Since `electron-builder` already publishes and uploads all built binaries and updater metadata files when `GH_TOKEN` is present, the extra upload step was duplicate and resulted in double-uploaded files with space-spaced and hyphenated names.
+
+---
+
 ## [1.3.91] - 2026-06-29
 
 ### Fixed
