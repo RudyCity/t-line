@@ -220,7 +220,9 @@ export default function App() {
     handleOpenWorktreeModal,
     handleAddWorktree,
     handleRemoveWorktree,
-    handleUpdateWorkspace
+    handleUpdateWorkspace,
+    deletingWorkspacePaths,
+    deletingWorktreePaths
   } = useWorkspaces(isAuthenticated, localStorage.getItem('token'), showAlert);
 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
@@ -1137,6 +1139,8 @@ export default function App() {
             gitStatusLoading={gitStatusLoading}
             refreshGitStatus={() => fetchGitStatus(true)}
             onEditWorkspace={handleOpenEditWorkspaceModal}
+            deletingWorkspacePaths={deletingWorkspacePaths}
+            deletingWorktreePaths={deletingWorktreePaths}
           />
         )}
       </div>

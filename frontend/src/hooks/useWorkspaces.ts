@@ -39,6 +39,8 @@ export function useWorkspaces(
   const [isNewBranch, setIsNewBranch] = useState<boolean>(false);
   const [repoBranches, setRepoBranches] = useState<string[]>([]);
   const [gitLoading, setGitLoading] = useState<boolean>(false);
+  const [deletingWorkspacePaths, setDeletingWorkspacePaths] = useState<string[]>([]);
+  const [deletingWorktreePaths, setDeletingWorktreePaths] = useState<string[]>([]);
 
   const fetchWorkspaces = useCallback(async () => {
     if (!token) return;
@@ -126,7 +128,7 @@ export function useWorkspaces(
   };
 
   const handleRemoveWorkspace = async (workspacePath: string): Promise<boolean> => {
-
+    setDeletingWorkspacePaths(prev => [...prev, workspacePath]);
     try {
       const res = await fetch('/api/workspaces', {
         method: 'DELETE',
@@ -138,11 +140,16 @@ export function useWorkspaces(
       });
       const data = await res.json();
       if (data.success) {
+        window.dispatchEvent(new CustomEvent('tline-toast', {
+          detail: { message: 'Workspace removed successfully' }
+        }));
         fetchWorkspaces();
         return true;
       }
     } catch (e) {
       console.error('Error removing workspace:', e);
+    } finally {
+      setDeletingWorkspacePaths(prev => prev.filter(p => p !== workspacePath));
     }
     return false;
   };
@@ -205,7 +212,7 @@ export function useWorkspaces(
   };
 
   const handleRemoveWorktree = async (repoPath: string, worktreePath: string) => {
-
+    setDeletingWorktreePaths(prev => [...prev, worktreePath]);
     setGitLoading(true);
     try {
       const res = await fetch('/api/worktrees/remove', {
@@ -218,6 +225,9 @@ export function useWorkspaces(
       });
       const data = await res.json();
       if (data.success) {
+        window.dispatchEvent(new CustomEvent('tline-toast', {
+          detail: { message: 'Worktree removed successfully' }
+        }));
         fetchWorkspaces();
       } else {
         showAlert('Worktree Error', data.output || 'Failed to remove worktree.');
@@ -226,6 +236,7 @@ export function useWorkspaces(
       console.error('Error removing worktree:', e);
     } finally {
       setGitLoading(false);
+      setDeletingWorktreePaths(prev => prev.filter(p => p !== worktreePath));
     }
   };
 
@@ -280,6 +291,8 @@ export function useWorkspaces(
     setIsNewBranch,
     repoBranches,
     gitLoading,
+    deletingWorkspacePaths,
+    deletingWorktreePaths,
     handleOpenWorktreeModal,
     handleAddWorktree,
     handleRemoveWorktree,

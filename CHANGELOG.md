@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.85] - 2026-06-29
+
+### Added
+- **Deletion Loading Skeletons & Success Toasts**: Integrated real-time visual feedback when removing workspaces or worktrees. Displays a responsive, non-interactive loading card skeleton with red border highlights, pulse animations, and spinning loaders for workspaces, and a matching tree connector loading node for worktrees. Dispatches user-facing success notifications (`tline-toast` events) upon completion.
+
+---
+
 ## [1.3.84] - 2026-06-29
 
 ### Changed

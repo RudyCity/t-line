@@ -29,6 +29,8 @@ interface SidebarContentPanelProps {
   gitStatusLoading?: boolean;
   refreshGitStatus?: () => void;
   onEditWorkspace?: (ws: WorkspaceInfo) => void;
+  deletingWorkspacePaths?: string[];
+  deletingWorktreePaths?: string[];
 }
 
 export function SidebarContentPanel({
@@ -55,7 +57,9 @@ export function SidebarContentPanel({
   changedFiles = [],
   gitStatusLoading = false,
   refreshGitStatus,
-  onEditWorkspace
+  onEditWorkspace,
+  deletingWorkspacePaths = [],
+  deletingWorktreePaths = []
 }: SidebarContentPanelProps) {
   return (
     <div 
@@ -156,6 +160,8 @@ export function SidebarContentPanel({
             handleRemoveWorkspace={handleRemoveWorkspace}
             handleRemoveWorktree={handleRemoveWorktree}
             onEditWorkspace={onEditWorkspace || (() => {})}
+            deletingWorkspacePaths={deletingWorkspacePaths}
+            deletingWorktreePaths={deletingWorktreePaths}
           />
 
           {workspaces.length === 0 && (

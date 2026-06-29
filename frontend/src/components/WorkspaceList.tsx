@@ -32,6 +32,8 @@ export interface WorkspaceListProps {
   handleRemoveWorkspace: (path: string) => void;
   handleRemoveWorktree: (repoPath: string, wtPath: string) => void;
   onEditWorkspace: (ws: WorkspaceInfo) => void;
+  deletingWorkspacePaths?: string[];
+  deletingWorktreePaths?: string[];
 }
 
 /** Detects if the screen is in "mobile" mode (< 768px) */
@@ -171,6 +173,7 @@ interface WorktreeListProps {
   onWorkspaceClick: (wsId: string) => void;
   onWorktreeClick: (wsId: string, wtPath: string) => void;
   isPathInWorktree: (filePath: string, wtPath: string) => boolean;
+  deletingWorktreePaths?: string[];
 }
 
 function WorktreeList({
@@ -183,7 +186,8 @@ function WorktreeList({
   handleRemoveWorktree,
   onWorkspaceClick,
   onWorktreeClick,
-  isPathInWorktree
+  isPathInWorktree,
+  deletingWorktreePaths = []
 }: WorktreeListProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -212,6 +216,20 @@ function WorktreeList({
             return inst && isPathInWorktree(inst.cwd, wt.path);
           }))
         ));
+
+        if (deletingWorktreePaths?.includes(wt.path)) {
+          return (
+            <div key={wt.path} className={`tree-connector-wrapper ${isLast ? 'tree-item-last' : ''} opacity-60 animate-pulse pointer-events-none`}>
+              <div className="tree-connector" />
+              <div className="tree-item-content">
+                <div className="flex items-center gap-2 py-1 px-1.5 text-[10px] text-red-300 font-mono">
+                  <span className="h-2 w-2 rounded-full border border-red-400 border-t-transparent animate-spin shrink-0" />
+                  <span className="truncate">Removing {wt.branch || 'detached'}...</span>
+                </div>
+              </div>
+            </div>
+          );
+        }
 
         return (
           <div
@@ -316,7 +334,9 @@ export function WorkspaceList({
   openTerminal,
   handleRemoveWorkspace,
   handleRemoveWorktree,
-  onEditWorkspace
+  onEditWorkspace,
+  deletingWorkspacePaths = [],
+  deletingWorktreePaths = []
 }: WorkspaceListProps): React.JSX.Element {
   const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
@@ -398,6 +418,17 @@ export function WorkspaceList({
           const hasDirtyChanges = totalDirty > 0;
           const isDropdownOpen = openDropdownId === w.id;
 
+          if (deletingWorkspacePaths?.includes(w.path)) {
+            return (
+              <div key={w.id} className="ws-card animate-pulse pointer-events-none opacity-60 flex items-center justify-between py-3 px-3.5 border border-red-500/20 bg-red-500/5 rounded-lg">
+                <div className="flex items-center gap-2 font-sans">
+                  <span className="h-3 w-3 rounded-full border-2 border-red-400 border-t-transparent animate-spin shrink-0" />
+                  <span className="text-[11px] font-semibold text-red-300">Removing {w.name}...</span>
+                </div>
+              </div>
+            );
+          }
+
           return (
             <div
               key={w.id}
@@ -465,6 +496,7 @@ export function WorkspaceList({
                 onWorkspaceClick={onWorkspaceClick}
                 onWorktreeClick={onWorktreeClick}
                 isPathInWorktree={isPathInWorktree}
+                deletingWorktreePaths={deletingWorktreePaths}
               />
             </div>
           );
