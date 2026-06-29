@@ -527,10 +527,10 @@
   box-sizing: border-box;
 }
 
+/*.welcome-card-inner {*/
 .welcome-card-inner {
   position: relative;
   background: var(--bg-card);
-  border: 1px solid var(--border-color);
   border-radius: 14px;
   padding: 40px !important;
   display: flex;

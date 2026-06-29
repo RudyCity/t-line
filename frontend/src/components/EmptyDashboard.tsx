@@ -17,7 +17,7 @@ export function EmptyDashboard({
 }: EmptyDashboardProps): React.JSX.Element {
   return (
     <div className="welcome-card-outer">
-      <div className="welcome-card-inner border border-[var(--border-color)] bg-[var(--bg-card)] backdrop-blur-md max-w-md w-full rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+      <div className="welcome-card-inner bg-[var(--bg-card)] backdrop-blur-md max-w-md w-full rounded-2xl">
         <div 
           className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border flex items-center justify-center mb-5 shadow-inner"
           style={{
