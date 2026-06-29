@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.106] - 2026-06-29
+
+### Added
+- **Detached HEAD Fallback for Worktrees**: Added a fallback in `addWorktree` that automatically attempts to use `--detach` when a branch (like `master`) is already checked out by another worktree, preventing `fatal` check out conflicts.
+
+---
+
 ## [1.3.105] - 2026-06-29
 
 ### Changed

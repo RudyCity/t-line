@@ -240,28 +240,38 @@ export function useWorkspaceHandlers({
       if (matched) return matched;
     }
     
-    const isPathInWorkspace = (filePath: string, wsPath: string) => {
+    const isPathInWorkspace = (filePath: string, w: WorkspaceInfo) => {
       const normFile = filePath.toLowerCase().replace(/\\/g, '/');
-      const normWS = wsPath.toLowerCase().replace(/\\/g, '/');
-      return normFile === normWS || normFile.startsWith(normWS + '/');
+      const normWS = w.path.toLowerCase().replace(/\\/g, '/');
+      if (normFile === normWS || normFile.startsWith(normWS + '/')) {
+        return true;
+      }
+      const wts = w.worktrees || [];
+      for (const wt of wts) {
+        const normWt = wt.path.toLowerCase().replace(/\\/g, '/');
+        if (normFile === normWt || normFile.startsWith(normWt + '/')) {
+          return true;
+        }
+      }
+      return false;
     };
 
     if (tab.type === 'file' && tab.filePath) {
-      const matched = workspaces.find(w => isPathInWorkspace(tab.filePath!, w.path));
+      const matched = workspaces.find(w => isPathInWorkspace(tab.filePath!, w));
       if (matched) return matched;
     } else if (tab.type === 'terminal' && tab.layout) {
       const termIds = getTerminalIds(tab.layout);
       if (tab.focusedTerminalId) {
         const inst = terminalInstances[tab.focusedTerminalId];
         if (inst && inst.cwd) {
-          const matched = workspaces.find(w => isPathInWorkspace(inst.cwd, w.path));
+          const matched = workspaces.find(w => isPathInWorkspace(inst.cwd, w));
           if (matched) return matched;
         }
       }
       for (const id of termIds) {
         const inst = terminalInstances[id];
         if (inst && inst.cwd) {
-          const matched = workspaces.find(w => isPathInWorkspace(inst.cwd, w.path));
+          const matched = workspaces.find(w => isPathInWorkspace(inst.cwd, w));
           if (matched) return matched;
         }
       }

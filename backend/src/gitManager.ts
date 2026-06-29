@@ -269,6 +269,21 @@ export async function addWorktree(
     clearWorkspaceCache();
     return { success: true, output };
   } catch (error: any) {
+    if (error.message && error.message.includes('is already used by worktree')) {
+      try {
+        const normalizedRepo = path.normalize(repoPath);
+        const normalizedWorktree = path.normalize(worktreePath);
+        const detachArgs = ['worktree', 'add', '--detach', normalizedWorktree, branchName];
+        const output = await runGit(detachArgs, normalizedRepo);
+        clearWorkspaceCache();
+        return { 
+          success: true, 
+          output: output + '\n(Note: Branch was already checked out elsewhere; created as a detached HEAD to avoid conflicts.)' 
+        };
+      } catch (detachError: any) {
+        return { success: false, output: detachError.message };
+      }
+    }
     return { success: false, output: error.message };
   }
 }
