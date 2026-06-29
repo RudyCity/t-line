@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.74] - 2026-06-29
+
+### Added
+- **Dynamic System Update Checker**: Integrated an automatic update checker. Added `/api/system/version` backend endpoint to read the application version dynamically, and configured the frontend to compare it against the latest GitHub release and show toast notifications and highlighted warning badges with direct download links in the UI.
+
+---
+
 ## [1.3.73] - 2026-06-29
 
 ### Added

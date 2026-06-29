@@ -8,6 +8,9 @@ export interface SettingsModalProps {
   token: string;
   workspacesCount: number;
   showAlert: (title: string, message: string) => void;
+  appVersion?: string;
+  updateAvailable?: boolean;
+  latestVersion?: string;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -15,7 +18,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   token,
   workspacesCount,
-  showAlert
+  showAlert,
+  appVersion,
+  updateAvailable,
+  latestVersion
 }) => {
   const [activeTab, setActiveTab] = React.useState<'general' | 'security' | 'connections'>('general');
   const [currentPassword, setCurrentPassword] = React.useState('');
@@ -175,7 +181,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '8px' }}>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Application Version</span>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-main)', fontFamily: 'var(--font-mono)' }}>v1.0.3</span>
+                  {updateAvailable ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-main)', fontFamily: 'var(--font-mono)' }}>v{appVersion}</span>
+                      <a
+                        href="https://github.com/RudyCity/t-line/releases"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontSize: '0.75rem', color: '#f59e0b', textDecoration: 'none', fontWeight: 'bold' }}
+                        title={`Click to download v${latestVersion}`}
+                      >
+                        (Update: v{latestVersion})
+                      </a>
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-main)', fontFamily: 'var(--font-mono)' }}>v{appVersion || '1.3.73'}</span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '8px' }}>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Active Workspaces</span>

@@ -176,6 +176,18 @@ app.get('/api/auth/setup-status', (req, res) => {
   res.json({ setupRequired: isSetupRequired() });
 });
 
+app.get('/api/system/version', (req, res) => {
+  let appVersion = '1.3.73';
+  try {
+    const packageJsonPath = path.join(__dirname, '..', 'package.json');
+    if (fs.existsSync(packageJsonPath)) {
+      const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+      appVersion = pkg.version || appVersion;
+    }
+  } catch (e) {}
+  res.json({ version: appVersion });
+});
+
 app.post('/api/auth/setup', (req, res) => {
   const { password } = req.body;
   if (!password || password.length < 6) {

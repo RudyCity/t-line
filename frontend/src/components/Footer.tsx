@@ -22,6 +22,9 @@ export interface FooterProps {
   activeTabType?: 'terminal' | 'file' | null;
   onRefreshTerminal?: () => void;
   activeTabPath?: string;
+  appVersion?: string;
+  updateAvailable?: boolean;
+  latestVersion?: string;
 }
 
 export function Footer({
@@ -37,7 +40,10 @@ export function Footer({
   tunnelLoading,
   activeTabType,
   onRefreshTerminal,
-  activeTabPath
+  activeTabPath,
+  appVersion,
+  updateAvailable,
+  latestVersion
 }: FooterProps): React.JSX.Element {
   const [copied, setCopied] = React.useState(false);
 
@@ -119,10 +125,23 @@ export function Footer({
       <footer className="app-footer flex items-center justify-between px-6 border-t border-white/10 bg-[#080b13]/90 backdrop-blur-md text-xs text-slate-400 select-none shrink-0 h-9 z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.3)]">
       {/* Left Section: Version & Workspace */}
       <div className="flex items-center gap-3">
-        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 font-sans text-[10px] font-semibold tracking-wider hover:bg-purple-500/20 hover:border-purple-500/35 transition-all duration-200 cursor-pointer">
-          <span className="h-1.5 w-1.5 rounded-full bg-purple-400 shadow-[0_0_6px_#a855f7]" />
-          <span>t-line v1.3.54</span>
-        </span>
+        {updateAvailable ? (
+          <a
+            href="https://github.com/RudyCity/t-line/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-sans text-[10px] font-semibold tracking-wider hover:bg-amber-500/25 hover:border-amber-500/45 transition-all duration-200 cursor-pointer animate-pulse"
+            title={`New Update Available: v${latestVersion}! Click to download.`}
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_6px_#f59e0b]" />
+            <span>t-line v{appVersion} (Update: v{latestVersion})</span>
+          </a>
+        ) : (
+          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 font-sans text-[10px] font-semibold tracking-wider hover:bg-purple-500/20 hover:border-purple-500/35 transition-all duration-200 cursor-pointer">
+            <span className="h-1.5 w-1.5 rounded-full bg-purple-400 shadow-[0_0_6px_#a855f7]" />
+            <span>t-line v{appVersion || '1.3.73'}</span>
+          </span>
+        )}
 
         {panelWorkspace && (
           <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono text-slate-500">
