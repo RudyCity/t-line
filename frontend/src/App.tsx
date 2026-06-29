@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
-import { GitFileStatus } from './components/FilePanel';
+import { useState, useEffect } from 'react';
 import { 
   Folder, 
   Plus, 
@@ -26,7 +25,7 @@ import { useWorkspaces } from './hooks/useWorkspaces';
 import { useUpdateChecker } from './hooks/useUpdateChecker';
 import { useTabUiHandlers } from './hooks/useTabUiHandlers';
 import { useAuth } from './hooks/useAuth';
-import { useTerminals, WorkspaceInfo, getTerminalIds } from './hooks/useTerminals';
+import { useTerminals, WorkspaceInfo } from './hooks/useTerminals';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { SplitLayoutRenderer } from './components/SplitLayoutRenderer';
 import { Footer } from './components/Footer';
@@ -36,32 +35,11 @@ import { useLayoutHelpers } from './hooks/useLayoutHelpers';
 import { SidebarContentPanel } from './components/SidebarContentPanel';
 import { RightSidebar } from './components/RightSidebar';
 import { UpdateNotification } from './components/UpdateNotification';
-
-
-const TPlusLogo = ({ size = 16 }: { size?: number }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 512 512" 
-    className="shrink-0"
-    style={{ filter: 'drop-shadow(0 0 4px rgba(168, 85, 247, 0.4))' }}
-  >
-    <defs>
-      <linearGradient id="glyph-grad-inline" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#c084fc" />
-        <stop offset="100%" stop-color="#a855f7" />
-      </linearGradient>
-    </defs>
-    <path 
-      d="M 140 160 C 140 148.95 148.95 140 160 140 L 320 140 C 331.05 140 340 148.95 340 160 L 340 200 C 340 211.05 331.05 220 320 220 L 270 220 L 270 360 C 270 371.05 261.05 380 250 380 L 210 380 C 198.95 380 190 371.05 190 360 L 190 220 L 160 220 C 148.95 220 140 211.05 140 200 Z" 
-      fill="url(#glyph-grad-inline)" 
-    />
-    <path 
-      d="M 330 280 C 330 274.48 334.48 270 340 270 L 360 270 L 360 250 C 360 244.48 364.48 240 370 240 L 390 240 C 395.52 240 400 244.48 400 250 L 400 270 L 420 270 C 425.52 270 430 274.48 430 280 L 430 300 C 430 305.52 425.52 310 420 310 L 400 310 L 400 330 C 400 335.52 395.52 340 390 340 L 370 340 C 364.48 340 360 335.52 360 330 L 360 310 L 340 310 C 334.48 310 330 305.52 330 300 Z" 
-      fill="#ffffff" 
-    />
-  </svg>
-);
+import { useGitStatus } from './hooks/useGitStatus';
+import { useConfirmDialog } from './hooks/useConfirmDialog';
+import { useWorkspaceHandlers } from './hooks/useWorkspaceHandlers';
+import { TPlusLogo } from './components/TPlusLogo';
+import { TabTooltip, TabContextMenu } from './components/TabUiComponents';
 
 export default function App() {
   const {
@@ -88,56 +66,12 @@ export default function App() {
     return saved === 'true';
   });
 
-  // Unified Alert/Confirm Dialog State
-  const [confirmDialog, setConfirmDialog] = useState<{
-    show: boolean;
-    title: string;
-    message: string;
-    confirmLabel?: string;
-    cancelLabel?: string;
-    variant?: 'primary' | 'secondary' | 'danger';
-    isAlert?: boolean;
-    onConfirm: () => void;
-    onCancel?: () => void;
-  } | null>(null);
-
-  const showAlert = useCallback((title: string, message: string) => {
-    setConfirmDialog({
-      show: true,
-      title,
-      message,
-      isAlert: true,
-      onConfirm: () => setConfirmDialog(null)
-    });
-  }, []);
-
-  const showConfirm = useCallback((
-    title: string,
-    message: string,
-    onConfirm: () => void,
-    variant: 'primary' | 'secondary' | 'danger' = 'primary',
-    confirmLabel = 'Confirm',
-    cancelLabel = 'Cancel'
-  ) => {
-    setConfirmDialog({
-      show: true,
-      title,
-      message,
-      confirmLabel,
-      cancelLabel,
-      variant,
-      onConfirm: () => {
-        onConfirm();
-        setConfirmDialog(null);
-      },
-      onCancel: () => setConfirmDialog(null)
-    });
-  }, []);
+  // Unified Alert/Confirm Dialog State via hook
+  const { confirmDialog, showAlert, showConfirm } = useConfirmDialog();
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [rightMenuOpen, setRightMenuOpen] = useState<boolean>(false);
   const [showShortcutModal, setShowShortcutModal] = useState<boolean>(false);
-  const [showEditWorkspaceModal, setShowEditWorkspaceModal] = useState<boolean>(false);
-  const [editingWorkspace, setEditingWorkspace] = useState<WorkspaceInfo | null>(null);
+  // Workspace editing states will be provided by useWorkspaceHandlers hook
 
   const [showMobileKeyboard, setShowMobileKeyboard] = useState<boolean>(false);
   const {
@@ -264,42 +198,8 @@ export default function App() {
     activeTabId
   );
 
-  const [changedFiles, setChangedFiles] = useState<GitFileStatus[]>([]);
-  const [gitStatusLoading, setGitStatusLoading] = useState<boolean>(false);
-
-  const fetchGitStatus = useCallback(async (showLoading = false) => {
-    if (!panelWorkspace || !panelWorkspace.isGit) {
-      setChangedFiles([]);
-      return;
-    }
-    if (showLoading) setGitStatusLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`/api/workspaces/${panelWorkspace.id}/git/status`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setChangedFiles(data);
-      }
-    } catch (e) {
-      console.error('Error fetching git status:', e);
-    } finally {
-      if (showLoading) setGitStatusLoading(false);
-    }
-  }, [panelWorkspace]);
-
-  useEffect(() => {
-    fetchGitStatus(true);
-  }, [panelWorkspace, fetchGitStatus]);
-
-  useEffect(() => {
-    if (!panelWorkspace || !panelWorkspace.isGit) return;
-    const interval = setInterval(() => {
-      fetchGitStatus(false);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [panelWorkspace, fetchGitStatus]);
+  // Git status state via hook
+  const { changedFiles, gitStatusLoading, fetchGitStatus } = useGitStatus(panelWorkspace);
 
   // Listen to zoom events dispatched from terminal status bar
   useEffect(() => {
@@ -313,261 +213,37 @@ export default function App() {
   }, [handleZoomIn, handleZoomOut]);
 
 
-  // Handle workspace removal and close all associated terminal and file tabs
-  const handleRemoveWorkspace = (workspacePath: string) => {
-
-    showConfirm(
-      'Remove Workspace',
-      'Are you sure you want to remove this workspace from tracking? (Files will not be deleted)',
-      async () => {
-        const success = await rawHandleRemoveWorkspace(workspacePath);
-        if (success) {
-          const isPathInWorkspace = (filePath: string, wsPath: string) => {
-            const normFile = filePath.toLowerCase().replace(/\\/g, '/');
-            const normWS = wsPath.toLowerCase().replace(/\\/g, '/');
-            return normFile === normWS || normFile.startsWith(normWS + '/');
-          };
-
-          setTabs(prevTabs => {
-            const tabsToClose = prevTabs.filter(tab => {
-              if (tab.type === 'file' && tab.filePath) {
-                return isPathInWorkspace(tab.filePath, workspacePath);
-              }
-              if (tab.type === 'terminal' && tab.layout) {
-                const termIds = getTerminalIds(tab.layout);
-                return termIds.some(id => {
-                  const inst = terminalInstances[id];
-                  return inst && isPathInWorkspace(inst.cwd, workspacePath);
-                });
-              }
-              return false;
-            });
-
-            if (tabsToClose.length === 0) return prevTabs;
-
-            const closedTermIds: string[] = [];
-            tabsToClose.forEach(tab => {
-              if (tab.type === 'terminal' && tab.layout) {
-                const termIds = getTerminalIds(tab.layout);
-                termIds.forEach(id => {
-                  wsManager.unsubscribe(id);
-                  closedTermIds.push(id);
-                });
-              }
-            });
-
-            if (closedTermIds.length > 0) {
-              setTerminalInstances(prevInstances => {
-                const next = { ...prevInstances };
-                closedTermIds.forEach(id => delete next[id]);
-                return next;
-              });
-            }
-
-            const remainingTabs = prevTabs.filter(t => !tabsToClose.some(c => c.id === t.id));
-
-            if (tabsToClose.some(c => c.id === activeTabId)) {
-              if (remainingTabs.length > 0) {
-                setActiveTabId(remainingTabs[remainingTabs.length - 1].id);
-              } else {
-                setActiveTabId('');
-              }
-            }
-
-            return remainingTabs;
-          });
-        }
-      },
-      'danger',
-      'Remove',
-      'Cancel'
-    );
-  };
-
-  const handleRemoveWorktreeWrapped = (wsId: string, wtPath: string) => {
-    showConfirm(
-      'Remove Worktree',
-      `Are you sure you want to remove the worktree at ${wtPath}? This will delete the checked-out files but keep the branch.`,
-      () => {
-        // Find and close any tabs / terminals pointing to this worktree to release OS locks
-        const normWtPath = wtPath.toLowerCase().replace(/\\/g, '/');
-        const isPathInWt = (p: string) => {
-          const normP = p.toLowerCase().replace(/\\/g, '/');
-          return normP === normWtPath || normP.startsWith(normWtPath + '/');
-        };
-
-        const tabsToClose = tabs.filter(t => {
-          if (t.type === 'file' && t.filePath && isPathInWt(t.filePath)) {
-            return true;
-          }
-          if (t.type === 'terminal' && t.layout) {
-            const termIds = getTerminalIds(t.layout);
-            return termIds.some(id => {
-              const inst = terminalInstances[id];
-              const cwd = inst?.cwd || '';
-              return cwd && isPathInWt(cwd);
-            });
-          }
-          return false;
-        });
-
-        if (tabsToClose.length > 0) {
-          tabsToClose.forEach(t => {
-            closeTerminal(t.id);
-          });
-        }
-
-        // Add a slight delay before triggering backend removal to allow terminal processes to exit completely
-        setTimeout(() => {
-          handleRemoveWorktree(wsId, wtPath);
-        }, 500);
-      },
-      'danger',
-      'Remove',
-      'Cancel'
-    );
-  };
-
-  const handleOpenEditWorkspaceModal = (workspace: WorkspaceInfo) => {
-    setEditingWorkspace(workspace);
-    setShowEditWorkspaceModal(true);
-  };
-
-  const handleUpdateWorkspaceSubmit = async (updates: { defaultShell: string; name: string }) => {
-    if (!editingWorkspace) return;
-    const success = await handleUpdateWorkspace(editingWorkspace.path, updates);
-    if (success) {
-      setShowEditWorkspaceModal(false);
-      setEditingWorkspace(null);
-    }
-  };
-
-  const getWorkspaceForTab = (tabId: string): WorkspaceInfo | null => {
-    const tab = tabs.find(t => t.id === tabId);
-    if (!tab) return null;
-
-    if (tab.workspaceId) {
-      const matched = workspaces.find(w => w.id === tab.workspaceId);
-      if (matched) return matched;
-    }
-    
-    const isPathInWorkspace = (filePath: string, wsPath: string) => {
-      const normFile = filePath.toLowerCase().replace(/\\/g, '/');
-      const normWS = wsPath.toLowerCase().replace(/\\/g, '/');
-      return normFile === normWS || normFile.startsWith(normWS + '/');
-    };
-
-    if (tab.type === 'file' && tab.filePath) {
-      const matched = workspaces.find(w => isPathInWorkspace(tab.filePath!, w.path));
-      if (matched) return matched;
-    } else if (tab.type === 'terminal' && tab.layout) {
-      const termIds = getTerminalIds(tab.layout);
-      if (tab.focusedTerminalId) {
-        const inst = terminalInstances[tab.focusedTerminalId];
-        if (inst && inst.cwd) {
-          const matched = workspaces.find(w => isPathInWorkspace(inst.cwd, w.path));
-          if (matched) return matched;
-        }
-      }
-      for (const id of termIds) {
-        const inst = terminalInstances[id];
-        if (inst && inst.cwd) {
-          const matched = workspaces.find(w => isPathInWorkspace(inst.cwd, w.path));
-          if (matched) return matched;
-        }
-      }
-    }
-    return null;
-  };
-
-  // Update workspace's last active tab when activeTabId changes
-  useEffect(() => {
-    if (!activeTabId) return;
-    const ws = getWorkspaceForTab(activeTabId);
-    if (ws) {
-      setWorkspaceActiveTab(ws.id, activeTabId);
-    }
-  }, [activeTabId, tabs, terminalInstances, workspaces]);
-
-  const handleWorkspaceClick = (workspaceId: string) => {
-    const ws = workspaces.find(w => w.id === workspaceId);
-    if (!ws) return;
-
-    setPanelWorkspace(ws);
-
-    // 1. Try to restore last active tab from memory
-    const savedTabId = workspaceActiveTab[workspaceId];
-    if (savedTabId && tabs.some(t => t.id === savedTabId)) {
-      setActiveTabId(savedTabId);
-      setSidebarOpen(false);
-      return;
-    }
-
-    // 2. Try to find any open tab that matches this workspace
-    const isPathInWorkspace = (filePath: string, wsPath: string) => {
-      const normFile = filePath.toLowerCase().replace(/\\/g, '/');
-      const normWS = wsPath.toLowerCase().replace(/\\/g, '/');
-      return normFile === normWS || normFile.startsWith(normWS + '/');
-    };
-
-    const matchedTab = tabs.find(tab => {
-      if (tab.type === 'file' && tab.filePath) {
-        return isPathInWorkspace(tab.filePath, ws.path);
-      }
-      if (tab.type === 'terminal' && tab.layout) {
-        const termIds = getTerminalIds(tab.layout);
-        return termIds.some(id => {
-          const inst = terminalInstances[id];
-          return inst && isPathInWorkspace(inst.cwd, ws.path);
-        });
-      }
-      return false;
-    });
-
-    if (matchedTab) {
-      setActiveTabId(matchedTab.id);
-    } else {
-      // 3. Fallback: open a new terminal tab in this workspace
-      openTerminal('Shell', ws.path);
-    }
-    setSidebarOpen(false);
-  };
-
-  const handleWorktreeClick = (workspaceId: string, wtPath: string) => {
-    const ws = workspaces.find(w => w.id === workspaceId);
-    if (!ws) return;
-
-    setPanelWorkspace(ws);
-
-    const isPathInWorktree = (filePath: string, path: string) => {
-      const normFile = filePath.toLowerCase().replace(/\\/g, '/');
-      const normPath = path.toLowerCase().replace(/\\/g, '/');
-      return normFile === normPath || normFile.startsWith(normPath + '/');
-    };
-
-    const matchedTab = tabs.find(tab => {
-      if (tab.type === 'file' && tab.filePath) {
-        return isPathInWorktree(tab.filePath, wtPath);
-      }
-      if (tab.type === 'terminal' && tab.layout) {
-        const termIds = getTerminalIds(tab.layout);
-        return termIds.some(id => {
-          const inst = terminalInstances[id];
-          return inst && isPathInWorktree(inst.cwd, wtPath);
-        });
-      }
-      return false;
-    });
-
-    if (matchedTab) {
-      setActiveTabId(matchedTab.id);
-    } else {
-      const wt = ws.worktrees.find(w => w.path === wtPath);
-      const name = `${ws.name} (${wt?.branch || 'worktree'})`;
-      openTerminal(name, wtPath, ws.defaultShell);
-    }
-    setSidebarOpen(false);
-  };
+  // Workspace and worktree handlers hook
+  const {
+    editingWorkspace,
+    setEditingWorkspace,
+    showEditWorkspaceModal,
+    setShowEditWorkspaceModal,
+    handleRemoveWorkspace,
+    handleRemoveWorktreeWrapped,
+    handleOpenEditWorkspaceModal,
+    handleUpdateWorkspaceSubmit,
+    handleWorkspaceClick,
+    handleWorktreeClick
+  } = useWorkspaceHandlers({
+    rawHandleRemoveWorkspace,
+    handleRemoveWorktree,
+    handleUpdateWorkspace,
+    workspaces,
+    tabs,
+    setTabs,
+    terminalInstances,
+    setTerminalInstances,
+    activeTabId,
+    setActiveTabId,
+    workspaceActiveTab,
+    setWorkspaceActiveTab,
+    openTerminal,
+    closeTerminal,
+    setPanelWorkspace,
+    showConfirm,
+    setSidebarOpen
+  });
 
 
 
@@ -1242,82 +918,17 @@ export default function App() {
         systemStats={systemStats}
       />
 
-      {activeTooltip && !tabContextMenu && (
-        <div 
-          className="tab-tooltip"
-          style={{
-            position: 'fixed',
-            left: `${activeTooltip.x}px`,
-            top: `${activeTooltip.y}px`,
-            transform: 'translateX(-50%)',
-            zIndex: 9999,
-            pointerEvents: 'none'
-          }}
-        >
-          <div className="tab-tooltip-title">{activeTooltip.title}</div>
-          {activeTooltip.branch && (
-            <div className="tab-tooltip-branch">
-              <GitBranch size={10} className="shrink-0" />
-              <span>{activeTooltip.branch}</span>
-            </div>
-          )}
-          <div className="tab-tooltip-path">{activeTooltip.path}</div>
-        </div>
-      )}
+      <TabTooltip activeTooltip={activeTooltip} tabContextMenu={tabContextMenu} />
 
-      {tabContextMenu && (
-        <div 
-          className="terminal-context-menu"
-          style={{
-            position: 'fixed',
-            top: tabContextMenu.y,
-            left: tabContextMenu.x,
-            zIndex: 1000
-          }}
-        >
-          <button
-            onClick={() => closeTerminal(tabContextMenu.tabId)}
-            className="terminal-context-menu-item"
-          >
-            <span>Close Tab</span>
-          </button>
-          <button
-            onClick={() => handleCloseOtherTabs(tabContextMenu.tabId)}
-            className="terminal-context-menu-item"
-          >
-            <span>Close Other Tabs</span>
-          </button>
-          <button
-            onClick={handleCloseAllTabs}
-            className="terminal-context-menu-item"
-          >
-            <span>Close All Tabs</span>
-          </button>
-          {tabs.find(t => t.id === tabContextMenu.tabId)?.type === 'terminal' && (
-            <>
-              <div className="terminal-context-menu-separator" />
-              <button
-                onClick={() => {
-                  setActiveTabId(tabContextMenu.tabId);
-                  setTimeout(() => splitFocusedTerminal('vertical'), 50);
-                }}
-                className="terminal-context-menu-item"
-              >
-                <span>Split Pane Vertically</span>
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTabId(tabContextMenu.tabId);
-                  setTimeout(() => splitFocusedTerminal('horizontal'), 50);
-                }}
-                className="terminal-context-menu-item"
-              >
-                <span>Split Pane Horizontally</span>
-              </button>
-            </>
-          )}
-        </div>
-      )}
+      <TabContextMenu
+        tabContextMenu={tabContextMenu}
+        tabs={tabs}
+        closeTerminal={closeTerminal}
+        handleCloseOtherTabs={handleCloseOtherTabs}
+        handleCloseAllTabs={handleCloseAllTabs}
+        setActiveTabId={setActiveTabId}
+        splitFocusedTerminal={splitFocusedTerminal}
+      />
     </div>
   );
 }

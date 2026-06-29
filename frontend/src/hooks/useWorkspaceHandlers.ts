@@ -1,0 +1,322 @@
+import { useState, useEffect, useCallback } from 'react';
+import { WorkspaceInfo, getTerminalIds } from './useTerminals';
+import { wsManager } from '../services/websocket';
+
+interface WorkspaceHandlersProps {
+  rawHandleRemoveWorkspace: (workspacePath: string) => Promise<boolean>;
+  handleRemoveWorktree: (workspaceId: string, worktreePath: string) => Promise<void>;
+  handleUpdateWorkspace: (workspacePath: string, updates: { defaultShell: string; name: string }) => Promise<boolean>;
+  workspaces: WorkspaceInfo[];
+  tabs: any[];
+  setTabs: React.Dispatch<React.SetStateAction<any[]>>;
+  terminalInstances: Record<string, any>;
+  setTerminalInstances: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+  activeTabId: string;
+  setActiveTabId: (id: string) => void;
+  workspaceActiveTab: Record<string, string>;
+  setWorkspaceActiveTab: (workspaceId: string, tabId: string) => void;
+  openTerminal: (title: string, cwd: string, shell?: string) => void;
+  closeTerminal: (tabId: string) => void;
+  setPanelWorkspace: React.Dispatch<React.SetStateAction<WorkspaceInfo | null>>;
+  showConfirm: (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    variant?: 'primary' | 'secondary' | 'danger',
+    confirmLabel?: string,
+    cancelLabel?: string
+  ) => void;
+  setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+export function useWorkspaceHandlers({
+  rawHandleRemoveWorkspace,
+  handleRemoveWorktree,
+  handleUpdateWorkspace,
+  workspaces,
+  tabs,
+  setTabs,
+  terminalInstances,
+  setTerminalInstances,
+  activeTabId,
+  setActiveTabId,
+  workspaceActiveTab,
+  setWorkspaceActiveTab,
+  openTerminal,
+  closeTerminal,
+  setPanelWorkspace,
+  showConfirm,
+  setSidebarOpen
+}: WorkspaceHandlersProps) {
+  const [showEditWorkspaceModal, setShowEditWorkspaceModal] = useState<boolean>(false);
+  const [editingWorkspace, setEditingWorkspace] = useState<WorkspaceInfo | null>(null);
+
+  // Handle workspace removal and close all associated terminal and file tabs
+  const handleRemoveWorkspace = useCallback((workspacePath: string) => {
+    showConfirm(
+      'Remove Workspace',
+      'Are you sure you want to remove this workspace from tracking? (Files will not be deleted)',
+      async () => {
+        const success = await rawHandleRemoveWorkspace(workspacePath);
+        if (success) {
+          const isPathInWorkspace = (filePath: string, wsPath: string) => {
+            const normFile = filePath.toLowerCase().replace(/\\/g, '/');
+            const normWS = wsPath.toLowerCase().replace(/\\/g, '/');
+            return normFile === normWS || normFile.startsWith(normWS + '/');
+          };
+
+          setTabs(prevTabs => {
+            const tabsToClose = prevTabs.filter(tab => {
+              if (tab.type === 'file' && tab.filePath) {
+                return isPathInWorkspace(tab.filePath, workspacePath);
+              }
+              if (tab.type === 'terminal' && tab.layout) {
+                const termIds = getTerminalIds(tab.layout);
+                return termIds.some(id => {
+                  const inst = terminalInstances[id];
+                  return inst && isPathInWorkspace(inst.cwd, workspacePath);
+                });
+              }
+              return false;
+            });
+
+            if (tabsToClose.length === 0) return prevTabs;
+
+            const closedTermIds: string[] = [];
+            tabsToClose.forEach(tab => {
+              if (tab.type === 'terminal' && tab.layout) {
+                const termIds = getTerminalIds(tab.layout);
+                termIds.forEach(id => {
+                  wsManager.unsubscribe(id);
+                  closedTermIds.push(id);
+                });
+              }
+            });
+
+            if (closedTermIds.length > 0) {
+              setTerminalInstances(prevInstances => {
+                const next = { ...prevInstances };
+                closedTermIds.forEach(id => delete next[id]);
+                return next;
+              });
+            }
+
+            const remainingTabs = prevTabs.filter(t => !tabsToClose.some(c => c.id === t.id));
+
+            if (tabsToClose.some(c => c.id === activeTabId)) {
+              if (remainingTabs.length > 0) {
+                setActiveTabId(remainingTabs[remainingTabs.length - 1].id);
+              } else {
+                setActiveTabId('');
+              }
+            }
+
+            return remainingTabs;
+          });
+        }
+      },
+      'danger',
+      'Remove',
+      'Cancel'
+    );
+  }, [rawHandleRemoveWorkspace, terminalInstances, activeTabId, setTabs, setTerminalInstances, setActiveTabId, showConfirm]);
+
+  const handleRemoveWorktreeWrapped = useCallback((wsId: string, wtPath: string) => {
+    showConfirm(
+      'Remove Worktree',
+      `Are you sure you want to remove the worktree at ${wtPath}? This will delete the checked-out files but keep the branch.`,
+      () => {
+        // Find and close any tabs / terminals pointing to this worktree to release OS locks
+        const normWtPath = wtPath.toLowerCase().replace(/\\/g, '/');
+        const isPathInWt = (p: string) => {
+          const normP = p.toLowerCase().replace(/\\/g, '/');
+          return normP === normWtPath || normP.startsWith(normWtPath + '/');
+        };
+
+        const tabsToClose = tabs.filter(t => {
+          if (t.type === 'file' && t.filePath && isPathInWt(t.filePath)) {
+            return true;
+          }
+          if (t.type === 'terminal' && t.layout) {
+            const termIds = getTerminalIds(t.layout);
+            return termIds.some(id => {
+              const inst = terminalInstances[id];
+              const cwd = inst?.cwd || '';
+              return cwd && isPathInWt(cwd);
+            });
+          }
+          return false;
+        });
+
+        if (tabsToClose.length > 0) {
+          tabsToClose.forEach(t => {
+            closeTerminal(t.id);
+          });
+        }
+
+        // Add a slight delay before triggering backend removal to allow terminal processes to exit completely
+        setTimeout(() => {
+          handleRemoveWorktree(wsId, wtPath);
+        }, 500);
+      },
+      'danger',
+      'Remove',
+      'Cancel'
+    );
+  }, [tabs, terminalInstances, closeTerminal, handleRemoveWorktree, showConfirm]);
+
+  const handleOpenEditWorkspaceModal = useCallback((workspace: WorkspaceInfo) => {
+    setEditingWorkspace(workspace);
+    setShowEditWorkspaceModal(true);
+  }, []);
+
+  const handleUpdateWorkspaceSubmit = useCallback(async (updates: { defaultShell: string; name: string }) => {
+    if (!editingWorkspace) return;
+    const success = await handleUpdateWorkspace(editingWorkspace.path, updates);
+    if (success) {
+      setShowEditWorkspaceModal(false);
+      setEditingWorkspace(null);
+    }
+  }, [editingWorkspace, handleUpdateWorkspace]);
+
+  const getWorkspaceForTab = useCallback((tabId: string): WorkspaceInfo | null => {
+    const tab = tabs.find(t => t.id === tabId);
+    if (!tab) return null;
+
+    if (tab.workspaceId) {
+      const matched = workspaces.find(w => w.id === tab.workspaceId);
+      if (matched) return matched;
+    }
+    
+    const isPathInWorkspace = (filePath: string, wsPath: string) => {
+      const normFile = filePath.toLowerCase().replace(/\\/g, '/');
+      const normWS = wsPath.toLowerCase().replace(/\\/g, '/');
+      return normFile === normWS || normFile.startsWith(normWS + '/');
+    };
+
+    if (tab.type === 'file' && tab.filePath) {
+      const matched = workspaces.find(w => isPathInWorkspace(tab.filePath!, w.path));
+      if (matched) return matched;
+    } else if (tab.type === 'terminal' && tab.layout) {
+      const termIds = getTerminalIds(tab.layout);
+      if (tab.focusedTerminalId) {
+        const inst = terminalInstances[tab.focusedTerminalId];
+        if (inst && inst.cwd) {
+          const matched = workspaces.find(w => isPathInWorkspace(inst.cwd, w.path));
+          if (matched) return matched;
+        }
+      }
+      for (const id of termIds) {
+        const inst = terminalInstances[id];
+        if (inst && inst.cwd) {
+          const matched = workspaces.find(w => isPathInWorkspace(inst.cwd, w.path));
+          if (matched) return matched;
+        }
+      }
+    }
+    return null;
+  }, [tabs, workspaces, terminalInstances]);
+
+  // Update workspace's last active tab when activeTabId changes
+  useEffect(() => {
+    if (!activeTabId) return;
+    const ws = getWorkspaceForTab(activeTabId);
+    if (ws) {
+      setWorkspaceActiveTab(ws.id, activeTabId);
+    }
+  }, [activeTabId, tabs, terminalInstances, workspaces, getWorkspaceForTab, setWorkspaceActiveTab]);
+
+  const handleWorkspaceClick = useCallback((workspaceId: string) => {
+    const ws = workspaces.find(w => w.id === workspaceId);
+    if (!ws) return;
+
+    setPanelWorkspace(ws);
+
+    // 1. Try to restore last active tab from memory
+    const savedTabId = workspaceActiveTab[workspaceId];
+    if (savedTabId && tabs.some(t => t.id === savedTabId)) {
+      setActiveTabId(savedTabId);
+      setSidebarOpen(false);
+      return;
+    }
+
+    // 2. Try to find any open tab that matches this workspace
+    const isPathInWorkspace = (filePath: string, wsPath: string) => {
+      const normFile = filePath.toLowerCase().replace(/\\/g, '/');
+      const normWS = wsPath.toLowerCase().replace(/\\/g, '/');
+      return normFile === normWS || normFile.startsWith(normWS + '/');
+    };
+
+    const matchedTab = tabs.find(tab => {
+      if (tab.type === 'file' && tab.filePath) {
+        return isPathInWorkspace(tab.filePath, ws.path);
+      }
+      if (tab.type === 'terminal' && tab.layout) {
+        const termIds = getTerminalIds(tab.layout);
+        return termIds.some(id => {
+          const inst = terminalInstances[id];
+          return inst && isPathInWorkspace(inst.cwd, ws.path);
+        });
+      }
+      return false;
+    });
+
+    if (matchedTab) {
+      setActiveTabId(matchedTab.id);
+    } else {
+      // 3. Fallback: open a new terminal tab in this workspace
+      openTerminal('Shell', ws.path);
+    }
+    setSidebarOpen(false);
+  }, [workspaces, workspaceActiveTab, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setSidebarOpen]);
+
+  const handleWorktreeClick = useCallback((workspaceId: string, wtPath: string) => {
+    const ws = workspaces.find(w => w.id === workspaceId);
+    if (!ws) return;
+
+    setPanelWorkspace(ws);
+
+    const isPathInWorktree = (filePath: string, path: string) => {
+      const normFile = filePath.toLowerCase().replace(/\\/g, '/');
+      const normPath = path.toLowerCase().replace(/\\/g, '/');
+      return normFile === normPath || normFile.startsWith(normPath + '/');
+    };
+
+    const matchedTab = tabs.find(tab => {
+      if (tab.type === 'file' && tab.filePath) {
+        return isPathInWorktree(tab.filePath, wtPath);
+      }
+      if (tab.type === 'terminal' && tab.layout) {
+        const termIds = getTerminalIds(tab.layout);
+        return termIds.some(id => {
+          const inst = terminalInstances[id];
+          return inst && isPathInWorktree(inst.cwd, wtPath);
+        });
+      }
+      return false;
+    });
+
+    if (matchedTab) {
+      setActiveTabId(matchedTab.id);
+    } else {
+      const wt = ws.worktrees.find(w => w.path === wtPath);
+      const name = `${ws.name} (${wt?.branch || 'worktree'})`;
+      openTerminal(name, wtPath, ws.defaultShell);
+    }
+    setSidebarOpen(false);
+  }, [workspaces, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setSidebarOpen]);
+
+  return {
+    editingWorkspace,
+    setEditingWorkspace,
+    showEditWorkspaceModal,
+    setShowEditWorkspaceModal,
+    handleRemoveWorkspace,
+    handleRemoveWorktreeWrapped,
+    handleOpenEditWorkspaceModal,
+    handleUpdateWorkspaceSubmit,
+    handleWorkspaceClick,
+    handleWorktreeClick,
+    getWorkspaceForTab
+  };
+}

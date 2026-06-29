@@ -2,6 +2,18 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.100] - 2026-06-29
+
+### Refactored
+- **Code Modularization (App.tsx)**: Refactored the core frontend `App.tsx` file to bring it fully under the strict 1,000-line repository limit (reduced from 1,028 lines to 938 lines):
+  - Extracted workspace/worktree actions and tab interaction logic to a new custom hook `useWorkspaceHandlers.ts`.
+  - Extracted unified confirmation and alert dialog state management to a new custom hook `useConfirmDialog.ts`.
+  - Extracted active workspace git status polling and state management to a new custom hook `useGitStatus.ts`.
+  - Extracted the static inline SVG `TPlusLogo` component to its own file `TPlusLogo.tsx`.
+  - Extracted `TabTooltip` and `TabContextMenu` components to a dedicated file `TabUiComponents.tsx`.
+
+---
+
 ## [1.3.99] - 2026-06-29
 
 ### Added
