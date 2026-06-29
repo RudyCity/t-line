@@ -19,12 +19,24 @@ export interface WorkspaceInfo {
   defaultShell?: string;
 }
 
+export interface ActiveProcessSummary {
+  pid: number;
+  ppid: number;
+  name: string;
+  commandLine: string;
+  isClaude: boolean;
+  isGemini: boolean;
+  isCursor: boolean;
+  isSuperagent: boolean;
+}
+
 export interface TerminalInstanceData {
   id: string;
   name: string;
   initialName?: string;
   cwd: string;
   shellType: string;
+  activeProcesses?: ActiveProcessSummary[];
 }
 
 export type SplitLayoutNode =
@@ -517,6 +529,19 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     );
   }, []);
 
+  const handleActiveProcessesChange = useCallback((id: string, processes: ActiveProcessSummary[]) => {
+    setTerminalInstances(prev => {
+      if (!prev[id]) return prev;
+      return {
+        ...prev,
+        [id]: {
+          ...prev[id],
+          activeProcesses: processes
+        }
+      };
+    });
+  }, []);
+
   const importActiveSessions = useCallback((sessions: Array<{ id: string; shellType: string; cwd: string }>) => {
     setTerminalInstances(prev => {
       const next = { ...prev };
@@ -597,6 +622,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     splitFocusedTerminal,
     focusTerminal,
     handleTitleChange,
+    handleActiveProcessesChange,
     importActiveSessions,
     refreshTerminal,
     refreshTriggers

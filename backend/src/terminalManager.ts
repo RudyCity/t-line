@@ -1,4 +1,4 @@
-import { spawn as spawnProcess, ChildProcessWithoutNullStreams } from 'child_process';
+import { spawn as spawnProcess, ChildProcessWithoutNullStreams, exec } from 'child_process';
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
@@ -388,3 +388,173 @@ export class TerminalManager {
 }
 
 export const terminalManager = new TerminalManager();
+
+export interface ActiveProcessSummary {
+  pid: number;
+  ppid: number;
+  name: string;
+  commandLine: string;
+  isClaude: boolean;
+  isGemini: boolean;
+  isCursor: boolean;
+  isSuperagent: boolean;
+}
+
+function parseWmicCsv(csvContent: string): any[] {
+  const lines = csvContent.split(/\r?\n/);
+  if (lines.length < 2) return [];
+
+  const headerLine = lines[0];
+  const headers = headerLine.split(',').map(h => h.trim().toLowerCase());
+  
+  const cmdIdx = headers.indexOf('commandline');
+  const nameIdx = headers.indexOf('name');
+  const ppidIdx = headers.indexOf('parentprocessid');
+  const pidIdx = headers.indexOf('processid');
+
+  if (nameIdx === -1 || ppidIdx === -1 || pidIdx === -1) {
+    return [];
+  }
+
+  const processes: any[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    const cells: string[] = [];
+    let currentCell = '';
+    let inQuotes = false;
+    for (let j = 0; j < line.length; j++) {
+      const char = line[j];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        cells.push(currentCell);
+        currentCell = '';
+      } else {
+        currentCell += char;
+      }
+    }
+    cells.push(currentCell);
+
+    if (cells.length < headers.length) continue;
+
+    const pid = parseInt(cells[pidIdx], 10);
+    const ppid = parseInt(cells[ppidIdx], 10);
+    const name = cells[nameIdx] ? cells[nameIdx].replace(/^"|"$/g, '').trim() : '';
+    const commandLine = cmdIdx !== -1 && cells[cmdIdx] ? cells[cmdIdx].replace(/^"|"$/g, '').trim() : '';
+
+    if (!isNaN(pid) && !isNaN(ppid)) {
+      processes.push({ pid, ppid, name, commandLine });
+    }
+  }
+
+  return processes;
+}
+
+function parsePsOutput(psContent: string): any[] {
+  const lines = psContent.split(/\r?\n/);
+  const processes: any[] = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    
+    const parts = line.split(/\s+/);
+    if (parts.length < 3) continue;
+    
+    const pid = parseInt(parts[0], 10);
+    const ppid = parseInt(parts[1], 10);
+    const name = parts[2];
+    const commandLine = parts.slice(3).join(' ');
+    
+    if (!isNaN(pid) && !isNaN(ppid)) {
+      processes.push({ pid, ppid, name, commandLine });
+    }
+  }
+  return processes;
+}
+
+export function getActiveProcessesForPid(shellPid: number): Promise<ActiveProcessSummary[]> {
+  return new Promise((resolve) => {
+    const isWin = os.platform() === 'win32';
+    const cmd = isWin
+      ? 'wmic process get CommandLine,Name,ParentProcessId,ProcessId /FORMAT:csv'
+      : 'ps -ax -o pid,ppid,comm,command 2>/dev/null || ps -ax -o pid,ppid,comm,args';
+
+    exec(cmd, { maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
+      if (err || !stdout) {
+        resolve([]);
+        return;
+      }
+      try {
+        const processes = isWin ? parseWmicCsv(stdout) : parsePsOutput(stdout);
+        
+        // Build ppid map
+        const ppidMap = new Map<number, any[]>();
+        for (const proc of processes) {
+          if (!ppidMap.has(proc.ppid)) {
+            ppidMap.set(proc.ppid, []);
+          }
+          ppidMap.get(proc.ppid)!.push(proc);
+        }
+
+        // Traverse descendants
+        const descendants: any[] = [];
+        const queue = [shellPid];
+        const visited = new Set<number>();
+
+        while (queue.length > 0) {
+          const current = queue.shift()!;
+          if (visited.has(current)) continue;
+          visited.add(current);
+
+          const children = ppidMap.get(current);
+          if (children) {
+            for (const child of children) {
+              descendants.push(child);
+              queue.push(child.pid);
+            }
+          }
+        }
+
+        // Filter and map to ActiveProcessSummary
+        const summaries: ActiveProcessSummary[] = descendants
+          .filter(p => {
+            const nameLower = p.name.toLowerCase();
+            // Exclude shell helpers that are not actual active user commands
+            return nameLower !== 'conhost.exe' && 
+                   nameLower !== 'openconsole.exe' && 
+                   p.pid !== shellPid;
+          })
+          .map(p => {
+            const cmdLower = p.commandLine.toLowerCase();
+            const nameLower = p.name.toLowerCase();
+            
+            const isClaude = cmdLower.includes('claude') || cmdLower.includes('@anthropic-ai/claude-code');
+            const isGemini = cmdLower.includes('gemini') || cmdLower.includes('google/generative-ai');
+            const isCursor = cmdLower.includes('cursor') || nameLower.includes('cursor');
+            const isSuperagent = cmdLower.includes('superagent') || cmdLower.includes('superagent-cli');
+
+            return {
+              pid: p.pid,
+              ppid: p.ppid,
+              name: p.name,
+              commandLine: p.commandLine,
+              isClaude,
+              isGemini,
+              isCursor,
+              isSuperagent
+            };
+          });
+
+        resolve(summaries);
+      } catch (e) {
+        console.error('Error in getActiveProcessesForPid:', e);
+        resolve([]);
+      }
+    });
+  });
+}
+

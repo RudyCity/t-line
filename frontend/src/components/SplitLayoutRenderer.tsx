@@ -1,6 +1,6 @@
 import React from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { SplitLayoutNode, TerminalInstanceData } from '../hooks/useTerminals';
+import { SplitLayoutNode, TerminalInstanceData, ActiveProcessSummary } from '../hooks/useTerminals';
 import { TerminalInstance } from './TerminalInstance';
 
 export interface SplitLayoutRendererProps {
@@ -11,6 +11,7 @@ export interface SplitLayoutRendererProps {
   terminalFontSize: number;
   terminalInstances: Record<string, TerminalInstanceData>;
   handleTitleChange: (id: string, title: string) => void;
+  handleActiveProcessesChange?: (id: string, processes: ActiveProcessSummary[]) => void;
   focusTerminal: (id: string) => void;
   closePane: (id: string) => void;
   splitFocusedTerminal: (direction: 'horizontal' | 'vertical') => void;
@@ -27,6 +28,7 @@ export function SplitLayoutRenderer({
   terminalFontSize,
   terminalInstances,
   handleTitleChange,
+  handleActiveProcessesChange,
   focusTerminal,
   closePane,
   splitFocusedTerminal,
@@ -59,6 +61,7 @@ export function SplitLayoutRenderer({
           wsConnected={wsConnected}
           fontSize={terminalFontSize}
           onTitleChange={(title) => handleTitleChange(term.id, title)}
+          onActiveProcessesChange={(processes) => handleActiveProcessesChange?.(term.id, processes)}
           onFocus={() => {
             focusTerminal(node.terminalId);
             onTerminalFocus?.();
@@ -121,6 +124,7 @@ export function SplitLayoutRenderer({
           terminalFontSize={terminalFontSize}
           terminalInstances={terminalInstances}
           handleTitleChange={handleTitleChange}
+          handleActiveProcessesChange={handleActiveProcessesChange}
           focusTerminal={focusTerminal}
           closePane={closePane}
           splitFocusedTerminal={splitFocusedTerminal}
@@ -146,6 +150,7 @@ export function SplitLayoutRenderer({
           terminalFontSize={terminalFontSize}
           terminalInstances={terminalInstances}
           handleTitleChange={handleTitleChange}
+          handleActiveProcessesChange={handleActiveProcessesChange}
           focusTerminal={focusTerminal}
           closePane={closePane}
           splitFocusedTerminal={splitFocusedTerminal}

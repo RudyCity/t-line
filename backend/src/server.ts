@@ -28,7 +28,7 @@ import {
   getGitDiff,
   clearWorkspaceCache
 } from './gitManager';
-import { terminalManager } from './terminalManager';
+import { terminalManager, getActiveProcessesForPid } from './terminalManager';
 import { tunnelManager } from './tunnelManager';
 
 dotenv.config();
@@ -731,9 +731,11 @@ server.on('upgrade', (request, socket, head) => {
 wss.on('connection', (ws: WebSocket) => {
   const activeTerminals = new Set<string>();
 
-  // Helper to start process title polling
+  // Helper to start process title polling and active process detection
   const startTitlePolling = (termId: string, terminal: any) => {
     let lastProcessName = '';
+    let lastActiveStateStr = '';
+
     const titleInterval = setInterval(() => {
       if (ws.readyState !== WebSocket.OPEN) {
         clearInterval(titleInterval);
@@ -756,8 +758,35 @@ wss.on('connection', (ws: WebSocket) => {
       }
     }, 1000);
 
+    const processInterval = setInterval(async () => {
+      if (ws.readyState !== WebSocket.OPEN) {
+        clearInterval(processInterval);
+        return;
+      }
+      try {
+        const pid = terminal.getPid();
+        if (pid) {
+          const activeProcesses = await getActiveProcessesForPid(pid);
+          const stateStr = JSON.stringify(activeProcesses);
+          if (stateStr !== lastActiveStateStr) {
+            lastActiveStateStr = stateStr;
+            ws.send(JSON.stringify({
+              type: 'activeProcesses',
+              id: termId,
+              processes: activeProcesses
+            }));
+          }
+        }
+      } catch (e) {
+        clearInterval(processInterval);
+      }
+    }, 2500);
+
     // Return a cleanup function
-    return () => clearInterval(titleInterval);
+    return () => {
+      clearInterval(titleInterval);
+      clearInterval(processInterval);
+    };
   };
 
   ws.on('message', (message: string) => {

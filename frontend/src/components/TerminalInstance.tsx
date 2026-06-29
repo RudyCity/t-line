@@ -7,6 +7,7 @@ import { Unicode11Addon } from 'xterm-addon-unicode11';
 import { CanvasAddon } from '@xterm/addon-canvas';
 import { ImageAddon } from '@xterm/addon-image';
 import { wsManager } from '../services/websocket';
+import { ActiveProcessSummary } from '../hooks/useTerminals';
 
 interface TerminalTab {
   id: string;
@@ -21,6 +22,7 @@ interface TerminalInstanceProps {
   wsConnected: boolean;
   fontSize: number;
   onTitleChange?: (title: string) => void;
+  onActiveProcessesChange?: (processes: ActiveProcessSummary[]) => void;
   onFocus?: () => void;
   refreshTrigger?: number;
   isFocusedPane?: boolean;
@@ -341,7 +343,7 @@ function TerminalContextMenu({ x, y, hasSelection, onCopy, onPaste, onSelectAll,
 // ── Main Terminal Instance ─────────────────────────────────────
 export function TerminalInstance({
   tab, active, wsConnected, fontSize,
-  onTitleChange, onFocus, refreshTrigger,
+  onTitleChange, onActiveProcessesChange, onFocus, refreshTrigger,
   isFocusedPane = false, pid
 }: TerminalInstanceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -349,6 +351,7 @@ export function TerminalInstance({
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
   const onTitleChangeRef = useRef(onTitleChange);
+  const onActiveProcessesChangeRef = useRef(onActiveProcessesChange);
   const onFocusRef = useRef(onFocus);
 
   const [showSearch, setShowSearch] = useState(false);
@@ -490,6 +493,7 @@ export function TerminalInstance({
   );
 
   useEffect(() => { onTitleChangeRef.current = onTitleChange; }, [onTitleChange]);
+  useEffect(() => { onActiveProcessesChangeRef.current = onActiveProcessesChange; }, [onActiveProcessesChange]);
   useEffect(() => { onFocusRef.current = onFocus; }, [onFocus]);
 
   const closeSearch = useCallback(() => {
@@ -597,6 +601,8 @@ export function TerminalInstance({
         scheduleWrite(payload.data);
       } else if (payload.type === 'title') {
         onTitleChangeRef.current?.(payload.title);
+      } else if (payload.type === 'activeProcesses') {
+        onActiveProcessesChangeRef.current?.(payload.processes);
       } else if (payload.type === 'pid') {
         setLocalPid(payload.pid);
       } else if (payload.type === 'exit') {

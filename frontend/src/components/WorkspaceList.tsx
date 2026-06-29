@@ -15,7 +15,30 @@ import {
   ChevronRight,
   X
 } from 'lucide-react';
-import { WorkspaceInfo, TabData, WorkspaceActiveTabMap, getTerminalIds } from '../hooks/useTerminals';
+import { WorkspaceInfo, TabData, WorkspaceActiveTabMap, getTerminalIds, ActiveProcessSummary } from '../hooks/useTerminals';
+
+// Helper to normalize path matching
+const isPathInWorktree = (filePath: string, wtPath: string): boolean => {
+  const normFile = filePath.toLowerCase().replace(/\\/g, '/');
+  const normWt = wtPath.toLowerCase().replace(/\\/g, '/');
+  return normFile === normWt || normFile.startsWith(normWt + '/');
+};
+
+// Helper to get active running processes for a path
+const getRunningProcessesForPath = (
+  path: string,
+  terminalInstances: Record<string, any>
+): ActiveProcessSummary[] => {
+  const processes: ActiveProcessSummary[] = [];
+  Object.values(terminalInstances).forEach((inst: any) => {
+    if (inst && inst.cwd && isPathInWorktree(inst.cwd, path)) {
+      if (inst.activeProcesses && inst.activeProcesses.length > 0) {
+        processes.push(...inst.activeProcesses);
+      }
+    }
+  });
+  return processes;
+};
 
 export interface WorkspaceListProps {
   workspaces: WorkspaceInfo[];
@@ -217,6 +240,13 @@ function WorktreeList({
           }))
         ));
 
+        const wtProcesses = getRunningProcessesForPath(wt.path, terminalInstances);
+        const hasWtRunning = wtProcesses.length > 0;
+        const isWtClaudeActive = wtProcesses.some(p => p.isClaude);
+        const isWtGeminiActive = wtProcesses.some(p => p.isGemini);
+        const isWtCursorActive = wtProcesses.some(p => p.isCursor);
+        const isWtSuperagentActive = wtProcesses.some(p => p.isSuperagent);
+
         if (deletingWorktreePaths?.includes(wt.path)) {
           return (
             <div key={wt.path} className={`tree-connector-wrapper ${isLast ? 'tree-item-last' : ''} opacity-60 animate-pulse pointer-events-none`}>
@@ -254,7 +284,12 @@ function WorktreeList({
                 }}
               >
                 <div className="flex items-center gap-1.5 truncate flex-1 min-w-0" title={wt.path}>
-                  <GitBranch size={10} className={isWtActive ? 'text-purple-400 shrink-0' : (wt.isDirty ? 'text-amber-400 shrink-0' : 'text-slate-500 shrink-0')} />
+                  <div className="relative flex items-center shrink-0">
+                    <GitBranch size={10} className={isWtActive ? 'text-purple-400 shrink-0' : (wt.isDirty ? 'text-amber-400 shrink-0' : 'text-slate-500 shrink-0')} />
+                    {hasWtRunning && (
+                      <span className="absolute -bottom-0.5 -right-0.5 ws-active-dot" style={{ width: '4px', height: '4px', boxShadow: '0 0 4px #10b981' }} title="Active processes running in terminal" />
+                    )}
+                  </div>
                   <span className={`truncate text-[11px] ${isWtActive ? 'text-purple-200' : (wt.isDirty ? 'text-amber-400' : 'text-slate-400')}`}>
                     {wt.branch || 'detached'}
                   </span>
@@ -269,6 +304,28 @@ function WorktreeList({
                   {isWtActive && (
                     <span className="ws-active-badge shrink-0" style={{ width: '11px', height: '11px', fontSize: '6px' }} title="Active worktree tab">
                       <Check size={7} strokeWidth={3} />
+                    </span>
+                  )}
+
+                  {/* Compact process badges for worktree */}
+                  {isWtClaudeActive && (
+                    <span className="ws-active-process-badge ws-badge-claude shrink-0 scale-[0.85] origin-left" style={{ fontSize: '7px', height: '12px', padding: '0 3px' }} title="Claude Code running">
+                      Claude
+                    </span>
+                  )}
+                  {isWtGeminiActive && (
+                    <span className="ws-active-process-badge ws-badge-gemini shrink-0 scale-[0.85] origin-left" style={{ fontSize: '7px', height: '12px', padding: '0 3px' }} title="Gemini CLI running">
+                      Gemini
+                    </span>
+                  )}
+                  {isWtCursorActive && (
+                    <span className="ws-active-process-badge ws-badge-cursor shrink-0 scale-[0.85] origin-left" style={{ fontSize: '7px', height: '12px', padding: '0 3px' }} title="Cursor running">
+                      Cursor
+                    </span>
+                  )}
+                  {isWtSuperagentActive && (
+                    <span className="ws-active-process-badge ws-badge-superagent shrink-0 scale-[0.85] origin-left" style={{ fontSize: '7px', height: '12px', padding: '0 3px' }} title="Superagent running">
+                      Superagent
                     </span>
                   )}
                 </div>
@@ -343,12 +400,7 @@ export function WorkspaceList({
   const searchRef = useRef<HTMLInputElement>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
-  // Helper to normalize path matching
-  const isPathInWorktree = (filePath: string, wtPath: string) => {
-    const normFile = filePath.toLowerCase().replace(/\\/g, '/');
-    const normWt = wtPath.toLowerCase().replace(/\\/g, '/');
-    return normFile === normWt || normFile.startsWith(normWt + '/');
-  };
+  // (Using file-level helper isPathInWorktree)
 
   /**
    * Determine which workspace currently "owns" the active tab.
@@ -418,6 +470,13 @@ export function WorkspaceList({
           const hasDirtyChanges = totalDirty > 0;
           const isDropdownOpen = openDropdownId === w.id;
 
+          const runningProcesses = getRunningProcessesForPath(w.path, terminalInstances);
+          const hasRunning = runningProcesses.length > 0;
+          const isClaudeActive = runningProcesses.some(p => p.isClaude);
+          const isGeminiActive = runningProcesses.some(p => p.isGemini);
+          const isCursorActive = runningProcesses.some(p => p.isCursor);
+          const isSuperagentActive = runningProcesses.some(p => p.isSuperagent);
+
           if (deletingWorkspacePaths?.includes(w.path)) {
             return (
               <div key={w.id} className="ws-card animate-pulse pointer-events-none opacity-60 flex items-center justify-between py-3 px-3.5 border border-red-500/20 bg-red-500/5 rounded-lg">
@@ -444,10 +503,15 @@ export function WorkspaceList({
               {/* Header row */}
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 font-medium truncate min-w-0 flex-1">
-                  <Folder
-                    size={14}
-                    className={`shrink-0 ${isActive ? 'text-purple-400' : hasDirtyChanges ? 'text-amber-400' : 'text-sky-400'}`}
-                  />
+                  <div className="relative flex items-center shrink-0">
+                    <Folder
+                      size={14}
+                      className={`shrink-0 ${isActive ? 'text-purple-400' : hasDirtyChanges ? 'text-amber-400' : 'text-sky-400'}`}
+                    />
+                    {hasRunning && (
+                      <span className="absolute -bottom-0.5 -right-0.5 ws-active-dot" title="Active processes running in terminal" />
+                    )}
+                  </div>
                   <span
                     className={`text-[12px] font-semibold tracking-wide truncate ${isActive ? 'text-purple-200' : 'text-slate-100'}`}
                     title={w.path}
@@ -464,6 +528,33 @@ export function WorkspaceList({
                   {hasDirtyChanges && !isActive && (
                     <span className="ws-dirty-count shrink-0" title={`${totalDirty} uncommitted changes`}>
                       {totalDirty}
+                    </span>
+                  )}
+
+                  {/* Active processes badges */}
+                  {isClaudeActive && (
+                    <span className="ws-active-process-badge ws-badge-claude shrink-0" title="Claude Code running">
+                      Claude
+                    </span>
+                  )}
+                  {isGeminiActive && (
+                    <span className="ws-active-process-badge ws-badge-gemini shrink-0" title="Gemini CLI running">
+                      Gemini
+                    </span>
+                  )}
+                  {isCursorActive && (
+                    <span className="ws-active-process-badge ws-badge-cursor shrink-0" title="Cursor running">
+                      Cursor
+                    </span>
+                  )}
+                  {isSuperagentActive && (
+                    <span className="ws-active-process-badge ws-badge-superagent shrink-0" title="Superagent running">
+                      Superagent
+                    </span>
+                  )}
+                  {hasRunning && !isClaudeActive && !isGeminiActive && !isCursorActive && !isSuperagentActive && (
+                    <span className="ws-active-process-badge ws-badge-general shrink-0" title={`${runningProcesses[0].name} running`}>
+                      Active
                     </span>
                   )}
                 </div>

@@ -229,6 +229,7 @@ export default function App() {
     splitFocusedTerminal,
     focusTerminal,
     handleTitleChange,
+    handleActiveProcessesChange,
     importActiveSessions,
     refreshTerminal,
     refreshTriggers
@@ -1114,6 +1115,7 @@ export default function App() {
                       terminalFontSize={terminalFontSize}
                       terminalInstances={terminalInstances}
                       handleTitleChange={handleTitleChange}
+                      handleActiveProcessesChange={handleActiveProcessesChange}
                       focusTerminal={focusTerminal}
                       closePane={closePane}
                       splitFocusedTerminal={splitFocusedTerminal}

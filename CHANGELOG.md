@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.98] - 2026-06-29
+
+### Added
+- **Terminal Active Processes Loading & Badges**: Added active process monitoring to the workspace list and branch list.
+  - Implemented OS process tree scanning (`getActiveProcessesForPid`) on Windows/Unix in `terminalManager.ts`.
+  - Added a 2.5s interval in WebSocket title polling to check active child processes and push the list to client.
+  - Rendered a glowing pulsing green dot overlapping workspace and worktree icons when a terminal has active commands running.
+  - Added beautiful styled gradient glow badges next to workspace/worktree items for specific processes (Claude Code, Gemini CLI, Cursor, Superagent CLI, and general "Active" processes).
+
+---
+
 ## [1.3.97] - 2026-06-29
 
 ### Refactored
