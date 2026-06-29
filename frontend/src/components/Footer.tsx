@@ -16,6 +16,7 @@ function formatBytes(bytes: number, decimals: number = 1): string {
 
 export interface FooterProps {
   panelWorkspace: WorkspaceInfo | null;
+  panelWorktreePath?: string | null;
   tunnelStatus: {
     active: boolean;
     url: string | null;
@@ -41,6 +42,7 @@ export interface FooterProps {
 
 export function Footer({
   panelWorkspace,
+  panelWorktreePath,
   tunnelStatus,
   terminalFontSize,
   defaultShell,
@@ -73,7 +75,8 @@ export function Footer({
 
   const getWorkspaceActiveBranch = (
     workspace: WorkspaceInfo | null,
-    tabPath?: string
+    tabPath?: string,
+    panelWorktreePath?: string | null
   ): { name: string; isDirty: boolean; isMain: boolean } | null => {
     if (!workspace || !workspace.isGit || !workspace.worktrees || workspace.worktrees.length === 0) return null;
     
@@ -84,7 +87,10 @@ export function Footer({
     };
 
     let activeWt = null;
-    if (tabPath) {
+    if (panelWorktreePath) {
+      activeWt = workspace.worktrees.find(wt => wt.path === panelWorktreePath);
+    }
+    if (!activeWt && tabPath) {
       activeWt = workspace.worktrees.find(wt => isPathInWorktree(tabPath, wt.path));
     }
 
@@ -104,18 +110,20 @@ export function Footer({
 
   const getRelativeActivePath = (
     workspace: WorkspaceInfo | null,
-    tabPath?: string
+    tabPath?: string,
+    panelWorktreePath?: string | null
   ): string => {
     if (!workspace) return '';
-    if (!tabPath) return workspace.name;
+    const targetPath = tabPath || panelWorktreePath || '';
+    if (!targetPath) return workspace.name;
 
-    const normTab = tabPath.toLowerCase().replace(/\\/g, '/');
+    const normTab = targetPath.toLowerCase().replace(/\\/g, '/');
     
     if (workspace.worktrees) {
       for (const wt of workspace.worktrees) {
         const normWt = wt.path.toLowerCase().replace(/\\/g, '/');
         if (normTab === normWt || normTab.startsWith(normWt + '/')) {
-          const rel = tabPath.slice(wt.path.length).replace(/\\/g, '/');
+          const rel = targetPath.slice(wt.path.length).replace(/\\/g, '/');
           const cleanRel = rel.startsWith('/') ? rel.slice(1) : rel;
           const prefix = wt.isMain ? workspace.name : `${workspace.name} (${wt.branch || 'wt'})`;
           return cleanRel ? `${prefix}/${cleanRel}` : prefix;
@@ -125,7 +133,7 @@ export function Footer({
 
     const normWS = workspace.path.toLowerCase().replace(/\\/g, '/');
     if (normTab.startsWith(normWS)) {
-      const rel = tabPath.slice(workspace.path.length).replace(/\\/g, '/');
+      const rel = targetPath.slice(workspace.path.length).replace(/\\/g, '/');
       const cleanRel = rel.startsWith('/') ? rel.slice(1) : rel;
       return cleanRel ? `${workspace.name}/${cleanRel}` : workspace.name;
     }
@@ -281,11 +289,11 @@ export function Footer({
               }}
             >
               <Folder size={11} style={{ color: 'var(--color-primary)' }} />
-              <span className="font-semibold truncate max-w-[180px]">{getRelativeActivePath(panelWorkspace, activeTabPath)}</span>
+              <span className="font-semibold truncate max-w-[180px]">{getRelativeActivePath(panelWorkspace, activeTabPath, panelWorktreePath)}</span>
             </span>
             
             {(() => {
-              const activeBranch = getWorkspaceActiveBranch(panelWorkspace, activeTabPath);
+              const activeBranch = getWorkspaceActiveBranch(panelWorkspace, activeTabPath, panelWorktreePath);
               if (!activeBranch) return null;
               return (
                 <>

@@ -688,6 +688,16 @@ export default function App() {
           {/* Integrated Tab Bar */}
           {filteredTabs.length > 0 && (
             <div className="chrome-tabs-container mx-3 desktop-only" style={{ WebkitAppRegion: 'no-drag' } as any}>
+              {panelWorktreePath !== null && (() => {
+                const activeWt = panelWorkspace?.worktrees?.find(wt => wt.path === panelWorktreePath);
+                const branchName = activeWt?.branch || 'worktree';
+                return (
+                  <div className="tab-group-badge" title={`Branch: ${branchName}`}>
+                    <GitBranch size={10} />
+                    <span>{branchName}</span>
+                  </div>
+                );
+              })()}
               {(() => {
                 let prevBranch: string | null = null;
                 return filteredTabs.map(t => {
@@ -820,6 +830,7 @@ export default function App() {
               openTerminal={openTerminal}
               panelWorkspace={panelWorkspace}
               workspaces={workspaces}
+              panelWorktreePath={panelWorktreePath}
             />
             
           ) : (
@@ -980,6 +991,7 @@ export default function App() {
 
       <Footer
         panelWorkspace={panelWorkspace}
+        panelWorktreePath={panelWorktreePath}
         tunnelStatus={tunnelStatus}
         tunnelLoading={tunnelLoading}
         terminalFontSize={terminalFontSize}

@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.111] - 2026-06-29
+
+### Added
+- **Worktree Header & Footer Synchronization**:
+  - Integrated `panelWorktreePath` into `Footer` to display the selected worktree's branch name and relative directory path even when there are no active tabs or when the active tab path is not in the worktree.
+  - Added a persistent worktree branch badge (`.tab-group-badge`) at the start of the Integrated Tab Bar when in worktree filtering mode.
+  - Pass `panelWorktreePath` to `EmptyDashboard` so that clicking the "Open Terminal" button opens the shell directly within the active worktree directory.
+
+---
+
 ## [1.3.110] - 2026-06-29
 
 ### Changed
