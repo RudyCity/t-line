@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.96] - 2026-06-29
+
+### Fixed
+- **Workspace & Branch Badges Out-of-date**: Fixed a bug where workspace cards and worktree branch dirty count badges were never updated after initial load. Added periodic workspace list polling (every 10 seconds) in the frontend.
+- **Save Refetch & Cache Invalidation**: Saving a file in the code editor now triggers an immediate workspace refresh in the frontend. Also, the backend file write endpoint `/api/fs/write` now automatically clears the workspace status cache to ensure the badges update instantly.
+- **Type Safety**: Fixed a TypeScript compilation error in `FileViewerTab.tsx` regarding implicit `any` type for Monaco model iterator.
+
+---
+
 ## [1.3.95] - 2026-06-29
 
 ### Added

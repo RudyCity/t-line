@@ -1357,7 +1357,10 @@ export default function App() {
                     <FileViewerTab
                       filePath={activeTab.filePath || ''}
                       token={localStorage.getItem('token') || ''}
-                      onSave={() => fetchGitStatus(false)}
+                      onSave={() => {
+                        fetchGitStatus(false);
+                        fetchWorkspaces();
+                      }}
                     />
                   );
                 }

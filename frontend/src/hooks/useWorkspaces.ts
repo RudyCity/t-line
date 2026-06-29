@@ -58,9 +58,15 @@ export function useWorkspaces(
   }, [token]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!isAuthenticated) return;
+    
+    fetchWorkspaces();
+    
+    const interval = setInterval(() => {
       fetchWorkspaces();
-    }
+    }, 10000); // Poll every 10 seconds to keep workspace and branch badges up to date
+    
+    return () => clearInterval(interval);
   }, [isAuthenticated, fetchWorkspaces]);
 
   const fetchDirectoryList = async (targetPath = '') => {

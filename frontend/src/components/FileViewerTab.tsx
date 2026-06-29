@@ -92,7 +92,7 @@ export function FileViewerTab({ filePath, token, onSave }: FileViewerTabProps) {
       // Dispose of the Monaco model for this file when switching/unmounting to prevent memory leaks
       loader.init().then((monaco) => {
         const models = monaco.editor.getModels();
-        const targetModel = models.find(m => m.uri.path.endsWith(filePath.replace(/\\/g, '/')));
+        const targetModel = models.find((m: any) => m.uri.path.endsWith(filePath.replace(/\\/g, '/')));
         if (targetModel) {
           targetModel.dispose();
         }

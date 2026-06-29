@@ -25,7 +25,8 @@ import {
   removeWorktree,
   getRepoBranches,
   getGitStatus,
-  getGitDiff
+  getGitDiff,
+  clearWorkspaceCache
 } from './gitManager';
 import { terminalManager } from './terminalManager';
 import { tunnelManager } from './tunnelManager';
@@ -670,6 +671,7 @@ app.post('/api/fs/write', authMiddleware, (req, res) => {
   try {
     const resolvedPath = path.resolve(filePath);
     fs.writeFileSync(resolvedPath, content, 'utf8');
+    clearWorkspaceCache(); // Clear cache so status updates immediately
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
