@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('electron', {
   startBackend: () => ipcRenderer.send('start-backend'),
   restartBackend: () => ipcRenderer.send('restart-backend'),
   getBackendStatus: () => ipcRenderer.invoke('get-backend-status'),
+  getMemoryUsage: () => ipcRenderer.invoke('get-memory-usage'),
   checkConnection: () => ipcRenderer.invoke('check-connection'),
   onBackendStatusChange: (callback) => {
     const listener = (event, value) => callback(value);

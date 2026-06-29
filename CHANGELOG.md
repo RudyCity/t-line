@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.82] - 2026-06-29
+
+### Added
+- **Real-time Memory (RAM) Usage Widget in Footer**: Implemented memory diagnostics directly into the bottom status bar footer. Displays the RAM consumption for the Backend process (`B: XX MB`) and Desktop application (`D: XX MB`, aggregating memory working set size across all Electron processes). Added a detailed hover dropup tooltip showing complete memory breakdown (RSS and Heap memory for the Backend process, App Total and Main Process RSS for Desktop, and Free/Total Host System Memory). Added `/api/system/stats` backend endpoint and Electron main process IPC handler `get-memory-usage` to safely fetch these values.
+
+---
+
 ## [1.3.81] - 2026-06-29
 
 ### Fixed

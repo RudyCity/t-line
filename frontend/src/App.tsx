@@ -21,6 +21,7 @@ import { FileViewerTab } from './components/FileViewerTab';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
 import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal, ConfirmModal, WorkspaceEditModal } from './components/Modals';
 import { useTunnel } from './hooks/useTunnel';
+import { useSystemStats } from './hooks/useSystemStats';
 import { useWorkspaces } from './hooks/useWorkspaces';
 import { useTerminals, WorkspaceInfo, getTerminalIds } from './hooks/useTerminals';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -237,6 +238,9 @@ export default function App() {
     handleStartTokenTunnel,
     handleStopTunnel
   } = useTunnel(isAuthenticated, showAlert);
+
+  // System statistics hook
+  const systemStats = useSystemStats(isAuthenticated);
 
   // Active panel state: 'workspaces' | 'explorer' | 'changes'
   const [activePanel, setActivePanel] = useState<'workspaces' | 'explorer' | 'changes' | 'tabs'>('workspaces');
@@ -1484,6 +1488,7 @@ export default function App() {
         appVersion={appVersion}
         updateAvailable={updateAvailable}
         latestVersion={latestVersion}
+        systemStats={systemStats}
       />
 
       {activeTooltip && !tabContextMenu && (

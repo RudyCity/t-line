@@ -188,6 +188,27 @@ app.get('/api/system/version', (req, res) => {
   res.json({ version: appVersion });
 });
 
+app.get('/api/system/stats', authMiddleware, (req, res) => {
+  try {
+    const memoryUsage = process.memoryUsage();
+    res.json({
+      backend: {
+        rss: memoryUsage.rss,
+        heapUsed: memoryUsage.heapUsed,
+        heapTotal: memoryUsage.heapTotal
+      },
+      system: {
+        total: os.totalmem(),
+        free: os.freemem(),
+        platform: os.platform()
+      }
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
 app.post('/api/auth/setup', (req, res) => {
   const { password } = req.body;
   if (!password || password.length < 6) {

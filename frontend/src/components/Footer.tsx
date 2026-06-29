@@ -1,7 +1,18 @@
 import React from 'react';
-import { GitBranch, ZoomIn, ZoomOut, ExternalLink, Copy, Check, Info, Terminal, Folder, Globe, RefreshCw } from 'lucide-react';
+import { GitBranch, ZoomIn, ZoomOut, ExternalLink, Copy, Check, Info, Terminal, Folder, Globe, RefreshCw, Cpu } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { Toast } from './Toast';
+import { SystemStats } from '../hooks/useSystemStats';
+
+// Helper function to format bytes into readable units
+function formatBytes(bytes: number, decimals: number = 1): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
 
 export interface FooterProps {
   panelWorkspace: WorkspaceInfo | null;
@@ -25,6 +36,7 @@ export interface FooterProps {
   appVersion?: string;
   updateAvailable?: boolean;
   latestVersion?: string;
+  systemStats: SystemStats | null;
 }
 
 export function Footer({
@@ -43,7 +55,8 @@ export function Footer({
   activeTabPath,
   appVersion,
   updateAvailable,
-  latestVersion
+  latestVersion,
+  systemStats
 }: FooterProps): React.JSX.Element {
   const [copied, setCopied] = React.useState(false);
 
@@ -248,6 +261,74 @@ export function Footer({
 
       {/* Right Section: Cloudflare Tunnel & Status — hidden on mobile */}
       <div className="hidden sm:flex items-center gap-2.5">
+        {/* System Resource Stats - hidden on mobile/small screen */}
+        {systemStats && (
+          <div className="hidden md:flex items-center gap-1.5 bg-slate-900/60 hover:bg-slate-800/80 px-2.5 py-1 rounded-full border border-white/5 hover:border-white/10 transition-all duration-200 shadow-inner cursor-default relative group">
+            <Cpu size={11} className="text-purple-400 animate-pulse" />
+            <span className="font-sans text-[10px] font-semibold text-slate-400">RAM</span>
+            <span className="text-white/10 font-sans text-[10px] font-normal">|</span>
+            <span className="font-mono text-[10px] font-semibold text-purple-300">B: {formatBytes(systemStats.backend.rss)}</span>
+            {systemStats.desktop && (
+              <>
+                <span className="text-white/10 font-sans text-[10px] font-normal">|</span>
+                <span className="font-mono text-[10px] font-semibold text-emerald-300">D: {formatBytes(systemStats.desktop.desktopTotal)}</span>
+              </>
+            )}
+
+            {/* Hover Tooltip Dropup */}
+            <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex flex-col w-56 bg-[#0b0f17] border border-white/15 rounded-lg p-3 shadow-[0_10px_25px_rgba(0,0,0,0.5)] z-50 pointer-events-none text-slate-300 font-sans">
+              <h4 className="text-[11px] font-bold text-white mb-2 pb-1 border-b border-white/10 flex items-center gap-1.5">
+                <Cpu size={12} className="text-purple-400" />
+                System Resources
+              </h4>
+              
+              <div className="space-y-2 text-[10px]">
+                <div>
+                  <p className="font-semibold text-purple-300">Backend Process</p>
+                  <div className="flex justify-between pl-1">
+                    <span className="text-slate-500">RSS (Total):</span>
+                    <span className="font-mono text-slate-300">{formatBytes(systemStats.backend.rss)}</span>
+                  </div>
+                  <div className="flex justify-between pl-1">
+                    <span className="text-slate-500">Heap Used:</span>
+                    <span className="font-mono text-slate-300">{formatBytes(systemStats.backend.heapUsed)}</span>
+                  </div>
+                  <div className="flex justify-between pl-1">
+                    <span className="text-slate-500">Heap Limit:</span>
+                    <span className="font-mono text-slate-300">{formatBytes(systemStats.backend.heapTotal)}</span>
+                  </div>
+                </div>
+
+                {systemStats.desktop && (
+                  <div>
+                    <p className="font-semibold text-emerald-300">Desktop Application</p>
+                    <div className="flex justify-between pl-1">
+                      <span className="text-slate-500">App Total:</span>
+                      <span className="font-mono text-slate-300">{formatBytes(systemStats.desktop.desktopTotal)}</span>
+                    </div>
+                    <div className="flex justify-between pl-1">
+                      <span className="text-slate-500">Main RSS:</span>
+                      <span className="font-mono text-slate-300">{formatBytes(systemStats.desktop.desktopRss)}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-1.5 border-t border-white/5">
+                  <p className="font-semibold text-slate-400">Host System Memory</p>
+                  <div className="flex justify-between pl-1">
+                    <span className="text-slate-500">Used:</span>
+                    <span className="font-mono text-slate-300">{formatBytes(systemStats.system.total - systemStats.system.free)}</span>
+                  </div>
+                  <div className="flex justify-between pl-1">
+                    <span className="text-slate-500">Free / Total:</span>
+                    <span className="font-mono text-slate-300">{formatBytes(systemStats.system.free)} / {formatBytes(systemStats.system.total)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Cloudflare Tunnel status */}
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] text-slate-500 hidden md:inline-block">Cloudflare Tunnel:</span>

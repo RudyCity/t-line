@@ -665,6 +665,26 @@ ipcMain.handle('get-backend-status', () => {
   return backendStatus;
 });
 
+ipcMain.handle('get-memory-usage', async () => {
+  try {
+    const metrics = app.getAppMetrics();
+    let totalMemoryKB = 0;
+    metrics.forEach(metric => {
+      totalMemoryKB += (metric.memory.workingSetSize || 0);
+    });
+    
+    const memoryUsage = process.memoryUsage();
+    return {
+      desktopRss: memoryUsage.rss,
+      desktopTotal: totalMemoryKB * 1024
+    };
+  } catch (e) {
+    console.error('Error fetching desktop memory metrics:', e);
+    return null;
+  }
+});
+
+
 ipcMain.handle('check-connection', async () => {
   const port = 3999;
   const running = await isBackendRunning(port);
