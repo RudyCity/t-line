@@ -361,6 +361,35 @@ export default function App() {
     }
   }, [workspaces, activePanel, panelWorkspace, isAuthenticated]);
 
+  const filteredTabs = useMemo(() => {
+    if (!panelWorkspace) {
+      return tabs.filter(t => !t.workspaceId);
+    }
+    const wsTabs = tabs.filter(t => t.workspaceId === panelWorkspace.id);
+
+    if (panelWorktreePath) {
+      // In worktree mode, filter tabs to show only those belonging to that specific worktree
+      return wsTabs.filter(t => {
+        const isFile = t.type === 'file';
+        const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
+        const path = isFile ? (t.filePath || '') : (focusedInst?.cwd || '');
+        if (!path) return false;
+        return isPathInWorktree(path, panelWorktreePath);
+      });
+    }
+
+    // In workspace mode (panelWorktreePath === null), display all tabs but group them by worktree.
+    // The sorting order matches the order of worktrees in panelWorkspace.worktrees.
+    const getTabWtIndex = (t: TabData) => {
+      const wtPath = getTabWorktreePath(t, panelWorkspace, terminalInstances);
+      const wts = panelWorkspace.worktrees || [];
+      if (!wtPath) return wts.length; // place tabs without a worktree at the end
+      return wts.findIndex(wt => wt.path === wtPath);
+    };
+
+    return [...wsTabs].sort((a, b) => getTabWtIndex(a) - getTabWtIndex(b));
+  }, [tabs, panelWorkspace, panelWorktreePath, terminalInstances]);
+
   const triggerLogout = () => {
     handleLogout(setTabs, setTerminalInstances, setActiveTabId);
   };
@@ -446,35 +475,6 @@ export default function App() {
     }
     return '';
   };
-
-  const filteredTabs = useMemo(() => {
-    if (!panelWorkspace) {
-      return tabs.filter(t => !t.workspaceId);
-    }
-    const wsTabs = tabs.filter(t => t.workspaceId === panelWorkspace.id);
-
-    if (panelWorktreePath) {
-      // In worktree mode, filter tabs to show only those belonging to that specific worktree
-      return wsTabs.filter(t => {
-        const isFile = t.type === 'file';
-        const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
-        const path = isFile ? (t.filePath || '') : (focusedInst?.cwd || '');
-        if (!path) return false;
-        return isPathInWorktree(path, panelWorktreePath);
-      });
-    }
-
-    // In workspace mode (panelWorktreePath === null), display all tabs but group them by worktree.
-    // The sorting order matches the order of worktrees in panelWorkspace.worktrees.
-    const getTabWtIndex = (t: TabData) => {
-      const wtPath = getTabWorktreePath(t, panelWorkspace, terminalInstances);
-      const wts = panelWorkspace.worktrees || [];
-      if (!wtPath) return wts.length; // place tabs without a worktree at the end
-      return wts.findIndex(wt => wt.path === wtPath);
-    };
-
-    return [...wsTabs].sort((a, b) => getTabWtIndex(a) - getTabWtIndex(b));
-  }, [tabs, panelWorkspace, panelWorktreePath, terminalInstances]);
 
   return (
     <div className="app-container">
