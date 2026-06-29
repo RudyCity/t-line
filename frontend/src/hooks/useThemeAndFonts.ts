@@ -98,6 +98,10 @@ export const THEMES: Record<string, ThemePreset> = {
 export const UI_FONTS = {
   Outfit: "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   Inter: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  Poppins: "'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  Roboto: "'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  Montserrat: "'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  Ubuntu: "'Ubuntu', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   System: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
 };
 
@@ -105,6 +109,7 @@ export const MONO_FONTS = {
   'JetBrains Mono': "'JetBrains Mono', monospace",
   'Fira Code': "'Fira Code', monospace",
   'Source Code Pro': "'Source Code Pro', monospace",
+  'Ubuntu Mono': "'Ubuntu Mono', monospace",
   'Courier New': "'Courier New', Courier, monospace",
   System: "monospace",
 };
