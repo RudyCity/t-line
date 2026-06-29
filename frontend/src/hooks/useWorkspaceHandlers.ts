@@ -360,9 +360,6 @@ export function useWorkspaceHandlers({
     setPanelWorktreePath(wtPath); // Set active worktree path!
 
     const matchedTab = tabs.find(tab => {
-      if (tab.type === 'file' && tab.filePath) {
-        return isPathInWorktree(tab.filePath, wtPath);
-      }
       if (tab.type === 'terminal' && tab.layout) {
         const termIds = getTerminalIds(tab.layout);
         return termIds.some(id => {

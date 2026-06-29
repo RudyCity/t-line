@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.105] - 2026-06-29
+
+### Changed
+- **Worktree Selection Behavior**: Clicking on a worktree in the sidebar now specifically targets, opens, or switches to a terminal tab configured for that worktree path instead of opening or activating file tabs.
+
+---
+
 ## [1.3.104] - 2026-06-29
 
 ### Added
