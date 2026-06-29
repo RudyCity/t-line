@@ -21,9 +21,9 @@ export function EmptyDashboard({
         <div 
           className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border flex items-center justify-center mb-5 shadow-inner"
           style={{
-            backgroundColor: 'color-mix(in srgb, var(--bg-main) 60%, transparent)',
-            borderColor: 'var(--border-color)',
-            color: 'var(--text-muted)'
+            backgroundColor: 'color-mix(in srgb, var(--color-primary) 10%, transparent)',
+            borderColor: 'color-mix(in srgb, var(--color-primary) 20%, transparent)',
+            color: 'var(--color-primary)'
           }}
         >
           <FolderPlus className="w-6 h-6 sm:w-7 sm:h-7" />
@@ -31,7 +31,7 @@ export function EmptyDashboard({
         <h2 className="text-base sm:text-lg font-bold tracking-tight mb-3" style={{ color: 'var(--text-main)' }}>
           t-line Workspace Manager
         </h2>
-        <p className="text-[11px] sm:text-xs max-w-xs mb-6 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+        <p className="text-[11px] sm:text-xs max-w-xs mb-6 leading-relaxed" style={{ color: 'color-mix(in srgb, var(--text-main) 70%, transparent)' }}>
           Manage your development directories and Git worktrees. Register a workspace folder to get started or open a terminal.
         </p>
         <div className="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto">
@@ -53,16 +53,16 @@ export function EmptyDashboard({
             onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')}
             style={{
               borderColor: 'var(--border-color)',
-              backgroundColor: 'color-mix(in srgb, var(--bg-main) 60%, transparent)',
-              color: 'var(--text-muted)'
+              backgroundColor: 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
+              color: 'color-mix(in srgb, var(--text-main) 80%, transparent)'
             }}
             onMouseOver={(e) => { 
               e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)';
               e.currentTarget.style.color = 'var(--text-main)';
             }}
             onMouseOut={(e) => { 
-              e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--bg-main) 60%, transparent)';
-              e.currentTarget.style.color = 'var(--text-muted)';
+              e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--bg-card) 60%, transparent)';
+              e.currentTarget.style.color = 'color-mix(in srgb, var(--text-main) 80%, transparent)';
             }}
           >
             Open Terminal

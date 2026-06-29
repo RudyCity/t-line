@@ -529,7 +529,8 @@
 
 .welcome-card-inner {
   position: relative;
-  background: rgba(7, 9, 15, 0.95);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 14px;
   padding: 40px !important;
   display: flex;
