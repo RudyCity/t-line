@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.93] - 2026-06-29
+
+### Fixed
+- **System Tray PTY Sessions**: Fixed an issue where the tray menu would not update when terminal sessions changed due to the polling loop ignoring identical status updates.
+- **Git Worktree Support in Tray**: Updated session-to-workspace mapping to look up git worktree paths in addition to main workspace paths. Submenu items for terminal sessions in a worktree now explicitly indicate the active worktree's branch.
+
+---
+
 ## [1.3.92] - 2026-06-29
 
 ### Fixed

@@ -223,11 +223,27 @@ function getWorkspaceForPath(workspacesList, cwd) {
   
   for (const ws of workspacesList) {
     if (!ws || !ws.path) continue;
+    
+    // Check main workspace path
     const normWS = ws.path.toLowerCase().replace(/\\/g, '/');
     if (normCwd === normWS || normCwd.startsWith(normWS + '/')) {
       if (ws.path.length > maxLen) {
         maxLen = ws.path.length;
         bestMatch = ws;
+      }
+    }
+    
+    // Check worktrees
+    if (Array.isArray(ws.worktrees)) {
+      for (const wt of ws.worktrees) {
+        if (!wt || !wt.path) continue;
+        const normWT = wt.path.toLowerCase().replace(/\\/g, '/');
+        if (normCwd === normWT || normCwd.startsWith(normWT + '/')) {
+          if (wt.path.length > maxLen) {
+            maxLen = wt.path.length;
+            bestMatch = ws;
+          }
+        }
       }
     }
   }
@@ -495,8 +511,22 @@ function updateTrayMenu() {
         const submenuItems = wsTerms.map(t => {
           const separatorChar = process.platform === 'win32' ? '\\' : '/';
           const folderName = t.cwd ? t.cwd.substring(t.cwd.lastIndexOf(separatorChar) + 1) : '';
+          
+          let labelSuffix = folderName || 'Root';
+          if (ws.worktrees && t.cwd) {
+            const normCwd = t.cwd.toLowerCase().replace(/\\/g, '/');
+            const matchedWt = ws.worktrees.find(wt => {
+              if (!wt || !wt.path) return false;
+              const normWT = wt.path.toLowerCase().replace(/\\/g, '/');
+              return normCwd === normWT || normCwd.startsWith(normWT + '/');
+            });
+            if (matchedWt) {
+              labelSuffix = matchedWt.branch ? `wt: ${matchedWt.branch}` : `wt: ${folderName}`;
+            }
+          }
+
           return {
-            label: `[PID ${t.pid}] ${t.shellType} (${folderName || 'Root'})`,
+            label: `[PID ${t.pid}] ${t.shellType} (${labelSuffix})`,
             click: () => showWindow()
           };
         });
@@ -853,6 +883,10 @@ app.on('ready', async () => {
       if (newStatus !== backendStatus || sessionsChanged) {
         const statusTransition = (newStatus !== backendStatus);
         updateBackendStatus(newStatus);
+        
+        if (sessionsChanged && !statusTransition) {
+          updateTrayMenu();
+        }
         
         if (statusTransition) {
           // If it transitioned to stopped, show the stopped message
