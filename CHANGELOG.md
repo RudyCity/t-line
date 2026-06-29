@@ -15,8 +15,10 @@ All notable changes to the **t-line** workspace manager project will be document
 - **xterm — Upgraded Search Bar**: Search overlay now uses a slide-down animation, a grouped input wrapper with search icon, better visual toggle buttons for case-sensitive and regex modes, and distinct red styling when no results are found.
 - **xterm — Split Pane Focus Ring**: In split-pane layouts, the currently focused terminal pane is highlighted with a violet glow border animation, making it immediately clear which pane is active.
 - **xterm — Zoom from Status Bar**: Zoom in/out buttons in the status bar fire a `tline-zoom` custom event, wired to the same zoom handlers as keyboard shortcuts, so font size can be adjusted directly from the terminal bar.
+- **xterm — Custom Mouse Cursor**: Changed the default mouse cursor inside the terminal screen from the `text` I-beam selector to a standard `default` arrow pointer. This makes mouse interaction feel natural in interactive TUI apps (e.g. Ink TUI interfaces with hover states), while still allowing dynamic overrides to `pointer` when hovering web links.
 
 ---
+
 
 
 
