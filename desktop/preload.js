@@ -25,5 +25,15 @@ contextBridge.exposeInMainWorld('electron', {
     return () => {
       ipcRenderer.removeListener('backend-status-change', listener);
     };
-  }
+  },
+  // Auto-updater API
+  onUpdateStatus: (callback) => {
+    const listener = (event, payload) => callback(payload);
+    ipcRenderer.on('update-status', listener);
+    return () => {
+      ipcRenderer.removeListener('update-status', listener);
+    };
+  },
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  installUpdate: () => ipcRenderer.send('install-update')
 });

@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.87] - 2026-06-29
+
+### Added
+- **Auto-Update System**: Implemented a full end-to-end auto-update system powered by `electron-updater`. The app now automatically checks GitHub Releases for a newer version 5 seconds after startup and every 4 hours thereafter. Downloads happen silently in the background. A non-intrusive floating toast notification (bottom-right) informs users when an update is available, shows a real-time download progress bar (with speed and size info), and presents a "Restart & Install" button when the update is ready. Users can dismiss the toast or manually retry on error. The system is a no-op in development mode.
+
+---
+
 ## [1.3.86] - 2026-06-29
 
 ### Changed

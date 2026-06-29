@@ -1633,4 +1633,182 @@
   cursor: default;
 }
 
+/* ─── Update Notification ──────────────────────────────────────────────────── */
+
+.update-notification {
+  position: fixed;
+  bottom: 52px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  min-width: 260px;
+  max-width: 360px;
+  border-radius: 10px;
+  background: rgba(10, 13, 22, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.03);
+  color: #e2e8f0;
+  font-size: 12px;
+  font-family: inherit;
+  animation: updateSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes updateSlideIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+.update-notification-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.update-notification-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.update-icon { flex-shrink: 0; }
+.update-icon--spin { color: #94a3b8; animation: spin 1s linear infinite; }
+.update-icon--purple { color: #a855f7; }
+.update-icon--blue   { color: #60a5fa; }
+.update-icon--green  { color: #34d399; }
+.update-icon--red    { color: #f87171; }
+
+.update-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+}
+
+.update-title {
+  font-weight: 600;
+  font-size: 12px;
+  color: #f1f5f9;
+  line-height: 1.3;
+}
+
+.update-version {
+  font-size: 10px;
+  color: #94a3b8;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.update-version--error {
+  color: #f87171;
+  font-family: inherit;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.update-percent {
+  font-size: 11px;
+  font-weight: 600;
+  color: #60a5fa;
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+}
+
+.update-badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  flex-shrink: 0;
+}
+
+.update-speed {
+  font-size: 10px;
+  color: #64748b;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.update-progress-bar-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.update-progress-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6366f1, #a855f7);
+  transition: width 0.3s ease;
+}
+
+.update-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.update-btn--primary {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.4);
+  color: #c084fc;
+}
+
+.update-btn--primary:hover {
+  background: rgba(168, 85, 247, 0.35);
+  border-color: rgba(168, 85, 247, 0.6);
+}
+
+.update-btn--ghost {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+}
+
+.update-btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+}
+
+.update-dismiss-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.12s;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 1px;
+}
+
+.update-dismiss-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+}
 

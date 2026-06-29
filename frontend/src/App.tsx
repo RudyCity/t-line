@@ -32,6 +32,7 @@ import { MobileKeyboard } from './components/MobileKeyboard';
 import { useLayoutHelpers } from './hooks/useLayoutHelpers';
 import { SidebarContentPanel } from './components/SidebarContentPanel';
 import { RightSidebar } from './components/RightSidebar';
+import { UpdateNotification } from './components/UpdateNotification';
 
 
 const TPlusLogo = ({ size = 16 }: { size?: number }) => (
@@ -1015,6 +1016,7 @@ export default function App() {
 
   return (
     <div className="app-container">
+      <UpdateNotification />
       
       <div className="app-content-wrapper">
         
