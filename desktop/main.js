@@ -247,8 +247,8 @@ function startBackend() {
     cmd = 'npm';
     args = ['run', 'dev:backend'];
   } else {
-    // In production, spawn node directly on compiled js
-    cmd = 'node';
+    // In production, spawn Electron itself as a Node process to run the backend script
+    cmd = process.execPath;
     args = [path.join(projectRoot, 'backend', 'dist', 'server.js')];
   }
 
@@ -256,10 +256,15 @@ function startBackend() {
   
   updateBackendStatus('starting');
 
+  const spawnEnv = { ...process.env, PORT: '3999' };
+  if (!isDev) {
+    spawnEnv.ELECTRON_RUN_AS_NODE = '1';
+  }
+
   backendProcess = spawn(cmd, args, {
     cwd: projectRoot,
     shell: true,
-    env: { ...process.env, PORT: '3999' }
+    env: spawnEnv
   });
 
   let token = null;

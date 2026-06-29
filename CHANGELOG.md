@@ -4,6 +4,13 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ---
 
+## [1.3.77] - 2026-06-29
+
+### Fixed
+- **Production Backend Executable Spawning**: Fixed backend initialization failure in packaged production builds. Reconfigured the spawn command in `desktop/main.js` to run the backend inside Electron's runtime (`process.execPath`) using `ELECTRON_RUN_AS_NODE=1` environment mode to guarantee ABI compatibility for native modules. Added `asarUnpack` configuration for `backend/**/*` inside `desktop/package.json` to prevent executable path loading blocks under the ASAR archive.
+
+---
+
 ## [1.3.76] - 2026-06-29
 
 ### Fixed
