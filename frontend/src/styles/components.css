@@ -1530,8 +1530,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 10px;
-  background: rgba(4, 6, 12, 0.9);
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--bg-sidebar);
+  border-top: 1px solid var(--border-color);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   gap: 8px;
@@ -1567,7 +1567,7 @@
 .terminal-status-shell {
   font-size: 10px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--color-primary);
   font-family: var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1575,17 +1575,17 @@
 
 .terminal-status-pid {
   font-size: 9.5px;
-  color: #334155;
+  color: var(--text-muted);
   font-family: var(--font-mono);
   padding: 1px 5px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.02);
   border-radius: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
 }
 
 .terminal-status-cursor {
   font-size: 9.5px;
-  color: #334155;
+  color: var(--text-muted);
   font-family: var(--font-mono);
   letter-spacing: 0.02em;
   min-width: 36px;
@@ -1594,7 +1594,7 @@
 
 .terminal-status-fontsize {
   font-size: 9.5px;
-  color: #334155;
+  color: var(--text-muted);
   font-family: var(--font-mono);
   min-width: 26px;
   text-align: center;
@@ -1603,14 +1603,14 @@
 .terminal-status-divider {
   width: 1px;
   height: 10px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--border-color);
   flex-shrink: 0;
 }
 
 .terminal-status-btn {
   background: transparent;
   border: none;
-  color: #334155;
+  color: var(--text-muted);
   padding: 2px 3px;
   cursor: pointer;
   border-radius: 3px;
@@ -1622,8 +1622,8 @@
 }
 
 .terminal-status-btn:hover {
-  color: #94a3b8;
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-main);
+  background: var(--bg-card-hover);
 }
 
 /* ── Smart Paste Confirm ── */
