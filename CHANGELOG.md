@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.114] - 2026-06-29
+
+### Fixed
+- **Sub-folder Worktree Path Sorting & Matching**:
+  - Sorted worktrees by path length descending in `getTabGitBranch` (`useTabUiHandlers.ts`) to ensure specific nested worktrees (e.g. `.worktrees/*`) match before falling back to the main workspace path.
+  - Applied the same descending path length sorting in the `Footer` helpers (`getWorkspaceActiveBranch` and `getRelativeActivePath`) to fix incorrect branch/path displays.
+  - Refactored `WorkspaceList.tsx` active worktree highlighting logic (`isWtActive`) to prevent the main branch and sub-folder worktrees from being highlighted simultaneously.
+
+---
+
 ## [1.3.113] - 2026-06-29
 
 ### Added

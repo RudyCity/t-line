@@ -91,7 +91,8 @@ export function Footer({
       activeWt = workspace.worktrees.find(wt => wt.path === panelWorktreePath);
     }
     if (!activeWt && tabPath) {
-      activeWt = workspace.worktrees.find(wt => isPathInWorktree(tabPath, wt.path));
+      const sortedWts = [...workspace.worktrees].sort((a, b) => b.path.length - a.path.length);
+      activeWt = sortedWts.find(wt => isPathInWorktree(tabPath, wt.path));
     }
 
     if (!activeWt) {
@@ -120,7 +121,8 @@ export function Footer({
     const normTab = targetPath.toLowerCase().replace(/\\/g, '/');
     
     if (workspace.worktrees) {
-      for (const wt of workspace.worktrees) {
+      const sortedWts = [...workspace.worktrees].sort((a, b) => b.path.length - a.path.length);
+      for (const wt of sortedWts) {
         const normWt = wt.path.toLowerCase().replace(/\\/g, '/');
         if (normTab === normWt || normTab.startsWith(normWt + '/')) {
           const rel = targetPath.slice(wt.path.length).replace(/\\/g, '/');

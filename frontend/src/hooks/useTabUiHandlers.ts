@@ -57,7 +57,8 @@ export function useTabUiHandlers({
     for (const w of workspaces) {
       if (w.isGit) {
         const wts = w.worktrees || [];
-        for (const wt of wts) {
+        const sortedWts = [...wts].sort((a, b) => b.path.length - a.path.length);
+        for (const wt of sortedWts) {
           if (isUnder(wt.path, normPath)) {
             return wt.branch || 'detached';
           }

@@ -241,14 +241,44 @@ function WorktreeList({
       {visibleWts.map((wt, idx) => {
         const isLast = idx === visibleWts.length - 1 && (expanded || sortedWts.length <= BRANCH_LIMIT);
 
+        // Find which worktree owns the active tab
+        const activeTab = tabs.find(t => t.id === activeTabId);
+        let tabWorktreePath: string | null = null;
+        if (activeTab && activeTab.workspaceId === w.id) {
+          let tabPath = '';
+          if (activeTab.type === 'file') {
+            tabPath = activeTab.filePath || '';
+          } else if (activeTab.type === 'terminal' && activeTab.layout) {
+            const focusedId = activeTab.focusedTerminalId;
+            const inst = focusedId ? terminalInstances[focusedId] : null;
+            if (inst && inst.cwd) {
+              tabPath = inst.cwd;
+            }
+            if (!tabPath) {
+              const termIds = getTerminalIds(activeTab.layout);
+              for (const id of termIds) {
+                const inst = terminalInstances[id];
+                if (inst && inst.cwd) {
+                  tabPath = inst.cwd;
+                  break;
+                }
+              }
+            }
+          }
+          if (tabPath) {
+            const wts = w.worktrees || [];
+            const sortedWts = [...wts].sort((a, b) => b.path.length - a.path.length);
+            for (const wtItem of sortedWts) {
+              if (isPathInWorktree(tabPath, wtItem.path)) {
+                tabWorktreePath = wtItem.path;
+                break;
+              }
+            }
+          }
+        }
+
         const isSelectedWt = panelWorktreePath === wt.path || (wt.isMain && panelWorktreePath === null && panelWorkspace?.id === w.id);
-        const isWtActive = isSelectedWt || (panelWorktreePath === null && activeTabId && tabs.some(t => t.id === activeTabId && (
-          (t.type === 'file' && t.filePath && isPathInWorktree(t.filePath, wt.path)) ||
-          (t.type === 'terminal' && t.layout && getTerminalIds(t.layout).some(id => {
-            const inst = terminalInstances[id];
-            return inst && isPathInWorktree(inst.cwd, wt.path);
-          }))
-        )));
+        const isWtActive = isSelectedWt || (panelWorktreePath === null && tabWorktreePath === wt.path);
 
         const wtProcesses = getRunningProcessesForPath(wt.path, terminalInstances);
         const hasWtRunning = wtProcesses.length > 0;
