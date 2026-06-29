@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FileCode, RotateCcw, Check } from 'lucide-react';
-import Editor from '@monaco-editor/react';
+import Editor, { loader } from '@monaco-editor/react';
 
 interface FileViewerTabProps {
   filePath: string;
@@ -89,6 +89,14 @@ export function FileViewerTab({ filePath, token, onSave }: FileViewerTabProps) {
     loadFile();
     return () => {
       active = false;
+      // Dispose of the Monaco model for this file when switching/unmounting to prevent memory leaks
+      loader.init().then((monaco) => {
+        const models = monaco.editor.getModels();
+        const targetModel = models.find(m => m.uri.path.endsWith(filePath.replace(/\\/g, '/')));
+        if (targetModel) {
+          targetModel.dispose();
+        }
+      }).catch(() => {});
     };
   }, [filePath, token]);
 

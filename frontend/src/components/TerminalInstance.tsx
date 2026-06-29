@@ -509,7 +509,7 @@ export function TerminalInstance({
       fontFamily: 'JetBrains Mono, Fira Code, Courier New, monospace',
       lineHeight: 1.2,
       letterSpacing: 0,
-      scrollback: 10000,
+      scrollback: 3000, // Reduced from 10000 to save memory per terminal tab
       scrollOnUserInput: true,
       fastScrollModifier: 'shift',
       fastScrollSensitivity: 5,

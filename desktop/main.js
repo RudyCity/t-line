@@ -9,6 +9,11 @@ const { autoUpdater } = require('electron-updater');
 // Disable hardware acceleration to prevent GPU process crash (error code -1073741819)
 app.disableHardwareAcceleration();
 
+// Limit V8 heap memory usage for main and renderer processes to prevent memory bloat (forces GC earlier)
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=384');
+// Prune GPU resources and command buffers when idle to free memory
+app.commandLine.appendSwitch('prune-gpu-command-buffer');
+
 // Enforce single instance lock
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -281,7 +286,8 @@ function startBackend() {
     const { utilityProcess } = require('electron');
     backendProcess = utilityProcess.fork(scriptPath, [], {
       env: spawnEnv,
-      stdio: 'pipe'
+      stdio: 'pipe',
+      execArgv: ['--max-old-space-size=192']
     });
   }
 

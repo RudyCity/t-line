@@ -2,6 +2,19 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.94] - 2026-06-29
+
+### Added
+- **RAM Optimization**: Implemented several memory optimizations to reduce the footprint of Electron, Node, React, and terminal sessions:
+  - Added `--max-old-space-size=384` js-flags to Electron to restrict V8 heap size in main/renderer processes.
+  - Enabled GPU command buffer pruning on idle.
+  - Limited the Node.js backend utility process memory limit to `192MB`.
+  - Disposed of Monaco Editor models on tab unmount/file change to prevent memory leaks.
+  - Reduced terminal scrollback history from 10,000 to 3,000 lines.
+  - Halved the PTY session output buffer limit to 64KB.
+
+---
+
 ## [1.3.93] - 2026-06-29
 
 ### Fixed
