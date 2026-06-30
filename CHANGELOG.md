@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.165] - 2026-06-30
+
+### Changed
+- **Git Commit History: Compact Visual Simplification**:
+  - Reverted card-style feeds back to a standard flat, borderless list format with simple divider lines, reducing the item height and maximizing screen space.
+  - Removed author avatar icons to clean up horizontal layout.
+  - Removed SVG glow blur filters from the `visx` shapes to render crisp, solid, high-contrast branch lines.
+
+---
+
 ## [1.3.164] - 2026-06-30
 
 ### Changed
