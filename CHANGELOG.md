@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.149] - 2026-06-30
+
+### Added
+- **Open Changed Files as Editor Tab from Git Changes Panel**:
+  - Clicking any file in the Git Changes sidebar (both Staged and Unstaged sections) now opens the file directly as an editor tab in the main view.
+  - Added `onFileOpen` and `workspacePath` props to `GitChanges` component to resolve the full absolute file path and pass it to the tab opener.
+  - Deleted files are excluded from tab-opening (no content to display).
+
+---
+
 ## [1.3.148] - 2026-06-30
 
 ### Fixed
