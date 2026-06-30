@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GitCommit, User, Calendar, FileCode, FilePlus, FileMinus, X, Loader2, RefreshCw } from 'lucide-react';
-import { LinkVertical, LinkVerticalStep, LinkVerticalLine, LinkHorizontal } from '@visx/shape';
+import { LinkVertical, LinkVerticalLine, LinkHorizontal } from '@visx/shape';
 
 export interface CommitInfo {
   hash: string;
@@ -63,12 +63,7 @@ const LANE_COLORS = [
   '#f472b6', // pink-400
 ];
 
-interface GitGraphLineProps {
-  prefix: string;
-  linkType: 'curved' | 'stepped' | 'straight';
-}
-
-function GitGraphLine({ prefix, linkType }: GitGraphLineProps) {
+function GitGraphLine({ prefix }: { prefix: string }) {
   const chars = prefix.split('');
   const laneWidth = 12;
   const rowHeight = 50;
@@ -101,28 +96,6 @@ function GitGraphLine({ prefix, linkType }: GitGraphLineProps) {
         if (char === ' ') {
           return null;
         }
-
-        const renderLink = (srcX: number, srcY: number, tgtX: number, tgtY: number, key: string) => {
-          const props = {
-            key,
-            data: {
-              source: { x: srcX, y: srcY },
-              target: { x: tgtX, y: tgtY }
-            },
-            stroke: laneColor,
-            strokeWidth: 2,
-            fill: 'none',
-            style: { filter: 'url(#line-glow)', opacity: 0.85 }
-          };
-
-          if (linkType === 'stepped') {
-            return <LinkVerticalStep {...props} />;
-          }
-          if (linkType === 'straight') {
-            return <LinkVerticalLine {...props} />;
-          }
-          return <LinkVertical {...props} />;
-        };
 
         if (char === '*') {
           return (
@@ -170,14 +143,38 @@ function GitGraphLine({ prefix, linkType }: GitGraphLineProps) {
           // Slope up-right (branches/merges leftward going down)
           // Top: index, Bottom: index - 1
           const xcBottom = (index - 1) * laneWidth + laneWidth / 2;
-          return renderLink(xcBottom, rowHeight, xc, 0, `slash-${index}`);
+          return (
+            <LinkVertical
+              key={index}
+              data={{
+                source: { x: xcBottom, y: rowHeight },
+                target: { x: xc, y: 0 }
+              }}
+              stroke={laneColor}
+              strokeWidth={2}
+              fill="none"
+              style={{ filter: 'url(#line-glow)', opacity: 0.85 }}
+            />
+          );
         }
 
         if (char === '\\') {
           // Slope down-right (branches/merges rightward going down)
           // Top: index - 1, Bottom: index
           const xcTop = (index - 1) * laneWidth + laneWidth / 2;
-          return renderLink(xc, rowHeight, xcTop, 0, `backslash-${index}`);
+          return (
+            <LinkVertical
+              key={index}
+              data={{
+                source: { x: xc, y: rowHeight },
+                target: { x: xcTop, y: 0 }
+              }}
+              stroke={laneColor}
+              strokeWidth={2}
+              fill="none"
+              style={{ filter: 'url(#line-glow)', opacity: 0.85 }}
+            />
+          );
         }
 
         if (char === '_') {
@@ -285,7 +282,6 @@ function parseDiff(diff: string): { header: string; hunks: { header: string; lin
 export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps) {
   const [history, setHistory] = useState<CommitInfo[]>([]);
   const [loading, setLoading] = useState(false);
-  const [linkType, setLinkType] = useState<'curved' | 'stepped' | 'straight'>('curved');
   
   const [selectedCommitHash, setSelectedCommitHash] = useState<string | null>(null);
   const [commitDetails, setCommitDetails] = useState<CommitDetails | null>(null);
@@ -408,32 +404,6 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
           background: color-mix(in srgb, var(--color-primary, #a855f7) 6%, var(--bg-sidebar)) !important;
           border-color: var(--color-primary, #a855f7) !important;
           box-shadow: 0 0 8px rgba(168, 85, 247, 0.15);
-        }
-        .git-style-selector {
-          display: flex;
-          background: var(--bg-main, rgba(0,0,0,0.15));
-          border-radius: 6px;
-          padding: 2px;
-          border: 1px solid var(--border-color);
-        }
-        .git-style-btn {
-          background: transparent;
-          border: none;
-          color: var(--text-muted);
-          font-size: 0.65rem;
-          font-weight: 600;
-          padding: 2px 6px;
-          border-radius: 4px;
-          cursor: pointer;
-          transition: all 0.15s;
-        }
-        .git-style-btn:hover {
-          color: var(--text-main);
-        }
-        .git-style-btn-active {
-          background: var(--color-primary, #a855f7);
-          color: white !important;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
         .git-graph-col {
           display: flex;
@@ -600,36 +570,11 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
       
       {/* ── Commits Log and Graph Column ── */}
       <div className="explorer-tree" style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: 'none' }}>
-        <div className="panel-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="panel-section-header">
           <span className="panel-section-title">Git Commit History</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div className="git-style-selector">
-              <button 
-                className={`git-style-btn ${linkType === 'curved' ? 'git-style-btn-active' : ''}`}
-                onClick={() => setLinkType('curved')}
-                title="Curved Lines"
-              >
-                Curve
-              </button>
-              <button 
-                className={`git-style-btn ${linkType === 'stepped' ? 'git-style-btn-active' : ''}`}
-                onClick={() => setLinkType('stepped')}
-                title="Stepped Lines (Dendrogram)"
-              >
-                Step
-              </button>
-              <button 
-                className={`git-style-btn ${linkType === 'straight' ? 'git-style-btn-active' : ''}`}
-                onClick={() => setLinkType('straight')}
-                title="Straight Lines"
-              >
-                Line
-              </button>
-            </div>
-            <button className="action-btn" onClick={fetchHistory} title="Refresh History" disabled={loading}>
-              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            </button>
-          </div>
+          <button className="action-btn" onClick={fetchHistory} title="Refresh History" disabled={loading}>
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+          </button>
         </div>
         
         <div className="explorer-scroll" style={{ flex: 1, position: 'relative' }}>
@@ -659,7 +604,7 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
                   >
                     {/* Visual tree graph column */}
                     <div className="git-graph-col">
-                      <GitGraphLine prefix={commit.graphPrefix} linkType={linkType} />
+                      <GitGraphLine prefix={commit.graphPrefix} />
                     </div>
                     
                     {/* Commit info column */}

@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.164] - 2026-06-30
+
+### Changed
+- **Git Commit History: Visx Curve Model Only**:
+  - Removed the link type selector button group from the panel header to keep the UI clean and clutter-free.
+  - Locked the rendering logic to use exclusively the curved `LinkVertical` path (matching the core visual style of visx dendrograms) for all diagonal merge and branch lines.
+
+---
+
 ## [1.3.163] - 2026-06-30
 
 ### Added
