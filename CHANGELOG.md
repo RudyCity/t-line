@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.136] - 2026-06-30
+
+### Added
+- **Image Mouse Scroll-to-Zoom Support**:
+  - Implemented mouse wheel scroll zoom handling on the image viewer tab.
+  - Attached non-passive wheel event listener to container to intercept default scrolling and adjust zoom scale incrementally.
+
+---
+
 ## [1.3.135] - 2026-06-30
 
 ### Added

@@ -77,6 +77,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
+  const imageContainerRef = useRef<HTMLDivElement>(null);
 
   const handleZoomIn = () => setZoom(z => Math.min(z + 0.25, 4));
   const handleZoomOut = () => setZoom(z => Math.max(z - 0.25, 0.25));
@@ -113,6 +114,26 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDragging]);
+
+  useEffect(() => {
+    if (fileType !== 'image') return;
+    const container = imageContainerRef.current;
+    if (!container) return;
+
+    const handleWheelEvent = (e: WheelEvent) => {
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        setZoom(z => Math.min(z + 0.1, 4));
+      } else {
+        setZoom(z => Math.max(z - 0.1, 0.25));
+      }
+    };
+
+    container.addEventListener('wheel', handleWheelEvent, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheelEvent);
+    };
+  }, [fileType]);
 
   useEffect(() => {
     if (fileType !== 'text') {
@@ -270,7 +291,10 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
         </div>
 
         {/* Image Viewer Area */}
-        <div className="flex-1 flex flex-col items-center justify-center p-4 bg-[#0a0a0c] overflow-auto select-none relative">
+        <div 
+          ref={imageContainerRef}
+          className="flex-1 flex flex-col items-center justify-center p-4 bg-[#0a0a0c] overflow-auto select-none relative"
+        >
           {/* Zoom Controls Overlay */}
           <div className="absolute top-4 right-4 flex items-center gap-1 bg-[#16161a]/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 z-10">
             <button 
