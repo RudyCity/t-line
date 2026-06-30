@@ -129,14 +129,15 @@ function GitGraphLine({ prefix }: { prefix: string }) {
 
         if (char === '/') {
           // Slope up-right (branches/merges leftward going down)
-          // Top: index, Bottom: index - 1
+          // Top: index + 1, Bottom: index - 1
+          const xcTop = (index + 1) * laneWidth + laneWidth / 2;
           const xcBottom = (index - 1) * laneWidth + laneWidth / 2;
           return (
             <LinkVertical
               key={index}
               data={{
                 source: { x: xcBottom, y: rowHeight },
-                target: { x: xc, y: 0 }
+                target: { x: xcTop, y: 0 }
               }}
               stroke={laneColor}
               strokeWidth={2}
@@ -147,13 +148,14 @@ function GitGraphLine({ prefix }: { prefix: string }) {
 
         if (char === '\\') {
           // Slope down-right (branches/merges rightward going down)
-          // Top: index - 1, Bottom: index
+          // Top: index - 1, Bottom: index + 1
           const xcTop = (index - 1) * laneWidth + laneWidth / 2;
+          const xcBottom = (index + 1) * laneWidth + laneWidth / 2;
           return (
             <LinkVertical
               key={index}
               data={{
-                source: { x: xc, y: rowHeight },
+                source: { x: xcBottom, y: rowHeight },
                 target: { x: xcTop, y: 0 }
               }}
               stroke={laneColor}

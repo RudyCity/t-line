@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.167] - 2026-06-30
+
+### Fixed
+- **Git Commit History: Slashes & Backslashes Column Alignment**:
+  - Corrected the coordinate logic for diagonal curves (`/` and `\`) in `GitGraphLine`. In Git's `--graph` outputs, branch columns are separated by spaces (odd indices) while lines and nodes reside on even indices. Slashes/backslashes are transitions spanning from `index - 1` to `index + 1`. Adjusting both endpoints to these even column coordinates removes the 1-lane horizontal gap offset and connects lanes cleanly.
+
+---
+
 ## [1.3.166] - 2026-06-30
 
 ### Fixed
