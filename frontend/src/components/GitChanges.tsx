@@ -30,6 +30,8 @@ interface GitChangesProps {
   onRefresh: () => void;
   worktreePath?: string | null;
   onOpenBranchModal?: () => void;
+  onFileOpen?: (filePath: string, name: string) => void;
+  workspacePath?: string;
 }
 
 function StatusIcon({ status }: { status: GitFileStatus['status'] }) {
@@ -84,7 +86,9 @@ export function GitChanges({
   loading,
   onRefresh,
   worktreePath,
-  onOpenBranchModal
+  onOpenBranchModal,
+  onFileOpen,
+  workspacePath,
 }: GitChangesProps) {
   const [activeTab, setActiveTab] = useState<'changes' | 'history'>('changes');
   const [selectedFile, setSelectedFile] = useState<GitFileStatus | null>(null);
@@ -98,6 +102,16 @@ export function GitChanges({
   const handleFileSelect = useCallback(async (file: GitFileStatus) => {
     setSelectedFile(file);
     setDiff('');
+
+    // Open the file as a tab if handler is provided and file is not deleted
+    if (onFileOpen && file.status !== 'deleted') {
+      const basePath = worktreePath || workspacePath || '';
+      const sep = basePath.endsWith('/') || basePath.endsWith('\\') ? '' : '/';
+      const fullPath = basePath ? `${basePath}${sep}${file.path.replace(/\\/g, '/')}` : file.path;
+      const fileName = file.path.split(/[/\\]/).pop() ?? file.path;
+      onFileOpen(fullPath, fileName);
+    }
+
     if (file.status === 'untracked' || file.status === 'added') {
       setDiff('(New/untracked file – no diff available)');
       return;
@@ -122,7 +136,7 @@ export function GitChanges({
     } finally {
       setDiffLoading(false);
     }
-  }, [workspaceId, token, worktreePath]);
+  }, [workspaceId, token, worktreePath, workspacePath, onFileOpen]);
 
   const handleStage = useCallback(async (filePath?: string, all = false) => {
     setActionLoading(true);

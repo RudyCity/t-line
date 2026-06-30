@@ -242,6 +242,8 @@ export function SidebarContentPanel({
               onRefresh={refreshGitStatus || (() => {})}
               worktreePath={panelWorktreePath}
               onOpenBranchModal={onOpenBranchModal}
+              onFileOpen={openFileTab}
+              workspacePath={panelWorkspace.path}
             />
           ) : (
             <div className="panel-empty" style={{ flex: 1 }}>
