@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { GitCommit, User, Calendar, FileCode, FilePlus, FileMinus, X, Loader2, RefreshCw } from 'lucide-react';
 
 export interface CommitInfo {
@@ -64,67 +64,125 @@ const LANE_COLORS = [
 
 function GitGraphLine({ prefix }: { prefix: string }) {
   const chars = prefix.split('');
+  const laneWidth = 12;
+  const rowHeight = 50;
+  const svgWidth = chars.length * laneWidth;
+
   return (
-    <div style={{ display: 'flex', height: '100%', alignItems: 'stretch' }}>
+    <svg 
+      width={svgWidth} 
+      height="100%" 
+      viewBox={`0 0 ${svgWidth} ${rowHeight}`} 
+      preserveAspectRatio="none"
+      style={{ display: 'block', flexShrink: 0 }}
+    >
       {chars.map((char, index) => {
         const laneColor = LANE_COLORS[index % LANE_COLORS.length];
-        const cellStyle: React.CSSProperties = {
-          position: 'relative',
-          width: '12px',
-          height: '100%',
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0
-        };
+        const xc = index * laneWidth + laneWidth / 2;
+        const xl = index * laneWidth;
+        const xr = (index + 1) * laneWidth;
+        const yc = rowHeight / 2;
 
         if (char === ' ') {
-          return <div key={index} style={{ width: '12px', flexShrink: 0 }} />;
+          return null;
         }
 
         if (char === '*') {
           return (
-            <div key={index} style={cellStyle}>
-              {/* Vertical connection line behind the node */}
-              <div style={{ position: 'absolute', top: 0, bottom: 0, left: '5px', width: '2px', backgroundColor: 'var(--tree-connector-color, rgba(255, 255, 255, 0.08))' }} />
-              <div 
-                style={{ 
-                  width: '8px', 
-                  height: '8px', 
-                  borderRadius: '50%', 
-                  backgroundColor: 'var(--color-primary, #a855f7)', 
-                  boxShadow: 'var(--tooltip-shadow, 0 0 6px var(--color-primary, #a855f7))',
-                  zIndex: 2 
-                }} 
+            <g key={index}>
+              <line 
+                x1={xc} 
+                y1={0} 
+                x2={xc} 
+                y2={rowHeight} 
+                stroke="var(--tree-connector-color, rgba(255, 255, 255, 0.08))" 
+                strokeWidth={2} 
               />
-            </div>
+              <circle 
+                cx={xc} 
+                cy={yc} 
+                r={4} 
+                fill="var(--color-primary, #a855f7)" 
+                stroke="var(--bg-sidebar, #1e1e2e)" 
+                strokeWidth={1.5}
+                style={{
+                  filter: 'drop-shadow(0px 0px 3px var(--color-primary, #a855f7))'
+                }}
+              />
+            </g>
           );
         }
 
         if (char === '|') {
           return (
-            <div key={index} style={cellStyle}>
-              <div style={{ width: '2px', height: '100%', backgroundColor: laneColor }} />
-            </div>
+            <line 
+              key={index}
+              x1={xc} 
+              y1={0} 
+              x2={xc} 
+              y2={rowHeight} 
+              stroke={laneColor} 
+              strokeWidth={2} 
+            />
+          );
+        }
+
+        if (char === '/') {
+          const xcTop = (index + 1) * laneWidth + laneWidth / 2;
+          return (
+            <path 
+              key={index}
+              d={`M ${xc} ${rowHeight} C ${xc} ${yc}, ${xcTop} ${yc}, ${xcTop} 0`}
+              fill="none"
+              stroke={laneColor}
+              strokeWidth={2}
+            />
+          );
+        }
+
+        if (char === '\\') {
+          const xcBottom = (index + 1) * laneWidth + laneWidth / 2;
+          return (
+            <path 
+              key={index}
+              d={`M ${xc} 0 C ${xc} ${yc}, ${xcBottom} ${yc}, ${xcBottom} ${rowHeight}`}
+              fill="none"
+              stroke={laneColor}
+              strokeWidth={2}
+            />
+          );
+        }
+
+        if (char === '_') {
+          return (
+            <line 
+              key={index}
+              x1={xl} 
+              y1={yc} 
+              x2={xr} 
+              y2={yc} 
+              stroke={laneColor} 
+              strokeWidth={2} 
+            />
           );
         }
 
         return (
-          <div 
+          <text 
             key={index} 
-            style={{ 
-              ...cellStyle, 
-              fontFamily: 'monospace', 
-              fontSize: '11px', 
-              fontWeight: 'bold', 
-              color: laneColor 
-            }}
+            x={xc} 
+            y={yc + 3} 
+            textAnchor="middle" 
+            fill={laneColor} 
+            fontSize="9px" 
+            fontFamily="monospace"
+            fontWeight="bold"
           >
             {char}
-          </div>
+          </text>
         );
       })}
-    </div>
+    </svg>
   );
 }
 

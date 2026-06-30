@@ -2,6 +2,18 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.159] - 2026-06-30
+
+### Changed
+- **Git Commit History: Custom SVG Renderer**:
+  - Replaced the character-based grid `div` renderer (`GitGraphLine`) with a modern, high-performance SVG drawing system.
+  - Implemented smooth cubic bezier curves (`M ... C ...`) for diagonal slash (`/`) and backslash (`\`) lines, making branch splits and merges visually continuous.
+  - Added support for straight SVG lines for vertical connectors (`|`) and horizontal lines (`_`).
+  - Styled commit nodes (`*`) as SVG circles with a drop shadow glow matching the workspace theme accent.
+  - Cleaned up unused React imports to pass TypeScript compilation checks.
+
+---
+
 ## [1.3.158] - 2026-06-30
 
 ### Fixed
