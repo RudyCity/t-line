@@ -1230,6 +1230,18 @@
   box-shadow: 0 0 0 1px var(--color-primary-glow);
 }
 
+/* Compact overrides for CustomSelect inside workspace-select-bar */
+.workspace-select-bar .relative {
+  flex: 1;
+}
+
+.workspace-select-bar .relative button {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  min-height: 24px;
+}
+
 /* ── Premium Terminal Context Menu ── */
 .terminal-ctx-menu {
   background: var(--bg-sidebar);

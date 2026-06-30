@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.144] - 2026-06-30
+
+### Fixed
+- **Custom Select Integration in Sidebar**:
+  - Replaced the native HTML `<select>` dropdowns in the left sidebar's File Explorer and Git Changes panels with the project's custom, premium `<Select>` component.
+  - Added CSS style overrides in `components.css` to keep the custom Select dropdowns compact and beautifully integrated within the sidebar layout.
+
+---
+
 ## [1.3.143] - 2026-06-30
 
 ### Added

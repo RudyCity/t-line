@@ -3,6 +3,7 @@ import { Plus, Terminal as TerminalIcon, FileCode, FolderTree, GitCompare } from
 import { TabData, TerminalInstanceData, WorkspaceInfo } from '../hooks/useTerminals';
 import { WorkspaceList } from './WorkspaceList';
 import { FileExplorer, GitChanges, GitFileStatus } from './FilePanel';
+import { Select } from './Form';
 
 interface SidebarContentPanelProps {
   activePanel: 'workspaces' | 'explorer' | 'changes' | 'tabs';
@@ -186,19 +187,15 @@ export function SidebarContentPanel({
           {workspaces.length > 0 && (
             <div className="workspace-select-bar">
               <span className="select-bar-label">Workspace:</span>
-              <select
+              <Select
                 value={panelWorkspace?.id || ''}
-                onChange={(e) => {
-                  const ws = workspaces.find(w => w.id === e.target.value);
-                  if (ws) setPanelWorkspace(ws || null);
+                onChange={(val) => {
+                  const ws = workspaces.find(w => w.id === val);
+                  if (ws) setPanelWorkspace(ws);
                 }}
-                className="workspace-select-dropdown"
-              >
-                <option value="" disabled>Select Workspace...</option>
-                {workspaces.map(w => (
-                  <option key={w.id} value={w.id}>{w.name}</option>
-                ))}
-              </select>
+                placeholder="Select Workspace..."
+                options={workspaces.map(w => ({ value: w.id, label: w.name }))}
+              />
             </div>
           )}
           {panelWorkspace ? (
@@ -225,19 +222,15 @@ export function SidebarContentPanel({
           {workspaces.filter(w => w.isGit).length > 0 && (
             <div className="workspace-select-bar">
               <span className="select-bar-label">Workspace:</span>
-              <select
+              <Select
                 value={panelWorkspace?.id || ''}
-                onChange={(e) => {
-                  const ws = workspaces.find(w => w.id === e.target.value);
-                  if (ws) setPanelWorkspace(ws || null);
+                onChange={(val) => {
+                  const ws = workspaces.find(w => w.id === val);
+                  if (ws) setPanelWorkspace(ws);
                 }}
-                className="workspace-select-dropdown"
-              >
-                <option value="" disabled>Select Workspace...</option>
-                {workspaces.filter(w => w.isGit).map(w => (
-                  <option key={w.id} value={w.id}>{w.name}</option>
-                ))}
-              </select>
+                placeholder="Select Workspace..."
+                options={workspaces.filter(w => w.isGit).map(w => ({ value: w.id, label: w.name }))}
+              />
             </div>
           )}
           {panelWorkspace && panelWorkspace.isGit ? (
