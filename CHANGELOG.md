@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.169] - 2026-06-30
+
+### Added
+- **Show Hidden Files in File Explorer**:
+  - Removed filters that exclude hidden files and directories starting with `.`, exposing `.gitignore`, `.env`, `.github`, `.git`, `.agents`, etc. to the file explorer. Dependency and build directories (`node_modules`, `dist`, `dist-exe`) remain excluded.
+- **Refactoring Server File Length**:
+  - Extracted all Express filesystem routes (`/list`, `/explore`, `/read`, `/raw`, `/write`, `/delete`, `/open-explorer`) from `backend/src/server.ts` into a new router file `backend/src/fsRoutes.ts`. This reduces the file length of `server.ts` to ~740 lines, keeping it well within the strict 1000-line limit.
+
+---
+
 ## [1.3.168] - 2026-06-30
 
 ### Fixed
