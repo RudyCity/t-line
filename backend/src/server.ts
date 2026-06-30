@@ -567,7 +567,34 @@ app.get('/api/fs/read', authMiddleware, (req, res) => {
     const bytesRead = fs.readSync(fd, buffer, 0, buffer.length, 0);
     fs.closeSync(fd);
 
-    const content = buffer.toString('utf8', 0, bytesRead);
+    let encoding: BufferEncoding = 'utf8';
+    let startOffset = 0;
+
+    if (bytesRead >= 2) {
+      if (buffer[0] === 0xFF && buffer[1] === 0xFE) {
+        encoding = 'utf16le';
+        startOffset = 2;
+      } else if (bytesRead >= 3 && buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) {
+        encoding = 'utf8';
+        startOffset = 3;
+      } else {
+        // Heuristic to detect UTF-16LE without BOM
+        let nullsAtOdd = 0;
+        let nullsAtEven = 0;
+        const limit = Math.min(bytesRead, 100);
+        for (let i = 0; i < limit; i++) {
+          if (buffer[i] === 0x00) {
+            if (i % 2 === 1) nullsAtOdd++;
+            else nullsAtEven++;
+          }
+        }
+        if (nullsAtOdd > 5 && nullsAtEven === 0) {
+          encoding = 'utf16le';
+        }
+      }
+    }
+
+    const content = buffer.toString(encoding, startOffset, bytesRead);
     res.json({
       content,
       truncated: stat.size > bytesRead

@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.139] - 2026-06-30
+
+### Fixed
+- **UTF-16LE File Encoding Auto-detection**:
+  - Implemented auto-detection of UTF-16LE file encoding in `/api/fs/read` (checking BOM `0xFF 0xFE` and null-byte odd-index heuristics).
+  - Correctly decodes UTF-16LE content to prevent spaced-out text rendering and red `NUL` character boxes inside Monaco editor.
+
+---
+
 ## [1.3.138] - 2026-06-30
 
 ### Added
