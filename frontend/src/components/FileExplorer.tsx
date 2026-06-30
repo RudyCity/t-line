@@ -12,6 +12,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { GitFileStatus } from './GitChanges';
+import { ConfirmModal } from './Modals';
 
 interface FsItem {
   name: string;
@@ -384,9 +385,12 @@ export function FileExplorer({
     }
   }, [rootPath, token]);
 
-  const handleDeleteNode = useCallback(async (node: TreeNode) => {
-    const confirmMsg = `Are you sure you want to delete ${node.name}? This action cannot be undone.`;
-    if (!window.confirm(confirmMsg)) return;
+  const [deleteConfirmNode, setDeleteConfirmNode] = useState<TreeNode | null>(null);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteConfirmNode) return;
+    const node = deleteConfirmNode;
+    setDeleteConfirmNode(null);
 
     try {
       const res = await fetch(`/api/fs/delete?path=${encodeURIComponent(node.path)}`, {
@@ -405,7 +409,7 @@ export function FileExplorer({
     } catch (e: any) {
       alert(`Error deleting: ${e.message}`);
     }
-  }, [token, load]);
+  }, [deleteConfirmNode, token, load]);
 
   const handleOpenExplorer = useCallback(async (node: TreeNode) => {
     try {
@@ -527,8 +531,21 @@ export function FileExplorer({
           y={contextMenu.y}
           node={contextMenu.node}
           onClose={() => setContextMenu(null)}
-          onDelete={handleDeleteNode}
+          onDelete={setDeleteConfirmNode}
           onOpenExplorer={handleOpenExplorer}
+        />
+      )}
+
+      {deleteConfirmNode && (
+        <ConfirmModal
+          show={!!deleteConfirmNode}
+          title="Delete Item"
+          message={`Are you sure you want to delete ${deleteConfirmNode.name}? This action cannot be undone.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          variant="danger"
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteConfirmNode(null)}
         />
       )}
     </div>

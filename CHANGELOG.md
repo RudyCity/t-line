@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.131] - 2026-06-30
+
+### Fixed
+- **UI Deletion Confirmation Modal**: Replaced the native browser `window.confirm` dialog for Workspace Explorer item deletions with the application's native, glassmorphic `ConfirmModal` UI component.
+
+---
+
 ## [1.3.130] - 2026-06-30
 
 ### Added
