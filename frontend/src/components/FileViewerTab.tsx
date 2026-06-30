@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { FileCode, RotateCcw, Check, ZoomIn, ZoomOut, Maximize, Image as ImageIcon, FileText } from 'lucide-react';
+import { FileCode, RotateCcw, Check, ZoomIn, ZoomOut, Maximize, Image as ImageIcon, FileText, File } from 'lucide-react';
 import Editor, { loader } from '@monaco-editor/react';
 
 interface FileViewerTabProps {
@@ -10,13 +10,21 @@ interface FileViewerTabProps {
   themeBackground?: string;
 }
 
-function getFileType(filePath: string): 'image' | 'pdf' | 'text' {
+function getFileType(filePath: string): 'image' | 'pdf' | 'text' | 'binary' {
   const ext = filePath.split('.').pop()?.toLowerCase();
   if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico'].includes(ext || '')) {
     return 'image';
   }
   if (ext === 'pdf') {
     return 'pdf';
+  }
+  const binaryExtensions = [
+    'exe', 'dll', 'so', 'dylib', 'bin', 'zip', 'tar', 'gz', 'rar', '7z',
+    'mp3', 'mp4', 'wav', 'ogg', 'webm', 'woff', 'woff2', 'ttf', 'eot', 'dmg',
+    'pkg', 'iso', 'class', 'jar', 'db', 'sqlite'
+  ];
+  if (binaryExtensions.includes(ext || '')) {
+    return 'binary';
   }
   return 'text';
 }
@@ -28,6 +36,7 @@ function getLanguageFromPath(filePath: string): string {
     case 'jsx':
       return 'javascript';
     case 'ts':
+      return 'typescript';
     case 'tsx':
       return 'typescript';
     case 'html':
@@ -57,6 +66,9 @@ function getLanguageFromPath(filePath: string): string {
     case 'c':
     case 'h':
       return 'cpp';
+    case 'svg':
+    case 'xml':
+      return 'xml';
     default:
       return 'plaintext';
   }
@@ -87,11 +99,16 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
   };
 
   const fileType = getFileType(filePath);
+  const isSvg = filePath.split('.').pop()?.toLowerCase() === 'svg';
+  const [viewMode, setViewMode] = useState<'preview' | 'code'>('preview');
 
   useEffect(() => {
     setZoom(1);
     setPosition({ x: 0, y: 0 });
-  }, [filePath]);
+    if (isSvg) {
+      setViewMode('preview');
+    }
+  }, [filePath, isSvg]);
 
   useEffect(() => {
     if (!isDragging) return;
@@ -135,8 +152,11 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
     };
   }, [fileType]);
 
+  const shouldLoadAsText = fileType === 'text' || (isSvg && viewMode === 'code');
+  const renderType = (isSvg && viewMode === 'code') ? 'text' : fileType;
+
   useEffect(() => {
-    if (fileType !== 'text') {
+    if (!shouldLoadAsText) {
       setLoading(false);
       return;
     }
@@ -179,7 +199,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
         }
       }).catch(() => {});
     };
-  }, [filePath, token, fileType]);
+  }, [filePath, token, shouldLoadAsText]);
 
   // Monaco Editor theme effect
   useEffect(() => {
@@ -276,7 +296,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
     );
   }
 
-  if (fileType === 'image') {
+  if (renderType === 'image') {
     return (
       <div className="flex flex-col flex-1 w-full h-full bg-[var(--bg-main)] overflow-hidden">
         {/* File Header */}
@@ -287,7 +307,33 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
               {filePath}
             </span>
           </div>
-          <div className="text-[11px] text-slate-500 font-medium">Image Preview</div>
+          <div className="flex items-center gap-2">
+            {isSvg && (
+              <div className="flex items-center bg-slate-900 rounded-md p-0.5 border border-slate-800 mr-2">
+                <button
+                  onClick={() => setViewMode('preview')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-medium transition duration-150 cursor-pointer ${
+                    viewMode === 'preview'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Preview
+                </button>
+                <button
+                  onClick={() => setViewMode('code')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-medium transition duration-150 cursor-pointer ${
+                    viewMode === 'code'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Code
+                </button>
+              </div>
+            )}
+            <div className="text-[11px] text-slate-500 font-medium">Image Preview</div>
+          </div>
         </div>
 
         {/* Image Viewer Area */}
@@ -358,7 +404,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
     );
   }
 
-  if (fileType === 'pdf') {
+  if (renderType === 'pdf') {
     return (
       <div className="flex flex-col flex-1 w-full h-full bg-[var(--bg-main)] overflow-hidden">
         {/* File Header */}
@@ -384,6 +430,63 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
     );
   }
 
+  if (renderType === 'binary') {
+    const handleRevealInExplorer = async () => {
+      try {
+        const res = await fetch('/api/fs/open-explorer', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ path: filePath })
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          alert(`Failed to reveal file: ${err.error}`);
+        }
+      } catch (e: any) {
+        alert(`Error revealing file: ${e.message}`);
+      }
+    };
+
+    return (
+      <div className="flex flex-col flex-1 w-full h-full bg-[var(--bg-main)] overflow-hidden">
+        {/* File Header */}
+        <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0">
+          <div className="flex items-center gap-2 truncate">
+            <File size={14} className="text-slate-400 shrink-0" />
+            <span className="text-xs font-mono text-slate-300 truncate" title={filePath}>
+              {filePath}
+            </span>
+          </div>
+          <div className="text-[11px] text-slate-500 font-medium">Binary File</div>
+        </div>
+
+        {/* Binary Warning Content */}
+        <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#0a0a0c] select-none text-center">
+          <div className="p-4 rounded-full bg-slate-900 border border-slate-800 text-slate-400 mb-4 animate-pulse">
+            <File size={32} />
+          </div>
+          <h3 className="text-sm font-semibold text-slate-200 mb-1">
+            Binary File Not Supported
+          </h3>
+          <p className="text-xs text-slate-400 max-w-sm mb-6 leading-relaxed">
+            This file cannot be displayed in the editor because it is a binary file or has an unsupported format.
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleRevealInExplorer}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-md transition-colors duration-150 cursor-pointer"
+            >
+              Reveal in Explorer
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col flex-1 w-full h-full bg-[var(--bg-main)] overflow-hidden">
       {/* File Header */}
@@ -399,6 +502,30 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
         </div>
         
         <div className="flex items-center gap-2">
+          {isSvg && (
+            <div className="flex items-center bg-slate-900 rounded-md p-0.5 border border-slate-800 mr-2">
+              <button
+                onClick={() => setViewMode('preview')}
+                className={`px-2 py-0.5 rounded text-[10px] font-medium transition duration-150 cursor-pointer ${
+                  viewMode === 'preview'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Preview
+              </button>
+              <button
+                onClick={() => setViewMode('code')}
+                className={`px-2 py-0.5 rounded text-[10px] font-medium transition duration-150 cursor-pointer ${
+                  viewMode === 'code'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Code
+              </button>
+            </div>
+          )}
           {saving ? (
             <div className="flex items-center gap-1.5 text-[11px] text-purple-400 font-medium animate-pulse">
               <span className="h-1.5 w-1.5 rounded-full bg-purple-500 animate-ping" />

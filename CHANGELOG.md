@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.173] - 2026-06-30
+
+### Added
+- **Binary File Handling in Editor Tabs**:
+  - Implemented binary file detection (`.exe`, `.zip`, `.dll`, `.mp3`, `.mp4`, etc.) in `FileViewerTab`.
+  - Added a binary warning UI with a "Reveal in Explorer" button to prevent reading binary files as text, avoiding browser freezes/crashes and auto-save corruption.
+- **SVG Preview & Code Toggle**:
+  - Added a preview/code toggle in `FileViewerTab` header for `.svg` files. Users can now switch between visual vector graphics preview and direct XML code editing.
+
+---
+
 ## [1.3.172] - 2026-06-30
 
 ### Added
