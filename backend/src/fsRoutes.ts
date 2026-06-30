@@ -112,9 +112,6 @@ router.get('/explore', authMiddleware, (req, res) => {
       })
       .filter((item): item is { name: string; path: string; isDirectory: boolean } => 
         item !== null && 
-        item.name !== 'node_modules' && 
-        item.name !== 'dist' && 
-        item.name !== 'dist-exe' &&
         item.name !== '.git'
       )
       .sort((a, b) => {

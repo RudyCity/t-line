@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.171] - 2026-06-30
+
+### Fixed
+- **Show node_modules and Build Folders**:
+  - Restored visibility of `node_modules`, `dist`, and `dist-exe` directories in the file explorer. Only `.git` folder remains hidden.
+
+---
+
 ## [1.3.170] - 2026-06-30
 
 ### Fixed
