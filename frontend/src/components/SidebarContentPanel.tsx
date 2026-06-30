@@ -35,8 +35,8 @@ function WorkspaceSwitcher({
           align-items: center;
           gap: 4px;
           padding: 5px 10px;
-          border-bottom: 1px solid rgba(255,255,255,0.06);
-          background: rgba(0,0,0,0.12);
+          border-bottom: 1px solid var(--border-color);
+          background: var(--panel-header-bg, rgba(0,0,0,0.12));
           flex-shrink: 0;
           overflow-x: auto;
           scrollbar-width: none;
@@ -53,7 +53,8 @@ function WorkspaceSwitcher({
           padding-right: 4px;
         }
         .ws-pill-sep {
-          color: rgba(255,255,255,0.2);
+          color: var(--text-muted);
+          opacity: 0.4;
           font-size: 0.65rem;
           flex-shrink: 0;
           user-select: none;
@@ -66,8 +67,8 @@ function WorkspaceSwitcher({
           font-weight: 500;
           padding: 2px 8px;
           border-radius: 4px;
-          border: 1px solid rgba(255,255,255,0.07);
-          background: rgba(255,255,255,0.03);
+          border: 1px solid var(--border-color);
+          background: var(--surface-overlay);
           color: var(--text-muted);
           cursor: pointer;
           white-space: nowrap;
@@ -75,14 +76,20 @@ function WorkspaceSwitcher({
           transition: all 0.13s;
         }
         .ws-pill:hover {
-          background: rgba(255,255,255,0.07);
+          background: var(--surface-overlay-hover);
           color: var(--text-main);
-          border-color: rgba(255,255,255,0.14);
+          border-color: var(--border-color);
+        }
+        .theme-light .ws-pill:hover {
+          background: var(--surface-overlay-hover);
+          color: var(--text-main);
+          border-color: rgba(0, 0, 0, 0.2);
         }
         .ws-pill-active {
-          background: rgba(168,85,247,0.13) !important;
-          border-color: rgba(168,85,247,0.35) !important;
+          background: var(--tab-active-bg, rgba(168,85,247,0.13)) !important;
+          border-color: var(--tab-active-border, rgba(168,85,247,0.35)) !important;
           color: var(--color-primary, #a855f7) !important;
+          box-shadow: none !important;
         }
       `}</style>
 

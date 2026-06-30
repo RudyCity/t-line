@@ -300,8 +300,8 @@ export function GitChanges({
         /* Segmented tab styling */
         .git-tabs-container {
           display: flex;
-          border-bottom: 1px solid rgba(255,255,255,0.06);
-          background: rgba(0,0,0,0.15);
+          border-bottom: 1px solid var(--border-color);
+          background: var(--sidebar-tabs-bg, rgba(0,0,0,0.15));
           flex-shrink: 0;
         }
         .git-tab-btn {
@@ -318,17 +318,17 @@ export function GitChanges({
         }
         .git-tab-btn:hover {
           color: var(--text-main);
-          background: rgba(255,255,255,0.02);
+          background: var(--surface-overlay);
         }
         .git-tab-btn-active {
           color: var(--color-primary, #a855f7) !important;
           border-bottom-color: var(--color-primary, #a855f7);
-          background: rgba(168, 85, 247, 0.04);
+          background: var(--tab-active-bg, rgba(168, 85, 247, 0.04));
         }
 
         .git-commit-container {
           padding: 12px;
-          border-bottom: 1px solid rgba(255,255,255,0.06);
+          border-bottom: 1px solid var(--border-color);
           display: flex;
           flex-direction: column;
           gap: 8px;
@@ -336,8 +336,8 @@ export function GitChanges({
         .git-commit-textarea {
           width: 100%;
           min-height: 52px;
-          background: rgba(15, 23, 42, 0.4);
-          border: 1px solid rgba(255,255,255,0.08);
+          background: var(--surface-overlay);
+          border: 1px solid var(--border-color);
           border-radius: 6px;
           padding: 6px 8px;
           color: var(--text-main);
@@ -375,7 +375,7 @@ export function GitChanges({
           gap: 6px;
         }
         .git-commit-btn:hover:not(:disabled) {
-          background: #9333ea;
+          background: var(--color-primary-hover, #9333ea);
         }
         .git-commit-btn:disabled {
           opacity: 0.5;
@@ -391,7 +391,7 @@ export function GitChanges({
           color: var(--text-muted);
           text-transform: uppercase;
           letter-spacing: 0.05em;
-          border-top: 1px solid rgba(255,255,255,0.03);
+          border-top: 1px solid var(--border-color);
         }
         .git-section-title:first-of-type {
           border-top: none;
@@ -415,7 +415,7 @@ export function GitChanges({
         .git-action-btn:hover {
           opacity: 1 !important;
           color: var(--text-main) !important;
-          background: rgba(255,255,255,0.08);
+          background: var(--surface-overlay-hover);
         }
         .git-action-btn.hover-danger:hover {
           color: var(--color-danger, #ef4444) !important;

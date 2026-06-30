@@ -218,6 +218,9 @@ export function useThemeAndFonts() {
     root.style.setProperty('--font-sans-weight', fontSansWeight);
     root.style.setProperty('--font-mono-weight', fontMonoWeight);
 
+    // Set theme class on document element for CSS selectors (e.g. .theme-light)
+    root.className = `theme-${theme}`;
+
     root.style.setProperty('--accent-color', accentColor);
     root.style.setProperty('--color-primary', accentColor);
 
@@ -269,7 +272,10 @@ export function useThemeAndFonts() {
       root.style.setProperty('--toast-text', '#0f172a');
       root.style.setProperty('--ws-dropdown-bg', 'rgba(255, 255, 255, 0.98)');
       root.style.setProperty('--ws-dropdown-border', 'rgba(0, 0, 0, 0.1)');
-      root.style.setProperty('--ws-dropdown-shadow', '0 10px 25px -5px rgba(0,0,0,0.15), 0 8px 10px -6px rgba(0,0,0,0.1)');
+      root.style.setProperty('--ws-dropdown-shadow', 'none');
+      root.style.setProperty('--glass-shadow', 'none');
+      root.style.setProperty('--tooltip-shadow', 'none');
+      root.style.setProperty('--toast-shadow', 'none');
       root.style.setProperty('--panel-header-bg', 'rgba(0, 0, 0, 0.04)');
       root.style.setProperty('--sidebar-tabs-bg', 'rgba(0, 0, 0, 0.04)');
       root.style.setProperty('--window-btn-hover-bg', 'rgba(0, 0, 0, 0.07)');
@@ -297,6 +303,9 @@ export function useThemeAndFonts() {
       root.style.setProperty('--ws-dropdown-bg', 'rgba(15, 23, 42, 0.98)');
       root.style.setProperty('--ws-dropdown-border', `color-mix(in srgb, ${accentColor} 25%, transparent)`);
       root.style.setProperty('--ws-dropdown-shadow', '0 10px 25px -5px rgba(0,0,0,0.6), 0 8px 10px -6px rgba(0,0,0,0.5)');
+      root.style.setProperty('--glass-shadow', '0 8px 32px 0 rgba(0, 0, 0, 0.5)');
+      root.style.setProperty('--tooltip-shadow', '0 4px 12px rgba(0, 0, 0, 0.5)');
+      root.style.setProperty('--toast-shadow', '0 4px 12px rgba(0, 0, 0, 0.5)');
       root.style.setProperty('--panel-header-bg', 'rgba(0, 0, 0, 0.25)');
       root.style.setProperty('--sidebar-tabs-bg', 'rgba(0, 0, 0, 0.2)');
       root.style.setProperty('--window-btn-hover-bg', 'rgba(255, 255, 255, 0.08)');

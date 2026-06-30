@@ -225,7 +225,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         {/* Tabs navigation */}
-        <div className="sidebar-panel-tabs" style={{ background: 'rgba(0,0,0,0.15)' }}>
+        <div className="sidebar-panel-tabs" style={{ background: 'var(--sidebar-tabs-bg)' }}>
           <button
             type="button"
             className={`sidebar-panel-tab ${activeTab === 'general' ? 'active' : ''}`}
@@ -408,14 +408,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           style={{
                             padding: '8px 10px',
                             borderRadius: '8px',
-                            background: isSelected ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
+                            background: isSelected ? 'var(--surface-overlay-active, rgba(255,255,255,0.06))' : 'var(--surface-overlay, rgba(255,255,255,0.02))',
                             border: isSelected ? '1.5px solid var(--color-primary)' : '1.5px solid var(--border-color)',
                             cursor: 'pointer',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
                             transition: 'all 0.2s ease',
-                            boxShadow: isSelected ? '0 0 8px var(--color-primary-glow)' : 'none'
+                            boxShadow: isSelected ? 'var(--card-active-shadow, 0 0 8px var(--color-primary-glow))' : 'none'
                           }}
                         >
                           <span style={{ fontSize: '0.75rem', fontWeight: isSelected ? 600 : 400, color: isSelected ? 'var(--text-main)' : 'var(--text-muted)' }}>
@@ -458,10 +458,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             height: '22px',
                             borderRadius: '50%',
                             background: preset.value,
-                            border: isSelected ? '2px solid #ffffff' : '1px solid rgba(255,255,255,0.2)',
+                            border: isSelected ? '2px solid var(--text-main, #ffffff)' : '1px solid var(--border-color, rgba(255,255,255,0.2))',
                             cursor: 'pointer',
                             padding: 0,
-                            boxShadow: isSelected ? `0 0 6px ${preset.value}` : 'none',
+                            boxShadow: isSelected ? 'var(--accent-shadow-glow, 0 0 6px ' + preset.value + ')' : 'none',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',

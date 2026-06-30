@@ -2,6 +2,19 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.157] - 2026-06-30
+
+### Fixed
+- **Light Theme: UI Shadows, Tooltips, Toasts and Sidebar Panels**:
+  - Added CSS class `theme-light` to document root dynamically based on theme.
+  - Eliminated box shadows, active glows, dot pulses, and resizer glows in light theme using CSS overrides.
+  - Removed heavy shadows on `.sidebar` and `.right-sidebar` in light mode.
+  - Updated the inline switcher style block in `SidebarContentPanel.tsx` to use CSS custom properties instead of hardcoded dark values.
+  - Revamped style tags in `GitChanges.tsx` using CSS variables to correctly adjust inputs, textareas, and tabs in light theme.
+  - Improved theme selection highlights and accent selectors in `SettingsModal.tsx` to remain visible and high contrast on light backgrounds.
+
+---
+
 ## [1.3.156] - 2026-06-30
 
 ### Fixed
