@@ -20,6 +20,7 @@ import { wsManager } from './services/websocket';
 import { FileViewerTab } from './components/FileViewerTab';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
 import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal, ConfirmModal, WorkspaceEditModal } from './components/Modals';
+import { BranchModal } from './components/BranchModal';
 import { useTunnel } from './hooks/useTunnel';
 import { useSystemStats } from './hooks/useSystemStats';
 import { useWorkspaces } from './hooks/useWorkspaces';
@@ -90,6 +91,7 @@ export default function App() {
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [rightMenuOpen, setRightMenuOpen] = useState<boolean>(false);
   const [showShortcutModal, setShowShortcutModal] = useState<boolean>(false);
+  const [showBranchModal, setShowBranchModal] = useState<boolean>(false);
   // Workspace editing states will be provided by useWorkspaceHandlers hook
 
   const [showMobileKeyboard, setShowMobileKeyboard] = useState<boolean>(false);
@@ -309,7 +311,7 @@ export default function App() {
 
 
   // Keyboard Shortcuts
-  const hasModals = showWorkspaceModal || showWorktreeModal || showTunnelModal || showSettingsModal;
+  const hasModals = showWorkspaceModal || showWorktreeModal || showTunnelModal || showSettingsModal || showBranchModal;
   useKeyboardShortcuts({
     enabled: isAuthenticated && !hasModals,
     onNewTerminal: () => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || ''),
@@ -730,6 +732,7 @@ export default function App() {
             deletingWorktreePaths={deletingWorktreePaths}
             panelWorktreePath={panelWorktreePath}
             fsChangeTrigger={fsChangeTrigger}
+            onOpenBranchModal={() => setShowBranchModal(true)}
           />
         )}
       </div>
@@ -1189,6 +1192,15 @@ export default function App() {
         />
       )}
 
+      <BranchModal
+        show={showBranchModal}
+        onClose={() => setShowBranchModal(false)}
+        workspace={panelWorkspace}
+        worktreePath={panelWorktreePath}
+        token={localStorage.getItem('token') || ''}
+        onBranchChanged={() => fetchGitStatus(true)}
+      />
+
       <Footer
         panelWorkspace={panelWorkspace}
         panelWorktreePath={panelWorktreePath}
@@ -1208,6 +1220,7 @@ export default function App() {
         updateAvailable={updateAvailable}
         latestVersion={latestVersion}
         systemStats={systemStats}
+        onBranchClick={() => setShowBranchModal(true)}
       />
 
       <TabTooltip activeTooltip={activeTooltip} tabContextMenu={tabContextMenu} />

@@ -39,6 +39,7 @@ export interface FooterProps {
   updateAvailable?: boolean;
   latestVersion?: string;
   systemStats: SystemStats | null;
+  onBranchClick?: () => void;
 }
 
 export function Footer({
@@ -59,7 +60,8 @@ export function Footer({
   appVersion,
   updateAvailable,
   latestVersion,
-  systemStats
+  systemStats,
+  onBranchClick
 }: FooterProps): React.JSX.Element {
   const [copied, setCopied] = React.useState(false);
 
@@ -321,7 +323,7 @@ export function Footer({
                 <>
                   <span style={{ color: 'var(--border-color)' }}>|</span>
                   <span 
-                    className="flex items-center gap-1.5 px-1.5 py-0.5 rounded font-sans text-[11px] transition-all duration-150 border"
+                    className="flex items-center gap-1.5 px-1.5 py-0.5 rounded font-sans text-[11px] transition-all duration-150 border cursor-pointer hover:bg-purple-500/10 hover:border-purple-500/30"
                     style={{
                       backgroundColor: activeBranch.isDirty 
                         ? 'rgba(245, 158, 11, 0.08)' 
@@ -333,7 +335,8 @@ export function Footer({
                         ? '#f59e0b' 
                         : 'var(--text-main)'
                     }}
-                    title={activeBranch.isDirty ? "Uncommitted changes" : "Git Branch"}
+                    onClick={onBranchClick}
+                    title={activeBranch.isDirty ? "Uncommitted changes (Click to Switch/Sync Branch)" : "Git Branch (Click to Switch/Sync Branch)"}
                   >
                     <GitBranch size={11} style={{ color: activeBranch.isMain ? 'var(--color-primary)' : '#10b981' }} />
                     <span className="font-medium">{activeBranch.name}</span>

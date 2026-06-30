@@ -33,6 +33,7 @@ interface SidebarContentPanelProps {
   deletingWorktreePaths?: string[];
   panelWorktreePath?: string | null;
   fsChangeTrigger?: number;
+  onOpenBranchModal?: () => void;
 }
 
 export function SidebarContentPanel({
@@ -63,7 +64,8 @@ export function SidebarContentPanel({
   deletingWorkspacePaths = [],
   deletingWorktreePaths = [],
   panelWorktreePath = null,
-  fsChangeTrigger = 0
+  fsChangeTrigger = 0,
+  onOpenBranchModal
 }: SidebarContentPanelProps) {
   return (
     <div 
@@ -246,6 +248,7 @@ export function SidebarContentPanel({
               loading={gitStatusLoading}
               onRefresh={refreshGitStatus || (() => {})}
               worktreePath={panelWorktreePath}
+              onOpenBranchModal={onOpenBranchModal}
             />
           ) : (
             <div className="panel-empty" style={{ flex: 1 }}>

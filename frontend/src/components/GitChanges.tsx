@@ -10,8 +10,10 @@ import {
   Minus,
   RotateCcw,
   GitCommit,
-  RefreshCw
+  RefreshCw,
+  GitBranch
 } from 'lucide-react';
+import { GitHistory } from './GitHistory';
 
 export interface GitFileStatus {
   path: string;
@@ -27,6 +29,7 @@ interface GitChangesProps {
   loading: boolean;
   onRefresh: () => void;
   worktreePath?: string | null;
+  onOpenBranchModal?: () => void;
 }
 
 function StatusIcon({ status }: { status: GitFileStatus['status'] }) {
@@ -80,8 +83,10 @@ export function GitChanges({
   files,
   loading,
   onRefresh,
-  worktreePath
+  worktreePath,
+  onOpenBranchModal
 }: GitChangesProps) {
+  const [activeTab, setActiveTab] = useState<'changes' | 'history'>('changes');
   const [selectedFile, setSelectedFile] = useState<GitFileStatus | null>(null);
   const [diff, setDiff] = useState<string>('');
   const [diffLoading, setDiffLoading] = useState(false);
@@ -270,6 +275,35 @@ export function GitChanges({
   return (
     <div className="panel-container">
       <style>{`
+        /* Segmented tab styling */
+        .git-tabs-container {
+          display: flex;
+          border-bottom: 1px solid rgba(255,255,255,0.06);
+          background: rgba(0,0,0,0.15);
+          flex-shrink: 0;
+        }
+        .git-tab-btn {
+          flex: 1;
+          padding: 8px 12px;
+          border: none;
+          background: none;
+          color: var(--text-muted);
+          font-size: 0.72rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s;
+          border-bottom: 2px solid transparent;
+        }
+        .git-tab-btn:hover {
+          color: var(--text-main);
+          background: rgba(255,255,255,0.02);
+        }
+        .git-tab-btn-active {
+          color: var(--color-primary, #a855f7) !important;
+          border-bottom-color: var(--color-primary, #a855f7);
+          background: rgba(168, 85, 247, 0.04);
+        }
+
         .git-commit-container {
           padding: 12px;
           border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -377,296 +411,325 @@ export function GitChanges({
           margin-right: 8px;
         }
       `}</style>
-      <div className="panel-split">
-        {/* Changed files list */}
-        <div className="explorer-tree">
-          <div className="panel-section-header">
-            <span className="panel-section-title">
-              SOURCE CONTROL
-              {files.length > 0 && (
-                <span className="changes-badge">{files.length}</span>
-              )}
-            </span>
-            <div className="git-header-actions">
-              {unstagedFiles.length > 0 && (
-                <button
-                  className="action-btn"
-                  onClick={() => handleStage(undefined, true)}
-                  title="Stage All Changes"
-                  disabled={loading || actionLoading}
-                >
-                  <Plus size={13} />
-                </button>
-              )}
-              {stagedFiles.length > 0 && (
-                <button
-                  className="action-btn"
-                  onClick={() => handleUnstage(undefined, true)}
-                  title="Unstage All Changes"
-                  disabled={loading || actionLoading}
-                >
-                  <Minus size={13} />
-                </button>
-              )}
-              {files.length > 0 && (
-                <button
-                  className="action-btn action-btn-danger"
-                  onClick={() => handleDiscard(undefined, true)}
-                  title="Discard All Changes"
-                  disabled={loading || actionLoading}
-                >
-                  <RotateCcw size={13} />
-                </button>
-              )}
-              <button
-                className="action-btn"
-                onClick={onRefresh}
-                title="Refresh"
-                disabled={loading || actionLoading}
-              >
-                <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-              </button>
-            </div>
-          </div>
 
-          {/* Commit container */}
-          {files.length > 0 && (
-            <div className="git-commit-container">
-              <textarea
-                className="git-commit-textarea"
-                placeholder="Commit message (Ctrl+Enter to commit...)"
-                value={commitMessage}
-                onChange={(e) => setCommitMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                disabled={actionLoading}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label className="git-commit-options">
-                  <input
-                    type="checkbox"
-                    checked={stageAllBeforeCommit}
-                    onChange={(e) => setStageAllBeforeCommit(e.target.checked)}
-                    disabled={actionLoading}
-                  />
-                  <span>Stage all & commit</span>
-                </label>
-                <button
-                  className="git-commit-btn"
-                  onClick={() => handleCommit()}
-                  disabled={actionLoading || !commitMessage.trim()}
-                >
-                  Commit
-                </button>
-              </div>
-            </div>
-          )}
+      <div className="git-tabs-container">
+        <button
+          className={`git-tab-btn ${activeTab === 'changes' ? 'git-tab-btn-active' : ''}`}
+          onClick={() => setActiveTab('changes')}
+        >
+          Changes
+        </button>
+        <button
+          className={`git-tab-btn ${activeTab === 'history' ? 'git-tab-btn-active' : ''}`}
+          onClick={() => setActiveTab('history')}
+        >
+          History
+        </button>
+      </div>
 
-          <div className="explorer-scroll">
-            {loading ? (
-              <div className="panel-loading">
-                <Loader2 size={16} className="animate-spin" />
-                <span>Checking...</span>
-              </div>
-            ) : files.length === 0 ? (
-              <div className="panel-empty">
-                <GitCommit size={24} style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
-                <span>No changes</span>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                {/* Staged Changes Section */}
-                {stagedFiles.length > 0 && (
-                  <>
-                    <div className="git-section-title">
-                      <span>Staged Changes ({stagedFiles.length})</span>
-                      <button
-                        className="action-btn"
-                        style={{ padding: '2px', background: 'none' }}
-                        onClick={() => handleUnstage(undefined, true)}
-                        title="Unstage All"
-                        disabled={actionLoading}
-                      >
-                        <Minus size={11} />
-                      </button>
-                    </div>
-                    {stagedFiles.map(file => {
-                      const { label, color } = STATUS_LABEL[file.status];
-                      const isActive = selectedFile?.path === file.path;
-                      const fileName = file.path.split(/[/\\]/).pop() ?? file.path;
-                      const dirName = file.path.split(/[/\\]/).slice(0, -1).join('/');
-                      return (
-                        <div
-                          key={`staged-${file.path}`}
-                          className={`explorer-item ${isActive ? 'explorer-item-active' : ''}`}
-                          style={{ paddingLeft: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}
-                          onClick={() => handleFileSelect(file)}
-                          title={file.path}
-                        >
-                          <StatusIcon status={file.status} />
-                          <span className="flex-1 min-w-0 text-left" style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span className="explorer-item-name">{fileName}</span>
-                            {dirName && (
-                              <span className="explorer-item-dir">{dirName}</span>
-                            )}
-                          </span>
-                          
-                          <div className="git-actions-wrapper">
-                            <button
-                              className="git-action-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleUnstage(file.path);
-                              }}
-                              title="Unstage Changes"
-                              disabled={actionLoading}
-                            >
-                              <Minus size={13} />
-                            </button>
-                          </div>
-
-                          <span style={{ fontSize: '0.65rem', fontWeight: 700, color, flexShrink: 0, width: '12px', textAlign: 'center', marginRight: '4px' }}>
-                            {label}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </>
+      {activeTab === 'changes' ? (
+        <div className="panel-split">
+          {/* Changed files list */}
+          <div className="explorer-tree">
+            <div className="panel-section-header">
+              <span className="panel-section-title">
+                SOURCE CONTROL
+                {files.length > 0 && (
+                  <span className="changes-badge">{files.length}</span>
                 )}
-
-                {/* Unstaged Changes Section */}
+              </span>
+              <div className="git-header-actions">
+                {onOpenBranchModal && (
+                  <button
+                    className="action-btn"
+                    onClick={onOpenBranchModal}
+                    title="Branch Management & Sync"
+                  >
+                    <GitBranch size={13} />
+                  </button>
+                )}
                 {unstagedFiles.length > 0 && (
-                  <>
-                    <div className="git-section-title" style={{ marginTop: stagedFiles.length > 0 ? '8px' : '0px' }}>
-                      <span>Changes ({unstagedFiles.length})</span>
-                      <div style={{ display: 'flex', gap: '4px' }}>
+                  <button
+                    className="action-btn"
+                    onClick={() => handleStage(undefined, true)}
+                    title="Stage All Changes"
+                    disabled={loading || actionLoading}
+                  >
+                    <Plus size={13} />
+                  </button>
+                )}
+                {stagedFiles.length > 0 && (
+                  <button
+                    className="action-btn"
+                    onClick={() => handleUnstage(undefined, true)}
+                    title="Unstage All Changes"
+                    disabled={loading || actionLoading}
+                  >
+                    <Minus size={13} />
+                  </button>
+                )}
+                {files.length > 0 && (
+                  <button
+                    className="action-btn action-btn-danger"
+                    onClick={() => handleDiscard(undefined, true)}
+                    title="Discard All Changes"
+                    disabled={loading || actionLoading}
+                  >
+                    <RotateCcw size={13} />
+                  </button>
+                )}
+                <button
+                  className="action-btn"
+                  onClick={onRefresh}
+                  title="Refresh"
+                  disabled={loading || actionLoading}
+                >
+                  <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+                </button>
+              </div>
+            </div>
+
+            {/* Commit container */}
+            {files.length > 0 && (
+              <div className="git-commit-container">
+                <textarea
+                  className="git-commit-textarea"
+                  placeholder="Commit message (Ctrl+Enter to commit...)"
+                  value={commitMessage}
+                  onChange={(e) => setCommitMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  disabled={actionLoading}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label className="git-commit-options">
+                    <input
+                      type="checkbox"
+                      checked={stageAllBeforeCommit}
+                      onChange={(e) => setStageAllBeforeCommit(e.target.checked)}
+                      disabled={actionLoading}
+                    />
+                    <span>Stage all & commit</span>
+                  </label>
+                  <button
+                    className="git-commit-btn"
+                    onClick={() => handleCommit()}
+                    disabled={actionLoading || !commitMessage.trim()}
+                  >
+                    Commit
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="explorer-scroll">
+              {loading ? (
+                <div className="panel-loading">
+                  <Loader2 size={16} className="animate-spin" />
+                  <span>Checking...</span>
+                </div>
+              ) : files.length === 0 ? (
+                <div className="panel-empty">
+                  <GitCommit size={24} style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
+                  <span>No changes</span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                  {/* Staged Changes Section */}
+                  {stagedFiles.length > 0 && (
+                    <>
+                      <div className="git-section-title">
+                        <span>Staged Changes ({stagedFiles.length})</span>
                         <button
                           className="action-btn"
                           style={{ padding: '2px', background: 'none' }}
-                          onClick={() => handleStage(undefined, true)}
-                          title="Stage All"
+                          onClick={() => handleUnstage(undefined, true)}
+                          title="Unstage All"
                           disabled={actionLoading}
                         >
-                          <Plus size={11} />
-                        </button>
-                        <button
-                          className="action-btn action-btn-danger"
-                          style={{ padding: '2px', background: 'none' }}
-                          onClick={() => handleDiscard(undefined, true)}
-                          title="Discard All"
-                          disabled={actionLoading}
-                        >
-                          <RotateCcw size={11} />
+                          <Minus size={11} />
                         </button>
                       </div>
-                    </div>
-                    {unstagedFiles.map(file => {
-                      const { label, color } = STATUS_LABEL[file.status];
-                      const isActive = selectedFile?.path === file.path;
-                      const fileName = file.path.split(/[/\\]/).pop() ?? file.path;
-                      const dirName = file.path.split(/[/\\]/).slice(0, -1).join('/');
-                      return (
-                        <div
-                          key={`unstaged-${file.path}`}
-                          className={`explorer-item ${isActive ? 'explorer-item-active' : ''}`}
-                          style={{ paddingLeft: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}
-                          onClick={() => handleFileSelect(file)}
-                          title={file.path}
-                        >
-                          <StatusIcon status={file.status} />
-                          <span className="flex-1 min-w-0 text-left" style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span className="explorer-item-name">{fileName}</span>
-                            {dirName && (
-                              <span className="explorer-item-dir">{dirName}</span>
-                            )}
-                          </span>
-                          
-                          <div className="git-actions-wrapper">
-                            <button
-                              className="git-action-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStage(file.path);
-                              }}
-                              title="Stage Changes"
-                              disabled={actionLoading}
-                            >
-                              <Plus size={13} />
-                            </button>
-                            <button
-                              className="git-action-btn hover-danger"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDiscard(file.path);
-                              }}
-                              title="Discard Changes"
-                              disabled={actionLoading}
-                            >
-                              <RotateCcw size={13} />
-                            </button>
+                      {stagedFiles.map(file => {
+                        const { label, color } = STATUS_LABEL[file.status];
+                        const isActive = selectedFile?.path === file.path;
+                        const fileName = file.path.split(/[/\\]/).pop() ?? file.path;
+                        const dirName = file.path.split(/[/\\]/).slice(0, -1).join('/');
+                        return (
+                          <div
+                            key={`staged-${file.path}`}
+                            className={`explorer-item ${isActive ? 'explorer-item-active' : ''}`}
+                            style={{ paddingLeft: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}
+                            onClick={() => handleFileSelect(file)}
+                            title={file.path}
+                          >
+                            <StatusIcon status={file.status} />
+                            <span className="flex-1 min-w-0 text-left" style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span className="explorer-item-name">{fileName}</span>
+                              {dirName && (
+                                <span className="explorer-item-dir">{dirName}</span>
+                              )}
+                            </span>
+                            
+                            <div className="git-actions-wrapper">
+                              <button
+                                className="git-action-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUnstage(file.path);
+                                }}
+                                title="Unstage Changes"
+                                disabled={actionLoading}
+                              >
+                                <Minus size={13} />
+                              </button>
+                            </div>
+
+                            <span style={{ fontSize: '0.65rem', fontWeight: 700, color, flexShrink: 0, width: '12px', textAlign: 'center', marginRight: '4px' }}>
+                              {label}
+                            </span>
                           </div>
+                        );
+                      })}
+                    </>
+                  )}
 
-                          <span style={{ fontSize: '0.65rem', fontWeight: 700, color, flexShrink: 0, width: '12px', textAlign: 'center', marginRight: '4px' }}>
-                            {label}
-                          </span>
+                  {/* Unstaged Changes Section */}
+                  {unstagedFiles.length > 0 && (
+                    <>
+                      <div className="git-section-title" style={{ marginTop: stagedFiles.length > 0 ? '8px' : '0px' }}>
+                        <span>Changes ({unstagedFiles.length})</span>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button
+                            className="action-btn"
+                            style={{ padding: '2px', background: 'none' }}
+                            onClick={() => handleStage(undefined, true)}
+                            title="Stage All"
+                            disabled={actionLoading}
+                          >
+                            <Plus size={11} />
+                          </button>
+                          <button
+                            className="action-btn action-btn-danger"
+                            style={{ padding: '2px', background: 'none' }}
+                            onClick={() => handleDiscard(undefined, true)}
+                            title="Discard All"
+                            disabled={actionLoading}
+                          >
+                            <RotateCcw size={11} />
+                          </button>
                         </div>
-                      );
-                    })}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+                      </div>
+                      {unstagedFiles.map(file => {
+                        const { label, color } = STATUS_LABEL[file.status];
+                        const isActive = selectedFile?.path === file.path;
+                        const fileName = file.path.split(/[/\\]/).pop() ?? file.path;
+                        const dirName = file.path.split(/[/\\]/).slice(0, -1).join('/');
+                        return (
+                          <div
+                            key={`unstaged-${file.path}`}
+                            className={`explorer-item ${isActive ? 'explorer-item-active' : ''}`}
+                            style={{ paddingLeft: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}
+                            onClick={() => handleFileSelect(file)}
+                            title={file.path}
+                          >
+                            <StatusIcon status={file.status} />
+                            <span className="flex-1 min-w-0 text-left" style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span className="explorer-item-name">{fileName}</span>
+                              {dirName && (
+                                <span className="explorer-item-dir">{dirName}</span>
+                              )}
+                            </span>
+                            
+                            <div className="git-actions-wrapper">
+                              <button
+                                className="git-action-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStage(file.path);
+                                }}
+                                title="Stage Changes"
+                                disabled={actionLoading}
+                              >
+                                <Plus size={13} />
+                              </button>
+                              <button
+                                className="git-action-btn hover-danger"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDiscard(file.path);
+                                }}
+                                title="Discard Changes"
+                                disabled={actionLoading}
+                              >
+                                <RotateCcw size={13} />
+                              </button>
+                            </div>
 
-        {/* Diff viewer */}
-        {selectedFile && (
-          <div className="file-preview">
-            <div className="panel-section-header">
-              <div className="flex items-center gap-2 truncate">
-                <StatusIcon status={selectedFile.status} />
-                <span className="panel-section-title truncate">
-                  {selectedFile.path.split(/[/\\]/).pop()}
-                </span>
-              </div>
-              <button className="action-btn" onClick={() => setSelectedFile(null)} title="Close">
-                <X size={13} />
-              </button>
-            </div>
-            <div className="file-preview-content">
-              {diffLoading ? (
-                <div className="panel-loading">
-                  <Loader2 size={16} className="animate-spin" />
-                  <span>Loading diff...</span>
+                            <span style={{ fontSize: '0.65rem', fontWeight: 700, color, flexShrink: 0, width: '12px', textAlign: 'center', marginRight: '4px' }}>
+                              {label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
                 </div>
-              ) : parsed && parsed.hunks.length > 0 ? (
-                <div className="diff-viewer">
-                  {parsed.hunks.map((hunk, hi) => (
-                    <div key={hi} className="diff-hunk">
-                      <div className="diff-hunk-header">{hunk.header}</div>
-                      {hunk.lines.map((line, li) => (
-                        <div
-                          key={li}
-                          className={`diff-line ${
-                            line.type === '+' ? 'diff-line-add' :
-                            line.type === '-' ? 'diff-line-del' : 'diff-line-ctx'
-                          }`}
-                        >
-                          <span className="diff-line-sign">
-                            {line.type === ' ' ? ' ' : line.type}
-                          </span>
-                          <span className="diff-line-text">{line.text}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <pre className="file-preview-code">{diff}</pre>
               )}
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Diff viewer */}
+          {selectedFile && (
+            <div className="file-preview">
+              <div className="panel-section-header">
+                <div className="flex items-center gap-2 truncate">
+                  <StatusIcon status={selectedFile.status} />
+                  <span className="panel-section-title truncate">
+                    {selectedFile.path.split(/[/\\]/).pop()}
+                  </span>
+                </div>
+                <button className="action-btn" onClick={() => setSelectedFile(null)} title="Close">
+                  <X size={13} />
+                </button>
+              </div>
+              <div className="file-preview-content">
+                {diffLoading ? (
+                  <div className="panel-loading">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Loading diff...</span>
+                  </div>
+                ) : parsed && parsed.hunks.length > 0 ? (
+                  <div className="diff-viewer">
+                    {parsed.hunks.map((hunk, hi) => (
+                      <div key={hi} className="diff-hunk">
+                        <div className="diff-hunk-header">{hunk.header}</div>
+                        {hunk.lines.map((line, li) => (
+                          <div
+                            key={li}
+                            className={`diff-line ${
+                              line.type === '+' ? 'diff-line-add' :
+                              line.type === '-' ? 'diff-line-del' : 'diff-line-ctx'
+                            }`}
+                          >
+                            <span className="diff-line-sign">
+                              {line.type === ' ' ? ' ' : line.type}
+                            </span>
+                            <span className="diff-line-text">{line.text}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <pre className="file-preview-code">{diff}</pre>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <GitHistory workspaceId={workspaceId} token={token} worktreePath={worktreePath} />
+      )}
     </div>
   );
 }

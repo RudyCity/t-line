@@ -522,3 +522,161 @@ export async function commitChanges(repoPath: string, message: string, commitAll
   }
 }
 
+// Checkout an existing branch
+export async function checkoutBranch(repoPath: string, branchName: string): Promise<{ success: boolean; output: string }> {
+  try {
+    const normalizedRepo = path.normalize(repoPath);
+    const output = await runGit(['checkout', branchName], normalizedRepo);
+    clearWorkspaceCache();
+    return { success: true, output };
+  } catch (error: any) {
+    return { success: false, output: error.message };
+  }
+}
+
+// Create a new local branch and checkout
+export async function createBranch(repoPath: string, branchName: string, checkout = true): Promise<{ success: boolean; output: string }> {
+  try {
+    const normalizedRepo = path.normalize(repoPath);
+    const args = checkout ? ['checkout', '-b', branchName] : ['branch', branchName];
+    const output = await runGit(args, normalizedRepo);
+    clearWorkspaceCache();
+    return { success: true, output };
+  } catch (error: any) {
+    return { success: false, output: error.message };
+  }
+}
+
+// Pull changes
+export async function pullBranch(repoPath: string): Promise<{ success: boolean; output: string }> {
+  try {
+    const normalizedRepo = path.normalize(repoPath);
+    const output = await runGit(['pull'], normalizedRepo);
+    clearWorkspaceCache();
+    return { success: true, output };
+  } catch (error: any) {
+    return { success: false, output: error.message };
+  }
+}
+
+// Push changes
+export async function pushBranch(repoPath: string): Promise<{ success: boolean; output: string }> {
+  try {
+    const normalizedRepo = path.normalize(repoPath);
+    const output = await runGit(['push'], normalizedRepo);
+    clearWorkspaceCache();
+    return { success: true, output };
+  } catch (error: any) {
+    return { success: false, output: error.message };
+  }
+}
+
+export interface CommitInfo {
+  hash: string;
+  shortHash: string;
+  authorName: string;
+  authorEmail: string;
+  date: string;
+  subject: string;
+  graphPrefix: string;
+}
+
+// Get recent git commits with log graph
+export async function getGitHistory(repoPath: string, limit = 50): Promise<CommitInfo[]> {
+  try {
+    const normalizedRepo = path.normalize(repoPath);
+    // Format: __COMMIT__|%H|%h|%an|%ae|%ar|%s
+    // Use --graph for visual representation
+    const format = '__COMMIT__|%H|%h|%an|%ae|%ar|%s';
+    const output = await runGit(['log', '--graph', '--date-order', `--format=${format}`, `-n`, limit.toString()], normalizedRepo);
+    if (!output.trim()) return [];
+    
+    return output.split('\n').map(line => {
+      const parts = line.split('__COMMIT__|');
+      if (parts.length > 1) {
+        const graphPrefix = parts[0];
+        const [hash, shortHash, authorName, authorEmail, date, subject] = parts[1].split('|');
+        return { hash, shortHash, authorName, authorEmail, date, subject, graphPrefix };
+      } else {
+        // Line with graph representation only (connectors)
+        return {
+          hash: '',
+          shortHash: '',
+          authorName: '',
+          authorEmail: '',
+          date: '',
+          subject: '',
+          graphPrefix: line
+        };
+      }
+    });
+  } catch (e) {
+    console.error('Error fetching git history:', e);
+    return [];
+  }
+}
+
+export interface CommitFile {
+  path: string;
+  status: 'modified' | 'added' | 'deleted' | 'renamed';
+}
+
+export interface CommitDetails {
+  hash: string;
+  authorName: string;
+  authorEmail: string;
+  date: string;
+  message: string;
+  files: CommitFile[];
+}
+
+// Get detailed info of a commit
+export async function getCommitDetails(repoPath: string, commitHash: string): Promise<CommitDetails> {
+  const normalizedRepo = path.normalize(repoPath);
+  
+  // Format: name|email|date|full message
+  const infoOutput = await runGit(['show', '-s', '--format=%an|%ae|%ad|%B', commitHash], normalizedRepo);
+  const parts = infoOutput.split('|');
+  const authorName = parts[0] || '';
+  const authorEmail = parts[1] || '';
+  const date = parts[2] || '';
+  const message = parts.slice(3).join('|').trim();
+
+  const filesOutput = await runGit(['diff-tree', '--no-commit-id', '--name-status', '-r', commitHash], normalizedRepo);
+  const files: CommitFile[] = filesOutput.split('\n').filter(Boolean).map(line => {
+    const parts = line.split(/\s+/);
+    const statusCode = parts[0];
+    const filePath = parts[1];
+    
+    let status: CommitFile['status'] = 'modified';
+    if (statusCode.startsWith('A')) status = 'added';
+    else if (statusCode.startsWith('D')) status = 'deleted';
+    else if (statusCode.startsWith('R')) status = 'renamed';
+    
+    return { path: filePath, status };
+  });
+
+  return {
+    hash: commitHash,
+    authorName,
+    authorEmail,
+    date,
+    message,
+    files
+  };
+}
+
+// Get diff of a file in a commit
+export async function getGitCommitDiff(repoPath: string, commitHash: string, filePath: string): Promise<string> {
+  try {
+    const normalizedRepo = path.normalize(repoPath);
+    const normalizedFile = path.normalize(filePath);
+    // git show to get the diff format, with format= to remove headers
+    const output = await runGit(['show', '--format=', commitHash, '--', normalizedFile], normalizedRepo);
+    return output;
+  } catch (error: any) {
+    return `Error generating commit diff: ${error.message}`;
+  }
+}
+
+

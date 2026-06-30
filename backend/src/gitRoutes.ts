@@ -10,7 +10,14 @@ import {
   stagePath,
   unstagePath,
   discardChanges,
-  commitChanges
+  commitChanges,
+  checkoutBranch,
+  createBranch,
+  pullBranch,
+  pushBranch,
+  getGitHistory,
+  getCommitDetails,
+  getGitCommitDiff
 } from './gitManager';
 
 const router = express.Router();
@@ -203,6 +210,167 @@ router.post('/worktrees/remove', authMiddleware, async (req, res) => {
     res.json(result);
   } else {
     res.status(400).json(result);
+  }
+});
+
+router.post('/workspaces/:id/git/checkout', authMiddleware, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const { branchName, worktreePath } = req.body;
+    if (!branchName) {
+      return res.status(400).json({ error: 'branchName is required.' });
+    }
+    
+    const configs = getWorkspaces();
+    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
+    if (!matched) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+    
+    const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
+    const result = await checkoutBranch(targetPath, branchName);
+    if (result.success) {
+      if (onWorkspaceChangeCallback) onWorkspaceChangeCallback();
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/workspaces/:id/git/branch/create', authMiddleware, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const { branchName, worktreePath } = req.body;
+    if (!branchName) {
+      return res.status(400).json({ error: 'branchName is required.' });
+    }
+    
+    const configs = getWorkspaces();
+    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
+    if (!matched) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+    
+    const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
+    const result = await createBranch(targetPath, branchName, true);
+    if (result.success) {
+      if (onWorkspaceChangeCallback) onWorkspaceChangeCallback();
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/workspaces/:id/git/pull', authMiddleware, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const { worktreePath } = req.body;
+    const configs = getWorkspaces();
+    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
+    if (!matched) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+    
+    const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
+    const result = await pullBranch(targetPath);
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/workspaces/:id/git/push', authMiddleware, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const { worktreePath } = req.body;
+    const configs = getWorkspaces();
+    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
+    if (!matched) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+    
+    const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
+    const result = await pushBranch(targetPath);
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.get('/workspaces/:id/git/history', authMiddleware, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const { worktreePath, limit } = req.query;
+    const configs = getWorkspaces();
+    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
+    if (!matched) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+    
+    const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
+    const historyLimit = limit ? parseInt(limit as string, 10) : 50;
+    const history = await getGitHistory(targetPath, historyLimit);
+    res.json(history);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.get('/workspaces/:id/git/commit-details', authMiddleware, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const { worktreePath, commitHash } = req.query;
+    if (!commitHash || typeof commitHash !== 'string') {
+      return res.status(400).json({ error: 'commitHash query parameter is required.' });
+    }
+    
+    const configs = getWorkspaces();
+    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
+    if (!matched) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+    
+    const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
+    const details = await getCommitDetails(targetPath, commitHash);
+    res.json(details);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.get('/workspaces/:id/git/commit-diff', authMiddleware, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const { worktreePath, commitHash, filePath } = req.query;
+    if (!commitHash || typeof commitHash !== 'string' || !filePath || typeof filePath !== 'string') {
+      return res.status(400).json({ error: 'commitHash and filePath are required.' });
+    }
+    
+    const configs = getWorkspaces();
+    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
+    if (!matched) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+    
+    const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
+    const diff = await getGitCommitDiff(targetPath, commitHash, filePath);
+    res.json({ diff });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
   }
 });
 

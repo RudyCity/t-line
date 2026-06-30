@@ -2,6 +2,18 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.143] - 2026-06-30
+
+### Added
+- **Enriched VSCode-like Git Source Control Features**:
+  - Integrated a premium **Git Commit History** panel showing recent commits alongside a visual **Git Graph** lane tree. Lanes are dynamically colorized to map branch structures clearly.
+  - Implemented detail views for historical commits, displaying author metadata, date details, full commit body messages, and list of changed files.
+  - Allowed side-by-side/inline diff previewing for any modified file in a historical commit.
+  - Created a interactive **Branch Management & Sync** modal, allowing search/checkout of local branches, creation/checkout of new local branches, and remote pull/push sync actions.
+  - Made the Footer's branch indicator pill hoverable and clickable to quickly toggle the Branch Management dialog.
+
+---
+
 ## [1.3.142] - 2026-06-30
 
 ### Fixed
