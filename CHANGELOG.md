@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.142] - 2026-06-30
+
+### Fixed
+- **Dropdown Menu Visibility Fix**:
+  - Moved the absolute-positioned tabs dropdown container outside the `.chrome-tabs-container` which has `overflow: hidden;` styling.
+  - This prevents the dropdown switcher menu from being visually clipped/hidden behind the tab bar layout.
+
+---
+
 ## [1.3.141] - 2026-06-30
 
 ### Added
