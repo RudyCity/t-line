@@ -208,7 +208,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         <div
           className={`absolute left-0 rounded-lg border border-[var(--border-color)] overflow-hidden shadow-2xl z-50 flex flex-col max-h-60 ${variant === 'minimal' ? 'min-w-[110px]' : 'right-0'} ${align === 'top' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'}`}
           style={{
-            background: 'rgba(9, 12, 20, 0.95)',
+            background: 'color-mix(in srgb, var(--bg-sidebar) 95%, transparent)',
             backdropFilter: 'blur(var(--blur-amount))',
             boxShadow: 'var(--glass-shadow)',
           }}

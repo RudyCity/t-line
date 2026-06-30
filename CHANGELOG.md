@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.148] - 2026-06-30
+
+### Fixed
+- **CustomSelect Theme Color Support**:
+  - Replaced the hardcoded dark background `rgba(9, 12, 20, 0.95)` on the dropdown panel with a theme-aware `color-mix(in srgb, var(--bg-sidebar) 95%, transparent)` value.
+  - The dropdown now correctly adapts its background color to the active theme (Dark, Nord, Light, etc.).
+
+---
+
 ## [1.3.147] - 2026-06-30
 
 ### Fixed
