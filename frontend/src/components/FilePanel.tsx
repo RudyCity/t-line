@@ -300,29 +300,38 @@ export function FileExplorer({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [localTrigger, setLocalTrigger] = useState(0);
 
+  // Keep onRefresh in a ref so it never causes load() to be recreated.
+  const onRefreshRef = useRef(onRefresh);
+  useEffect(() => { onRefreshRef.current = onRefresh; }, [onRefresh]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const items = await fetchExplore(rootPath, token);
       setRoots(items.map(i => ({ ...i })));
       setLocalTrigger(prev => prev + 1);
-      if (onRefresh) onRefresh();
+      if (onRefreshRef.current) onRefreshRef.current();
     } catch {
       // ignore
     } finally {
       setLoading(false);
     }
-  }, [rootPath, token, onRefresh]);
+  }, [rootPath, token]); // onRefresh intentionally excluded — accessed via ref
 
+  // Load once on mount or when rootPath/token changes.
   useEffect(() => { load(); }, [load]);
 
+  // Reload when an external refresh trigger fires (e.g. after a git action).
+  const prevRefreshTrigger = useRef(refreshTrigger);
   useEffect(() => {
-    if (refreshTrigger > 0) {
+    if (refreshTrigger > 0 && refreshTrigger !== prevRefreshTrigger.current) {
+      prevRefreshTrigger.current = refreshTrigger;
       load();
     }
   }, [refreshTrigger, load]);
 
   const combinedTrigger = refreshTrigger + localTrigger;
+
 
   const handleFileClick = useCallback(async (path: string, name: string) => {
     if (onFileClick) {

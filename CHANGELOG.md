@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.126] - 2026-06-30
+
+### Fixed
+- **File Explorer Request Storm (`ERR_INSUFFICIENT_RESOURCES`)**: Fixed an infinite fetch loop in `FileExplorer` where the `onRefresh` callback prop (an unstable function reference from the parent) was included in the `useCallback` dependency array for `load`. Every parent re-render caused `load` to be recreated, which triggered its `useEffect`, which fired another fetch, which caused another re-render — resulting in hundreds of requests per second to `/api/fs/explore`. The fix moves `onRefresh` into a stable `useRef`, decoupling it from the dependency chain entirely.
+
+---
+
 ## [1.3.125] - 2026-06-30
 
 ### Fixed
