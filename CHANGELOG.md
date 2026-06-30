@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.168] - 2026-06-30
+
+### Fixed
+- **Git Changes: Missing First Character in Filename**:
+  - Replaced `stdout.trim()` with `stdout.trimEnd()` in the `runGit` process execution utility. Using `trim()` stripped leading whitespace on the first line of the output (which is used by `git status --porcelain` to indicate unstaged status codes, e.g. ` M package-lock.json`), causing columns to shift left and parsing functions to slice off the first character of filenames.
+
+---
+
 ## [1.3.167] - 2026-06-30
 
 ### Fixed

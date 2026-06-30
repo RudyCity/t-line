@@ -29,7 +29,7 @@ function runGit(args: string[], cwd: string): Promise<string> {
       if (error) {
         reject(new Error(stderr || error.message));
       } else {
-        resolve(stdout.trim());
+        resolve(stdout.trimEnd());
       }
     });
   });
