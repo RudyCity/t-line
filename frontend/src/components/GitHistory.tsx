@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GitCommit, User, Calendar, FileCode, FilePlus, FileMinus, X, Loader2, RefreshCw } from 'lucide-react';
+import { LinkVertical } from '@visx/shape';
 
 export interface CommitInfo {
   hash: string;
@@ -132,12 +133,15 @@ function GitGraphLine({ prefix }: { prefix: string }) {
           // Top: index, Bottom: index - 1
           const xcBottom = (index - 1) * laneWidth + laneWidth / 2;
           return (
-            <path 
+            <LinkVertical
               key={index}
-              d={`M ${xcBottom} ${rowHeight} C ${xcBottom} ${yc}, ${xc} ${yc}, ${xc} 0`}
-              fill="none"
+              data={{
+                source: { x: xcBottom, y: rowHeight },
+                target: { x: xc, y: 0 }
+              }}
               stroke={laneColor}
               strokeWidth={2}
+              fill="none"
             />
           );
         }
@@ -147,12 +151,15 @@ function GitGraphLine({ prefix }: { prefix: string }) {
           // Top: index, Bottom: index + 1
           const xcBottom = (index + 1) * laneWidth + laneWidth / 2;
           return (
-            <path 
+            <LinkVertical
               key={index}
-              d={`M ${xc} 0 C ${xc} ${yc}, ${xcBottom} ${yc}, ${xcBottom} ${rowHeight}`}
-              fill="none"
+              data={{
+                source: { x: xc, y: 0 },
+                target: { x: xcBottom, y: rowHeight }
+              }}
               stroke={laneColor}
               strokeWidth={2}
+              fill="none"
             />
           );
         }

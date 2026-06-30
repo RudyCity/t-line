@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.161] - 2026-06-30
+
+### Changed
+- **Git Commit History: Airbnb visx Integration**:
+  - Replaced raw SVG paths for git slash (`/`) and backslash (`\`) connector lines with the `LinkVertical` component from Airbnb's `@visx/shape` library.
+  - Retained exact pixel alignments and correct diagonal slope shift logic for seamless multi-row connection.
+
+---
+
 ## [1.3.160] - 2026-06-30
 
 ### Fixed
