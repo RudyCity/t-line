@@ -128,11 +128,13 @@ function GitGraphLine({ prefix }: { prefix: string }) {
         }
 
         if (char === '/') {
-          const xcTop = (index + 1) * laneWidth + laneWidth / 2;
+          // Slope up-right (branches/merges leftward going down)
+          // Top: index, Bottom: index - 1
+          const xcBottom = (index - 1) * laneWidth + laneWidth / 2;
           return (
             <path 
               key={index}
-              d={`M ${xc} ${rowHeight} C ${xc} ${yc}, ${xcTop} ${yc}, ${xcTop} 0`}
+              d={`M ${xcBottom} ${rowHeight} C ${xcBottom} ${yc}, ${xc} ${yc}, ${xc} 0`}
               fill="none"
               stroke={laneColor}
               strokeWidth={2}
@@ -141,6 +143,8 @@ function GitGraphLine({ prefix }: { prefix: string }) {
         }
 
         if (char === '\\') {
+          // Slope down-right (branches/merges rightward going down)
+          // Top: index, Bottom: index + 1
           const xcBottom = (index + 1) * laneWidth + laneWidth / 2;
           return (
             <path 
@@ -158,9 +162,9 @@ function GitGraphLine({ prefix }: { prefix: string }) {
             <line 
               key={index}
               x1={xl} 
-              y1={yc} 
+              y1={rowHeight - 1} 
               x2={xr} 
-              y2={yc} 
+              y2={rowHeight - 1} 
               stroke={laneColor} 
               strokeWidth={2} 
             />

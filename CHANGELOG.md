@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.160] - 2026-06-30
+
+### Fixed
+- **Git Commit History: Visual alignment for SVG branch lines**:
+  - Corrected the coordinate logic for slash (`/`) characters in `GitGraphLine`. Shifted the slope to go from bottom-left (`index - 1`) to top-right (`index`), allowing multiple diagonal merge paths to flow smoothly across row boundaries without gaps.
+  - Aligned horizontal underscore (`_`) connectors to the bottom boundary of the row cell (`rowHeight - 1`) so they connect seamlessly with the bottom points of slashes and backslashes.
+
+---
+
 ## [1.3.159] - 2026-06-30
 
 ### Changed
