@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* Xterm.js Styles */
-@import "xterm/css/xterm.css";
+@import "@xterm/xterm/css/xterm.css";
 
 /* Modular Stylesheets */
 @import "./base.css";
