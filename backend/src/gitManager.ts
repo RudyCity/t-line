@@ -405,7 +405,11 @@ export async function getGitStatus(repoPath: string): Promise<GitFileStatus[]> {
       }
       
       return { path: filePath, status, staged, unstaged };
-    }).filter((item): item is GitFileStatus => item !== null && !!item.path);
+    }).filter((item): item is GitFileStatus =>
+      item !== null &&
+      !!item.path &&
+      !item.path.endsWith('/')   // exclude bare directory entries (e.g. untracked folders)
+    );
   } catch (e) {
     return [];
   }

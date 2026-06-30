@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.150] - 2026-06-30
+
+### Fixed
+- **Filter Folders from Git Changes Panel**:
+  - Fixed `getGitStatus` in `gitManager.ts` to exclude directory entries (paths ending with `/`) from git status output.
+  - Folders (e.g. untracked `node_modules/`, `dist/`) will no longer incorrectly appear as changed items in the Git Changes sidebar.
+
+---
+
 ## [1.3.149] - 2026-06-30
 
 ### Added
