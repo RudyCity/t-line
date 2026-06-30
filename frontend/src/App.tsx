@@ -1198,7 +1198,10 @@ export default function App() {
         workspace={panelWorkspace}
         worktreePath={panelWorktreePath}
         token={localStorage.getItem('token') || ''}
-        onBranchChanged={() => fetchGitStatus(true)}
+        onBranchChanged={() => {
+          fetchGitStatus(true);
+          fetchWorkspaces();
+        }}
       />
 
       <Footer
