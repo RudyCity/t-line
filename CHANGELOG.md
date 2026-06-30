@@ -2,6 +2,19 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.122] - 2026-06-30
+
+### Added
+- **Git Actions in Source Control Tab**:
+  - Implemented stage, unstage, and discard changes for individual files directly from the Changes panel.
+  - Added "Stage All", "Unstage All", and "Discard All" buttons in the Changes panel header.
+  - Added a Commit section featuring a commit message text area with Ctrl+Enter keyboard shortcut support and a "Stage all & commit" option.
+  - Grouped changes into explicit "Staged Changes" and "Changes" (unstaged) sections to align with professional Git client standards.
+  - Added robust confirmation prompts before discarding changes to protect unstaged work from accidental deletions.
+  - Refactored git backend endpoints to a separate express router file (`gitRoutes.ts`) to maintain a clean modular architecture and keep `server.ts` well under the 1000-line limit.
+
+---
+
 ## [1.3.121] - 2026-06-29
 
 ### Added

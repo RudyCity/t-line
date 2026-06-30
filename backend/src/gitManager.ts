@@ -363,6 +363,8 @@ export async function getRepoBranches(repoPath: string): Promise<string[]> {
 export interface GitFileStatus {
   path: string;
   status: 'modified' | 'untracked' | 'added' | 'deleted' | 'renamed';
+  staged: boolean;
+  unstaged: boolean;
 }
 
 // Get git changes (modified, untracked, added, deleted, renamed)
@@ -373,22 +375,36 @@ export async function getGitStatus(repoPath: string): Promise<GitFileStatus[]> {
     if (!output.trim()) return [];
     
     return output.split('\n').map(line => {
-      if (line.length < 3) return null;
-      const statusChar = line.substring(0, 2);
-      const filePath = line.substring(3).trim();
+      if (line.length < 4) return null;
+      const X = line[0];
+      const Y = line[1];
+      let filePath = line.substring(3).trim();
+      
+      if (X === 'R' || Y === 'R') {
+        const parts = filePath.split(' -> ');
+        if (parts.length > 1) {
+          filePath = parts[1].trim();
+        }
+      }
+      
+      const stagedList = ['M', 'A', 'D', 'R', 'C'];
+      const unstagedList = ['M', 'D', 'T'];
+      
+      const staged = stagedList.includes(X);
+      const unstaged = unstagedList.includes(Y) || (X === '?' && Y === '?');
       
       let status: GitFileStatus['status'] = 'modified';
-      if (statusChar.includes('??')) {
+      if (X === '?' && Y === '?') {
         status = 'untracked';
-      } else if (statusChar.includes('A')) {
+      } else if (X === 'A' || Y === 'A') {
         status = 'added';
-      } else if (statusChar.includes('D')) {
+      } else if (X === 'D' || Y === 'D') {
         status = 'deleted';
-      } else if (statusChar.includes('R')) {
+      } else if (X === 'R' || Y === 'R') {
         status = 'renamed';
       }
       
-      return { path: filePath, status };
+      return { path: filePath, status, staged, unstaged };
     }).filter((item): item is GitFileStatus => item !== null && !!item.path);
   } catch (e) {
     return [];
@@ -406,3 +422,103 @@ export async function getGitDiff(repoPath: string, filePath: string): Promise<st
     return `Error generating diff: ${error.message}`;
   }
 }
+
+// Stage path (file or all)
+export async function stagePath(repoPath: string, filePath?: string, all = false): Promise<{ success: boolean; output: string }> {
+  try {
+    const normalizedRepo = path.normalize(repoPath);
+    let output = '';
+    if (all) {
+      output = await runGit(['add', '-A'], normalizedRepo);
+    } else if (filePath) {
+      const normalizedFile = path.normalize(filePath);
+      output = await runGit(['add', normalizedFile], normalizedRepo);
+    } else {
+      return { success: false, output: 'No file path provided.' };
+    }
+    return { success: true, output };
+  } catch (error: any) {
+    return { success: false, output: error.message };
+  }
+}
+
+// Unstage path (file or all)
+export async function unstagePath(repoPath: string, filePath?: string, all = false): Promise<{ success: boolean; output: string }> {
+  try {
+    const normalizedRepo = path.normalize(repoPath);
+    let output = '';
+    if (all) {
+      output = await runGit(['reset', 'HEAD'], normalizedRepo);
+    } else if (filePath) {
+      const normalizedFile = path.normalize(filePath);
+      output = await runGit(['reset', 'HEAD', '--', normalizedFile], normalizedRepo);
+    } else {
+      return { success: false, output: 'No file path provided.' };
+    }
+    return { success: true, output };
+  } catch (error: any) {
+    return { success: false, output: error.message };
+  }
+}
+
+// Discard changes (file or all)
+export async function discardChanges(repoPath: string, filePath?: string, all = false): Promise<{ success: boolean; output: string }> {
+  try {
+    const normalizedRepo = path.normalize(repoPath);
+    if (all) {
+      // Unstage everything
+      await runGit(['reset', 'HEAD'], normalizedRepo);
+      // Checkout all tracked files
+      await runGit(['checkout', '--', '.'], normalizedRepo);
+      // Clean all untracked files
+      await runGit(['clean', '-fd'], normalizedRepo);
+      return { success: true, output: 'Discarded all changes.' };
+    } else if (filePath) {
+      const normalizedFile = path.normalize(filePath);
+      const fullPath = path.resolve(normalizedRepo, normalizedFile);
+
+      // Unstage the file first (in case it is staged)
+      try {
+        await runGit(['reset', 'HEAD', '--', normalizedFile], normalizedRepo);
+      } catch (e) {
+        // Ignore reset errors
+      }
+
+      // Try to checkout/restore the file
+      try {
+        await runGit(['checkout', '--', normalizedFile], normalizedRepo);
+      } catch (error) {
+        // If checkout fails, delete the untracked file
+        if (fs.existsSync(fullPath)) {
+          const stats = fs.statSync(fullPath);
+          if (stats.isDirectory()) {
+            fs.rmSync(fullPath, { recursive: true, force: true });
+          } else {
+            fs.unlinkSync(fullPath);
+          }
+        }
+      }
+      return { success: true, output: `Discarded changes for ${filePath}` };
+    } else {
+      return { success: false, output: 'No file path provided.' };
+    }
+  } catch (error: any) {
+    return { success: false, output: error.message };
+  }
+}
+
+// Commit changes
+export async function commitChanges(repoPath: string, message: string, commitAll = false): Promise<{ success: boolean; output: string }> {
+  try {
+    const normalizedRepo = path.normalize(repoPath);
+    if (commitAll) {
+      // Stage all changes (both tracked modifications and untracked files)
+      await runGit(['add', '-A'], normalizedRepo);
+    }
+    const output = await runGit(['commit', '-m', message], normalizedRepo);
+    return { success: true, output };
+  } catch (error: any) {
+    return { success: false, output: error.message };
+  }
+}
+

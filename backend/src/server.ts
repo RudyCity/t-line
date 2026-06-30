@@ -21,15 +21,11 @@ import {
   removeWorkspace, 
   updateWorkspace,
   getWorkspaceInfo, 
-  addWorktree, 
-  removeWorktree,
-  getRepoBranches,
-  getGitStatus,
-  getGitDiff,
   clearWorkspaceCache
 } from './gitManager';
 import { terminalManager, getActiveProcessesForPid } from './terminalManager';
 import { tunnelManager } from './tunnelManager';
+import gitRouter from './gitRoutes';
 
 dotenv.config();
 
@@ -340,92 +336,7 @@ app.put('/api/workspaces', authMiddleware, (req, res) => {
   }
 });
 
-app.get('/api/workspaces/:id/branches', authMiddleware, async (req, res) => {
-  try {
-    const workspaceId = req.params.id;
-    const configs = getWorkspaces();
-    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
-    
-    if (!matched) {
-      return res.status(404).json({ error: 'Workspace not found.' });
-    }
-    
-    const branches = await getRepoBranches(matched.path);
-    res.json(branches);
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get('/api/workspaces/:id/git/status', authMiddleware, async (req, res) => {
-  try {
-    const workspaceId = req.params.id;
-    const { worktreePath } = req.query;
-    const configs = getWorkspaces();
-    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
-    
-    if (!matched) {
-      return res.status(404).json({ error: 'Workspace not found.' });
-    }
-    
-    const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
-    const statusList = await getGitStatus(targetPath);
-    res.json(statusList);
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get('/api/workspaces/:id/git/diff', authMiddleware, async (req, res) => {
-  try {
-    const workspaceId = req.params.id;
-    const { filePath, worktreePath } = req.query;
-    if (!filePath || typeof filePath !== 'string') {
-      return res.status(400).json({ error: 'filePath is required.' });
-    }
-    
-    const configs = getWorkspaces();
-    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
-    
-    if (!matched) {
-      return res.status(404).json({ error: 'Workspace not found.' });
-    }
-    
-    const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
-    const diffOutput = await getGitDiff(targetPath, filePath);
-    res.json({ diff: diffOutput });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.post('/api/worktrees/add', authMiddleware, async (req, res) => {
-  const { repoPath, worktreePath, branchName, newBranch, newBranchName } = req.body;
-  if (!repoPath || !worktreePath || !branchName) {
-    return res.status(400).json({ error: 'repoPath, worktreePath, and branchName are required.' });
-  }
-  
-  const result = await addWorktree(repoPath, worktreePath, branchName, !!newBranch, newBranchName);
-  if (result.success) {
-    res.json(result);
-  } else {
-    res.status(400).json(result);
-  }
-});
-
-app.post('/api/worktrees/remove', authMiddleware, async (req, res) => {
-  const { repoPath, worktreePath, force } = req.body;
-  if (!repoPath || !worktreePath) {
-    return res.status(400).json({ error: 'repoPath and worktreePath are required.' });
-  }
-  
-  const result = await removeWorktree(repoPath, worktreePath, !!force);
-  if (result.success) {
-    res.json(result);
-  } else {
-    res.status(400).json(result);
-  }
-});
+app.use('/api', gitRouter);
 
 // ----------------------------------------------------
 // Security & Access Control Endpoints (Protected)
