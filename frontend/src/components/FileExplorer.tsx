@@ -125,7 +125,9 @@ function TreeNodeItem({
   rootPath,
   changedFiles = [],
   refreshTrigger = 0,
-  onContextMenu
+  onContextMenu,
+  selectedPaths,
+  onItemClick
 }: {
   node: TreeNode;
   depth: number;
@@ -135,6 +137,8 @@ function TreeNodeItem({
   changedFiles?: GitFileStatus[];
   refreshTrigger?: number;
   onContextMenu: (e: React.MouseEvent, node: TreeNode) => void;
+  selectedPaths: string[];
+  onItemClick: (node: TreeNode, e: React.MouseEvent) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [children, setChildren] = useState<TreeNode[]>([]);
@@ -157,24 +161,29 @@ function TreeNodeItem({
     }
   }, [refreshTrigger, expanded, node.path, token]);
 
-  const toggle = useCallback(async () => {
-    if (!node.isDirectory) {
-      onFileClick(node.path, node.name);
-      return;
-    }
-    if (!expanded && children.length === 0) {
-      setLoading(true);
-      try {
-        const items = await fetchExplore(node.path, token);
-        setChildren(items.map(i => ({ ...i })));
-      } catch {
-        // ignore
-      } finally {
-        setLoading(false);
+  const handleItemClick = async (e: React.MouseEvent) => {
+    onItemClick(node, e);
+
+    const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+    if (!isCtrlOrCmd) {
+      if (!node.isDirectory) {
+        onFileClick(node.path, node.name);
+      } else {
+        if (!expanded && children.length === 0) {
+          setLoading(true);
+          try {
+            const items = await fetchExplore(node.path, token);
+            setChildren(items.map(i => ({ ...i })));
+          } catch {
+            // ignore
+          } finally {
+            setLoading(false);
+          }
+        }
+        setExpanded(prev => !prev);
       }
     }
-    setExpanded(prev => !prev);
-  }, [expanded, children.length, node, token, onFileClick]);
+  };
 
   const iconColor = !node.isDirectory ? getFileIcon(node.name).color : undefined;
   const indent = depth * 14;
@@ -198,12 +207,14 @@ function TreeNodeItem({
     onContextMenu(e, node);
   };
 
+  const isSelected = selectedPaths.includes(node.path);
+
   return (
     <div>
       <button
-        className="explorer-item"
+        className={`explorer-item${isSelected ? ' explorer-item-active' : ''}`}
         style={{ paddingLeft: `${8 + indent}px` }}
-        onClick={toggle}
+        onClick={handleItemClick}
         onContextMenu={handleContextMenu}
         title={node.path}
       >
@@ -282,6 +293,8 @@ function TreeNodeItem({
               changedFiles={changedFiles}
               refreshTrigger={refreshTrigger}
               onContextMenu={onContextMenu}
+              selectedPaths={selectedPaths}
+              onItemClick={onItemClick}
             />
           ))}
         </div>
@@ -295,12 +308,13 @@ interface ExplorerContextMenuProps {
   x: number;
   y: number;
   node: TreeNode;
+  selectedCount: number;
   onClose: () => void;
-  onDelete: (node: TreeNode) => void;
-  onOpenExplorer: (node: TreeNode) => void;
+  onDelete: () => void;
+  onOpenExplorer: () => void;
 }
 
-function ExplorerContextMenu({ x, y, node, onClose, onDelete, onOpenExplorer }: ExplorerContextMenuProps) {
+function ExplorerContextMenu({ x, y, node, selectedCount, onClose, onDelete, onOpenExplorer }: ExplorerContextMenuProps) {
   useEffect(() => {
     const close = (e: MouseEvent) => {
       if ((e.target as HTMLElement).closest('.terminal-ctx-menu') === null) {
@@ -318,7 +332,7 @@ function ExplorerContextMenu({ x, y, node, onClose, onDelete, onOpenExplorer }: 
     >
       <button
         onClick={() => {
-          onOpenExplorer(node);
+          onOpenExplorer();
           onClose();
         }}
         className="terminal-ctx-item"
@@ -327,13 +341,17 @@ function ExplorerContextMenu({ x, y, node, onClose, onDelete, onOpenExplorer }: 
           <FolderOpen size={13} />
         </span>
         <span className="terminal-ctx-label">
-          {node.isDirectory ? 'Open in Explorer' : 'Reveal in Explorer'}
+          {selectedCount > 1
+            ? `Open ${selectedCount} Items`
+            : node.isDirectory
+            ? 'Open in Explorer'
+            : 'Reveal in Explorer'}
         </span>
       </button>
       <div className="terminal-ctx-separator" />
       <button
         onClick={() => {
-          onDelete(node);
+          onDelete();
           onClose();
         }}
         className="terminal-ctx-item danger"
@@ -341,7 +359,9 @@ function ExplorerContextMenu({ x, y, node, onClose, onDelete, onOpenExplorer }: 
         <span className="terminal-ctx-icon">
           <Trash2 size={13} />
         </span>
-        <span className="terminal-ctx-label">Delete</span>
+        <span className="terminal-ctx-label">
+          {selectedCount > 1 ? `Delete (${selectedCount} items)` : 'Delete'}
+        </span>
       </button>
     </div>
   );
@@ -361,9 +381,36 @@ export function FileExplorer({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [localTrigger, setLocalTrigger] = useState(0);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: TreeNode } | null>(null);
+  
+  const [selectedNodes, setSelectedNodes] = useState<TreeNode[]>([]);
+  const selectedPaths = selectedNodes.map(n => n.path);
+
+  const handleItemClick = useCallback((node: TreeNode, e: React.MouseEvent) => {
+    const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+    if (isCtrlOrCmd) {
+      setSelectedNodes(prev => {
+        const exists = prev.some(n => n.path === node.path);
+        if (exists) {
+          return prev.filter(n => n.path !== node.path);
+        } else {
+          return [...prev, node];
+        }
+      });
+    } else {
+      setSelectedNodes([node]);
+    }
+  }, []);
 
   const handleContextMenu = useCallback((e: React.MouseEvent, node: TreeNode) => {
     e.preventDefault();
+    setSelectedNodes(prev => {
+      const exists = prev.some(n => n.path === node.path);
+      if (exists) {
+        return prev;
+      } else {
+        return [node];
+      }
+    });
     setContextMenu({ x: e.clientX, y: e.clientY, node });
   }, []);
 
@@ -385,50 +432,73 @@ export function FileExplorer({
     }
   }, [rootPath, token]);
 
-  const [deleteConfirmNode, setDeleteConfirmNode] = useState<TreeNode | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleDeleteConfirm = useCallback(async () => {
-    if (!deleteConfirmNode) return;
-    const node = deleteConfirmNode;
-    setDeleteConfirmNode(null);
+    if (selectedNodes.length === 0) return;
+    setShowDeleteConfirm(false);
 
     try {
-      const res = await fetch(`/api/fs/delete?path=${encodeURIComponent(node.path)}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
+      let successCount = 0;
+      let failCount = 0;
+
+      await Promise.all(
+        selectedNodes.map(async (node) => {
+          try {
+            const res = await fetch(`/api/fs/delete?path=${encodeURIComponent(node.path)}`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+              successCount++;
+            } else {
+              failCount++;
+            }
+          } catch {
+            failCount++;
+          }
+        })
+      );
+
+      if (successCount > 0) {
         window.dispatchEvent(new CustomEvent('tline-toast', {
-          detail: { message: `Deleted ${node.name}` }
+          detail: { message: `Deleted ${successCount} item(s)` }
         }));
         load();
-      } else {
-        const err = await res.json();
-        alert(`Failed to delete: ${err.error || 'Unknown error'}`);
       }
-    } catch (e: any) {
-      alert(`Error deleting: ${e.message}`);
-    }
-  }, [deleteConfirmNode, token, load]);
 
-  const handleOpenExplorer = useCallback(async (node: TreeNode) => {
-    try {
-      const res = await fetch('/api/fs/open-explorer', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ path: node.path })
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        alert(`Failed to open in explorer: ${err.error || 'Unknown error'}`);
+      if (failCount > 0) {
+        alert(`Failed to delete ${failCount} item(s).`);
       }
+      setSelectedNodes([]);
     } catch (e: any) {
-      alert(`Error opening in explorer: ${e.message}`);
+      alert(`Error deleting items: ${e.message}`);
     }
-  }, [token]);
+  }, [selectedNodes, token, load]);
+
+  const handleOpenExplorer = useCallback(async () => {
+    if (selectedNodes.length === 0) return;
+    try {
+      await Promise.all(
+        selectedNodes.map(async (node) => {
+          const res = await fetch('/api/fs/open-explorer', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ path: node.path })
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            console.error(`Failed to open ${node.name} in explorer:`, err.error);
+          }
+        })
+      );
+    } catch (e: any) {
+      console.error('Error opening items in explorer:', e);
+    }
+  }, [selectedNodes, token]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -475,7 +545,14 @@ export function FileExplorer({
               <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             </button>
           </div>
-          <div className="explorer-scroll">
+          <div 
+            className="explorer-scroll"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setSelectedNodes([]);
+              }
+            }}
+          >
             {loading && roots.length === 0 ? (
               <div className="panel-loading">
                 <Loader2 size={16} className="animate-spin" />
@@ -493,6 +570,8 @@ export function FileExplorer({
                   changedFiles={changedFiles}
                   refreshTrigger={combinedTrigger}
                   onContextMenu={handleContextMenu}
+                  selectedPaths={selectedPaths}
+                  onItemClick={handleItemClick}
                 />
               ))
             )}
@@ -530,22 +609,29 @@ export function FileExplorer({
           x={contextMenu.x}
           y={contextMenu.y}
           node={contextMenu.node}
+          selectedCount={selectedNodes.length}
           onClose={() => setContextMenu(null)}
-          onDelete={setDeleteConfirmNode}
+          onDelete={() => setShowDeleteConfirm(true)}
           onOpenExplorer={handleOpenExplorer}
         />
       )}
 
-      {deleteConfirmNode && (
+      {showDeleteConfirm && (
         <ConfirmModal
-          show={!!deleteConfirmNode}
-          title="Delete Item"
-          message={`Are you sure you want to delete ${deleteConfirmNode.name}? This action cannot be undone.`}
+          show={showDeleteConfirm}
+          title={selectedNodes.length > 1 ? 'Delete Multiple Items' : 'Delete Item'}
+          message={
+            selectedNodes.length > 1
+              ? `Are you sure you want to delete these ${selectedNodes.length} items? This action cannot be undone.`
+              : selectedNodes.length === 1
+              ? `Are you sure you want to delete ${selectedNodes[0].name}? This action cannot be undone.`
+              : ''
+          }
           confirmLabel="Delete"
           cancelLabel="Cancel"
           variant="danger"
           onConfirm={handleDeleteConfirm}
-          onCancel={() => setDeleteConfirmNode(null)}
+          onCancel={() => setShowDeleteConfirm(false)}
         />
       )}
     </div>

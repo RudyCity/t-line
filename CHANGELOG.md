@@ -2,6 +2,18 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.132] - 2026-06-30
+
+### Added
+- **Multi-select Files/Directories in Explorer**:
+  - Added support for multi-selecting items in the Workspace Explorer by holding Ctrl/Cmd key while clicking.
+  - Implemented visual highlighting (`explorer-item-active` class styling) for all selected items.
+  - Updated context menu actions to support batch operations: opening multiple items in the native system file explorer, and deleting multiple items concurrently.
+  - Extended the `ConfirmModal` warning message and title dynamically to reflect the count and names of selected items.
+  - Added background click-to-deselect functionality to clear active selections.
+
+---
+
 ## [1.3.131] - 2026-06-30
 
 ### Fixed
