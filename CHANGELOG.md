@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.172] - 2026-06-30
+
+### Added
+- **Visual Distinctions for Hidden/Dot Files**:
+  - Implemented the `.explorer-item-muted` CSS style class in `components.css` to render files/directories starting with `.` (e.g. `.gitignore`, `.env`, `.github`, `.agents`) slightly faded/translucent (opacity: 0.55). This matches premium IDE aesthetics and helps distinguish hidden configurations from primary source files.
+
+---
+
 ## [1.3.171] - 2026-06-30
 
 ### Fixed

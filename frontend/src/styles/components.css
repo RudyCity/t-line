@@ -1044,6 +1044,18 @@
   color: var(--color-primary);
 }
 
+.explorer-item-muted {
+  opacity: 0.55;
+}
+
+.explorer-item-muted:hover {
+  opacity: 0.85;
+}
+
+.explorer-item-muted.explorer-item-active {
+  opacity: 0.85;
+}
+
 .explorer-item-arrow {
   width: 14px;
   height: 14px;

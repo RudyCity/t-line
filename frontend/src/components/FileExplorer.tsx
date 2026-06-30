@@ -209,11 +209,12 @@ function TreeNodeItem({
   };
 
   const isSelected = selectedPaths.includes(node.path);
+  const isDotFile = node.name.startsWith('.');
 
   return (
     <div>
       <button
-        className={`explorer-item${isSelected ? ' explorer-item-active' : ''}`}
+        className={`explorer-item${isSelected ? ' explorer-item-active' : ''}${isDotFile ? ' explorer-item-muted' : ''}`}
         style={{ paddingLeft: `${8 + indent}px` }}
         onClick={handleItemClick}
         onContextMenu={handleContextMenu}
