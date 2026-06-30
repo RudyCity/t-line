@@ -91,6 +91,9 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
   const dragStart = useRef({ x: 0, y: 0 });
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
+  // SVG preview blob URL (avoids auth/CSP/caching issues with <img> tag)
+  const [svgPreviewUrl, setSvgPreviewUrl] = useState<string | null>(null);
+
   const handleZoomIn = () => setZoom(z => Math.min(z + 0.25, 4));
   const handleZoomOut = () => setZoom(z => Math.max(z - 0.25, 0.25));
   const handleResetZoom = () => {
@@ -152,8 +155,22 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
     };
   }, [fileType]);
 
-  const shouldLoadAsText = fileType === 'text' || (isSvg && viewMode === 'code');
+  // SVG always loads as text so we have content for both preview (blob URL) and code (Monaco)
+  const shouldLoadAsText = fileType === 'text' || isSvg;
+  // renderType controls which UI to show — SVG code mode shows Monaco, otherwise image/pdf/binary
   const renderType = (isSvg && viewMode === 'code') ? 'text' : fileType;
+
+  // Build a fresh blob URL from editedContent whenever SVG content changes in preview mode.
+  // This ensures preview is always in sync with edits (auto-saved content) without auth/cache issues.
+  useEffect(() => {
+    if (!isSvg || !editedContent) return;
+    const blob = new Blob([editedContent], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    setSvgPreviewUrl(url);
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [isSvg, editedContent]);
 
   useEffect(() => {
     if (!shouldLoadAsText) {
@@ -387,7 +404,13 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
             }}
           >
             <img
-              src={`/api/fs/raw?path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(token)}`}
+              src={
+                isSvg
+                  // Use blob URL for SVG so it works without auth token on the <img> src
+                  // and always reflects the latest saved content (cache-bust friendly)
+                  ? (svgPreviewUrl || '')
+                  : `/api/fs/raw?path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(token)}`
+              }
               alt={filePath.split(/[/\\]/).pop()}
               style={{
                 transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,

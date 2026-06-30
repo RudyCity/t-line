@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.176] - 2026-06-30
+
+### Fixed
+- **SVG Preview & Code Edit in Tab**:
+  - SVG files now always load their XML content as text on open, eliminating the need for a re-fetch when switching between Preview and Code modes. Mode switching is now instant with no loading skeleton flash.
+  - SVG preview is now rendered via a dynamically generated **blob URL** created from the in-memory content (`editedContent`), instead of the `/api/fs/raw` HTTP endpoint. This resolves rendering failures caused by auth token propagation on `<img>` tags, Electron CSP restrictions, and browser caching that would prevent the preview from reflecting post-save edits.
+  - The blob URL is automatically revoked and regenerated whenever the SVG content changes (including after every auto-save), ensuring the Preview tab always reflects the latest editor state in real-time.
+
+---
+
 ## [1.3.175] - 2026-06-30
 
 ### Fixed
