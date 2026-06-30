@@ -91,8 +91,6 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
   const dragStart = useRef({ x: 0, y: 0 });
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
-  // SVG preview blob URL (avoids auth/CSP/caching issues with <img> tag)
-  const [svgPreviewUrl, setSvgPreviewUrl] = useState<string | null>(null);
 
   const handleZoomIn = () => setZoom(z => Math.min(z + 0.25, 4));
   const handleZoomOut = () => setZoom(z => Math.max(z - 0.25, 0.25));
@@ -155,22 +153,11 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
     };
   }, [fileType]);
 
-  // SVG always loads as text so we have content for both preview (blob URL) and code (Monaco)
+  // SVG always loads as text — content is needed for inline DOM rendering in Preview mode
+  // and for Monaco editor in Code mode. Avoids re-fetch when switching between modes.
   const shouldLoadAsText = fileType === 'text' || isSvg;
   // renderType controls which UI to show — SVG code mode shows Monaco, otherwise image/pdf/binary
   const renderType = (isSvg && viewMode === 'code') ? 'text' : fileType;
-
-  // Build a fresh blob URL from editedContent whenever SVG content changes in preview mode.
-  // This ensures preview is always in sync with edits (auto-saved content) without auth/cache issues.
-  useEffect(() => {
-    if (!isSvg || !editedContent) return;
-    const blob = new Blob([editedContent], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    setSvgPreviewUrl(url);
-    return () => {
-      URL.revokeObjectURL(url);
-    };
-  }, [isSvg, editedContent]);
 
   useEffect(() => {
     if (!shouldLoadAsText) {
@@ -403,33 +390,51 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
               justifyContent: 'center'
             }}
           >
-            <img
-              src={
-                isSvg
-                  // Use blob URL for SVG so it works without auth token on the <img> src
-                  // and always reflects the latest saved content (cache-bust friendly)
-                  ? (svgPreviewUrl || '')
-                  : `/api/fs/raw?path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(token)}`
-              }
-              alt={filePath.split(/[/\\]/).pop()}
-              style={{
-                transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
-                transformOrigin: 'center center',
-                transition: isDragging ? 'none' : 'transform 0.15s ease-out',
-                maxWidth: '90%',
-                maxHeight: '90%',
-                width: isSvg ? '100%' : 'auto',
-                height: isSvg ? '100%' : 'auto',
-                objectFit: 'contain',
-                cursor: isDragging ? 'grabbing' : 'grab'
-              }}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                setIsDragging(true);
-                dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
-              }}
-              draggable={false}
-            />
+            {isSvg ? (
+              // Render SVG inline — most reliable in Electron (no URL scheme / CSP issues).
+              // Also live-synced: re-renders immediately after every auto-save.
+              <div
+                style={{
+                  transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
+                  transformOrigin: 'center center',
+                  transition: isDragging ? 'none' : 'transform 0.15s ease-out',
+                  width: '90%',
+                  height: '90%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: isDragging ? 'grabbing' : 'grab',
+                  overflow: 'hidden',
+                }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                  dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
+                }}
+                // Inject SVG XML directly into DOM — avoids blob:/data: URL handling by browser
+                dangerouslySetInnerHTML={{ __html: editedContent || '' }}
+              />
+            ) : (
+              <img
+                src={`/api/fs/raw?path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(token)}`}
+                alt={filePath.split(/[/\\]/).pop()}
+                style={{
+                  transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
+                  transformOrigin: 'center center',
+                  transition: isDragging ? 'none' : 'transform 0.15s ease-out',
+                  maxWidth: '90%',
+                  maxHeight: '90%',
+                  objectFit: 'contain',
+                  cursor: isDragging ? 'grabbing' : 'grab'
+                }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                  dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
+                }}
+                draggable={false}
+              />
+            )}
           </div>
         </div>
       </div>
