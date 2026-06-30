@@ -5,7 +5,7 @@ All notable changes to the **t-line** workspace manager project will be document
 ## [1.3.125] - 2026-06-30
 
 ### Fixed
-- **Insecure Content Security Policy Warning**: Added Content-Security-Policy (CSP) meta tags to both the main application (`index.html`) and the local fallback page (`connection-error.html`) to restrict scripts, styles, fonts, and WebSocket connections to trusted origins.
+- **Insecure Content Security Policy Warning**: Added Content-Security-Policy (CSP) meta tags to both the main application (`index.html`) and the local fallback page (`connection-error.html`) to restrict scripts, styles, fonts, and WebSocket connections to trusted origins, with adjustments to allow Monaco Editor workers from jsDelivr and cdnjs CDNs.
 - **Canvas Renderer Initialization TypeError**: Migrated all xterm.js dependencies from legacy unscoped packages (`xterm`, `xterm-addon-*`) to modern scoped package versions under the `@xterm/` namespace. This prevents duplicate xterm bundle instances and aligns types at runtime, allowing the canvas addon to initialize and render correctly.
 
 ---
