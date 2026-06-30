@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.133] - 2026-06-30
+
+### Added
+- **Shift+Click Range Selection in Explorer**:
+  - Implemented Shift+Click range selection support to select a sequence of visible files/directories in the Workspace Explorer.
+  - Calculated visual range selection by query-selecting active elements in the tree-view viewport dynamically using a scroll container ref and DOM attributes.
+  - Reset range anchor upon background deselect.
+
+---
+
 ## [1.3.132] - 2026-06-30
 
 ### Added

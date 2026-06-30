@@ -217,6 +217,9 @@ function TreeNodeItem({
         onClick={handleItemClick}
         onContextMenu={handleContextMenu}
         title={node.path}
+        data-path={node.path}
+        data-name={node.name}
+        data-isdir={node.isDirectory}
       >
         <span className="explorer-item-arrow">
           {node.isDirectory
@@ -382,22 +385,52 @@ export function FileExplorer({
   const [localTrigger, setLocalTrigger] = useState(0);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: TreeNode } | null>(null);
   
-  const [selectedNodes, setSelectedNodes] = useState<TreeNode[]>([]);
+  const [selectedNodes, setSelectedNodes] = useState<{ path: string; name: string; isDirectory: boolean }[]>([]);
   const selectedPaths = selectedNodes.map(n => n.path);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const lastClickedPathRef = useRef<string | null>(null);
 
   const handleItemClick = useCallback((node: TreeNode, e: React.MouseEvent) => {
     const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+    const isShift = e.shiftKey;
+
+    if (isShift && lastClickedPathRef.current && scrollRef.current) {
+      const buttons = Array.from(scrollRef.current.querySelectorAll('.explorer-item'));
+      const paths = buttons.map(btn => btn.getAttribute('data-path') || '');
+      
+      const idx1 = paths.indexOf(lastClickedPathRef.current);
+      const idx2 = paths.indexOf(node.path);
+      
+      if (idx1 !== -1 && idx2 !== -1) {
+        const start = Math.min(idx1, idx2);
+        const end = Math.max(idx1, idx2);
+        const rangeButtons = buttons.slice(start, end + 1);
+        
+        const newSelection = rangeButtons.map(btn => ({
+          path: btn.getAttribute('data-path') || '',
+          name: btn.getAttribute('data-name') || '',
+          isDirectory: btn.getAttribute('data-isdir') === 'true'
+        }));
+        
+        setSelectedNodes(newSelection);
+        return;
+      }
+    }
+
+    lastClickedPathRef.current = node.path;
+
     if (isCtrlOrCmd) {
       setSelectedNodes(prev => {
         const exists = prev.some(n => n.path === node.path);
         if (exists) {
           return prev.filter(n => n.path !== node.path);
         } else {
-          return [...prev, node];
+          return [...prev, { path: node.path, name: node.name, isDirectory: node.isDirectory }];
         }
       });
     } else {
-      setSelectedNodes([node]);
+      setSelectedNodes([{ path: node.path, name: node.name, isDirectory: node.isDirectory }]);
     }
   }, []);
 
@@ -408,7 +441,8 @@ export function FileExplorer({
       if (exists) {
         return prev;
       } else {
-        return [node];
+        lastClickedPathRef.current = node.path;
+        return [{ path: node.path, name: node.name, isDirectory: node.isDirectory }];
       }
     });
     setContextMenu({ x: e.clientX, y: e.clientY, node });
@@ -546,10 +580,12 @@ export function FileExplorer({
             </button>
           </div>
           <div 
+            ref={scrollRef}
             className="explorer-scroll"
             onClick={(e) => {
               if (e.target === e.currentTarget) {
                 setSelectedNodes([]);
+                lastClickedPathRef.current = null;
               }
             }}
           >
