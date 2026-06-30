@@ -94,13 +94,17 @@ export function GitChanges({
   const [selectedFile, setSelectedFile] = useState<GitFileStatus | null>(null);
   const [diff, setDiff] = useState<string>('');
   const [diffLoading, setDiffLoading] = useState(false);
-  
+  // When onFileOpen is provided, track the active file path for list highlight only
+  const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
+
   const [commitMessage, setCommitMessage] = useState('');
   const [stageAllBeforeCommit, setStageAllBeforeCommit] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   const handleFileSelect = useCallback(async (file: GitFileStatus) => {
-    // If an external file-open handler exists, delegate to it and skip the inline diff panel
+    // If an external file-open handler exists, open as tab and highlight the list item.
+    // Do NOT set selectedFile so the inline diff panel stays hidden and the file list
+    // keeps its full width.
     if (onFileOpen && file.status !== 'deleted') {
       const basePath = (worktreePath || workspacePath || '').replace(/\\/g, '/');
       const relPath = file.path.replace(/\\/g, '/');
@@ -108,12 +112,12 @@ export function GitChanges({
       const fullPath = basePath ? `${basePath}${sep}${relPath}` : relPath;
       const fileName = relPath.split('/').pop() ?? relPath;
       onFileOpen(fullPath, fileName);
-      // Also highlight the file in the list without showing the bottom diff panel
-      setSelectedFile(file);
+      setActiveFilePath(file.path);
       return;
     }
 
     setSelectedFile(file);
+    setActiveFilePath(null);
     setDiff('');
 
     if (file.status === 'untracked' || file.status === 'added') {
@@ -569,7 +573,9 @@ export function GitChanges({
                       </div>
                       {stagedFiles.map(file => {
                         const { label, color } = STATUS_LABEL[file.status];
-                        const isActive = selectedFile?.path === file.path;
+                        const isActive = onFileOpen
+                          ? activeFilePath === file.path
+                          : selectedFile?.path === file.path;
                         const fileName = file.path.split(/[/\\]/).pop() ?? file.path;
                         const dirName = file.path.split(/[/\\]/).slice(0, -1).join('/');
                         return (
@@ -639,7 +645,9 @@ export function GitChanges({
                       </div>
                       {unstagedFiles.map(file => {
                         const { label, color } = STATUS_LABEL[file.status];
-                        const isActive = selectedFile?.path === file.path;
+                        const isActive = onFileOpen
+                          ? activeFilePath === file.path
+                          : selectedFile?.path === file.path;
                         const fileName = file.path.split(/[/\\]/).pop() ?? file.path;
                         const dirName = file.path.split(/[/\\]/).slice(0, -1).join('/');
                         return (
@@ -696,8 +704,8 @@ export function GitChanges({
             </div>
           </div>
 
-          {/* Diff viewer */}
-          {selectedFile && (
+          {/* Diff viewer — only shown when not in tab-open mode */}
+          {!onFileOpen && selectedFile && (
             <div className="file-preview">
               <div className="panel-section-header">
                 <div className="flex items-center gap-2 truncate">
