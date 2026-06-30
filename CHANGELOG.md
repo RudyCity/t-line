@@ -2,6 +2,18 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.163] - 2026-06-30
+
+### Added
+- **Git Commit History: Interactive visx Style Selector**:
+  - Added a segmented control button group in the panel header allowing users to dynamically switch between **Curve** (cubic bezier), **Step** (orthogonal dendrogram-style), and **Line** (straight diagonals) rendering modes.
+- **Git Commit History: Premium Visual Layout Redesign**:
+  - Replaced the simple flat border list layout with a modern card-based timeline feed utilizing transparent glassmorphic backgrounds, rounded corners (`8px`), and custom border shadows.
+  - Implemented dynamic hover micro-animations (cards lift upwards on hover with glowing border indicators).
+  - Applied neon SVG drop-shadow filter glow on the visx connector tracks to create a glowing aesthetic in the graph columns.
+
+---
+
 ## [1.3.162] - 2026-06-30
 
 ### Changed
