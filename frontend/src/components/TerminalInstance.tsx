@@ -579,6 +579,39 @@ export function TerminalInstance({
     terminalRef.current = term;
     fitAddonRef.current = fitAddon;
 
+    term.attachCustomKeyEventHandler((e) => {
+      if (e.type === 'keydown') {
+        const key = e.key.toLowerCase();
+        // Ctrl+C (Copy) when there is selected text
+        if (e.ctrlKey && key === 'c') {
+          if (term.hasSelection()) {
+            const selected = term.getSelection();
+            if (selected) {
+              navigator.clipboard.writeText(selected);
+            }
+            return false;
+          }
+        }
+        // Ctrl+V (Paste)
+        if (e.ctrlKey && key === 'v') {
+          navigator.clipboard.readText().then((text) => {
+            if (text) {
+              const lines = text.split('\n');
+              if (lines.length >= 3) {
+                setSmartPasteText(text);
+              } else {
+                wsManager.send(JSON.stringify({ type: 'data', id: tab.id, data: text }));
+              }
+            }
+          }).catch((err) => {
+            console.error('Failed to paste from custom key event handler:', err);
+          });
+          return false;
+        }
+      }
+      return true;
+    });
+
     // ── Cursor position tracking ───────────────────────────
     term.onCursorMove(() => {
       const buf = term.buffer.active;

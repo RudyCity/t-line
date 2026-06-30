@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.129] - 2026-06-30
+
+### Fixed
+- **Terminal Copy/Paste on Text Selection**: Fixed an issue where Ctrl+C did not copy text when selection (blocking text) was active in the terminal.
+  - Added an xterm custom key event handler to intercept Ctrl+C when there is an active selection and write the selected text to the clipboard.
+  - Intercepted Ctrl+V to paste text from the clipboard via the WebSocket pty connection, supporting multi-line smart paste warnings.
+
+---
+
 ## [1.3.128] - 2026-06-30
 
 ### Fixed
