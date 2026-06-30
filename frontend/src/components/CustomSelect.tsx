@@ -39,6 +39,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const isKeyboardNavRef = useRef(false);
 
   // Close when clicking outside
   useEffect(() => {
@@ -78,6 +79,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       // Default active index to the currently selected option or first non-disabled option
       const selectedIndex = filteredOptions.findIndex((opt) => opt.value === value);
       if (selectedIndex !== -1) {
+        isKeyboardNavRef.current = true;
         setActiveIndex(selectedIndex);
       } else {
         const firstEnabled = filteredOptions.findIndex((opt) => !opt.disabled);
@@ -91,7 +93,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 
   // Scroll active option into view
   useEffect(() => {
-    if (activeIndex !== -1 && listRef.current) {
+    if (isKeyboardNavRef.current && activeIndex !== -1 && listRef.current) {
       const activeEl = listRef.current.children[activeIndex] as HTMLElement;
       if (activeEl) {
         // Adjust for search input container if searchable
@@ -147,6 +149,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         break;
       case 'ArrowDown':
         e.preventDefault();
+        isKeyboardNavRef.current = true;
         // Find next non-disabled option
         let nextIndex = activeIndex;
         do {
@@ -158,6 +161,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         break;
       case 'ArrowUp':
         e.preventDefault();
+        isKeyboardNavRef.current = true;
         // Find previous non-disabled option
         let prevIndex = activeIndex;
         do {
@@ -245,7 +249,12 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                     type="button"
                     disabled={opt.disabled}
                     onClick={() => handleSelectOption(opt)}
-                    onMouseEnter={() => !opt.disabled && setActiveIndex(index)}
+                    onMouseEnter={() => {
+                      if (!opt.disabled) {
+                        isKeyboardNavRef.current = false;
+                        setActiveIndex(index);
+                      }
+                    }}
                     className={`w-full flex items-center justify-between px-3 py-2 text-xs transition-colors duration-150 text-left outline-none
                       ${opt.disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
                       ${isActive ? 'bg-[var(--color-primary)]/15 text-[var(--text-main)]' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}

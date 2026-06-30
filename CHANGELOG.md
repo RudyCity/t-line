@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.147] - 2026-06-30
+
+### Fixed
+- **Optimized CustomSelect Hover Performance**:
+  - Prevented massive layout thrashing and hover lag by conditionalizing the DOM `scrollIntoView` call so that it only runs during keyboard navigation (i.e. arrow key presses or initially opening the selected option), and not during mouse hover movements.
+
+---
+
 ## [1.3.146] - 2026-06-30
 
 ### Fixed
