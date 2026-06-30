@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.158] - 2026-06-30
+
+### Fixed
+- **Git Commit History: Light Theme UI fixes**:
+  - Replaced hardcoded dark background and border in the Git Graph column with transparent backgrounds and border variables, aligning it cleanly with the list layout.
+  - Enabled the vertical connecting branch line to dynamically use `--tree-connector-color` instead of a hardcoded white alpha color, making branches clearly visible in Light Mode.
+  - Added high-contrast branch references (badges like `main`, `remote`, `tag`) for the light theme, using darker texts and soft-colored backgrounds to improve readability.
+  - Removed node glows and avatar shadows when the light theme is active.
+
+---
+
 ## [1.3.157] - 2026-06-30
 
 ### Fixed

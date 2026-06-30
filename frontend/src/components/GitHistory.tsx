@@ -86,14 +86,14 @@ function GitGraphLine({ prefix }: { prefix: string }) {
           return (
             <div key={index} style={cellStyle}>
               {/* Vertical connection line behind the node */}
-              <div style={{ position: 'absolute', top: 0, bottom: 0, left: '5px', width: '2px', backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
+              <div style={{ position: 'absolute', top: 0, bottom: 0, left: '5px', width: '2px', backgroundColor: 'var(--tree-connector-color, rgba(255, 255, 255, 0.08))' }} />
               <div 
                 style={{ 
                   width: '8px', 
                   height: '8px', 
                   borderRadius: '50%', 
                   backgroundColor: 'var(--color-primary, #a855f7)', 
-                  boxShadow: '0 0 6px var(--color-primary, #a855f7)',
+                  boxShadow: 'var(--tooltip-shadow, 0 0 6px var(--color-primary, #a855f7))',
                   zIndex: 2 
                 }} 
               />
@@ -300,13 +300,13 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
         .git-history-item {
           display: flex;
           align-items: stretch;
-          border-bottom: 1px solid rgba(255,255,255,0.02);
+          border-bottom: 1px solid var(--border-color);
           cursor: pointer;
           min-height: 50px;
           transition: background-color 0.15s;
         }
         .git-history-item:hover {
-          background: rgba(255,255,255,0.02);
+          background: var(--surface-overlay);
         }
         .git-history-item-active {
           background: rgba(168, 85, 247, 0.08) !important;
@@ -316,8 +316,8 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
           display: flex;
           align-items: stretch;
           padding: 0 10px;
-          border-right: 1px solid rgba(255,255,255,0.04);
-          background: rgba(0,0,0,0.12);
+          border-right: 1px solid var(--border-color);
+          background: transparent;
           min-width: 66px;
           max-width: 150px;
           flex-shrink: 0;
@@ -328,7 +328,7 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
           height: 2px;
         }
         .git-graph-col::-webkit-scrollbar-thumb {
-          background: rgba(255,255,255,0.1);
+          background: var(--scrollbar-thumb, rgba(255,255,255,0.1));
         }
         .git-commit-info-col {
           display: flex;
@@ -417,8 +417,8 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
         }
         .git-details-header-card {
           padding: 10px 12px;
-          background: rgba(255,255,255,0.02);
-          border: 1px solid rgba(255,255,255,0.04);
+          background: var(--surface-overlay);
+          border: 1px solid var(--border-color);
           border-radius: 8px;
           display: flex;
           flex-direction: column;
@@ -443,6 +443,35 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
           font-size: 0.7rem;
           color: var(--color-primary, #a855f7);
           word-break: break-all;
+        }
+
+        /* Light Theme Overrides for high contrast and clean lines */
+        .theme-light .git-ref-head {
+          background: rgba(124, 58, 237, 0.08);
+          color: #7c3aed;
+          border-color: rgba(124, 58, 237, 0.22);
+        }
+        .theme-light .git-ref-branch {
+          background: rgba(22, 163, 74, 0.08);
+          color: #16a34a;
+          border-color: rgba(22, 163, 74, 0.22);
+        }
+        .theme-light .git-ref-remote {
+          background: rgba(220, 38, 38, 0.08);
+          color: #dc2626;
+          border-color: rgba(220, 38, 38, 0.22);
+        }
+        .theme-light .git-ref-tag {
+          background: rgba(217, 119, 6, 0.08);
+          color: #d97706;
+          border-color: rgba(217, 119, 6, 0.22);
+        }
+        .theme-light .git-author-avatar-tiny {
+          box-shadow: none;
+          text-shadow: none;
+        }
+        .theme-light .git-history-item-active {
+          background: var(--tab-active-bg) !important;
         }
       `}</style>
       
