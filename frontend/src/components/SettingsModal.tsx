@@ -3,6 +3,17 @@ import { Info, Shield, Eye, EyeOff, RefreshCw, Download, CheckCircle, XCircle, L
 import { FormField, Input, Button, Select } from './Form';
 import { THEMES, UI_FONTS, MONO_FONTS } from '../hooks/useThemeAndFonts';
 
+const UI_FONT_OPTIONS = Object.keys(UI_FONTS).map(f => ({ value: f, label: f }));
+const MONO_FONT_OPTIONS = Object.keys(MONO_FONTS).map(f => ({ value: f, label: f }));
+
+const FONT_WEIGHT_OPTIONS = [
+  { value: '300', label: 'Light (300)' },
+  { value: '400', label: 'Regular (400)' },
+  { value: '500', label: 'Medium (500)' },
+  { value: '600', label: 'Semibold (600)' },
+  { value: '700', label: 'Bold (700)' }
+];
+
 export interface SettingsModalProps {
   show: boolean;
   onClose: () => void;
@@ -126,16 +137,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   React.useEffect(() => {
-    if (show) {
+    if (show && activeTab === 'connections') {
       fetchConnections();
       
-      // Auto-refresh logs if Connections tab is open
-      if (activeTab === 'connections') {
-        const interval = setInterval(() => {
-          fetchConnections();
-        }, 5000);
-        return () => clearInterval(interval);
-      }
+      const interval = setInterval(() => {
+        fetchConnections();
+      }, 5000);
+      return () => clearInterval(interval);
     }
   }, [show, activeTab]);
 
@@ -499,7 +507,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <Select
                       value={fontSans}
                       onChange={(val) => setFontSans(val)}
-                      options={Object.keys(UI_FONTS).map(f => ({ value: f, label: f }))}
+                      options={UI_FONT_OPTIONS}
                       searchable={true}
                     />
                   </FormField>
@@ -507,7 +515,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <Select
                       value={fontMono}
                       onChange={(val) => setFontMono(val)}
-                      options={Object.keys(MONO_FONTS).map(f => ({ value: f, label: f }))}
+                      options={MONO_FONT_OPTIONS}
                       searchable={true}
                     />
                   </FormField>
@@ -519,26 +527,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <Select
                       value={fontSansWeight}
                       onChange={(val) => setFontSansWeight(val)}
-                      options={[
-                        { value: '300', label: 'Light (300)' },
-                        { value: '400', label: 'Regular (400)' },
-                        { value: '500', label: 'Medium (500)' },
-                        { value: '600', label: 'Semibold (600)' },
-                        { value: '700', label: 'Bold (700)' }
-                      ]}
+                      options={FONT_WEIGHT_OPTIONS}
                     />
                   </FormField>
                   <FormField label="Terminal Font Weight" className="mb-0">
                     <Select
                       value={fontMonoWeight}
                       onChange={(val) => setFontMonoWeight(val)}
-                      options={[
-                        { value: '300', label: 'Light (300)' },
-                        { value: '400', label: 'Regular (400)' },
-                        { value: '500', label: 'Medium (500)' },
-                        { value: '600', label: 'Semibold (600)' },
-                        { value: '700', label: 'Bold (700)' }
-                      ]}
+                      options={FONT_WEIGHT_OPTIONS}
                     />
                   </FormField>
                 </div>

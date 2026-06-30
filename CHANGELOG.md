@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.146] - 2026-06-30
+
+### Fixed
+- **Optimized Settings Modal Tab Switching Performance**:
+  - Moved font and weight options arrays outside the component's render function so they have stable object references, preventing unnecessary re-renders of the custom `<Select>` dropdown elements.
+  - Refactored the connection-checking effect to fetch connections only when the "Access Control" tab is active, eliminating redundant background network requests and associated state-update lags during tab transitions.
+
+---
+
 ## [1.3.145] - 2026-06-30
 
 ### Added
