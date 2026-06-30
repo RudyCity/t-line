@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.177] - 2026-06-30
+
+### Changed
+- **Image & SVG Preview Background**:
+  - Preview area background now uses `var(--bg-main)` to match the active theme instead of a hardcoded dark color.
+  - Replaced radial dot pattern with a clean **square grid** (`24×24px`) using `linear-gradient` CSS backgrounds. Grid line color is controlled by the new `--preview-grid-line` CSS variable: subtle white (`rgba(255,255,255,0.05)`) on dark themes, subtle black (`rgba(0,0,0,0.07)`) on Light Mode — automatically adapts with no JavaScript.
+  - Grid container background uses `var(--bg-sidebar)` and border uses `var(--border-color)`, both theme-aware.
+  - Zoom controls overlay now uses `var(--bg-card)` and `var(--border-color)` instead of hardcoded dark colors.
+
+---
+
 ## [1.3.176] - 2026-06-30
 
 ### Fixed

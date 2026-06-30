@@ -343,10 +343,16 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
         {/* Image Viewer Area */}
         <div 
           ref={imageContainerRef}
-          className="flex-1 flex flex-col items-center justify-center p-4 bg-[#0a0a0c] overflow-auto select-none relative"
+          className="flex-1 flex flex-col items-center justify-center p-4 overflow-auto select-none relative"
+          style={{ background: 'var(--bg-main)' }}
         >
           {/* Zoom Controls Overlay */}
-          <div className="absolute top-4 right-4 flex items-center gap-1 bg-[#16161a]/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 z-10">
+          <div className="absolute top-4 right-4 flex items-center gap-1 backdrop-blur-md px-3 py-1.5 rounded-lg z-10"
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
+            }}
+          >
             <button 
               className="flex items-center justify-center p-1 text-slate-400 hover:text-white hover:bg-white/5 rounded transition duration-150 cursor-pointer" 
               onClick={handleZoomOut} 
@@ -373,13 +379,10 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
             </button>
           </div>
 
-          {/* Checkerboard background wrapper */}
+          {/* Grid background — square grid lines that adapt to the active theme */}
           <div 
-            className="rounded-lg border border-white/5 overflow-hidden"
+            className="rounded-xl overflow-hidden"
             style={{
-              backgroundImage: 'radial-gradient(#ffffff0a 1px, transparent 0), radial-gradient(#ffffff0a 1px, #0a0a0c 0)',
-              backgroundSize: '20px 20px',
-              backgroundPosition: '0 0, 10px 10px',
               position: 'absolute',
               top: '16px',
               bottom: '16px',
@@ -387,7 +390,16 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
               right: '16px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              border: '1px solid var(--border-color)',
+              /* bg-sidebar as the canvas base + square grid overlay */
+              background: 'var(--bg-sidebar)',
+              backgroundImage: [
+                'linear-gradient(var(--preview-grid-line, rgba(255,255,255,0.05)) 1px, transparent 1px)',
+                'linear-gradient(90deg, var(--preview-grid-line, rgba(255,255,255,0.05)) 1px, transparent 1px)',
+              ].join(', '),
+              backgroundSize: '24px 24px',
+              backgroundPosition: '0 0',
             }}
           >
             {isSvg ? (

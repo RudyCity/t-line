@@ -1960,6 +1960,8 @@
   --ws-dropdown-shadow: none;
   --glass-shadow: none;
   --accent-shadow-glow: none;
+  /* Grid lines for image/SVG preview — black on light backgrounds */
+  --preview-grid-line: rgba(0, 0, 0, 0.07);
 }
 
 .theme-light .ws-card-active {

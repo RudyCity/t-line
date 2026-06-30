@@ -34,6 +34,9 @@
     /* Sizes */
     --sidebar-width: 320px;
     --topbar-height: 40px;
+
+    /* Image / SVG preview grid lines — subtle white on dark themes */
+    --preview-grid-line: rgba(255, 255, 255, 0.05);
   }
 
   /* Global Reset */
