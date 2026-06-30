@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.140] - 2026-06-30
+
+### Fixed
+- **Open Tabs Dropdown Button**:
+  - Fixed open tabs dropdown instantly closing itself on click.
+  - Implemented target checks using `closest()` to exclude dropdown button clicks from triggering auto-close.
+
+---
+
 ## [1.3.139] - 2026-06-30
 
 ### Fixed

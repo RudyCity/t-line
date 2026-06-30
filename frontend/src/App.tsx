@@ -166,9 +166,15 @@ export default function App() {
 
   useEffect(() => {
     if (!showTabsDropdown) return;
-    const closeDropdown = () => setShowTabsDropdown(false);
-    window.addEventListener('click', closeDropdown);
-    return () => window.removeEventListener('click', closeDropdown);
+    const closeDropdown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.tabs-dropdown-btn') || target.closest('.dropdown-menu')) {
+        return;
+      }
+      setShowTabsDropdown(false);
+    };
+    document.addEventListener('click', closeDropdown);
+    return () => document.removeEventListener('click', closeDropdown);
   }, [showTabsDropdown]);
 
   // Terminal state management hook
@@ -855,7 +861,7 @@ export default function App() {
               {filteredTabs.length > 1 && (
                 <div style={{ position: 'relative', display: 'inline-flex' }}>
                   <button
-                    className={`action-btn shrink-0 ${showTabsDropdown ? 'active' : ''}`}
+                    className={`action-btn shrink-0 tabs-dropdown-btn ${showTabsDropdown ? 'active' : ''}`}
                     onClick={(e) => { e.stopPropagation(); setShowTabsDropdown(!showTabsDropdown); }}
                     title="View Open Tabs"
                     style={{ marginLeft: '4px' }}
