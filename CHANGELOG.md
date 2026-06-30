@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.155] - 2026-06-30
+
+### Fixed
+- **Connection Error Page: Light Theme Compatibility**:
+  - Replaced all hardcoded dark-only color values with semantic CSS custom properties (`--btn-secondary-bg`, `--btn-secondary-border`, `--status-footer-bg`, `--heading-gradient-from/to`, `--icon-bg`, `--icon-border`).
+  - Removed all `box-shadow` declarations (card shadow, primary button glow, icon inner shadow, status dot glow) so the page renders cleanly on light themes without dark halos or colored glows.
+  - Added a light-theme override block in `applySavedTheme()` that overrides the semantic tokens with appropriate light values when `settings.theme === 'light'`.
+
+---
+
 ## [1.3.151] - 2026-06-30
 
 ### Fixed
