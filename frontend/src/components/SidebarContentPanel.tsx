@@ -1,9 +1,171 @@
 import React from 'react';
-import { Plus, Terminal as TerminalIcon, FileCode, FolderTree, GitCompare } from 'lucide-react';
-import { TabData, TerminalInstanceData, WorkspaceInfo } from '../hooks/useTerminals';
+import { Plus, Terminal as TerminalIcon, FileCode, FolderTree, GitCompare, GitBranch } from 'lucide-react';
+import { TabData, TerminalInstanceData, WorkspaceInfo, WorktreeInfo } from '../hooks/useTerminals';
 import { WorkspaceList } from './WorkspaceList';
 import { FileExplorer, GitChanges, GitFileStatus } from './FilePanel';
-import { Select } from './Form';
+
+// ─── Permanent Workspace + Worktree Switcher ────────────────────────────────
+
+interface WorkspaceSwitcherProps {
+  workspaces: WorkspaceInfo[];
+  panelWorkspace: WorkspaceInfo | null;
+  panelWorktreePath: string | null;
+  onWorkspaceClick: (wsId: string) => void;
+  onWorktreeClick: (wsId: string, wtPath: string) => void;
+  gitOnly?: boolean;
+}
+
+function WorkspaceSwitcher({
+  workspaces,
+  panelWorkspace,
+  panelWorktreePath,
+  onWorkspaceClick,
+  onWorktreeClick,
+  gitOnly = false,
+}: WorkspaceSwitcherProps) {
+  const filtered = gitOnly ? workspaces.filter(w => w.isGit) : workspaces;
+  if (filtered.length === 0) return null;
+
+  return (
+    <>
+      <style>{`
+        .ws-switcher {
+          display: flex;
+          flex-direction: column;
+          gap: 1px;
+          padding: 6px 8px;
+          border-bottom: 1px solid rgba(255,255,255,0.06);
+          background: rgba(0,0,0,0.12);
+          flex-shrink: 0;
+          overflow-x: auto;
+        }
+        .ws-switcher-row {
+          display: flex;
+          align-items: center;
+          gap: 3px;
+          min-height: 26px;
+          flex-wrap: wrap;
+        }
+        .ws-switcher-label {
+          font-size: 0.65rem;
+          font-weight: 700;
+          color: var(--text-muted);
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          padding: 0 4px 0 2px;
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+        .ws-switcher-label-active {
+          color: var(--text-main);
+        }
+        .ws-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 0.68rem;
+          font-weight: 500;
+          padding: 2px 8px;
+          border-radius: 4px;
+          border: 1px solid rgba(255,255,255,0.07);
+          background: rgba(255,255,255,0.03);
+          color: var(--text-muted);
+          cursor: pointer;
+          white-space: nowrap;
+          transition: all 0.13s;
+          flex-shrink: 0;
+        }
+        .ws-pill:hover {
+          background: rgba(255,255,255,0.07);
+          color: var(--text-main);
+          border-color: rgba(255,255,255,0.14);
+        }
+        .ws-pill-active {
+          background: rgba(168,85,247,0.13) !important;
+          border-color: rgba(168,85,247,0.35) !important;
+          color: var(--color-primary, #a855f7) !important;
+        }
+        .ws-pill-sep {
+          color: rgba(255,255,255,0.15);
+          font-size: 0.65rem;
+          user-select: none;
+          flex-shrink: 0;
+        }
+      `}</style>
+
+      <div className="ws-switcher">
+        {filtered.map(ws => {
+          const isActiveWs = panelWorkspace?.id === ws.id;
+          const mainWt: WorktreeInfo | undefined = ws.worktrees?.find(wt => wt.isMain);
+          const otherWts: WorktreeInfo[] = ws.worktrees?.filter(wt => !wt.isMain) ?? [];
+
+          // "main" is active when: this workspace is active AND
+          // worktreePath is null/undefined OR equals the main worktree path
+          const isMainActive =
+            isActiveWs &&
+            (!panelWorktreePath || panelWorktreePath === mainWt?.path);
+
+          const mainLabel = mainWt?.branch || 'main';
+
+          return (
+            <div key={ws.id} className="ws-switcher-row">
+              {/* Workspace name badge */}
+              <span
+                className={`ws-switcher-label${isActiveWs ? ' ws-switcher-label-active' : ''}`}
+              >
+                {ws.name}
+              </span>
+
+              {ws.worktrees && ws.worktrees.length > 0 ? (
+                <>
+                  <span className="ws-pill-sep">›</span>
+
+                  {/* Main worktree pill */}
+                  <button
+                    className={`ws-pill${isMainActive ? ' ws-pill-active' : ''}`}
+                    onClick={() => onWorkspaceClick(ws.id)}
+                    title={mainWt?.path || ws.path}
+                  >
+                    <GitBranch size={10} />
+                    {mainLabel}
+                  </button>
+
+                  {/* Other worktrees */}
+                  {otherWts.map(wt => {
+                    const isWtActive = isActiveWs && panelWorktreePath === wt.path;
+                    const branchLabel = wt.branch || wt.path.split(/[\\/]/).pop() || 'worktree';
+                    return (
+                      <button
+                        key={wt.path}
+                        className={`ws-pill${isWtActive ? ' ws-pill-active' : ''}`}
+                        onClick={() => onWorktreeClick(ws.id, wt.path)}
+                        title={wt.path}
+                      >
+                        <GitBranch size={10} />
+                        {branchLabel}
+                      </button>
+                    );
+                  })}
+                </>
+              ) : (
+                /* No worktrees — just make the workspace name a button */
+                <button
+                  className={`ws-pill${isActiveWs ? ' ws-pill-active' : ''}`}
+                  onClick={() => onWorkspaceClick(ws.id)}
+                  title={ws.path}
+                >
+                  {ws.name}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+// ─── SidebarContentPanel ────────────────────────────────────────────────────
 
 interface SidebarContentPanelProps {
   activePanel: 'workspaces' | 'explorer' | 'changes' | 'tabs';
@@ -69,7 +231,7 @@ export function SidebarContentPanel({
   onOpenBranchModal
 }: SidebarContentPanelProps) {
   return (
-    <div 
+    <div
       className="sidebar-content"
       style={{
         padding: activePanel === 'workspaces' ? '16px 0px' : '0px',
@@ -98,7 +260,7 @@ export function SidebarContentPanel({
               const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
               const shellType = focusedInst?.shellType || '';
               const isActive = activeTabId === t.id;
-              
+
               return (
                 <div
                   key={t.id}
@@ -185,18 +347,13 @@ export function SidebarContentPanel({
       {activePanel === 'explorer' && (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
           {workspaces.length > 0 && (
-            <div className="workspace-select-bar">
-              <span className="select-bar-label">Workspace:</span>
-              <Select
-                value={panelWorkspace?.id || ''}
-                onChange={(val) => {
-                  const ws = workspaces.find(w => w.id === val);
-                  if (ws) setPanelWorkspace(ws);
-                }}
-                placeholder="Select Workspace..."
-                options={workspaces.map(w => ({ value: w.id, label: w.name }))}
-              />
-            </div>
+            <WorkspaceSwitcher
+              workspaces={workspaces}
+              panelWorkspace={panelWorkspace}
+              panelWorktreePath={panelWorktreePath}
+              onWorkspaceClick={onWorkspaceClick}
+              onWorktreeClick={onWorktreeClick}
+            />
           )}
           {panelWorkspace ? (
             <FileExplorer
@@ -220,18 +377,14 @@ export function SidebarContentPanel({
       {activePanel === 'changes' && (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
           {workspaces.filter(w => w.isGit).length > 0 && (
-            <div className="workspace-select-bar">
-              <span className="select-bar-label">Workspace:</span>
-              <Select
-                value={panelWorkspace?.id || ''}
-                onChange={(val) => {
-                  const ws = workspaces.find(w => w.id === val);
-                  if (ws) setPanelWorkspace(ws);
-                }}
-                placeholder="Select Workspace..."
-                options={workspaces.filter(w => w.isGit).map(w => ({ value: w.id, label: w.name }))}
-              />
-            </div>
+            <WorkspaceSwitcher
+              workspaces={workspaces}
+              panelWorkspace={panelWorkspace}
+              panelWorktreePath={panelWorktreePath}
+              onWorkspaceClick={onWorkspaceClick}
+              onWorktreeClick={onWorktreeClick}
+              gitOnly
+            />
           )}
           {panelWorkspace && panelWorkspace.isGit ? (
             <GitChanges
