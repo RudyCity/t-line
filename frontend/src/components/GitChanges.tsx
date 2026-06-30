@@ -100,17 +100,21 @@ export function GitChanges({
   const [actionLoading, setActionLoading] = useState(false);
 
   const handleFileSelect = useCallback(async (file: GitFileStatus) => {
+    // If an external file-open handler exists, delegate to it and skip the inline diff panel
+    if (onFileOpen && file.status !== 'deleted') {
+      const basePath = (worktreePath || workspacePath || '').replace(/\\/g, '/');
+      const relPath = file.path.replace(/\\/g, '/');
+      const sep = basePath.endsWith('/') ? '' : '/';
+      const fullPath = basePath ? `${basePath}${sep}${relPath}` : relPath;
+      const fileName = relPath.split('/').pop() ?? relPath;
+      onFileOpen(fullPath, fileName);
+      // Also highlight the file in the list without showing the bottom diff panel
+      setSelectedFile(file);
+      return;
+    }
+
     setSelectedFile(file);
     setDiff('');
-
-    // Open the file as a tab if handler is provided and file is not deleted
-    if (onFileOpen && file.status !== 'deleted') {
-      const basePath = worktreePath || workspacePath || '';
-      const sep = basePath.endsWith('/') || basePath.endsWith('\\') ? '' : '/';
-      const fullPath = basePath ? `${basePath}${sep}${file.path.replace(/\\/g, '/')}` : file.path;
-      const fileName = file.path.split(/[/\\]/).pop() ?? file.path;
-      onFileOpen(fullPath, fileName);
-    }
 
     if (file.status === 'untracked' || file.status === 'added') {
       setDiff('(New/untracked file – no diff available)');

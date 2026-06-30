@@ -2,6 +2,19 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.151] - 2026-06-30
+
+### Fixed
+- **Git Changes: Bottom Diff Panel Hides When Opening as Tab**:
+  - When `onFileOpen` is provided, clicking a file now immediately opens it as an editor tab and **does not show the inline diff panel** below the file list. The file is still highlighted in the list.
+  - Previous behavior caused both the inline diff panel AND the tab to open simultaneously.
+- **Git Changes: File Tab Now Visible in Tab Bar**:
+  - Fixed `filteredTabs` in `App.tsx` to always include `file`-type tabs in the active worktree view. Previously, file tabs opened from the Git Changes panel could be hidden by the worktree filter even though they belonged to the workspace.
+- **Git Changes: Improved Path Construction**:
+  - `workspacePath` backslashes are now normalized to forward-slashes before concatenating with the git-relative `file.path`, producing a consistent forward-slash path for cross-platform compatibility.
+
+---
+
 ## [1.3.150] - 2026-06-30
 
 ### Fixed

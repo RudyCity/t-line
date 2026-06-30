@@ -470,15 +470,19 @@ export default function App() {
     const wsTabs = tabs.filter(t => t.workspaceId === panelWorkspace.id);
 
     if (panelWorktreePath) {
-      // In worktree mode, filter tabs to show only those belonging to that specific worktree
+      // In worktree mode, filter tabs to show only those belonging to that specific worktree.
+      // File tabs (type === 'file') are always shown in the active worktree view because
+      // they may have been opened from the Git Changes panel and their path may span the workspace.
       return wsTabs.filter(t => {
+        if (t.type === 'file') return true;
+
         const matchedWtPath = getTabWorktreePath(t, panelWorkspace, terminalInstances);
         const wtObj = panelWorkspace.worktrees?.find(wt => wt.path === matchedWtPath);
         const isMainTab = !matchedWtPath || (wtObj && wtObj.isMain);
-        
+
         const targetWtObj = panelWorkspace.worktrees?.find(wt => wt.path === panelWorktreePath);
         const isTargetMain = !panelWorktreePath || (targetWtObj && targetWtObj.isMain);
-        
+
         if (isTargetMain) {
           return isMainTab;
         }
