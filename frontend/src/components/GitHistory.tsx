@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GitCommit, User, Calendar, FileCode, FilePlus, FileMinus, X, Loader2, RefreshCw } from 'lucide-react';
-import { LinkVertical } from '@visx/shape';
+import { LinkVertical, LinkHorizontal } from '@visx/shape';
 
 export interface CommitInfo {
   hash: string;
@@ -91,13 +91,14 @@ function GitGraphLine({ prefix }: { prefix: string }) {
         if (char === '*') {
           return (
             <g key={index}>
-              <line 
-                x1={xc} 
-                y1={0} 
-                x2={xc} 
-                y2={rowHeight} 
-                stroke="var(--tree-connector-color, rgba(255, 255, 255, 0.08))" 
-                strokeWidth={2} 
+              <LinkVertical
+                data={{
+                  source: { x: xc, y: rowHeight },
+                  target: { x: xc, y: 0 }
+                }}
+                stroke="var(--tree-connector-color, rgba(255, 255, 255, 0.08))"
+                strokeWidth={2}
+                fill="none"
               />
               <circle 
                 cx={xc} 
@@ -116,14 +117,15 @@ function GitGraphLine({ prefix }: { prefix: string }) {
 
         if (char === '|') {
           return (
-            <line 
+            <LinkVertical
               key={index}
-              x1={xc} 
-              y1={0} 
-              x2={xc} 
-              y2={rowHeight} 
-              stroke={laneColor} 
-              strokeWidth={2} 
+              data={{
+                source: { x: xc, y: rowHeight },
+                target: { x: xc, y: 0 }
+              }}
+              stroke={laneColor}
+              strokeWidth={2}
+              fill="none"
             />
           );
         }
@@ -148,14 +150,14 @@ function GitGraphLine({ prefix }: { prefix: string }) {
 
         if (char === '\\') {
           // Slope down-right (branches/merges rightward going down)
-          // Top: index, Bottom: index + 1
-          const xcBottom = (index + 1) * laneWidth + laneWidth / 2;
+          // Top: index - 1, Bottom: index
+          const xcTop = (index - 1) * laneWidth + laneWidth / 2;
           return (
             <LinkVertical
               key={index}
               data={{
-                source: { x: xc, y: 0 },
-                target: { x: xcBottom, y: rowHeight }
+                source: { x: xc, y: rowHeight },
+                target: { x: xcTop, y: 0 }
               }}
               stroke={laneColor}
               strokeWidth={2}
@@ -166,14 +168,15 @@ function GitGraphLine({ prefix }: { prefix: string }) {
 
         if (char === '_') {
           return (
-            <line 
+            <LinkHorizontal
               key={index}
-              x1={xl} 
-              y1={rowHeight - 1} 
-              x2={xr} 
-              y2={rowHeight - 1} 
-              stroke={laneColor} 
-              strokeWidth={2} 
+              data={{
+                source: { x: xl, y: rowHeight - 1 },
+                target: { x: xr, y: rowHeight - 1 }
+              }}
+              stroke={laneColor}
+              strokeWidth={2}
+              fill="none"
             />
           );
         }

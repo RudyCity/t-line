@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.162] - 2026-06-30
+
+### Changed
+- **Git Commit History: Full visx Migration & Alignment Corrections**:
+  - Fully migrated all straight, diagonal, and horizontal lines in the visual commit graph rendering to use Airbnb's `@visx/shape` components (`LinkVertical` and `LinkHorizontal`).
+  - Corrected the coordinate formula for backslash (`\`) lines to run from `index - 1` (top) to `index` (bottom), matching the actual branch offsets. This resolves the remaining gaps seen in multi-lane split and merge commits.
+
+---
+
 ## [1.3.161] - 2026-06-30
 
 ### Changed
