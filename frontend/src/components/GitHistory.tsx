@@ -96,7 +96,7 @@ function GitGraphLine({ prefix }: { prefix: string }) {
                   source: { x: xc, y: rowHeight },
                   target: { x: xc, y: 0 }
                 }}
-                stroke="var(--tree-connector-color, rgba(255, 255, 255, 0.08))"
+                stroke={laneColor}
                 strokeWidth={2}
                 fill="none"
               />

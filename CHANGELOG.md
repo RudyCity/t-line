@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.166] - 2026-06-30
+
+### Fixed
+- **Git Commit History: Node Line Connection Alignment**:
+  - Replaced the faint `var(--tree-connector-color)` stroke on vertical lines passing through commit nodes (`*`) with the actual `laneColor`. This restores visibility of vertical connectors going to/from commit nodes, making curves and straights connect seamlessly in light and dark themes.
+
+---
+
 ## [1.3.165] - 2026-06-30
 
 ### Changed
