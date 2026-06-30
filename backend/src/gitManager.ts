@@ -579,15 +579,16 @@ export interface CommitInfo {
   date: string;
   subject: string;
   graphPrefix: string;
+  refNames?: string;
 }
 
 // Get recent git commits with log graph
 export async function getGitHistory(repoPath: string, limit = 50): Promise<CommitInfo[]> {
   try {
     const normalizedRepo = path.normalize(repoPath);
-    // Format: __COMMIT__|%H|%h|%an|%ae|%ar|%s
+    // Format: __COMMIT__|%H|%h|%an|%ae|%ar|%s|%d
     // Use --graph for visual representation
-    const format = '__COMMIT__|%H|%h|%an|%ae|%ar|%s';
+    const format = '__COMMIT__|%H|%h|%an|%ae|%ar|%s|%d';
     const output = await runGit(['log', '--graph', '--date-order', `--format=${format}`, `-n`, limit.toString()], normalizedRepo);
     if (!output.trim()) return [];
     
@@ -595,8 +596,9 @@ export async function getGitHistory(repoPath: string, limit = 50): Promise<Commi
       const parts = line.split('__COMMIT__|');
       if (parts.length > 1) {
         const graphPrefix = parts[0];
-        const [hash, shortHash, authorName, authorEmail, date, subject] = parts[1].split('|');
-        return { hash, shortHash, authorName, authorEmail, date, subject, graphPrefix };
+        const [hash, shortHash, authorName, authorEmail, date, subject, refNamesRaw] = parts[1].split('|');
+        const refNames = refNamesRaw ? refNamesRaw.trim().replace(/^\((.*)\)$/, '$1') : '';
+        return { hash, shortHash, authorName, authorEmail, date, subject, graphPrefix, refNames };
       } else {
         // Line with graph representation only (connectors)
         return {
@@ -606,7 +608,8 @@ export async function getGitHistory(repoPath: string, limit = 50): Promise<Commi
           authorEmail: '',
           date: '',
           subject: '',
-          graphPrefix: line
+          graphPrefix: line,
+          refNames: ''
         };
       }
     });

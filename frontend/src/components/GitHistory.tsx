@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { GitCommit, User, Calendar, FileCode, FilePlus, FileMinus, X, Loader2, RefreshCw } from 'lucide-react';
 
 export interface CommitInfo {
@@ -9,6 +9,7 @@ export interface CommitInfo {
   date: string;
   subject: string;
   graphPrefix: string;
+  refNames?: string;
 }
 
 export interface CommitFile {
@@ -52,44 +53,124 @@ const STATUS_LABEL: Record<CommitFile['status'], { label: string; color: string 
 };
 
 const LANE_COLORS = [
-  '#f43f5e', // rose-500
-  '#3b82f6', // blue-500
-  '#10b981', // emerald-500
-  '#a855f7', // purple-500
-  '#f59e0b', // amber-500
-  '#06b6d4', // cyan-500
-  '#ec4899', // pink-500
+  '#38bdf8', // sky-400
+  '#4ade80', // green-400
+  '#f43f5e', // rose-400
+  '#fbbf24', // amber-400
+  '#c084fc', // purple-400
+  '#22d3ee', // cyan-400
+  '#f472b6', // pink-400
 ];
 
-function ColorizedGraphPrefix({ prefix }: { prefix: string }) {
-  // Render character by character, colorizing based on position / index to represent lanes
+function GitGraphLine({ prefix }: { prefix: string }) {
+  const chars = prefix.split('');
   return (
-    <span className="font-mono text-xs whitespace-pre select-none tracking-normal" style={{ letterSpacing: '0.05em' }}>
-      {prefix.split('').map((char, index) => {
-        if (char === ' ') return <span key={index}> </span>;
-        
-        let color = '#94a3b8'; // default text-muted
+    <div style={{ display: 'flex', height: '100%', alignItems: 'stretch' }}>
+      {chars.map((char, index) => {
+        const laneColor = LANE_COLORS[index % LANE_COLORS.length];
+        const cellStyle: React.CSSProperties = {
+          position: 'relative',
+          width: '12px',
+          height: '100%',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0
+        };
+
+        if (char === ' ') {
+          return <div key={index} style={{ width: '12px', flexShrink: 0 }} />;
+        }
+
         if (char === '*') {
-          color = 'var(--color-primary, #a855f7)'; // main node is bright purple/primary
-        } else {
-          // connection lines colored by column index
-          color = LANE_COLORS[index % LANE_COLORS.length];
+          return (
+            <div key={index} style={cellStyle}>
+              {/* Vertical connection line behind the node */}
+              <div style={{ position: 'absolute', top: 0, bottom: 0, left: '5px', width: '2px', backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
+              <div 
+                style={{ 
+                  width: '8px', 
+                  height: '8px', 
+                  borderRadius: '50%', 
+                  backgroundColor: 'var(--color-primary, #a855f7)', 
+                  boxShadow: '0 0 6px var(--color-primary, #a855f7)',
+                  zIndex: 2 
+                }} 
+              />
+            </div>
+          );
+        }
+
+        if (char === '|') {
+          return (
+            <div key={index} style={cellStyle}>
+              <div style={{ width: '2px', height: '100%', backgroundColor: laneColor }} />
+            </div>
+          );
         }
 
         return (
-          <span 
+          <div 
             key={index} 
             style={{ 
-              color, 
-              fontWeight: char === '*' ? 'bold' : 'normal',
-              textShadow: char === '*' ? '0 0 4px var(--color-primary)' : 'none'
+              ...cellStyle, 
+              fontFamily: 'monospace', 
+              fontSize: '11px', 
+              fontWeight: 'bold', 
+              color: laneColor 
             }}
           >
             {char}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function getAvatarColor(name: string) {
+  if (!name) return 'var(--color-primary, #a855f7)';
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const colors = [
+    '#ec4899', // pink-500
+    '#f43f5e', // rose-500
+    '#3b82f6', // blue-500
+    '#10b981', // emerald-500
+    '#a855f7', // purple-500
+    '#f59e0b', // amber-500
+    '#06b6d4', // cyan-500
+    '#84cc16', // lime-500
+  ];
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function RefBadges({ refNames }: { refNames?: string }) {
+  if (!refNames) return null;
+  const refs = refNames.split(',').map(r => r.trim()).filter(Boolean);
+  return (
+    <>
+      {refs.map((ref, idx) => {
+        let type: 'head' | 'branch' | 'remote' | 'tag' = 'branch';
+        let label = ref;
+        if (ref.startsWith('HEAD -> ')) {
+          type = 'head';
+          label = ref.replace('HEAD -> ', '');
+        } else if (ref.startsWith('tag: ')) {
+          type = 'tag';
+          label = ref.replace('tag: ', '');
+        } else if (ref.includes('/')) {
+          type = 'remote';
+        }
+        return (
+          <span key={idx} className={`git-ref-badge git-ref-${type}`} title={ref}>
+            {label}
           </span>
         );
       })}
-    </span>
+    </>
   );
 }
 
@@ -216,78 +297,65 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
           flex-direction: column;
           width: 100%;
         }
-        .git-timeline-track {
-          position: absolute;
-          left: 77px; /* 66px graph col width + 12px center of 24px node col - 1px offset for track center */
-          top: 0;
-          bottom: 0;
-          width: 2px;
-          background: rgba(255, 255, 255, 0.05);
-          z-index: 1;
-        }
         .git-history-item {
           display: flex;
           align-items: stretch;
-          border-bottom: 1px solid rgba(255,255,255,0.01);
+          border-bottom: 1px solid rgba(255,255,255,0.02);
           cursor: pointer;
-          min-height: 48px;
-          position: relative;
+          min-height: 50px;
           transition: background-color 0.15s;
-          z-index: 2;
         }
         .git-history-item:hover {
           background: rgba(255,255,255,0.02);
         }
         .git-history-item-active {
           background: rgba(168, 85, 247, 0.08) !important;
-          border-left: 2px solid var(--color-primary, #a855f7);
+          border-left: 3px solid var(--color-primary, #a855f7);
         }
         .git-graph-col {
           display: flex;
-          align-items: center;
-          padding: 0 8px;
+          align-items: stretch;
+          padding: 0 10px;
           border-right: 1px solid rgba(255,255,255,0.04);
           background: rgba(0,0,0,0.12);
           min-width: 66px;
-          max-width: 66px;
+          max-width: 150px;
           flex-shrink: 0;
-          overflow: hidden;
+          overflow-x: auto;
+          overflow-y: hidden;
         }
-        .git-timeline-node-col {
-          position: relative;
-          width: 24px;
-          flex-shrink: 0;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 2;
+        .git-graph-col::-webkit-scrollbar {
+          height: 2px;
         }
-        .git-timeline-node {
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          background: var(--bg-sidebar, #1e1e2e);
-          border: 2px solid var(--color-primary, #a855f7);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 0.55rem;
-          font-weight: 700;
-          color: var(--color-primary, #a855f7);
-          box-shadow: 0 0 6px rgba(168, 85, 247, 0.25);
-          text-shadow: none;
-        }
-        .git-timeline-node-connector {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: rgba(255, 255, 255, 0.15);
+        .git-graph-col::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.1);
         }
         .git-commit-info-col {
           display: flex;
+          align-items: center;
+          padding: 8px 12px;
+          flex: 1;
+          min-width: 0;
+          gap: 12px;
+        }
+        .git-author-avatar-tiny {
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.7rem;
+          font-weight: bold;
+          color: white;
+          flex-shrink: 0;
+          text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .git-commit-text-block {
+          display: flex;
           flex-direction: column;
           justify-content: center;
-          padding: 8px 12px;
           flex: 1;
           min-width: 0;
         }
@@ -297,7 +365,39 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
           gap: 8px;
           font-size: 0.68rem;
           color: var(--text-muted);
-          margin-top: 2px;
+          margin-top: 3px;
+        }
+        .git-ref-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 1px 6px;
+          border-radius: 4px;
+          font-size: 0.65rem;
+          font-weight: 600;
+          margin-left: 6px;
+          border: 1px solid transparent;
+          vertical-align: middle;
+          white-space: nowrap;
+        }
+        .git-ref-head {
+          background: rgba(168, 85, 247, 0.12);
+          color: #c084fc;
+          border-color: rgba(168, 85, 247, 0.3);
+        }
+        .git-ref-branch {
+          background: rgba(74, 222, 128, 0.12);
+          color: #4ade80;
+          border-color: rgba(74, 222, 128, 0.3);
+        }
+        .git-ref-remote {
+          background: rgba(239, 68, 68, 0.12);
+          color: #f87171;
+          border-color: rgba(239, 68, 68, 0.3);
+        }
+        .git-ref-tag {
+          background: rgba(245, 158, 11, 0.12);
+          color: #fbbf24;
+          border-color: rgba(245, 158, 11, 0.3);
         }
         .git-commit-details-panel {
           flex: 1.2;
@@ -368,13 +468,10 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
             </div>
           ) : (
             <div className="git-history-container">
-              {/* Vertical timeline track line */}
-              <div className="git-timeline-track" />
-              
               {history.map((commit, index) => {
                 const isCommitNode = !!commit.hash;
                 const isActive = selectedCommitHash === commit.hash;
-                const initials = commit.authorName ? commit.authorName.charAt(0).toUpperCase() : '?';
+                const initials = commit.authorName ? commit.authorName.slice(0, 2).toUpperCase() : '?';
                 
                 return (
                   <div
@@ -385,32 +482,35 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
                   >
                     {/* Visual tree graph column */}
                     <div className="git-graph-col">
-                      <ColorizedGraphPrefix prefix={commit.graphPrefix} />
-                    </div>
-                    
-                    {/* Visual timeline node column */}
-                    <div className="git-timeline-node-col">
-                      {isCommitNode ? (
-                        <div className="git-timeline-node" title={`Author: ${commit.authorName}`}>
-                          {initials}
-                        </div>
-                      ) : (
-                        <div className="git-timeline-node-connector" />
-                      )}
+                      <GitGraphLine prefix={commit.graphPrefix} />
                     </div>
                     
                     {/* Commit info column */}
                     {isCommitNode ? (
                       <div className="git-commit-info-col">
-                        <span className="explorer-item-name truncate font-semibold" style={{ fontSize: '0.8rem' }}>
-                          {commit.subject}
-                        </span>
-                        <div className="git-history-meta">
-                          <span className="font-mono text-purple-400 font-semibold">{commit.shortHash}</span>
-                          <span>•</span>
-                          <span className="flex items-center gap-0.5"><User size={10} /> {commit.authorName}</span>
-                          <span>•</span>
-                          <span>{commit.date}</span>
+                        {/* Author Avatar circle */}
+                        <div 
+                          className="git-author-avatar-tiny"
+                          style={{ backgroundColor: getAvatarColor(commit.authorName) }}
+                        >
+                          {initials}
+                        </div>
+                        
+                        {/* Text Details */}
+                        <div className="git-commit-text-block">
+                          <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                            <span className="explorer-item-name truncate font-semibold flex-1" style={{ fontSize: '0.8rem' }}>
+                              {commit.subject}
+                            </span>
+                            <RefBadges refNames={commit.refNames} />
+                          </div>
+                          <div className="git-history-meta">
+                            <span className="font-mono text-purple-400 font-semibold">{commit.shortHash}</span>
+                            <span>•</span>
+                            <span>{commit.authorName}</span>
+                            <span>•</span>
+                            <span>{commit.date}</span>
+                          </div>
                         </div>
                       </div>
                     ) : (
