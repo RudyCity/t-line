@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.137] - 2026-06-30
+
+### Fixed
+- **Footer Path display adjustment**:
+  - Resolved active file paths to parent directories inside the footer to display containing folders exclusively.
+  - Adjusted footer directory folder-opening context clicks to launch parent folders instead of raw file paths.
+
+---
+
 ## [1.3.136] - 2026-06-30
 
 ### Added

@@ -116,8 +116,14 @@ export function Footer({
     panelWorktreePath?: string | null
   ): string => {
     if (!workspace) return '';
-    const targetPath = tabPath || panelWorktreePath || '';
+    let targetPath = tabPath || panelWorktreePath || '';
     if (!targetPath) return workspace.name;
+
+    if (activeTabType === 'file' && tabPath) {
+      const parts = targetPath.replace(/\\/g, '/').split('/');
+      parts.pop();
+      targetPath = parts.join('/');
+    }
 
     const normTab = targetPath.toLowerCase().replace(/\\/g, '/');
     
@@ -283,9 +289,22 @@ export function Footer({
             <span
               className="flex items-center gap-1.5 transition-colors duration-150 cursor-pointer"
               style={{ color: 'var(--text-main)' }}
-              title={`Open in Explorer: ${activeTabPath || panelWorkspace.path}`}
+              title={`Open in Explorer: ${(() => {
+                let p = activeTabPath || panelWorkspace.path;
+                if (activeTabType === 'file' && activeTabPath) {
+                  const parts = p.replace(/\\/g, '/').split('/');
+                  parts.pop();
+                  p = parts.join('/');
+                }
+                return p;
+              })()}`}
               onClick={() => {
-                const folderPath = activeTabPath || panelWorkspace.path;
+                let folderPath = activeTabPath || panelWorkspace.path;
+                if (activeTabType === 'file' && activeTabPath) {
+                  const parts = folderPath.replace(/\\/g, '/').split('/');
+                  parts.pop();
+                  folderPath = parts.join('/');
+                }
                 if ((window as any).electron?.openFolder) {
                   (window as any).electron.openFolder(folderPath);
                 }
