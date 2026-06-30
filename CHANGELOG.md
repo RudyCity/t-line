@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.145] - 2026-06-30
+
+### Added
+- **Premium Google Fonts in Appearance Settings**:
+  - Imported a full suite of modern, premium Google Fonts in `index.html` (including Geist, Plus Jakarta Sans, Open Sans, Nunito, Sora, DM Sans, IBM Plex Mono, Inconsolata, Roboto Mono, Space Grotesk, Manrope, Work Sans, Cabin, Space Mono, and Anonymous Pro).
+  - Updated `useThemeAndFonts.ts` to include these new fonts in the UI Font Family and Terminal Font Family choices in the Appearance settings.
+  - Implemented fallbacks for `Geist Sans` to look for both the Vercel local name and Google Fonts name.
+
+---
+
 ## [1.3.144] - 2026-06-30
 
 ### Fixed
