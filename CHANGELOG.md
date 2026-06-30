@@ -2,6 +2,18 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.128] - 2026-06-30
+
+### Fixed
+- **File Explorer and Git Changes Sync**: Fixed out-of-date File Explorer and Git Changes views when files are modified, created, or deleted.
+  - Enhanced backend file watcher to recursively watch active worktree directories dynamically in addition to main workspace paths.
+  - Added callback triggers to re-initialize file watchers when worktrees are added or removed.
+  - Configured backend `/api/fs/write` to trigger immediate update notifications when files are saved in the Monaco editor.
+  - Added a deep comparison helper in `useGitStatus` to prevent redundant explorer fetches during background polling.
+  - Updated frontend `App.tsx` to automatically trigger file explorer tree refreshes whenever git status updates or files are saved.
+
+---
+
 ## [1.3.127] - 2026-06-30
 
 ### Fixed

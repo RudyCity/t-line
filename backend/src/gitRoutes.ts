@@ -170,6 +170,12 @@ router.post('/workspaces/:id/git/commit', authMiddleware, async (req, res) => {
   }
 });
 
+let onWorkspaceChangeCallback: (() => void) | null = null;
+
+export function registerWorkspaceChangeCallback(cb: () => void) {
+  onWorkspaceChangeCallback = cb;
+}
+
 router.post('/worktrees/add', authMiddleware, async (req, res) => {
   const { repoPath, worktreePath, branchName, newBranch, newBranchName } = req.body;
   if (!repoPath || !worktreePath || !branchName) {
@@ -178,6 +184,7 @@ router.post('/worktrees/add', authMiddleware, async (req, res) => {
   
   const result = await addWorktree(repoPath, worktreePath, branchName, !!newBranch, newBranchName);
   if (result.success) {
+    if (onWorkspaceChangeCallback) onWorkspaceChangeCallback();
     res.json(result);
   } else {
     res.status(400).json(result);
@@ -192,6 +199,7 @@ router.post('/worktrees/remove', authMiddleware, async (req, res) => {
   
   const result = await removeWorktree(repoPath, worktreePath, !!force);
   if (result.success) {
+    if (onWorkspaceChangeCallback) onWorkspaceChangeCallback();
     res.json(result);
   } else {
     res.status(400).json(result);

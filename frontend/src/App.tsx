@@ -259,6 +259,11 @@ export default function App() {
     };
   }, [fetchGitStatus, fetchWorkspaces]);
 
+  // Sync file explorer trigger when git changes change
+  useEffect(() => {
+    setFsChangeTrigger(prev => prev + 1);
+  }, [changedFiles]);
+
 
   // Workspace and worktree handlers hook
   const {
@@ -1015,6 +1020,7 @@ export default function App() {
                       onSave={() => {
                         fetchGitStatus(false);
                         fetchWorkspaces();
+                        setFsChangeTrigger(prev => prev + 1);
                       }}
                       theme={theme}
                       themeBackground={THEMES[theme]?.bgMain}

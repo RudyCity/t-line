@@ -25,7 +25,7 @@ import {
 } from './gitManager';
 import { terminalManager, getActiveProcessesForPid } from './terminalManager';
 import { tunnelManager } from './tunnelManager';
-import gitRouter from './gitRoutes';
+import gitRouter, { registerWorkspaceChangeCallback } from './gitRoutes';
 
 dotenv.config();
 
@@ -589,6 +589,7 @@ app.post('/api/fs/write', authMiddleware, (req, res) => {
     const resolvedPath = path.resolve(filePath);
     fs.writeFileSync(resolvedPath, content, 'utf8');
     clearWorkspaceCache(); // Clear cache so status updates immediately
+    handleFileChange(resolvedPath); // Trigger immediate update notification
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -661,10 +662,24 @@ function handleFileChange(filename: string) {
   }, 300);
 }
 
-function updateWorkspaceWatchers() {
+async function updateWorkspaceWatchers() {
   try {
     const workspaces = getWorkspaces();
-    const pathsToKeep = new Set(workspaces.map(w => path.normalize(w.path)));
+    const pathsToKeep = new Set<string>();
+
+    for (const ws of workspaces) {
+      pathsToKeep.add(path.normalize(ws.path));
+      try {
+        const info = await getWorkspaceInfo(ws);
+        if (info.worktrees) {
+          for (const wt of info.worktrees) {
+            pathsToKeep.add(path.normalize(wt.path));
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to get workspace info for ${ws.path}:`, err);
+      }
+    }
 
     for (const watchedPath of fsWatchers.keys()) {
       if (!pathsToKeep.has(watchedPath)) {
@@ -673,8 +688,7 @@ function updateWorkspaceWatchers() {
       }
     }
 
-    for (const ws of workspaces) {
-      const normalized = path.normalize(ws.path);
+    for (const normalized of pathsToKeep) {
       if (!fsWatchers.has(normalized) && fs.existsSync(normalized)) {
         try {
           const watcher = fs.watch(normalized, { recursive: true }, (event, filename) => {
@@ -686,7 +700,7 @@ function updateWorkspaceWatchers() {
           });
           fsWatchers.set(normalized, watcher);
         } catch (err) {
-          console.error(`Failed to watch workspace ${normalized}:`, err);
+          console.error(`Failed to watch path ${normalized}:`, err);
         }
       }
     }
@@ -694,6 +708,11 @@ function updateWorkspaceWatchers() {
     console.error('Error updating workspace watchers:', err);
   }
 }
+
+// Register worktree/workspace change callback to update watchers
+registerWorkspaceChangeCallback(() => {
+  updateWorkspaceWatchers().catch(err => console.error(err));
+});
 
 wss.on('connection', (ws: WebSocket) => {
   activeWebSockets.add(ws);
