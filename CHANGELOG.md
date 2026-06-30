@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.156] - 2026-06-30
+
+### Fixed
+- **Light Theme: Global Color Token Fixes**:
+  - Added 28 new light/dark adaptive semantic CSS custom properties to `useThemeAndFonts.ts` (`--surface-overlay`, `--surface-overlay-hover`, `--surface-overlay-active`, `--surface-inverse`, `--scrollbar-thumb`, `--scrollbar-thumb-hover`, `--tree-connector-color`, `--tab-active-bg/border/color`, `--tab-close-hover-bg`, `--tooltip-bg/border/text/title/path/branch`, `--toast-bg/border/text`, `--ws-dropdown-bg/border/shadow`, `--panel-header-bg`, `--sidebar-tabs-bg`, `--window-btn-hover-bg`).
+  - **`components.css`**: Replaced hardcoded dark-only RGBA/hex values with semantic variables in: tab hover/active/close-hover, tab tooltip (background, border, text, title, path, branch), toast item (background, border, color, shadow), workspace dropdown menu (background, border, shadow), dropdown action button hover, workspace search bar (background, border), tree container border, tree connector pseudo-elements, and tree item hover.
+  - **`layout.css`**: Replaced hardcoded RGBA values in sidebar panel tabs background, sidebar panel tab hover/active, panel section header background, and window control button hover.
+  - **`base.css`**: Replaced hardcoded scrollbar thumb colors with CSS variable references with dark-mode fallbacks (`--scrollbar-thumb`, `--scrollbar-thumb-hover`).
+
+---
+
 ## [1.3.155] - 2026-06-30
 
 ### Fixed

@@ -245,6 +245,63 @@ export function useThemeAndFonts() {
       `color-mix(in srgb, ${preset.textMain} 4%, transparent)`
     );
 
+    // Light/dark adaptive semantic tokens
+    if (isLight) {
+      root.style.setProperty('--surface-overlay', 'rgba(0, 0, 0, 0.04)');
+      root.style.setProperty('--surface-overlay-hover', 'rgba(0, 0, 0, 0.07)');
+      root.style.setProperty('--surface-overlay-active', 'rgba(0, 0, 0, 0.1)');
+      root.style.setProperty('--surface-inverse', 'rgba(0, 0, 0, 0.04)');
+      root.style.setProperty('--scrollbar-thumb', 'rgba(0, 0, 0, 0.15)');
+      root.style.setProperty('--scrollbar-thumb-hover', 'rgba(0, 0, 0, 0.25)');
+      root.style.setProperty('--tree-connector-color', 'rgba(0, 0, 0, 0.15)');
+      root.style.setProperty('--tab-active-bg', `color-mix(in srgb, ${accentColor} 10%, transparent)`);
+      root.style.setProperty('--tab-active-border', `color-mix(in srgb, ${accentColor} 35%, transparent)`);
+      root.style.setProperty('--tab-active-color', `color-mix(in srgb, ${accentColor} 80%, #000000)`);
+      root.style.setProperty('--tab-close-hover-bg', 'rgba(0, 0, 0, 0.12)');
+      root.style.setProperty('--tooltip-bg', 'rgba(255, 255, 255, 0.97)');
+      root.style.setProperty('--tooltip-border', `color-mix(in srgb, ${accentColor} 30%, transparent)`);
+      root.style.setProperty('--tooltip-text', '#0f172a');
+      root.style.setProperty('--tooltip-title', `color-mix(in srgb, ${accentColor} 70%, #000000)`);
+      root.style.setProperty('--tooltip-path', '#64748b');
+      root.style.setProperty('--tooltip-branch', '#b45309');
+      root.style.setProperty('--toast-bg', 'rgba(255, 255, 255, 0.97)');
+      root.style.setProperty('--toast-border', `color-mix(in srgb, ${accentColor} 30%, transparent)`);
+      root.style.setProperty('--toast-text', '#0f172a');
+      root.style.setProperty('--ws-dropdown-bg', 'rgba(255, 255, 255, 0.98)');
+      root.style.setProperty('--ws-dropdown-border', 'rgba(0, 0, 0, 0.1)');
+      root.style.setProperty('--ws-dropdown-shadow', '0 10px 25px -5px rgba(0,0,0,0.15), 0 8px 10px -6px rgba(0,0,0,0.1)');
+      root.style.setProperty('--panel-header-bg', 'rgba(0, 0, 0, 0.04)');
+      root.style.setProperty('--sidebar-tabs-bg', 'rgba(0, 0, 0, 0.04)');
+      root.style.setProperty('--window-btn-hover-bg', 'rgba(0, 0, 0, 0.07)');
+    } else {
+      root.style.setProperty('--surface-overlay', 'rgba(255, 255, 255, 0.04)');
+      root.style.setProperty('--surface-overlay-hover', 'rgba(255, 255, 255, 0.08)');
+      root.style.setProperty('--surface-overlay-active', 'rgba(255, 255, 255, 0.12)');
+      root.style.setProperty('--surface-inverse', 'rgba(0, 0, 0, 0.2)');
+      root.style.setProperty('--scrollbar-thumb', 'rgba(255, 255, 255, 0.1)');
+      root.style.setProperty('--scrollbar-thumb-hover', 'rgba(255, 255, 255, 0.2)');
+      root.style.setProperty('--tree-connector-color', 'rgba(255, 255, 255, 0.15)');
+      root.style.setProperty('--tab-active-bg', `color-mix(in srgb, ${accentColor} 8%, transparent)`);
+      root.style.setProperty('--tab-active-border', `color-mix(in srgb, ${accentColor} 25%, transparent)`);
+      root.style.setProperty('--tab-active-color', `color-mix(in srgb, ${accentColor} 80%, #ffffff)`);
+      root.style.setProperty('--tab-close-hover-bg', 'rgba(255, 255, 255, 0.15)');
+      root.style.setProperty('--tooltip-bg', 'rgba(15, 23, 42, 0.95)');
+      root.style.setProperty('--tooltip-border', `color-mix(in srgb, ${accentColor} 40%, transparent)`);
+      root.style.setProperty('--tooltip-text', '#f1f5f9');
+      root.style.setProperty('--tooltip-title', `color-mix(in srgb, ${accentColor} 90%, #ffffff)`);
+      root.style.setProperty('--tooltip-path', 'var(--text-muted)');
+      root.style.setProperty('--tooltip-branch', '#fbbf24');
+      root.style.setProperty('--toast-bg', 'rgba(14, 17, 26, 0.9)');
+      root.style.setProperty('--toast-border', `color-mix(in srgb, ${accentColor} 30%, transparent)`);
+      root.style.setProperty('--toast-text', '#e9d5ff');
+      root.style.setProperty('--ws-dropdown-bg', 'rgba(15, 23, 42, 0.98)');
+      root.style.setProperty('--ws-dropdown-border', `color-mix(in srgb, ${accentColor} 25%, transparent)`);
+      root.style.setProperty('--ws-dropdown-shadow', '0 10px 25px -5px rgba(0,0,0,0.6), 0 8px 10px -6px rgba(0,0,0,0.5)');
+      root.style.setProperty('--panel-header-bg', 'rgba(0, 0, 0, 0.25)');
+      root.style.setProperty('--sidebar-tabs-bg', 'rgba(0, 0, 0, 0.2)');
+      root.style.setProperty('--window-btn-hover-bg', 'rgba(255, 255, 255, 0.08)');
+    }
+
     // Sync theme settings to Electron desktop config
     if ((window as any).electron?.saveThemeSettings) {
       (window as any).electron.saveThemeSettings({

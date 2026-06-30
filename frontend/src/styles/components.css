@@ -36,8 +36,8 @@
   gap: 7px;
   margin: 0 12px 10px;
   padding: 5px 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-color);
   border-radius: 7px;
   transition: border-color 0.2s;
 }
@@ -304,7 +304,7 @@
 .tree-container {
   margin-top: 6px;
   padding-left: 8px;
-  border-left: 1px dashed rgba(255, 255, 255, 0.1);
+  border-left: 1px dashed var(--tree-connector-color);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -322,7 +322,7 @@
 }
 
 .tree-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-overlay);
 }
 
 .tree-item-label {
@@ -397,7 +397,7 @@
 
 .action-btn:hover {
   color: var(--text-main);
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface-overlay-active);
 }
 
 .action-btn-danger:hover {
@@ -411,16 +411,16 @@
   right: 0;
   top: 100%;
   margin-top: 4px;
-  background: rgba(15, 23, 42, 0.98);
+  background: var(--ws-dropdown-bg);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(168, 85, 247, 0.25);
+  border: 1px solid var(--ws-dropdown-border);
   border-radius: 8px;
   padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   z-index: 100;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(168, 85, 247, 0.08);
+  box-shadow: var(--ws-dropdown-shadow);
   min-width: 160px;
   animation: wsDropdownFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -448,12 +448,12 @@
 
 .ws-dropdown-menu .action-btn:hover {
   color: var(--text-main);
-  background: rgba(168, 85, 247, 0.15);
+  background: var(--surface-overlay-hover);
 }
 
 .ws-dropdown-menu .action-btn-danger:hover {
   color: var(--color-danger);
-  background: rgba(239, 68, 68, 0.15);
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .ws-dropdown-label {
@@ -495,7 +495,7 @@
   top: 0;
   bottom: 0;
   width: 1px;
-  border-left: 1px dashed rgba(255, 255, 255, 0.15);
+  border-left: 1px dashed var(--tree-connector-color);
 }
 
 .tree-item-last .tree-connector::before {
@@ -509,7 +509,7 @@
   top: 50%;
   width: 8px;
   height: 1px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.15);
+  border-top: 1px dashed var(--tree-connector-color);
 }
 
 .tree-item-content {
@@ -582,15 +582,14 @@
 }
 
 .tab:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-overlay);
   color: var(--text-main);
 }
 
 .tab-active {
-  background: rgba(168, 85, 247, 0.08) !important;
-  border-color: rgba(168, 85, 247, 0.25) !important;
-  color: #c084fc !important;
-  box-shadow: 0 0 12px rgba(168, 85, 247, 0.05);
+  background: var(--tab-active-bg) !important;
+  border-color: var(--tab-active-border) !important;
+  color: var(--tab-active-color) !important;
 }
 
 .tab-title-container {
@@ -661,21 +660,20 @@
 }
 
 .tab-close:hover {
-  background: rgba(255, 255, 255, 0.15) !important;
+  background: var(--tab-close-hover-bg) !important;
   color: var(--color-danger) !important;
   opacity: 1 !important;
 }
 
 /* Tab Tooltip */
 .tab-tooltip {
-  background: rgba(15, 23, 42, 0.95);
+  background: var(--tooltip-bg);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(168, 85, 247, 0.4);
-  color: #f1f5f9;
+  border: 1px solid var(--tooltip-border);
+  color: var(--tooltip-text);
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 0.72rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 12px rgba(168, 85, 247, 0.25);
   pointer-events: none;
   display: flex;
   flex-direction: column;
@@ -686,12 +684,12 @@
 
 .tab-tooltip-title {
   font-weight: 600;
-  color: #c084fc;
+  color: var(--tooltip-title);
 }
 
 .tab-tooltip-path {
   font-family: var(--font-mono);
-  color: var(--text-muted);
+  color: var(--tooltip-path);
   font-size: 0.65rem;
   word-break: break-all;
 }
@@ -701,7 +699,7 @@
   align-items: center;
   gap: 4px;
   font-size: 0.65rem;
-  color: #fbbf24;
+  color: var(--tooltip-branch);
   font-weight: 500;
   margin-top: 1px;
 }
@@ -1347,14 +1345,13 @@
   gap: 8px;
   padding: 8px 12px;
   border-radius: 6px;
-  background: rgba(14, 17, 26, 0.9);
+  background: var(--toast-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(168, 85, 247, 0.3);
-  color: #e9d5ff; /* purple-200 */
+  border: 1px solid var(--toast-border);
+  color: var(--toast-text);
   font-size: 11px;
   font-weight: 500;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 10px rgba(168, 85, 247, 0.1);
   animation: toastSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
