@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.127] - 2026-06-30
+
+### Fixed
+- **Monaco Editor CSS Blocked by CSP**: Added `https://cdn.jsdelivr.net` to the `style-src` directive in `frontend/index.html`. The Monaco editor stylesheet (`editor.main.css`) is loaded from jsDelivr at runtime and was being blocked because `cdn.jsdelivr.net` was only listed in `script-src` and `worker-src` but not in `style-src`.
+
+---
+
 ## [1.3.126] - 2026-06-30
 
 ### Fixed
