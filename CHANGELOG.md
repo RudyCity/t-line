@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.174] - 2026-06-30
+
+### Fixed
+- **SVG Preview Rendering**:
+  - Added explicit container width/height styling for SVG image views. This prevents the SVG from collapsing to 0x0 size in CSS due to circular dependencies between relative image sizes and parent flex containers.
+
+---
+
 ## [1.3.173] - 2026-06-30
 
 ### Added

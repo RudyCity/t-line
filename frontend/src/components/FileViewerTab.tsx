@@ -376,7 +376,12 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
               backgroundImage: 'radial-gradient(#ffffff0a 1px, transparent 0), radial-gradient(#ffffff0a 1px, #0a0a0c 0)',
               backgroundSize: '20px 20px',
               backgroundPosition: '0 0, 10px 10px',
-              padding: '20px'
+              padding: '20px',
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
             <img
@@ -388,6 +393,8 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
                 transition: isDragging ? 'none' : 'transform 0.15s ease-out',
                 maxWidth: '100%',
                 maxHeight: '100%',
+                width: isSvg ? '100%' : 'auto',
+                height: isSvg ? '100%' : 'auto',
                 objectFit: 'contain',
                 cursor: isDragging ? 'grabbing' : 'grab'
               }}
