@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.170] - 2026-06-30
+
+### Fixed
+- **Filter Out .git Folder**:
+  - Restored the `.git` metadata folder exclusion while keeping all other hidden dotfiles and dot-directories visible in the file explorer.
+
+---
+
 ## [1.3.169] - 2026-06-30
 
 ### Added

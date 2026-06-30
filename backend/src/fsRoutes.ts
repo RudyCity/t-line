@@ -57,7 +57,7 @@ router.get('/list', authMiddleware, (req, res) => {
     const directories = items
       .filter(item => {
         try {
-          return item.isDirectory();
+          return item.isDirectory() && item.name !== '.git';
         } catch (e) {
           return false;
         }
@@ -114,7 +114,8 @@ router.get('/explore', authMiddleware, (req, res) => {
         item !== null && 
         item.name !== 'node_modules' && 
         item.name !== 'dist' && 
-        item.name !== 'dist-exe'
+        item.name !== 'dist-exe' &&
+        item.name !== '.git'
       )
       .sort((a, b) => {
         if (a.isDirectory === b.isDirectory) {
