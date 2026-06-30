@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.138] - 2026-06-30
+
+### Added
+- **Copy Path Option in Workspace Explorer**:
+  - Added "Copy Path" / "Copy Paths" options in the Explorer's context menu.
+  - Copies absolute path (or newline-separated list for multi-selections) to the clipboard.
+  - Displays a toast confirmation notification upon success.
+
+---
+
 ## [1.3.137] - 2026-06-30
 
 ### Fixed

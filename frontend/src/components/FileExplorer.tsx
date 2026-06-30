@@ -9,7 +9,8 @@ import {
   FileCode,
   Loader2,
   X,
-  Trash2
+  Trash2,
+  Copy
 } from 'lucide-react';
 import { GitFileStatus } from './GitChanges';
 import { ConfirmModal } from './Modals';
@@ -315,9 +316,10 @@ interface ExplorerContextMenuProps {
   onClose: () => void;
   onDelete: () => void;
   onOpenExplorer: () => void;
+  onCopyPath: () => void;
 }
 
-function ExplorerContextMenu({ x, y, node, selectedCount, onClose, onDelete, onOpenExplorer }: ExplorerContextMenuProps) {
+function ExplorerContextMenu({ x, y, node, selectedCount, onClose, onDelete, onOpenExplorer, onCopyPath }: ExplorerContextMenuProps) {
   useEffect(() => {
     const close = (e: MouseEvent) => {
       if ((e.target as HTMLElement).closest('.terminal-ctx-menu') === null) {
@@ -349,6 +351,20 @@ function ExplorerContextMenu({ x, y, node, selectedCount, onClose, onDelete, onO
             : node.isDirectory
             ? 'Open in Explorer'
             : 'Reveal in Explorer'}
+        </span>
+      </button>
+      <button
+        onClick={() => {
+          onCopyPath();
+          onClose();
+        }}
+        className="terminal-ctx-item"
+      >
+        <span className="terminal-ctx-icon">
+          <Copy size={13} />
+        </span>
+        <span className="terminal-ctx-label">
+          {selectedCount > 1 ? 'Copy Paths' : 'Copy Path'}
         </span>
       </button>
       <div className="terminal-ctx-separator" />
@@ -534,6 +550,19 @@ export function FileExplorer({
     }
   }, [selectedNodes, token]);
 
+  const handleCopyPath = useCallback(async () => {
+    if (selectedNodes.length === 0) return;
+    try {
+      const pathsText = selectedNodes.map(n => n.path).join('\n');
+      await navigator.clipboard.writeText(pathsText);
+      window.dispatchEvent(new CustomEvent('tline-toast', {
+        detail: { message: selectedNodes.length > 1 ? `Copied ${selectedNodes.length} paths` : 'Copied path to clipboard' }
+      }));
+    } catch (e: any) {
+      alert(`Failed to copy path: ${e.message}`);
+    }
+  }, [selectedNodes]);
+
   useEffect(() => { load(); }, [load]);
 
   const prevRefreshTrigger = useRef(refreshTrigger);
@@ -649,6 +678,7 @@ export function FileExplorer({
           onClose={() => setContextMenu(null)}
           onDelete={() => setShowDeleteConfirm(true)}
           onOpenExplorer={handleOpenExplorer}
+          onCopyPath={handleCopyPath}
         />
       )}
 
