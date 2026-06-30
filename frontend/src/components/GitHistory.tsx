@@ -210,13 +210,30 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
   return (
     <div className="panel-split" style={{ height: '100%' }}>
       <style>{`
+        .git-history-container {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+        }
+        .git-timeline-track {
+          position: absolute;
+          left: 77px; /* 66px graph col width + 12px center of 24px node col - 1px offset for track center */
+          top: 0;
+          bottom: 0;
+          width: 2px;
+          background: rgba(255, 255, 255, 0.05);
+          z-index: 1;
+        }
         .git-history-item {
           display: flex;
           align-items: stretch;
-          border-bottom: 1px solid rgba(255,255,255,0.02);
+          border-bottom: 1px solid rgba(255,255,255,0.01);
           cursor: pointer;
-          min-height: 42px;
+          min-height: 48px;
+          position: relative;
           transition: background-color 0.15s;
+          z-index: 2;
         }
         .git-history-item:hover {
           background: rgba(255,255,255,0.02);
@@ -228,18 +245,51 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
         .git-graph-col {
           display: flex;
           align-items: center;
-          padding: 0 10px;
+          padding: 0 8px;
           border-right: 1px solid rgba(255,255,255,0.04);
-          background: rgba(0,0,0,0.08);
-          min-width: 60px;
+          background: rgba(0,0,0,0.12);
+          min-width: 66px;
+          max-width: 66px;
+          flex-shrink: 0;
+          overflow: hidden;
+        }
+        .git-timeline-node-col {
+          position: relative;
+          width: 24px;
+          flex-shrink: 0;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 2;
+        }
+        .git-timeline-node {
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: var(--bg-sidebar, #1e1e2e);
+          border: 2px solid var(--color-primary, #a855f7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.55rem;
+          font-weight: 700;
+          color: var(--color-primary, #a855f7);
+          box-shadow: 0 0 6px rgba(168, 85, 247, 0.25);
+          text-shadow: none;
+        }
+        .git-timeline-node-connector {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.15);
         }
         .git-commit-info-col {
           display: flex;
           flex-direction: column;
           justify-content: center;
-          padding: 6px 12px;
+          padding: 8px 12px;
           flex: 1;
-          min-w-0;
+          min-width: 0;
         }
         .git-history-meta {
           display: flex;
@@ -305,7 +355,7 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
           </button>
         </div>
         
-        <div className="explorer-scroll" style={{ flex: 1 }}>
+        <div className="explorer-scroll" style={{ flex: 1, position: 'relative' }}>
           {loading ? (
             <div className="panel-loading">
               <Loader2 size={16} className="animate-spin" />
@@ -317,10 +367,14 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
               <span>No commit history found</span>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <div className="git-history-container">
+              {/* Vertical timeline track line */}
+              <div className="git-timeline-track" />
+              
               {history.map((commit, index) => {
                 const isCommitNode = !!commit.hash;
                 const isActive = selectedCommitHash === commit.hash;
+                const initials = commit.authorName ? commit.authorName.charAt(0).toUpperCase() : '?';
                 
                 return (
                   <div
@@ -332,6 +386,17 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
                     {/* Visual tree graph column */}
                     <div className="git-graph-col">
                       <ColorizedGraphPrefix prefix={commit.graphPrefix} />
+                    </div>
+                    
+                    {/* Visual timeline node column */}
+                    <div className="git-timeline-node-col">
+                      {isCommitNode ? (
+                        <div className="git-timeline-node" title={`Author: ${commit.authorName}`}>
+                          {initials}
+                        </div>
+                      ) : (
+                        <div className="git-timeline-node-connector" />
+                      )}
                     </div>
                     
                     {/* Commit info column */}
