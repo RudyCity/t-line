@@ -359,6 +359,8 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
 
     setTabs(prev => {
       const targetTab = prev.find(t => t.id === tabId);
+      const targetWorkspaceId = targetTab ? targetTab.workspaceId : undefined;
+
       if (targetTab) {
         if (targetTab.type === 'terminal' && targetTab.layout) {
           const termIds = getTerminalIds(targetTab.layout);
@@ -375,15 +377,29 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
 
       const filtered = prev.filter(t => t.id !== tabId);
       if (activeTabId === tabId) {
-        if (filtered.length > 0) {
-          setActiveTabId(filtered[filtered.length - 1].id);
+        const sameWorkspaceTabs = filtered.filter(t => t.workspaceId === targetWorkspaceId);
+        if (sameWorkspaceTabs.length > 0) {
+          // Find the index of the closed tab in the original list to select a smart next tab
+          const originalWorkspaceTabs = prev.filter(t => t.workspaceId === targetWorkspaceId);
+          const closedIdx = originalWorkspaceTabs.findIndex(t => t.id === tabId);
+          if (closedIdx !== -1 && originalWorkspaceTabs.length > 1) {
+            const nextActiveIdx = closedIdx < originalWorkspaceTabs.length - 1 ? closedIdx : closedIdx - 1;
+            const nextTab = sameWorkspaceTabs[nextActiveIdx];
+            if (nextTab) {
+              setActiveTabId(nextTab.id);
+            } else {
+              setActiveTabId(sameWorkspaceTabs[sameWorkspaceTabs.length - 1].id);
+            }
+          } else {
+            setActiveTabId(sameWorkspaceTabs[sameWorkspaceTabs.length - 1].id);
+          }
         } else {
           setActiveTabId('');
         }
       }
       return filtered;
     });
-  }, [activeTabId]);
+  }, [activeTabId, setActiveTabId]);
 
   const closePane = useCallback((terminalId: string) => {
     setTabs(prevTabs => {
@@ -405,7 +421,16 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
 
       if (targetTab.layout?.type === 'leaf') {
         // If it's the only pane in the tab, close the entire tab
-        return prevTabs.filter(t => t.id !== targetTab.id);
+        const filtered = prevTabs.filter(t => t.id !== targetTab.id);
+        if (activeTabId === targetTab.id) {
+          const sameWorkspaceTabs = filtered.filter(t => t.workspaceId === targetTab.workspaceId);
+          if (sameWorkspaceTabs.length > 0) {
+            setActiveTabId(sameWorkspaceTabs[sameWorkspaceTabs.length - 1].id);
+          } else {
+            setActiveTabId('');
+          }
+        }
+        return filtered;
       }
 
       // If it's part of a split layout, remove the leaf node
@@ -429,7 +454,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
 
       return updatedTabs;
     });
-  }, [terminalInstances]);
+  }, [activeTabId, setActiveTabId, terminalInstances]);
 
   const splitFocusedTerminal = useCallback((direction: 'horizontal' | 'vertical') => {
     setTabs(prevTabs => {

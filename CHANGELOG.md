@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.124] - 2026-06-30
+
+### Fixed
+- **Tab Closing Focus Isolation**: Fixed a bug where closing the last tab of a workspace automatically switched the view to a different active workspace. Closing the last tab of a workspace now correctly keeps the focus on that workspace and displays the "Empty Dashboard" welcome screen as expected.
+
+---
+
 ## [1.3.123] - 2026-06-30
 
 ### Added
