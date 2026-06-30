@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FileCode, RotateCcw, Check, ZoomIn, ZoomOut, Maximize, Image as ImageIcon, FileText } from 'lucide-react';
 import Editor, { loader } from '@monaco-editor/react';
 
@@ -72,17 +72,47 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Image zoom state
+  // Image zoom and pan state
   const [zoom, setZoom] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+
   const handleZoomIn = () => setZoom(z => Math.min(z + 0.25, 4));
   const handleZoomOut = () => setZoom(z => Math.max(z - 0.25, 0.25));
-  const handleResetZoom = () => setZoom(1);
+  const handleResetZoom = () => {
+    setZoom(1);
+    setPosition({ x: 0, y: 0 });
+  };
 
   const fileType = getFileType(filePath);
 
   useEffect(() => {
     setZoom(1);
+    setPosition({ x: 0, y: 0 });
   }, [filePath]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      setPosition({
+        x: e.clientX - dragStart.current.x,
+        y: e.clientY - dragStart.current.y
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
 
   useEffect(() => {
     if (fileType !== 'text') {
@@ -283,12 +313,18 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
               src={`/api/fs/raw?path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(token)}`}
               alt={filePath.split(/[/\\]/).pop()}
               style={{
-                transform: `scale(${zoom})`,
+                transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
                 transformOrigin: 'center center',
-                transition: 'transform 0.15s ease-out',
+                transition: isDragging ? 'none' : 'transform 0.15s ease-out',
                 maxWidth: '100%',
                 maxHeight: '100%',
-                objectFit: 'contain'
+                objectFit: 'contain',
+                cursor: isDragging ? 'grabbing' : 'grab'
+              }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+                dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
               }}
               draggable={false}
             />

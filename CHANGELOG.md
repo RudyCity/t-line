@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.135] - 2026-06-30
+
+### Added
+- **Image Grab-to-Pan / Drag-to-Scroll Support**:
+  - Implemented click-and-drag grabbing support to pan/scroll around zoomed images.
+  - Tracked dragging coordinates globally and applied translation offset in the image transform.
+  - Temporarily disabled transitions during dragging to ensure zero-latency movement.
+  - Styled grab/grabbing cursor states dynamically.
+
+---
+
 ## [1.3.134] - 2026-06-30
 
 ### Added
