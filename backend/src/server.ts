@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import os from 'os';
+import { exec } from 'child_process';
 import { 
   isSetupRequired, 
   setupMasterPassword, 
@@ -591,6 +592,84 @@ app.post('/api/fs/write', authMiddleware, (req, res) => {
     clearWorkspaceCache(); // Clear cache so status updates immediately
     handleFileChange(resolvedPath); // Trigger immediate update notification
     res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/fs/delete', authMiddleware, (req, res) => {
+  const targetPath = req.query.path as string || req.body.path as string;
+  if (!targetPath) {
+    return res.status(400).json({ error: 'Path is required.' });
+  }
+
+  try {
+    const resolvedPath = path.resolve(targetPath);
+    if (!fs.existsSync(resolvedPath)) {
+      return res.status(404).json({ error: 'Path does not exist.' });
+    }
+
+    const stat = fs.statSync(resolvedPath);
+    if (stat.isDirectory()) {
+      fs.rmSync(resolvedPath, { recursive: true, force: true });
+    } else {
+      fs.rmSync(resolvedPath, { force: true });
+    }
+
+    clearWorkspaceCache();
+    handleFileChange(resolvedPath); // Notify file explorer changes
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/fs/open-explorer', authMiddleware, (req, res) => {
+  const targetPath = req.body.path as string;
+  if (!targetPath) {
+    return res.status(400).json({ error: 'Path is required.' });
+  }
+
+  try {
+    const resolvedPath = path.resolve(targetPath);
+    if (!fs.existsSync(resolvedPath)) {
+      return res.status(404).json({ error: 'Path does not exist.' });
+    }
+
+    const platform = os.platform();
+    let cmd = '';
+
+    if (platform === 'win32') {
+      const stat = fs.statSync(resolvedPath);
+      if (stat.isDirectory()) {
+        cmd = `explorer.exe "${resolvedPath}"`;
+      } else {
+        cmd = `explorer.exe /select,"${resolvedPath}"`;
+      }
+    } else if (platform === 'darwin') {
+      const stat = fs.statSync(resolvedPath);
+      if (stat.isDirectory()) {
+        cmd = `open "${resolvedPath}"`;
+      } else {
+        cmd = `open -R "${resolvedPath}"`;
+      }
+    } else {
+      // Linux fallback
+      const stat = fs.statSync(resolvedPath);
+      if (stat.isDirectory()) {
+        cmd = `xdg-open "${resolvedPath}"`;
+      } else {
+        cmd = `xdg-open "${path.dirname(resolvedPath)}"`;
+      }
+    }
+
+    exec(cmd, (err) => {
+      if (err) {
+        console.error('Failed to open explorer:', err);
+        return res.status(500).json({ error: err.message });
+      }
+      res.json({ success: true });
+    });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

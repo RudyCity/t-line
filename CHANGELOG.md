@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.130] - 2026-06-30
+
+### Added
+- **Workspace Explorer Right-Click Context Menu**:
+  - Implemented a premium glassmorphic context menu for files and directories in the Workspace Explorer.
+  - Added "Open in Explorer" / "Reveal in Explorer" to open the selected directory/file in the native OS file explorer (Windows Explorer, macOS Finder, or xdg-open on Linux).
+  - Added "Delete" to recursively remove files and directories with confirmation prompts and reactive WebSocket reload events.
+  - Refactored `FilePanel.tsx` by splitting the monolithic code into two new files (`FileExplorer.tsx` and `GitChanges.tsx`) to comply with the 1000-line limit rule.
+
+---
+
 ## [1.3.129] - 2026-06-30
 
 ### Fixed
