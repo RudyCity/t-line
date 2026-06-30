@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.141] - 2026-06-30
+
+### Added
+- **Enforced Maximum Tab Limit in Tab Bar**:
+  - Enforced a maximum limit of 7 visible tabs in the main tab bar.
+  - Automatically moves overflow tabs into the dropdown switcher.
+  - Dynamically includes the active tab as the last visible tab in the tab bar if it is selected from the dropdown list.
+
+---
+
 ## [1.3.140] - 2026-06-30
 
 ### Fixed

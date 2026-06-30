@@ -496,6 +496,23 @@ export default function App() {
     return [...wsTabs].sort((a, b) => getTabWtIndex(a) - getTabWtIndex(b));
   }, [tabs, panelWorkspace, panelWorktreePath, terminalInstances]);
 
+  const visibleTabs = useMemo(() => {
+    const MAX_VISIBLE_TABS = 7;
+    if (filteredTabs.length <= MAX_VISIBLE_TABS) {
+      return filteredTabs;
+    }
+    
+    const activeIndex = filteredTabs.findIndex(t => t.id === activeTabId);
+    if (activeIndex === -1 || activeIndex < MAX_VISIBLE_TABS) {
+      return filteredTabs.slice(0, MAX_VISIBLE_TABS);
+    }
+    
+    return [
+      ...filteredTabs.slice(0, MAX_VISIBLE_TABS - 1),
+      filteredTabs[activeIndex]
+    ];
+  }, [filteredTabs, activeTabId]);
+
   const triggerLogout = () => {
     handleLogout(setTabs, setTerminalInstances, setActiveTabId);
   };
@@ -805,7 +822,7 @@ export default function App() {
               })()}
               {(() => {
                 let prevBranch: string | null = null;
-                return filteredTabs.map(t => {
+                return visibleTabs.map(t => {
                   const isFile = t.type === 'file';
                   const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
                   const shellType = focusedInst?.shellType || '';
