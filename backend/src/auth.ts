@@ -117,12 +117,14 @@ export function verifyToken(token: string): any {
 
 // Express auth middleware
 export function authMiddleware(req: any, res: any, next: any) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Authorization header required' });
+  let token = '';
+  if (req.headers.authorization) {
+    const authHeader = req.headers.authorization;
+    token = authHeader.split(' ')[1];
+  } else if (req.query.token) {
+    token = req.query.token as string;
   }
 
-  const token = authHeader.split(' ')[1];
   if (!token) {
     return res.status(401).json({ error: 'Token required' });
   }

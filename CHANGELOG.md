@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.134] - 2026-06-30
+
+### Added
+- **Tab Image & PDF Viewer Support**:
+  - Implemented `/api/fs/raw` raw streaming backend endpoint for loading images and PDF contents directly.
+  - Allowed query parameter authentication (`?token=...`) in `authMiddleware` for embedding resources.
+  - Integrated a premium zoomable image viewer for images (`.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`, `.ico`) with checkerboard transparency background, smooth scaling animations, zoom out, zoom in, and reset options.
+  - Integrated an iframe/embed viewer for PDF documents.
+
+---
+
 ## [1.3.133] - 2026-06-30
 
 ### Added

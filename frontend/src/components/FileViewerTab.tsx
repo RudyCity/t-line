@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileCode, RotateCcw, Check } from 'lucide-react';
+import { FileCode, RotateCcw, Check, ZoomIn, ZoomOut, Maximize, Image as ImageIcon, FileText } from 'lucide-react';
 import Editor, { loader } from '@monaco-editor/react';
 
 interface FileViewerTabProps {
@@ -8,6 +8,17 @@ interface FileViewerTabProps {
   onSave?: () => void;
   theme?: string;
   themeBackground?: string;
+}
+
+function getFileType(filePath: string): 'image' | 'pdf' | 'text' {
+  const ext = filePath.split('.').pop()?.toLowerCase();
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico'].includes(ext || '')) {
+    return 'image';
+  }
+  if (ext === 'pdf') {
+    return 'pdf';
+  }
+  return 'text';
 }
 
 function getLanguageFromPath(filePath: string): string {
@@ -61,7 +72,24 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // Image zoom state
+  const [zoom, setZoom] = useState(1);
+  const handleZoomIn = () => setZoom(z => Math.min(z + 0.25, 4));
+  const handleZoomOut = () => setZoom(z => Math.max(z - 0.25, 0.25));
+  const handleResetZoom = () => setZoom(1);
+
+  const fileType = getFileType(filePath);
+
   useEffect(() => {
+    setZoom(1);
+  }, [filePath]);
+
+  useEffect(() => {
+    if (fileType !== 'text') {
+      setLoading(false);
+      return;
+    }
+
     let active = true;
     async function loadFile() {
       setLoading(true);
@@ -100,7 +128,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
         }
       }).catch(() => {});
     };
-  }, [filePath, token]);
+  }, [filePath, token, fileType]);
 
   // Monaco Editor theme effect
   useEffect(() => {
@@ -192,6 +220,105 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
               <div className="h-3 bg-slate-900/40 rounded" style={{ width: `${width}%` }} />
             </div>
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (fileType === 'image') {
+    return (
+      <div className="flex flex-col flex-1 w-full h-full bg-[var(--bg-main)] overflow-hidden">
+        {/* File Header */}
+        <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0">
+          <div className="flex items-center gap-2 truncate">
+            <ImageIcon size={14} className="text-purple-400 shrink-0" />
+            <span className="text-xs font-mono text-slate-300 truncate" title={filePath}>
+              {filePath}
+            </span>
+          </div>
+          <div className="text-[11px] text-slate-500 font-medium">Image Preview</div>
+        </div>
+
+        {/* Image Viewer Area */}
+        <div className="flex-1 flex flex-col items-center justify-center p-4 bg-[#0a0a0c] overflow-auto select-none relative">
+          {/* Zoom Controls Overlay */}
+          <div className="absolute top-4 right-4 flex items-center gap-1 bg-[#16161a]/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 z-10">
+            <button 
+              className="flex items-center justify-center p-1 text-slate-400 hover:text-white hover:bg-white/5 rounded transition duration-150 cursor-pointer" 
+              onClick={handleZoomOut} 
+              title="Zoom Out"
+            >
+              <ZoomOut size={14} />
+            </button>
+            <span className="text-xs font-medium text-slate-300 font-mono w-12 text-center">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button 
+              className="flex items-center justify-center p-1 text-slate-400 hover:text-white hover:bg-white/5 rounded transition duration-150 cursor-pointer" 
+              onClick={handleZoomIn} 
+              title="Zoom In"
+            >
+              <ZoomIn size={14} />
+            </button>
+            <button 
+              className="flex items-center justify-center p-1 text-slate-400 hover:text-white hover:bg-white/5 rounded transition duration-150 cursor-pointer" 
+              onClick={handleResetZoom} 
+              title="Reset Zoom"
+            >
+              <Maximize size={14} />
+            </button>
+          </div>
+
+          {/* Checkerboard background wrapper */}
+          <div 
+            className="max-w-full max-h-full flex items-center justify-center rounded-lg border border-white/5 overflow-auto"
+            style={{
+              backgroundImage: 'radial-gradient(#ffffff0a 1px, transparent 0), radial-gradient(#ffffff0a 1px, #0a0a0c 0)',
+              backgroundSize: '20px 20px',
+              backgroundPosition: '0 0, 10px 10px',
+              padding: '20px'
+            }}
+          >
+            <img
+              src={`/api/fs/raw?path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(token)}`}
+              alt={filePath.split(/[/\\]/).pop()}
+              style={{
+                transform: `scale(${zoom})`,
+                transformOrigin: 'center center',
+                transition: 'transform 0.15s ease-out',
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain'
+              }}
+              draggable={false}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (fileType === 'pdf') {
+    return (
+      <div className="flex flex-col flex-1 w-full h-full bg-[var(--bg-main)] overflow-hidden">
+        {/* File Header */}
+        <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0">
+          <div className="flex items-center gap-2 truncate">
+            <FileText size={14} className="text-purple-400 shrink-0" />
+            <span className="text-xs font-mono text-slate-300 truncate" title={filePath}>
+              {filePath}
+            </span>
+          </div>
+          <div className="text-[11px] text-slate-500 font-medium">PDF Document</div>
+        </div>
+
+        {/* PDF Frame */}
+        <div className="flex-1 w-full h-full bg-[#0a0a0c] overflow-hidden">
+          <iframe
+            src={`/api/fs/raw?path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(token)}`}
+            className="w-full h-full border-none"
+            title="PDF Viewer"
+          />
         </div>
       </div>
     );

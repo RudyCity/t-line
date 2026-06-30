@@ -577,6 +577,49 @@ app.get('/api/fs/read', authMiddleware, (req, res) => {
   }
 });
 
+app.get('/api/fs/raw', authMiddleware, (req, res) => {
+  const filePath = req.query.path as string;
+  if (!filePath) {
+    return res.status(400).json({ error: 'File path is required.' });
+  }
+
+  try {
+    const resolvedPath = path.resolve(filePath);
+    if (!fs.existsSync(resolvedPath)) {
+      return res.status(404).json({ error: 'File does not exist.' });
+    }
+
+    const stat = fs.statSync(resolvedPath);
+    if (!stat.isFile()) {
+      return res.status(400).json({ error: 'Path is not a file.' });
+    }
+
+    const ext = path.extname(resolvedPath).toLowerCase();
+    let contentType = 'application/octet-stream';
+    if (ext === '.pdf') {
+      contentType = 'application/pdf';
+    } else if (ext === '.png') {
+      contentType = 'image/png';
+    } else if (ext === '.jpg' || ext === '.jpeg') {
+      contentType = 'image/jpeg';
+    } else if (ext === '.gif') {
+      contentType = 'image/gif';
+    } else if (ext === '.webp') {
+      contentType = 'image/webp';
+    } else if (ext === '.svg') {
+      contentType = 'image/svg+xml';
+    } else if (ext === '.ico') {
+      contentType = 'image/x-icon';
+    }
+
+    res.setHeader('Content-Type', contentType);
+    const stream = fs.createReadStream(resolvedPath);
+    stream.pipe(res);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/fs/write', authMiddleware, (req, res) => {
   const { path: filePath, content } = req.body;
   if (!filePath) {
