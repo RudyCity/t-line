@@ -805,6 +805,33 @@ ipcMain.on('install-update', () => {
   autoUpdater.quitAndInstall(false, true);
 });
 
+// ─── Theme Sync ──────────────────────────────────────────────────────────────
+
+function getThemeSettingsPath() {
+  return path.join(app.getPath('userData'), 'theme_settings.json');
+}
+
+ipcMain.on('save-theme-settings', (_, settings) => {
+  try {
+    fs.writeFileSync(getThemeSettingsPath(), JSON.stringify(settings, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Failed to save theme settings:', err);
+  }
+});
+
+ipcMain.handle('get-theme-settings', () => {
+  try {
+    const filePath = getThemeSettingsPath();
+    if (fs.existsSync(filePath)) {
+      const data = fs.readFileSync(filePath, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error('Failed to read theme settings:', err);
+  }
+  return null;
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 ipcMain.handle('check-connection', async () => {

@@ -34,6 +34,8 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.removeListener('update-status', listener);
     };
   },
+  saveThemeSettings: (settings) => ipcRenderer.send('save-theme-settings', settings),
+  getThemeSettings: () => ipcRenderer.invoke('get-theme-settings'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   installUpdate: () => ipcRenderer.send('install-update')
 });

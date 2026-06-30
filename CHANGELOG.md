@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.123] - 2026-06-30
+
+### Added
+- **Theme Synchronization to Reconnect & Restart Screens**:
+  - Saved the user's active theme preset, accent color, and font choices to a local configuration file (`theme_settings.json`) in the Electron application data directory.
+  - Preloaded and applied the saved theme variables dynamically on the offline reconnection screen (`connection-error.html`), updating body mesh gradients, window control buttons, titlebars, background cards, borders, fonts, and active accents.
+  - Replaced hardcoded mesh gradient colors in both the main application (`base.css`) and reconnect screen with dynamic theme CSS variables (`--bg-radial-dot`, `--bg-radial-glow1`, `--bg-radial-glow2`).
+  - Styled the primary action button (`Start Backend`) on the reconnect page using the active theme's accent color and custom shadows.
+
+---
+
 ## [1.3.122] - 2026-06-30
 
 ### Added

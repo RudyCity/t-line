@@ -44,9 +44,9 @@
       flex-direction: column;
       -webkit-font-smoothing: antialiased;
       background-image: 
-        radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-        radial-gradient(at 0% 0%, rgba(168, 85, 247, 0.08) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.04) 0px, transparent 50%);
+        radial-gradient(var(--bg-radial-dot, rgba(255, 255, 255, 0.02)) 1px, transparent 1px),
+        radial-gradient(at 0% 0%, var(--bg-radial-glow1, rgba(168, 85, 247, 0.08)) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, var(--bg-radial-glow2, rgba(14, 165, 233, 0.04)) 0px, transparent 50%);
       background-size: 24px 24px, 100% 100%, 100% 100%;
     }
 
@@ -56,8 +56,8 @@
       justify-content: space-between;
       align-items: center;
       height: 40px;
-      background: #090c14;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      background: var(--bg-sidebar, #090c14);
+      border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.05));
       user-select: none;
       -webkit-app-region: drag;
       padding: 0 16px;
@@ -177,8 +177,8 @@
       width: 54px;
       height: 54px;
       border-radius: 50%;
-      background: rgba(17, 24, 39, 0.9);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: var(--bg-main, rgba(17, 24, 39, 0.9));
+      border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
       display: flex;
       align-items: center;
       justify-content: center;
@@ -197,14 +197,6 @@
     .theme-stopped {
       --color-primary: var(--color-warning);
       --color-primary-hover: #fbbf24;
-    }
-    .theme-starting {
-      --color-primary: #a855f7;
-      --color-primary-hover: #c084fc;
-    }
-    .theme-running {
-      --color-primary: var(--color-info);
-      --color-primary-hover: #38bdf8;
     }
 
     /* Typography */
@@ -252,13 +244,13 @@
     .btn-primary {
       background: var(--color-primary);
       border: none;
-      color: #000;
-      box-shadow: 0 4px 14px 0 rgba(168, 85, 247, 0.2);
+      color: #ffffff;
+      box-shadow: 0 4px 14px 0 var(--color-primary-glow, rgba(168, 85, 247, 0.2));
     }
 
     .btn-primary:hover {
       background: var(--color-primary-hover);
-      box-shadow: 0 6px 20px 0 rgba(168, 85, 247, 0.35);
+      box-shadow: 0 6px 20px 0 var(--color-primary-glow, rgba(168, 85, 247, 0.35));
       transform: translateY(-1px);
     }
     
@@ -371,6 +363,82 @@
   </div>
 
   <script>
+    // Load and apply theme settings
+    async function applySavedTheme() {
+      if (window.electron && window.electron.getThemeSettings) {
+        try {
+          const settings = await window.electron.getThemeSettings();
+          if (settings) {
+            const root = document.documentElement;
+            const preset = settings.preset || {};
+
+            if (preset.bgMain) root.style.setProperty('--bg-main', preset.bgMain);
+            if (preset.bgSidebar) root.style.setProperty('--bg-sidebar', preset.bgSidebar);
+            if (preset.bgCard) root.style.setProperty('--bg-card', preset.bgCard);
+            if (preset.borderColor) root.style.setProperty('--border-color', preset.borderColor);
+            if (preset.textMain) root.style.setProperty('--text-main', preset.textMain);
+            if (preset.textMuted) root.style.setProperty('--text-muted', preset.textMuted);
+
+            // Accent color
+            const accentColor = settings.accentColor || preset.defaultAccent || '#a855f7';
+            root.style.setProperty('--color-primary', accentColor);
+            
+            const isLight = settings.theme === 'light';
+            root.style.setProperty(
+              '--color-primary-hover',
+              `color-mix(in srgb, ${accentColor} 80%, ${isLight ? '#000000' : '#ffffff'})`
+            );
+            root.style.setProperty(
+              '--color-primary-glow',
+              `color-mix(in srgb, ${accentColor} 35%, transparent)`
+            );
+            root.style.setProperty(
+              '--border-glow',
+              `color-mix(in srgb, ${accentColor} 15%, transparent)`
+            );
+
+            // Apply radial glow and other backgrounds dynamically
+            root.style.setProperty('--bg-radial-dot', preset.bgRadialDot || 'rgba(255, 255, 255, 0.02)');
+            root.style.setProperty(
+              '--bg-radial-glow1',
+              `color-mix(in srgb, ${accentColor} 8%, transparent)`
+            );
+            root.style.setProperty(
+              '--bg-radial-glow2',
+              `color-mix(in srgb, ${preset.textMain || '#ffffff'} 4%, transparent)`
+            );
+
+            // Font-sans
+            const UI_FONTS = {
+              Outfit: "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              Inter: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              Poppins: "'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              Roboto: "'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              Montserrat: "'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              Ubuntu: "'Ubuntu', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              'Geist Sans': "'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              'SF Pro': "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, sans-serif",
+              'Plus Jakarta Sans': "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              'Lato': "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              'Open Sans': "'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              'Nunito': "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              'Sora': "'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              'DM Sans': "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              System: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            };
+            if (settings.fontSans) {
+              const fontSansValue = UI_FONTS[settings.fontSans] || UI_FONTS.Outfit;
+              root.style.setProperty('--font-sans', fontSansValue);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to apply saved theme settings:', err);
+        }
+      }
+    }
+
+    applySavedTheme();
+
     // SVGs for different states
     const SVG_SPINNER = `<svg class="animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
     const SVG_ALERT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;

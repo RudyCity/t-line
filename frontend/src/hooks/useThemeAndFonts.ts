@@ -238,6 +238,19 @@ export function useThemeAndFonts() {
       '--bg-radial-glow2',
       `color-mix(in srgb, ${preset.textMain} 4%, transparent)`
     );
+
+    // Sync theme settings to Electron desktop config
+    if ((window as any).electron?.saveThemeSettings) {
+      (window as any).electron.saveThemeSettings({
+        theme,
+        accentColor,
+        fontSans,
+        fontMono,
+        fontSansWeight,
+        fontMonoWeight,
+        preset
+      });
+    }
   }, [theme, accentColor, fontSans, fontMono, fontSansWeight, fontMonoWeight]);
 
   return {
