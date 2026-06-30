@@ -371,14 +371,16 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
 
           {/* Checkerboard background wrapper */}
           <div 
-            className="max-w-full max-h-full flex items-center justify-center rounded-lg border border-white/5 overflow-auto"
+            className="rounded-lg border border-white/5 overflow-hidden"
             style={{
               backgroundImage: 'radial-gradient(#ffffff0a 1px, transparent 0), radial-gradient(#ffffff0a 1px, #0a0a0c 0)',
               backgroundSize: '20px 20px',
               backgroundPosition: '0 0, 10px 10px',
-              padding: '20px',
-              width: '100%',
-              height: '100%',
+              position: 'absolute',
+              top: '16px',
+              bottom: '16px',
+              left: '16px',
+              right: '16px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
@@ -391,8 +393,8 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
                 transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
                 transformOrigin: 'center center',
                 transition: isDragging ? 'none' : 'transform 0.15s ease-out',
-                maxWidth: '100%',
-                maxHeight: '100%',
+                maxWidth: '90%',
+                maxHeight: '90%',
                 width: isSvg ? '100%' : 'auto',
                 height: isSvg ? '100%' : 'auto',
                 objectFit: 'contain',

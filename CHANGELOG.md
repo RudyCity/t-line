@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.175] - 2026-06-30
+
+### Fixed
+- **Image Preview Container Layout**:
+  - Re-implemented the checkerboard wrapper container style using absolute positioning inside the relative parent. This guarantees the container correctly inherits parent boundary dimensions and prevents layout collapsing/blank screens in flex parent environments.
+
+---
+
 ## [1.3.174] - 2026-06-30
 
 ### Fixed
