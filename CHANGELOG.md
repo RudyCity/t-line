@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.203] - 2026-07-01
+
+### Fixed
+- **CI/CD**: Fixed GitHub Actions release workflow to properly upload binaries to GitHub Releases by adding `--publish always` flag to `electron-builder`.
+
 ## [1.3.202] - 2026-07-01
 
 ### Changed
