@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.184] - 2026-07-01
+
+### Changed
+- **Chrome-like Seamless Active Tab Curves**:
+  - Implemented smooth, outward bottom-corner curves for active tabs (`.tab-active::before` and `.tab-active::after`) using radial-gradient overlays to blend the active tab seamlessly into the workspace panel.
+  - Removed side borders of active tabs and replaced them with top-only accent colors to mimic the modern Google Chrome tab design.
+
+---
+
 ## [1.3.183] - 2026-07-01
 
 ### Changed

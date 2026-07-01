@@ -536,19 +536,27 @@ body.tab-dragging .drag-drop-overlay {
   height: 100%;
   display: flex;
   align-items: flex-end; /* Push tabs to the bottom to join content */
-  gap: 2px;
+  gap: 0px; /* Tabs touch/overlap for Chrome look */
 }
 
 /* Base style for tabs inside content-tabs-bar */
 .content-tabs-bar .tab {
   height: 28px;
+  padding: 0 12px;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
   margin-bottom: 0;
-  border: 1px solid transparent;
-  border-bottom: none;
+  border: none !important;
   background: transparent;
-  transition: none; /* Avoid visual stutter during height change */
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
 }
 
 /* Inactive tabs hover state */
@@ -557,22 +565,43 @@ body.tab-dragging .drag-drop-overlay {
   color: var(--text-main);
 }
 
-/* Active tab merges with the main content area */
+/* Active tab style: merges seamlessly with content area in Chrome style */
 .content-tabs-bar .tab-active {
-  height: 32px; /* Taller tab to connect to bottom border */
+  height: 32px; /* Taller active tab */
   background: var(--bg-main) !important; /* Matches main workspace background */
-  border-left: 1px solid var(--border-color) !important;
-  border-top: 1px solid var(--border-color) !important;
-  border-right: 1px solid var(--border-color) !important;
-  border-bottom: 1px solid var(--bg-main) !important; /* Mask the parent's border-bottom */
-  border-top-left-radius: 6px !important;
-  border-top-right-radius: 6px !important;
+  border-top: 2px solid var(--color-primary) !important; /* Accent indicator line at the top */
+  border-top-left-radius: 8px !important;
+  border-top-right-radius: 8px !important;
   border-bottom-left-radius: 0 !important;
   border-bottom-right-radius: 0 !important;
   color: var(--text-main) !important;
   position: relative;
   z-index: 2; /* Sit on top of the border-bottom */
   margin-bottom: -1px; /* Extend over the bottom border of content-tabs-bar */
+}
+
+/* Left Chrome-like outward curve */
+.content-tabs-bar .tab-active::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: -8px;
+  width: 8px;
+  height: 9px;
+  background: radial-gradient(circle at 0 0, transparent 8px, var(--bg-main) 8px);
+  pointer-events: none;
+}
+
+/* Right Chrome-like outward curve */
+.content-tabs-bar .tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: -8px;
+  width: 8px;
+  height: 9px;
+  background: radial-gradient(circle at 100% 0, transparent 8px, var(--bg-main) 8px);
+  pointer-events: none;
 }
 
 /* Plus button alignment */
@@ -590,5 +619,6 @@ body.tab-dragging .drag-drop-overlay {
 .content-tabs-bar .tabs-dropdown-wrapper .action-btn {
   margin-bottom: 5px; /* Center it vertically relative to tabs */
 }
+
 
 
