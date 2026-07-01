@@ -5,12 +5,12 @@ export const TPlusLogo = ({ size = 16 }: { size?: number }) => (
     height={size} 
     viewBox="0 0 512 512" 
     className="shrink-0"
-    style={{ filter: 'drop-shadow(0 0 4px rgba(168, 85, 247, 0.4))' }}
+    style={{ filter: 'drop-shadow(0 0 4px rgba(6, 182, 212, 0.4))' }}
   >
     <defs>
       <linearGradient id="glyph-grad-inline" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#c084fc" />
-        <stop offset="100%" stop-color="#a855f7" />
+        <stop offset="0%" stop-color="#6366f1" />
+        <stop offset="100%" stop-color="#06b6d4" />
       </linearGradient>
     </defs>
     <path 

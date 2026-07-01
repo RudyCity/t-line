@@ -82,10 +82,10 @@ function TerminalSearchBar({ searchAddon, onClose }: SearchBarProps) {
     const opts = { caseSensitive, regex, decorations: {
       matchBackground: 'rgba(168,85,247,0.3)',
       matchBorder: 'rgba(168,85,247,0.8)',
-      matchOverviewRuler: '#a855f7',
+      matchOverviewRuler: '#6366f1',
       activeMatchBackground: 'rgba(168,85,247,0.6)',
-      activeMatchBorder: '#c084fc',
-      activeMatchColorOverviewRuler: '#c084fc',
+      activeMatchBorder: '#818cf8',
+      activeMatchColorOverviewRuler: '#818cf8',
     }};
     const found = forward
       ? searchAddon.findNext(term, opts)
@@ -538,21 +538,21 @@ export function TerminalInstance({
       theme: {
         background: themeBackground || '#000000',
         foreground: themeForeground || '#f8fafc',
-        cursor: accentColor || '#a855f7',
+        cursor: accentColor || '#6366f1',
         cursorAccent: themeBackground || '#000000',
         selectionBackground: isLightColor(themeBackground)
           ? (accentColor ? `color-mix(in srgb, ${accentColor} 40%, #000000)` : '#334155')
-          : (accentColor ? `color-mix(in srgb, ${accentColor} 30%, transparent)` : 'rgba(168, 85, 247, 0.3)'),
+          : (accentColor ? `color-mix(in srgb, ${accentColor} 30%, transparent)` : 'rgba(99, 102, 241, 0.3)'),
         selectionForeground: '#ffffff',
         selectionInactiveBackground: isLightColor(themeBackground)
           ? (accentColor ? `color-mix(in srgb, ${accentColor} 20%, #000000)` : '#475569')
-          : (accentColor ? `color-mix(in srgb, ${accentColor} 15%, transparent)` : 'rgba(168, 85, 247, 0.15)'),
+          : (accentColor ? `color-mix(in srgb, ${accentColor} 15%, transparent)` : 'rgba(99, 102, 241, 0.15)'),
         black: isLightColor(themeBackground) ? '#0f172a' : '#4a5568',
         red: '#ef4444',
         green: isLightColor(themeBackground) ? '#15803d' : '#10b981',
         yellow: isLightColor(themeBackground) ? '#b45309' : '#f59e0b',
         blue: isLightColor(themeBackground) ? '#1d4ed8' : '#3b82f6',
-        magenta: isLightColor(themeBackground) ? '#7e22ce' : '#a855f7',
+        magenta: isLightColor(themeBackground) ? '#7e22ce' : '#6366f1',
         cyan: isLightColor(themeBackground) ? '#0369a1' : '#06b6d4',
         white: isLightColor(themeBackground) ? '#0f172a' : '#cbd5e1',
         brightBlack: isLightColor(themeBackground) ? '#475569' : '#718096',
@@ -560,7 +560,7 @@ export function TerminalInstance({
         brightGreen: isLightColor(themeBackground) ? '#166534' : '#34d399',
         brightYellow: isLightColor(themeBackground) ? '#d97706' : '#fbbf24',
         brightBlue: isLightColor(themeBackground) ? '#1e40af' : '#60a5fa',
-        brightMagenta: isLightColor(themeBackground) ? '#6b21a8' : '#c084fc',
+        brightMagenta: isLightColor(themeBackground) ? '#6b21a8' : '#818cf8',
         brightCyan: isLightColor(themeBackground) ? '#075985' : '#22d3ee',
         brightWhite: isLightColor(themeBackground) ? '#0f172a' : '#f1f5f9',
       }
@@ -795,21 +795,21 @@ export function TerminalInstance({
         terminalRef.current.options.theme = {
           background: themeBackground || '#000000',
           foreground: themeForeground || '#f8fafc',
-          cursor: accentColor || '#a855f7',
+          cursor: accentColor || '#6366f1',
           cursorAccent: themeBackground || '#000000',
           selectionBackground: isLight
             ? (accentColor ? `color-mix(in srgb, ${accentColor} 40%, #000000)` : '#334155')
-            : (accentColor ? `color-mix(in srgb, ${accentColor} 30%, transparent)` : 'rgba(168, 85, 247, 0.3)'),
+            : (accentColor ? `color-mix(in srgb, ${accentColor} 30%, transparent)` : 'rgba(99, 102, 241, 0.3)'),
           selectionForeground: '#ffffff',
           selectionInactiveBackground: isLight
             ? (accentColor ? `color-mix(in srgb, ${accentColor} 20%, #000000)` : '#475569')
-            : (accentColor ? `color-mix(in srgb, ${accentColor} 15%, transparent)` : 'rgba(168, 85, 247, 0.15)'),
+            : (accentColor ? `color-mix(in srgb, ${accentColor} 15%, transparent)` : 'rgba(99, 102, 241, 0.15)'),
           black: isLight ? '#0f172a' : '#4a5568',
           red: '#ef4444',
           green: isLight ? '#15803d' : '#10b981',
           yellow: isLight ? '#b45309' : '#f59e0b',
           blue: isLight ? '#1d4ed8' : '#3b82f6',
-          magenta: isLight ? '#7e22ce' : '#a855f7',
+          magenta: isLight ? '#7e22ce' : '#6366f1',
           cyan: isLight ? '#0369a1' : '#06b6d4',
           white: isLight ? '#0f172a' : '#cbd5e1',
           brightBlack: isLight ? '#475569' : '#718096',
@@ -817,7 +817,7 @@ export function TerminalInstance({
           brightGreen: isLight ? '#166534' : '#34d399',
           brightYellow: isLight ? '#d97706' : '#fbbf24',
           brightBlue: isLight ? '#1e40af' : '#60a5fa',
-          brightMagenta: isLight ? '#6b21a8' : '#c084fc',
+          brightMagenta: isLight ? '#6b21a8' : '#818cf8',
           brightCyan: isLight ? '#075985' : '#22d3ee',
           brightWhite: isLight ? '#0f172a' : '#f1f5f9',
         };

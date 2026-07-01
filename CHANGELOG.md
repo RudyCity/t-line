@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.199] - 2026-07-01
+
+### Changed
+- **Logo & Icon Color Theme Redesign**: Updated the brand logo (`TPlusLogo`), desktop icon (`icon.svg`, `icon.png`), and web favicon from the feminine violet/purple scheme to a professional Indigo & Cyan palette.
+- **Default Application Theme Accent**: Changed the default theme's primary accent color from Violet (`#a855f7`) to Indigo (`#6366f1`) and updated all fallbacks and related styles to provide a clean, tech-focused, and gender-neutral user interface.
+
+---
+
 ## [1.3.198] - 2026-07-01
 
 ### Changed

@@ -483,8 +483,8 @@ body.tab-dragging .drag-drop-overlay {
 
 .drag-drop-zone {
   position: absolute;
-  background: rgba(168, 85, 247, 0.02);
-  border: 2px dashed rgba(168, 85, 247, 0.3);
+  background: rgba(99, 102, 241, 0.02);
+  border: 2px dashed rgba(99, 102, 241, 0.3);
   pointer-events: auto;
   display: flex;
   align-items: center;
@@ -495,12 +495,12 @@ body.tab-dragging .drag-drop-overlay {
 }
 
 .drag-drop-zone:hover {
-  background: rgba(168, 85, 247, 0.18) !important;
-  border-color: #c084fc !important;
+  background: rgba(99, 102, 241, 0.18) !important;
+  border-color: #818cf8 !important;
 }
 
 .drag-drop-zone span {
-  color: #c084fc;
+  color: #818cf8;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;

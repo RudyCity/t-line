@@ -50,7 +50,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   latestVersion,
   theme = 'default',
   setTheme = () => {},
-  accentColor = '#a855f7',
+  accentColor = '#6366f1',
   setAccentColor = () => {},
   fontSans = 'Outfit',
   setFontSans = () => {},
@@ -315,7 +315,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </span>
                     )}
                     {updateCheckStatus === 'available' && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#a855f7' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#6366f1' }}>
                         <ArrowUpCircle size={12} />
                         {updateCheckVersion ? `v${updateCheckVersion} available` : 'Available'}
                       </span>
@@ -335,9 +335,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           display: 'flex', alignItems: 'center', gap: '4px',
                           fontSize: '0.75rem', fontWeight: 600,
                           padding: '3px 10px', borderRadius: '6px',
-                          background: 'rgba(168, 85, 247, 0.2)',
-                          border: '1px solid rgba(168, 85, 247, 0.4)',
-                          color: '#c084fc', cursor: 'pointer'
+                          background: 'rgba(99, 102, 241, 0.2)',
+                          border: '1px solid rgba(99, 102, 241, 0.4)',
+                          color: '#818cf8', cursor: 'pointer'
                         }}
                       >
                         <RefreshCw size={11} />
@@ -652,7 +652,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {activeTab === 'connections' && (
             <div>
-              <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(168, 85, 247, 0.05)', border: '1px solid rgba(168, 85, 247, 0.1)', padding: '10px', borderRadius: '8px' }}>
+              <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.1)', padding: '10px', borderRadius: '8px' }}>
                 <Shield size={16} className="text-purple-400 shrink-0" />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
                   Manage client devices accessing your server. You can block individual IPs to prevent unauthorized web or terminal connection requests.

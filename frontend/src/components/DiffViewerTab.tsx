@@ -174,7 +174,7 @@ export function DiffViewerTab({
           flex-shrink: 0;
         }
         .dvt-header-icon {
-          color: var(--color-primary, #a855f7);
+          color: var(--color-primary, #6366f1);
           flex-shrink: 0;
         }
         .dvt-header-file {
@@ -189,7 +189,7 @@ export function DiffViewerTab({
         .dvt-header-hash {
           font-family: monospace;
           font-size: 0.7rem;
-          color: var(--color-primary, #a855f7);
+          color: var(--color-primary, #6366f1);
           flex-shrink: 0;
         }
         .dvt-header-stats {

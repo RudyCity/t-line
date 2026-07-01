@@ -25,7 +25,7 @@ export const THEMES: Record<string, ThemePreset> = {
     textMain: '#f8fafc',
     textMuted: '#94a3b8',
     textDark: '#64748b',
-    defaultAccent: '#a855f7',
+    defaultAccent: '#6366f1',
     bgRadialDot: 'rgba(255, 255, 255, 0.02)',
   },
   dracula: {

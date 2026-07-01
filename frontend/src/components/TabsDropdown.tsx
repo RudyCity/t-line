@@ -237,7 +237,7 @@ export const TabsDropdown: React.FC<TabsDropdownProps> = ({
                         alignItems: 'center', 
                         gap: '2px', 
                         fontSize: '9px', 
-                        background: 'rgba(168, 85, 247, 0.1)', 
+                        background: 'rgba(99, 102, 241, 0.1)', 
                         color: 'var(--accent-color)', 
                         padding: '1px 4px', 
                         borderRadius: '3px',

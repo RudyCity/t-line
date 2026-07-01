@@ -329,9 +329,9 @@ export function GitChanges({
           background: var(--surface-overlay);
         }
         .git-tab-btn-active {
-          color: var(--color-primary, #a855f7) !important;
-          border-bottom-color: var(--color-primary, #a855f7);
-          background: var(--tab-active-bg, rgba(168, 85, 247, 0.04));
+          color: var(--color-primary, #6366f1) !important;
+          border-bottom-color: var(--color-primary, #6366f1);
+          background: var(--tab-active-bg, rgba(99, 102, 241, 0.04));
         }
 
         .git-commit-container {
@@ -356,7 +356,7 @@ export function GitChanges({
           transition: border-color 0.2s;
         }
         .git-commit-textarea:focus {
-          border-color: var(--color-primary, #a855f7);
+          border-color: var(--color-primary, #6366f1);
         }
         .git-commit-options {
           display: flex;
@@ -368,7 +368,7 @@ export function GitChanges({
           user-select: none;
         }
         .git-commit-btn {
-          background: var(--color-primary, #a855f7);
+          background: var(--color-primary, #6366f1);
           color: white;
           border: none;
           border-radius: 6px;

@@ -392,7 +392,7 @@ export function CheckpointsPanel({
         .status-m { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
         .status-a { background: rgba(16, 185, 129, 0.15); color: #34d399; }
         .status-d { background: rgba(239, 68, 68, 0.15); color: #f87171; }
-        .status-r { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+        .status-r { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
         .cp-target-path-wrap {
           padding: 6px 10px;
           background: rgba(255, 255, 255, 0.03);

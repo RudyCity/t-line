@@ -59,7 +59,7 @@ const LANE_COLORS = [
   '#4ade80', // green-400
   '#f43f5e', // rose-400
   '#fbbf24', // amber-400
-  '#c084fc', // purple-400
+  '#818cf8', // purple-400
   '#22d3ee', // cyan-400
   '#f472b6', // pink-400
 ];
@@ -105,7 +105,7 @@ function GitGraphLine({ prefix }: { prefix: string }) {
                 cx={xc} 
                 cy={yc} 
                 r={4} 
-                fill="var(--color-primary, #a855f7)" 
+                fill="var(--color-primary, #6366f1)" 
                 stroke="var(--bg-sidebar, #1e1e2e)" 
                 strokeWidth={1.5}
               />
@@ -345,8 +345,8 @@ export function GitHistory({ workspaceId, token, worktreePath, onOpenDiffTab }: 
           background: var(--surface-overlay);
         }
         .git-history-item-active {
-          background: rgba(168, 85, 247, 0.08) !important;
-          border-left: 3px solid var(--color-primary, #a855f7);
+          background: rgba(99, 102, 241, 0.08) !important;
+          border-left: 3px solid var(--color-primary, #6366f1);
         }
         .git-graph-col {
           display: flex;
@@ -416,9 +416,9 @@ export function GitHistory({ workspaceId, token, worktreePath, onOpenDiffTab }: 
           white-space: nowrap;
         }
         .git-ref-head {
-          background: rgba(168, 85, 247, 0.12);
-          color: #c084fc;
-          border-color: rgba(168, 85, 247, 0.3);
+          background: rgba(99, 102, 241, 0.12);
+          color: #818cf8;
+          border-color: rgba(99, 102, 241, 0.3);
         }
         .git-ref-branch {
           background: rgba(74, 222, 128, 0.12);
@@ -470,7 +470,7 @@ export function GitHistory({ workspaceId, token, worktreePath, onOpenDiffTab }: 
         .git-details-hash {
           font-family: monospace;
           font-size: 0.7rem;
-          color: var(--color-primary, #a855f7);
+          color: var(--color-primary, #6366f1);
           word-break: break-all;
         }
 
@@ -515,8 +515,8 @@ export function GitHistory({ workspaceId, token, worktreePath, onOpenDiffTab }: 
         }
         .git-history-resizer:hover,
         .git-history-resizer:active {
-          background: rgba(168, 85, 247, 0.18);
-          border-color: rgba(168, 85, 247, 0.4);
+          background: rgba(99, 102, 241, 0.18);
+          border-color: rgba(99, 102, 241, 0.4);
         }
         .git-commit-details-panel {
           display: flex;

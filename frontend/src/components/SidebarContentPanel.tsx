@@ -89,7 +89,7 @@ export function WorkspaceSwitcher({
         .ws-pill-active {
           background: var(--tab-active-bg, rgba(168,85,247,0.13)) !important;
           border-color: var(--tab-active-border, rgba(168,85,247,0.35)) !important;
-          color: var(--color-primary, #a855f7) !important;
+          color: var(--color-primary, #6366f1) !important;
           box-shadow: none !important;
         }
       `}</style>

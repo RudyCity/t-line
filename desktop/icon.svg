@@ -7,10 +7,10 @@
       <stop offset="100%" stop-color="#0f172a" />
     </linearGradient>
 
-    <!-- Glowing Purple Gradient for the glyphs -->
+    <!-- Glowing Indigo/Cyan Gradient for the glyphs -->
     <linearGradient id="glyph-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#c084fc" />
-      <stop offset="100%" stop-color="#a855f7" />
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#06b6d4" />
     </linearGradient>
 
     <!-- Outer Glow Filter -->
@@ -24,7 +24,7 @@
   </defs>
 
   <!-- Background Card -->
-  <rect width="512" height="512" rx="112" fill="url(#bg-grad)" stroke="rgba(168, 85, 247, 0.3)" stroke-width="6" />
+  <rect width="512" height="512" rx="112" fill="url(#bg-grad)" stroke="rgba(99, 102, 241, 0.3)" stroke-width="6" />
 
   <!-- Grid Pattern Overlay (sleek tech look) -->
   <g opacity="0.05">
