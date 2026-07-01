@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.211] - 2026-07-01
+
+### Fixed
+- **CSP / Fonts**: Allowed `data:` URIs in `font-src` directive in `frontend/index.html` to resolve issues loading base64-embedded fonts (e.g. from Monaco Editor).
+
 ## [1.3.210] - 2026-07-01
 
 ### Added
