@@ -306,7 +306,8 @@ app.get('/api/workspaces', authMiddleware, async (req, res) => {
 
 app.post('/api/workspaces', authMiddleware, (req, res) => {
   const { path: dirPath, defaultShell } = req.body;
-  if (!dirPath || !fs.existsSync(dirPath)) {
+  const isSSH = dirPath && dirPath.startsWith('ssh://');
+  if (!dirPath || (!isSSH && !fs.existsSync(dirPath))) {
     return res.status(400).json({ error: 'Valid directory path is required.' });
   }
   const result = addWorkspace(dirPath, defaultShell);
@@ -495,11 +496,13 @@ async function updateWorkspaceWatchers() {
     const pathsToKeep = new Set<string>();
 
     for (const ws of workspaces) {
+      if (ws.path.startsWith('ssh://')) continue;
       pathsToKeep.add(path.normalize(ws.path));
       try {
         const info = await getWorkspaceInfo(ws);
         if (info.worktrees) {
           for (const wt of info.worktrees) {
+            if (wt.path.startsWith('ssh://')) continue;
             pathsToKeep.add(path.normalize(wt.path));
           }
         }

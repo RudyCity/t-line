@@ -2,6 +2,20 @@ import { execFile } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { loadConfig, saveConfig } from './auth';
+import {
+  isSSHPath,
+  parseSSHPath,
+  runSSHCommand,
+  remoteExists,
+  remoteRead,
+  remoteWrite,
+  normalizeSSHPath
+} from './sshHelpers';
+
+function normalizePath(p: string): string {
+  if (p && p.startsWith('ssh://')) return normalizeSSHPath(p);
+  return path.normalize(p);
+}
 
 interface WorktreeInfo {
   path: string;
@@ -23,6 +37,13 @@ interface WorkspaceInfo {
 
 // Promisified safe execFile helper for git commands
 function runGit(args: string[], cwd: string): Promise<string> {
+  if (cwd && cwd.startsWith('ssh://')) {
+    const ssh = parseSSHPath(cwd);
+    if (!ssh) throw new Error('Invalid SSH Path');
+    const gitArgs = args.map(a => `"${a.replace(/"/g, '\\"')}"`).join(' ');
+    const cmd = `cd "${ssh.remotePath.replace(/"/g, '\\"')}" && git ${gitArgs}`;
+    return runSSHCommand(ssh.host, ssh.port, ssh.user, cmd);
+  }
   return new Promise((resolve, reject) => {
     // 15 seconds timeout to prevent hanging processes
     execFile('git', args, { cwd, timeout: 15000 }, (error, stdout, stderr) => {
@@ -49,10 +70,10 @@ export function getWorkspaces(): WorkspaceConfig[] {
   // Migrate old format (string[]) to new format (WorkspaceConfig[])
   return raw.map((item: any) => {
     if (typeof item === 'string') {
-      return { path: path.normalize(item), defaultShell: 'powershell' };
+      return { path: normalizePath(item), defaultShell: 'powershell' };
     }
     return {
-      path: path.normalize(item.path),
+      path: normalizePath(item.path),
       defaultShell: item.defaultShell || 'powershell',
       name: item.name
     };
@@ -65,12 +86,12 @@ export function addWorkspace(dirPath: string, defaultShell = 'powershell'): { su
   if (!config) return { success: false, workspaces: [] };
 
   const rawWorkspaces: any[] = (config as any).workspaces || [];
-  const normalizedPath = path.normalize(dirPath);
+  const normalizedPath = normalizePath(dirPath);
 
   // Check if already exists
   const exists = rawWorkspaces.some((w: any) => {
     const p = typeof w === 'string' ? w : w.path;
-    return path.normalize(p) === normalizedPath;
+    return normalizePath(p) === normalizedPath;
   });
 
   if (!exists) {
@@ -89,11 +110,11 @@ export function removeWorkspace(dirPath: string): { success: boolean; workspaces
   if (!config) return { success: false, workspaces: [] };
 
   let rawWorkspaces: any[] = (config as any).workspaces || [];
-  const normalizedPath = path.normalize(dirPath);
+  const normalizedPath = normalizePath(dirPath);
 
   rawWorkspaces = rawWorkspaces.filter((w: any) => {
     const p = typeof w === 'string' ? w : w.path;
-    return path.normalize(p) !== normalizedPath;
+    return normalizePath(p) !== normalizedPath;
   });
   
   (config as any).workspaces = rawWorkspaces;
@@ -109,11 +130,11 @@ export function updateWorkspace(dirPath: string, updates: { defaultShell?: strin
   if (!config) return { success: false, workspaces: [] };
 
   const rawWorkspaces: any[] = (config as any).workspaces || [];
-  const normalizedPath = path.normalize(dirPath);
+  const normalizedPath = normalizePath(dirPath);
 
   const idx = rawWorkspaces.findIndex((w: any) => {
     const p = typeof w === 'string' ? w : w.path;
-    return path.normalize(p) === normalizedPath;
+    return normalizePath(p) === normalizedPath;
   });
 
   if (idx !== -1) {
@@ -145,7 +166,7 @@ export function parseWorktreePorcelain(porcelain: string): WorktreeInfo[] {
         worktrees.push(currentWorktree as WorktreeInfo);
       }
       currentWorktree = {
-        path: path.normalize(trimmed.substring(9).trim()),
+        path: normalizePath(trimmed.substring(9).trim()),
         isMain: worktrees.length === 0 // The first one listed is the main/parent worktree
       };
     } else if (trimmed.startsWith('commit ')) {
@@ -189,7 +210,7 @@ export function clearWorkspaceCache(): void {
 
 // Retrieve details for a workspace
 export async function getWorkspaceInfo(workspace: WorkspaceConfig): Promise<WorkspaceInfo> {
-  const normalizedPath = path.normalize(workspace.path);
+  const normalizedPath = normalizePath(workspace.path);
   const cacheKey = normalizedPath;
   const now = Date.now();
   
@@ -198,8 +219,22 @@ export async function getWorkspaceInfo(workspace: WorkspaceConfig): Promise<Work
     return cached.info;
   }
 
-  const name = workspace.name || path.basename(normalizedPath) || normalizedPath;
-  const isGit = fs.existsSync(path.join(normalizedPath, '.git'));
+  let name = workspace.name;
+  if (!name) {
+    if (normalizedPath.startsWith('ssh://')) {
+      const parts = normalizedPath.split('/');
+      name = parts[parts.length - 1] || normalizedPath;
+    } else {
+      name = path.basename(normalizedPath) || normalizedPath;
+    }
+  }
+
+  let isGit = false;
+  if (normalizedPath.startsWith('ssh://')) {
+    isGit = await remoteExists(`${normalizedPath}/.git`);
+  } else {
+    isGit = fs.existsSync(path.join(normalizedPath, '.git'));
+  }
   
   let worktrees: WorktreeInfo[] = [];
 
@@ -208,6 +243,18 @@ export async function getWorkspaceInfo(workspace: WorkspaceConfig): Promise<Work
       const ptyOutput = await runGit(['worktree', 'list', '--porcelain'], normalizedPath);
       const parsedWorktrees = parseWorktreePorcelain(ptyOutput);
       
+      if (normalizedPath.startsWith('ssh://')) {
+        const ssh = parseSSHPath(normalizedPath);
+        if (ssh) {
+          const prefix = `ssh://${ssh.user}@${ssh.host}:${ssh.port}`;
+          for (const wt of parsedWorktrees) {
+            if (!wt.path.startsWith('ssh://')) {
+              wt.path = `${prefix}${wt.path.replace(/\\/g, '/')}`;
+            }
+          }
+        }
+      }
+
       // Check dirty status for each worktree sequentially to prevent resource contention
       const resolvedWorktrees: WorktreeInfo[] = [];
       for (const wt of parsedWorktrees) {
@@ -256,8 +303,8 @@ export async function addWorktree(
   newBranchName?: string
 ): Promise<{ success: boolean; output: string }> {
   try {
-    const normalizedRepo = path.normalize(repoPath);
-    const normalizedWorktree = path.normalize(worktreePath);
+    const normalizedRepo = normalizePath(repoPath);
+    const normalizedWorktree = normalizePath(worktreePath);
     
     const args = ['worktree', 'add'];
     if (newBranch) {
@@ -274,8 +321,8 @@ export async function addWorktree(
   } catch (error: any) {
     if (error.message && error.message.includes('is already used by worktree')) {
       try {
-        const normalizedRepo = path.normalize(repoPath);
-        const normalizedWorktree = path.normalize(worktreePath);
+        const normalizedRepo = normalizePath(repoPath);
+        const normalizedWorktree = normalizePath(worktreePath);
         
         // If they specify a custom local branch name but it fails (unlikely to fail on 'already used' unless the new name is in use),
         // or if checking out existing branch directly fails:
@@ -297,8 +344,8 @@ export async function addWorktree(
 
 // Remove a git worktree — with Windows Permission Denied fallback
 export async function removeWorktree(repoPath: string, worktreePath: string, force: boolean): Promise<{ success: boolean; output: string }> {
-  const normalizedRepo = path.normalize(repoPath);
-  const normalizedWorktree = path.normalize(worktreePath);
+  const normalizedRepo = normalizePath(repoPath);
+  const normalizedWorktree = normalizePath(worktreePath);
 
   // Step 1: Try git worktree remove (--force)
   try {
@@ -323,7 +370,12 @@ export async function removeWorktree(repoPath: string, worktreePath: string, for
 
     try {
       // Force-remove directory tree via Node.js (bypasses the git shell limitation)
-      if (fs.existsSync(normalizedWorktree)) {
+      if (normalizedWorktree.startsWith('ssh://')) {
+        const ssh = parseSSHPath(normalizedWorktree);
+        if (ssh) {
+          await runSSHCommand(ssh.host, ssh.port, ssh.user, `rm -rf "${ssh.remotePath}"`);
+        }
+      } else if (fs.existsSync(normalizedWorktree)) {
         // On Windows, read-only .git files can block deletion — clear read-only flags first
         const clearReadOnly = (dirPath: string) => {
           try {
@@ -353,7 +405,8 @@ export async function removeWorktree(repoPath: string, worktreePath: string, for
 // List local git branches in repository
 export async function getRepoBranches(repoPath: string): Promise<string[]> {
   try {
-    const output = await runGit(['branch', '--format=%(refname:short)'], repoPath);
+    const normalizedRepo = normalizePath(repoPath);
+    const output = await runGit(['branch', '--format=%(refname:short)'], normalizedRepo);
     return output.split('\n').map(b => b.trim()).filter(Boolean);
   } catch (e) {
     return [];
@@ -493,7 +546,12 @@ export async function discardChanges(repoPath: string, filePath?: string, all = 
         await runGit(['checkout', '--', normalizedFile], normalizedRepo);
       } catch (error) {
         // If checkout fails, delete the untracked file
-        if (fs.existsSync(fullPath)) {
+        if (fullPath.startsWith('ssh://')) {
+          const ssh = parseSSHPath(fullPath);
+          if (ssh) {
+            await runSSHCommand(ssh.host, ssh.port, ssh.user, `rm -rf "${ssh.remotePath}"`);
+          }
+        } else if (fs.existsSync(fullPath)) {
           const stats = fs.statSync(fullPath);
           if (stats.isDirectory()) {
             fs.rmSync(fullPath, { recursive: true, force: true });
@@ -698,19 +756,36 @@ export interface Checkpoint {
   worktreePath: string; // worktree path where it was created
 }
 
+async function getMetaPath(normalizedRepo: string): Promise<string> {
+  const commonGitDir = await runGit(['rev-parse', '--git-common-dir'], normalizedRepo);
+  const commonGitDirClean = commonGitDir.trim().replace(/\\/g, '/');
+  
+  if (normalizedRepo.startsWith('ssh://')) {
+    const ssh = parseSSHPath(normalizedRepo);
+    if (!ssh) throw new Error('Invalid SSH Path');
+    const resolvedRemoteDir = commonGitDirClean.startsWith('/') 
+      ? commonGitDirClean 
+      : `${ssh.remotePath}/${commonGitDirClean}`;
+    return `ssh://${ssh.user}@${ssh.host}:${ssh.port}${resolvedRemoteDir}/tline-checkpoints.json`;
+  } else {
+    const absCommonGitDir = path.resolve(normalizedRepo, commonGitDir);
+    return path.join(absCommonGitDir, 'tline-checkpoints.json');
+  }
+}
+
 // Get checkpoints list for a repository/worktree path
 export async function getCheckpoints(repoPath: string): Promise<Checkpoint[]> {
   try {
-    const normalizedRepo = path.normalize(repoPath);
-    const commonGitDir = await runGit(['rev-parse', '--git-common-dir'], normalizedRepo);
-    const absCommonGitDir = path.resolve(normalizedRepo, commonGitDir);
-    const metaPath = path.join(absCommonGitDir, 'tline-checkpoints.json');
+    const normalizedRepo = normalizePath(repoPath);
+    const metaPath = await getMetaPath(normalizedRepo);
 
-    if (!fs.existsSync(metaPath)) {
+    const exists = metaPath.startsWith('ssh://') ? await remoteExists(metaPath) : fs.existsSync(metaPath);
+    if (!exists) {
       return [];
     }
 
-    const checkpoints: Checkpoint[] = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    const content = metaPath.startsWith('ssh://') ? (await remoteRead(metaPath)).content : fs.readFileSync(metaPath, 'utf8');
+    const checkpoints: Checkpoint[] = JSON.parse(content);
 
     // Validate each checkpoint's commit exists in Git.
     // If a checkpoint's commit is missing (e.g., cloned elsewhere or manually pruned),
@@ -727,7 +802,11 @@ export async function getCheckpoints(repoPath: string): Promise<Checkpoint[]> {
 
     // If some invalid checkpoints were removed, update the metadata file
     if (validCheckpoints.length !== checkpoints.length) {
-      fs.writeFileSync(metaPath, JSON.stringify(validCheckpoints, null, 2), 'utf8');
+      if (metaPath.startsWith('ssh://')) {
+        await remoteWrite(metaPath, JSON.stringify(validCheckpoints, null, 2));
+      } else {
+        fs.writeFileSync(metaPath, JSON.stringify(validCheckpoints, null, 2), 'utf8');
+      }
     }
 
     return validCheckpoints;
@@ -743,7 +822,7 @@ export async function createCheckpoint(
   description: string
 ): Promise<{ success: boolean; checkpoint?: Checkpoint; output: string }> {
   try {
-    const normalizedRepo = path.normalize(repoPath);
+    const normalizedRepo = normalizePath(repoPath);
 
     // Get HEAD commit hash
     const headCommit = await runGit(['rev-parse', 'HEAD'], normalizedRepo);
@@ -798,19 +877,23 @@ export async function createCheckpoint(
     };
 
     // Save to metadata JSON in common git dir
-    const commonGitDir = await runGit(['rev-parse', '--git-common-dir'], normalizedRepo);
-    const absCommonGitDir = path.resolve(normalizedRepo, commonGitDir);
-    const metaPath = path.join(absCommonGitDir, 'tline-checkpoints.json');
+    const metaPath = await getMetaPath(normalizedRepo);
 
     let checkpoints: Checkpoint[] = [];
-    if (fs.existsSync(metaPath)) {
+    const exists = metaPath.startsWith('ssh://') ? await remoteExists(metaPath) : fs.existsSync(metaPath);
+    if (exists) {
       try {
-        checkpoints = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+        const content = metaPath.startsWith('ssh://') ? (await remoteRead(metaPath)).content : fs.readFileSync(metaPath, 'utf8');
+        checkpoints = JSON.parse(content);
       } catch (e) {}
     }
 
     checkpoints.push(checkpoint);
-    fs.writeFileSync(metaPath, JSON.stringify(checkpoints, null, 2), 'utf8');
+    if (metaPath.startsWith('ssh://')) {
+      await remoteWrite(metaPath, JSON.stringify(checkpoints, null, 2));
+    } else {
+      fs.writeFileSync(metaPath, JSON.stringify(checkpoints, null, 2), 'utf8');
+    }
 
     return { success: true, checkpoint, output: 'Checkpoint created successfully.' };
   } catch (error: any) {
@@ -824,7 +907,7 @@ export async function restoreCheckpoint(
   checkpointId: string
 ): Promise<{ success: boolean; output: string }> {
   try {
-    const normalizedRepo = path.normalize(repoPath);
+    const normalizedRepo = normalizePath(repoPath);
 
     // Verify workspace is clean
     const status = await getGitStatus(normalizedRepo);
@@ -836,15 +919,15 @@ export async function restoreCheckpoint(
     }
 
     // Load checkpoints
-    const commonGitDir = await runGit(['rev-parse', '--git-common-dir'], normalizedRepo);
-    const absCommonGitDir = path.resolve(normalizedRepo, commonGitDir);
-    const metaPath = path.join(absCommonGitDir, 'tline-checkpoints.json');
+    const metaPath = await getMetaPath(normalizedRepo);
 
-    if (!fs.existsSync(metaPath)) {
+    const exists = metaPath.startsWith('ssh://') ? await remoteExists(metaPath) : fs.existsSync(metaPath);
+    if (!exists) {
       return { success: false, output: 'No checkpoints found.' };
     }
 
-    const checkpoints: Checkpoint[] = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    const content = metaPath.startsWith('ssh://') ? (await remoteRead(metaPath)).content : fs.readFileSync(metaPath, 'utf8');
+    const checkpoints: Checkpoint[] = JSON.parse(content);
     const checkpoint = checkpoints.find(c => c.id === checkpointId);
 
     if (!checkpoint) {
@@ -882,18 +965,18 @@ export async function deleteCheckpoint(
   checkpointId: string
 ): Promise<{ success: boolean; output: string }> {
   try {
-    const normalizedRepo = path.normalize(repoPath);
+    const normalizedRepo = normalizePath(repoPath);
 
     // Load checkpoints
-    const commonGitDir = await runGit(['rev-parse', '--git-common-dir'], normalizedRepo);
-    const absCommonGitDir = path.resolve(normalizedRepo, commonGitDir);
-    const metaPath = path.join(absCommonGitDir, 'tline-checkpoints.json');
+    const metaPath = await getMetaPath(normalizedRepo);
 
-    if (!fs.existsSync(metaPath)) {
+    const exists = metaPath.startsWith('ssh://') ? await remoteExists(metaPath) : fs.existsSync(metaPath);
+    if (!exists) {
       return { success: false, output: 'No checkpoints found.' };
     }
 
-    let checkpoints: Checkpoint[] = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    const content = metaPath.startsWith('ssh://') ? (await remoteRead(metaPath)).content : fs.readFileSync(metaPath, 'utf8');
+    let checkpoints: Checkpoint[] = JSON.parse(content);
     const checkpoint = checkpoints.find(c => c.id === checkpointId);
 
     if (checkpoint) {
@@ -904,7 +987,11 @@ export async function deleteCheckpoint(
 
       // Filter and save
       checkpoints = checkpoints.filter(c => c.id !== checkpointId);
-      fs.writeFileSync(metaPath, JSON.stringify(checkpoints, null, 2), 'utf8');
+      if (metaPath.startsWith('ssh://')) {
+        await remoteWrite(metaPath, JSON.stringify(checkpoints, null, 2));
+      } else {
+        fs.writeFileSync(metaPath, JSON.stringify(checkpoints, null, 2), 'utf8');
+      }
     }
 
     return { success: true, output: 'Checkpoint deleted.' };

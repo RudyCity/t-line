@@ -2,6 +2,7 @@ import { spawn as spawnProcess, ChildProcessWithoutNullStreams, exec } from 'chi
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
+import { isSSHPath, parseSSHPath } from './sshHelpers';
 
 let pty: any = null;
 try {
@@ -201,25 +202,40 @@ export class TerminalManager {
     const isWin = os.platform() === 'win32';
     let shell = '';
     let args: string[] = [];
+    let normalizedCwd = '';
 
-    if (isWin) {
-      switch (shellType) {
-        case 'cmd':
-          shell = 'cmd.exe'; args = []; break;
-        case 'gitbash':
-          shell = this.getGitBashPath(); args = ['--login', '-i']; break;
-        case 'wsl':
-          shell = 'wsl.exe'; args = []; break;
-        case 'powershell':
-        default:
-          shell = 'powershell.exe'; args = ['-NoLogo']; break;
-      }
+    if (cwd && cwd.startsWith('ssh://')) {
+      const ssh = parseSSHPath(cwd);
+      if (!ssh) throw new Error('Invalid SSH Path');
+      shell = 'ssh';
+      args = [
+        '-t',
+        '-p', ssh.port.toString(),
+        '-o', 'StrictHostKeyChecking=accept-new',
+        `${ssh.user}@${ssh.host}`,
+        `cd "${ssh.remotePath.replace(/"/g, '\\"')}" ; exec \\$SHELL -l || exec bash || exec sh`
+      ];
+      normalizedCwd = os.homedir();
     } else {
-      shell = shellType === 'wsl' ? 'bash' : (shellType === 'cmd' ? 'sh' : 'bash');
-      args = [];
+      if (isWin) {
+        switch (shellType) {
+          case 'cmd':
+            shell = 'cmd.exe'; args = []; break;
+          case 'gitbash':
+            shell = this.getGitBashPath(); args = ['--login', '-i']; break;
+          case 'wsl':
+            shell = 'wsl.exe'; args = []; break;
+          case 'powershell':
+          default:
+            shell = 'powershell.exe'; args = ['-NoLogo']; break;
+        }
+      } else {
+        shell = shellType === 'wsl' ? 'bash' : (shellType === 'cmd' ? 'sh' : 'bash');
+        args = [];
+      }
+      normalizedCwd = cwd ? path.normalize(cwd) : os.homedir();
     }
 
-    const normalizedCwd = cwd ? path.normalize(cwd) : os.homedir();
     let terminal: ITerminal;
     if (pty) {
       terminal = new PtyTerminal(shell, args, normalizedCwd, cols, rows);
@@ -235,7 +251,7 @@ export class TerminalManager {
       cleanupTimeout: null,
       isDetached: false,
       shellType,
-      cwd: normalizedCwd,
+      cwd: cwd || normalizedCwd,
       outputBufferChunks: [],
       outputBufferLength: 0,
       pendingFlushChunks: [],

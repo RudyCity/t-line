@@ -2,9 +2,20 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { authMiddleware } from './auth';
 import { clearWorkspaceCache } from './gitManager';
+import {
+  isSSHPath,
+  parseSSHPath,
+  remoteList,
+  remoteExplore,
+  remoteRead,
+  remoteWrite,
+  remoteDelete,
+  remoteCreate,
+  remoteRename
+} from './sshHelpers';
 
 const router = express.Router();
 
@@ -15,10 +26,15 @@ export function registerFileChangeCallback(cb: (filename: string) => void) {
 }
 
 // File System directory browser endpoint
-router.get('/list', authMiddleware, (req, res) => {
+router.get('/list', authMiddleware, async (req, res) => {
   const targetPath = req.query.path as string;
 
   try {
+    if (targetPath && isSSHPath(targetPath)) {
+      const result = await remoteList(targetPath);
+      return res.json(result);
+    }
+
     if (!targetPath) {
       // Return logical drives on Windows, or root on Unix
       if (os.platform() === 'win32') {
@@ -80,13 +96,17 @@ router.get('/list', authMiddleware, (req, res) => {
   }
 });
 
-router.get('/explore', authMiddleware, (req, res) => {
+router.get('/explore', authMiddleware, async (req, res) => {
   const targetPath = req.query.path as string;
   if (!targetPath) {
     return res.status(400).json({ error: 'Path is required.' });
   }
 
   try {
+    if (isSSHPath(targetPath)) {
+      const result = await remoteExplore(targetPath);
+      return res.json(result);
+    }
     const resolvedPath = path.resolve(targetPath);
     if (!fs.existsSync(resolvedPath)) {
       return res.status(404).json({ error: 'Path does not exist.' });
@@ -133,13 +153,17 @@ router.get('/explore', authMiddleware, (req, res) => {
   }
 });
 
-router.get('/read', authMiddleware, (req, res) => {
+router.get('/read', authMiddleware, async (req, res) => {
   const filePath = req.query.path as string;
   if (!filePath) {
     return res.status(400).json({ error: 'File path is required.' });
   }
 
   try {
+    if (isSSHPath(filePath)) {
+      const result = await remoteRead(filePath);
+      return res.json(result);
+    }
     const resolvedPath = path.resolve(filePath);
     if (!fs.existsSync(resolvedPath)) {
       return res.status(404).json({ error: 'File does not exist.' });
@@ -200,6 +224,40 @@ router.get('/raw', authMiddleware, (req, res) => {
   }
 
   try {
+    if (isSSHPath(filePath)) {
+      const ssh = parseSSHPath(filePath);
+      if (!ssh) return res.status(400).json({ error: 'Invalid SSH path.' });
+      
+      const ext = path.extname(ssh.remotePath).toLowerCase();
+      let contentType = 'application/octet-stream';
+      if (ext === '.pdf') {
+        contentType = 'application/pdf';
+      } else if (ext === '.png') {
+        contentType = 'image/png';
+      } else if (ext === '.jpg' || ext === '.jpeg') {
+        contentType = 'image/jpeg';
+      } else if (ext === '.gif') {
+        contentType = 'image/gif';
+      } else if (ext === '.webp') {
+        contentType = 'image/webp';
+      } else if (ext === '.svg') {
+        contentType = 'image/svg+xml';
+      } else if (ext === '.ico') {
+        contentType = 'image/x-icon';
+      }
+      
+      res.setHeader('Content-Type', contentType);
+      const child = spawn('ssh', [
+        '-p', ssh.port.toString(),
+        '-o', 'BatchMode=yes',
+        '-o', 'StrictHostKeyChecking=accept-new',
+        `${ssh.user}@${ssh.host}`,
+        `cat "${ssh.remotePath.replace(/"/g, '\\"')}"`
+      ]);
+      child.stdout.pipe(res);
+      child.stderr.on('data', (d) => console.error('ssh raw error:', d.toString()));
+      return;
+    }
     const resolvedPath = path.resolve(filePath);
     if (!fs.existsSync(resolvedPath)) {
       return res.status(404).json({ error: 'File does not exist.' });
@@ -236,7 +294,7 @@ router.get('/raw', authMiddleware, (req, res) => {
   }
 });
 
-router.post('/write', authMiddleware, (req, res) => {
+router.post('/write', authMiddleware, async (req, res) => {
   const { path: filePath, content } = req.body;
   if (!filePath) {
     return res.status(400).json({ error: 'File path is required.' });
@@ -246,6 +304,14 @@ router.post('/write', authMiddleware, (req, res) => {
   }
 
   try {
+    if (isSSHPath(filePath)) {
+      await remoteWrite(filePath, content);
+      clearWorkspaceCache();
+      if (fileChangeCallback) {
+        fileChangeCallback(filePath);
+      }
+      return res.json({ success: true });
+    }
     const resolvedPath = path.resolve(filePath);
     fs.writeFileSync(resolvedPath, content, 'utf8');
     clearWorkspaceCache(); // Clear cache so status updates immediately
@@ -258,13 +324,21 @@ router.post('/write', authMiddleware, (req, res) => {
   }
 });
 
-router.delete('/delete', authMiddleware, (req, res) => {
+router.delete('/delete', authMiddleware, async (req, res) => {
   const targetPath = req.query.path as string || req.body.path as string;
   if (!targetPath) {
     return res.status(400).json({ error: 'Path is required.' });
   }
 
   try {
+    if (isSSHPath(targetPath)) {
+      await remoteDelete(targetPath);
+      clearWorkspaceCache();
+      if (fileChangeCallback) {
+        fileChangeCallback(targetPath);
+      }
+      return res.json({ success: true });
+    }
     const resolvedPath = path.resolve(targetPath);
     if (!fs.existsSync(resolvedPath)) {
       return res.status(404).json({ error: 'Path does not exist.' });
@@ -294,6 +368,9 @@ router.post('/open-explorer', authMiddleware, (req, res) => {
   }
 
   try {
+    if (isSSHPath(targetPath)) {
+      return res.json({ success: true });
+    }
     const resolvedPath = path.resolve(targetPath);
     if (!fs.existsSync(resolvedPath)) {
       return res.status(404).json({ error: 'Path does not exist.' });
@@ -338,13 +415,21 @@ router.post('/open-explorer', authMiddleware, (req, res) => {
   }
 });
 
-router.post('/create', authMiddleware, (req, res) => {
+router.post('/create', authMiddleware, async (req, res) => {
   const { path: itemPath, isDirectory } = req.body;
   if (!itemPath) {
     return res.status(400).json({ error: 'Path is required.' });
   }
 
   try {
+    if (isSSHPath(itemPath)) {
+      await remoteCreate(itemPath, isDirectory);
+      clearWorkspaceCache();
+      if (fileChangeCallback) {
+        fileChangeCallback(itemPath);
+      }
+      return res.json({ success: true });
+    }
     const resolvedPath = path.resolve(itemPath);
     if (fs.existsSync(resolvedPath)) {
       return res.status(400).json({ error: 'Path already exists.' });
@@ -371,13 +456,22 @@ router.post('/create', authMiddleware, (req, res) => {
   }
 });
 
-router.post('/rename', authMiddleware, (req, res) => {
+router.post('/rename', authMiddleware, async (req, res) => {
   const { oldPath, newPath } = req.body;
   if (!oldPath || !newPath) {
     return res.status(400).json({ error: 'oldPath and newPath are required.' });
   }
 
   try {
+    if (isSSHPath(oldPath)) {
+      await remoteRename(oldPath, newPath);
+      clearWorkspaceCache();
+      if (fileChangeCallback) {
+        fileChangeCallback(oldPath);
+        fileChangeCallback(newPath);
+      }
+      return res.json({ success: true });
+    }
     const resolvedOldPath = path.resolve(oldPath);
     const resolvedNewPath = path.resolve(newPath);
 

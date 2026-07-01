@@ -2,6 +2,18 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.193] - 2026-07-01
+
+### Added
+- **SSH/SFTP Remote Workspace Support**:
+  - **Backend Helpers**: Created [sshHelpers.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sshHelpers.ts) to manage remote SSH filesystem operations, directory listing (`ls -F -A`), file read/write (`cat`/`head` / stdin streaming), and file check operations using native OpenSSH CLI tools.
+  - **SSH Workspace Interception**: Adapted [fsRoutes.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/fsRoutes.ts) and [gitManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/gitManager.ts) to inspect path prefixes and automatically delegate operations to remote servers when target directories start with `ssh://`.
+  - **Checkpoints over SSH**: Programmed remote checkpoints configuration metadata support, saving snapshots (`tline-checkpoints.json`) in the remote `.git` common directory.
+  - **Interactive Remote Terminals**: Integrated remote terminal session support in [terminalManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/terminalManager.ts), launching an interactive `ssh -t` terminal when creating shell instances for SSH-prefixed directories.
+  - **UI Add Workspace Hints**: Updated [Modals.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/Modals.tsx) workspace add input to display hints on remote SSH paths (`ssh://user@host:port/path`) and disable the local directory explorer button for remote inputs.
+
+---
+
 ## [1.3.192] - 2026-07-01
 
 ### Added

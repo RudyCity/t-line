@@ -52,11 +52,11 @@ export const WorkspaceAddModal: React.FC<WorkspaceAddModalProps> = ({
           </button>
         </div>
         
-        <FormField label="Workspace Directory Path">
+        <FormField label="Workspace Directory Path (Local or SSH)">
           <div style={{ display: 'flex', gap: '8px' }}>
             <Input 
               type="text" 
-              placeholder="e.g. D:\projects\my-repo" 
+              placeholder="e.g. D:\projects\my-repo or ssh://user@host:port/path" 
               value={newWorkspacePath}
               onChange={(e) => setNewWorkspacePath(e.target.value)}
               required
@@ -67,6 +67,7 @@ export const WorkspaceAddModal: React.FC<WorkspaceAddModalProps> = ({
               variant="secondary"
               style={{ padding: '8px 12px', fontSize: '0.85rem' }} 
               onClick={handleFolderBrowse}
+              disabled={newWorkspacePath.startsWith('ssh://')}
             >
               Browse
             </Button>
