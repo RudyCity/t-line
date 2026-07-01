@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.212] - 2026-07-01
+
+### Fixed
+- **Git status path parsing**: Added unescape and unquote support for paths containing spaces, double quotes, and multi-byte UTF-8 octal escape sequences in `backend/src/gitManager.ts` and `backend/src/checkpointManager.ts` to ensure files are correctly tracked, staged, and unstaged in the File Explorer and Changes tab.
+
 ## [1.3.211] - 2026-07-01
 
 ### Fixed

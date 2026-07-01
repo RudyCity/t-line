@@ -11,7 +11,8 @@ import {
   runGit,
   normalizePath,
   clearWorkspaceCache,
-  getGitStatus
+  getGitStatus,
+  unquoteGitPath
 } from './gitManager';
 
 export interface Checkpoint {
@@ -131,13 +132,11 @@ export async function createCheckpoint(
         if (statusType.startsWith('D') || statusType.endsWith('D')) {
           continue; // skip deleted
         }
-        let filePathPart = line.substring(3);
-        if (filePathPart.startsWith('"') && filePathPart.endsWith('"')) {
-          filePathPart = filePathPart.substring(1, filePathPart.length - 1);
-        }
+        let filePathPart = line.substring(3).trim();
         if (filePathPart.includes(' -> ')) {
-          filePathPart = filePathPart.split(' -> ')[1];
+          filePathPart = filePathPart.split(' -> ')[1].trim();
         }
+        filePathPart = unquoteGitPath(filePathPart);
         filesToCheck.push(filePathPart);
       }
 

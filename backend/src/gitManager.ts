@@ -17,6 +17,29 @@ export function normalizePath(p: string): string {
   return path.normalize(p);
 }
 
+export function unquoteGitPath(p: string): string {
+  if (p && p.startsWith('"') && p.endsWith('"')) {
+    let inner = p.slice(1, -1);
+    inner = inner.replace(/\\([0-7]{3})|\\(.)/g, (match, octal, char) => {
+      if (octal) {
+        return String.fromCharCode(parseInt(octal, 8));
+      }
+      switch (char) {
+        case 'n': return '\n';
+        case 't': return '\t';
+        case 'r': return '\r';
+        case 'b': return '\b';
+        case 'f': return '\f';
+        case 'a': return '\x07';
+        case 'v': return '\v';
+        default: return char;
+      }
+    });
+    return Buffer.from(inner, 'binary').toString('utf8');
+  }
+  return p;
+}
+
 interface WorktreeInfo {
   path: string;
   commit: string;
@@ -439,6 +462,7 @@ export async function getGitStatus(repoPath: string): Promise<GitFileStatus[]> {
           filePath = parts[1].trim();
         }
       }
+      filePath = unquoteGitPath(filePath);
       
       const stagedList = ['M', 'A', 'D', 'R', 'C'];
       const unstagedList = ['M', 'D', 'T'];
