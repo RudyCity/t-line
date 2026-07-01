@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.205] - 2026-07-01
+
+### Fixed
+- **Terminal**: Resolved Ctrl+V double paste bug — now always blocks xterm and browser native paste handlers, then reads clipboard manually via `navigator.clipboard.readText()` once. Increased debounce threshold from 100ms to 300ms as additional safety net.
+
 ## [1.3.204] - 2026-07-01
 
 ### Fixed
@@ -1911,4 +1916,5 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ### Security
 * **Authentication Bypass**: Implemented local runtime ephemeral tokens to automatically authenticate local Electron clients while enforcing strict Master Password locks on incoming web requests.
+
 
