@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.196] - 2026-07-01
+
+### Changed
+- **Checkpoint/Snapshot UI**: Replaced native browser `window.confirm` and `alert` prompts with custom modal-based dialogs (`ConfirmModal` / `useConfirmDialog`) for checkpoint restore, delete, and create operations, resulting in a cleaner and more integrated user interface.
+
+---
+
 ## [1.3.195] - 2026-07-01
 
 ### Fixed

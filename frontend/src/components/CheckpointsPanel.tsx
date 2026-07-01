@@ -15,6 +15,8 @@ import {
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { WorkspaceSwitcher } from './SidebarContentPanel';
 import { Input, TextArea, Button } from './Form';
+import { useConfirmDialog } from '../hooks/useConfirmDialog';
+import { ConfirmModal } from './Modals';
 
 
 interface Checkpoint {
@@ -80,6 +82,7 @@ export function CheckpointsPanel({
   // Restore State
   const [restoringCpId, setRestoringCpId] = useState<string | null>(null);
   const [deletingCpId, setDeletingCpId] = useState<string | null>(null);
+  const { confirmDialog, showAlert, showConfirm } = useConfirmDialog();
 
   const targetPath = panelWorktreePath || panelWorkspace?.path || '';
 
@@ -171,75 +174,87 @@ export function CheckpointsPanel({
         fetchCheckpoints();
         onCheckpointChange?.();
       } else {
-        alert(data.output || 'Failed to create checkpoint.');
+        showAlert('Error', data.output || 'Failed to create checkpoint.');
       }
 
     } catch (e: any) {
-      alert(e.message || 'Error creating checkpoint.');
+      showAlert('Error', e.message || 'Error creating checkpoint.');
     } finally {
       setCreating(false);
     }
   };
 
-  const handleRestoreCheckpoint = async (cp: Checkpoint) => {
+  const handleRestoreCheckpoint = (cp: Checkpoint) => {
     const confirmMsg = `Are you sure you want to restore the checkpoint '${cp.name}'?\n\n` +
       `This will checkout branch '${cp.branch}' and restore all changes.\n` +
       `Your current working directory MUST be clean, or this restore will fail.`;
 
-    if (!window.confirm(confirmMsg)) return;
+    showConfirm(
+      'Restore Snapshot',
+      confirmMsg,
+      async () => {
+        setRestoringCpId(cp.id);
+        try {
+          const res = await fetch(`/api/workspaces/${panelWorkspace?.id}/checkpoints/${cp.id}/restore`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ worktreePath: panelWorktreePath })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            showAlert('Success', `Checkpoint '${cp.name}' restored successfully!`);
+            fetchCheckpoints();
+            onCheckpointChange?.();
+          } else {
+            showAlert('Error', data.output || 'Failed to restore checkpoint.');
+          }
 
-    setRestoringCpId(cp.id);
-    try {
-      const res = await fetch(`/api/workspaces/${panelWorkspace?.id}/checkpoints/${cp.id}/restore`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ worktreePath: panelWorktreePath })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        alert(`Checkpoint '${cp.name}' restored successfully!`);
-        fetchCheckpoints();
-        onCheckpointChange?.();
-      } else {
-        alert(data.output || 'Failed to restore checkpoint.');
-      }
-
-    } catch (e: any) {
-      alert(e.message || 'Error restoring checkpoint.');
-    } finally {
-      setRestoringCpId(null);
-    }
+        } catch (e: any) {
+          showAlert('Error', e.message || 'Error restoring checkpoint.');
+        } finally {
+          setRestoringCpId(null);
+        }
+      },
+      'primary',
+      'Restore'
+    );
   };
 
-  const handleDeleteCheckpoint = async (cp: Checkpoint) => {
-    if (!window.confirm(`Are you sure you want to delete checkpoint '${cp.name}'?`)) return;
+  const handleDeleteCheckpoint = (cp: Checkpoint) => {
+    showConfirm(
+      'Delete Snapshot',
+      `Are you sure you want to delete checkpoint '${cp.name}'?`,
+      async () => {
+        setDeletingCpId(cp.id);
+        try {
+          const res = await fetch(`/api/workspaces/${panelWorkspace?.id}/checkpoints/${cp.id}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ worktreePath: panelWorktreePath })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            fetchCheckpoints();
+            onCheckpointChange?.();
+          } else {
+            showAlert('Error', data.output || 'Failed to delete checkpoint.');
+          }
 
-    setDeletingCpId(cp.id);
-    try {
-      const res = await fetch(`/api/workspaces/${panelWorkspace?.id}/checkpoints/${cp.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ worktreePath: panelWorktreePath })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        fetchCheckpoints();
-        onCheckpointChange?.();
-      } else {
-        alert(data.output || 'Failed to delete checkpoint.');
-      }
-
-    } catch (e: any) {
-      alert(e.message || 'Error deleting checkpoint.');
-    } finally {
-      setDeletingCpId(null);
-    }
+        } catch (e: any) {
+          showAlert('Error', e.message || 'Error deleting checkpoint.');
+        } finally {
+          setDeletingCpId(null);
+        }
+      },
+      'danger',
+      'Delete'
+    );
   };
 
   const formatTime = (ts: number) => {
@@ -565,6 +580,20 @@ export function CheckpointsPanel({
             </form>
           </div>
         </div>
+      )}
+
+      {confirmDialog && (
+        <ConfirmModal
+          show={confirmDialog.show}
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmLabel={confirmDialog.confirmLabel}
+          cancelLabel={confirmDialog.cancelLabel}
+          variant={confirmDialog.variant}
+          isAlert={confirmDialog.isAlert}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={confirmDialog.onCancel}
+        />
       )}
     </div>
   );
