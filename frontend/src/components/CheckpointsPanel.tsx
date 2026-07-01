@@ -48,6 +48,7 @@ interface CheckpointsPanelProps {
   onWorkspaceClick: (wsId: string) => void;
   onWorktreeClick: (wsId: string, wtPath: string) => void;
   onOpenDiffTab?: (commitHash: string, filePath: string, worktreePath?: string) => void;
+  onCheckpointChange?: () => void;
 }
 
 export function CheckpointsPanel({
@@ -56,7 +57,8 @@ export function CheckpointsPanel({
   token,
   onWorkspaceClick,
   onWorktreeClick,
-  onOpenDiffTab
+  onOpenDiffTab,
+  onCheckpointChange
 }: CheckpointsPanelProps) {
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
   const [loading, setLoading] = useState(false);
@@ -165,9 +167,11 @@ export function CheckpointsPanel({
         setNewCpDesc('');
         setShowCreateModal(false);
         fetchCheckpoints();
+        onCheckpointChange?.();
       } else {
         alert(data.output || 'Failed to create checkpoint.');
       }
+
     } catch (e: any) {
       alert(e.message || 'Error creating checkpoint.');
     } finally {
@@ -196,9 +200,11 @@ export function CheckpointsPanel({
       if (res.ok && data.success) {
         alert(`Checkpoint '${cp.name}' restored successfully!`);
         fetchCheckpoints();
+        onCheckpointChange?.();
       } else {
         alert(data.output || 'Failed to restore checkpoint.');
       }
+
     } catch (e: any) {
       alert(e.message || 'Error restoring checkpoint.');
     } finally {
@@ -222,9 +228,11 @@ export function CheckpointsPanel({
       const data = await res.json();
       if (res.ok && data.success) {
         fetchCheckpoints();
+        onCheckpointChange?.();
       } else {
         alert(data.output || 'Failed to delete checkpoint.');
       }
+
     } catch (e: any) {
       alert(e.message || 'Error deleting checkpoint.');
     } finally {

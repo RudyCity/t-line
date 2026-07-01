@@ -757,6 +757,10 @@ export default function App() {
             fsChangeTrigger={fsChangeTrigger}
             onOpenBranchModal={() => setShowBranchModal(true)}
             openDiffTab={openDiffTab}
+            onCheckpointChange={() => {
+              fetchGitStatus(true);
+              fetchWorkspaces();
+            }}
           />
         )}
       </div>

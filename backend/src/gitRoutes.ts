@@ -417,6 +417,7 @@ router.post('/workspaces/:id/checkpoints', authMiddleware, async (req, res) => {
     const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
     const result = await createCheckpoint(targetPath, name, description || '');
     if (result.success) {
+      if (onWorkspaceChangeCallback) onWorkspaceChangeCallback();
       res.json(result);
     } else {
       res.status(400).json(result);
@@ -442,6 +443,7 @@ router.post('/workspaces/:id/checkpoints/:checkpointId/restore', authMiddleware,
     const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
     const result = await restoreCheckpoint(targetPath, checkpointId);
     if (result.success) {
+      if (onWorkspaceChangeCallback) onWorkspaceChangeCallback();
       res.json(result);
     } else {
       res.status(400).json(result);
@@ -467,6 +469,7 @@ router.delete('/workspaces/:id/checkpoints/:checkpointId', authMiddleware, async
     const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
     const result = await deleteCheckpoint(targetPath, checkpointId);
     if (result.success) {
+      if (onWorkspaceChangeCallback) onWorkspaceChangeCallback();
       res.json(result);
     } else {
       res.status(400).json(result);
