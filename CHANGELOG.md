@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.194] - 2026-07-01
+
+### Changed
+- **Documentation**: Updated `README.md` to detail key new features including SSH/SFTP Remote Workspace support, Workspace Checkpoints (Snapshots), interactive file explorer operations, theme-aware SVGs, and binary file warnings.
+
+---
+
 ## [1.3.193] - 2026-07-01
 
 ### Added

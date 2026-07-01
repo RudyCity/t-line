@@ -33,12 +33,26 @@ Modern software engineering requires juggling multiple branches, repositories, a
 ### 🌿 Visual Git Worktrees Management
 * **Real-time Dirty Indexing**: Instantly flags modified or untracked files with glowing amber indicators and uncommitted change badges.
 * **Dirty-First Auto-Sorting**: Workspaces with active modifications are automatically floated to the top of the sidebar.
+* **Advanced Branch Syncing**: Custom interactive search-to-filter branch selection panel, branch deletion (with force-delete prompts for unmerged changes), and a 3-column repository action layout (Fetch-all-prune, Pull, and Push).
 * **Safety Lock Pruning**: Automatically shuts down terminal tabs and file locks associated with a worktree before removal. Falls back to direct file-system removal and manual registry pruning if files are locked.
+
+### 📸 Workspace & Worktree Checkpoints (Snapshots)
+* **Zero-Stash Snapshots**: Take instant snapshots of staged/unstaged changes and untracked files saved under Git-isolated references (`refs/tline/checkpoints/*`) to avoid cluttering git stash or status.
+* **Visual Diff Comparisons**: View and expand snapshot contents, listing changed files and launching side-by-side Monaco diff viewer tabs directly.
 
 ### 📁 Unified Workspace Explorer & Editor
 * **Full-Bleed UI**: Clean borderless sidebar layout maximizing screen real estate.
 * **Built-in Monaco Editor**: View and modify codebase files directly in editor tabs alongside terminal panes, complete with copy shortcuts and clean formatting.
+* **Interactive File Operations**: Create new files, folders, or rename/move existing items inside the explorer pane via header action buttons or right-click context menus.
+* **Theme-Aware SVG & Binary Previews**: Live visual vector previews for SVGs using dynamic blob URL regeneration (rendering edits in real-time) and safe warning dialogs for binary files to prevent text-load crashes.
+* **Muted Hidden Files**: Automatically dims dot-files and folders (like `.gitignore`, `.env`, `.github`) to keep your primary codebase structure visible.
 * **Auto-Focus Selection**: Automatically selects the first active or Git-enabled workspace on switch.
+
+### 🔗 SSH/SFTP Remote Workspace Support
+* **Secure Remote Mounts**: Connect to remote workspaces using standard `ssh://user@host:port/path` directory schemes.
+* **Native OpenSSH Engine**: Runs directory listing (`ls -F -A`), remote file read/write operations (`cat`), and git commands on remote environments using system OpenSSH binaries.
+* **Integrated Interactive Terminals**: Automatically spawns remote SSH terminal sessions using `ssh -t` directly integrated into the tab bar layout when accessing remote paths.
+* **Remote Checkpoints**: Persists snapshot configuration metadata (`tline-checkpoints.json`) in the remote `.git` common directory to maintain working states across machines.
 
 ### 🌐 Secure Cloudflare Tunneling & ACL
 * **One-Click Share**: Instantly expose the dashboard using Quick URL or a Custom Tunnel token.
@@ -56,7 +70,7 @@ Modern software engineering requires juggling multiple branches, repositories, a
 | Layer | Technologies Used |
 | :--- | :--- |
 | **Frontend** | React (TS), Vite, Tailwind CSS v4, Monaco Editor, xterm.js + Canvas / WebLinks / Image addons |
-| **Backend** | Node.js, Express, WebSocket (`ws`), `node-pty`, `bcryptjs` |
+| **Backend** | Node.js, Express, WebSocket (`ws`), `node-pty`, `bcryptjs`, OpenSSH CLI |
 | **Desktop** | Electron, Electron-Builder (Installer/Portable EXE) |
 
 ---
