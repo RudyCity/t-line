@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.200] - 2026-07-01
+
+### Fixed
+- **Terminal Double Paste on Ctrl+V**:
+  - Registered a native `paste` event listener directly on xterm.js's helper `textarea` to intercept all paste events (Ctrl+V, Cmd+V, Shift+Insert, and Edit -> Paste native menu triggers).
+  - Implemented event prevention (`e.preventDefault()`, `e.stopPropagation()`) in the paste listener to completely bypass xterm's native paste handler, avoiding duplicate paste triggers.
+  - Intercepted Ctrl+V (and Cmd+V on macOS) in the custom key event handler to return `false` in Electron (avoiding PTY character emission) while allowing standard propagation in browsers.
+  - Added a ref-based `performPaste` utility with 100ms/identical-content paste deduplication as a safety layer.
+
+---
+
 ## [1.3.199] - 2026-07-01
 
 ### Changed

@@ -426,18 +426,35 @@ export function TerminalInstance({
     setContextMenu(null);
   };
 
+  const lastPasteTimeRef = useRef<number>(0);
+  const lastPasteTextRef = useRef<string>('');
+
+  const performPaste = useCallback((text: string) => {
+    const now = Date.now();
+    if (now - lastPasteTimeRef.current < 100 && text === lastPasteTextRef.current) {
+      return;
+    }
+    lastPasteTimeRef.current = now;
+    lastPasteTextRef.current = text;
+
+    const lines = text.split('\n');
+    if (lines.length >= 3) {
+      setSmartPasteText(text);
+    } else {
+      wsManager.send(JSON.stringify({ type: 'data', id: tab.id, data: text }));
+    }
+  }, [tab.id]);
+
+  const performPasteRef = useRef(performPaste);
+  useEffect(() => {
+    performPasteRef.current = performPaste;
+  }, [performPaste]);
+
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
       if (text && terminalRef.current) {
-        const lines = text.split('\n');
-        if (lines.length >= 3) {
-          // Smart paste: show confirmation for multi-line content
-          setSmartPasteText(text);
-          setContextMenu(null);
-          return;
-        }
-        wsManager.send(JSON.stringify({ type: 'data', id: tab.id, data: text }));
+        performPaste(text);
       }
     } catch (err) {
       console.error('Failed to paste:', err);
@@ -597,8 +614,18 @@ export function TerminalInstance({
       console.warn('Canvas renderer not available, using default DOM renderer:', e);
     }
 
+    const handlePasteEvent = (e: ClipboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const text = e.clipboardData?.getData('text');
+      if (text) {
+        performPasteRef.current(text);
+      }
+    };
+
     if (term.textarea) {
       term.textarea.setAttribute('inputmode', 'none');
+      term.textarea.addEventListener('paste', handlePasteEvent);
     }
 
     terminalRef.current = term;
@@ -617,21 +644,14 @@ export function TerminalInstance({
             return false;
           }
         }
-        // Ctrl+V (Paste)
-        if (e.ctrlKey && key === 'v') {
-          navigator.clipboard.readText().then((text) => {
-            if (text) {
-              const lines = text.split('\n');
-              if (lines.length >= 3) {
-                setSmartPasteText(text);
-              } else {
-                wsManager.send(JSON.stringify({ type: 'data', id: tab.id, data: text }));
-              }
-            }
-          }).catch((err) => {
-            console.error('Failed to paste from custom key event handler:', err);
-          });
-          return false;
+        // Ctrl+V / Cmd+V (Paste shortcut)
+        const isPasteShortcut = (e.ctrlKey && key === 'v') || (e.metaKey && key === 'v');
+        if (isPasteShortcut) {
+          const isElectron = typeof window !== 'undefined' && !!(window as any).electron;
+          if (isElectron) {
+            return false;
+          }
+          return true;
         }
       }
       return true;
@@ -719,6 +739,9 @@ export function TerminalInstance({
         cancelAnimationFrame(rafHandleRef.current);
         rafHandleRef.current = null;
         writeQueueRef.current = [];
+      }
+      if (term.textarea) {
+        term.textarea.removeEventListener('paste', handlePasteEvent);
       }
       wsManager.send(JSON.stringify({ type: 'suspend', id: tab.id }));
       wsManager.removeListener(tab.id);
