@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.189] - 2026-07-01
+
+### Fixed
+- **Terminal Status Bar Hidden Overflow**:
+  - Replaced `.terminal-element` hardcoded `height: 100%` with `flex: 1` and `min-height: 0` to align with the parent flexbox layout. This prevents the terminal container from pushing the `TerminalStatusBar` (at the bottom of the pane) off-screen and being clipped.
+
+---
+
 ## [1.3.188] - 2026-07-01
 
 ### Changed
