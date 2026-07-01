@@ -913,5 +913,31 @@ export async function deleteCheckpoint(
   }
 }
 
+// Delete a local branch
+export async function deleteBranch(repoPath: string, branchName: string, force = false): Promise<{ success: boolean; output: string }> {
+  try {
+    const normalizedRepo = path.normalize(repoPath);
+    const flag = force ? '-D' : '-d';
+    const output = await runGit(['branch', flag, branchName], normalizedRepo);
+    clearWorkspaceCache();
+    return { success: true, output };
+  } catch (error: any) {
+    return { success: false, output: error.message };
+  }
+}
+
+// Fetch from remote
+export async function fetchRemote(repoPath: string): Promise<{ success: boolean; output: string }> {
+  try {
+    const normalizedRepo = path.normalize(repoPath);
+    const output = await runGit(['fetch', '--all', '--prune'], normalizedRepo);
+    clearWorkspaceCache();
+    return { success: true, output };
+  } catch (error: any) {
+    return { success: false, output: error.message };
+  }
+}
+
+
 
 

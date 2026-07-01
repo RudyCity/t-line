@@ -21,7 +21,9 @@ import {
   getCheckpoints,
   createCheckpoint,
   restoreCheckpoint,
-  deleteCheckpoint
+  deleteCheckpoint,
+  deleteBranch,
+  fetchRemote
 } from './gitManager';
 
 const router = express.Router();
@@ -305,6 +307,54 @@ router.post('/workspaces/:id/git/push', authMiddleware, async (req, res) => {
     
     const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
     const result = await pushBranch(targetPath);
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/workspaces/:id/git/branch/delete', authMiddleware, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const { branchName, force, worktreePath } = req.body;
+    if (!branchName) {
+      return res.status(400).json({ error: 'branchName is required.' });
+    }
+    
+    const configs = getWorkspaces();
+    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
+    if (!matched) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+    
+    const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
+    const result = await deleteBranch(targetPath, branchName, !!force);
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/workspaces/:id/git/fetch', authMiddleware, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const { worktreePath } = req.body;
+    const configs = getWorkspaces();
+    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
+    if (!matched) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+    
+    const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
+    const result = await fetchRemote(targetPath);
     if (result.success) {
       res.json(result);
     } else {

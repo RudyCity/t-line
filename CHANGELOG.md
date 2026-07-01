@@ -2,12 +2,23 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
-## [1.3.187] - 2026-07-01
+## [1.3.188] - 2026-07-01
 
 ### Changed
-- **High-Contrast Terminal Text Selection in Light Mode**:
-  - Configured terminal instances in light mode to use a solid dark selection background (a dark variant of the accent color, or Slate-700 fallback) and white selection foreground text.
-  - This ensures text selection remains highly legible and visible with high contrast when using Light Mode.
+- **Branch Management Modal — Redesign & Feature Upgrade**:
+  - **Redesigned UI**: Replaced the plain browser `<select>` dropdown with a custom scrollable branch list panel. Active branch is highlighted with a purple left-border indicator and check icon.
+  - **Branch Search**: Added a live search/filter input at the top of the branch list, letting users instantly filter by name across many branches.
+  - **Branch Deletion**: Each non-active branch now shows a trash icon on hover. Clicking it reveals an inline confirmation row. If Git reports unmerged changes, the modal escalates to a force-delete prompt before proceeding.
+  - **Fetch Repository**: Added a "Fetch" action button alongside Pull and Push, wired to a new `POST /api/workspaces/:id/git/fetch` endpoint that runs `git fetch --all --prune`.
+  - **3-Column Sync Grid**: Fetch / Pull / Push are rendered side-by-side in a uniform grid with consistent sizing and hover effects. Push uses a primary purple accent; Fetch and Pull use a neutral ghost style.
+  - **Premium Animations**: Overlay fades in and the modal card scales up with a spring bounce animation on open.
+  - **Self-Contained Styles**: All modal styles are scoped via a `<style>` block inside the component to avoid polluting global CSS.
+
+### Added (Backend)
+- `deleteBranch(repoPath, branchName, force)` in `gitManager.ts` — runs `git branch -d` / `git branch -D`.
+- `fetchRemote(repoPath)` in `gitManager.ts` — runs `git fetch --all --prune`.
+- `POST /api/workspaces/:id/git/branch/delete` route in `gitRoutes.ts`.
+- `POST /api/workspaces/:id/git/fetch` route in `gitRoutes.ts`.
 
 ---
 
