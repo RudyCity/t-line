@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.208] - 2026-07-01
+
+### Changed
+- **Documentation**: Updated README.md preview image (`preview.png`) to showcase the latest workspace manager interface.
+
 ## [1.3.207] - 2026-07-01
 
 ### Fixed
