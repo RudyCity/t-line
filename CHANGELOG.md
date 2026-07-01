@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.210] - 2026-07-01
+
+### Added
+- **Testing**: Configured Vitest, React Testing Library, and jsdom environment in the frontend workspace.
+- **Git Tests**: Implemented comprehensive unit/integration test suite for Git-related features:
+  - Verified git status decorators and directory changes count badges in `FileExplorer`.
+  - Tested stage, unstage, discard, and commit user interactions and API calls in `GitChanges`.
+
 ## [1.3.209] - 2026-07-01
 
 ### Fixed
