@@ -265,7 +265,7 @@ function startBackend() {
   
   updateBackendStatus('starting');
 
-  const spawnEnv = { ...process.env, PORT: '3999' };
+  const spawnEnv = { ...process.env, PORT: '5779' };
 
   if (isDev) {
     // In development, spawn the ts-node process using npm workspace run
@@ -330,7 +330,7 @@ function startBackend() {
       
       // Delay slightly to ensure server socket is fully listening
       setTimeout(() => {
-        const url = token ? `http://localhost:3999/?token=${token}` : 'http://localhost:3999/';
+        const url = token ? `http://localhost:5779/?token=${token}` : 'http://localhost:5779/';
         if (mainWindow) {
           mainWindow.loadURL(url);
           mainWindow.show();
@@ -423,7 +423,7 @@ function createWindow(urlOrPath) {
 
   // Handle connection or loading failures
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-    if (validatedURL.startsWith('http://localhost:3999') || validatedURL.startsWith('http://127.0.0.1:3999')) {
+    if (validatedURL.startsWith('http://localhost:5779') || validatedURL.startsWith('http://127.0.0.1:5779')) {
       console.log(`Failed to load backend URL ${validatedURL} (${errorDescription}). Loading local reconnect page.`);
       mainWindow.loadFile(path.join(__dirname, 'connection-error.html'));
     }
@@ -584,7 +584,7 @@ function updateTrayMenu() {
 function showWindow() {
   if (!mainWindow) {
     if (backendStatus === 'running') {
-      const url = bypassToken ? `http://localhost:3999/?token=${bypassToken}` : 'http://localhost:3999/';
+      const url = bypassToken ? `http://localhost:5779/?token=${bypassToken}` : 'http://localhost:5779/';
       createWindow(url);
     } else {
       createWindow(path.join(__dirname, 'connection-error.html'));
@@ -835,7 +835,7 @@ ipcMain.handle('get-theme-settings', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 ipcMain.handle('check-connection', async () => {
-  const port = 3999;
+  const port = 5779;
   const running = await isBackendRunning(port);
   if (running) {
     updateBackendStatus('running');
@@ -844,7 +844,7 @@ ipcMain.handle('check-connection', async () => {
         bypassToken = fs.readFileSync(BYPASS_TOKEN_FILE, 'utf8').trim();
       }
     } catch (e) {}
-    const url = bypassToken ? `http://localhost:3999/?token=${bypassToken}` : 'http://localhost:3999/';
+    const url = bypassToken ? `http://localhost:5779/?token=${bypassToken}` : 'http://localhost:5779/';
     if (mainWindow) {
       const currentUrl = mainWindow.webContents.getURL();
       if (!currentUrl.startsWith('http')) {
@@ -861,7 +861,7 @@ app.on('ready', async () => {
   createTray();
   initAutoUpdater();
   
-  const port = 3999;
+  const port = 5779;
   const alreadyRunning = await isBackendRunning(port);
   if (alreadyRunning) {
     console.log(`Backend is already running on port ${port}. Connecting directly...`);
@@ -875,7 +875,7 @@ app.on('ready', async () => {
       console.error('Error reading external bypass token:', err);
     }
     
-    const url = bypassToken ? `http://localhost:3999/?token=${bypassToken}` : 'http://localhost:3999/';
+    const url = bypassToken ? `http://localhost:5779/?token=${bypassToken}` : 'http://localhost:5779/';
     createWindow(url);
   } else {
     startBackend();
@@ -937,7 +937,7 @@ app.on('ready', async () => {
               }
             } catch (e) {}
             
-            const url = bypassToken ? `http://localhost:3999/?token=${bypassToken}` : 'http://localhost:3999/';
+            const url = bypassToken ? `http://localhost:5779/?token=${bypassToken}` : 'http://localhost:5779/';
             if (mainWindow) {
               mainWindow.loadURL(url);
             } else {
@@ -983,7 +983,7 @@ app.on('quit', () => {
 app.on('activate', () => {
   if (mainWindow === null && backendStatus === 'running') {
     // If backend is running, try to open window again
-    const url = bypassToken ? `http://localhost:3999/?token=${bypassToken}` : 'http://localhost:3999/';
+    const url = bypassToken ? `http://localhost:5779/?token=${bypassToken}` : 'http://localhost:5779/';
     createWindow(url);
   }
 });

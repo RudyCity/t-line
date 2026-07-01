@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.202] - 2026-07-01
+
+### Changed
+- **Application Port Configuration**:
+  - Changed the default backend server port from `3999` to `5779` (`backend/src/server.ts`, `desktop/main.js`).
+  - Changed the frontend Vite development server port from `5173` to `5773` (`frontend/vite.config.ts`).
+  - Updated the Vite proxy target for `/api` to point to the new backend port `5779`.
+  - Updated the WebSocket client dev-mode port detection in `frontend/src/services/websocket.ts` to check for port `5773` and fallback to `5779`.
+
+---
+
 ## [1.3.201] - 2026-07-01
 
 ### Fixed

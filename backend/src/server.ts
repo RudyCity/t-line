@@ -32,7 +32,7 @@ import fsRouter, { registerFileChangeCallback } from './fsRoutes';
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3999;
+const port = process.env.PORT || 5779;
 
 app.use(cors());
 app.use(express.json());
@@ -176,7 +176,7 @@ app.get('/api/auth/setup-status', (req, res) => {
 });
 
 app.get('/api/system/version', (req, res) => {
-  let appVersion = '1.3.201';
+  let appVersion = '1.3.202';
   try {
     const packageJsonPath = path.join(__dirname, '..', 'package.json');
     if (fs.existsSync(packageJsonPath)) {
