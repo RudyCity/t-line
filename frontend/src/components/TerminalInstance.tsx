@@ -645,13 +645,10 @@ export function TerminalInstance({
           }
         }
         // Ctrl+V / Cmd+V (Paste shortcut)
-        // Always block xterm & browser default, then paste manually once.
+        // Yield control to browser native handler to trigger 'paste' event on textarea
         const isPasteShortcut = (e.ctrlKey && key === 'v') || (e.metaKey && key === 'v');
         if (isPasteShortcut) {
-          navigator.clipboard.readText().then((text) => {
-            if (text) performPasteRef.current(text);
-          }).catch(() => {/* clipboard access denied */});
-          return false; // block xterm + browser native paste
+          return false;
         }
       }
       return true;
