@@ -533,10 +533,13 @@ body.tab-dragging .drag-drop-overlay {
 
 /* Ensure chrome-tabs-container behaves correctly in the content-tabs-bar */
 .content-tabs-bar .chrome-tabs-container {
-  height: 100%;
+  height: calc(100% + 1px); /* Extend 1px below to cover bottom border */
+  position: relative;
+  bottom: -1px;
   display: flex;
   align-items: flex-end; /* Push tabs to the bottom to join content */
   gap: 0px; /* Tabs touch/overlap for Chrome look */
+  overflow: hidden; /* Prevent text overflow wrap */
 }
 
 /* Base style for tabs inside content-tabs-bar */
@@ -577,7 +580,7 @@ body.tab-dragging .drag-drop-overlay {
   color: var(--text-main) !important;
   position: relative;
   z-index: 2; /* Sit on top of the border-bottom */
-  margin-bottom: -1px; /* Extend over the bottom border of content-tabs-bar */
+  margin-bottom: 0; /* Aligned with shifted container bottom */
 }
 
 /* Left Chrome-like outward curve */

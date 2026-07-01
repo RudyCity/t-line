@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.185] - 2026-07-01
+
+### Fixed
+- **Clipping of Active Tab Bottom Border Overlap**:
+  - Adjusted the height of `.chrome-tabs-container` to `calc(100% + 1px)` and positioned it with `bottom: -1px; overflow: hidden`.
+  - This allows the active tab and its outward curves to sit on top of the `.content-tabs-bar` container's bottom border without being clipped by `overflow: hidden`, successfully masking the border under the active tab.
+
+---
+
 ## [1.3.184] - 2026-07-01
 
 ### Changed
