@@ -623,5 +623,25 @@ body.tab-dragging .drag-drop-overlay {
   margin-bottom: 5px; /* Center it vertically relative to tabs */
 }
 
+/* Styling for Git branch group badge inside content-tabs-bar */
+.content-tabs-bar .tab-group-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px;
+  height: 20px;
+  border-radius: 10px; /* Modern pill shape */
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent);
+  margin-bottom: 5px; /* Floats off the bottom border for a clean, aligned look */
+  margin-right: 6px;
+  margin-left: 2px;
+  user-select: none;
+}
+
+
 
 

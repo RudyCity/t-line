@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.186] - 2026-07-01
+
+### Changed
+- **Redesigned Git Branch Group Badge**:
+  - Polished the Git branch badge in the `.content-tabs-bar` to float cleanly off the bottom border using `margin-bottom: 5px`.
+  - Upgraded the badge style to a premium pill shape (`border-radius: 10px`) with refined vertical height, padding, and subtle translucent colors (`color-mix` values) for optimal visual alignment with tab controls.
+
+---
+
 ## [1.3.185] - 2026-07-01
 
 ### Fixed
