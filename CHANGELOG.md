@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.192] - 2026-07-01
+
+### Added
+- **File Explorer Operations (Rename, New File, New Folder)**:
+  - **Backend Endpoints**: Added `/api/fs/create` to create empty files and folders, and `/api/fs/rename` to rename/move files and folders.
+  - **Reusable Modal**: Added `InputModal` in `Modals.tsx` to handle user input prompts with clean Glassmorphism styling and focus handling.
+  - **Explorer Header Actions**: Integrated new file and folder buttons next to the Refresh button in the explorer panel header.
+  - **Explorer Context Menu**: Extended context menu items for workspace items to support creating new files/folders relative to the selected item and renaming files/folders.
+
+---
+
 ## [1.3.191] - 2026-07-01
 
 ### Fixed

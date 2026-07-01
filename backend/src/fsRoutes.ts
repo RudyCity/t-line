@@ -338,4 +338,73 @@ router.post('/open-explorer', authMiddleware, (req, res) => {
   }
 });
 
+router.post('/create', authMiddleware, (req, res) => {
+  const { path: itemPath, isDirectory } = req.body;
+  if (!itemPath) {
+    return res.status(400).json({ error: 'Path is required.' });
+  }
+
+  try {
+    const resolvedPath = path.resolve(itemPath);
+    if (fs.existsSync(resolvedPath)) {
+      return res.status(400).json({ error: 'Path already exists.' });
+    }
+
+    const parentDir = path.dirname(resolvedPath);
+    if (!fs.existsSync(parentDir)) {
+      return res.status(400).json({ error: 'Parent directory does not exist.' });
+    }
+
+    if (isDirectory) {
+      fs.mkdirSync(resolvedPath, { recursive: true });
+    } else {
+      fs.writeFileSync(resolvedPath, '', 'utf8');
+    }
+
+    clearWorkspaceCache();
+    if (fileChangeCallback) {
+      fileChangeCallback(resolvedPath);
+    }
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/rename', authMiddleware, (req, res) => {
+  const { oldPath, newPath } = req.body;
+  if (!oldPath || !newPath) {
+    return res.status(400).json({ error: 'oldPath and newPath are required.' });
+  }
+
+  try {
+    const resolvedOldPath = path.resolve(oldPath);
+    const resolvedNewPath = path.resolve(newPath);
+
+    if (!fs.existsSync(resolvedOldPath)) {
+      return res.status(404).json({ error: 'Source path does not exist.' });
+    }
+
+    if (fs.existsSync(resolvedNewPath)) {
+      return res.status(400).json({ error: 'Destination path already exists.' });
+    }
+
+    const parentDir = path.dirname(resolvedNewPath);
+    if (!fs.existsSync(parentDir)) {
+      return res.status(400).json({ error: 'Parent directory does not exist.' });
+    }
+
+    fs.renameSync(resolvedOldPath, resolvedNewPath);
+
+    clearWorkspaceCache();
+    if (fileChangeCallback) {
+      fileChangeCallback(resolvedOldPath);
+      fileChangeCallback(resolvedNewPath);
+    }
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;

@@ -630,3 +630,77 @@ export const WorkspaceEditModal: React.FC<WorkspaceEditModalProps> = ({
     </div>
   );
 };
+
+interface InputModalProps {
+  show: boolean;
+  title: string;
+  placeholder: string;
+  initialValue?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  onConfirm: (value: string) => void;
+  onCancel: () => void;
+}
+
+export const InputModal: React.FC<InputModalProps> = ({
+  show,
+  title,
+  placeholder,
+  initialValue = '',
+  confirmLabel = 'Submit',
+  cancelLabel = 'Cancel',
+  onConfirm,
+  onCancel
+}) => {
+  const [value, setValue] = React.useState(initialValue);
+
+  React.useEffect(() => {
+    if (show) {
+      setValue(initialValue);
+    }
+  }, [show, initialValue]);
+
+  if (!show) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (value.trim()) {
+      onConfirm(value.trim());
+    }
+  };
+
+  return (
+    <div className="modal-overlay" style={{ zIndex: 9999 }}>
+      <form onSubmit={handleSubmit} className="modal-content glass-panel" style={{ maxWidth: '400px' }}>
+        <div className="modal-header">
+          <h3 className="modal-title">{title}</h3>
+          <button 
+            type="button" 
+            className="action-btn" 
+            onClick={onCancel}
+          >
+            ×
+          </button>
+        </div>
+        <div style={{ marginBottom: '20px' }}>
+          <Input 
+            type="text" 
+            placeholder={placeholder} 
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            required
+            autoFocus
+          />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+          <Button type="button" variant="secondary" onClick={onCancel}>
+            {cancelLabel}
+          </Button>
+          <Button type="submit" variant="primary">
+            {confirmLabel}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+};

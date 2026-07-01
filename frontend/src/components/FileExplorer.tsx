@@ -10,10 +10,13 @@ import {
   Loader2,
   X,
   Trash2,
-  Copy
+  Copy,
+  FilePlus,
+  FolderPlus,
+  Edit2
 } from 'lucide-react';
 import { GitFileStatus } from './GitChanges';
-import { ConfirmModal } from './Modals';
+import { ConfirmModal, InputModal } from './Modals';
 
 interface FsItem {
   name: string;
@@ -318,9 +321,24 @@ interface ExplorerContextMenuProps {
   onDelete: () => void;
   onOpenExplorer: () => void;
   onCopyPath: () => void;
+  onRename: () => void;
+  onNewFile: () => void;
+  onNewFolder: () => void;
 }
 
-function ExplorerContextMenu({ x, y, node, selectedCount, onClose, onDelete, onOpenExplorer, onCopyPath }: ExplorerContextMenuProps) {
+function ExplorerContextMenu({
+  x,
+  y,
+  node,
+  selectedCount,
+  onClose,
+  onDelete,
+  onOpenExplorer,
+  onCopyPath,
+  onRename,
+  onNewFile,
+  onNewFolder
+}: ExplorerContextMenuProps) {
   useEffect(() => {
     const close = (e: MouseEvent) => {
       if ((e.target as HTMLElement).closest('.terminal-ctx-menu') === null) {
@@ -371,6 +389,44 @@ function ExplorerContextMenu({ x, y, node, selectedCount, onClose, onDelete, onO
       <div className="terminal-ctx-separator" />
       <button
         onClick={() => {
+          onNewFile();
+          onClose();
+        }}
+        className="terminal-ctx-item"
+      >
+        <span className="terminal-ctx-icon">
+          <FilePlus size={13} />
+        </span>
+        <span className="terminal-ctx-label">New File</span>
+      </button>
+      <button
+        onClick={() => {
+          onNewFolder();
+          onClose();
+        }}
+        className="terminal-ctx-item"
+      >
+        <span className="terminal-ctx-icon">
+          <FolderPlus size={13} />
+        </span>
+        <span className="terminal-ctx-label">New Folder</span>
+      </button>
+      <button
+        onClick={() => {
+          onRename();
+          onClose();
+        }}
+        className="terminal-ctx-item"
+        disabled={selectedCount !== 1}
+      >
+        <span className="terminal-ctx-icon">
+          <Edit2 size={13} />
+        </span>
+        <span className="terminal-ctx-label">Rename</span>
+      </button>
+      <div className="terminal-ctx-separator" />
+      <button
+        onClick={() => {
           onDelete();
           onClose();
         }}
@@ -401,6 +457,19 @@ export function FileExplorer({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [localTrigger, setLocalTrigger] = useState(0);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: TreeNode } | null>(null);
+  const [inputModal, setInputModal] = useState<{
+    show: boolean;
+    title: string;
+    placeholder: string;
+    initialValue: string;
+    onConfirm: (value: string) => void;
+  }>({
+    show: false,
+    title: '',
+    placeholder: '',
+    initialValue: '',
+    onConfirm: () => {}
+  });
   
   const [selectedNodes, setSelectedNodes] = useState<{ path: string; name: string; isDirectory: boolean }[]>([]);
   const selectedPaths = selectedNodes.map(n => n.path);
@@ -564,6 +633,152 @@ export function FileExplorer({
     }
   }, [selectedNodes]);
 
+  const getParentPath = useCallback((itemPath: string): string => {
+    const lastSlash = Math.max(itemPath.lastIndexOf('/'), itemPath.lastIndexOf('\\'));
+    if (lastSlash === -1) {
+      return itemPath;
+    }
+    return itemPath.substring(0, lastSlash);
+  }, []);
+
+  const joinPath = useCallback((parent: string, childName: string): string => {
+    const hasBackslash = parent.includes('\\');
+    const separator = hasBackslash ? '\\' : '/';
+    if (parent.endsWith('/') || parent.endsWith('\\')) {
+      return parent + childName;
+    }
+    return parent + separator + childName;
+  }, []);
+
+  const triggerNewFile = useCallback((targetNode?: TreeNode) => {
+    let parentDir = rootPath;
+    if (targetNode) {
+      parentDir = targetNode.isDirectory ? targetNode.path : getParentPath(targetNode.path);
+    } else if (selectedNodes.length === 1) {
+      const activeNode = selectedNodes[0];
+      parentDir = activeNode.isDirectory ? activeNode.path : getParentPath(activeNode.path);
+    }
+
+    setInputModal({
+      show: true,
+      title: 'New File',
+      placeholder: 'Enter file name',
+      initialValue: '',
+      onConfirm: async (fileName) => {
+        const fullPath = joinPath(parentDir, fileName);
+        try {
+          const res = await fetch('/api/fs/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ path: fullPath, isDirectory: false })
+          });
+          if (res.ok) {
+            window.dispatchEvent(new CustomEvent('tline-toast', {
+              detail: { message: `Created file: ${fileName}` }
+            }));
+            load();
+          } else {
+            const err = await res.json();
+            alert(`Failed to create file: ${err.error}`);
+          }
+        } catch (e: any) {
+          alert(`Error creating file: ${e.message}`);
+        } finally {
+          setInputModal(prev => ({ ...prev, show: false }));
+        }
+      }
+    });
+  }, [rootPath, selectedNodes, token, load, getParentPath, joinPath]);
+
+  const triggerNewFolder = useCallback((targetNode?: TreeNode) => {
+    let parentDir = rootPath;
+    if (targetNode) {
+      parentDir = targetNode.isDirectory ? targetNode.path : getParentPath(targetNode.path);
+    } else if (selectedNodes.length === 1) {
+      const activeNode = selectedNodes[0];
+      parentDir = activeNode.isDirectory ? activeNode.path : getParentPath(activeNode.path);
+    }
+
+    setInputModal({
+      show: true,
+      title: 'New Folder',
+      placeholder: 'Enter folder name',
+      initialValue: '',
+      onConfirm: async (folderName) => {
+        const fullPath = joinPath(parentDir, folderName);
+        try {
+          const res = await fetch('/api/fs/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ path: fullPath, isDirectory: true })
+          });
+          if (res.ok) {
+            window.dispatchEvent(new CustomEvent('tline-toast', {
+              detail: { message: `Created folder: ${folderName}` }
+            }));
+            load();
+          } else {
+            const err = await res.json();
+            alert(`Failed to create folder: ${err.error}`);
+          }
+        } catch (e: any) {
+          alert(`Error creating folder: ${e.message}`);
+        } finally {
+          setInputModal(prev => ({ ...prev, show: false }));
+        }
+      }
+    });
+  }, [rootPath, selectedNodes, token, load, getParentPath, joinPath]);
+
+  const triggerRename = useCallback((targetNode?: TreeNode) => {
+    const nodeToRename = targetNode || (selectedNodes.length === 1 ? selectedNodes[0] : null);
+    if (!nodeToRename) return;
+
+    setInputModal({
+      show: true,
+      title: 'Rename',
+      placeholder: 'Enter new name',
+      initialValue: nodeToRename.name,
+      onConfirm: async (newName) => {
+        if (newName === nodeToRename.name) {
+          setInputModal(prev => ({ ...prev, show: false }));
+          return;
+        }
+        const parentDir = getParentPath(nodeToRename.path);
+        const newPath = joinPath(parentDir, newName);
+        try {
+          const res = await fetch('/api/fs/rename', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ oldPath: nodeToRename.path, newPath })
+          });
+          if (res.ok) {
+            window.dispatchEvent(new CustomEvent('tline-toast', {
+              detail: { message: `Renamed to: ${newName}` }
+            }));
+            load();
+          } else {
+            const err = await res.json();
+            alert(`Failed to rename: ${err.error}`);
+          }
+        } catch (e: any) {
+          alert(`Error renaming: ${e.message}`);
+        } finally {
+          setInputModal(prev => ({ ...prev, show: false }));
+        }
+      }
+    });
+  }, [selectedNodes, token, load, getParentPath, joinPath]);
+
   useEffect(() => { load(); }, [load]);
 
   const prevRefreshTrigger = useRef(refreshTrigger);
@@ -600,14 +815,30 @@ export function FileExplorer({
         <div className="explorer-tree">
           <div className="panel-section-header">
             <span className="panel-section-title">EXPLORER</span>
-            <button
-              className="action-btn"
-              onClick={load}
-              title="Refresh"
-              disabled={loading}
-            >
-              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            </button>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button
+                className="action-btn"
+                onClick={() => triggerNewFile()}
+                title="New File..."
+              >
+                <FilePlus size={13} />
+              </button>
+              <button
+                className="action-btn"
+                onClick={() => triggerNewFolder()}
+                title="New Folder..."
+              >
+                <FolderPlus size={13} />
+              </button>
+              <button
+                className="action-btn"
+                onClick={load}
+                title="Refresh"
+                disabled={loading}
+              >
+                <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+              </button>
+            </div>
           </div>
           <div 
             ref={scrollRef}
@@ -627,17 +858,17 @@ export function FileExplorer({
             ) : (
               roots.map(node => (
                 <TreeNodeItem
-                  key={node.path}
-                  node={node}
-                  depth={0}
-                  token={token}
-                  onFileClick={handleFileClick}
-                  rootPath={rootPath}
-                  changedFiles={changedFiles}
-                  refreshTrigger={combinedTrigger}
-                  onContextMenu={handleContextMenu}
-                  selectedPaths={selectedPaths}
-                  onItemClick={handleItemClick}
+                   key={node.path}
+                   node={node}
+                   depth={0}
+                   token={token}
+                   onFileClick={handleFileClick}
+                   rootPath={rootPath}
+                   changedFiles={changedFiles}
+                   refreshTrigger={combinedTrigger}
+                   onContextMenu={handleContextMenu}
+                   selectedPaths={selectedPaths}
+                   onItemClick={handleItemClick}
                 />
               ))
             )}
@@ -680,6 +911,9 @@ export function FileExplorer({
           onDelete={() => setShowDeleteConfirm(true)}
           onOpenExplorer={handleOpenExplorer}
           onCopyPath={handleCopyPath}
+          onRename={() => triggerRename(contextMenu.node)}
+          onNewFile={() => triggerNewFile(contextMenu.node)}
+          onNewFolder={() => triggerNewFolder(contextMenu.node)}
         />
       )}
 
@@ -699,6 +933,19 @@ export function FileExplorer({
           variant="danger"
           onConfirm={handleDeleteConfirm}
           onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
+
+      {inputModal.show && (
+        <InputModal
+          show={inputModal.show}
+          title={inputModal.title}
+          placeholder={inputModal.placeholder}
+          initialValue={inputModal.initialValue}
+          confirmLabel={inputModal.title === 'Rename' ? 'Rename' : 'Create'}
+          cancelLabel="Cancel"
+          onConfirm={inputModal.onConfirm}
+          onCancel={() => setInputModal(prev => ({ ...prev, show: false }))}
         />
       )}
     </div>
