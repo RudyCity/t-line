@@ -167,7 +167,7 @@ interface SidebarContentPanelProps {
   panelWorktreePath?: string | null;
   fsChangeTrigger?: number;
   onOpenBranchModal?: () => void;
-  openDiffTab?: (commitHash: string, filePath: string, workspaceId: string) => void;
+  openDiffTab?: (commitHash: string, filePath: string, workspaceId: string, worktreePath?: string) => void;
 }
 
 export function SidebarContentPanel({
@@ -366,7 +366,8 @@ export function SidebarContentPanel({
               onOpenBranchModal={onOpenBranchModal}
               onFileOpen={openFileTab}
               onOpenDiffTab={openDiffTab
-                ? (commitHash, filePath) => openDiffTab(commitHash, filePath, panelWorkspace.id)
+                ? (commitHash, filePath, worktreePath) =>
+                    openDiffTab(commitHash, filePath, panelWorkspace.id, worktreePath ?? panelWorktreePath ?? undefined)
                 : undefined
               }
               workspacePath={panelWorkspace.path}

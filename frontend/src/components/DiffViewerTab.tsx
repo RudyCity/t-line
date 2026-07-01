@@ -6,6 +6,7 @@ interface DiffViewerTabProps {
   filePath: string;
   token: string;
   workspaceId: string;
+  worktreePath?: string;
 }
 
 interface ParsedHunk {
@@ -101,13 +102,15 @@ export function DiffViewerTab({
   filePath,
   token,
   workspaceId,
+  worktreePath,
 }: DiffViewerTabProps) {
   const [diff, setDiff] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const isWorkingTree = commitHash === 'WORKTREE';
   const fileName = filePath.split(/[/\\]/).pop() ?? filePath;
-  const shortHash = commitHash.slice(0, 7);
+  const shortHash = isWorkingTree ? 'Working Tree' : commitHash.slice(0, 7);
 
   useEffect(() => {
     let active = true;
@@ -117,10 +120,16 @@ export function DiffViewerTab({
 
     async function loadDiff() {
       try {
-        const res = await fetch(
-          `/api/workspaces/${workspaceId}/git/commit-diff?commitHash=${encodeURIComponent(commitHash)}&filePath=${encodeURIComponent(filePath)}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        let url: string;
+        if (isWorkingTree) {
+          // Working-tree diff: changes vs HEAD
+          const wtParam = worktreePath ? `&worktreePath=${encodeURIComponent(worktreePath)}` : '';
+          url = `/api/workspaces/${workspaceId}/git/diff?filePath=${encodeURIComponent(filePath)}${wtParam}`;
+        } else {
+          // Historical commit diff
+          url = `/api/workspaces/${workspaceId}/git/commit-diff?commitHash=${encodeURIComponent(commitHash)}&filePath=${encodeURIComponent(filePath)}`;
+        }
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (active) setDiff(data.diff ?? '(Empty diff)');
@@ -133,7 +142,7 @@ export function DiffViewerTab({
 
     loadDiff();
     return () => { active = false; };
-  }, [commitHash, filePath, workspaceId, token]);
+  }, [commitHash, filePath, workspaceId, token, worktreePath, isWorkingTree]);
 
   const parsed = diff ? parseDiffWithLineNumbers(diff) : null;
   const addCount = parsed?.hunks.reduce((acc, h) => acc + h.lines.filter(l => l.type === '+').length, 0) ?? 0;
@@ -344,8 +353,21 @@ export function DiffViewerTab({
 
       {/* Header */}
       <div className="dvt-header">
-        <GitCommit size={14} className="dvt-header-icon" />
+        <GitCommit size={14} className="dvt-header-icon" style={{ color: isWorkingTree ? '#fb923c' : undefined }} />
         <span className="dvt-header-file" title={filePath}>{fileName}</span>
+        {isWorkingTree && (
+          <span style={{
+            fontSize: '0.65rem',
+            fontWeight: 700,
+            color: '#fb923c',
+            background: 'rgba(251,146,60,0.1)',
+            border: '1px solid rgba(251,146,60,0.3)',
+            borderRadius: '4px',
+            padding: '1px 6px',
+            flexShrink: 0,
+            fontFamily: 'var(--font-sans, sans-serif)',
+          }}>Working Tree</span>
+        )}
         <div className="dvt-header-stats">
           {!loading && !error && parsed && (
             <>
@@ -354,7 +376,9 @@ export function DiffViewerTab({
             </>
           )}
         </div>
-        <span className="dvt-header-hash">{shortHash}</span>
+        {!isWorkingTree && (
+          <span className="dvt-header-hash">{shortHash}</span>
+        )}
       </div>
 
       {/* Body */}

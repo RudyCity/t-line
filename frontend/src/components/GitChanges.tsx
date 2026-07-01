@@ -31,7 +31,7 @@ interface GitChangesProps {
   worktreePath?: string | null;
   onOpenBranchModal?: () => void;
   onFileOpen?: (filePath: string, name: string) => void;
-  onOpenDiffTab?: (commitHash: string, filePath: string) => void;
+  onOpenDiffTab?: (commitHash: string, filePath: string, worktreePath?: string) => void;
   workspacePath?: string;
 }
 
@@ -104,9 +104,14 @@ export function GitChanges({
   const [actionLoading, setActionLoading] = useState(false);
 
   const handleFileSelect = useCallback(async (file: GitFileStatus) => {
-    // If an external file-open handler exists, open as tab and highlight the list item.
-    // Do NOT set selectedFile so the inline diff panel stays hidden and the file list
-    // keeps its full width.
+    // Priority 1: open working-tree diff in a tab for modified/renamed files
+    if (onOpenDiffTab && (file.status === 'modified' || file.status === 'renamed')) {
+      onOpenDiffTab('WORKTREE', file.path, worktreePath ?? undefined);
+      setActiveFilePath(file.path);
+      return;
+    }
+
+    // Priority 2: open the file itself in a tab (added/untracked — no diff available)
     if (onFileOpen && file.status !== 'deleted') {
       const basePath = (worktreePath || workspacePath || '').replace(/\\/g, '/');
       const relPath = file.path.replace(/\\/g, '/');
@@ -118,6 +123,7 @@ export function GitChanges({
       return;
     }
 
+    // Fallback: inline diff panel (no tab handlers provided)
     setSelectedFile(file);
     setActiveFilePath(null);
     setDiff('');
@@ -146,7 +152,7 @@ export function GitChanges({
     } finally {
       setDiffLoading(false);
     }
-  }, [workspaceId, token, worktreePath, workspacePath, onFileOpen]);
+  }, [workspaceId, token, worktreePath, workspacePath, onFileOpen, onOpenDiffTab]);
 
   const handleStage = useCallback(async (filePath?: string, all = false) => {
     setActionLoading(true);

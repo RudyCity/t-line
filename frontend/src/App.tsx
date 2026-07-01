@@ -1071,6 +1071,7 @@ export default function App() {
                       filePath={activeTab.filePath || ''}
                       token={localStorage.getItem('token') || ''}
                       workspaceId={activeTab.workspaceId || ''}
+                      worktreePath={activeTab.worktreePath}
                     />
                   );
                 }

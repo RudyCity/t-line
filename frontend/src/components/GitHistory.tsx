@@ -31,7 +31,7 @@ interface GitHistoryProps {
   workspaceId: string;
   token: string;
   worktreePath?: string | null;
-  onOpenDiffTab?: (commitHash: string, filePath: string) => void;
+  onOpenDiffTab?: (commitHash: string, filePath: string, worktreePath?: string) => void;
 }
 
 function StatusIcon({ status }: { status: CommitFile['status'] }) {

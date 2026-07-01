@@ -57,7 +57,8 @@ export interface TabData {
   type: 'terminal' | 'file' | 'diff';
   filePath?: string;
   // For 'diff' type tabs
-  commitHash?: string;
+  commitHash?: string; // 'WORKTREE' for working-tree diffs
+  worktreePath?: string; // for working-tree diff scoping
   layout?: SplitLayoutNode;
   focusedTerminalId?: string;
   workspaceId?: string;
@@ -356,12 +357,19 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     onTerminalOpen?.();
   }, [tabs, onTerminalOpen, findWorkspaceIdForPath]);
 
-  const openDiffTab = useCallback((commitHash: string, filePath: string, workspaceId: string) => {
+  const openDiffTab = useCallback((commitHash: string, filePath: string, workspaceId: string, worktreePath?: string) => {
     const fileName = filePath.split(/[/\\]/).pop() ?? filePath;
-    const tabName = `Δ ${fileName} (${commitHash.slice(0, 7)})`;
-    // Reuse existing tab for same commit+file
+    const isWorkingTree = commitHash === 'WORKTREE';
+    const tabName = isWorkingTree
+      ? `\u0394 ${fileName} (changes)`
+      : `\u0394 ${fileName} (${commitHash.slice(0, 7)})`;
+
+    // Reuse existing tab for same commit+file (or same working-tree+file)
     const existing = tabs.find(
-      t => t.type === 'diff' && t.commitHash === commitHash && t.filePath === filePath
+      t => t.type === 'diff' &&
+           t.commitHash === commitHash &&
+           t.filePath === filePath &&
+           t.worktreePath === (worktreePath ?? undefined)
     );
     if (existing) {
       setActiveTabId(existing.id);
@@ -376,6 +384,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
       type: 'diff',
       filePath,
       commitHash,
+      worktreePath: worktreePath ?? undefined,
       workspaceId
     };
 
