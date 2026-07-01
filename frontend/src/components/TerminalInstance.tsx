@@ -616,6 +616,7 @@ export function TerminalInstance({
 
     const handlePasteEvent = (e: ClipboardEvent) => {
       e.preventDefault();
+      e.stopImmediatePropagation();
       e.stopPropagation();
       const text = e.clipboardData?.getData('text');
       if (text) {
@@ -625,7 +626,7 @@ export function TerminalInstance({
 
     if (term.textarea) {
       term.textarea.setAttribute('inputmode', 'none');
-      term.textarea.addEventListener('paste', handlePasteEvent);
+      term.textarea.addEventListener('paste', handlePasteEvent, true);
     }
 
     terminalRef.current = term;
@@ -738,7 +739,7 @@ export function TerminalInstance({
         writeQueueRef.current = [];
       }
       if (term.textarea) {
-        term.textarea.removeEventListener('paste', handlePasteEvent);
+        term.textarea.removeEventListener('paste', handlePasteEvent, true);
       }
       wsManager.send(JSON.stringify({ type: 'suspend', id: tab.id }));
       wsManager.removeListener(tab.id);

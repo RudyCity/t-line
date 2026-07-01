@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.207] - 2026-07-01
+
+### Fixed
+- **Terminal**: Fixed Ctrl+V / paste event double paste bug by registering the custom paste handler in the capturing phase (`useCapture = true`) and invoking `e.stopImmediatePropagation()`. This intercepts paste events before xterm's native handler can execute and prevents duplicate values.
+
 ## [1.3.206] - 2026-07-01
 
 ### Fixed
