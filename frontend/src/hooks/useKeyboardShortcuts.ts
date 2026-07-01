@@ -17,6 +17,7 @@ export interface KeyboardShortcutsOptions {
   /** Zoom in/out (Alt+= / Alt+-) */
   onZoomIn?: () => void;
   onZoomOut?: () => void;
+  onQuickSnapshot?: () => void;
   /** Aktif atau tidak (false jika modal terbuka, dll) */
   enabled?: boolean;
 }
@@ -50,6 +51,7 @@ export function useKeyboardShortcuts({
   onSplitVertical,
   onZoomIn,
   onZoomOut,
+  onQuickSnapshot,
   enabled = true,
 }: KeyboardShortcutsOptions) {
 
@@ -134,9 +136,16 @@ export function useKeyboardShortcuts({
         onZoomOut?.();
         return;
       }
+
+      // ── Alt+S — Quick Snapshot ──────────────────────────
+      if (alt && !shift && e.key === 's') {
+        e.preventDefault();
+        onQuickSnapshot?.();
+        return;
+      }
     };
 
     window.addEventListener('keydown', handler, { capture: true });
     return () => window.removeEventListener('keydown', handler, { capture: true });
-  }, [enabled, isInInput, onNewTerminal, onCloseTab, onNextTab, onPrevTab, onJumpToTab, onSplitHorizontal, onSplitVertical, onZoomIn, onZoomOut]);
+  }, [enabled, isInInput, onNewTerminal, onCloseTab, onNextTab, onPrevTab, onJumpToTab, onSplitHorizontal, onSplitVertical, onZoomIn, onZoomOut, onQuickSnapshot]);
 }

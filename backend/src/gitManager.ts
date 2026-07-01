@@ -732,13 +732,24 @@ export async function getCommitDetails(repoPath: string, commitHash: string): Pr
 }
 
 // Get diff of a file in a commit
-export async function getGitCommitDiff(repoPath: string, commitHash: string, filePath: string): Promise<string> {
+export async function getGitCommitDiff(
+  repoPath: string,
+  commitHash: string,
+  filePath: string,
+  compareWithWorktree = false
+): Promise<string> {
   try {
     const normalizedRepo = path.normalize(repoPath);
     const normalizedFile = path.normalize(filePath);
-    // git show to get the diff format, with format= to remove headers
-    const output = await runGit(['show', '--format=', commitHash, '--', normalizedFile], normalizedRepo);
-    return output;
+    if (compareWithWorktree) {
+      // Diff between the commit's file state and current working tree file state
+      const output = await runGit(['diff', commitHash, '--', normalizedFile], normalizedRepo);
+      return output;
+    } else {
+      // git show to get the diff format, with format= to remove headers
+      const output = await runGit(['show', '--format=', commitHash, '--', normalizedFile], normalizedRepo);
+      return output;
+    }
   } catch (error: any) {
     return `Error generating commit diff: ${error.message}`;
   }

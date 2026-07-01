@@ -10,7 +10,8 @@ import {
   Loader2,
   X,
   AlertTriangle,
-  Clock
+  Clock,
+  GitCompare
 } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { WorkspaceSwitcher } from './SidebarContentPanel';
@@ -51,7 +52,7 @@ interface CheckpointsPanelProps {
   token: string;
   onWorkspaceClick: (wsId: string) => void;
   onWorktreeClick: (wsId: string, wtPath: string) => void;
-  onOpenDiffTab?: (commitHash: string, filePath: string, worktreePath?: string) => void;
+  onOpenDiffTab?: (commitHash: string, filePath: string, worktreePath?: string, compareWithWorktree?: boolean) => void;
   onCheckpointChange?: () => void;
 }
 
@@ -115,6 +116,49 @@ export function CheckpointsPanel({
     setExpandedCp(null);
   }, [panelWorkspace, panelWorktreePath, fetchCheckpoints]);
 
+  // Listen for external reload events (e.g. from quick snapshot)
+  useEffect(() => {
+    const handleRefresh = () => {
+      fetchCheckpoints();
+    };
+    window.addEventListener('tline-checkpoints-refresh', handleRefresh);
+    return () => {
+      window.removeEventListener('tline-checkpoints-refresh', handleRefresh);
+    };
+  }, [fetchCheckpoints]);
+
+  // Auto-generate description based on current changes when opening create modal
+  useEffect(() => {
+    if (showCreateModal && panelWorkspace) {
+      const loadChangesForAutofill = async () => {
+        try {
+          const wtParam = panelWorktreePath ? `?worktreePath=${encodeURIComponent(panelWorktreePath)}` : '';
+          const res = await fetch(`/api/workspaces/${panelWorkspace.id}/git/status${wtParam}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.length > 0) {
+              const fileCount = data.length;
+              const getBasename = (filePath: string) => {
+                const parts = filePath.replace(/\\/g, '/').split('/');
+                return parts[parts.length - 1] || '';
+              };
+              const names = data.slice(0, 3).map((f: any) => getBasename(f.path)).join(', ');
+              const more = fileCount > 3 ? ` and ${fileCount - 3} others` : '';
+              setNewCpDesc(`Snapshot of changes in: ${names}${more}`);
+            } else {
+              setNewCpDesc('Snapshot of clean state');
+            }
+          }
+        } catch (e) {
+          console.error('Error autofilling description:', e);
+        }
+      };
+      loadChangesForAutofill();
+    }
+  }, [showCreateModal, panelWorkspace, panelWorktreePath, token]);
+
   // Load details (files modified) for expanded checkpoint
   const loadCheckpointDetails = async (cp: Checkpoint) => {
     if (cpDetails[cp.commitHash] || loadingDetails[cp.commitHash] || !cp.isDirty) {
@@ -148,8 +192,8 @@ export function CheckpointsPanel({
     }
   };
 
-  const handleCreateCheckpoint = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateCheckpoint = async (e?: React.FormEvent, force = false) => {
+    if (e) e.preventDefault();
     if (!panelWorkspace || !newCpName.trim()) return;
 
     setCreating(true);
@@ -163,7 +207,8 @@ export function CheckpointsPanel({
         body: JSON.stringify({
           worktreePath: panelWorktreePath,
           name: newCpName.trim(),
-          description: newCpDesc.trim()
+          description: newCpDesc.trim(),
+          force
         })
       });
       const data = await res.json();
@@ -173,6 +218,16 @@ export function CheckpointsPanel({
         setShowCreateModal(false);
         fetchCheckpoints();
         onCheckpointChange?.();
+      } else if (data.hasLargeFiles) {
+        showConfirm(
+          'Large Files Detected',
+          data.output,
+          () => {
+            handleCreateCheckpoint(undefined, true);
+          },
+          'danger',
+          'Create Snapshot Anyway'
+        );
       } else {
         showAlert('Error', data.output || 'Failed to create checkpoint.');
       }
@@ -449,7 +504,7 @@ export function CheckpointsPanel({
                         ) : details?.files && details.files.length > 0 ? (
                           <div className="flex flex-col gap-0.5 max-h-48 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
                             {details.files.map(file => (
-                              <div key={file.path} className="cp-file-item">
+                              <div key={file.path} className="cp-file-item flex items-center justify-between gap-2 px-1 hover:bg-[var(--bg-card-hover)] rounded">
                                 <span
                                   className="truncate flex-1 font-mono text-[10px] pr-2 cursor-pointer hover:underline text-left"
                                   onClick={() => onOpenDiffTab?.(cp.commitHash, file.path, panelWorktreePath ?? undefined)}
@@ -457,9 +512,19 @@ export function CheckpointsPanel({
                                 >
                                   {file.path.split(/[/\\]/).pop()}
                                 </span>
-                                <span className={`file-status-badge shrink-0 status-${file.status[0]}`}>
-                                  {file.status[0]}
-                                </span>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <button
+                                    onClick={() => onOpenDiffTab?.(cp.commitHash, file.path, panelWorktreePath ?? undefined, true)}
+                                    className="p-0.5 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded cursor-pointer transition-colors"
+                                    title="Compare snapshot file vs current working directory"
+                                    style={{ border: 'none', background: 'transparent' }}
+                                  >
+                                    <GitCompare size={10} />
+                                  </button>
+                                  <span className={`file-status-badge shrink-0 status-${file.status[0]}`}>
+                                    {file.status[0]}
+                                  </span>
+                                </div>
                               </div>
                             ))}
                           </div>

@@ -415,6 +415,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: ['Alt', ']'], label: 'Tab berikutnya' },
       { keys: ['Alt', '['], label: 'Tab sebelumnya' },
       { keys: ['Alt', '1–9'], label: 'Loncat ke tab ke-N' },
+      { keys: ['Alt', 'S'], label: 'Ambil quick snapshot' },
     ],
   },
   {

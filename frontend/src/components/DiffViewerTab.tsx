@@ -7,6 +7,7 @@ interface DiffViewerTabProps {
   token: string;
   workspaceId: string;
   worktreePath?: string;
+  compareWithWorktree?: boolean;
 }
 
 interface ParsedHunk {
@@ -103,6 +104,7 @@ export function DiffViewerTab({
   token,
   workspaceId,
   worktreePath,
+  compareWithWorktree,
 }: DiffViewerTabProps) {
   const [diff, setDiff] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,7 +112,7 @@ export function DiffViewerTab({
 
   const isWorkingTree = commitHash === 'WORKTREE';
   const fileName = filePath.split(/[/\\]/).pop() ?? filePath;
-  const shortHash = isWorkingTree ? 'Working Tree' : commitHash.slice(0, 7);
+  const shortHash = isWorkingTree ? 'Working Tree' : compareWithWorktree ? 'VS Working Tree' : commitHash.slice(0, 7);
 
   useEffect(() => {
     let active = true;
@@ -128,7 +130,8 @@ export function DiffViewerTab({
         } else {
           // Historical commit diff
           const wtParam = worktreePath ? `&worktreePath=${encodeURIComponent(worktreePath)}` : '';
-          url = `/api/workspaces/${workspaceId}/git/commit-diff?commitHash=${encodeURIComponent(commitHash)}&filePath=${encodeURIComponent(filePath)}${wtParam}`;
+          const compParam = compareWithWorktree ? `&compareWithWorktree=true` : '';
+          url = `/api/workspaces/${workspaceId}/git/commit-diff?commitHash=${encodeURIComponent(commitHash)}&filePath=${encodeURIComponent(filePath)}${wtParam}${compParam}`;
         }
         const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -143,7 +146,7 @@ export function DiffViewerTab({
 
     loadDiff();
     return () => { active = false; };
-  }, [commitHash, filePath, workspaceId, token, worktreePath, isWorkingTree]);
+  }, [commitHash, filePath, workspaceId, token, worktreePath, isWorkingTree, compareWithWorktree]);
 
   const parsed = diff ? parseDiffWithLineNumbers(diff) : null;
   const addCount = parsed?.hunks.reduce((acc, h) => acc + h.lines.filter(l => l.type === '+').length, 0) ?? 0;

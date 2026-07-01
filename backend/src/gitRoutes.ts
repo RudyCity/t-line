@@ -411,7 +411,7 @@ router.get('/workspaces/:id/git/commit-details', authMiddleware, async (req, res
 router.get('/workspaces/:id/git/commit-diff', authMiddleware, async (req, res) => {
   try {
     const workspaceId = req.params.id;
-    const { worktreePath, commitHash, filePath } = req.query;
+    const { worktreePath, commitHash, filePath, compareWithWorktree } = req.query;
     if (!commitHash || typeof commitHash !== 'string' || !filePath || typeof filePath !== 'string') {
       return res.status(400).json({ error: 'commitHash and filePath are required.' });
     }
@@ -423,7 +423,7 @@ router.get('/workspaces/:id/git/commit-diff', authMiddleware, async (req, res) =
     }
     
     const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
-    const diff = await getGitCommitDiff(targetPath, commitHash, filePath);
+    const diff = await getGitCommitDiff(targetPath, commitHash, filePath, compareWithWorktree === 'true');
     res.json({ diff });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -453,7 +453,7 @@ router.get('/workspaces/:id/checkpoints', authMiddleware, async (req, res) => {
 router.post('/workspaces/:id/checkpoints', authMiddleware, async (req, res) => {
   try {
     const workspaceId = req.params.id;
-    const { worktreePath, name, description } = req.body;
+    const { worktreePath, name, description, force } = req.body;
     
     if (!name) {
       return res.status(400).json({ error: 'Checkpoint name is required.' });
@@ -467,7 +467,7 @@ router.post('/workspaces/:id/checkpoints', authMiddleware, async (req, res) => {
     }
     
     const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
-    const result = await createCheckpoint(targetPath, name, description || '');
+    const result = await createCheckpoint(targetPath, name, description || '', !!force);
     if (result.success) {
       if (onWorkspaceChangeCallback) onWorkspaceChangeCallback();
       res.json(result);

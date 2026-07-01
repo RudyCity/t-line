@@ -169,6 +169,62 @@ export default function App() {
   const [panelWorktreePath, setPanelWorktreePath] = useState<string | null>(null);
   const [showTabsDropdown, setShowTabsDropdown] = useState<boolean>(false);
 
+  const [quickCreating, setQuickCreating] = useState(false);
+  const handleQuickSnapshot = async (force = false) => {
+    if (!panelWorkspace) {
+      showAlert('Error', 'Please select a workspace first.');
+      return;
+    }
+    if (!panelWorkspace.isGit) {
+      showAlert('Error', 'Current workspace is not a Git repository.');
+      return;
+    }
+
+    setQuickCreating(true);
+    try {
+      const token = localStorage.getItem('token');
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const name = `Quick Snapshot (${timeStr})`;
+      const description = 'Automatically generated quick snapshot';
+
+      const res = await fetch(`/api/workspaces/${panelWorkspace.id}/checkpoints`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          worktreePath: panelWorktreePath,
+          name,
+          description,
+          force
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showAlert('Success', `Quick snapshot '${name}' created successfully!`);
+        fetchGitStatus(true);
+        window.dispatchEvent(new CustomEvent('tline-checkpoints-refresh'));
+      } else if (data.hasLargeFiles) {
+        showConfirm(
+          'Large Files Detected',
+          data.output,
+          () => {
+            handleQuickSnapshot(true);
+          },
+          'danger',
+          'Create Snapshot Anyway'
+        );
+      } else {
+        showAlert('Error', data.output || 'Failed to create snapshot.');
+      }
+    } catch (err: any) {
+      showAlert('Error', err.message || 'Error creating quick snapshot.');
+    } finally {
+      setQuickCreating(false);
+    }
+  };
+
   useEffect(() => {
     if (!showTabsDropdown) return;
     const closeDropdown = (e: MouseEvent) => {
@@ -319,6 +375,7 @@ export default function App() {
   useKeyboardShortcuts({
     enabled: isAuthenticated && !hasModals,
     onNewTerminal: () => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || ''),
+    onQuickSnapshot: () => handleQuickSnapshot(),
     onCloseTab: () => {
       const activeTab = tabs.find(t => t.id === activeTabId);
       if (activeTab) {
@@ -853,6 +910,21 @@ export default function App() {
 
             {/* App Actions (Shortcuts, Settings, Logout) */}
             <div className="flex items-center gap-1.5 mr-2 desktop-only" style={{ WebkitAppRegion: 'no-drag' } as any}>
+              {panelWorkspace?.isGit && (
+                <button
+                  type="button"
+                  className="action-btn text-purple-400 hover:text-purple-300"
+                  onClick={() => handleQuickSnapshot()}
+                  disabled={quickCreating}
+                  title="Quick Snapshot (Alt+S)"
+                >
+                  {quickCreating ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Camera size={14} />
+                  )}
+                </button>
+              )}
               <button type="button" className="action-btn" onClick={() => setShowShortcutModal(true)} title="Keyboard Shortcuts">
                 <HelpCircle size={14} />
               </button>
@@ -1032,6 +1104,7 @@ export default function App() {
                       token={localStorage.getItem('token') || ''}
                       workspaceId={activeTab.workspaceId || ''}
                       worktreePath={activeTab.worktreePath}
+                      compareWithWorktree={activeTab.compareWithWorktree}
                     />
                   );
                 }

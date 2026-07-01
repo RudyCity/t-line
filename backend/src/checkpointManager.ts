@@ -4,7 +4,8 @@ import {
   parseSSHPath,
   remoteExists,
   remoteRead,
-  remoteWrite
+  remoteWrite,
+  runSSHCommand
 } from './sshHelpers';
 import {
   runGit,
@@ -59,13 +60,25 @@ export async function getCheckpoints(repoPath: string): Promise<Checkpoint[]> {
     // Validate each checkpoint's commit exists in Git.
     // If a checkpoint's commit is missing (e.g., cloned elsewhere or manually pruned),
     // we clean it up from metadata to stay consistent.
+    let existingRefs: string[] = [];
+    try {
+      const showRefOutput = await runGit(['show-ref'], normalizedRepo);
+      existingRefs = showRefOutput.split('\n').map(line => line.trim()).filter(Boolean);
+    } catch (e) {}
+
+    const existingHashes = new Set(existingRefs.map(line => line.split(' ')[0]));
+
     const validCheckpoints: Checkpoint[] = [];
     for (const cp of checkpoints) {
-      try {
-        await runGit(['cat-file', '-t', cp.commitHash], normalizedRepo);
+      if (existingHashes.has(cp.commitHash)) {
         validCheckpoints.push(cp);
-      } catch (e) {
-        // Commit is missing; ignore/auto-prune
+      } else {
+        try {
+          await runGit(['cat-file', '-t', cp.commitHash], normalizedRepo);
+          validCheckpoints.push(cp);
+        } catch (e) {
+          // Commit is missing; ignore/auto-prune
+        }
       }
     }
 
@@ -88,8 +101,9 @@ export async function getCheckpoints(repoPath: string): Promise<Checkpoint[]> {
 export async function createCheckpoint(
   repoPath: string,
   name: string,
-  description: string
-): Promise<{ success: boolean; checkpoint?: Checkpoint; output: string }> {
+  description: string,
+  force = false
+): Promise<{ success: boolean; checkpoint?: Checkpoint; output: string; hasLargeFiles?: boolean; largeFilesList?: string[] }> {
   try {
     const normalizedRepo = normalizePath(repoPath);
 
@@ -105,6 +119,80 @@ export async function createCheckpoint(
     // Check dirty status
     const status = await getGitStatus(normalizedRepo);
     const isDirty = status.length > 0;
+
+    // Check for large files (over 10MB) if not forced
+    if (isDirty && !force) {
+      const statusOutput = await runGit(['status', '--porcelain', '-u'], normalizedRepo);
+      const lines = statusOutput.split('\n').map(l => l.trim()).filter(Boolean);
+      
+      const filesToCheck: string[] = [];
+      for (const line of lines) {
+        const statusType = line.substring(0, 2);
+        if (statusType.startsWith('D') || statusType.endsWith('D')) {
+          continue; // skip deleted
+        }
+        let filePathPart = line.substring(3);
+        if (filePathPart.startsWith('"') && filePathPart.endsWith('"')) {
+          filePathPart = filePathPart.substring(1, filePathPart.length - 1);
+        }
+        if (filePathPart.includes(' -> ')) {
+          filePathPart = filePathPart.split(' -> ')[1];
+        }
+        filesToCheck.push(filePathPart);
+      }
+
+      const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+      const largeFiles: string[] = [];
+
+      if (filesToCheck.length > 0) {
+        if (normalizedRepo.startsWith('ssh://')) {
+          const ssh = parseSSHPath(normalizedRepo);
+          if (ssh) {
+            const escapedFiles = filesToCheck.map(f => `"${f.replace(/"/g, '\\"')}"`).join(' ');
+            try {
+              const cmd = `cd "${ssh.remotePath.replace(/"/g, '\\"')}" && wc -c ${escapedFiles}`;
+              const sizeOutput = await runSSHCommand(ssh.host, ssh.port, ssh.user, cmd);
+              const sizeLines = sizeOutput.split('\n').map(l => l.trim()).filter(Boolean);
+              for (const sizeLine of sizeLines) {
+                const match = sizeLine.match(/^(\d+)\s+(.+)$/);
+                if (match) {
+                  const size = parseInt(match[1], 10);
+                  const name = match[2];
+                  if (name !== 'total' && size > MAX_SIZE) {
+                    largeFiles.push(`${name} (${(size / (1024 * 1024)).toFixed(1)} MB)`);
+                  }
+                }
+              }
+            } catch (e) {
+              console.error('Error checking remote sizes batch:', e);
+            }
+          }
+        } else {
+          for (const f of filesToCheck) {
+            try {
+              const fullPath = path.resolve(normalizedRepo, f);
+              if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
+                const size = fs.statSync(fullPath).size;
+                if (size > MAX_SIZE) {
+                  largeFiles.push(`${f} (${(size / (1024 * 1024)).toFixed(1)} MB)`);
+                }
+              }
+            } catch (e) {}
+          }
+        }
+      }
+
+      if (largeFiles.length > 0) {
+        return {
+          success: false,
+          hasLargeFiles: true,
+          largeFilesList: largeFiles,
+          output: `Warning: Large files detected (over 10MB):\n` +
+            largeFiles.map(lf => `- ${lf}`).join('\n') +
+            `\n\nCreating a snapshot with these files might be slow. Do you want to proceed?`
+        };
+      }
+    }
 
     let commitHash = headCommit;
     const checkpointId = `cp_${Date.now()}`;
