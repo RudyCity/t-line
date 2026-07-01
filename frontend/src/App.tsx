@@ -431,8 +431,9 @@ export default function App() {
       wsManager.connect();
       wsManager.setOnConnectionChange(setWsConnected);
       fetchDashboardData();
+      fetchLocalVersion();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchLocalVersion]);
 
   const prevActiveTabIdRef = useRef<string>('');
   const prevActiveTabPathRef = useRef<string>('');

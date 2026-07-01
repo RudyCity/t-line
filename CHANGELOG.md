@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.201] - 2026-07-01
+
+### Fixed
+- **System Update Checker**:
+  - Fixed a critical bug in `checkUpdates` where the `updateAvailable` state was never reset to `false` when the latest release on GitHub was older than or equal to the current version.
+  - Dynamically imported the application version from the frontend's own `package.json` to act as the default fallback version (instead of the outdated hardcoded `'1.3.73'`), avoiding false update triggers.
+  - Updated the backend version endpoint `/api/system/version` fallback version to `1.3.201`.
+  - Triggered the update checker's `fetchLocalVersion` whenever `isAuthenticated` transitions to `true` (indicating successful authentication and a responsive backend), resolving race conditions where the checker ran before the backend server finished starting up.
+
+---
+
 ## [1.3.200] - 2026-07-01
 
 ### Fixed

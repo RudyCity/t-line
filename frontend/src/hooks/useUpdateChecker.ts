@@ -1,7 +1,10 @@
 import { useState, useCallback } from 'react';
+import { version } from '../../package.json';
+
+const DEFAULT_VERSION = version || '1.3.201';
 
 export function useUpdateChecker() {
-  const [appVersion, setAppVersion] = useState<string>('1.3.73');
+  const [appVersion, setAppVersion] = useState<string>(DEFAULT_VERSION);
   const [latestVersion, setLatestVersion] = useState<string>('');
   const [updateAvailable, setUpdateAvailable] = useState<boolean>(false);
 
@@ -37,6 +40,8 @@ export function useUpdateChecker() {
             detail: { message: `New Update Available: v${cleanLatest}! Click the version badge in the footer to download.` }
           }));
         }, 3000);
+      } else {
+        setUpdateAvailable(false);
       }
     } catch (err) {
       console.error('Failed to check for updates:', err);
@@ -53,7 +58,7 @@ export function useUpdateChecker() {
       }
     } catch (e) {
       console.error('Failed to fetch local version:', e);
-      checkUpdates('1.3.73');
+      checkUpdates(DEFAULT_VERSION);
     }
   }, [checkUpdates]);
 
@@ -64,3 +69,4 @@ export function useUpdateChecker() {
     fetchLocalVersion
   };
 }
+

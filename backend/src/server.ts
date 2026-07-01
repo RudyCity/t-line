@@ -176,7 +176,7 @@ app.get('/api/auth/setup-status', (req, res) => {
 });
 
 app.get('/api/system/version', (req, res) => {
-  let appVersion = '1.3.73';
+  let appVersion = '1.3.201';
   try {
     const packageJsonPath = path.join(__dirname, '..', 'package.json');
     if (fs.existsSync(packageJsonPath)) {
