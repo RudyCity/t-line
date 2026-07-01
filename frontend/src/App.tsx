@@ -33,6 +33,7 @@ import { useTerminals, WorkspaceInfo, TabData } from './hooks/useTerminals';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { SplitLayoutRenderer } from './components/SplitLayoutRenderer';
 import { Footer } from './components/Footer';
+import { TabsDropdown } from './components/TabsDropdown';
 import { EmptyDashboard } from './components/EmptyDashboard';
 import { MobileKeyboard } from './components/MobileKeyboard';
 import { useLayoutHelpers } from './hooks/useLayoutHelpers';
@@ -902,68 +903,17 @@ export default function App() {
                 <ChevronDown size={14} />
               </button>
               {showTabsDropdown && (
-                <div 
-                  className="dropdown-menu" 
-                  style={{ 
-                    position: 'absolute', 
-                    top: '100%', 
-                    right: 0, 
-                    marginTop: '8px', 
-                    zIndex: 100, 
-                    minWidth: '200px', 
-                    backgroundColor: 'var(--bg-card)', 
-                    border: '1px solid var(--border-color)', 
-                    borderRadius: '8px', 
-                    boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
-                    padding: '6px 0',
-                    maxHeight: '300px',
-                    overflowY: 'auto'
-                  }}
-                >
-                  {filteredTabs.map(t => {
-                    const isFile = t.type === 'file';
-                    const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
-                    const displayName = isFile ? t.name : (focusedInst?.name || t.name);
-                    const isActive = activeTabId === t.id;
-                    
-                    return (
-                      <div
-                        key={t.id}
-                        className={`dropdown-item flex items-center justify-between px-3 py-1.5 text-xs cursor-pointer transition-colors ${
-                          isActive 
-                            ? 'bg-purple-600/10 text-purple-400 font-semibold' 
-                            : 'text-slate-300 hover:bg-slate-800/60'
-                        }`}
-                        onClick={() => {
-                          setActiveTabId(t.id);
-                          setShowTabsDropdown(false);
-                        }}
-                      >
-                        <div className="flex items-center gap-2 overflow-hidden mr-3">
-                          {isFile ? (
-                            <FileCode size={12} className={isActive ? 'text-purple-400' : 'text-slate-400'} />
-                          ) : (
-                            <TerminalIcon size={12} className={isActive ? 'text-purple-400' : 'text-slate-400'} />
-                          )}
-                          <span className="truncate">{displayName}</span>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            closeTerminal(t.id, e);
-                            if (filteredTabs.length <= 2) {
-                              setShowTabsDropdown(false);
-                            }
-                          }}
-                          className="text-slate-500 hover:text-red-400 font-bold ml-auto text-sm px-1"
-                          title="Close Tab"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+                <TabsDropdown
+                  filteredTabs={filteredTabs}
+                  activeTabId={activeTabId}
+                  setActiveTabId={setActiveTabId}
+                  closeTerminal={closeTerminal}
+                  terminalInstances={terminalInstances}
+                  onClose={() => setShowTabsDropdown(false)}
+                  getTabGitBranch={getTabGitBranch}
+                  handleCloseOtherTabs={handleCloseOtherTabs}
+                  handleCloseAllTabs={handleCloseAllTabs}
+                />
               )}
             </div>
           )}

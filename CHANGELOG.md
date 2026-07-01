@@ -2,6 +2,27 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.179] - 2026-07-01
+
+### Fixed
+- **Light Theme Tab Switcher Dropdown** (`App`, `TabsDropdown`):
+  - Fixed color contrast issues in light theme mode (where inactive tabs had extremely low contrast, light gray text on a white background).
+  - Used semantic CSS variables (`--ws-dropdown-bg`, `--ws-dropdown-border`, `--text-main`, `--text-muted`, and `--ws-dropdown-shadow`) so the dropdown switcher automatically adapts between dark and light themes with premium aesthetics.
+
+### Added
+- **Search & Filter in Tab Switcher Dropdown** (`TabsDropdown`):
+  - Added an auto-focused search bar inside the dropdown menu to filter open tabs dynamically by name, path, cwd, or shell type.
+- **Keyboard Navigation** (`TabsDropdown`):
+  - Supported navigating filtered items using `ArrowUp`/`ArrowDown`, selecting using `Enter`, closing the dropdown with `Escape`, and closing the highlighted tab using `Delete`/`Backspace` when the search query is empty.
+  - Implemented automatic smooth scrolling to keep the highlighted item in view during keyboard navigation.
+- **Enhanced Tab Switcher Metadata** (`TabsDropdown`):
+  - Grouped and counted tabs by category (Files, Terminals, Diffs) inside the header.
+  - Displayed relative path/cwd information and Git branch badges for each tab item.
+- **Footer Quick Actions** (`TabsDropdown`):
+  - Added "Close Others" and "Close All" quick action buttons at the bottom of the dropdown.
+
+---
+
 ## [1.3.176] - 2026-07-01
 
 ### Fixed

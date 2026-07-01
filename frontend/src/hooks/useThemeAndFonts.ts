@@ -272,7 +272,7 @@ export function useThemeAndFonts() {
       root.style.setProperty('--toast-text', '#0f172a');
       root.style.setProperty('--ws-dropdown-bg', 'rgba(255, 255, 255, 0.98)');
       root.style.setProperty('--ws-dropdown-border', 'rgba(0, 0, 0, 0.1)');
-      root.style.setProperty('--ws-dropdown-shadow', 'none');
+      root.style.setProperty('--ws-dropdown-shadow', '0 10px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.08)');
       root.style.setProperty('--glass-shadow', 'none');
       root.style.setProperty('--tooltip-shadow', 'none');
       root.style.setProperty('--toast-shadow', 'none');
