@@ -963,7 +963,7 @@ export default function App() {
 
               {/* Tabs list dropdown switcher */}
               {filteredTabs.length > 1 && (
-                <div style={{ position: 'relative', display: 'inline-flex', WebkitAppRegion: 'no-drag' } as any}>
+                <div className="tabs-dropdown-wrapper" style={{ position: 'relative', display: 'inline-flex', WebkitAppRegion: 'no-drag' } as any}>
                   <button
                     className={`action-btn shrink-0 tabs-dropdown-btn ${showTabsDropdown ? 'active' : ''}`}
                     onClick={(e) => { e.stopPropagation(); setShowTabsDropdown(!showTabsDropdown); }}

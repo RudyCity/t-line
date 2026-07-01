@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.183] - 2026-07-01
+
+### Changed
+- **Active Tab Seamless Merging**:
+  - Aligned all tabs to the bottom of the `.content-tabs-bar` container using `align-items: flex-end`.
+  - Configured the active tab (`.tab-active`) to use the exact background color of the workspace panel (`var(--bg-main)`).
+  - Overlapped the parent container's bottom border under the active tab using `margin-bottom: -1px` and `z-index: 2` to remove the separation line and seamlessly join the active tab with the terminal/content below it.
+  - Aligned the New Terminal (+) and switcher dropdown buttons to stay vertically centered relative to tab height.
+
+---
+
 ## [1.3.182] - 2026-07-01
 
 ### Changed

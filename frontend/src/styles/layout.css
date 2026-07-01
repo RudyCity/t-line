@@ -520,18 +520,75 @@ body.tab-dragging .drag-drop-overlay {
 /* Content Tabs Bar (Option 3: merged tabs into content/terminal panel) */
 .content-tabs-bar {
   display: flex;
-  align-items: center;
+  align-items: flex-end; /* Align tabs to the bottom */
   justify-content: space-between;
   height: 38px;
   min-height: 38px;
   background: var(--bg-sidebar);
   border-bottom: 1px solid var(--border-color);
-  padding: 0 4px;
+  padding: 0 8px;
   user-select: none;
+  position: relative;
 }
 
 /* Ensure chrome-tabs-container behaves correctly in the content-tabs-bar */
 .content-tabs-bar .chrome-tabs-container {
   height: 100%;
+  display: flex;
+  align-items: flex-end; /* Push tabs to the bottom to join content */
+  gap: 2px;
 }
+
+/* Base style for tabs inside content-tabs-bar */
+.content-tabs-bar .tab {
+  height: 28px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-bottom: 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: transparent;
+  transition: none; /* Avoid visual stutter during height change */
+}
+
+/* Inactive tabs hover state */
+.content-tabs-bar .tab:hover {
+  background: var(--surface-overlay);
+  color: var(--text-main);
+}
+
+/* Active tab merges with the main content area */
+.content-tabs-bar .tab-active {
+  height: 32px; /* Taller tab to connect to bottom border */
+  background: var(--bg-main) !important; /* Matches main workspace background */
+  border-left: 1px solid var(--border-color) !important;
+  border-top: 1px solid var(--border-color) !important;
+  border-right: 1px solid var(--border-color) !important;
+  border-bottom: 1px solid var(--bg-main) !important; /* Mask the parent's border-bottom */
+  border-top-left-radius: 6px !important;
+  border-top-right-radius: 6px !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  color: var(--text-main) !important;
+  position: relative;
+  z-index: 2; /* Sit on top of the border-bottom */
+  margin-bottom: -1px; /* Extend over the bottom border of content-tabs-bar */
+}
+
+/* Plus button alignment */
+.content-tabs-bar .chrome-tabs-container .action-btn {
+  margin-bottom: 5px; /* Center it vertically relative to tabs */
+}
+
+/* Dropdown list button container alignment */
+.content-tabs-bar .tabs-dropdown-wrapper {
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.content-tabs-bar .tabs-dropdown-wrapper .action-btn {
+  margin-bottom: 5px; /* Center it vertically relative to tabs */
+}
+
 
