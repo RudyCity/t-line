@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.204] - 2026-07-01
+
+### Fixed
+- **CI/CD**: Fixed electron-builder publish argument passing in GitHub Actions — use `working-directory` and direct `npx electron-builder --publish always` instead of npm workspace proxy.
+
 ## [1.3.203] - 2026-07-01
 
 ### Fixed
@@ -1906,3 +1911,4 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ### Security
 * **Authentication Bypass**: Implemented local runtime ephemeral tokens to automatically authenticate local Electron clients while enforcing strict Master Password locks on incoming web requests.
+
