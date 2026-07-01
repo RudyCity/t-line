@@ -540,9 +540,13 @@ export function TerminalInstance({
         foreground: themeForeground || '#f8fafc',
         cursor: accentColor || '#a855f7',
         cursorAccent: themeBackground || '#000000',
-        selectionBackground: accentColor ? `color-mix(in srgb, ${accentColor} 30%, transparent)` : 'rgba(168, 85, 247, 0.3)',
-        selectionForeground: isLightColor(themeBackground) ? undefined : '#ffffff',
-        selectionInactiveBackground: accentColor ? `color-mix(in srgb, ${accentColor} 15%, transparent)` : 'rgba(168, 85, 247, 0.15)',
+        selectionBackground: isLightColor(themeBackground)
+          ? (accentColor ? `color-mix(in srgb, ${accentColor} 40%, #000000)` : '#334155')
+          : (accentColor ? `color-mix(in srgb, ${accentColor} 30%, transparent)` : 'rgba(168, 85, 247, 0.3)'),
+        selectionForeground: '#ffffff',
+        selectionInactiveBackground: isLightColor(themeBackground)
+          ? (accentColor ? `color-mix(in srgb, ${accentColor} 20%, #000000)` : '#475569')
+          : (accentColor ? `color-mix(in srgb, ${accentColor} 15%, transparent)` : 'rgba(168, 85, 247, 0.15)'),
         black: isLightColor(themeBackground) ? '#0f172a' : '#4a5568',
         red: '#ef4444',
         green: isLightColor(themeBackground) ? '#15803d' : '#10b981',
@@ -793,9 +797,13 @@ export function TerminalInstance({
           foreground: themeForeground || '#f8fafc',
           cursor: accentColor || '#a855f7',
           cursorAccent: themeBackground || '#000000',
-          selectionBackground: accentColor ? `color-mix(in srgb, ${accentColor} 30%, transparent)` : 'rgba(168, 85, 247, 0.3)',
-          selectionForeground: isLight ? undefined : '#ffffff',
-          selectionInactiveBackground: accentColor ? `color-mix(in srgb, ${accentColor} 15%, transparent)` : 'rgba(168, 85, 247, 0.15)',
+          selectionBackground: isLight
+            ? (accentColor ? `color-mix(in srgb, ${accentColor} 40%, #000000)` : '#334155')
+            : (accentColor ? `color-mix(in srgb, ${accentColor} 30%, transparent)` : 'rgba(168, 85, 247, 0.3)'),
+          selectionForeground: '#ffffff',
+          selectionInactiveBackground: isLight
+            ? (accentColor ? `color-mix(in srgb, ${accentColor} 20%, #000000)` : '#475569')
+            : (accentColor ? `color-mix(in srgb, ${accentColor} 15%, transparent)` : 'rgba(168, 85, 247, 0.15)'),
           black: isLight ? '#0f172a' : '#4a5568',
           red: '#ef4444',
           green: isLight ? '#15803d' : '#10b981',

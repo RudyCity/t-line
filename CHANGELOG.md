@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.187] - 2026-07-01
+
+### Changed
+- **High-Contrast Terminal Text Selection in Light Mode**:
+  - Configured terminal instances in light mode to use a solid dark selection background (a dark variant of the accent color, or Slate-700 fallback) and white selection foreground text.
+  - This ensures text selection remains highly legible and visible with high contrast when using Light Mode.
+
+---
+
 ## [1.3.186] - 2026-07-01
 
 ### Changed
