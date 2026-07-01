@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.191] - 2026-07-01
+
+### Fixed
+- **Terminal Pane Split Buttons in Light Mode**:
+  - Dynamically styled the terminal floating action bar (containing horizontal split, vertical split, and close pane buttons) to use custom translucent light styling in light mode. This replaces the hardcoded dark background and border styling with a clean light layout that integrates perfectly with the light theme.
+  - Adapted the pane resize handles to use a softer purple translucency in light mode to improve contrast and feel premium.
+
+---
+
 ## [1.3.190] - 2026-07-01
 
 ### Fixed

@@ -3,6 +3,26 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { SplitLayoutNode, TerminalInstanceData, ActiveProcessSummary } from '../hooks/useTerminals';
 import { TerminalInstance } from './TerminalInstance';
 
+// Helper to detect if a background color is light/bright
+function isLightColor(color: string | undefined): boolean {
+  if (!color) return false;
+  if (color.startsWith('#')) {
+    const hex = color.slice(1);
+    if (hex.length === 3) {
+      const r = parseInt(hex[0] + hex[0], 16);
+      const g = parseInt(hex[1] + hex[1], 16);
+      const b = parseInt(hex[2] + hex[2], 16);
+      return (r * 299 + g * 587 + b * 114) / 1000 >= 128;
+    } else if (hex.length === 6) {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      return (r * 299 + g * 587 + b * 114) / 1000 >= 128;
+    }
+  }
+  return false;
+}
+
 export interface SplitLayoutRendererProps {
   node: SplitLayoutNode;
   activeTabId: string;
@@ -87,7 +107,11 @@ export function SplitLayoutRenderer({
         
         {/* Floating action bar at top-right of each pane */}
         <div 
-          className="absolute bottom-2 right-2 top-auto lg:top-2 lg:right-2 lg:bottom-auto flex items-center gap-1.5 opacity-100 lg:opacity-0 lg:group-hover/pane:opacity-100 transition-opacity duration-200 z-50 bg-[#0f111a]/85 backdrop-blur-md border border-purple-500/25 rounded-md p-1.5 lg:p-1 shadow-lg"
+          className={`absolute bottom-2 right-2 top-auto lg:top-2 lg:right-2 lg:bottom-auto flex items-center gap-1.5 opacity-100 lg:opacity-0 lg:group-hover/pane:opacity-100 transition-opacity duration-200 z-50 backdrop-blur-md border rounded-md p-1.5 lg:p-1 shadow-lg ${
+            isLightColor(themeBackground) 
+              ? 'bg-white/85 border-purple-300/40 shadow-sm' 
+              : 'bg-[#0f111a]/85 border-purple-500/25'
+          }`}
           onClick={(e) => e.stopPropagation()}
           onTouchEnd={(e) => e.stopPropagation()}
         >
@@ -95,7 +119,11 @@ export function SplitLayoutRenderer({
             type="button"
             title="Split Horizontal (Alt+D)"
             onClick={() => splitFocusedTerminal('horizontal')}
-            className="w-7 h-7 lg:w-5 lg:h-5 text-slate-400 hover:text-purple-400 hover:bg-white/5 rounded p-1.5 lg:p-1 transition-colors flex items-center justify-center cursor-pointer"
+            className={`w-7 h-7 lg:w-5 lg:h-5 rounded p-1.5 lg:p-1 transition-colors flex items-center justify-center cursor-pointer ${
+              isLightColor(themeBackground) 
+                ? 'text-slate-600 hover:text-purple-600 hover:bg-black/5' 
+                : 'text-slate-400 hover:text-purple-400 hover:bg-white/5'
+            }`}
           >
             <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 lg:w-3 lg:h-3" fill="currentColor">
               <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm6.5 1v8h1V4z" />
@@ -105,7 +133,11 @@ export function SplitLayoutRenderer({
             type="button"
             title="Split Vertical (Alt+E)"
             onClick={() => splitFocusedTerminal('vertical')}
-            className="w-7 h-7 lg:w-5 lg:h-5 text-slate-400 hover:text-purple-400 hover:bg-white/5 rounded p-1.5 lg:p-1 transition-colors flex items-center justify-center cursor-pointer"
+            className={`w-7 h-7 lg:w-5 lg:h-5 rounded p-1.5 lg:p-1 transition-colors flex items-center justify-center cursor-pointer ${
+              isLightColor(themeBackground) 
+                ? 'text-slate-600 hover:text-purple-600 hover:bg-black/5' 
+                : 'text-slate-400 hover:text-purple-400 hover:bg-white/5'
+            }`}
           >
             <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 lg:w-3 lg:h-3" fill="currentColor">
               <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm1 5.5h12v-1H2z" />
@@ -116,7 +148,11 @@ export function SplitLayoutRenderer({
               type="button"
               title="Close Pane (Alt+W)"
               onClick={() => closePane(node.terminalId)}
-              className="w-7 h-7 lg:w-5 lg:h-5 text-slate-400 hover:text-red-400 hover:bg-white/5 rounded p-1.5 lg:p-1 transition-colors flex items-center justify-center cursor-pointer"
+              className={`w-7 h-7 lg:w-5 lg:h-5 rounded p-1.5 lg:p-1 transition-colors flex items-center justify-center cursor-pointer ${
+                isLightColor(themeBackground) 
+                  ? 'text-slate-600 hover:text-red-600 hover:bg-red-500/10' 
+                  : 'text-slate-400 hover:text-red-400 hover:bg-white/5'
+              }`}
             >
               <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 lg:w-3 lg:h-3" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 3l10 10M13 3L3 13" />
@@ -154,7 +190,11 @@ export function SplitLayoutRenderer({
         />
       </Panel>
       <PanelResizeHandle
-        className="bg-purple-500/15 hover:bg-purple-500/40 transition-colors flex-shrink-0"
+        className={`transition-colors flex-shrink-0 ${
+          isLightColor(themeBackground)
+            ? 'bg-purple-500/10 hover:bg-purple-500/35'
+            : 'bg-purple-500/15 hover:bg-purple-500/40'
+        }`}
         style={{
           width: node.direction === 'horizontal' ? '4px' : '100%',
           height: node.direction === 'vertical' ? '4px' : '100%',
