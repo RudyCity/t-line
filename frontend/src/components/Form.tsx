@@ -4,11 +4,11 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   className?: string;
 }
 
-export const Input: React.FC<InputProps> = ({ className = '', ...props }) => {
+export const Input: React.FC<InputProps> = ({ className = '', style, ...props }) => {
   return (
     <input
       className={`form-input w-full border border-[var(--border-color)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--color-primary)]/50 focus:ring-1 focus:ring-[var(--color-primary)]/25 transition-all duration-200 ${className}`}
-      style={{ backgroundColor: 'var(--bg-main)' }}
+      style={{ backgroundColor: 'var(--bg-main)', ...style }}
       {...props}
     />
   );
@@ -24,11 +24,11 @@ interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
   className?: string;
 }
 
-export const TextArea: React.FC<TextAreaProps> = ({ className = '', ...props }) => {
+export const TextArea: React.FC<TextAreaProps> = ({ className = '', style, ...props }) => {
   return (
     <textarea
       className={`form-input w-full border border-[var(--border-color)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--color-primary)]/50 focus:ring-1 focus:ring-[var(--color-primary)]/25 transition-all duration-200 ${className}`}
-      style={{ backgroundColor: 'var(--bg-main)' }}
+      style={{ backgroundColor: 'var(--bg-main)', ...style }}
       {...props}
     />
   );
