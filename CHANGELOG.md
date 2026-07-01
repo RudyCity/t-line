@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.182] - 2026-07-01
+
+### Changed
+- **Content Integrated Tab Bar**:
+  - Relocated the chrome-like tab bar (`chrome-tabs-container` and dropdown switcher) from the global window `top-bar` down into the `.content-area`.
+  - Positioned the tab bar directly on top of the active workspace panel (e.g. above terminal panes, Monaco file viewers, and diff view tabs), matching modern editor styles (such as VS Code editor tab headers).
+  - Added CSS layout rules for `.content-tabs-bar` with consistent background (`var(--bg-sidebar)`) and borders.
+
+---
+
 ## [1.3.181] - 2026-07-01
 
 ### Fixed

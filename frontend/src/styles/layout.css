@@ -516,3 +516,22 @@ body.tab-dragging .drag-drop-overlay {
 .theme-light .right-sidebar {
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.06) !important;
 }
+
+/* Content Tabs Bar (Option 3: merged tabs into content/terminal panel) */
+.content-tabs-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 38px;
+  min-height: 38px;
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 4px;
+  user-select: none;
+}
+
+/* Ensure chrome-tabs-container behaves correctly in the content-tabs-bar */
+.content-tabs-bar .chrome-tabs-container {
+  height: 100%;
+}
+

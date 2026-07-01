@@ -833,116 +833,7 @@ export default function App() {
             </span>
           </div>
 
-          {/* Left Divider if there are tabs */}
-          {filteredTabs.length > 0 && (
-            <div className="window-controls-separator shrink-0 desktop-only" style={{ margin: '0 12px', height: '16px' }} />
-          )}
-
-          {/* Integrated Tab Bar */}
-          {filteredTabs.length > 0 && (
-            <div className="chrome-tabs-container mx-3 desktop-only" style={{ WebkitAppRegion: 'no-drag' } as any}>
-              {panelWorktreePath !== null && (() => {
-                const activeWt = panelWorkspace?.worktrees?.find(wt => wt.path === panelWorktreePath);
-                const branchName = activeWt?.branch || 'worktree';
-                return (
-                  <div className="tab-group-badge" title={`Branch: ${branchName}`}>
-                    <GitBranch size={10} />
-                    <span>{branchName}</span>
-                  </div>
-                );
-              })()}
-              {(() => {
-                let prevBranch: string | null = null;
-                return visibleTabs.map(t => {
-                  const isFile = t.type === 'file';
-                  const isDiff = t.type === 'diff';
-                  const focusedInst = !isFile && !isDiff && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
-                  const shellType = focusedInst?.shellType || '';
-                  const displayName = (isFile || isDiff) ? t.name : (focusedInst?.name || t.name);
-                  const branch = getTabGitBranch(t);
-
-                  const showGroupHeader = panelWorktreePath === null && branch && branch !== prevBranch;
-                  prevBranch = branch || null;
-
-                  return (
-                    <Fragment key={t.id}>
-                      {showGroupHeader && (
-                        <div className="tab-group-badge" title={`Branch: ${branch}`}>
-                          <GitBranch size={10} />
-                          <span>{branch}</span>
-                        </div>
-                      )}
-                      <div 
-                        className={`tab ${activeTabId === t.id ? 'tab-active' : ''}`}
-                        onClick={() => handleTabClick(t)}
-                        onMouseEnter={(e) => handleTabMouseEnter(e, t)}
-                        onMouseLeave={handleTabMouseLeave}
-                        onContextMenu={(e) => handleTabContextMenu(e, t.id)}
-                      >
-                        {t.type === 'file' ? (
-                          <FileCode size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
-                        ) : t.type === 'diff' ? (
-                          <GitCompare size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? '#4ade80' : 'var(--text-muted)' }} />
-                        ) : (
-                          <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
-                        )}
-                        <span className="tab-title-container">
-                          <span className="tab-title">{displayName}</span>
-                          {shellType && (
-                            <span className="tab-shell-type">({shellType === 'powershell' ? 'ps' : shellType})</span>
-                          )}
-                        </span>
-                        <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)}>×</span>
-                      </div>
-                    </Fragment>
-                  );
-                });
-              })()}
-              {/* New Terminal button */}
-              <button
-                className="action-btn shrink-0"
-                onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')}
-                title="New terminal (Alt+T)"
-                style={{ marginLeft: '6px' }}
-              >
-                <Plus size={14} />
-              </button>
-
-            </div>
-          )}
-
-          {/* Tabs list dropdown switcher */}
-          {filteredTabs.length > 1 && (
-            <div style={{ position: 'relative', display: 'inline-flex', WebkitAppRegion: 'no-drag' } as any} className="desktop-only">
-              <button
-                className={`action-btn shrink-0 tabs-dropdown-btn ${showTabsDropdown ? 'active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); setShowTabsDropdown(!showTabsDropdown); }}
-                title="View Open Tabs"
-                style={{ marginLeft: '4px' }}
-              >
-                <ChevronDown size={14} />
-              </button>
-              {showTabsDropdown && (
-                <TabsDropdown
-                  filteredTabs={filteredTabs}
-                  activeTabId={activeTabId}
-                  setActiveTabId={setActiveTabId}
-                  closeTerminal={closeTerminal}
-                  terminalInstances={terminalInstances}
-                  onClose={() => setShowTabsDropdown(false)}
-                  getTabGitBranch={getTabGitBranch}
-                  handleCloseOtherTabs={handleCloseOtherTabs}
-                  handleCloseAllTabs={handleCloseAllTabs}
-                />
-              )}
-            </div>
-          )}
-
-
-          {/* Right Divider if there are tabs */}
-          {filteredTabs.length > 0 && (
-            <div className="window-controls-separator shrink-0 desktop-only" style={{ margin: '0 12px', height: '16px' }} />
-          )}
+          {/* Tabs are now merged in the content area below */}
 
           <div className="top-bar-actions flex items-center gap-2 shrink-0">
             <button 
@@ -999,6 +890,105 @@ export default function App() {
 
         {/* Dynamic Panels */}
         <div className={`content-area ${filteredTabs.length > 0 ? 'content-area-tabs' : 'content-area-empty'}`}>
+          {filteredTabs.length > 0 && (
+            <div className="content-tabs-bar flex items-center justify-between desktop-only">
+              <div className="chrome-tabs-container mx-3" style={{ WebkitAppRegion: 'no-drag' } as any}>
+                {panelWorktreePath !== null && (() => {
+                  const activeWt = panelWorkspace?.worktrees?.find(wt => wt.path === panelWorktreePath);
+                  const branchName = activeWt?.branch || 'worktree';
+                  return (
+                    <div className="tab-group-badge" title={`Branch: ${branchName}`}>
+                      <GitBranch size={10} />
+                      <span>{branchName}</span>
+                    </div>
+                  );
+                })()}
+                {(() => {
+                  let prevBranch: string | null = null;
+                  return visibleTabs.map(t => {
+                    const isFile = t.type === 'file';
+                    const isDiff = t.type === 'diff';
+                    const focusedInst = !isFile && !isDiff && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
+                    const shellType = focusedInst?.shellType || '';
+                    const displayName = (isFile || isDiff) ? t.name : (focusedInst?.name || t.name);
+                    const branch = getTabGitBranch(t);
+
+                    const showGroupHeader = panelWorktreePath === null && branch && branch !== prevBranch;
+                    prevBranch = branch || null;
+
+                    return (
+                      <Fragment key={t.id}>
+                        {showGroupHeader && (
+                          <div className="tab-group-badge" title={`Branch: ${branch}`}>
+                            <GitBranch size={10} />
+                            <span>{branch}</span>
+                          </div>
+                        )}
+                        <div 
+                          className={`tab ${activeTabId === t.id ? 'tab-active' : ''}`}
+                          onClick={() => handleTabClick(t)}
+                          onMouseEnter={(e) => handleTabMouseEnter(e, t)}
+                          onMouseLeave={handleTabMouseLeave}
+                          onContextMenu={(e) => handleTabContextMenu(e, t.id)}
+                        >
+                          {t.type === 'file' ? (
+                            <FileCode size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
+                          ) : t.type === 'diff' ? (
+                            <GitCompare size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? '#4ade80' : 'var(--text-muted)' }} />
+                          ) : (
+                            <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
+                          )}
+                          <span className="tab-title-container">
+                            <span className="tab-title">{displayName}</span>
+                            {shellType && (
+                              <span className="tab-shell-type">({shellType === 'powershell' ? 'ps' : shellType})</span>
+                            )}
+                          </span>
+                          <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)}>×</span>
+                        </div>
+                      </Fragment>
+                    );
+                  });
+                })()}
+                {/* New Terminal button */}
+                <button
+                  className="action-btn shrink-0"
+                  onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')}
+                  title="New terminal (Alt+T)"
+                  style={{ marginLeft: '6px' }}
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+
+              {/* Tabs list dropdown switcher */}
+              {filteredTabs.length > 1 && (
+                <div style={{ position: 'relative', display: 'inline-flex', WebkitAppRegion: 'no-drag' } as any}>
+                  <button
+                    className={`action-btn shrink-0 tabs-dropdown-btn ${showTabsDropdown ? 'active' : ''}`}
+                    onClick={(e) => { e.stopPropagation(); setShowTabsDropdown(!showTabsDropdown); }}
+                    title="View Open Tabs"
+                    style={{ marginLeft: '4px', marginRight: '8px' }}
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                  {showTabsDropdown && (
+                    <TabsDropdown
+                      filteredTabs={filteredTabs}
+                      activeTabId={activeTabId}
+                      setActiveTabId={setActiveTabId}
+                      closeTerminal={closeTerminal}
+                      terminalInstances={terminalInstances}
+                      onClose={() => setShowTabsDropdown(false)}
+                      getTabGitBranch={getTabGitBranch}
+                      handleCloseOtherTabs={handleCloseOtherTabs}
+                      handleCloseAllTabs={handleCloseAllTabs}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           {filteredTabs.length === 0 ? (
             
             // Empty Dashboard Welcome View
