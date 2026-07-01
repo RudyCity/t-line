@@ -54,8 +54,10 @@ export type SplitLayoutNode =
 export interface TabData {
   id: string;
   name: string;
-  type: 'terminal' | 'file';
+  type: 'terminal' | 'file' | 'diff';
   filePath?: string;
+  // For 'diff' type tabs
+  commitHash?: string;
   layout?: SplitLayoutNode;
   focusedTerminalId?: string;
   workspaceId?: string;
@@ -354,6 +356,34 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     onTerminalOpen?.();
   }, [tabs, onTerminalOpen, findWorkspaceIdForPath]);
 
+  const openDiffTab = useCallback((commitHash: string, filePath: string, workspaceId: string) => {
+    const fileName = filePath.split(/[/\\]/).pop() ?? filePath;
+    const tabName = `Δ ${fileName} (${commitHash.slice(0, 7)})`;
+    // Reuse existing tab for same commit+file
+    const existing = tabs.find(
+      t => t.type === 'diff' && t.commitHash === commitHash && t.filePath === filePath
+    );
+    if (existing) {
+      setActiveTabId(existing.id);
+      onTerminalOpen?.();
+      return;
+    }
+
+    const tabId = `diff-${Date.now()}`;
+    const newTab: TabData = {
+      id: tabId,
+      name: tabName,
+      type: 'diff',
+      filePath,
+      commitHash,
+      workspaceId
+    };
+
+    setTabs(prev => [...prev, newTab]);
+    setActiveTabId(tabId);
+    onTerminalOpen?.();
+  }, [tabs, onTerminalOpen]);
+
   const closeTerminal = useCallback((tabId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
 
@@ -642,6 +672,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     handleZoomOut,
     openTerminal,
     openFileTab,
+    openDiffTab,
     closeTerminal,
     closePane,
     splitFocusedTerminal,

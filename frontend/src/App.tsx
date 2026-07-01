@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { FileViewerTab } from './components/FileViewerTab';
+import { DiffViewerTab } from './components/DiffViewerTab';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
 import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal, ConfirmModal, WorkspaceEditModal } from './components/Modals';
 import { BranchModal } from './components/BranchModal';
@@ -197,6 +198,7 @@ export default function App() {
     handleZoomOut,
     openTerminal,
     openFileTab,
+    openDiffTab,
     closeTerminal,
     closePane,
     splitFocusedTerminal,
@@ -737,6 +739,7 @@ export default function App() {
             panelWorktreePath={panelWorktreePath}
             fsChangeTrigger={fsChangeTrigger}
             onOpenBranchModal={() => setShowBranchModal(true)}
+            openDiffTab={openDiffTab}
           />
         )}
       </div>
@@ -831,9 +834,10 @@ export default function App() {
                 let prevBranch: string | null = null;
                 return visibleTabs.map(t => {
                   const isFile = t.type === 'file';
-                  const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
+                  const isDiff = t.type === 'diff';
+                  const focusedInst = !isFile && !isDiff && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
                   const shellType = focusedInst?.shellType || '';
-                  const displayName = isFile ? t.name : (focusedInst?.name || t.name);
+                  const displayName = (isFile || isDiff) ? t.name : (focusedInst?.name || t.name);
                   const branch = getTabGitBranch(t);
 
                   const showGroupHeader = panelWorktreePath === null && branch && branch !== prevBranch;
@@ -854,8 +858,10 @@ export default function App() {
                         onMouseLeave={handleTabMouseLeave}
                         onContextMenu={(e) => handleTabContextMenu(e, t.id)}
                       >
-                        {isFile ? (
+                        {t.type === 'file' ? (
                           <FileCode size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
+                        ) : t.type === 'diff' ? (
+                          <GitCompare size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? '#4ade80' : 'var(--text-muted)' }} />
                         ) : (
                           <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                         )}
@@ -1055,6 +1061,16 @@ export default function App() {
                       }}
                       theme={theme}
                       themeBackground={THEMES[theme]?.bgMain}
+                    />
+                  );
+                }
+                if (activeTab.type === 'diff') {
+                  return (
+                    <DiffViewerTab
+                      commitHash={activeTab.commitHash || ''}
+                      filePath={activeTab.filePath || ''}
+                      token={localStorage.getItem('token') || ''}
+                      workspaceId={activeTab.workspaceId || ''}
                     />
                   );
                 }

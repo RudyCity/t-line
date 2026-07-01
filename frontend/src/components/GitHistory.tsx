@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { GitCommit, User, Calendar, FileCode, FilePlus, FileMinus, X, Loader2, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { GitCommit, User, Calendar, FileCode, FilePlus, FileMinus, RefreshCw, Loader2, X } from 'lucide-react';
 import { LinkVertical, LinkVerticalLine, LinkHorizontal } from '@visx/shape';
 
 export interface CommitInfo {
@@ -31,6 +31,7 @@ interface GitHistoryProps {
   workspaceId: string;
   token: string;
   worktreePath?: string | null;
+  onOpenDiffTab?: (commitHash: string, filePath: string) => void;
 }
 
 function StatusIcon({ status }: { status: CommitFile['status'] }) {
@@ -228,39 +229,19 @@ function RefBadges({ refNames }: { refNames?: string }) {
   );
 }
 
-function parseDiff(diff: string): { header: string; hunks: { header: string; lines: { type: '+' | '-' | ' '; text: string }[] }[] } {
-  const lines = diff.split('\n');
-  let header = '';
-  const hunks: { header: string; lines: { type: '+' | '-' | ' '; text: string }[] }[] = [];
-  let currentHunk: typeof hunks[0] | null = null;
 
-  for (const line of lines) {
-    if (line.startsWith('@@')) {
-      if (currentHunk) hunks.push(currentHunk);
-      currentHunk = { header: line, lines: [] };
-    } else if (currentHunk) {
-      if (line.startsWith('+')) currentHunk.lines.push({ type: '+', text: line.slice(1) });
-      else if (line.startsWith('-')) currentHunk.lines.push({ type: '-', text: line.slice(1) });
-      else currentHunk.lines.push({ type: ' ', text: line.slice(1) });
-    } else {
-      header += line + '\n';
-    }
-  }
-  if (currentHunk) hunks.push(currentHunk);
-  return { header, hunks };
-}
-
-export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps) {
+export function GitHistory({ workspaceId, token, worktreePath, onOpenDiffTab }: GitHistoryProps) {
   const [history, setHistory] = useState<CommitInfo[]>([]);
   const [loading, setLoading] = useState(false);
-  
+
   const [selectedCommitHash, setSelectedCommitHash] = useState<string | null>(null);
   const [commitDetails, setCommitDetails] = useState<CommitDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
-  
-  const [selectedFile, setSelectedFile] = useState<CommitFile | null>(null);
-  const [diff, setDiff] = useState<string>('');
-  const [diffLoading, setDiffLoading] = useState(false);
+
+  // Resize state — top panel (history list) height as percentage
+  const [historyHeightPct, setHistoryHeightPct] = useState<number>(50);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
@@ -284,16 +265,12 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
     fetchHistory();
     setSelectedCommitHash(null);
     setCommitDetails(null);
-    setSelectedFile(null);
-    setDiff('');
   }, [workspaceId, token, worktreePath, fetchHistory]);
 
   const handleCommitSelect = async (commit: CommitInfo) => {
     if (!commit.hash) return; // ignore connector-only lines
     setSelectedCommitHash(commit.hash);
     setCommitDetails(null);
-    setSelectedFile(null);
-    setDiff('');
     
     setDetailsLoading(true);
     try {
@@ -312,38 +289,43 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
     }
   };
 
-  const handleFileSelect = async (file: CommitFile) => {
+  const handleFileSelect = (file: CommitFile) => {
     if (!selectedCommitHash) return;
-    setSelectedFile(file);
-    setDiff('');
-    
-    if (file.status === 'added') {
-      setDiff('(New file added in this commit – no diff relative to parent)');
-      return;
-    }
-    
-    setDiffLoading(true);
-    try {
-      const queryParam = worktreePath ? `&worktreePath=${encodeURIComponent(worktreePath)}` : '';
-      const res = await fetch(
-        `/api/workspaces/${workspaceId}/git/commit-diff?commitHash=${selectedCommitHash}&filePath=${encodeURIComponent(file.path)}${queryParam}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setDiff(data.diff || '(Empty diff)');
-      }
-    } catch {
-      setDiff('(Error loading commit diff)');
-    } finally {
-      setDiffLoading(false);
+    if (onOpenDiffTab) {
+      onOpenDiffTab(selectedCommitHash, file.path);
     }
   };
 
-  const parsedDiff = diff ? parseDiff(diff) : null;
+  // Resize drag handler
+  const handleResizerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDraggingRef.current = true;
+    const container = containerRef.current;
+    if (!container) return;
+
+    const onMouseMove = (mv: MouseEvent) => {
+      if (!isDraggingRef.current || !container) return;
+      const rect = container.getBoundingClientRect();
+      const pct = ((mv.clientY - rect.top) / rect.height) * 100;
+      setHistoryHeightPct(Math.min(Math.max(pct, 20), 80));
+    };
+    const onMouseUp = () => {
+      isDraggingRef.current = false;
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, []);
+
+
 
   return (
-    <div className="panel-split" style={{ height: '100%' }}>
+    <div ref={containerRef} className="panel-split" style={{ height: '100%', flexDirection: 'column', position: 'relative' }}>
       <style>{`
         .git-history-container {
           position: relative;
@@ -453,14 +435,7 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
           color: #fbbf24;
           border-color: rgba(245, 158, 11, 0.3);
         }
-        .git-commit-details-panel {
-          flex: 1.2;
-          display: flex;
-          flex-direction: column;
-          border-left: 1px solid var(--border-color);
-          background: var(--bg-sidebar);
-          overflow: hidden;
-        }
+
         .git-details-body {
           flex: 1;
           overflow-y: auto;
@@ -527,10 +502,43 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
         .theme-light .git-history-item-active {
           background: var(--tab-active-bg) !important;
         }
+        .git-history-resizer {
+          height: 5px;
+          flex-shrink: 0;
+          background: transparent;
+          border-top: 1px solid var(--border-color);
+          border-bottom: 1px solid var(--border-color);
+          cursor: row-resize;
+          position: relative;
+          z-index: 10;
+          transition: background 0.15s;
+        }
+        .git-history-resizer:hover,
+        .git-history-resizer:active {
+          background: rgba(168, 85, 247, 0.18);
+          border-color: rgba(168, 85, 247, 0.4);
+        }
+        .git-commit-details-panel {
+          display: flex;
+          flex-direction: column;
+          background: var(--bg-sidebar);
+          overflow: hidden;
+          min-height: 80px;
+        }
       `}</style>
       
       {/* ── Commits Log and Graph Column ── */}
-      <div className="explorer-tree" style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: 'none' }}>
+      <div
+        className="explorer-tree"
+        style={{
+          height: selectedCommitHash ? `${historyHeightPct}%` : '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          borderRight: 'none',
+          overflow: 'hidden',
+          flexShrink: 0,
+        }}
+      >
         <div className="panel-section-header">
           <span className="panel-section-title">Git Commit History</span>
           <button className="action-btn" onClick={fetchHistory} title="Refresh History" disabled={loading}>
@@ -601,9 +609,21 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
         </div>
       </div>
 
-      {/* ── Commit Details and Historical File Diff Panel ── */}
+      {/* ── Resize Handle between History List and Details ── */}
       {selectedCommitHash && (
-        <div className="git-commit-details-panel">
+        <div
+          className="git-history-resizer"
+          onMouseDown={handleResizerMouseDown}
+          title="Drag to resize"
+        />
+      )}
+
+      {/* ── Commit Details Panel ── */}
+      {selectedCommitHash && (
+        <div
+          className="git-commit-details-panel"
+          style={{ height: `${100 - historyHeightPct}%`, flexShrink: 0 }}
+        >
           <div className="panel-section-header">
             <span className="panel-section-title">Commit Details</span>
             <button className="action-btn" onClick={() => setSelectedCommitHash(null)} title="Close Panel">
@@ -642,21 +662,28 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Changed Files ({commitDetails.files.length})
                   </span>
-                  
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', background: 'rgba(0,0,0,0.1)', borderRadius: '6px', padding: '4px' }}>
                     {commitDetails.files.map(file => {
                       const { label, color } = STATUS_LABEL[file.status];
-                      const isFileActive = selectedFile?.path === file.path;
                       const fileName = file.path.split(/[/\\]/).pop() ?? file.path;
                       const dirName = file.path.split(/[/\\]/).slice(0, -1).join('/');
-                      
+                      const canOpen = file.status !== 'deleted';
+
                       return (
                         <div
                           key={file.path}
-                          className={`explorer-item ${isFileActive ? 'explorer-item-active' : ''}`}
-                          style={{ paddingLeft: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                          onClick={() => handleFileSelect(file)}
-                          title={file.path}
+                          className="explorer-item"
+                          style={{
+                            paddingLeft: '8px',
+                            cursor: canOpen ? 'pointer' : 'default',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            opacity: canOpen ? 1 : 0.5,
+                          }}
+                          onClick={() => canOpen && handleFileSelect(file)}
+                          title={canOpen ? `Open diff: ${file.path}` : file.path}
                         >
                           <StatusIcon status={file.status} />
                           <span className="flex-1 min-w-0 text-left" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -676,53 +703,6 @@ export function GitHistory({ workspaceId, token, worktreePath }: GitHistoryProps
                     )}
                   </div>
                 </div>
-
-                {/* Diff Preview Subpanel */}
-                {selectedFile && (
-                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '14px', overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate" style={{ maxWidth: '80%' }}>
-                        Diff: {selectedFile.path.split('/').pop()}
-                      </span>
-                      <button className="action-btn" onClick={() => setSelectedFile(null)} title="Close Diff">
-                        <X size={11} />
-                      </button>
-                    </div>
-                    
-                    <div className="file-preview-content" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', overflow: 'auto', flex: 1 }}>
-                      {diffLoading ? (
-                        <div className="panel-loading" style={{ height: '80px' }}>
-                          <Loader2 size={14} className="animate-spin" />
-                          <span>Loading commit diff...</span>
-                        </div>
-                      ) : parsedDiff && parsedDiff.hunks.length > 0 ? (
-                        <div className="diff-viewer">
-                          {parsedDiff.hunks.map((hunk, hi) => (
-                            <div key={hi} className="diff-hunk">
-                              <div className="diff-hunk-header">{hunk.header}</div>
-                              {hunk.lines.map((line, li) => (
-                                <div
-                                  key={li}
-                                  className={`diff-line ${
-                                    line.type === '+' ? 'diff-line-add' :
-                                    line.type === '-' ? 'diff-line-del' : 'diff-line-ctx'
-                                  }`}
-                                >
-                                  <span className="diff-line-sign">
-                                    {line.type === ' ' ? ' ' : line.type}
-                                  </span>
-                                  <span className="diff-line-text">{line.text}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <pre className="file-preview-code" style={{ padding: '8px' }}>{diff}</pre>
-                      )}
-                    </div>
-                  </div>
-                )}
               </>
             ) : (
               <div className="panel-empty">

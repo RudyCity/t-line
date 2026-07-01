@@ -31,6 +31,7 @@ interface GitChangesProps {
   worktreePath?: string | null;
   onOpenBranchModal?: () => void;
   onFileOpen?: (filePath: string, name: string) => void;
+  onOpenDiffTab?: (commitHash: string, filePath: string) => void;
   workspacePath?: string;
 }
 
@@ -88,6 +89,7 @@ export function GitChanges({
   worktreePath,
   onOpenBranchModal,
   onFileOpen,
+  onOpenDiffTab,
   workspacePath,
 }: GitChangesProps) {
   const [activeTab, setActiveTab] = useState<'changes' | 'history'>('changes');
@@ -754,7 +756,7 @@ export function GitChanges({
           )}
         </div>
       ) : (
-        <GitHistory workspaceId={workspaceId} token={token} worktreePath={worktreePath} />
+        <GitHistory workspaceId={workspaceId} token={token} worktreePath={worktreePath} onOpenDiffTab={onOpenDiffTab} />
       )}
     </div>
   );

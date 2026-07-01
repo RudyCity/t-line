@@ -2,6 +2,24 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.178] - 2026-07-01
+
+### Added
+- **Commit Diff in Dedicated Tab** (`GitHistory`):
+  - Clicking a file in the **Changed Files** section of Commit Details now opens the file's diff in a **new dedicated tab** (type `diff`) rather than an inline panel within the sidebar.
+  - Diff tabs use a `Δ filename (shortHash)` naming convention and a green `GitCompare` icon in the tab bar to distinguish them from regular file tabs.
+  - The `DiffViewerTab` component features: dual gutter line numbers (old/new), collapsible hunks, per-line add/delete/context coloring, and addition/deletion stats in the header.
+  - Files with `deleted` status are grayed out and non-clickable (no diff can be shown for deleted files).
+  - Opening the same commit+file diff a second time reuses the existing tab instead of creating a duplicate.
+
+### Added
+- **Resizable History / Commit Details panels** (`GitHistory`):
+  - A **drag handle** (`row-resize` cursor) is now rendered between the **Git Commit History** list and the **Commit Details** panel.
+  - Dragging the handle resizes the two panels vertically between 20% and 80% of the available height.
+  - The resize handle highlights with a purple accent on hover for clear discoverability.
+
+---
+
 ## [1.3.177] - 2026-06-30
 
 ### Changed
@@ -1099,7 +1117,7 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ### Removed
 - **Blinking Git Dirty Status Dots**: Removed the redundant blinking amber/orange dots next to git branch names in the workspace sidebar list and footer. Dirty status continues to be indicated by the text and branch icon turning amber.
-- **Blinking Version Dot**: Removed the blinking animation from the purple application version indicator in the footer and updated the hardcoded version text from `v1.3.42` to the current version `v1.3.51` (which will be bumped to `v1.3.52` in release).
+- **Blinking Version Dot**: Removed the blinking animation from the purple application version indicator in the footer and updated the hardcoded version text from `v1.3.42` to the current "version": "1.3.178".
 
 ## [1.3.51] - 2026-06-28
 
