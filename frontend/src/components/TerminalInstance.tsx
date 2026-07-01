@@ -431,7 +431,7 @@ export function TerminalInstance({
 
   const performPaste = useCallback((text: string) => {
     const now = Date.now();
-    if (now - lastPasteTimeRef.current < 100 && text === lastPasteTextRef.current) {
+    if (now - lastPasteTimeRef.current < 300 && text === lastPasteTextRef.current) {
       return;
     }
     lastPasteTimeRef.current = now;
@@ -645,13 +645,13 @@ export function TerminalInstance({
           }
         }
         // Ctrl+V / Cmd+V (Paste shortcut)
+        // Always block xterm & browser default, then paste manually once.
         const isPasteShortcut = (e.ctrlKey && key === 'v') || (e.metaKey && key === 'v');
         if (isPasteShortcut) {
-          const isElectron = typeof window !== 'undefined' && !!(window as any).electron;
-          if (isElectron) {
-            return false;
-          }
-          return true;
+          navigator.clipboard.readText().then((text) => {
+            if (text) performPasteRef.current(text);
+          }).catch(() => {/* clipboard access denied */});
+          return false; // block xterm + browser native paste
         }
       }
       return true;
