@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.190] - 2026-07-01
+
+### Fixed
+- **Terminal Padding Clipping of Bottom Rows**:
+  - Isolated the xterm `.terminal-element` container inside a wrapper class `.terminal-element-wrapper`. Shuffled the padding styling over to this wrapper and kept `.terminal-element` at `width: 100%; height: 100%`. This enables xterm's FitAddon to calculate row sizes based on the true content container height, preventing the bottom shell lines from being clipped or covered by the terminal status bar.
+
+---
+
 ## [1.3.189] - 2026-07-01
 
 ### Fixed

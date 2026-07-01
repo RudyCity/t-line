@@ -864,11 +864,13 @@ export function TerminalInstance({
         <TerminalSearchBar searchAddon={searchAddonRef.current} onClose={closeSearch} />
       )}
 
-      <div 
-        ref={containerRef} 
-        className="terminal-element" 
-        style={{ backgroundColor: themeBackground || '#0b0f19' }}
-      />
+      <div className="terminal-element-wrapper" style={{ backgroundColor: themeBackground || '#0b0f19' }}>
+        <div 
+          ref={containerRef} 
+          className="terminal-element" 
+          style={{ backgroundColor: themeBackground || '#0b0f19' }}
+        />
+      </div>
 
       <TerminalStatusBar
         shellType={tab.shellType}
