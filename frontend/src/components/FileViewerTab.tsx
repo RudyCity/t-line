@@ -283,16 +283,16 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
       <div className="flex flex-col h-full bg-[var(--bg-main)] overflow-hidden animate-pulse">
         {/* Skeleton Header */}
         <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0">
-          <div className="h-4 w-48 bg-slate-900 rounded" />
-          <div className="h-6 w-16 bg-slate-900 rounded" />
+          <div className="h-4 w-48 bg-[var(--surface-overlay)] rounded" />
+          <div className="h-6 w-16 bg-[var(--surface-overlay)] rounded" />
         </div>
         
         {/* Skeleton Code Lines */}
         <div className="flex-1 p-4 font-mono text-xs space-y-3">
           {[70, 85, 40, 60, 90, 30, 75, 50, 80, 45, 65, 35].map((width, idx) => (
             <div key={idx} className="flex gap-4 items-center">
-              <div className="w-12 h-3 bg-slate-900/60 rounded shrink-0" />
-              <div className="h-3 bg-slate-900/40 rounded" style={{ width: `${width}%` }} />
+              <div className="w-12 h-3 bg-[var(--surface-overlay)] rounded shrink-0" />
+              <div className="h-3 bg-[var(--surface-overlay)] opacity-60 rounded" style={{ width: `${width}%` }} />
             </div>
           ))}
         </div>
@@ -307,19 +307,19 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
         <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0">
           <div className="flex items-center gap-2 truncate">
             <ImageIcon size={14} className="text-purple-400 shrink-0" />
-            <span className="text-xs font-mono text-slate-300 truncate" title={filePath}>
+            <span className="text-xs font-mono text-[var(--text-muted)] truncate" title={filePath}>
               {filePath}
             </span>
           </div>
           <div className="flex items-center gap-2">
             {isSvg && (
-              <div className="flex items-center bg-slate-900 rounded-md p-0.5 border border-slate-800 mr-2">
+              <div className="flex items-center bg-[var(--bg-card)] rounded-md p-0.5 border border-[var(--border-color)] mr-2">
                 <button
                   onClick={() => setViewMode('preview')}
                   className={`px-2 py-0.5 rounded text-[10px] font-medium transition duration-150 cursor-pointer ${
                     viewMode === 'preview'
-                      ? 'bg-purple-600 text-white'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-[var(--color-primary)] text-white'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
                   }`}
                 >
                   Preview
@@ -328,8 +328,8 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
                   onClick={() => setViewMode('code')}
                   className={`px-2 py-0.5 rounded text-[10px] font-medium transition duration-150 cursor-pointer ${
                     viewMode === 'code'
-                      ? 'bg-purple-600 text-white'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-[var(--color-primary)] text-white'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
                   }`}
                 >
                   Code
@@ -354,24 +354,24 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
             }}
           >
             <button 
-              className="flex items-center justify-center p-1 text-slate-400 hover:text-white hover:bg-white/5 rounded transition duration-150 cursor-pointer" 
+              className="flex items-center justify-center p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] rounded transition duration-150 cursor-pointer" 
               onClick={handleZoomOut} 
               title="Zoom Out"
             >
               <ZoomOut size={14} />
             </button>
-            <span className="text-xs font-medium text-slate-300 font-mono w-12 text-center">
+            <span className="text-xs font-medium text-[var(--text-muted)] font-mono w-12 text-center">
               {Math.round(zoom * 100)}%
             </span>
             <button 
-              className="flex items-center justify-center p-1 text-slate-400 hover:text-white hover:bg-white/5 rounded transition duration-150 cursor-pointer" 
+              className="flex items-center justify-center p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] rounded transition duration-150 cursor-pointer" 
               onClick={handleZoomIn} 
               title="Zoom In"
             >
               <ZoomIn size={14} />
             </button>
             <button 
-              className="flex items-center justify-center p-1 text-slate-400 hover:text-white hover:bg-white/5 rounded transition duration-150 cursor-pointer" 
+              className="flex items-center justify-center p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] rounded transition duration-150 cursor-pointer" 
               onClick={handleResetZoom} 
               title="Reset Zoom"
             >
@@ -460,7 +460,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
         <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0">
           <div className="flex items-center gap-2 truncate">
             <FileText size={14} className="text-purple-400 shrink-0" />
-            <span className="text-xs font-mono text-slate-300 truncate" title={filePath}>
+            <span className="text-xs font-mono text-[var(--text-muted)] truncate" title={filePath}>
               {filePath}
             </span>
           </div>
@@ -468,7 +468,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
         </div>
 
         {/* PDF Frame */}
-        <div className="flex-1 w-full h-full bg-[#0a0a0c] overflow-hidden">
+        <div className="flex-1 w-full h-full bg-[var(--bg-main)] overflow-hidden">
           <iframe
             src={`/api/fs/raw?path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(token)}`}
             className="w-full h-full border-none"
@@ -504,23 +504,23 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
         {/* File Header */}
         <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0">
           <div className="flex items-center gap-2 truncate">
-            <File size={14} className="text-slate-400 shrink-0" />
-            <span className="text-xs font-mono text-slate-300 truncate" title={filePath}>
+            <File size={14} className="text-[var(--text-muted)] shrink-0" />
+            <span className="text-xs font-mono text-[var(--text-muted)] truncate" title={filePath}>
               {filePath}
             </span>
           </div>
-          <div className="text-[11px] text-slate-500 font-medium">Binary File</div>
+          <div className="text-[11px] text-[var(--text-dark)] font-medium">Binary File</div>
         </div>
 
         {/* Binary Warning Content */}
-        <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#0a0a0c] select-none text-center">
-          <div className="p-4 rounded-full bg-slate-900 border border-slate-800 text-slate-400 mb-4 animate-pulse">
+        <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[var(--bg-main)] select-none text-center">
+          <div className="p-4 rounded-full bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] mb-4 animate-pulse">
             <File size={32} />
           </div>
-          <h3 className="text-sm font-semibold text-slate-200 mb-1">
+          <h3 className="text-sm font-semibold text-[var(--text-main)] mb-1">
             Binary File Not Supported
           </h3>
-          <p className="text-xs text-slate-400 max-w-sm mb-6 leading-relaxed">
+          <p className="text-xs text-[var(--text-muted)] max-w-sm mb-6 leading-relaxed">
             This file cannot be displayed in the editor because it is a binary file or has an unsupported format.
           </p>
           <div className="flex items-center gap-3">
@@ -542,7 +542,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
       <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0">
         <div className="flex items-center gap-2 truncate">
           <FileCode size={14} className="text-purple-400 shrink-0" />
-          <span className="text-xs font-mono text-slate-300 truncate" title={filePath}>
+          <span className="text-xs font-mono text-[var(--text-muted)] truncate" title={filePath}>
             {filePath}
           </span>
           {saveError && (
@@ -552,13 +552,13 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
         
         <div className="flex items-center gap-2">
           {isSvg && (
-            <div className="flex items-center bg-slate-900 rounded-md p-0.5 border border-slate-800 mr-2">
+            <div className="flex items-center bg-[var(--bg-card)] rounded-md p-0.5 border border-[var(--border-color)] mr-2">
               <button
                 onClick={() => setViewMode('preview')}
                 className={`px-2 py-0.5 rounded text-[10px] font-medium transition duration-150 cursor-pointer ${
                   viewMode === 'preview'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-[var(--color-primary)] text-white'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
                 }`}
               >
                 Preview
@@ -567,8 +567,8 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
                 onClick={() => setViewMode('code')}
                 className={`px-2 py-0.5 rounded text-[10px] font-medium transition duration-150 cursor-pointer ${
                   viewMode === 'code'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-[var(--color-primary)] text-white'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
                 }`}
               >
                 Code
@@ -592,7 +592,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
               </span>
               <button
                 onClick={handleRevert}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-slate-400 hover:text-white hover:bg-white/5 rounded transition-all duration-150 cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] rounded transition-all duration-150 cursor-pointer"
                 title="Revert changes"
               >
                 <RotateCcw size={12} />

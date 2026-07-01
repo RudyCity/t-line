@@ -2,6 +2,19 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.176] - 2026-07-01
+
+### Fixed
+- **Light Mode Colors** (`FileViewerTab`):
+  - Replaced all hardcoded dark Tailwind color classes (`bg-slate-900`, `border-slate-800`, `text-slate-300`, `text-slate-400`, `hover:text-white`, `hover:bg-white/5`) with adaptive CSS variable equivalents (`var(--bg-card)`, `var(--border-color)`, `var(--text-muted)`, `var(--text-main)`, `var(--surface-overlay-hover)`).
+  - **Preview/Code toggle** container and inactive button text now adapts correctly in light mode.
+  - **Zoom controls** (Zoom In, Zoom Out, Reset) in image/SVG viewer now use theme-aware colors on hover.
+  - **Skeleton loading** bars now visible in light mode (using `--surface-overlay` instead of opaque dark slate).
+  - **Binary file warning** panel no longer hardcodes a dark background (`#0a0a0c`) — now uses `var(--bg-main)`.
+  - **PDF viewer** container background now adapts to theme.
+  - All **file path** spans across image, PDF, binary, and code editor viewers use `var(--text-muted)` for consistent adaptive contrast.
+  - **Revert button** in code editor header uses adaptive hover background.
+
 ## [1.3.178] - 2026-07-01
 
 ### Added
