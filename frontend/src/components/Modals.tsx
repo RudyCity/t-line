@@ -88,23 +88,46 @@ export const WorkspaceAddModal: React.FC<WorkspaceAddModalProps> = ({
         </div>
 
         {showSshHelp && (
-          <div className="glass-panel" style={{ padding: '14px', fontSize: '0.75rem', lineHeight: '1.45', marginBottom: '16px', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>
+          <div className="glass-panel" style={{ padding: '14px', fontSize: '0.75rem', lineHeight: '1.45', marginBottom: '16px', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: 'rgba(255, 255, 255, 0.02)', maxHeight: '350px', overflowY: 'auto' }}>
             <h4 style={{ fontWeight: '600', marginBottom: '6px', color: 'var(--text-main)', fontSize: '0.8rem' }}>SSH Workspace Setup Guide</h4>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '8px' }}>
-              To track a remote project on a Linux/Unix server, use the following URL format in the input field above:
-              <code style={{ display: 'block', padding: '6px', margin: '6px 0', backgroundColor: 'var(--bg-main)', borderRadius: '4px', fontFamily: 'monospace', color: 'var(--color-info)' }}>
+            
+            <p style={{ color: 'var(--text-muted)', marginBottom: '10px' }}>
+              To track a remote project, type the path in the input field above in this format:
+              <code style={{ display: 'block', padding: '6px', margin: '4px 0', backgroundColor: 'var(--bg-main)', borderRadius: '4px', fontFamily: 'monospace', color: 'var(--color-info)' }}>
                 ssh://user@host:port/path/to/project
               </code>
             </p>
-            <h5 style={{ fontWeight: '600', marginBottom: '4px', color: 'var(--text-main)' }}>Prerequisite: Passwordless SSH Key Authentication</h5>
+
+            <h5 style={{ fontWeight: '600', marginBottom: '4px', color: 'var(--text-main)' }}>Step 1: Generate SSH Key (on Local Machine)</h5>
             <p style={{ color: 'var(--text-muted)', marginBottom: '6px' }}>
-              Since the backend runs background actions, passwordless connection using SSH keys is required. Copy your public SSH key to the remote server by running this in your local command line:
+              If you don't have an SSH key, open your local terminal (CMD/PowerShell/Bash) and run:
             </p>
-            <code style={{ display: 'block', padding: '8px', backgroundColor: 'var(--bg-main)', borderRadius: '4px', fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all', marginBottom: '6px', color: 'var(--text-main)' }}>
-              {"cat ~/.ssh/id_ed25519.pub | ssh -p port user@host \"mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys\""}
+            <code style={{ display: 'block', padding: '6px', backgroundColor: 'var(--bg-main)', borderRadius: '4px', fontFamily: 'monospace', color: 'var(--text-main)', marginBottom: '10px' }}>
+              ssh-keygen -t ed25519
             </code>
+
+            <h5 style={{ fontWeight: '600', marginBottom: '4px', color: 'var(--text-main)' }}>Step 2: Copy Key to Remote Server</h5>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '6px' }}>
+              Run the corresponding command based on your local Operating System:
+            </p>
+            
+            <div style={{ marginBottom: '8px' }}>
+              <strong style={{ color: 'var(--text-main)', display: 'block', marginBottom: '2px' }}>Windows (PowerShell):</strong>
+              <code style={{ display: 'block', padding: '6px', backgroundColor: 'var(--bg-main)', borderRadius: '4px', fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: 'var(--text-main)' }}>
+                {"cat $HOME/.ssh/id_ed25519.pub | ssh -p port user@host \"mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys\""}
+              </code>
+            </div>
+
+            <div style={{ marginBottom: '10px' }}>
+              <strong style={{ color: 'var(--text-main)', display: 'block', marginBottom: '2px' }}>Linux / macOS / Git Bash:</strong>
+              <code style={{ display: 'block', padding: '6px', backgroundColor: 'var(--bg-main)', borderRadius: '4px', fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: 'var(--text-main)' }}>
+                ssh-copy-id -p port user@host
+              </code>
+            </div>
+
+            <h5 style={{ fontWeight: '600', marginBottom: '4px', color: 'var(--text-main)' }}>Step 3: Verify Connection</h5>
             <p style={{ color: 'var(--text-muted)' }}>
-              Verify by ensuring you can log in directly using <code style={{ fontFamily: 'monospace' }}>ssh -p port user@host</code> without being prompted for a password.
+              Ensure you can log in directly using <code style={{ fontFamily: 'monospace' }}>ssh -p port user@host</code> from a regular terminal without being prompted for a password.
             </p>
           </div>
         )}
