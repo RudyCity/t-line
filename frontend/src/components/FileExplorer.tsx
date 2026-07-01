@@ -79,10 +79,10 @@ function getFileIcon(name: string) {
 }
 
 function getRelativePath(rootPath: string, itemPath: string): string {
-  const normRoot = rootPath.replace(/\\/g, '/').replace(/\/$/, '');
+  const normRoot = rootPath.replace(/\\/g, '/').replace(/\/$/, '').toLowerCase();
   const normItem = itemPath.replace(/\\/g, '/');
   
-  if (normItem.startsWith(normRoot)) {
+  if (normItem.toLowerCase().startsWith(normRoot)) {
     return normItem.slice(normRoot.length).replace(/^\//, '');
   }
   return normItem;

@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.209] - 2026-07-01
+
+### Fixed
+- **Git & Explorer**: Fixed a bug where git changes in the sidebar and file explorer's modified (M) and untracked (U) badges were not updated in real-time. This was resolved by:
+  - Making path relative calculation case-insensitive to correctly match paths on Windows regardless of casing or drive letters.
+  - Updating the file system watcher in the backend to monitor key Git control files (`.git/index`, `.git/HEAD`, `.git/refs`) so that Git operations run in the terminal immediately trigger Git status updates.
+
 ## [1.3.208] - 2026-07-01
 
 ### Changed

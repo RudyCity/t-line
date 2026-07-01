@@ -523,8 +523,13 @@ async function updateWorkspaceWatchers() {
         try {
           const watcher = fs.watch(normalized, { recursive: true }, (event, filename) => {
             if (filename) {
-              const parts = filename.split(path.sep);
-              if (['node_modules', '.git', 'dist', 'dist-exe', '.agents'].some(p => parts.includes(p))) return;
+              const normalizedFilename = filename.replace(/\\/g, '/');
+              const parts = normalizedFilename.split('/');
+              if (['node_modules', 'dist', 'dist-exe', '.agents'].some(p => parts.includes(p))) return;
+              if (parts.includes('.git')) {
+                const isGitTrigger = parts.includes('index') || parts.includes('HEAD') || parts.includes('refs');
+                if (!isGitTrigger) return;
+              }
               handleFileChange(filename);
             }
           });
