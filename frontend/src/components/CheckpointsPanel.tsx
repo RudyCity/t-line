@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { WorkspaceSwitcher } from './SidebarContentPanel';
+import { Input, TextArea, Button } from './Form';
+
 
 interface Checkpoint {
   id: string;
@@ -313,6 +315,18 @@ export function CheckpointsPanel({
         .status-a { background: rgba(16, 185, 129, 0.15); color: #34d399; }
         .status-d { background: rgba(239, 68, 68, 0.15); color: #f87171; }
         .status-r { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+        .cp-target-path-wrap {
+          padding: 6px 10px;
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 6px;
+          font-size: 10px;
+          word-break: break-all;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .theme-light .cp-target-path-wrap {
+          background: rgba(0, 0, 0, 0.03) !important;
+          border-color: rgba(0, 0, 0, 0.05) !important;
+        }
       `}</style>
 
       {/* Workspace Switcher header */}
@@ -490,20 +504,19 @@ export function CheckpointsPanel({
             </div>
 
             <form onSubmit={handleCreateCheckpoint} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '16px 0' }}>
-              <div style={{ padding: '6px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', fontSize: '10px', wordBreak: 'break-all' }}>
-                <span className="text-slate-400">Target path:</span> <span className="font-mono text-purple-300">{targetPath}</span>
+              <div className="cp-target-path-wrap">
+                <span className="text-[var(--text-muted)]">Target path:</span> <span className="font-mono text-[var(--color-primary)] font-semibold">{targetPath}</span>
               </div>
 
               <div className="form-group">
                 <label className="form-label text-[11px]">Snapshot Name</label>
-                <input
+                <Input
                   type="text"
                   placeholder="e.g. Before merging branch-A"
                   value={newCpName}
                   onChange={(e) => setNewCpName(e.target.value)}
                   disabled={creating}
-                  className="input-field text-xs text-[var(--text-main)] bg-[var(--bg-main)] border-[var(--border-color)]"
-                  style={{ width: '100%', height: '32px', marginTop: '4px', padding: '0 8px', borderRadius: '4px' }}
+                  style={{ height: '32px', marginTop: '4px', fontSize: '12px' }}
                   required
                   autoFocus
                 />
@@ -511,42 +524,43 @@ export function CheckpointsPanel({
 
               <div className="form-group">
                 <label className="form-label text-[11px]">Description (Optional)</label>
-                <textarea
+                <TextArea
                   placeholder="Explain details of your work state..."
                   value={newCpDesc}
                   onChange={(e) => setNewCpDesc(e.target.value)}
                   disabled={creating}
-                  className="input-field text-xs text-[var(--text-main)] bg-[var(--bg-main)] border-[var(--border-color)] py-1.5"
-                  style={{ width: '100%', minHeight: '60px', marginTop: '4px', padding: '6px 8px', borderRadius: '4px', resize: 'vertical' }}
+                  style={{ minHeight: '60px', marginTop: '4px', resize: 'vertical', fontSize: '12px' }}
                 />
               </div>
 
               <div className="flex items-center justify-end gap-2 border-t border-[var(--border-color)]/30 pt-3 mt-1">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setShowCreateModal(false)}
                   disabled={creating}
-                  className="px-3 py-1.5 rounded bg-transparent hover:bg-white/5 text-[var(--text-muted)] hover:text-white text-xs font-semibold cursor-pointer border border-[var(--border-color)]"
+                  style={{ padding: '6px 12px', height: '30px', fontSize: '11px' }}
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
+                  variant="primary"
                   disabled={creating || !newCpName.trim()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold cursor-pointer border-0"
+                  style={{ padding: '6px 12px', height: '30px', fontSize: '11px' }}
                 >
                   {creating ? (
                     <>
-                      <Loader2 size={13} className="animate-spin" />
+                      <Loader2 size={12} className="animate-spin" />
                       <span>Creating...</span>
                     </>
                   ) : (
                     <>
-                      <Camera size={13} />
+                      <Camera size={12} />
                       <span>Create Snapshot</span>
                     </>
                   )}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

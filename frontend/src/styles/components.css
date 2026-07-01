@@ -1954,7 +1954,6 @@
 }
 
 
-/* Light theme overrides to eliminate glows/shadows and ensure high text contrast */
 .theme-light {
   --card-active-shadow: none;
   --glass-shadow: none;
@@ -1962,6 +1961,23 @@
   /* Grid lines for image/SVG preview — black on light backgrounds */
   --preview-grid-line: rgba(0, 0, 0, 0.07);
 }
+
+.theme-light .glass-panel {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.06), 0 0 1px rgba(0, 0, 0, 0.12) !important;
+}
+
+.theme-light .modal-overlay {
+  background: rgba(15, 23, 42, 0.22) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.theme-light .modal-title {
+  color: var(--text-main) !important;
+}
+
 
 .theme-light .ws-card-active {
   box-shadow: none !important;
