@@ -242,7 +242,7 @@ export function CheckpointsPanel({
   const handleRestoreCheckpoint = (cp: Checkpoint) => {
     const confirmMsg = `Are you sure you want to restore the checkpoint '${cp.name}'?\n\n` +
       `This will checkout branch '${cp.branch}' and restore all changes.\n` +
-      `Your current working directory MUST be clean, or this restore will fail.`;
+      `Any unsaved changes in your current working directory will be automatically backed up as a revertable Autosave snapshot.`;
 
     showConfirm(
       'Restore Snapshot',

@@ -266,15 +266,6 @@ export async function restoreCheckpoint(
   try {
     const normalizedRepo = normalizePath(repoPath);
 
-    // Verify workspace is clean
-    const status = await getGitStatus(normalizedRepo);
-    if (status.length > 0) {
-      return {
-        success: false,
-        output: 'Working directory is dirty. Please commit, stash, or discard changes first.'
-      };
-    }
-
     // Load checkpoints
     const metaPath = await getMetaPath(normalizedRepo);
 
@@ -291,7 +282,33 @@ export async function restoreCheckpoint(
       return { success: false, output: 'Checkpoint not found.' };
     }
 
-    // 1. Checkout the original branch/commit
+    // Verify workspace status
+    const status = await getGitStatus(normalizedRepo);
+    const isDirty = status.length > 0;
+
+    if (isDirty) {
+      // 1. Create an Autosave checkpoint of the current dirty state
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const autoName = `Autosave (${timeStr})`;
+      const autoDesc = `Autosave created before restoring snapshot '${checkpoint.name}'`;
+      const autoResult = await createCheckpoint(normalizedRepo, autoName, autoDesc, true);
+      if (!autoResult.success) {
+        return {
+          success: false,
+          output: `Failed to create autosave checkpoint before restore: ${autoResult.output}`
+        };
+      }
+
+      // 2. Discard/clean the working directory to prepare for checkout
+      await runGit(['reset', '--hard', 'HEAD'], normalizedRepo);
+      try {
+        await runGit(['clean', '-fd'], normalizedRepo);
+      } catch (cleanError) {
+        // ignore clean errors
+      }
+    }
+
+    // 3. Checkout the original branch/commit
     try {
       await runGit(['checkout', checkpoint.branch], normalizedRepo);
     } catch (checkoutError) {
@@ -299,7 +316,7 @@ export async function restoreCheckpoint(
       await runGit(['checkout', '--detach', checkpoint.parentCommit], normalizedRepo);
     }
 
-    // 2. Apply the checkpoint's changes
+    // 4. Apply the checkpoint's changes
     if (checkpoint.isDirty) {
       try {
         await runGit(['stash', 'apply', '--index', checkpoint.commitHash], normalizedRepo);

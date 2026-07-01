@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.197] - 2026-07-01
+
+### Added
+- **Auto-Snapshot before Restore (Autosave)**: If the working directory has unsaved (dirty) changes when restoring a snapshot, the system will automatically create a temporary "Autosave" snapshot of those changes before resetting and performing the checkout/restore. This prevents any loss of work and allows reverting/recovering back to the dirty state.
+
+---
+
 ## [1.3.196] - 2026-07-01
 
 ### Changed
