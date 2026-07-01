@@ -349,6 +349,14 @@ export function CheckpointsPanel({
           border-color: color-mix(in srgb, var(--color-primary) 30%, var(--border-color));
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
+        .cp-card-autosave {
+          background: rgba(245, 158, 11, 0.03);
+          border-color: rgba(245, 158, 11, 0.2);
+        }
+        .cp-card-autosave:hover {
+          border-color: rgba(245, 158, 11, 0.4);
+          box-shadow: 0 4px 12px rgba(245, 158, 11, 0.05);
+        }
         .cp-badge-dirty {
           background: rgba(245, 158, 11, 0.1);
           color: #f59e0b;
@@ -455,8 +463,10 @@ export function CheckpointsPanel({
             const details = cpDetails[cp.commitHash];
             const isLoadingDetails = loadingDetails[cp.commitHash];
 
+            const isAutosave = cp.name.startsWith('Autosave');
+
             return (
-              <div key={cp.id} className="cp-card flex flex-col gap-2">
+              <div key={cp.id} className={`cp-card flex flex-col gap-2 ${isAutosave ? 'cp-card-autosave' : ''}`}>
                 {/* Card Title Header */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex flex-col gap-0.5 min-w-0 flex-1">
@@ -465,9 +475,16 @@ export function CheckpointsPanel({
                       <span className="text-[10px] text-[var(--text-muted)] line-clamp-2">{cp.description}</span>
                     )}
                   </div>
-                  <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${cp.isDirty ? 'cp-badge-dirty' : 'cp-badge-clean'}`}>
-                    {cp.isDirty ? 'dirty changes' : 'clean bookmark'}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {isAutosave && (
+                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        autosave
+                      </span>
+                    )}
+                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${cp.isDirty ? 'cp-badge-dirty' : 'cp-badge-clean'}`}>
+                      {cp.isDirty ? 'dirty changes' : 'clean bookmark'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Card Meta Info */}

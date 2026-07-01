@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.198] - 2026-07-01
+
+### Changed
+- **Checkpoint/Snapshot UI Enhancement**: Styled "Autosave" snapshot cards with a distinct amber theme and added an auto-generated "autosave" badge to distinguish them from standard checkpoints, making it easier for users to identify automatic revert points.
+
+---
+
 ## [1.3.197] - 2026-07-01
 
 ### Added
