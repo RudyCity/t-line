@@ -18,13 +18,15 @@ import {
   getGitHistory,
   getCommitDetails,
   getGitCommitDiff,
-  getCheckpoints,
-  createCheckpoint,
-  restoreCheckpoint,
-  deleteCheckpoint,
   deleteBranch,
   fetchRemote
 } from './gitManager';
+import {
+  getCheckpoints,
+  createCheckpoint,
+  restoreCheckpoint,
+  deleteCheckpoint
+} from './checkpointManager';
 
 const router = express.Router();
 

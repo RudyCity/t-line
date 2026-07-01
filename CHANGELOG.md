@@ -2,6 +2,19 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.195] - 2026-07-01
+
+### Fixed
+- **Git Changes Untracked Files/Folders Detection**:
+  - Appended the `-u` (show untracked files) flag to the `git status --porcelain` command in `gitManager.ts`. This ensures Git reports individual files inside newly created/untracked folders, allowing them to bypass the directory-excluding filter and display correctly in the Git Changes side panel.
+
+### Refactored
+- **Strict File Length Limit Compliance**:
+  - Extracted all checkpoint/snapshot functions and types (such as `Checkpoint` interface, `getMetaPath`, `getCheckpoints`, `createCheckpoint`, `restoreCheckpoint`, and `deleteCheckpoint`) from the monolithic `gitManager.ts` file into a new dedicated module, `checkpointManager.ts` (approx. 250 lines).
+  - Updated `gitRoutes.ts` imports to consume the migrated functions, ensuring the codebase complies with the strict 1000-line limit per file.
+
+---
+
 ## [1.3.194] - 2026-07-01
 
 ### Changed
