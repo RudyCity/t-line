@@ -127,7 +127,8 @@ export function DiffViewerTab({
           url = `/api/workspaces/${workspaceId}/git/diff?filePath=${encodeURIComponent(filePath)}${wtParam}`;
         } else {
           // Historical commit diff
-          url = `/api/workspaces/${workspaceId}/git/commit-diff?commitHash=${encodeURIComponent(commitHash)}&filePath=${encodeURIComponent(filePath)}`;
+          const wtParam = worktreePath ? `&worktreePath=${encodeURIComponent(worktreePath)}` : '';
+          url = `/api/workspaces/${workspaceId}/git/commit-diff?commitHash=${encodeURIComponent(commitHash)}&filePath=${encodeURIComponent(filePath)}${wtParam}`;
         }
         const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);

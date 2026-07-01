@@ -17,7 +17,11 @@ import {
   pushBranch,
   getGitHistory,
   getCommitDetails,
-  getGitCommitDiff
+  getGitCommitDiff,
+  getCheckpoints,
+  createCheckpoint,
+  restoreCheckpoint,
+  deleteCheckpoint
 } from './gitManager';
 
 const router = express.Router();
@@ -374,4 +378,103 @@ router.get('/workspaces/:id/git/commit-diff', authMiddleware, async (req, res) =
   }
 });
 
+// Checkpoints API endpoints
+router.get('/workspaces/:id/checkpoints', authMiddleware, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const { worktreePath } = req.query;
+    const configs = getWorkspaces();
+    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
+    
+    if (!matched) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+    
+    const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
+    const checkpoints = await getCheckpoints(targetPath);
+    res.json(checkpoints);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/workspaces/:id/checkpoints', authMiddleware, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const { worktreePath, name, description } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ error: 'Checkpoint name is required.' });
+    }
+    
+    const configs = getWorkspaces();
+    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
+    
+    if (!matched) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+    
+    const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
+    const result = await createCheckpoint(targetPath, name, description || '');
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/workspaces/:id/checkpoints/:checkpointId/restore', authMiddleware, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const checkpointId = req.params.checkpointId;
+    const { worktreePath } = req.body;
+    
+    const configs = getWorkspaces();
+    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
+    
+    if (!matched) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+    
+    const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
+    const result = await restoreCheckpoint(targetPath, checkpointId);
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.delete('/workspaces/:id/checkpoints/:checkpointId', authMiddleware, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const checkpointId = req.params.checkpointId;
+    const { worktreePath } = req.body; // can be query parameter or body parameter
+    
+    const configs = getWorkspaces();
+    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
+    
+    if (!matched) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+    
+    const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
+    const result = await deleteCheckpoint(targetPath, checkpointId);
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;
+

@@ -3,17 +3,18 @@ import { Plus, Terminal as TerminalIcon, FileCode, FolderTree, GitCompare, GitBr
 import { TabData, TerminalInstanceData, WorkspaceInfo, WorktreeInfo } from '../hooks/useTerminals';
 import { WorkspaceList } from './WorkspaceList';
 import { FileExplorer, GitChanges, GitFileStatus } from './FilePanel';
+import { CheckpointsPanel } from './CheckpointsPanel';
 
 // ─── Permanent Workspace + Worktree Switcher ────────────────────────────────
 
-interface WorkspaceSwitcherProps {
+export interface WorkspaceSwitcherProps {
   panelWorkspace: WorkspaceInfo | null;
   panelWorktreePath: string | null;
   onWorkspaceClick: (wsId: string) => void;
   onWorktreeClick: (wsId: string, wtPath: string) => void;
 }
 
-function WorkspaceSwitcher({
+export function WorkspaceSwitcher({
   panelWorkspace,
   panelWorktreePath,
   onWorkspaceClick,
@@ -138,8 +139,8 @@ function WorkspaceSwitcher({
 // ─── SidebarContentPanel ────────────────────────────────────────────────────
 
 interface SidebarContentPanelProps {
-  activePanel: 'workspaces' | 'explorer' | 'changes' | 'tabs';
-  setActivePanel: (panel: 'workspaces' | 'explorer' | 'changes' | 'tabs') => void;
+  activePanel: 'workspaces' | 'explorer' | 'changes' | 'checkpoints' | 'tabs';
+  setActivePanel: (panel: 'workspaces' | 'explorer' | 'changes' | 'checkpoints' | 'tabs') => void;
   workspaces: WorkspaceInfo[];
   panelWorkspace: WorkspaceInfo | null;
   setPanelWorkspace: (ws: WorkspaceInfo | null) => void;
@@ -380,6 +381,23 @@ export function SidebarContentPanel({
           )}
         </div>
       )}
+
+      {/* ── Checkpoints Panel ── */}
+      {activePanel === 'checkpoints' && (
+        <CheckpointsPanel
+          panelWorkspace={panelWorkspace}
+          panelWorktreePath={panelWorktreePath}
+          token={localStorage.getItem('token') || ''}
+          onWorkspaceClick={onWorkspaceClick}
+          onWorktreeClick={onWorktreeClick}
+          onOpenDiffTab={openDiffTab
+            ? (commitHash, filePath, worktreePath) =>
+                openDiffTab(commitHash, filePath, panelWorkspace?.id || '', worktreePath ?? panelWorktreePath ?? undefined)
+            : undefined
+          }
+        />
+      )}
     </div>
   );
 }
+

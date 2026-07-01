@@ -2,7 +2,19 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.180] - 2026-07-01
+
+### Added
+- **Workspace & Worktree Checkpoints (Snapshots)**:
+  - Added a brand new **Snapshots** panel in the sidebar to capture the exact working state of any Git workspace or worktree.
+  - Snapshot creation preserves all staged/unstaged changes and untracked files by creating a custom Git reference (`refs/tline/checkpoints/*`) to shield it from Git garbage collection without cluttering the user's regular stashes.
+  - Supported viewing and expanding snapshots to list modified files and open side-by-side diff comparisons directly in Monaco editor tabs.
+  - Enabled one-click restoring of snapshots (switching to the snapshot's branch/commit and applying changes) and deletion.
+
+---
+
 ## [1.3.179] - 2026-07-01
+
 
 ### Fixed
 - **Light Theme Tab Switcher Dropdown** (`App`, `TabsDropdown`):

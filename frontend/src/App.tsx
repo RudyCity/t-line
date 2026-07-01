@@ -14,7 +14,8 @@ import {
   Keyboard,
   MoreVertical,
   HelpCircle,
-  ChevronDown
+  ChevronDown,
+  Camera
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { FileViewerTab } from './components/FileViewerTab';
@@ -162,8 +163,8 @@ export default function App() {
   // System statistics hook
   const systemStats = useSystemStats(isAuthenticated);
 
-  // Active panel state: 'workspaces' | 'explorer' | 'changes'
-  const [activePanel, setActivePanel] = useState<'workspaces' | 'explorer' | 'changes' | 'tabs'>('workspaces');
+  // Active panel state: 'workspaces' | 'explorer' | 'changes' | 'checkpoints'
+  const [activePanel, setActivePanel] = useState<'workspaces' | 'explorer' | 'changes' | 'checkpoints' | 'tabs'>('workspaces');
   const [panelWorkspace, setPanelWorkspace] = useState<WorkspaceInfo | null>(null);
   const [panelWorktreePath, setPanelWorktreePath] = useState<string | null>(null);
   const [showTabsDropdown, setShowTabsDropdown] = useState<boolean>(false);
@@ -707,7 +708,22 @@ export default function App() {
               </span>
             )}
           </button>
+          <button
+            className={`sidebar-panel-tab ${activePanel === 'checkpoints' ? 'active' : ''}`}
+            onClick={() => {
+              setActivePanel('checkpoints');
+              if (sidebarCollapsed) {
+                setSidebarCollapsed(false);
+                localStorage.setItem('tline-sidebar-collapsed', 'false');
+              }
+            }}
+            title="Checkpoints & Snapshots"
+          >
+            <Camera size={15} />
+            {!sidebarCollapsed && <span>Snapshots</span>}
+          </button>
         </div>
+
 
         {!sidebarCollapsed && (
           <SidebarContentPanel
