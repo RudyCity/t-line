@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.181] - 2026-07-01
+
+### Fixed
+- **Terminal Text Selection & ANSI Colors in Light Mode**:
+  - Dynamically cleared `selectionForeground` (setting it to `undefined`) in light mode so that selected terminal text preserves its original high-contrast foreground color, instead of forcing white text on a light background.
+  - Adjusted the 16 ANSI colors (black, green, yellow, blue, magenta, cyan, and white) to use higher-contrast/inverted variants specifically when in light mode, ensuring full readability of build scripts and CLI output.
+
+---
+
 ## [1.3.180] - 2026-07-01
 
 ### Added

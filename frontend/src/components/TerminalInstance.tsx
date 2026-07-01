@@ -9,6 +9,27 @@ import { ImageAddon } from '@xterm/addon-image';
 import { wsManager } from '../services/websocket';
 import { ActiveProcessSummary } from '../hooks/useTerminals';
 
+// Helper to detect if a background color is light/bright
+function isLightColor(color: string | undefined): boolean {
+  if (!color) return false;
+  if (color.startsWith('#')) {
+    const hex = color.slice(1);
+    if (hex.length === 3) {
+      const r = parseInt(hex[0] + hex[0], 16);
+      const g = parseInt(hex[1] + hex[1], 16);
+      const b = parseInt(hex[2] + hex[2], 16);
+      return (r * 299 + g * 587 + b * 114) / 1000 >= 128;
+    } else if (hex.length === 6) {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      return (r * 299 + g * 587 + b * 114) / 1000 >= 128;
+    }
+  }
+  return false;
+}
+
+
 interface TerminalTab {
   id: string;
   name: string;
@@ -520,24 +541,24 @@ export function TerminalInstance({
         cursor: accentColor || '#a855f7',
         cursorAccent: themeBackground || '#000000',
         selectionBackground: accentColor ? `color-mix(in srgb, ${accentColor} 30%, transparent)` : 'rgba(168, 85, 247, 0.3)',
-        selectionForeground: '#ffffff',
+        selectionForeground: isLightColor(themeBackground) ? undefined : '#ffffff',
         selectionInactiveBackground: accentColor ? `color-mix(in srgb, ${accentColor} 15%, transparent)` : 'rgba(168, 85, 247, 0.15)',
-        black: '#4a5568',
+        black: isLightColor(themeBackground) ? '#0f172a' : '#4a5568',
         red: '#ef4444',
-        green: '#10b981',
-        yellow: '#f59e0b',
-        blue: '#3b82f6',
-        magenta: '#a855f7',
-        cyan: '#06b6d4',
-        white: '#cbd5e1',
-        brightBlack: '#718096',
+        green: isLightColor(themeBackground) ? '#15803d' : '#10b981',
+        yellow: isLightColor(themeBackground) ? '#b45309' : '#f59e0b',
+        blue: isLightColor(themeBackground) ? '#1d4ed8' : '#3b82f6',
+        magenta: isLightColor(themeBackground) ? '#7e22ce' : '#a855f7',
+        cyan: isLightColor(themeBackground) ? '#0369a1' : '#06b6d4',
+        white: isLightColor(themeBackground) ? '#0f172a' : '#cbd5e1',
+        brightBlack: isLightColor(themeBackground) ? '#475569' : '#718096',
         brightRed: '#f87171',
-        brightGreen: '#34d399',
-        brightYellow: '#fbbf24',
-        brightBlue: '#60a5fa',
-        brightMagenta: '#c084fc',
-        brightCyan: '#22d3ee',
-        brightWhite: '#f1f5f9',
+        brightGreen: isLightColor(themeBackground) ? '#166534' : '#34d399',
+        brightYellow: isLightColor(themeBackground) ? '#d97706' : '#fbbf24',
+        brightBlue: isLightColor(themeBackground) ? '#1e40af' : '#60a5fa',
+        brightMagenta: isLightColor(themeBackground) ? '#6b21a8' : '#c084fc',
+        brightCyan: isLightColor(themeBackground) ? '#075985' : '#22d3ee',
+        brightWhite: isLightColor(themeBackground) ? '#0f172a' : '#f1f5f9',
       }
     });
 
@@ -766,30 +787,31 @@ export function TerminalInstance({
   useEffect(() => {
     if (terminalRef.current) {
       try {
+        const isLight = isLightColor(themeBackground);
         terminalRef.current.options.theme = {
           background: themeBackground || '#000000',
           foreground: themeForeground || '#f8fafc',
           cursor: accentColor || '#a855f7',
           cursorAccent: themeBackground || '#000000',
           selectionBackground: accentColor ? `color-mix(in srgb, ${accentColor} 30%, transparent)` : 'rgba(168, 85, 247, 0.3)',
-          selectionForeground: '#ffffff',
+          selectionForeground: isLight ? undefined : '#ffffff',
           selectionInactiveBackground: accentColor ? `color-mix(in srgb, ${accentColor} 15%, transparent)` : 'rgba(168, 85, 247, 0.15)',
-          black: '#4a5568',
+          black: isLight ? '#0f172a' : '#4a5568',
           red: '#ef4444',
-          green: '#10b981',
-          yellow: '#f59e0b',
-          blue: '#3b82f6',
-          magenta: '#a855f7',
-          cyan: '#06b6d4',
-          white: '#cbd5e1',
-          brightBlack: '#718096',
+          green: isLight ? '#15803d' : '#10b981',
+          yellow: isLight ? '#b45309' : '#f59e0b',
+          blue: isLight ? '#1d4ed8' : '#3b82f6',
+          magenta: isLight ? '#7e22ce' : '#a855f7',
+          cyan: isLight ? '#0369a1' : '#06b6d4',
+          white: isLight ? '#0f172a' : '#cbd5e1',
+          brightBlack: isLight ? '#475569' : '#718096',
           brightRed: '#f87171',
-          brightGreen: '#34d399',
-          brightYellow: '#fbbf24',
-          brightBlue: '#60a5fa',
-          brightMagenta: '#c084fc',
-          brightCyan: '#22d3ee',
-          brightWhite: '#f1f5f9',
+          brightGreen: isLight ? '#166534' : '#34d399',
+          brightYellow: isLight ? '#d97706' : '#fbbf24',
+          brightBlue: isLight ? '#1e40af' : '#60a5fa',
+          brightMagenta: isLight ? '#6b21a8' : '#c084fc',
+          brightCyan: isLight ? '#075985' : '#22d3ee',
+          brightWhite: isLight ? '#0f172a' : '#f1f5f9',
         };
       } catch (e) {
         console.error('Error updating terminal theme:', e);
