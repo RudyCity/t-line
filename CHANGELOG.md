@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.235] - 2026-07-02
+
+### Fixed
+- **Open Terminal dari Home Tidak Berfungsi**: Terminal yang dibuka dari tombol "Open Terminal" di halaman welcome/home (saat belum ada tab terbuka) kini langsung muncul. Sebelumnya tab baru difilter keluar oleh `filteredTabs` karena `panelWorkspace` belum diset saat render pertama.
+- **Open Terminal dari Context Menu Workspace (Titik Tiga) Tidak Berfungsi**: Tombol "Open Terminal" di dropdown titik tiga workspace kini memanggil `setPanelWorkspace` terlebih dahulu sebelum membuka terminal, sehingga tab baru langsung terlihat di tab bar workspace yang benar.
+- **EmptyDashboard**: Tombol "Open Terminal" kini otomatis menggunakan workspace pertama (`workspaces[0]`) jika belum ada workspace yang dipilih, sehingga terminal selalu dapat dibuka walaupun user belum mengklik workspace manapun.
+
 ## [1.3.234] - 2026-07-02
 
 ### Fixed
