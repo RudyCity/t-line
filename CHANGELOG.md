@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.219] - 2026-07-02
+
+### Added
+- **Manual Grid Addition**: Reverted auto-population so that new Terminal Grid tabs start completely empty by default, allowing users to select and build their grid manually.
+- **Close & Terminate Terminal Action**: Added a close/terminate button (Trash icon) in the card headers of the grid view to completely terminate the PTY session and remove it from the workspace, in addition to the "Hide from grid" option.
+
 ## [1.3.218] - 2026-07-02
 
 ### Added

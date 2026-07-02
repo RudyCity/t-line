@@ -1138,6 +1138,7 @@ export default function App() {
                       handleTitleChange={handleTitleChange}
                       handleActiveProcessesChange={handleActiveProcessesChange}
                       focusTerminal={focusTerminal}
+                      closePane={closePane}
                       setActiveTabId={setActiveTabId}
                       themeBackground={THEMES[theme]?.bgMain}
                       themeForeground={THEMES[theme]?.textMain}

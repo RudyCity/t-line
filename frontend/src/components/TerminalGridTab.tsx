@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   LayoutGrid, Plus, ExternalLink, ChevronDown, Folder, 
-  Terminal as TerminalIcon, Search, EyeOff, Check
+  Terminal as TerminalIcon, Search, EyeOff, Check, Trash2
 } from 'lucide-react';
 import { TabData, TerminalInstanceData, WorkspaceInfo, ActiveProcessSummary } from '../hooks/useTerminals';
 import { TerminalInstance } from './TerminalInstance';
@@ -17,6 +17,7 @@ interface TerminalGridTabProps {
   handleTitleChange: (id: string, title: string) => void;
   handleActiveProcessesChange?: (id: string, processes: ActiveProcessSummary[]) => void;
   focusTerminal: (id: string) => void;
+  closePane: (id: string) => void;
   setActiveTabId: (id: string) => void;
   themeBackground?: string;
   themeForeground?: string;
@@ -37,6 +38,7 @@ export function TerminalGridTab({
   handleTitleChange,
   handleActiveProcessesChange,
   focusTerminal,
+  closePane,
   setActiveTabId,
   themeBackground,
   themeForeground,
@@ -49,6 +51,20 @@ export function TerminalGridTab({
   const [searchQuery, setSearchQuery] = useState('');
   const [focusedTermId, setFocusedTermId] = useState<string | null>(null);
   const configRef = useRef<HTMLDivElement>(null);
+
+  // Terminate/delete terminal session
+  const handleCloseTerminal = (termId: string) => {
+    closePane(termId);
+    setTabs(prevTabs =>
+      prevTabs.map(t => {
+        if (t.id === tab.id) {
+          const currentIds = t.gridTerminalIds || [];
+          return { ...t, gridTerminalIds: currentIds.filter(id => id !== termId) };
+        }
+        return t;
+      })
+    );
+  };
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -842,11 +858,18 @@ export function TerminalGridTab({
                         <ExternalLink size={12} />
                       </button>
                       <button 
-                        className="grid-action-btn grid-action-btn-danger"
+                        className="grid-action-btn"
                         onClick={(e) => { e.stopPropagation(); toggleTerminalSelection(termId); }}
-                        title="Remove from grid"
+                        title="Hide from grid"
                       >
                         <EyeOff size={12} />
+                      </button>
+                      <button 
+                        className="grid-action-btn grid-action-btn-danger"
+                        onClick={(e) => { e.stopPropagation(); handleCloseTerminal(termId); }}
+                        title="Close and delete terminal"
+                      >
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   </div>
