@@ -343,7 +343,7 @@
     flex-shrink: 0;
   }
 
-  .mobile-tab-bar {
+  .mobile-tab-wrapper {
     display: flex !important;
   }
 
@@ -534,18 +534,27 @@ body.tab-dragging .drag-drop-overlay {
 }
 
 /* Mobile Tab Bar — shown inside top-bar on mobile/tablet */
-.mobile-tab-bar {
+.mobile-tab-wrapper {
   display: none; /* hidden by default, shown in media query */
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+  padding: 0 4px;
+  -webkit-app-region: no-drag;
+}
+
+.mobile-tab-bar {
+  display: flex;
   flex: 1;
   align-items: center;
   overflow-x: auto;
   overflow-y: hidden;
   gap: 4px;
-  padding: 0 6px;
+  min-width: 0;
   height: 100%;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none;
-  -webkit-app-region: no-drag;
 }
 
 .mobile-tab-bar::-webkit-scrollbar {

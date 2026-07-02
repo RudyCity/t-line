@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.258] - 2026-07-02
+
+### Fixed
+- **Fixed Mobile/Tablet New Tab Button Position**: Memisahkan tombol tambah terminal (`+` / `.mobile-tab-new`) dari container scroll tab ([.mobile-tab-bar](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/layout.css#L546)) pada tampilan header mobile & tablet (`<= 768px`).
+  - Menggunakan wrapper [.mobile-tab-wrapper](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/layout.css#L536) agar tombol `+` tetap **fixed / pinned** di posisi kanan dan tidak ikut tergeser saat daftar tab di-scroll secara horizontal.
+
 ## [1.3.257] - 2026-07-02
 
 ### Fixed
