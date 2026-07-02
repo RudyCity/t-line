@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.232] - 2026-07-02
+
+### Fixed
+- **Empty Workspaces Message Positioning**: Conditionally rendered `WorkspaceList` to prevent the empty list wrapper from occupying layout height and pushing the "No workspaces registered." text to the bottom center of the sidebar panel. The message now displays at the top center.
+
 ## [1.3.231] - 2026-07-02
 
 ### Changed

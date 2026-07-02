@@ -306,29 +306,29 @@ export function SidebarContentPanel({
             </div>
           </div>
 
-          <WorkspaceList
-            workspaces={workspaces}
-            tabs={tabs}
-            activeTabId={activeTabId}
-            terminalInstances={terminalInstances}
-            workspaceActiveTab={workspaceActiveTab}
-            onWorkspaceClick={onWorkspaceClick}
-            onWorktreeClick={onWorktreeClick}
-            setPanelWorkspace={setPanelWorkspace}
-            setActivePanel={setActivePanel}
-            handleOpenWorktreeModal={handleOpenWorktreeModal}
-            openTerminal={openTerminal}
-            handleRemoveWorkspace={handleRemoveWorkspace}
-            handleRemoveWorktree={handleRemoveWorktree}
-            onEditWorkspace={onEditWorkspace || (() => {})}
-            deletingWorkspacePaths={deletingWorkspacePaths}
-            deletingWorktreePaths={deletingWorktreePaths}
-            panelWorktreePath={panelWorktreePath}
-            panelWorkspace={panelWorkspace}
-            showSearch={showSearch}
-          />
-
-          {workspaces.length === 0 && (
+          {workspaces.length > 0 ? (
+            <WorkspaceList
+              workspaces={workspaces}
+              tabs={tabs}
+              activeTabId={activeTabId}
+              terminalInstances={terminalInstances}
+              workspaceActiveTab={workspaceActiveTab}
+              onWorkspaceClick={onWorkspaceClick}
+              onWorktreeClick={onWorktreeClick}
+              setPanelWorkspace={setPanelWorkspace}
+              setActivePanel={setActivePanel}
+              handleOpenWorktreeModal={handleOpenWorktreeModal}
+              openTerminal={openTerminal}
+              handleRemoveWorkspace={handleRemoveWorkspace}
+              handleRemoveWorktree={handleRemoveWorktree}
+              onEditWorkspace={onEditWorkspace || (() => {})}
+              deletingWorkspacePaths={deletingWorkspacePaths}
+              deletingWorktreePaths={deletingWorktreePaths}
+              panelWorktreePath={panelWorktreePath}
+              panelWorkspace={panelWorkspace}
+              showSearch={showSearch}
+            />
+          ) : (
             <div style={{ textAlign: 'center', color: 'var(--text-dark)', fontSize: '0.85rem', padding: '16px' }}>
               No workspaces registered.
             </div>
