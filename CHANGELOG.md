@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.263] - 2026-07-02
+
+### Fixed
+- **Restore Workspace Path & Git Branch Pill in Mobile/Tablet Footer**:
+  - Memisahkan elemen konteks workspace (nama folder + badge Git Branch aktif) dari blok tombol Zoom & Shell pada [Footer.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/Footer.tsx#L287).
+  - Memastikan nama workspace ([Folder] `fassst-manager`) dan pill branch aktif ([GitBranch] `master`) **selalu tampil** di Footer pada semua ukuran layar (mobile, tablet, maupun desktop), sementara hanya kontrol Zoom, Shell Selector, dan Cloudflare Tunnel yang disembunyikan di tampilan mobile/tablet.
+
 ## [1.3.262] - 2026-07-02
 
 ### Changed

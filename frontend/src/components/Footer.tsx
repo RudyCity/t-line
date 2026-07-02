@@ -284,150 +284,146 @@ export function Footer({
         )}
       </div>
 
-      {/* Center Section: Workspace Context & Zoom/Shell Controls — hidden on mobile & tablet */}
-      <div className="hidden lg:flex items-center gap-4">
-        {panelWorkspace && (
-          <div className="flex items-center gap-2 text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>
-            <span
-              className="flex items-center gap-1.5 transition-colors duration-150 cursor-pointer"
-              style={{ color: 'var(--text-main)' }}
-              title={`Open in Explorer: ${(() => {
-                let p = activeTabPath || panelWorkspace.path;
-                if (activeTabType === 'file' && activeTabPath) {
-                  const parts = p.replace(/\\/g, '/').split('/');
-                  parts.pop();
-                  p = parts.join('/');
-                }
-                return p;
-              })()}`}
-              onClick={() => {
-                let folderPath = activeTabPath || panelWorkspace.path;
-                if (activeTabType === 'file' && activeTabPath) {
-                  const parts = folderPath.replace(/\\/g, '/').split('/');
-                  parts.pop();
-                  folderPath = parts.join('/');
-                }
-                if ((window as any).electron?.openFolder) {
-                  (window as any).electron.openFolder(folderPath);
-                }
-              }}
-            >
-              <Folder size={11} style={{ color: 'var(--color-primary)' }} />
-              <span className="font-semibold truncate max-w-[180px]">{getRelativeActivePath(panelWorkspace, activeTabPath, panelWorktreePath)}</span>
-            </span>
-            
-            {(() => {
-              const activeBranch = getWorkspaceActiveBranch(panelWorkspace, activeTabPath, panelWorktreePath);
-              if (!activeBranch) return null;
-              return (
-                <>
-                  <span style={{ color: 'var(--border-color)' }}>|</span>
-                  <span 
-                    className="flex items-center gap-1.5 px-1.5 py-0.5 rounded font-sans text-[11px] transition-all duration-150 border cursor-pointer hover:bg-purple-500/10 hover:border-purple-500/30"
-                    style={{
-                      backgroundColor: activeBranch.isDirty 
-                        ? 'rgba(245, 158, 11, 0.08)' 
-                        : 'color-mix(in srgb, var(--bg-main) 60%, transparent)',
-                      borderColor: activeBranch.isDirty 
-                        ? 'rgba(245, 158, 11, 0.25)' 
-                        : 'var(--border-color)',
-                      color: activeBranch.isDirty 
-                        ? '#f59e0b' 
-                        : 'var(--text-main)'
-                    }}
-                    onClick={onBranchClick}
-                    title={activeBranch.isDirty ? "Uncommitted changes (Click to Switch/Sync Branch)" : "Git Branch (Click to Switch/Sync Branch)"}
-                  >
-                    <GitBranch size={11} style={{ color: activeBranch.isMain ? 'var(--color-primary)' : '#10b981' }} />
-                    <span className="font-medium">{activeBranch.name}</span>
-                  </span>
-                </>
-              );
-            })()}
-          </div>
-        )}
-
-        {panelWorkspace && <div className="w-px h-3.5" style={{ backgroundColor: 'var(--border-color)' }} />}
-
-        {/* Zoom & Shell Controls (Dashboard Pill) */}
-        <div 
-          className="flex items-center gap-3 px-3 py-1 rounded-full transition-all duration-200 shadow-inner"
-          style={{
-            backgroundColor: 'color-mix(in srgb, var(--bg-main) 30%, transparent)',
-            borderColor: 'var(--border-color)',
-            borderWidth: '1px'
-          }}
-        >
-          {/* Zoom controls */}
-          <div className="flex items-center gap-2">
-            <button 
-              className="hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none" 
-              style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
-              onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
-              onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-              onClick={handleZoomOut} 
-              title="Zoom Out Terminal font"
-            >
-              <ZoomOut size={12} />
-            </button>
-            <span 
-              className="text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold min-w-[28px] text-center border"
-              style={{
-                backgroundColor: 'color-mix(in srgb, var(--bg-main) 60%, transparent)',
-                borderColor: 'var(--border-color)',
-                color: 'var(--color-primary)'
-              }}
-            >
-              {terminalFontSize}px
-            </span>
-            <button 
-              className="hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none" 
-              style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
-              onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
-              onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-              onClick={handleZoomIn} 
-              title="Zoom In Terminal font"
-            >
-              <ZoomIn size={12} />
-            </button>
-          </div>
-
-          <div className="w-px h-3.5 bg-[var(--border-color)]" />
-
-          {/* Shell Selector */}
-          <div className="flex items-center gap-1.5">
-            <Terminal size={11} style={{ color: 'var(--text-muted)' }} />
-            <Select 
-               value={defaultShell} 
-               onChange={(val) => setDefaultShell(val)}
-               align="top"
-               variant="minimal"
-               className="w-20"
-               options={[
-                 { value: 'powershell', label: 'powershell' },
-                 { value: 'cmd', label: 'cmd' },
-                 { value: 'gitbash', label: 'gitbash' },
-                 { value: 'wsl', label: 'wsl' }
-               ]}
-            />
-          </div>
-
-          {activeTabType === 'terminal' && onRefreshTerminal && (
-            <>
-              <div className="w-px h-3.5 bg-[var(--border-color)]" />
-              <button
-                onClick={onRefreshTerminal}
-                className="hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none"
-                style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
-                onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
-                onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                title="Restart current terminal process"
-              >
-                <RefreshCw size={11} className="hover:rotate-45 transition-transform duration-200" />
-              </button>
-            </>
-          )}
+      {/* Center Section: Workspace Context (Path & Branch) — ALWAYS visible on mobile, tablet & desktop */}
+      {panelWorkspace && (
+        <div className="flex items-center gap-2 text-[11px] font-mono shrink-0" style={{ color: 'var(--text-muted)' }}>
+          <span
+            className="flex items-center gap-1.5 transition-colors duration-150 cursor-pointer"
+            style={{ color: 'var(--text-main)' }}
+            title={`Open in Explorer: ${(() => {
+              let p = activeTabPath || panelWorkspace.path;
+              if (activeTabType === 'file' && activeTabPath) {
+                const parts = p.replace(/\\/g, '/').split('/');
+                parts.pop();
+                p = parts.join('/');
+              }
+              return p;
+            })()}`}
+            onClick={() => {
+              let folderPath = activeTabPath || panelWorkspace.path;
+              if (activeTabType === 'file' && activeTabPath) {
+                const parts = folderPath.replace(/\\/g, '/').split('/');
+                parts.pop();
+                folderPath = parts.join('/');
+              }
+              if ((window as any).electron?.openFolder) {
+                (window as any).electron.openFolder(folderPath);
+              }
+            }}
+          >
+            <Folder size={11} style={{ color: 'var(--color-primary)' }} />
+            <span className="font-semibold truncate max-w-[120px] sm:max-w-[180px]">{getRelativeActivePath(panelWorkspace, activeTabPath, panelWorktreePath)}</span>
+          </span>
+          
+          {(() => {
+            const activeBranch = getWorkspaceActiveBranch(panelWorkspace, activeTabPath, panelWorktreePath);
+            if (!activeBranch) return null;
+            return (
+              <>
+                <span style={{ color: 'var(--border-color)' }}>|</span>
+                <span 
+                  className="flex items-center gap-1.5 px-1.5 py-0.5 rounded font-sans text-[11px] transition-all duration-150 border cursor-pointer hover:bg-purple-500/10 hover:border-purple-500/30"
+                  style={{
+                    backgroundColor: activeBranch.isDirty 
+                      ? 'rgba(245, 158, 11, 0.08)' 
+                      : 'color-mix(in srgb, var(--bg-main) 60%, transparent)',
+                    borderColor: activeBranch.isDirty 
+                      ? 'rgba(245, 158, 11, 0.25)' 
+                      : 'var(--border-color)',
+                    color: activeBranch.isDirty 
+                      ? '#f59e0b' 
+                      : 'var(--text-main)'
+                  }}
+                  onClick={onBranchClick}
+                  title={activeBranch.isDirty ? "Uncommitted changes (Click to Switch/Sync Branch)" : "Git Branch (Click to Switch/Sync Branch)"}
+                >
+                  <GitBranch size={11} style={{ color: activeBranch.isMain ? 'var(--color-primary)' : '#10b981' }} />
+                  <span className="font-medium">{activeBranch.name}</span>
+                </span>
+              </>
+            );
+          })()}
         </div>
+      )}
+
+      {/* Zoom & Shell Controls (Dashboard Pill) — hidden on mobile & tablet */}
+      <div 
+        className="hidden lg:flex items-center gap-3 px-3 py-1 rounded-full transition-all duration-200 shadow-inner"
+        style={{
+          backgroundColor: 'color-mix(in srgb, var(--bg-main) 30%, transparent)',
+          borderColor: 'var(--border-color)',
+          borderWidth: '1px'
+        }}
+      >
+        {/* Zoom controls */}
+        <div className="flex items-center gap-2">
+          <button 
+            className="hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none" 
+            style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
+            onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
+            onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+            onClick={handleZoomOut} 
+            title="Zoom Out Terminal font"
+          >
+            <ZoomOut size={12} />
+          </button>
+          <span 
+            className="text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold min-w-[28px] text-center border"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--bg-main) 60%, transparent)',
+              borderColor: 'var(--border-color)',
+              color: 'var(--color-primary)'
+            }}
+          >
+            {terminalFontSize}px
+          </span>
+          <button 
+            className="hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none" 
+            style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
+            onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
+            onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+            onClick={handleZoomIn} 
+            title="Zoom In Terminal font"
+          >
+            <ZoomIn size={12} />
+          </button>
+        </div>
+
+        <div className="w-px h-3.5 bg-[var(--border-color)]" />
+
+        {/* Shell Selector */}
+        <div className="flex items-center gap-1.5">
+          <Terminal size={11} style={{ color: 'var(--text-muted)' }} />
+          <Select 
+             value={defaultShell} 
+             onChange={(val) => setDefaultShell(val)}
+             align="top"
+             variant="minimal"
+             className="w-20"
+             options={[
+               { value: 'powershell', label: 'powershell' },
+               { value: 'cmd', label: 'cmd' },
+               { value: 'gitbash', label: 'gitbash' },
+               { value: 'wsl', label: 'wsl' }
+             ]}
+          />
+        </div>
+
+        {activeTabType === 'terminal' && onRefreshTerminal && (
+          <>
+            <div className="w-px h-3.5 bg-[var(--border-color)]" />
+            <button
+              onClick={onRefreshTerminal}
+              className="hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none"
+              style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
+              onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
+              onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+              title="Restart current terminal process"
+            >
+              <RefreshCw size={11} className="hover:rotate-45 transition-transform duration-200" />
+            </button>
+          </>
+        )}
       </div>
 
       {/* Right Section: Cloudflare Tunnel & Status — hidden on mobile & tablet */}
