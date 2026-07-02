@@ -80,6 +80,10 @@ export function TerminalInstance({
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
   const webglAddonRef = useRef<WebglAddon | null>(null);
+  // Tracks every addon loaded into the terminal so we can dispose them
+  // individually before term.dispose(), preventing xterm's AddonManager
+  // from iterating addons with undefined internal state (_isDisposed error).
+  const addonListRef = useRef<{ dispose: () => void }[]>([]);
   const onTitleChangeRef = useRef(onTitleChange);
   const onActiveProcessesChangeRef = useRef(onActiveProcessesChange);
   const onFocusRef = useRef(onFocus);
@@ -325,25 +329,32 @@ export function TerminalInstance({
     });
 
     // ── Addons ─────────────────────────────────────────────
+    addonListRef.current = [];
+
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
+    addonListRef.current.push(fitAddon);
 
     const unicode11Addon = new Unicode11Addon();
     term.loadAddon(unicode11Addon);
     term.unicode.activeVersion = '11';
+    addonListRef.current.push(unicode11Addon);
 
     const webLinksAddon = new WebLinksAddon((_, uri) => {
       window.open(uri, '_blank', 'noopener,noreferrer');
     });
     term.loadAddon(webLinksAddon);
+    addonListRef.current.push(webLinksAddon);
 
     const searchAddon = new SearchAddon();
     term.loadAddon(searchAddon);
     searchAddonRef.current = searchAddon;
+    addonListRef.current.push(searchAddon);
 
     // Image protocol addon (sixel / iTerm2 inline images)
     const imageAddon = new ImageAddon();
     term.loadAddon(imageAddon);
+    addonListRef.current.push(imageAddon);
 
     term.open(containerRef.current);
 
@@ -352,6 +363,7 @@ export function TerminalInstance({
     try {
       const webglAddon = new WebglAddon();
       webglAddonRef.current = webglAddon;
+      addonListRef.current.push(webglAddon);
       webglAddon.onContextLoss(() => {
         // Guard against double-dispose. The 'dispose' call in the addon may throw
         // due to a version mismatch in xterm internals (_core._store undefined).
@@ -359,6 +371,8 @@ export function TerminalInstance({
         try {
           if (webglAddonRef.current) {
             webglAddonRef.current = null;
+            // Remove from addonList so cleanup doesn't try to dispose it again
+            addonListRef.current = addonListRef.current.filter(a => a !== webglAddon);
             webglAddon.dispose();
           }
         } catch (err) {
@@ -369,6 +383,7 @@ export function TerminalInstance({
         try {
           const fallbackCanvas = new CanvasAddon();
           term.loadAddon(fallbackCanvas);
+          addonListRef.current.push(fallbackCanvas);
         } catch (canvasErr) {
           console.warn('Canvas fallback after WebGL context loss also failed:', canvasErr);
         }
@@ -384,6 +399,7 @@ export function TerminalInstance({
       try {
         const canvasAddon = new CanvasAddon();
         term.loadAddon(canvasAddon);
+        addonListRef.current.push(canvasAddon);
       } catch (e) {
         console.warn('Canvas renderer not available, using default DOM renderer:', e);
       }
@@ -526,8 +542,18 @@ export function TerminalInstance({
       }
       wsManager.send(JSON.stringify({ type: 'suspend', id: tab.id }));
       wsManager.removeListener(tab.id);
-      // Null out the webgl ref before terminal disposal to prevent the addon's
-      // internal dispose from crashing due to _core._store version mismatch.
+      // Dispose each addon individually before disposing the terminal.
+      // This prevents xterm's AddonManager from iterating addons with
+      // undefined internal state, which causes the _isDisposed TypeError.
+      const addons = [...addonListRef.current];
+      addonListRef.current = [];
+      for (const addon of addons) {
+        try {
+          addon.dispose();
+        } catch (_) {
+          // Ignore individual addon dispose errors
+        }
+      }
       webglAddonRef.current = null;
       terminalRef.current = null;
       fitAddonRef.current = null;
@@ -536,6 +562,8 @@ export function TerminalInstance({
       try {
         term.dispose();
       } catch (err) {
+        // After manual addon disposal, this should be silent.
+        // Keep the catch as a last safety net.
         console.warn('Terminal dispose error (safe to ignore):', err);
       }
     };

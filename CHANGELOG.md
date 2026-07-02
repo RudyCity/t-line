@@ -2,7 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.247] - 2026-07-02
+
+### Fixed
+- **Terminal Addon Dispose Error (Root Cause Fix)**: Memperbaiki secara tuntas `TypeError: Cannot read properties of undefined (reading '_isDisposed')` yang muncul di console saat terminal dihancurkan.
+  - Penyebab utama: xterm.js `AddonManager` secara internal mengiterasi semua addon yang ter-register dan memanggil `dispose()` pada setiap addon. Salah satu addon sudah memiliki state internal `undefined` saat iterasi terjadi, menyebabkan crash.
+  - Solusi: Menambahkan `addonListRef` untuk melacak **semua** addon yang di-load (`FitAddon`, `Unicode11Addon`, `WebLinksAddon`, `SearchAddon`, `ImageAddon`, `WebglAddon`/`CanvasAddon`). Setiap addon kini di-dispose secara **individual** dengan try-catch sebelum `term.dispose()` dipanggil, sehingga `AddonManager` tidak perlu mengiterasi addon yang sudah di-dispose.
+  - Saat WebGL context loss, addon WebGL dihapus dari `addonListRef` setelah di-dispose agar tidak di-dispose dua kali.
+  - `CanvasAddon` fallback (baik dari context loss maupun fallback awal) juga ditambahkan ke `addonListRef` agar disposal-nya dikelola dengan benar.
+
 ## [1.3.246] - 2026-07-02
+
 
 ### Changed
 - **Mobile/Tablet Terminal Split Button UX**: Memindahkan tombol split pane di perangkat mobile/tablet dari posisi kanan bawah ke **kanan atas**, dengan desain yang lebih minimalis.
