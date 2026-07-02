@@ -2,7 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.249] - 2026-07-02
+
+### Fixed
+- **Terminal Dispose Error (Real Root Cause)**: Memperbaiki secara tuntas `TypeError: Cannot read properties of undefined (reading '_isDisposed')` pada `AddonManager._wrappedAddonDispose`.
+  - **Root cause**: Meskipun addon di-dispose secara manual, xterm's `AddonManager` tetap menyimpan referensi addon di internal `_addons` array. Ketika `term.dispose()` dipanggil, `AddonManager.dispose()` mengiterasi `_addons` dan memanggil `_wrappedAddonDispose()` pada addon yang sudah ter-dispose → crash.
+  - **Fix**: Setelah loop pre-dispose addon, clear `(term as any)._addonManager._addons = []` dan `_disposables = []` sehingga `AddonManager.dispose()` menemukan array kosong dan tidak mencoba re-dispose apapun.
+
 ## [1.3.248] - 2026-07-02
+
 
 ### Changed
 - **Quick Launch UI Refactor**: Quick Launch bar terpisah dihapus dan digantikan dengan icon ⚡ (Zap) yang menjadi dropdown popover di tab bar.

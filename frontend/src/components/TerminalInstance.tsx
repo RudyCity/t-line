@@ -542,18 +542,36 @@ export function TerminalInstance({
       }
       wsManager.send(JSON.stringify({ type: 'suspend', id: tab.id }));
       wsManager.removeListener(tab.id);
-      // Dispose each addon individually before disposing the terminal.
-      // This prevents xterm's AddonManager from iterating addons with
-      // undefined internal state, which causes the _isDisposed TypeError.
+      // Step 1: Dispose each addon individually with a safety catch.
       const addons = [...addonListRef.current];
       addonListRef.current = [];
       for (const addon of addons) {
         try {
           addon.dispose();
         } catch (_) {
-          // Ignore individual addon dispose errors
+          // Ignore per-addon errors
         }
       }
+
+      // Step 2 (critical): Clear xterm's internal AddonManager registry.
+      // Even after manually disposing addons, xterm's AddonManager still
+      // holds references in its internal _addons array. When term.dispose()
+      // runs AddonManager.dispose(), it re-iterates those already-disposed
+      // addons and calls _wrappedAddonDispose() on them — crashing with
+      // "Cannot read properties of undefined (reading '_isDisposed')".
+      // Clearing _addons breaks the re-dispose loop entirely.
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mgr = (term as any)._addonManager;
+        if (mgr) {
+          if (Array.isArray(mgr._addons)) mgr._addons = [];
+          // Also clear any disposable registrations the manager holds
+          if (Array.isArray(mgr._disposables)) mgr._disposables = [];
+        }
+      } catch (_) {
+        // xterm internal API may vary — safe to ignore if unavailable
+      }
+
       webglAddonRef.current = null;
       terminalRef.current = null;
       fitAddonRef.current = null;
@@ -562,8 +580,6 @@ export function TerminalInstance({
       try {
         term.dispose();
       } catch (err) {
-        // After manual addon disposal, this should be silent.
-        // Keep the catch as a last safety net.
         console.warn('Terminal dispose error (safe to ignore):', err);
       }
     };
