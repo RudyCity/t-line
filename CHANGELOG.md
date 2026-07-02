@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.227] - 2026-07-02
+
+### Fixed
+- **Electron Build Missing Updater**: Added `updater.js` to the electron-builder `files` whitelist in `desktop/package.json` to prevent JavaScript load errors (`Cannot find module './updater'`) in packaged builds.
+
 ## [1.3.226] - 2026-07-02
 
 ### Fixed
