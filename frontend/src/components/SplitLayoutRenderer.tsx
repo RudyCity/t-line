@@ -115,7 +115,7 @@ function LeafPane({
     >
       <TerminalInstance
         tab={term as any}
-        active={!!(activeTabId && isFocused)}
+        active={!!activeTabId}
         wsConnected={wsConnected}
         fontSize={terminalFontSize}
         onTitleChange={(title) => handleTitleChange(term.id, title)}
@@ -126,6 +126,7 @@ function LeafPane({
         }}
         refreshTrigger={refreshTriggers?.[term.id] || 0}
         isFocusedPane={isFocused && hasMultiplePanes}
+        disableAutoFocus={!isFocused}
         fontFamily={fontFamily}
         fontWeight={fontWeight}
         accentColor={accentColor}

@@ -2,7 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
-## [1.3.251] - 2026-07-02
+## [1.3.252] - 2026-07-02
+
+### Fixed
+- **Mobile Terminal Black Screen Bug**: Memperbaiki masalah terminal yang tidak muncul / layar hitam di tampilan mobile (HP/tablet).
+  - **Bypass WebGL Addon on Mobile**: Di perangkat mobile / layar sentuh, WebGL Addon xterm.js dapat mengalami kegagalan konteks render tanpa throw exception yang menyebabkan layer teks hitam/transparan. Di mobile, otomatis menggunakan `CanvasAddon` / DOM renderer yang stabil 100%.
+  - **Leaf Pane Active State**: Memastikan prop `active` pada `TerminalInstance` bernilai `true` selama tab terminal aktif, sehingga proses WebSocket `init` dan penyesuaian dimensi (`fit()`) selalu berjalan meskipun dalam mode split pane.
+  - **CSS Flex & Height Fix**: Menambahkan `min-height: 0`, `height: 100%`, dan `width: 100%` pada elemen `.terminal-container`, `.terminal-element`, dan `.terminal-element .xterm` agar kalkulasi tinggi layout flexbox tidak bertabrakan pada browser mobile.
 
 ### Changed
 - **Right Side Tab Actions Layout**: Menyusun 3 ikon aksi utama secara rapi di **sisi kanan** baris tab:

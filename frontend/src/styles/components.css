@@ -733,6 +733,9 @@
   box-shadow: none;
   display: flex;
   flex-direction: row;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
 }
 
 .terminal-element-wrapper {
@@ -748,7 +751,16 @@
 .terminal-element {
   width: 100%;
   height: 100%;
+  min-height: 0;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.terminal-element .xterm {
+  height: 100%;
+  width: 100%;
+  padding: 0;
 }
 
 /* Forms & Dialog Modals */

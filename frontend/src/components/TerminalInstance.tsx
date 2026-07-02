@@ -359,40 +359,45 @@ export function TerminalInstance({
     term.open(containerRef.current);
 
     // ── GPU renderers (load after open with progressive fallback) ──
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+      (typeof window !== 'undefined' && (window.innerWidth <= 768 || 'ontouchstart' in window));
+
     let isWebglLoaded = false;
-    try {
-      const webglAddon = new WebglAddon();
-      webglAddonRef.current = webglAddon;
-      addonListRef.current.push(webglAddon);
-      webglAddon.onContextLoss(() => {
-        // Guard against double-dispose. The 'dispose' call in the addon may throw
-        // due to a version mismatch in xterm internals (_core._store undefined).
-        // After dispose, fall back to the Canvas renderer.
-        try {
-          if (webglAddonRef.current) {
+    if (!isMobileDevice) {
+      try {
+        const webglAddon = new WebglAddon();
+        webglAddonRef.current = webglAddon;
+        addonListRef.current.push(webglAddon);
+        webglAddon.onContextLoss(() => {
+          // Guard against double-dispose. The 'dispose' call in the addon may throw
+          // due to a version mismatch in xterm internals (_core._store undefined).
+          // After dispose, fall back to the Canvas renderer.
+          try {
+            if (webglAddonRef.current) {
+              webglAddonRef.current = null;
+              // Remove from addonList so cleanup doesn't try to dispose it again
+              addonListRef.current = addonListRef.current.filter(a => a !== webglAddon);
+              webglAddon.dispose();
+            }
+          } catch (err) {
+            console.warn('WebGL context loss dispose failed (safe to ignore):', err);
             webglAddonRef.current = null;
-            // Remove from addonList so cleanup doesn't try to dispose it again
-            addonListRef.current = addonListRef.current.filter(a => a !== webglAddon);
-            webglAddon.dispose();
           }
-        } catch (err) {
-          console.warn('WebGL context loss dispose failed (safe to ignore):', err);
-          webglAddonRef.current = null;
-        }
-        // Fallback to CanvasAddon after WebGL context loss
-        try {
-          const fallbackCanvas = new CanvasAddon();
-          term.loadAddon(fallbackCanvas);
-          addonListRef.current.push(fallbackCanvas);
-        } catch (canvasErr) {
-          console.warn('Canvas fallback after WebGL context loss also failed:', canvasErr);
-        }
-      });
-      term.loadAddon(webglAddon);
-      isWebglLoaded = true;
-    } catch (e) {
-      console.warn('WebGL renderer not available, trying Canvas renderer:', e);
-      webglAddonRef.current = null;
+          // Fallback to CanvasAddon after WebGL context loss
+          try {
+            const fallbackCanvas = new CanvasAddon();
+            term.loadAddon(fallbackCanvas);
+            addonListRef.current.push(fallbackCanvas);
+          } catch (canvasErr) {
+            console.warn('Canvas fallback after WebGL context loss also failed:', canvasErr);
+          }
+        });
+        term.loadAddon(webglAddon);
+        isWebglLoaded = true;
+      } catch (e) {
+        console.warn('WebGL renderer not available, trying Canvas renderer:', e);
+        webglAddonRef.current = null;
+      }
     }
 
     if (!isWebglLoaded) {
@@ -416,7 +421,7 @@ export function TerminalInstance({
     };
 
     if (term.textarea) {
-      term.textarea.setAttribute('inputmode', 'none');
+      term.textarea.setAttribute('inputmode', isMobileDevice ? 'text' : 'none');
       term.textarea.addEventListener('paste', handlePasteEvent, true);
     }
 
