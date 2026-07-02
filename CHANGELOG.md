@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.238] - 2026-07-02
+
+### Fixed
+- **Dropdown Select Terminals Tertimpa Terminal Grid Card**: Meningkatkan z-index pada `.grid-tab-header` dan memberikan `position: relative` agar dropdown konfigurasi terminal grid tampil di atas komponen-komponen terminal card (seperti status bar dan search bar) tanpa terpotong atau tertimpa.
+
 ## [1.3.237] - 2026-07-02
 
 ### Added

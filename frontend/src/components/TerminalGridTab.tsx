@@ -299,7 +299,8 @@ export function TerminalGridTab({
           border-bottom: 1px solid var(--border-color);
           background: rgba(0, 0, 0, 0.15);
           backdrop-filter: blur(8px);
-          z-index: 10;
+          position: relative;
+          z-index: 300;
           flex-shrink: 0;
         }
         .grid-header-left {
