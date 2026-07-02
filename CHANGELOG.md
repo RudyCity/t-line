@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.255] - 2026-07-02
+
+### Added / Fixed
+- **Left Sidebar Close Button for Mobile & Tablet**: Menambahkan tombol tutup `✕` pada header sidebar kiri ([sidebar-header](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx#L757)) yang khusus muncul di mode mobile & tablet, memungkinkan pengguna menutup sidebar berukuran full-screen dengan satu sentuhan.
+
 ## [1.3.254] - 2026-07-02
 
 ### Changed

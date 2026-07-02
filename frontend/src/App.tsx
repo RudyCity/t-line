@@ -17,7 +17,8 @@ import {
   ChevronDown,
   Camera,
   LayoutGrid,
-  Zap
+  Zap,
+  X
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { FileViewerTab } from './components/FileViewerTab';
@@ -754,10 +755,23 @@ export default function App() {
           }}
         >
         
-        <div className="sidebar-header" style={{ padding: sidebarCollapsed ? '12px 0' : '12px 16px', gap: '8px', justifyContent: sidebarCollapsed ? 'center' : 'flex-start' }}>
-          <TPlusLogo size={28} />
+        <div className="sidebar-header" style={{ padding: sidebarCollapsed ? '12px 0' : '12px 16px', gap: '8px', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <TPlusLogo size={28} />
+            {!sidebarCollapsed && (
+              <span className="logo-text" style={{ fontSize: '1.05rem', fontWeight: 600 }}>t-line</span>
+            )}
+          </div>
           {!sidebarCollapsed && (
-            <span className="logo-text" style={{ fontSize: '1.05rem', fontWeight: 600 }}>t-line</span>
+            <button
+              type="button"
+              className="action-btn mobile-only"
+              onClick={() => setSidebarOpen(false)}
+              title="Close Sidebar"
+              style={{ padding: '4px', cursor: 'pointer' }}
+            >
+              <X size={18} />
+            </button>
           )}
         </div>
 
@@ -904,11 +918,11 @@ export default function App() {
       )}
 
       {sidebarOpen && (
-        <div className="sidebar-overlay md:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
       )}
 
       {rightMenuOpen && (
-        <div className="sidebar-overlay md:hidden" onClick={() => setRightMenuOpen(false)} />
+        <div className="sidebar-overlay" onClick={() => setRightMenuOpen(false)} />
       )}
 
       <RightSidebar
