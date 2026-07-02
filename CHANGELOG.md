@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.240] - 2026-07-02
+
+### Fixed
+- **Infinite Reload Loop on Non-Git Workspaces**: Memperbaiki bug "flash flash" (flickering/reloading tak terbatas) di panel Explorer dan Git Changes pada workspace tanpa Git. Masalah ini disebabkan oleh hook `useGitStatus.ts` yang selalu mengembalikan referensi array baru `[]` (karena `setChangedFiles([])` dipanggil setiap kali status git di-fetch untuk workspace non-git), yang memicu trigger update `fsChangeTrigger` di `App.tsx`, yang kemudian memicu re-render dan me-load ulang file explorer secara terus-menerus. Diperbaiki dengan mengembalikan referensi `prev` yang sama jika array sudah kosong.
+
 ## [1.3.239] - 2026-07-02
 
 ### Fixed

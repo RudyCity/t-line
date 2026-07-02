@@ -19,7 +19,10 @@ export function useGitStatus(panelWorkspace: WorkspaceInfo | null, panelWorktree
 
   const fetchGitStatus = useCallback(async (showLoading = false) => {
     if (!panelWorkspace || !panelWorkspace.isGit) {
-      setChangedFiles([]);
+      setChangedFiles(prev => {
+        if (prev.length === 0) return prev;
+        return [];
+      });
       return;
     }
     if (showLoading) setGitStatusLoading(true);
