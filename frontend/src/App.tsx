@@ -632,36 +632,16 @@ export default function App() {
 
     // Default to the first workspace if none is active or if the active one no longer exists
     if (!panelWorkspace || !workspaces.some(w => w.id === panelWorkspace.id)) {
-      setPanelWorkspace(workspaces[0]);
-      return;
+      setPanelWorkspace(workspaces[0] || null);
     }
+  }, [workspaces, panelWorkspace, isAuthenticated]);
 
-    if (activePanel === 'explorer') {
-      if (!panelWorkspace || !workspaces.some(w => w.id === panelWorkspace.id)) {
-        setPanelWorkspace(workspaces[0]);
-      }
-    } else if (activePanel === 'changes') {
-      const isCurrentGit = panelWorkspace && workspaces.find(w => w.id === panelWorkspace.id)?.isGit;
-      if (!panelWorkspace || !isCurrentGit || !workspaces.some(w => w.id === panelWorkspace.id)) {
-        const firstGit = workspaces.find(w => w.isGit);
-        if (firstGit) {
-          setPanelWorkspace(firstGit);
-        } else {
-          setPanelWorkspace(workspaces[0]);
-        }
-      }
-    } else if (activePanel === 'checkpoints') {
-      const isCurrentGit = panelWorkspace && workspaces.find(w => w.id === panelWorkspace.id)?.isGit;
-      if (!panelWorkspace || !isCurrentGit || !workspaces.some(w => w.id === panelWorkspace.id)) {
-        const firstGit = workspaces.find(w => w.isGit);
-        if (firstGit) {
-          setPanelWorkspace(firstGit);
-        } else {
-          setPanelWorkspace(workspaces[0]);
-        }
-      }
+  // Safety check: if active workspace is not Git, panelWorktreePath must be null
+  useEffect(() => {
+    if (panelWorkspace && !panelWorkspace.isGit && panelWorktreePath !== null) {
+      setPanelWorktreePath(null);
     }
-  }, [workspaces, activePanel, panelWorkspace, isAuthenticated]);
+  }, [panelWorkspace, panelWorktreePath]);
 
 
 

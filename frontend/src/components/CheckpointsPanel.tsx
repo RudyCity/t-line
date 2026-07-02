@@ -89,7 +89,10 @@ export function CheckpointsPanel({
 
   // Fetch Checkpoints list
   const fetchCheckpoints = useCallback(async () => {
-    if (!panelWorkspace) return;
+    if (!panelWorkspace) {
+      setLoading(false);
+      return;
+    }
     if (!panelWorkspace.isGit) {
       setCheckpoints([]);
       setLoading(false);
@@ -453,7 +456,12 @@ export function CheckpointsPanel({
             <AlertTriangle size={18} />
             <span>{error}</span>
           </div>
-        ) : !panelWorkspace?.isGit ? (
+        ) : !panelWorkspace ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3 text-center px-6">
+            <AlertTriangle size={24} className="text-slate-500/80" style={{ opacity: 0.5 }} />
+            <span className="text-xs text-[var(--text-muted)] font-medium">No workspace selected</span>
+          </div>
+        ) : !panelWorkspace.isGit ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-center px-6">
             <AlertTriangle size={24} className="text-amber-500/80" />
             <span className="text-xs text-[var(--text-muted)] font-medium">Checkpoints are only supported in Git workspaces.</span>

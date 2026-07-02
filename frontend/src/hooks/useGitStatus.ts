@@ -23,6 +23,7 @@ export function useGitStatus(panelWorkspace: WorkspaceInfo | null, panelWorktree
         if (prev.length === 0) return prev;
         return [];
       });
+      setGitStatusLoading(false);
       return;
     }
     if (showLoading) setGitStatusLoading(true);

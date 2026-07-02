@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.244] - 2026-07-02
+
+### Fixed
+- **Loading Bug & Git Leak on Non-Git Workspaces**: Memperbaiki bug loading tanpa akhir pada panel Git Changes dan Snapshots ketika beralih ke/dari workspace tanpa Git, serta membatasi data Git agar tidak bocor di header/footer pada workspace non-Git.
+  - **Auto-Switch Workspace Removal**: Menghapus logika auto-switch workspace ke repositori Git lain ketika memilih panel Git Changes/Checkpoints pada workspace non-Git, sehingga workspace aktif tetap terjaga.
+  - **Reset Loading States**: Menyetel state `loading` di `CheckpointsPanel.tsx` dan `gitStatusLoading` di `useGitStatus.ts` ke `false` saat early return agar spinner loading tidak berjalan terus-menerus.
+  - **Safety Worktree Reset**: Menambahkan safety check di `App.tsx` untuk memastikan `panelWorktreePath` selalu `null` ketika workspace aktif bukan merupakan repositori Git, sehingga menghilangkan badge branch Git di tab bar (header) secara penuh.
+  - **Checkpoints Empty State**: Menampilkan tulisan "No workspace selected" secara benar jika tidak ada workspace aktif di panel Snapshots, alih-alih peringatan tidak mendukung Git.
+
 ## [1.3.243] - 2026-07-02
 
 ### Added
