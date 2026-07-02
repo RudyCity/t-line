@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.224] - 2026-07-02
+
+### Added
+- **Workspace Panel Scrolling & Search Toggle**: Restructured the workspace list container layout in the sidebar using flexbox, confining scrolling to the list items while keeping the heading fixed at the top. Added a search button next to the plus icon to toggle search input visibility (hidden by default) with auto-focus and clear actions.
+
 ## [1.3.223] - 2026-07-02
 
 ### Fixed

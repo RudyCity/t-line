@@ -59,6 +59,7 @@ export interface WorkspaceListProps {
   deletingWorktreePaths?: string[];
   panelWorktreePath: string | null;
   panelWorkspace?: WorkspaceInfo | null;
+  showSearch?: boolean;
 }
 
 /** Detects if the screen is in "mobile" mode (< 768px) */
@@ -458,12 +459,23 @@ export function WorkspaceList({
   deletingWorkspacePaths = [],
   deletingWorktreePaths = [],
   panelWorktreePath = null,
-  panelWorkspace = null
+  panelWorkspace = null,
+  showSearch = false
 }: WorkspaceListProps): React.JSX.Element {
   const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (showSearch) {
+      setTimeout(() => {
+        searchRef.current?.focus();
+      }, 50);
+    } else {
+      setSearch('');
+    }
+  }, [showSearch]);
 
   // (Using file-level helper isPathInWorktree)
 
@@ -508,26 +520,28 @@ export function WorkspaceList({
   return (
     <div className="workspace-list-root">
       {/* ── Search bar ── */}
-      <div className="ws-search-bar">
-        <Search size={12} className="ws-search-icon" />
-        <input
-          ref={searchRef}
-          type="text"
-          className="ws-search-input"
-          placeholder="Search workspaces…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-        {search && (
-          <button
-            className="ws-search-clear"
-            onClick={() => { setSearch(''); searchRef.current?.focus(); }}
-            title="Clear search"
-          >
-            <X size={11} />
-          </button>
-        )}
-      </div>
+      {showSearch && (
+        <div className="ws-search-bar">
+          <Search size={12} className="ws-search-icon" />
+          <input
+            ref={searchRef}
+            type="text"
+            className="ws-search-input"
+            placeholder="Search workspaces…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && (
+            <button
+              className="ws-search-clear"
+              onClick={() => { setSearch(''); searchRef.current?.focus(); }}
+              title="Clear search"
+            >
+              <X size={11} />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ── Workspace cards ── */}
       <div className="workspace-list flex flex-col gap-1.5 px-3">

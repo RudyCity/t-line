@@ -1,5 +1,5 @@
-import React from 'react';
-import { Plus, Terminal as TerminalIcon, FileCode, FolderTree, GitCompare, GitBranch, LayoutGrid } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Terminal as TerminalIcon, FileCode, FolderTree, GitCompare, GitBranch, LayoutGrid, Search } from 'lucide-react';
 import { TabData, TerminalInstanceData, WorkspaceInfo, WorktreeInfo } from '../hooks/useTerminals';
 import { WorkspaceList } from './WorkspaceList';
 import { FileExplorer, GitChanges, GitFileStatus } from './FilePanel';
@@ -206,6 +206,7 @@ export function SidebarContentPanel({
   openDiffTab,
   onCheckpointChange
 }: SidebarContentPanelProps) {
+  const [showSearch, setShowSearch] = useState(false);
 
   return (
     <div
@@ -287,12 +288,22 @@ export function SidebarContentPanel({
 
       {/* ── Workspaces Panel ── */}
       {activePanel === 'workspaces' && (
-        <div>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
           <div className="section-title" style={{ padding: '0 16px' }}>
             <span>Workspaces</span>
-            <button className="action-btn" onClick={() => { setShowWorkspaceModal(true); setSidebarOpen(false); }} title="Add Workspace">
-              <Plus size={16} />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                className="action-btn"
+                onClick={() => setShowSearch(prev => !prev)}
+                title="Toggle Search"
+                style={{ color: showSearch ? 'var(--color-primary)' : 'inherit' }}
+              >
+                <Search size={14} />
+              </button>
+              <button className="action-btn" onClick={() => { setShowWorkspaceModal(true); setSidebarOpen(false); }} title="Add Workspace">
+                <Plus size={16} />
+              </button>
+            </div>
           </div>
 
           <WorkspaceList
@@ -314,6 +325,7 @@ export function SidebarContentPanel({
             deletingWorktreePaths={deletingWorktreePaths}
             panelWorktreePath={panelWorktreePath}
             panelWorkspace={panelWorkspace}
+            showSearch={showSearch}
           />
 
           {workspaces.length === 0 && (
