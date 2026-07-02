@@ -273,7 +273,11 @@ export default function App() {
 
   const filteredTabs = useMemo(() => {
     if (!panelWorkspace) {
-      return tabs.filter(t => !t.workspaceId || t.type === 'grid');
+      // When no workspace is selected, show tabs without a workspace or grid tabs.
+      // Also include the currently active tab (even if it has a workspaceId) to
+      // prevent it from disappearing right after openTerminal sets activeTabId
+      // before the panelWorkspace useEffect has a chance to fire.
+      return tabs.filter(t => !t.workspaceId || t.type === 'grid' || t.id === activeTabId);
     }
     const wsTabs = tabs.filter(t => t.workspaceId === panelWorkspace.id || t.type === 'grid');
 
@@ -308,7 +312,7 @@ export default function App() {
     };
 
     return [...wsTabs].sort((a, b) => getTabWtIndex(a) - getTabWtIndex(b));
-  }, [tabs, panelWorkspace, panelWorktreePath, terminalInstances]);
+  }, [tabs, panelWorkspace, panelWorktreePath, terminalInstances, activeTabId]);
 
   const visibleTabs = useMemo(() => {
     const MAX_VISIBLE_TABS = 7;
@@ -1099,6 +1103,7 @@ export default function App() {
             <EmptyDashboard
               setShowWorkspaceModal={setShowWorkspaceModal}
               openTerminal={openTerminal}
+              setPanelWorkspace={setPanelWorkspace}
               panelWorkspace={panelWorkspace}
               workspaces={workspaces}
               panelWorktreePath={panelWorktreePath}

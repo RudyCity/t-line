@@ -5,6 +5,7 @@ import { WorkspaceInfo } from '../hooks/useTerminals';
 export interface EmptyDashboardProps {
   setShowWorkspaceModal: (val: boolean) => void;
   openTerminal: (name: string, path: string, shell?: string) => void;
+  setPanelWorkspace: (ws: WorkspaceInfo | null) => void;
   panelWorkspace: WorkspaceInfo | null;
   workspaces: WorkspaceInfo[];
   panelWorktreePath?: string | null;
@@ -13,6 +14,7 @@ export interface EmptyDashboardProps {
 export function EmptyDashboard({
   setShowWorkspaceModal,
   openTerminal,
+  setPanelWorkspace,
   panelWorkspace,
   workspaces,
   panelWorktreePath
@@ -53,12 +55,14 @@ export function EmptyDashboard({
           <button 
             className="px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-150 active:scale-98 cursor-pointer border" 
             onClick={() => {
-              const targetPath = panelWorktreePath || panelWorkspace?.path || workspaces[0]?.path || '';
-              const targetWt = panelWorkspace?.worktrees?.find(wt => wt.path === panelWorktreePath);
+              const targetWs = panelWorkspace || workspaces[0] || null;
+              const targetPath = panelWorktreePath || targetWs?.path || '';
+              const targetWt = targetWs?.worktrees?.find(wt => wt.path === panelWorktreePath);
               const targetName = panelWorktreePath 
-                ? `${panelWorkspace?.name} (${targetWt?.branch || 'worktree'})`
-                : 'Shell';
-              openTerminal(targetName, targetPath, panelWorkspace?.defaultShell);
+                ? `${targetWs?.name} (${targetWt?.branch || 'worktree'})`
+                : (targetWs?.name || 'Shell');
+              if (targetWs && !panelWorkspace) setPanelWorkspace(targetWs);
+              openTerminal(targetName, targetPath, targetWs?.defaultShell);
             }}
             style={{
               borderColor: 'var(--border-color)',

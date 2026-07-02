@@ -142,7 +142,7 @@ function WorkspaceActions({
       </button>
       <button
         className="action-btn"
-        onClick={(e) => { e.stopPropagation(); openTerminal(w.name, w.path, w.defaultShell); setOpen(false); }}
+        onClick={(e) => { e.stopPropagation(); setPanelWorkspace(w); openTerminal(w.name, w.path, w.defaultShell); setOpen(false); }}
         title={`Open terminal (${w.defaultShell || 'default'})`}
       >
         <TerminalIcon size={13} />
