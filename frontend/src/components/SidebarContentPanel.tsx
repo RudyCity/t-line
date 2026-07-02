@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Terminal as TerminalIcon, FileCode, FolderTree, GitCompare, GitBranch } from 'lucide-react';
+import { Plus, Terminal as TerminalIcon, FileCode, FolderTree, GitCompare, GitBranch, LayoutGrid } from 'lucide-react';
 import { TabData, TerminalInstanceData, WorkspaceInfo, WorktreeInfo } from '../hooks/useTerminals';
 import { WorkspaceList } from './WorkspaceList';
 import { FileExplorer, GitChanges, GitFileStatus } from './FilePanel';
@@ -252,8 +252,12 @@ export function SidebarContentPanel({
                   }`}
                 >
                   <div className="flex items-center gap-2.5 overflow-hidden">
-                    {isFile ? (
+                    {t.type === 'file' ? (
                       <FileCode size={13} className={isActive ? 'text-purple-400' : 'text-slate-400'} />
+                    ) : t.type === 'diff' ? (
+                      <GitCompare size={13} className={isActive ? 'text-purple-400' : 'text-slate-400'} />
+                    ) : t.type === 'grid' ? (
+                      <LayoutGrid size={13} className={isActive ? 'text-purple-400' : 'text-slate-400'} />
                     ) : (
                       <TerminalIcon size={13} className={isActive ? 'text-purple-400' : 'text-slate-400'} />
                     )}

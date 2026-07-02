@@ -54,7 +54,7 @@ export type SplitLayoutNode =
 export interface TabData {
   id: string;
   name: string;
-  type: 'terminal' | 'file' | 'diff';
+  type: 'terminal' | 'file' | 'diff' | 'grid';
   filePath?: string;
   // For 'diff' type tabs
   commitHash?: string; // 'WORKTREE' for working-tree diffs
@@ -63,6 +63,7 @@ export interface TabData {
   layout?: SplitLayoutNode;
   focusedTerminalId?: string;
   workspaceId?: string;
+  gridTerminalIds?: string[];
 }
 
 /** Maps workspaceId → last active tabId for that workspace */
@@ -669,6 +670,19 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     }));
   }, []);
 
+  const openGridTab = useCallback(() => {
+    const tabId = `grid-${Date.now()}`;
+    const newTab: TabData = {
+      id: tabId,
+      name: 'Terminal Grid',
+      type: 'grid',
+      gridTerminalIds: []
+    };
+    setTabs(prev => [...prev, newTab]);
+    setActiveTabId(tabId);
+    onTerminalOpen?.();
+  }, [onTerminalOpen]);
+
   return {
     tabs,
     setTabs,
@@ -687,6 +701,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     openTerminal,
     openFileTab,
     openDiffTab,
+    openGridTab,
     closeTerminal,
     closePane,
     splitFocusedTerminal,

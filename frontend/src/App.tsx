@@ -15,11 +15,13 @@ import {
   MoreVertical,
   HelpCircle,
   ChevronDown,
-  Camera
+  Camera,
+  LayoutGrid
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { FileViewerTab } from './components/FileViewerTab';
 import { DiffViewerTab } from './components/DiffViewerTab';
+import { TerminalGridTab } from './components/TerminalGridTab';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
 import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal, ConfirmModal, WorkspaceEditModal } from './components/Modals';
 import { BranchModal } from './components/BranchModal';
@@ -257,6 +259,7 @@ export default function App() {
     openTerminal,
     openFileTab,
     openDiffTab,
+    openGridTab,
     closeTerminal,
     closePane,
     splitFocusedTerminal,
@@ -527,9 +530,9 @@ export default function App() {
 
   const filteredTabs = useMemo(() => {
     if (!panelWorkspace) {
-      return tabs.filter(t => !t.workspaceId);
+      return tabs.filter(t => !t.workspaceId || t.type === 'grid');
     }
-    const wsTabs = tabs.filter(t => t.workspaceId === panelWorkspace.id);
+    const wsTabs = tabs.filter(t => t.workspaceId === panelWorkspace.id || t.type === 'grid');
 
     if (panelWorktreePath) {
       // In worktree mode, filter tabs to show only those belonging to that specific worktree.
@@ -981,9 +984,11 @@ export default function App() {
                   return visibleTabs.map(t => {
                     const isFile = t.type === 'file';
                     const isDiff = t.type === 'diff';
-                    const focusedInst = !isFile && !isDiff && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
+                    const isGrid = t.type === 'grid';
+                    const isTerminal = t.type === 'terminal';
+                    const focusedInst = isTerminal && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
                     const shellType = focusedInst?.shellType || '';
-                    const displayName = (isFile || isDiff) ? t.name : (focusedInst?.name || t.name);
+                    const displayName = (isFile || isDiff || isGrid) ? t.name : (focusedInst?.name || t.name);
                     const branch = getTabGitBranch(t);
 
                     const showGroupHeader = panelWorktreePath === null && branch && branch !== prevBranch;
@@ -1008,6 +1013,8 @@ export default function App() {
                             <FileCode size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                           ) : t.type === 'diff' ? (
                             <GitCompare size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? '#4ade80' : 'var(--text-muted)' }} />
+                          ) : t.type === 'grid' ? (
+                            <LayoutGrid size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                           ) : (
                             <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                           )}
@@ -1031,6 +1038,15 @@ export default function App() {
                   style={{ marginLeft: '6px' }}
                 >
                   <Plus size={14} />
+                </button>
+                {/* Terminal Grid button */}
+                <button
+                  className="action-btn shrink-0"
+                  onClick={openGridTab}
+                  title="New Terminal Grid"
+                  style={{ marginLeft: '4px' }}
+                >
+                  <LayoutGrid size={14} />
                 </button>
               </div>
 
@@ -1106,6 +1122,29 @@ export default function App() {
                       workspaceId={activeTab.workspaceId || ''}
                       worktreePath={activeTab.worktreePath}
                       compareWithWorktree={activeTab.compareWithWorktree}
+                    />
+                  );
+                }
+                if (activeTab.type === 'grid') {
+                  return (
+                    <TerminalGridTab
+                      tab={activeTab}
+                      tabs={tabs}
+                      setTabs={setTabs}
+                      workspaces={workspaces}
+                      terminalInstances={terminalInstances}
+                      wsConnected={wsConnected}
+                      terminalFontSize={terminalFontSize}
+                      handleTitleChange={handleTitleChange}
+                      handleActiveProcessesChange={handleActiveProcessesChange}
+                      focusTerminal={focusTerminal}
+                      setActiveTabId={setActiveTabId}
+                      themeBackground={THEMES[theme]?.bgMain}
+                      themeForeground={THEMES[theme]?.textMain}
+                      accentColor={accentColor}
+                      fontFamily={MONO_FONTS[fontMono as keyof typeof MONO_FONTS]}
+                      fontWeight={fontMonoWeight}
+                      refreshTriggers={refreshTriggers}
                     />
                   );
                 }

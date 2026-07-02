@@ -1,7 +1,8 @@
 import React from 'react';
 import {
   Plus, Terminal as TerminalIcon, FileCode, Settings, LogOut, X,
-  ZoomIn, ZoomOut, Globe, ExternalLink, Copy, Check, Info, RefreshCw
+  ZoomIn, ZoomOut, Globe, ExternalLink, Copy, Check, Info, RefreshCw,
+  LayoutGrid, GitCompare
 } from 'lucide-react';
 import { TabData, TerminalInstanceData, WorkspaceInfo } from '../hooks/useTerminals';
 import { Select } from './Form';
@@ -25,7 +26,7 @@ interface RightSidebarProps {
   setDefaultShell: (val: string) => void;
   handleZoomIn: () => void;
   handleZoomOut: () => void;
-  activeTabType?: 'terminal' | 'file' | 'diff' | null;
+  activeTabType?: 'terminal' | 'file' | 'diff' | 'grid' | null;
   onRefreshTerminal?: () => void;
   // Tunnel (from footer right section)
   tunnelStatus: {
@@ -130,8 +131,12 @@ export function RightSidebar({
                   }`}
                 >
                   <div className="flex items-center gap-2.5 overflow-hidden">
-                    {isFile ? (
+                    {t.type === 'file' ? (
                       <FileCode size={13} className={isActive ? 'text-[var(--color-primary)]' : 'text-[var(--text-muted)]'} />
+                    ) : t.type === 'diff' ? (
+                      <GitCompare size={13} className={isActive ? 'text-[var(--color-primary)]' : 'text-[var(--text-muted)]'} />
+                    ) : t.type === 'grid' ? (
+                      <LayoutGrid size={13} className={isActive ? 'text-[var(--color-primary)]' : 'text-[var(--text-muted)]'} />
                     ) : (
                       <TerminalIcon size={13} className={isActive ? 'text-[var(--color-primary)]' : 'text-[var(--text-muted)]'} />
                     )}

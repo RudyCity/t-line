@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.217] - 2026-07-02
+
+### Added
+- **Terminal Grid Monitor**: Implemented a cross-workspace Terminal Grid Monitor tab that allows users to select, layout, and monitor active terminal instances across all workspaces in a single unified grid view.
+- **Interactive Grid Cards**: Each card in the grid view renders a live interactive terminal pane, shows running processes dynamically, displays a workspace mapping badge, and supports one-click focusing (switching the main window view directly to the terminal's parent tab).
+
 ## [1.3.216] - 2026-07-02
 
 ### Added
