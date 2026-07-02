@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.251] - 2026-07-02
+
+### Changed
+- **Right Side Tab Actions Layout**: Menyusun 3 ikon aksi utama secara rapi di **sisi kanan** baris tab:
+  1. ⚡ **Quick Launch**: Ikon petir yang saat diklik menampilkan menu popover dropdown shortcut dengan penanganan auto click-outside.
+  2. 🔲 **Terminal Grid**: Ikon grid untuk membuka tab Terminal Grid baru.
+  3. ⌄ **Dropdown Tab Switcher**: Ikon dropdown chevron untuk melihat & berpindah antar tab yang terbuka.
+
 ## [1.3.250] - 2026-07-02
 
 ### Fixed / Improved
