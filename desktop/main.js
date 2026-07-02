@@ -298,26 +298,40 @@ function startBackend() {
 
   let token = null;
   const logFile = path.join(app.getPath('userData'), 'backend_run.log');
+
+  function logEvent(event) {
+    const timestamp = new Date().toISOString();
+    try {
+      fs.appendFileSync(logFile, `[${timestamp}] [event] ${event}\n`);
+    } catch (err) {}
+  }
+
+  function logStream(prefix, data) {
+    const timestamp = new Date().toISOString();
+    const lines = data.toString().split(/\r?\n/);
+    if (lines.length > 0 && lines[lines.length - 1] === '') {
+      lines.pop();
+    }
+    const formatted = lines.map(line => `[${timestamp}] [${prefix}] ${line}\n`).join('');
+    try {
+      fs.appendFileSync(logFile, formatted);
+    } catch (err) {}
+  }
+
   try {
-    fs.writeFileSync(logFile, `Backend Spawn Log - ${new Date().toISOString()}\n`);
+    fs.writeFileSync(logFile, `[${new Date().toISOString()}] [event] Backend Spawn Log initialized\n`);
   } catch (err) {}
 
   backendProcess.on('spawn', () => {
-    try {
-      fs.appendFileSync(logFile, `[spawned]\n`);
-    } catch (e) {}
+    logEvent('[spawned] Process successfully started');
   });
 
   backendProcess.on('error', (err) => {
-    try {
-      fs.appendFileSync(logFile, `[error] ${err.message}\n${err.stack}\n`);
-    } catch (e) {}
+    logEvent(`[error] ${err.message}\n${err.stack}`);
   });
 
   backendProcess.stdout.on('data', (data) => {
-    try {
-      fs.appendFileSync(logFile, `[stdout] ${data.toString()}`);
-    } catch (err) {}
+    logStream('stdout', data);
 
     const output = data.toString();
     console.log(`[backend-stdout] ${output.trim()}`);
@@ -327,12 +341,14 @@ function startBackend() {
     if (tokenMatch) {
       token = tokenMatch[1];
       bypassToken = token;
+      logEvent(`[token] Bypass token detected`);
     }
 
     // Parse when the server is ready
     if (output.includes('Workspace Server running on port') || output.includes('running on port')) {
       updateBackendStatus('running');
       backendRestartAttempts = 0;
+      logEvent(`[running] Workspace Server detected running on port 5779`);
       
       // Delay slightly to ensure server socket is fully listening
       setTimeout(() => {
@@ -348,16 +364,12 @@ function startBackend() {
   });
 
   backendProcess.stderr.on('data', (data) => {
-    try {
-      fs.appendFileSync(logFile, `[stderr] ${data.toString()}`);
-    } catch (err) {}
+    logStream('stderr', data);
     console.error(`[backend-stderr] ${data.toString().trim()}`);
   });
 
   backendProcess.on('close', (code) => {
-    try {
-      fs.appendFileSync(logFile, `[close] exited with code ${code}\n`);
-    } catch (err) {}
+    logEvent(`[close] Process exited with code ${code}`);
     console.log(`Backend process exited with code ${code}`);
     backendProcess = null;
     updateBackendStatus('stopped');
@@ -365,11 +377,13 @@ function startBackend() {
     if (!isQuitting && !isStoppingManual) {
       if (backendRestartAttempts < MAX_BACKEND_RESTARTS) {
         backendRestartAttempts++;
+        logEvent(`[auto-restart] Attempting auto-restart (${backendRestartAttempts}/${MAX_BACKEND_RESTARTS}) in 2 seconds...`);
         console.log(`Backend exited unexpectedly. Attempting auto-restart (${backendRestartAttempts}/${MAX_BACKEND_RESTARTS}) in 2 seconds...`);
         setTimeout(() => {
           startBackend();
         }, 2000);
       } else {
+        logEvent(`[crash-loop] Backend crashed repeatedly. Stopping attempts and showing connection error page.`);
         console.error(`Backend crashed repeatedly. Showing connection error page.`);
         if (mainWindow) {
           mainWindow.loadFile(path.join(__dirname, 'connection-error.html'));

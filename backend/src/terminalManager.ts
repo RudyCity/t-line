@@ -236,6 +236,8 @@ export class TerminalManager {
       normalizedCwd = cwd ? path.normalize(cwd) : os.homedir();
     }
 
+    console.log(`[PTY] Spawning PTY terminal: id=${id}, shell=${shell}, args=${JSON.stringify(args)}, cwd=${normalizedCwd}, size=${cols}x${rows}`);
+
     let terminal: ITerminal;
     if (pty) {
       terminal = new PtyTerminal(shell, args, normalizedCwd, cols, rows);
@@ -307,6 +309,7 @@ export class TerminalManager {
     });
 
     terminal.onExit((code) => {
+      console.log(`[PTY] Terminal process exited: id=${id}, code=${code}`);
       const activeSess = this.sessions.get(id);
       if (activeSess) {
         if (activeSess.onExit) activeSess.onExit(code);
@@ -377,6 +380,7 @@ export class TerminalManager {
   }
 
   removeTerminal(id: string): boolean {
+    console.log(`[PTY] Removing terminal session: id=${id}`);
     const session = this.sessions.get(id);
     if (session) {
       if (session.cleanupTimeout) clearTimeout(session.cleanupTimeout);

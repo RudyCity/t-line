@@ -557,6 +557,7 @@ registerFileChangeCallback((filename: string) => {
 wss.on('connection', (ws: WebSocket) => {
   activeWebSockets.add(ws);
   const activeTerminals = new Set<string>();
+  console.log(`[WS] Client connection established. Active clients: ${activeWebSockets.size}`);
 
   // Helper to start process title polling and active process detection
   const startTitlePolling = (termId: string, terminal: any) => {
@@ -628,6 +629,7 @@ wss.on('connection', (ws: WebSocket) => {
         
         if (existingTerm) {
           activeTerminals.add(id);
+          console.log(`[WS] Re-attaching to existing PTY session: id=${id}, PID=${existingTerm.getPid()}, size=${cols}x${rows}`);
 
           // Ensure the existing terminal process size matches the client's current grid dimensions
           if (cols && rows) {
@@ -676,6 +678,7 @@ wss.on('connection', (ws: WebSocket) => {
             }
           }, 100);
         } else {
+          console.log(`[WS] Creating new PTY session: id=${id}, cwd=${cwd}, shellType=${shellType}, size=${cols}x${rows}`);
           const term = terminalManager.createTerminal(id, cwd, cols, rows, shellType);
           activeTerminals.add(id);
           const stopPolling = startTitlePolling(id, term);
@@ -717,9 +720,11 @@ wss.on('connection', (ws: WebSocket) => {
           term.resize(cols, rows);
         }
       } else if (type === 'close') {
+        console.log(`[WS] Received close command for terminal: id=${id}`);
         terminalManager.removeTerminal(id);
         activeTerminals.delete(id);
       } else if (type === 'suspend') {
+        console.log(`[WS] Received suspend command for terminal: id=${id}`);
         terminalManager.setSender(id, null);
       }
     } catch (e) {
@@ -729,8 +734,10 @@ wss.on('connection', (ws: WebSocket) => {
 
   ws.on('close', () => {
     activeWebSockets.delete(ws);
+    console.log(`[WS] Client connection closed. Remaining active clients: ${activeWebSockets.size}`);
     // Put active terminals spawned by this connection into detached state (keep-alive)
     for (const termId of activeTerminals) {
+      console.log(`[WS] Detaching terminal session: id=${termId}`);
       terminalManager.detachSession(termId);
     }
     activeTerminals.clear();
