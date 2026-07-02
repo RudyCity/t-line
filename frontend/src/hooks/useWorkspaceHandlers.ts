@@ -321,7 +321,15 @@ export function useWorkspaceHandlers({
     if (!ws) return;
 
     setPanelWorkspace(ws);
-    setPanelWorktreePath(ws.path); // Select master/main!
+    // For non-git workspaces there are no worktrees, so keep panelWorktreePath null.
+    // For git workspaces, select the main worktree path so tabs belonging to the
+    // main branch are shown by default.
+    if (ws.isGit && ws.worktrees && ws.worktrees.length > 0) {
+      const mainWt = ws.worktrees.find(wt => wt.isMain);
+      setPanelWorktreePath(mainWt ? mainWt.path : null);
+    } else {
+      setPanelWorktreePath(null);
+    }
 
     // Find any open tab that matches the main branch/workspace path
     const matchedTab = tabs.find(tab => {

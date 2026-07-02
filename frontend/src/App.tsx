@@ -544,10 +544,20 @@ export default function App() {
         setPanelWorkspace(ws);
       }
 
-      // Sync worktree path selection
-      const matchedWtPath = getTabWorktreePath(activeTab, ws, terminalInstances);
-      const wtObj = ws.worktrees?.find(wt => wt.path === matchedWtPath);
-      const targetWtPath = (wtObj && !wtObj.isMain) ? matchedWtPath : ws.path;
+      // Sync worktree path selection.
+      // For non-git workspaces (no worktrees), always use null.
+      // For git workspaces, use the matched worktree path or the main worktree's path.
+      let targetWtPath: string | null = null;
+      if (ws.isGit && ws.worktrees && ws.worktrees.length > 0) {
+        const matchedWtPath = getTabWorktreePath(activeTab, ws, terminalInstances);
+        const wtObj = ws.worktrees.find(wt => wt.path === matchedWtPath);
+        if (wtObj && !wtObj.isMain) {
+          targetWtPath = matchedWtPath;
+        } else {
+          const mainWt = ws.worktrees.find(wt => wt.isMain);
+          targetWtPath = mainWt ? mainWt.path : null;
+        }
+      }
 
       if (panelWorktreePath !== targetWtPath) {
         setPanelWorktreePath(targetWtPath);
