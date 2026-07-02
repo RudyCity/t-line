@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.239] - 2026-07-02
+
+### Fixed
+- **Workspace Non-Git Error & Loading Bug**: Memperbaiki bug di mana Explorer, Changes, dan Snapshot/Checkpoints mengalami crash atau error ketika menggunakan workspace yang tidak memiliki repositori Git.
+  - **Checkpoints/Snapshots**: Menambahkan proteksi pada `CheckpointsPanel.tsx` agar tidak melakukan fetch data checkpoints jika workspace bukan Git, sehingga langsung menampilkan peringatan "Checkpoints are only supported in Git workspaces." secara bersih tanpa error 500.
+  - **Git Changes**: Memperbarui tampilan kosong (empty state) di tab Git Changes untuk menampilkan pesan "Git changes are only supported in Git workspaces." jika workspace yang aktif bukan Git.
+  - **App.tsx Active Panel Switcher**: Menambahkan sinkronisasi workspace otomatis ketika berpindah ke panel checkpoints; jika workspace aktif bukan Git, otomatis berpindah ke workspace Git pertama yang tersedia.
+  - **Backend gitRoutes Middleware**: Menambahkan middleware `gitWorkspaceMiddleware` pada route endpoints di `backend/src/gitRoutes.ts` yang berawalan `/workspaces/:id` untuk memvalidasi dan menolak request dengan status 400 Bad Request jika workspace target bukan repositori Git.
+
 ## [1.3.238] - 2026-07-02
 
 ### Fixed

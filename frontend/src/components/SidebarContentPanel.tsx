@@ -396,7 +396,11 @@ export function SidebarContentPanel({
           ) : (
             <div className="panel-empty" style={{ flex: 1 }}>
               <GitCompare size={24} style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
-              <span>No Git workspace selected</span>
+              <span>
+                {panelWorkspace
+                  ? 'Git changes are only supported in Git workspaces.'
+                  : 'No workspace selected'}
+              </span>
             </div>
           )}
         </div>

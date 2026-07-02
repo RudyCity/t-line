@@ -602,6 +602,16 @@ export default function App() {
           setPanelWorkspace(workspaces[0]);
         }
       }
+    } else if (activePanel === 'checkpoints') {
+      const isCurrentGit = panelWorkspace && workspaces.find(w => w.id === panelWorkspace.id)?.isGit;
+      if (!panelWorkspace || !isCurrentGit || !workspaces.some(w => w.id === panelWorkspace.id)) {
+        const firstGit = workspaces.find(w => w.isGit);
+        if (firstGit) {
+          setPanelWorkspace(firstGit);
+        } else {
+          setPanelWorkspace(workspaces[0]);
+        }
+      }
     }
   }, [workspaces, activePanel, panelWorkspace, isAuthenticated]);
 

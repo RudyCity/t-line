@@ -90,6 +90,12 @@ export function CheckpointsPanel({
   // Fetch Checkpoints list
   const fetchCheckpoints = useCallback(async () => {
     if (!panelWorkspace) return;
+    if (!panelWorkspace.isGit) {
+      setCheckpoints([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {

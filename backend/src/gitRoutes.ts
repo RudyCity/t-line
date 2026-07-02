@@ -19,7 +19,8 @@ import {
   getCommitDetails,
   getGitCommitDiff,
   deleteBranch,
-  fetchRemote
+  fetchRemote,
+  getWorkspaceInfo
 } from './gitManager';
 import {
   getCheckpoints,
@@ -29,6 +30,32 @@ import {
 } from './checkpointManager';
 
 const router = express.Router();
+
+const gitWorkspaceMiddleware = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  try {
+    const workspaceId = req.params.id;
+    const configs = getWorkspaces();
+    const matched = configs.find(w => Buffer.from(w.path).toString('base64') === workspaceId);
+    
+    if (!matched) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+    
+    const wsInfo = await getWorkspaceInfo(matched);
+    if (!wsInfo.isGit) {
+      return res.status(400).json({ error: 'Workspace is not a Git repository.' });
+    }
+    
+    (req as any).workspace = matched;
+    next();
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+router.use('/workspaces/:id/branches', authMiddleware, gitWorkspaceMiddleware);
+router.use('/workspaces/:id/git', authMiddleware, gitWorkspaceMiddleware);
+router.use('/workspaces/:id/checkpoints', authMiddleware, gitWorkspaceMiddleware);
 
 router.get('/workspaces/:id/branches', authMiddleware, async (req, res) => {
   try {
