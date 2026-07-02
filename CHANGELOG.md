@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.261] - 2026-07-02
+
+### Fixed
+- **Fixed Mobile & Tablet Terminal Keyboard Popup**:
+  - Menghapus pengecekan kondisional `!insideXterm` pada [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx#L510) agar sentuhan/tap langsung di area canvas terminal pada perangkat mobile & tablet selalu memicu `textarea.focus()`.
+  - Mengatur atribut `inputmode="text"`, `autocorrect="off"`, dan `autocapitalize="none"` pada textarea xterm.
+  - Menambahkan aturan CSS `.xterm-helper-textarea` di [layout.css](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/layout.css#L564) agar textarea terposisi secara valid di dalam viewport dengan ukuran non-zero, memaksa browser mobile (iOS Safari & Android Chrome) menampilkan soft keyboard bawaan saat area terminal di-tap.
+
 ## [1.3.260] - 2026-07-02
 
 ### Added / Fixed

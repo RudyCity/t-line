@@ -510,11 +510,9 @@ export function TerminalInstance({
         return;
       }
       if (terminalRef.current) {
-        const insideXterm = target.closest('.xterm');
-        const isAlreadyFocused = document.activeElement === terminalRef.current.textarea;
         const hasSelection = terminalRef.current.hasSelection();
 
-        if (!insideXterm && !isAlreadyFocused && !hasSelection) {
+        if (!hasSelection) {
           terminalRef.current.focus();
           if (terminalRef.current.textarea) {
             terminalRef.current.textarea.focus();
@@ -743,11 +741,9 @@ export function TerminalInstance({
     const target = e.target as HTMLElement;
     if (target.closest('input') || target.closest('button') || target.closest('select') || target.closest('a')) return;
     if (terminalRef.current) {
-      const insideXterm = target.closest('.xterm');
-      const isAlreadyFocused = document.activeElement === terminalRef.current.textarea;
       const hasSelection = terminalRef.current.hasSelection();
 
-      if (!insideXterm && !isAlreadyFocused && !hasSelection) {
+      if (!hasSelection) {
         terminalRef.current.focus();
         if (terminalRef.current.textarea) terminalRef.current.textarea.focus();
       }
