@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.216] - 2026-07-02
+
+### Added
+- **Typing Latency Optimization**: Bypassed batching/debouncing queues for small data chunks (<= 5 bytes, such as manual keystrokes and their echoing) in both backend PTY sending and frontend xterm writing. Keystrokes are now sent and rendered in real-time, eliminating the typing lag while retaining the performance advantages of batching for high-throughput commands.
+
 ## [1.3.215] - 2026-07-02
 
 ### Added

@@ -302,9 +302,15 @@ export class TerminalManager {
       }
 
       if (activeSess.sender) {
-        // Accumulate chunk into pending flush queue
-        activeSess.pendingFlushChunks.push(data);
-        scheduleFlush();
+        // If there are no pending flush chunks, no flush timer, and data is small,
+        // send it immediately for instant key-press feedback.
+        if (activeSess.pendingFlushChunks.length === 0 && activeSess.flushTimer === null && data.length <= 5) {
+          activeSess.sender(data);
+        } else {
+          // Accumulate chunk into pending flush queue
+          activeSess.pendingFlushChunks.push(data);
+          scheduleFlush();
+        }
       }
     });
 

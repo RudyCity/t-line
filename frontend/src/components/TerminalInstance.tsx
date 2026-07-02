@@ -383,6 +383,14 @@ export function TerminalInstance({
   const rafHandleRef = useRef<number | null>(null);
 
   const scheduleWrite = useCallback((data: string) => {
+    // If the queue is empty, no RAF is scheduled, and data is small (keystroke echo),
+    // write immediately to xterm to eliminate typing delay/latency.
+    const term = terminalRef.current;
+    if (term && writeQueueRef.current.length === 0 && rafHandleRef.current === null && data.length <= 5) {
+      term.write(data);
+      return;
+    }
+
     writeQueueRef.current.push(data);
     if (rafHandleRef.current === null) {
       rafHandleRef.current = requestAnimationFrame(() => {
