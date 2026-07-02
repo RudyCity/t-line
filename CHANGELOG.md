@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.253] - 2026-07-02
+
+### Changed
+- **Full Width Sidebars for Mobile & Tablet**: Memperbarui lebar sidebar kiri ([.sidebar](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/layout.css#L354)) dan sidebar kanan ([.right-sidebar](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/layout.css#L371)) menjadi **100% full width (`100vw`)** saat dibuka pada perangkat mobile maupun tablet (breakpoint `@media (max-width: 1024px)`).
+
 ## [1.3.252] - 2026-07-02
 
 ### Fixed
