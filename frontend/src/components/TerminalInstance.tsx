@@ -79,6 +79,7 @@ export function TerminalInstance({
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
+  const webglAddonRef = useRef<WebglAddon | null>(null);
   const onTitleChangeRef = useRef(onTitleChange);
   const onActiveProcessesChangeRef = useRef(onActiveProcessesChange);
   const onFocusRef = useRef(onFocus);
@@ -350,13 +351,33 @@ export function TerminalInstance({
     let isWebglLoaded = false;
     try {
       const webglAddon = new WebglAddon();
+      webglAddonRef.current = webglAddon;
       webglAddon.onContextLoss(() => {
-        webglAddon.dispose();
+        // Guard against double-dispose. The 'dispose' call in the addon may throw
+        // due to a version mismatch in xterm internals (_core._store undefined).
+        // After dispose, fall back to the Canvas renderer.
+        try {
+          if (webglAddonRef.current) {
+            webglAddonRef.current = null;
+            webglAddon.dispose();
+          }
+        } catch (err) {
+          console.warn('WebGL context loss dispose failed (safe to ignore):', err);
+          webglAddonRef.current = null;
+        }
+        // Fallback to CanvasAddon after WebGL context loss
+        try {
+          const fallbackCanvas = new CanvasAddon();
+          term.loadAddon(fallbackCanvas);
+        } catch (canvasErr) {
+          console.warn('Canvas fallback after WebGL context loss also failed:', canvasErr);
+        }
       });
       term.loadAddon(webglAddon);
       isWebglLoaded = true;
     } catch (e) {
       console.warn('WebGL renderer not available, trying Canvas renderer:', e);
+      webglAddonRef.current = null;
     }
 
     if (!isWebglLoaded) {
@@ -505,9 +526,18 @@ export function TerminalInstance({
       }
       wsManager.send(JSON.stringify({ type: 'suspend', id: tab.id }));
       wsManager.removeListener(tab.id);
+      // Null out the webgl ref before terminal disposal to prevent the addon's
+      // internal dispose from crashing due to _core._store version mismatch.
+      webglAddonRef.current = null;
       terminalRef.current = null;
+      fitAddonRef.current = null;
+      searchAddonRef.current = null;
       setIsInitialized(false);
-      term.dispose();
+      try {
+        term.dispose();
+      } catch (err) {
+        console.warn('Terminal dispose error (safe to ignore):', err);
+      }
     };
   }, [tab.id, debouncedFit, scheduleWrite]);
 

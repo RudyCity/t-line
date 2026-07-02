@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.245] - 2026-07-02
+
+### Fixed
+- **WebGL Addon Dispose Crash**: Memperbaiki `TypeError: Cannot read properties of undefined (reading '_isDisposed')` yang terjadi saat terminal dihancurkan atau WebGL context hilang. Bug ini disebabkan oleh version mismatch antara `@xterm/xterm` dan `@xterm/addon-webgl` dimana addon WebGL mencoba mengakses properti internal `_core._store` yang tidak ada di versi xterm yang terinstall.
+  - Menambahkan `webglAddonRef` untuk tracking instance WebGL addon dan mencegah double-dispose.
+  - Membungkus `webglAddon.dispose()` di `onContextLoss` dengan try-catch agar tidak crash, dengan fallback otomatis ke `CanvasAddon` setelah context loss.
+  - Membungkus `term.dispose()` di cleanup useEffect dengan try-catch dan menset semua addon refs ke `null` sebelum disposal untuk mencegah error.
+  - GPU stall warning (`GL Driver Message: GPU stall due to ReadPixels`) adalah peringatan performa WebGL normal dan tidak memengaruhi fungsionalitas.
+
 ## [1.3.244] - 2026-07-02
 
 ### Fixed
