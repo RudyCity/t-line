@@ -64,6 +64,8 @@ export interface TabData {
   focusedTerminalId?: string;
   workspaceId?: string;
   gridTerminalIds?: string[];
+  gridCardHeight?: number;
+  gridCardWidth?: number;
 }
 
 /** Maps workspaceId → last active tabId for that workspace */

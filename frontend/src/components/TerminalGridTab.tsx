@@ -52,6 +52,31 @@ export function TerminalGridTab({
   const [focusedTermId, setFocusedTermId] = useState<string | null>(null);
   const configRef = useRef<HTMLDivElement>(null);
 
+  const cardHeight = tab.gridCardHeight || 290;
+  const cardWidth = tab.gridCardWidth || 420;
+
+  const handleHeightChange = (height: number) => {
+    setTabs(prevTabs =>
+      prevTabs.map(t => {
+        if (t.id === tab.id) {
+          return { ...t, gridCardHeight: height };
+        }
+        return t;
+      })
+    );
+  };
+
+  const handleWidthChange = (width: number) => {
+    setTabs(prevTabs =>
+      prevTabs.map(t => {
+        if (t.id === tab.id) {
+          return { ...t, gridCardWidth: width };
+        }
+        return t;
+      })
+    );
+  };
+
   // Terminate/delete terminal session
   const handleCloseTerminal = (termId: string) => {
     closePane(termId);
@@ -405,6 +430,45 @@ export function TerminalGridTab({
         .custom-checkbox-tick {
           color: #fff;
         }
+        .dropdown-size-section {
+          padding: 12px;
+          background: rgba(0, 0, 0, 0.08);
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .size-slider-row {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .size-label {
+          font-size: 0.65rem;
+          font-weight: 600;
+          color: var(--text-muted);
+        }
+        .size-slider {
+          -webkit-appearance: none;
+          width: 100%;
+          height: 4px;
+          border-radius: 2px;
+          background: var(--border-color);
+          outline: none;
+          transition: background 0.15s;
+        }
+        .size-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: var(--color-primary);
+          cursor: pointer;
+          transition: transform 0.1s;
+        }
+        .size-slider::-webkit-slider-thumb:hover {
+          transform: scale(1.2);
+        }
         .dropdown-term-name {
           font-size: 0.72rem;
           font-weight: 500;
@@ -697,6 +761,33 @@ export function TerminalGridTab({
 
           {showConfig && (
             <div className="grid-config-dropdown">
+              <div className="dropdown-size-section">
+                <div className="size-slider-row">
+                  <span className="size-label">Card Width: {cardWidth}px</span>
+                  <input 
+                    type="range" 
+                    min="280" 
+                    max="800" 
+                    step="10"
+                    value={cardWidth} 
+                    onChange={(e) => handleWidthChange(parseInt(e.target.value, 10))}
+                    className="size-slider"
+                  />
+                </div>
+                <div className="size-slider-row" style={{ marginTop: '8px' }}>
+                  <span className="size-label">Card Height: {cardHeight}px</span>
+                  <input 
+                    type="range" 
+                    min="180" 
+                    max="600" 
+                    step="10"
+                    value={cardHeight} 
+                    onChange={(e) => handleHeightChange(parseInt(e.target.value, 10))}
+                    className="size-slider"
+                  />
+                </div>
+              </div>
+              <div style={{ height: '1px', background: 'var(--border-color)' }} />
               <div className="dropdown-search-wrapper">
                 <Search size={12} style={{ color: 'var(--text-muted)' }} />
                 <input 
@@ -809,7 +900,7 @@ export function TerminalGridTab({
             )}
           </div>
         ) : (
-          <div className="terminal-grid-layout">
+          <div className="terminal-grid-layout" style={{ gridTemplateColumns: `repeat(auto-fit, minmax(${cardWidth}px, 1fr))` }}>
             {selectedTerminalIds.map(termId => {
               const term = terminalInstances[termId];
               if (!term) return null;
@@ -836,6 +927,7 @@ export function TerminalGridTab({
                   key={termId}
                   className={`grid-terminal-card ${isFocused ? 'focused' : ''}`}
                   onClick={() => setFocusedTermId(termId)}
+                  style={{ height: `${cardHeight}px` }}
                 >
                   {/* Card Header */}
                   <div className="grid-card-header" onClick={() => setFocusedTermId(termId)}>

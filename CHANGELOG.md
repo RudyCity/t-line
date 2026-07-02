@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.220] - 2026-07-02
+
+### Added
+- **Persisted Card Resizing**: Added global sliders (Card Width and Card Height) inside the select popover to dynamically resize all terminal grid cards.
+- **Tab Layout Size Persistence**: Persisted custom card width and height values inside the `gridCardWidth` and `gridCardHeight` properties of the grid tab's state, preserving layouts across sessions in `localStorage`.
+
 ## [1.3.219] - 2026-07-02
 
 ### Added
