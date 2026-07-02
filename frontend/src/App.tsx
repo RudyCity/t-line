@@ -271,6 +271,62 @@ export default function App() {
     refreshTriggers
   } = useTerminals(workspaces, () => setSidebarOpen(false));
 
+  const filteredTabs = useMemo(() => {
+    if (!panelWorkspace) {
+      return tabs.filter(t => !t.workspaceId || t.type === 'grid');
+    }
+    const wsTabs = tabs.filter(t => t.workspaceId === panelWorkspace.id || t.type === 'grid');
+
+    if (panelWorktreePath) {
+      // In worktree mode, filter tabs to show only those belonging to that specific worktree.
+      // File tabs (type === 'file') are always shown in the active worktree view because
+      // they may have been opened from the Git Changes panel and their path may span the workspace.
+      return wsTabs.filter(t => {
+        if (t.type === 'file') return true;
+
+        const matchedWtPath = getTabWorktreePath(t, panelWorkspace, terminalInstances);
+        const wtObj = panelWorkspace.worktrees?.find(wt => wt.path === matchedWtPath);
+        const isMainTab = !matchedWtPath || (wtObj && wtObj.isMain);
+
+        const targetWtObj = panelWorkspace.worktrees?.find(wt => wt.path === panelWorktreePath);
+        const isTargetMain = !panelWorktreePath || (targetWtObj && targetWtObj.isMain);
+
+        if (isTargetMain) {
+          return isMainTab;
+        }
+        return matchedWtPath === panelWorktreePath;
+      });
+    }
+
+    // In workspace mode (panelWorktreePath === null), display all tabs but group them by worktree.
+    // The sorting order matches the order of worktrees in panelWorkspace.worktrees.
+    const getTabWtIndex = (t: TabData) => {
+      const wtPath = getTabWorktreePath(t, panelWorkspace, terminalInstances);
+      const wts = panelWorkspace.worktrees || [];
+      if (!wtPath) return wts.length; // place tabs without a worktree at the end
+      return wts.findIndex(wt => wt.path === wtPath);
+    };
+
+    return [...wsTabs].sort((a, b) => getTabWtIndex(a) - getTabWtIndex(b));
+  }, [tabs, panelWorkspace, panelWorktreePath, terminalInstances]);
+
+  const visibleTabs = useMemo(() => {
+    const MAX_VISIBLE_TABS = 7;
+    if (filteredTabs.length <= MAX_VISIBLE_TABS) {
+      return filteredTabs;
+    }
+    
+    const activeIndex = filteredTabs.findIndex(t => t.id === activeTabId);
+    if (activeIndex === -1 || activeIndex < MAX_VISIBLE_TABS) {
+      return filteredTabs.slice(0, MAX_VISIBLE_TABS);
+    }
+    
+    return [
+      ...filteredTabs.slice(0, MAX_VISIBLE_TABS - 1),
+      filteredTabs[activeIndex]
+    ];
+  }, [filteredTabs, activeTabId]);
+
   const {
     activeTooltip,
     tabContextMenu,
@@ -280,10 +336,17 @@ export default function App() {
     handleTabClick,
     handleTabContextMenu,
     handleCloseOtherTabs,
-    handleCloseAllTabs
+    handleCloseAllTabs,
+    moveTab,
+    handleTabDragStart,
+    handleTabDragOver,
+    handleTabDragEnd,
+    handleTabDrop,
+    draggingTabId
   } = useTabUiHandlers({
     tabs,
     setTabs,
+    filteredTabs,
     activeTabId,
     setActiveTabId,
     terminalInstances,
@@ -528,61 +591,7 @@ export default function App() {
     }
   }, [workspaces, activePanel, panelWorkspace, isAuthenticated]);
 
-  const filteredTabs = useMemo(() => {
-    if (!panelWorkspace) {
-      return tabs.filter(t => !t.workspaceId || t.type === 'grid');
-    }
-    const wsTabs = tabs.filter(t => t.workspaceId === panelWorkspace.id || t.type === 'grid');
 
-    if (panelWorktreePath) {
-      // In worktree mode, filter tabs to show only those belonging to that specific worktree.
-      // File tabs (type === 'file') are always shown in the active worktree view because
-      // they may have been opened from the Git Changes panel and their path may span the workspace.
-      return wsTabs.filter(t => {
-        if (t.type === 'file') return true;
-
-        const matchedWtPath = getTabWorktreePath(t, panelWorkspace, terminalInstances);
-        const wtObj = panelWorkspace.worktrees?.find(wt => wt.path === matchedWtPath);
-        const isMainTab = !matchedWtPath || (wtObj && wtObj.isMain);
-
-        const targetWtObj = panelWorkspace.worktrees?.find(wt => wt.path === panelWorktreePath);
-        const isTargetMain = !panelWorktreePath || (targetWtObj && targetWtObj.isMain);
-
-        if (isTargetMain) {
-          return isMainTab;
-        }
-        return matchedWtPath === panelWorktreePath;
-      });
-    }
-
-    // In workspace mode (panelWorktreePath === null), display all tabs but group them by worktree.
-    // The sorting order matches the order of worktrees in panelWorkspace.worktrees.
-    const getTabWtIndex = (t: TabData) => {
-      const wtPath = getTabWorktreePath(t, panelWorkspace, terminalInstances);
-      const wts = panelWorkspace.worktrees || [];
-      if (!wtPath) return wts.length; // place tabs without a worktree at the end
-      return wts.findIndex(wt => wt.path === wtPath);
-    };
-
-    return [...wsTabs].sort((a, b) => getTabWtIndex(a) - getTabWtIndex(b));
-  }, [tabs, panelWorkspace, panelWorktreePath, terminalInstances]);
-
-  const visibleTabs = useMemo(() => {
-    const MAX_VISIBLE_TABS = 7;
-    if (filteredTabs.length <= MAX_VISIBLE_TABS) {
-      return filteredTabs;
-    }
-    
-    const activeIndex = filteredTabs.findIndex(t => t.id === activeTabId);
-    if (activeIndex === -1 || activeIndex < MAX_VISIBLE_TABS) {
-      return filteredTabs.slice(0, MAX_VISIBLE_TABS);
-    }
-    
-    return [
-      ...filteredTabs.slice(0, MAX_VISIBLE_TABS - 1),
-      filteredTabs[activeIndex]
-    ];
-  }, [filteredTabs, activeTabId]);
 
   const triggerLogout = () => {
     handleLogout(setTabs, setTerminalInstances, setActiveTabId);
@@ -1003,7 +1012,12 @@ export default function App() {
                           </div>
                         )}
                         <div 
-                          className={`tab ${activeTabId === t.id ? 'tab-active' : ''}`}
+                          className={`tab ${activeTabId === t.id ? 'tab-active' : ''} ${draggingTabId === t.id ? 'dragging' : ''}`}
+                          draggable={true}
+                          onDragStart={(e) => handleTabDragStart(e, t.id)}
+                          onDragOver={handleTabDragOver}
+                          onDragEnd={handleTabDragEnd}
+                          onDrop={(e) => handleTabDrop(e, t.id)}
                           onClick={() => handleTabClick(t)}
                           onMouseEnter={(e) => handleTabMouseEnter(e, t)}
                           onMouseLeave={handleTabMouseLeave}
@@ -1072,6 +1086,7 @@ export default function App() {
                       getTabGitBranch={getTabGitBranch}
                       handleCloseOtherTabs={handleCloseOtherTabs}
                       handleCloseAllTabs={handleCloseAllTabs}
+                      moveTab={moveTab}
                     />
                   )}
                 </div>
@@ -1326,6 +1341,8 @@ export default function App() {
       <TabContextMenu
         tabContextMenu={tabContextMenu}
         tabs={tabs}
+        filteredTabs={filteredTabs}
+        moveTab={moveTab}
         closeTerminal={closeTerminal}
         handleCloseOtherTabs={handleCloseOtherTabs}
         handleCloseAllTabs={handleCloseAllTabs}

@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.233] - 2026-07-02
+
+### Added
+- **Reorderable Tabs**: Drag-and-drop support to swap tab positions directly in the main Chrome-like tabs container.
+- **Context Menu Tab Actions**: Left and right tab moving options in the Tab Context Menu ("Move Tab Left" / "Move Tab Right").
+- **Dropdown List Reordering**: Reorder action buttons (ArrowUp / ArrowDown) on hover in the open tabs dropdown menu to move tabs up/down.
+
 ## [1.3.232] - 2026-07-02
 
 ### Fixed

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, X, FileCode, Terminal as TerminalIcon, GitCompare, GitBranch } from 'lucide-react';
+import { Search, X, FileCode, Terminal as TerminalIcon, GitCompare, GitBranch, ArrowUp, ArrowDown } from 'lucide-react';
 import { TabData, TerminalInstanceData } from '../hooks/useTerminals';
 
 interface TabsDropdownProps {
@@ -12,6 +12,7 @@ interface TabsDropdownProps {
   getTabGitBranch: (tab: TabData) => string | null | undefined;
   handleCloseOtherTabs: (tabId: string) => void;
   handleCloseAllTabs: () => void;
+  moveTab: (tabId: string, direction: 'left' | 'right') => void;
 }
 
 export const TabsDropdown: React.FC<TabsDropdownProps> = ({
@@ -24,6 +25,7 @@ export const TabsDropdown: React.FC<TabsDropdownProps> = ({
   getTabGitBranch,
   handleCloseOtherTabs,
   handleCloseAllTabs,
+  moveTab,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -184,6 +186,7 @@ export const TabsDropdown: React.FC<TabsDropdownProps> = ({
             const isActive = activeTabId === t.id;
             const isHighlighted = highlightedIndex === index;
             const branch = getTabGitBranch(t);
+            const originalIndex = filteredTabs.findIndex(ft => ft.id === t.id);
 
             // Path/Details subtitle
             let details = '';
@@ -251,21 +254,39 @@ export const TabsDropdown: React.FC<TabsDropdownProps> = ({
                   )}
                 </div>
 
-                {/* Close button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closeTerminal(t.id, e);
-                    // Adjust focus index if the current tab is deleted
-                    if (filteredTabs.length <= 1) {
-                      onClose();
-                    }
-                  }}
-                  className="tabs-dropdown-item-close"
-                  title="Close Tab"
-                >
-                  ×
-                </button>
+                {/* Reorder and Close controls */}
+                <div className="tabs-dropdown-item-actions" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => moveTab(t.id, 'left')}
+                    disabled={originalIndex === 0}
+                    className="tabs-dropdown-action-btn"
+                    title="Move Tab Left / Up"
+                  >
+                    <ArrowUp size={10} />
+                  </button>
+                  <button
+                    onClick={() => moveTab(t.id, 'right')}
+                    disabled={originalIndex === filteredTabs.length - 1}
+                    className="tabs-dropdown-action-btn"
+                    title="Move Tab Right / Down"
+                  >
+                    <ArrowDown size={10} />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeTerminal(t.id, e);
+                      // Adjust focus index if the current tab is deleted
+                      if (filteredTabs.length <= 1) {
+                        onClose();
+                      }
+                    }}
+                    className="tabs-dropdown-item-close"
+                    title="Close Tab"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             );
           })

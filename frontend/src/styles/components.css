@@ -2191,6 +2191,55 @@
   color: #ef4444 !important;
 }
 
+/* Drag and Drop support for Chrome-like Tabs */
+.tab.dragging {
+  opacity: 0.4;
+  border: 1px dashed var(--accent-color) !important;
+  background: var(--surface-overlay) !important;
+}
+
+/* Dropdown actions style */
+.tabs-dropdown-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.4;
+  transition: opacity 0.12s ease;
+  margin-left: auto;
+}
+
+.tabs-dropdown-item:hover .tabs-dropdown-item-actions {
+  opacity: 1;
+}
+
+.tabs-dropdown-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.tabs-dropdown-action-btn:hover:not(:disabled) {
+  background: var(--surface-overlay-hover, rgba(255, 255, 255, 0.08));
+  color: var(--text-main);
+}
+
+.tabs-dropdown-action-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.tabs-dropdown-item-actions .tabs-dropdown-item-close {
+  margin-left: 2px;
+}
+
 .tabs-dropdown-no-results {
   padding: 20px;
   text-align: center;

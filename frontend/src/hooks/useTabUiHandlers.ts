@@ -20,6 +20,7 @@ export interface TabContextMenuData {
 interface UseTabUiHandlersProps {
   tabs: TabData[];
   setTabs: React.Dispatch<React.SetStateAction<TabData[]>>;
+  filteredTabs: TabData[];
   activeTabId: string;
   setActiveTabId: (id: string) => void;
   terminalInstances: Record<string, any>;
@@ -31,6 +32,7 @@ interface UseTabUiHandlersProps {
 export function useTabUiHandlers({
   tabs,
   setTabs,
+  filteredTabs,
   activeTabId,
   setActiveTabId,
   terminalInstances,
@@ -40,6 +42,7 @@ export function useTabUiHandlers({
 }: UseTabUiHandlersProps) {
   const [activeTooltip, setActiveTooltip] = useState<TooltipData | null>(null);
   const [tabContextMenu, setTabContextMenu] = useState<TabContextMenuData | null>(null);
+  const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
 
   const getTabGitBranch = useCallback((t: any): string | null => {
     const isFile = t.type === 'file';
@@ -183,6 +186,72 @@ export function useTabUiHandlers({
     });
   }, [panelWorkspace, setTabs, setActiveTabId, setTerminalInstances]);
 
+  const moveTab = useCallback((tabId: string, direction: 'left' | 'right') => {
+    const currentIndex = filteredTabs.findIndex(t => t.id === tabId);
+    if (currentIndex === -1) return;
+
+    const targetIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= filteredTabs.length) return;
+
+    const currentTab = filteredTabs[currentIndex];
+    const targetTab = filteredTabs[targetIndex];
+
+    setTabs(prevTabs => {
+      const nextTabs = [...prevTabs];
+      const gIndex1 = nextTabs.findIndex(t => t.id === currentTab.id);
+      const gIndex2 = nextTabs.findIndex(t => t.id === targetTab.id);
+      if (gIndex1 !== -1 && gIndex2 !== -1) {
+        nextTabs[gIndex1] = targetTab;
+        nextTabs[gIndex2] = currentTab;
+      }
+      return nextTabs;
+    });
+  }, [filteredTabs, setTabs]);
+
+  const handleTabDragStart = useCallback((e: React.DragEvent, tabId: string) => {
+    e.dataTransfer.setData('text/plain', tabId);
+    setDraggingTabId(tabId);
+    if (e.currentTarget) {
+      (e.currentTarget as HTMLElement).classList.add('dragging');
+    }
+  }, []);
+
+  const handleTabDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const handleTabDragEnd = useCallback((e: React.DragEvent) => {
+    setDraggingTabId(null);
+    if (e.currentTarget) {
+      (e.currentTarget as HTMLElement).classList.remove('dragging');
+    }
+  }, []);
+
+  const handleTabDrop = useCallback((e: React.DragEvent, targetTabId: string) => {
+    e.preventDefault();
+    const draggedId = e.dataTransfer.getData('text/plain') || draggingTabId;
+    if (!draggedId || draggedId === targetTabId) return;
+
+    const draggedIndex = filteredTabs.findIndex(t => t.id === draggedId);
+    const targetIndex = filteredTabs.findIndex(t => t.id === targetTabId);
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const draggedTab = filteredTabs[draggedIndex];
+    const targetTab = filteredTabs[targetIndex];
+
+    setTabs(prevTabs => {
+      const nextTabs = [...prevTabs];
+      const gIndexDrag = nextTabs.findIndex(t => t.id === draggedTab.id);
+      const gIndexTarget = nextTabs.findIndex(t => t.id === targetTab.id);
+      if (gIndexDrag !== -1 && gIndexTarget !== -1) {
+        nextTabs[gIndexDrag] = targetTab;
+        nextTabs[gIndexTarget] = draggedTab;
+      }
+      return nextTabs;
+    });
+    setDraggingTabId(null);
+  }, [filteredTabs, draggingTabId, setTabs]);
+
   return {
     activeTooltip,
     setActiveTooltip,
@@ -194,6 +263,12 @@ export function useTabUiHandlers({
     handleTabClick,
     handleTabContextMenu,
     handleCloseOtherTabs,
-    handleCloseAllTabs
+    handleCloseAllTabs,
+    moveTab,
+    handleTabDragStart,
+    handleTabDragOver,
+    handleTabDragEnd,
+    handleTabDrop,
+    draggingTabId
   };
 }

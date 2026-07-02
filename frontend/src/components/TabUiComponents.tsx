@@ -46,6 +46,8 @@ interface TabContextMenuProps {
     tabId: string;
   } | null;
   tabs: any[];
+  filteredTabs: any[];
+  moveTab: (tabId: string, direction: 'left' | 'right') => void;
   closeTerminal: (tabId: string) => void;
   handleCloseOtherTabs: (tabId: string) => void;
   handleCloseAllTabs: () => void;
@@ -56,6 +58,8 @@ interface TabContextMenuProps {
 export const TabContextMenu: React.FC<TabContextMenuProps> = ({
   tabContextMenu,
   tabs,
+  filteredTabs,
+  moveTab,
   closeTerminal,
   handleCloseOtherTabs,
   handleCloseAllTabs,
@@ -65,6 +69,9 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
   if (!tabContextMenu) return null;
 
   const targetTab = tabs.find(t => t.id === tabContextMenu.tabId);
+  const targetIndex = filteredTabs.findIndex(t => t.id === tabContextMenu.tabId);
+  const canMoveLeft = targetIndex > 0;
+  const canMoveRight = targetIndex !== -1 && targetIndex < filteredTabs.length - 1;
 
   return (
     <div 
@@ -94,6 +101,29 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
       >
         <span className="terminal-ctx-label">Close All Tabs</span>
       </button>
+
+      {(canMoveLeft || canMoveRight) && (
+        <>
+          <div className="terminal-ctx-separator" />
+          {canMoveLeft && (
+            <button
+              onClick={() => moveTab(tabContextMenu.tabId, 'left')}
+              className="terminal-ctx-item"
+            >
+              <span className="terminal-ctx-label">Move Tab Left</span>
+            </button>
+          )}
+          {canMoveRight && (
+            <button
+              onClick={() => moveTab(tabContextMenu.tabId, 'right')}
+              className="terminal-ctx-item"
+            >
+              <span className="terminal-ctx-label">Move Tab Right</span>
+            </button>
+          )}
+        </>
+      )}
+
       {targetTab?.type === 'terminal' && (
         <>
           <div className="terminal-ctx-separator" />
