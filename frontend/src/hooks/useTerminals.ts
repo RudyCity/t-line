@@ -137,7 +137,15 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
   const [tabs, setTabs] = useState<TabData[]>(() => {
     try {
       const savedTabs = localStorage.getItem('tline-tabs-v2');
-      if (savedTabs) return JSON.parse(savedTabs);
+      if (savedTabs) {
+        const parsed: TabData[] = JSON.parse(savedTabs);
+        return parsed.map(t => {
+          if (t.type === 'grid' && !t.gridTerminalIds) {
+            return { ...t, gridTerminalIds: [] };
+          }
+          return t;
+        });
+      }
 
       // Migration: load old tline-terminals
       const oldSaved = localStorage.getItem('tline-terminals');

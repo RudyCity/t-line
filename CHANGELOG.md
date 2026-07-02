@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.228] - 2026-07-02
+
+### Fixed
+- **Terminal Grid Default Empty Selection on Load**: Normalized the restored tabs layout from `localStorage` to ensure grid tabs initialize `gridTerminalIds` to an empty array (`[]`) instead of resolving to all active terminal IDs by default, preventing unexpected auto-population of terminal grid cards on application startup.
+
 ## [1.3.227] - 2026-07-02
 
 ### Fixed
