@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.248] - 2026-07-02
+
+### Changed
+- **Quick Launch UI Refactor**: Quick Launch bar terpisah dihapus dan digantikan dengan icon ⚡ (Zap) yang menjadi dropdown popover di tab bar.
+  - Icon ⚡ Quick Launch dan tombol 🔲 Grid dipindahkan ke **sisi kanan** tab bar, sejajar dengan tombol tabs dropdown.
+  - Klik icon ⚡ untuk membuka dropdown yang menampilkan daftar shortcuts, serta tombol "Add" untuk menambah shortcut baru.
+  - Klik salah satu shortcut langsung menjalankan command dan menutup dropdown.
+  - Menghemat ruang vertikal dengan menghilangkan bar tambahan di bawah tab.
+
 ## [1.3.247] - 2026-07-02
 
 ### Fixed
