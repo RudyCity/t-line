@@ -39,7 +39,7 @@ export function Toast() {
     <div className="toast-container">
       {toasts.map(toast => (
         <div key={toast.id} className="toast-item">
-          <Info size={13} className="text-purple-400 shrink-0 animate-pulse" />
+          <Info size={13} className="shrink-0 animate-pulse" style={{ color: 'var(--accent-color)' }} />
           <span>{toast.message}</span>
         </div>
       ))}

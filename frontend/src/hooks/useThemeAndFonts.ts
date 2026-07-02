@@ -269,7 +269,7 @@ export function useThemeAndFonts() {
       root.style.setProperty('--tooltip-branch', '#b45309');
       root.style.setProperty('--toast-bg', 'rgba(255, 255, 255, 0.97)');
       root.style.setProperty('--toast-border', `color-mix(in srgb, ${accentColor} 30%, transparent)`);
-      root.style.setProperty('--toast-text', '#0f172a');
+      root.style.setProperty('--toast-text', `color-mix(in srgb, ${accentColor} 15%, #0f172a)`);
       root.style.setProperty('--ws-dropdown-bg', 'rgba(255, 255, 255, 0.98)');
       root.style.setProperty('--ws-dropdown-border', 'rgba(0, 0, 0, 0.1)');
       root.style.setProperty('--ws-dropdown-shadow', '0 10px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.08)');
@@ -299,7 +299,7 @@ export function useThemeAndFonts() {
       root.style.setProperty('--tooltip-branch', '#fbbf24');
       root.style.setProperty('--toast-bg', 'rgba(14, 17, 26, 0.9)');
       root.style.setProperty('--toast-border', `color-mix(in srgb, ${accentColor} 30%, transparent)`);
-      root.style.setProperty('--toast-text', '#e9d5ff');
+      root.style.setProperty('--toast-text', `color-mix(in srgb, ${accentColor} 30%, #ffffff)`);
       root.style.setProperty('--ws-dropdown-bg', 'rgba(15, 23, 42, 0.98)');
       root.style.setProperty('--ws-dropdown-border', `color-mix(in srgb, ${accentColor} 25%, transparent)`);
       root.style.setProperty('--ws-dropdown-shadow', '0 10px 25px -5px rgba(0,0,0,0.6), 0 8px 10px -6px rgba(0,0,0,0.5)');

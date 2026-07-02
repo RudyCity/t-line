@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.226] - 2026-07-02
+
+### Fixed
+- **Toast Theme Color Integration**: Synchronized toast notification icon and text colors with the active workspace theme accent color by using CSS variables and dynamic `color-mix` functions.
+
 ## [1.3.225] - 2026-07-02
 
 ### Changed
