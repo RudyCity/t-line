@@ -115,7 +115,6 @@ export default function App() {
     }
   });
   const [showSavePromptModal, setShowSavePromptModal] = useState<boolean>(false);
-  const [showQuickLaunchDropdown, setShowQuickLaunchDropdown] = useState<boolean>(false);
   const [savePromptDefaultCwd, setSavePromptDefaultCwd] = useState<string>('');
   const [savePromptDefaultShell, setSavePromptDefaultShell] = useState<string>('powershell');
   const [savePromptInitialName, setSavePromptInitialName] = useState<string>('');
@@ -1161,61 +1160,44 @@ export default function App() {
                     <LayoutGrid size={14} />
                   </button>
 
-                  {/* Quick Launch icon + dropdown */}
-                  <div className="tabs-dropdown-wrapper" style={{ position: 'relative', display: 'inline-flex' }}>
-                    <button
-                      className={`action-btn shrink-0 ${showQuickLaunchDropdown ? 'active' : ''}`}
-                      onClick={(e) => { e.stopPropagation(); setShowQuickLaunchDropdown(v => !v); setShowTabsDropdown(false); }}
-                      title="Quick Launch Shortcuts"
-                    >
-                      <Zap size={14} />
-                    </button>
-                    {showQuickLaunchDropdown && (
-                      <div
-                        className="tabs-dropdown-menu"
-                        style={{ right: 0, left: 'auto', minWidth: '200px', maxHeight: '320px', overflowY: 'auto' }}
-                        onClick={(e) => e.stopPropagation()}
+                  {/* Quick Launch Inline Items */}
+                  <div className="quick-launch-inline flex items-center gap-1.5 overflow-x-auto select-none max-w-[50vw]">
+                    <span title="Quick Launch" className="flex items-center text-[var(--color-primary)] shrink-0 px-1">
+                      <Zap size={13} />
+                    </span>
+                    {savedPrompts.map(prompt => (
+                      <div 
+                        key={prompt.id} 
+                        className="quick-launch-item group relative flex items-center bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] rounded px-2 py-0.5 text-[var(--text-main)] cursor-pointer transition-all duration-150 shrink-0"
+                        title={`Run: ${prompt.command}\nPath: ${prompt.cwd}\nShell: ${prompt.shellType}`}
+                        onClick={() => handleRunSavedPrompt(prompt)}
                       >
-                        <div style={{ padding: '6px 10px 4px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Zap size={10} /> Quick Launch
-                          </span>
-                          <button
-                            onClick={() => {
-                              setSavePromptDefaultCwd(panelWorkspace?.path || workspaces[0]?.path || '');
-                              setSavePromptDefaultShell(defaultShell);
-                              setSavePromptInitialName('');
-                              setShowSavePromptModal(true);
-                              setShowQuickLaunchDropdown(false);
-                            }}
-                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', padding: '2px 4px', borderRadius: '4px' }}
-                            title="Add Shortcut"
-                          >
-                            <Plus size={11} /> Add
-                          </button>
-                        </div>
-                        {savedPrompts.length === 0 ? (
-                          <div style={{ padding: '12px 10px', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>No shortcuts yet</div>
-                        ) : (
-                          savedPrompts.map(prompt => (
-                            <div
-                              key={prompt.id}
-                              className="tabs-dropdown-item"
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', cursor: 'pointer' }}
-                              title={`Run: ${prompt.command}\nPath: ${prompt.cwd}\nShell: ${prompt.shellType}`}
-                              onClick={() => { handleRunSavedPrompt(prompt); setShowQuickLaunchDropdown(false); }}
-                            >
-                              <span style={{ fontSize: '12px', fontFamily: 'monospace', fontWeight: 500, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>{prompt.name}</span>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDeleteSavedPrompt(prompt.id); }}
-                                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px', lineHeight: 1, padding: '0 2px', marginLeft: '6px', flexShrink: 0 }}
-                                title="Delete Shortcut"
-                              >×</button>
-                            </div>
-                          ))
-                        )}
+                        <span className="font-mono text-[11px] font-medium text-[var(--text-main)]" style={{ whiteSpace: 'nowrap' }}>
+                          {prompt.name}
+                        </span>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSavedPrompt(prompt.id); }} 
+                          className="ml-1.5 text-[var(--text-muted)] hover:text-red-400 font-sans font-bold flex items-center justify-center"
+                          style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, fontSize: '12px', lineHeight: 1 }}
+                          title="Delete Shortcut"
+                        >
+                          ×
+                        </button>
                       </div>
-                    )}
+                    ))}
+                    <button 
+                      onClick={() => {
+                        setSavePromptDefaultCwd(panelWorkspace?.path || workspaces[0]?.path || '');
+                        setSavePromptDefaultShell(defaultShell);
+                        setSavePromptInitialName('');
+                        setShowSavePromptModal(true);
+                      }} 
+                      className="flex items-center gap-0.5 bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] border border-dashed border-[var(--border-color)] rounded px-2 py-0.5 text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer transition-all duration-150 text-[11px] shrink-0"
+                      style={{ whiteSpace: 'nowrap' }}
+                      title="Add Shortcut"
+                    >
+                      <Plus size={10} /> Add
+                    </button>
                   </div>
 
                   {/* Tabs list dropdown switcher */}
@@ -1223,7 +1205,7 @@ export default function App() {
                     <div className="tabs-dropdown-wrapper" style={{ position: 'relative', display: 'inline-flex' }}>
                       <button
                         className={`action-btn shrink-0 tabs-dropdown-btn ${showTabsDropdown ? 'active' : ''}`}
-                        onClick={(e) => { e.stopPropagation(); setShowTabsDropdown(!showTabsDropdown); setShowQuickLaunchDropdown(false); }}
+                        onClick={(e) => { e.stopPropagation(); setShowTabsDropdown(!showTabsDropdown); }}
                         title="View Open Tabs"
                         style={{ marginRight: '8px' }}
                       >

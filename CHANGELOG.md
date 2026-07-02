@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.250] - 2026-07-02
+
+### Fixed / Improved
+- **Quick Launch & Grid Placement**: Mengembalikan item Quick Launch agar tetap tampil langsung (inline) berupa chip/button di sebelah ikon ⚡ Zap, serta memindahkan Grid button (`<LayoutGrid />`) & Quick Launch secara lengkap ke **sisi kanan** tab bar (kanan sendiri).
+  - Quick Launch tidak lagi tersembunyi di dalam dropdown popover, sehingga item-item shortcut favorit tetap dapat diakses secara langsung dengan satu klik.
+  - Membuang baris horizontal Quick Launch terpisah di bawah tab bar untuk efisiensi ruang layout.
+
 ## [1.3.249] - 2026-07-02
 
 ### Fixed
