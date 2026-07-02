@@ -4,7 +4,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const http = require('http');
-const { autoUpdater } = require('electron-updater');
+const { initAutoUpdater } = require('./updater');
 
 // Disable hardware acceleration to prevent GPU process crash (error code -1073741819)
 app.disableHardwareAcceleration();
@@ -28,6 +28,9 @@ app.on('second-instance', () => {
 let mainWindow = null;
 let backendProcess = null;
 let backendStatus = 'stopped'; // 'stopped' | 'starting' | 'running'
+let backendRestartAttempts = 0;
+const MAX_BACKEND_RESTARTS = 5;
+let isStoppingManual = false;
 let tray = null;
 let isQuitting = false;
 let hasShownMinimizeNotification = false;
@@ -258,6 +261,8 @@ function getWorkspaceForPath(workspacesList, cwd) {
 function startBackend() {
   if (backendStatus !== 'stopped') return;
 
+  isStoppingManual = false;
+
   const isDev = !app.isPackaged;
   const projectRoot = isDev 
     ? path.join(app.getAppPath(), '..') 
@@ -287,7 +292,7 @@ function startBackend() {
     backendProcess = utilityProcess.fork(scriptPath, [], {
       env: spawnEnv,
       stdio: 'pipe',
-      execArgv: ['--max-old-space-size=192']
+      execArgv: ['--max-old-space-size=512']
     });
   }
 
@@ -327,6 +332,7 @@ function startBackend() {
     // Parse when the server is ready
     if (output.includes('Workspace Server running on port') || output.includes('running on port')) {
       updateBackendStatus('running');
+      backendRestartAttempts = 0;
       
       // Delay slightly to ensure server socket is fully listening
       setTimeout(() => {
@@ -356,8 +362,20 @@ function startBackend() {
     backendProcess = null;
     updateBackendStatus('stopped');
     
-    // If window is open, reload with stopped state
-    if (mainWindow && !isQuitting) {
+    if (!isQuitting && !isStoppingManual) {
+      if (backendRestartAttempts < MAX_BACKEND_RESTARTS) {
+        backendRestartAttempts++;
+        console.log(`Backend exited unexpectedly. Attempting auto-restart (${backendRestartAttempts}/${MAX_BACKEND_RESTARTS}) in 2 seconds...`);
+        setTimeout(() => {
+          startBackend();
+        }, 2000);
+      } else {
+        console.error(`Backend crashed repeatedly. Showing connection error page.`);
+        if (mainWindow) {
+          mainWindow.loadFile(path.join(__dirname, 'connection-error.html'));
+        }
+      }
+    } else if (mainWindow && !isQuitting && isStoppingManual) {
       mainWindow.loadFile(path.join(__dirname, 'connection-error.html'));
     }
   });
@@ -365,6 +383,7 @@ function startBackend() {
 
 function stopBackend() {
   if (!backendProcess) return;
+  isStoppingManual = true;
   console.log('Stopping backend process...');
   
   updateBackendStatus('stopped');
@@ -721,89 +740,6 @@ ipcMain.handle('get-memory-usage', async () => {
   }
 });
 
-// ─── Auto-Updater ────────────────────────────────────────────────────────────
-
-function sendUpdateStatus(payload) {
-  if (mainWindow) {
-    mainWindow.webContents.send('update-status', payload);
-  }
-}
-
-function initAutoUpdater() {
-  // Only run in packaged production builds
-  if (!app.isPackaged) {
-    console.log('[updater] Skipped — running in dev mode.');
-    return;
-  }
-
-  autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
-
-  autoUpdater.on('checking-for-update', () => {
-    console.log('[updater] Checking for update...');
-    sendUpdateStatus({ status: 'checking' });
-  });
-
-  autoUpdater.on('update-available', (info) => {
-    console.log('[updater] Update available:', info.version);
-    sendUpdateStatus({ status: 'available', version: info.version, releaseNotes: info.releaseNotes || null });
-  });
-
-  autoUpdater.on('update-not-available', (info) => {
-    console.log('[updater] Up to date:', info.version);
-    sendUpdateStatus({ status: 'not-available', version: info.version });
-  });
-
-  autoUpdater.on('download-progress', (progress) => {
-    console.log(`[updater] Download progress: ${Math.round(progress.percent)}%`);
-    sendUpdateStatus({
-      status: 'downloading',
-      percent: Math.round(progress.percent),
-      transferred: progress.transferred,
-      total: progress.total,
-      bytesPerSecond: progress.bytesPerSecond
-    });
-  });
-
-  autoUpdater.on('update-downloaded', (info) => {
-    console.log('[updater] Update downloaded:', info.version);
-    sendUpdateStatus({ status: 'ready', version: info.version });
-  });
-
-  autoUpdater.on('error', (err) => {
-    console.error('[updater] Error:', err.message);
-    sendUpdateStatus({ status: 'error', message: err.message });
-  });
-
-  // Check 5 seconds after startup, then every 4 hours
-  setTimeout(() => {
-    autoUpdater.checkForUpdates().catch(err => {
-      console.error('[updater] checkForUpdates failed:', err.message);
-    });
-  }, 5000);
-
-  setInterval(() => {
-    autoUpdater.checkForUpdates().catch(err => {
-      console.error('[updater] Periodic checkForUpdates failed:', err.message);
-    });
-  }, 4 * 60 * 60 * 1000);
-}
-
-ipcMain.handle('check-for-updates', async () => {
-  if (!app.isPackaged) return { status: 'dev' };
-  try {
-    const result = await autoUpdater.checkForUpdates();
-    return { status: 'ok', updateInfo: result?.updateInfo || null };
-  } catch (err) {
-    return { status: 'error', message: err.message };
-  }
-});
-
-ipcMain.on('install-update', () => {
-  if (!app.isPackaged) return;
-  isQuitting = true;
-  autoUpdater.quitAndInstall(false, true);
-});
 
 // ─── Theme Sync ──────────────────────────────────────────────────────────────
 
@@ -859,7 +795,9 @@ ipcMain.handle('check-connection', async () => {
 app.on('ready', async () => {
   createMenu();
   createTray();
-  initAutoUpdater();
+  initAutoUpdater(() => {
+    isQuitting = true;
+  });
   
   const port = 5779;
   const alreadyRunning = await isBackendRunning(port);

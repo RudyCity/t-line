@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.213] - 2026-07-02
+
+### Added
+- **Backend Auto-Restart**: Implemented automatic restart logic in the Electron desktop main process to transparently relaunch the backend on crashes.
+- **Terminal Keep-Alive Timeout**: Increased the PTY session detach timeout from 30 seconds to 10 minutes, allowing terminal states and running processes to persist through network reconnections, application reloads, or temporary backend restarts.
+
+### Changed
+- **Backend Memory Limits**: Raised the backend V8 old space size limit from 192MB to 512MB to avoid OOM crashes on large repos.
+- **Refactoring**: Extracted auto-updater functions into a separate `updater.js` helper file to keep `desktop/main.js` below the 1000-line limit.
+
 ## [1.3.212] - 2026-07-01
 
 ### Fixed

@@ -354,7 +354,7 @@ export class TerminalManager {
     }
   }
 
-  /** Detach session: keep alive for 30s (reduced from 60s) */
+  /** Detach session: keep alive for 10 minutes */
   detachSession(id: string) {
     const session = this.sessions.get(id);
     if (session) {
@@ -363,11 +363,11 @@ export class TerminalManager {
       if (session.cleanupTimeout) clearTimeout(session.cleanupTimeout);
 
       session.cleanupTimeout = setTimeout(() => {
-        console.log(`PTY Session ${id} was detached for 30s. Cleaning up terminal process.`);
+        console.log(`PTY Session ${id} was detached for 10 minutes. Cleaning up terminal process.`);
         this.removeTerminal(id);
-      }, 30000); // ← Reduced from 60s to 30s
+      }, 600000);
 
-      console.log(`PTY Session ${id} detached. Keeping alive for 30 seconds.`);
+      console.log(`PTY Session ${id} detached. Keeping alive for 10 minutes.`);
     }
   }
 
