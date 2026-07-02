@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.221] - 2026-07-02
+
+### Added
+- **Terminal Termination Confirmation Modal**: Implemented a custom overlay modal dialog with backdrop-blur, confirming when a user clicks the "Trash" (terminate) button on a grid card. This warns the user that closing the terminal will kill its background process and all running scripts inside it.
+
 ## [1.3.220] - 2026-07-02
 
 ### Added

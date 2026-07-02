@@ -50,7 +50,25 @@ export function TerminalGridTab({
   const [showConfig, setShowConfig] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [focusedTermId, setFocusedTermId] = useState<string | null>(null);
+  const [confirmCloseTermId, setConfirmCloseTermId] = useState<string | null>(null);
   const configRef = useRef<HTMLDivElement>(null);
+
+  const getTerminalDisplayName = (termId: string): string => {
+    const term = terminalInstances[termId];
+    if (!term) return 'Terminal';
+    const parentTab = tabs.find(tabNode => {
+      if (tabNode.type === 'terminal' && tabNode.layout) {
+        const checkNode = (node: any): boolean => {
+          if (!node) return false;
+          if (node.type === 'leaf') return node.terminalId === termId;
+          return checkNode(node.first) || checkNode(node.second);
+        };
+        return checkNode(tabNode.layout);
+      }
+      return false;
+    });
+    return parentTab ? parentTab.name : term.name;
+  };
 
   const cardHeight = tab.gridCardHeight || 290;
   const cardWidth = tab.gridCardWidth || 420;
@@ -513,6 +531,81 @@ export function TerminalGridTab({
           transition: all 0.2s ease;
           position: relative;
         }
+        .grid-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.65);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          animation: fadeIn 0.15s ease-out;
+        }
+        .grid-modal-container {
+          background: var(--bg-card);
+          border: 1px solid var(--border-color);
+          border-radius: 12px;
+          padding: 20px;
+          width: 90%;
+          max-width: 400px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+          animation: slideUp 0.15s ease-out;
+        }
+        .grid-modal-title {
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: var(--text-main);
+          margin-bottom: 10px;
+          margin-top: 0;
+        }
+        .grid-modal-text {
+          font-size: 0.78rem;
+          color: var(--text-muted);
+          line-height: 1.5;
+          margin-bottom: 20px;
+        }
+        .grid-modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+        }
+        .grid-modal-btn {
+          font-size: 0.72rem;
+          font-weight: 600;
+          padding: 8px 16px;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.12s;
+        }
+        .grid-modal-btn-cancel {
+          background: transparent;
+          border: 1px solid var(--border-color);
+          color: var(--text-main);
+        }
+        .grid-modal-btn-cancel:hover {
+          background: rgba(255, 255, 255, 0.05);
+        }
+        .grid-modal-btn-confirm {
+          background: #ef4444;
+          border: 1px solid #ef4444;
+          color: #fff;
+        }
+        .grid-modal-btn-confirm:hover {
+          background: #dc2626;
+          border-color: #dc2626;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { transform: translateY(10px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
         .grid-terminal-card.focused {
           border-color: var(--color-primary);
           box-shadow: 0 0 12px rgba(168, 85, 247, 0.18);
@@ -958,7 +1051,7 @@ export function TerminalGridTab({
                       </button>
                       <button 
                         className="grid-action-btn grid-action-btn-danger"
-                        onClick={(e) => { e.stopPropagation(); handleCloseTerminal(termId); }}
+                        onClick={(e) => { e.stopPropagation(); setConfirmCloseTermId(termId); }}
                         title="Close and delete terminal"
                       >
                         <Trash2 size={12} />
@@ -1013,6 +1106,38 @@ export function TerminalGridTab({
           </div>
         )}
       </div>
+
+      {/* Confirmation Modal */}
+      {confirmCloseTermId && (
+        <div className="grid-modal-overlay" onClick={() => setConfirmCloseTermId(null)}>
+          <div className="grid-modal-container" onClick={(e) => e.stopPropagation()}>
+            <h3 className="grid-modal-title">Terminate Terminal?</h3>
+            <p className="grid-modal-text">
+              Are you sure you want to completely close and terminate <strong>{getTerminalDisplayName(confirmCloseTermId)}</strong>? 
+              This will kill the terminal process and all running programs inside it.
+            </p>
+            <div className="grid-modal-actions">
+              <button 
+                className="grid-modal-btn grid-modal-btn-cancel"
+                onClick={() => setConfirmCloseTermId(null)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="grid-modal-btn grid-modal-btn-confirm"
+                onClick={() => {
+                  if (confirmCloseTermId) {
+                    handleCloseTerminal(confirmCloseTermId);
+                    setConfirmCloseTermId(null);
+                  }
+                }}
+              >
+                Terminate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
