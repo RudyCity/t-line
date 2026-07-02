@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.256] - 2026-07-02
+
+### Fixed
+- **Mobile Terminal Font Size Isolation**: Memisahkan kunci penyimpanan `localStorage` font size antara desktop (`tline-terminal-font-size-v2`) dan mobile/tablet (`tline-mobile-font-size`).
+  - **Penyebab font masih 12px**: Sebelumnya browser menyimpan nilai 12px dari sesi desktop lama di key `tline-terminal-font-size` sehingga meng-override nilai default mobile.
+  - **Solusi**: Mode mobile/tablet kini menggunakan storage key independen `tline-mobile-font-size` yang langsung terinisialisasi ke **9px** secara terpisah dari settingan desktop.
+
 ## [1.3.255] - 2026-07-02
 
 ### Added / Fixed

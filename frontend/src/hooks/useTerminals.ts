@@ -129,9 +129,10 @@ export function removeLeaf(node: SplitLayoutNode, targetId: string): SplitLayout
 
 export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () => void) {
   const [terminalFontSize, setTerminalFontSize] = useState<number>(() => {
-    const saved = localStorage.getItem('tline-terminal-font-size');
-    if (saved) return parseInt(saved, 10);
     const isMobileOrTablet = typeof window !== 'undefined' && (window.innerWidth <= 1024 || ('ontouchstart' in window && window.innerWidth < 1280));
+    const storageKey = isMobileOrTablet ? 'tline-mobile-font-size' : 'tline-terminal-font-size-v2';
+    const saved = localStorage.getItem(storageKey);
+    if (saved) return parseInt(saved, 10);
     return isMobileOrTablet ? 9 : 12;
   });
 
@@ -239,7 +240,9 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
   }, [activeTabId]);
 
   useEffect(() => {
-    localStorage.setItem('tline-terminal-font-size', terminalFontSize.toString());
+    const isMobileOrTablet = typeof window !== 'undefined' && (window.innerWidth <= 1024 || ('ontouchstart' in window && window.innerWidth < 1280));
+    const storageKey = isMobileOrTablet ? 'tline-mobile-font-size' : 'tline-terminal-font-size-v2';
+    localStorage.setItem(storageKey, terminalFontSize.toString());
   }, [terminalFontSize]);
 
   const handleZoomIn = useCallback(() => {
