@@ -42,6 +42,7 @@ interface TerminalTab {
   name: string;
   cwd: string;
   shellType: string;
+  initialCommand?: string;
 }
 
 interface TerminalInstanceProps {
@@ -61,6 +62,7 @@ interface TerminalInstanceProps {
   themeBackground?: string;
   themeForeground?: string;
   disableAutoFocus?: boolean;
+  onClearInitialCommand?: (terminalId: string) => void;
 }
 
 // Extracted sub-components imported from ./TerminalSubComponents
@@ -71,7 +73,7 @@ export function TerminalInstance({
   onTitleChange, onActiveProcessesChange, onFocus, refreshTrigger,
   isFocusedPane = false, pid,
   fontFamily, fontWeight, accentColor, themeBackground, themeForeground,
-  disableAutoFocus = false
+  disableAutoFocus = false, onClearInitialCommand
 }: TerminalInstanceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -520,6 +522,23 @@ export function TerminalInstance({
       }));
     }
   }, [active, wsConnected, tab.id, tab.cwd, tab.shellType]);
+
+  // ── Auto-execute saved prompt shortcut once ──────────────────
+  const initialCommandSent = useRef(false);
+  useEffect(() => {
+    if (wsConnected && isInitialized && tab.initialCommand && !initialCommandSent.current) {
+      initialCommandSent.current = true;
+      const timer = setTimeout(() => {
+        wsManager.send(JSON.stringify({
+          type: 'data',
+          id: tab.id,
+          data: tab.initialCommand + '\r'
+        }));
+        onClearInitialCommand?.(tab.id);
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [wsConnected, isInitialized, tab.initialCommand, tab.id, onClearInitialCommand]);
 
   // ── Manual refresh trigger ─────────────────────────────────
   useEffect(() => {

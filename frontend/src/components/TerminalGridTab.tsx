@@ -25,6 +25,7 @@ interface TerminalGridTabProps {
   fontFamily?: string;
   fontWeight?: string;
   refreshTriggers?: Record<string, number>;
+  clearInitialCommand?: (id: string) => void;
 }
 
 export function TerminalGridTab({
@@ -45,7 +46,8 @@ export function TerminalGridTab({
   accentColor = '#a855f7',
   fontFamily,
   fontWeight,
-  refreshTriggers
+  refreshTriggers,
+  clearInitialCommand
 }: TerminalGridTabProps) {
   const [showConfig, setShowConfig] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1078,6 +1080,7 @@ export function TerminalGridTab({
                       accentColor={accentColor}
                       themeBackground={themeBackground}
                       themeForeground={themeForeground}
+                      onClearInitialCommand={clearInitialCommand}
                     />
                   </div>
 

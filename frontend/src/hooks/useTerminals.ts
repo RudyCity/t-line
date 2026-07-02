@@ -37,6 +37,7 @@ export interface TerminalInstanceData {
   cwd: string;
   shellType: string;
   activeProcesses?: ActiveProcessSummary[];
+  initialCommand?: string;
 }
 
 export type SplitLayoutNode =
@@ -308,7 +309,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     }
   }, [workspaces, tabs, terminalInstances, findWorkspaceIdForPath]);
 
-  const openTerminal = useCallback((name: string, cwd: string, shellType?: string) => {
+  const openTerminal = useCallback((name: string, cwd: string, shellType?: string, initialCommand?: string) => {
     const tabId = `tab-${Date.now()}`;
     const termId = `term-${Date.now()}`;
     const activeShell = shellType || defaultShell;
@@ -326,7 +327,8 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
       name: tabName,
       initialName: tabName,
       cwd,
-      shellType: activeShell
+      shellType: activeShell,
+      initialCommand
     };
 
     const wsId = findWorkspaceIdForPath(cwd);
@@ -674,11 +676,21 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
   }, [findWorkspaceIdForPath]);
 
   const refreshTerminal = useCallback((terminalId: string) => {
-    if (!terminalId) return;
+    // Trigger terminal element reset & reconnect PTY
     setRefreshTriggers(prev => ({
       ...prev,
       [terminalId]: (prev[terminalId] || 0) + 1
     }));
+  }, []);
+
+  const clearInitialCommand = useCallback((id: string) => {
+    setTerminalInstances(prev => {
+      if (!prev[id] || !prev[id].initialCommand) return prev;
+      const next = { ...prev };
+      next[id] = { ...next[id] };
+      delete next[id].initialCommand;
+      return next;
+    });
   }, []);
 
   const openGridTab = useCallback(() => {
@@ -721,6 +733,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     handleActiveProcessesChange,
     importActiveSessions,
     refreshTerminal,
-    refreshTriggers
+    refreshTriggers,
+    clearInitialCommand
   };
 }

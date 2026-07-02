@@ -43,6 +43,7 @@ export interface SplitLayoutRendererProps {
   accentColor?: string;
   themeBackground?: string;
   themeForeground?: string;
+  clearInitialCommand?: (id: string) => void;
 }
 
 export function SplitLayoutRenderer({
@@ -64,7 +65,8 @@ export function SplitLayoutRenderer({
   fontWeight,
   accentColor,
   themeBackground,
-  themeForeground
+  themeForeground,
+  clearInitialCommand
 }: SplitLayoutRendererProps): React.JSX.Element | null {
   if (node.type === 'leaf') {
     const term = terminalInstances[node.terminalId];
@@ -103,6 +105,7 @@ export function SplitLayoutRenderer({
           accentColor={accentColor}
           themeBackground={themeBackground}
           themeForeground={themeForeground}
+          onClearInitialCommand={clearInitialCommand}
         />
         
         {/* Floating action bar at top-right of each pane */}

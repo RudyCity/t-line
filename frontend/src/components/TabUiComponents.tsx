@@ -53,6 +53,7 @@ interface TabContextMenuProps {
   handleCloseAllTabs: () => void;
   setActiveTabId: (tabId: string) => void;
   splitFocusedTerminal: (direction: 'vertical' | 'horizontal') => void;
+  onSavePromptShortcut?: (tabId: string) => void;
 }
 
 export const TabContextMenu: React.FC<TabContextMenuProps> = ({
@@ -64,7 +65,8 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
   handleCloseOtherTabs,
   handleCloseAllTabs,
   setActiveTabId,
-  splitFocusedTerminal
+  splitFocusedTerminal,
+  onSavePromptShortcut
 }) => {
   if (!tabContextMenu) return null;
 
@@ -127,6 +129,14 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
       {targetTab?.type === 'terminal' && (
         <>
           <div className="terminal-ctx-separator" />
+          <button
+            onClick={() => {
+              onSavePromptShortcut?.(tabContextMenu.tabId);
+            }}
+            className="terminal-ctx-item"
+          >
+            <span className="terminal-ctx-label" style={{ color: 'var(--color-primary, #6366f1)' }}>Save as Shortcut...</span>
+          </button>
           <button
             onClick={() => {
               setActiveTabId(tabContextMenu.tabId);

@@ -16,14 +16,23 @@ import {
   HelpCircle,
   ChevronDown,
   Camera,
-  LayoutGrid
+  LayoutGrid,
+  Zap
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { FileViewerTab } from './components/FileViewerTab';
 import { DiffViewerTab } from './components/DiffViewerTab';
 import { TerminalGridTab } from './components/TerminalGridTab';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
-import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal, ConfirmModal, WorkspaceEditModal } from './components/Modals';
+import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal, ConfirmModal, WorkspaceEditModal, SavePromptModal } from './components/Modals';
+
+interface SavedPrompt {
+  id: string;
+  name: string;
+  command: string;
+  cwd: string;
+  shellType: string;
+}
 import { BranchModal } from './components/BranchModal';
 import { useTunnel } from './hooks/useTunnel';
 import { useSystemStats } from './hooks/useSystemStats';
@@ -97,6 +106,18 @@ export default function App() {
   const [rightMenuOpen, setRightMenuOpen] = useState<boolean>(false);
   const [showShortcutModal, setShowShortcutModal] = useState<boolean>(false);
   const [showBranchModal, setShowBranchModal] = useState<boolean>(false);
+  const [savedPrompts, setSavedPrompts] = useState<SavedPrompt[]>(() => {
+    try {
+      const saved = localStorage.getItem('tline-saved-prompts');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [showSavePromptModal, setShowSavePromptModal] = useState<boolean>(false);
+  const [savePromptDefaultCwd, setSavePromptDefaultCwd] = useState<string>('');
+  const [savePromptDefaultShell, setSavePromptDefaultShell] = useState<string>('powershell');
+  const [savePromptInitialName, setSavePromptInitialName] = useState<string>('');
   // Workspace editing states will be provided by useWorkspaceHandlers hook
 
   const [showMobileKeyboard, setShowMobileKeyboard] = useState<boolean>(false);
@@ -268,7 +289,8 @@ export default function App() {
     handleActiveProcessesChange,
     importActiveSessions,
     refreshTerminal,
-    refreshTriggers
+    refreshTriggers,
+    clearInitialCommand
   } = useTerminals(workspaces, () => setSidebarOpen(false));
 
   const filteredTabs = useMemo(() => {
@@ -334,6 +356,7 @@ export default function App() {
   const {
     activeTooltip,
     tabContextMenu,
+    setTabContextMenu,
     getTabGitBranch,
     handleTabMouseEnter,
     handleTabMouseLeave,
@@ -438,7 +461,32 @@ export default function App() {
     setPanelWorktreePath
   });
 
+  const handleSavePromptSubmit = (name: string, command: string, cwd: string, shellType: string) => {
+    const newPrompt: SavedPrompt = {
+      id: `prompt-${Date.now()}`,
+      name,
+      command,
+      cwd,
+      shellType
+    };
+    const next = [...savedPrompts, newPrompt];
+    setSavedPrompts(next);
+    localStorage.setItem('tline-saved-prompts', JSON.stringify(next));
+    setShowSavePromptModal(false);
+    window.dispatchEvent(new CustomEvent('tline-toast', {
+      detail: { message: `Shortcut "${name}" saved!` }
+    }));
+  };
 
+  const handleDeleteSavedPrompt = (id: string) => {
+    const next = savedPrompts.filter(p => p.id !== id);
+    setSavedPrompts(next);
+    localStorage.setItem('tline-saved-prompts', JSON.stringify(next));
+  };
+
+  const handleRunSavedPrompt = (prompt: SavedPrompt) => {
+    openTerminal(prompt.name, prompt.cwd, prompt.shellType, prompt.command);
+  };
 
   // Keyboard Shortcuts
   const hasModals = showWorkspaceModal || showWorktreeModal || showTunnelModal || showSettingsModal || showBranchModal;
@@ -1040,122 +1088,163 @@ export default function App() {
         {/* Dynamic Panels */}
         <div className={`content-area ${filteredTabs.length > 0 ? 'content-area-tabs' : 'content-area-empty'}`}>
           {filteredTabs.length > 0 && (
-            <div className="content-tabs-bar flex items-center justify-between desktop-only">
-              <div className="chrome-tabs-container mx-3" style={{ WebkitAppRegion: 'no-drag' } as any}>
-                {panelWorktreePath !== null && (() => {
-                  const activeWt = panelWorkspace?.worktrees?.find(wt => wt.path === panelWorktreePath);
-                  const branchName = activeWt?.branch || 'worktree';
-                  return (
-                    <div className="tab-group-badge" title={`Branch: ${branchName}`}>
-                      <GitBranch size={10} />
-                      <span>{branchName}</span>
-                    </div>
-                  );
-                })()}
-                {(() => {
-                  let prevBranch: string | null = null;
-                  return visibleTabs.map(t => {
-                    const isFile = t.type === 'file';
-                    const isDiff = t.type === 'diff';
-                    const isGrid = t.type === 'grid';
-                    const isTerminal = t.type === 'terminal';
-                    const focusedInst = isTerminal && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
-                    const shellType = focusedInst?.shellType || '';
-                    const displayName = (isFile || isDiff || isGrid) ? t.name : (focusedInst?.name || t.name);
-                    const branch = getTabGitBranch(t);
-
-                    const showGroupHeader = panelWorktreePath === null && branch && branch !== prevBranch;
-                    prevBranch = branch || null;
-
+            <>
+              <div className="content-tabs-bar flex items-center justify-between desktop-only">
+                <div className="chrome-tabs-container mx-3" style={{ WebkitAppRegion: 'no-drag' } as any}>
+                  {panelWorktreePath !== null && (() => {
+                    const activeWt = panelWorkspace?.worktrees?.find(wt => wt.path === panelWorktreePath);
+                    const branchName = activeWt?.branch || 'worktree';
                     return (
-                      <Fragment key={t.id}>
-                        {showGroupHeader && (
-                          <div className="tab-group-badge" title={`Branch: ${branch}`}>
-                            <GitBranch size={10} />
-                            <span>{branch}</span>
-                          </div>
-                        )}
-                        <div 
-                          className={`tab ${activeTabId === t.id ? 'tab-active' : ''} ${draggingTabId === t.id ? 'dragging' : ''}`}
-                          draggable={true}
-                          onDragStart={(e) => handleTabDragStart(e, t.id)}
-                          onDragOver={handleTabDragOver}
-                          onDragEnd={handleTabDragEnd}
-                          onDrop={(e) => handleTabDrop(e, t.id)}
-                          onClick={() => handleTabClick(t)}
-                          onMouseEnter={(e) => handleTabMouseEnter(e, t)}
-                          onMouseLeave={handleTabMouseLeave}
-                          onContextMenu={(e) => handleTabContextMenu(e, t.id)}
-                        >
-                          {t.type === 'file' ? (
-                            <FileCode size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
-                          ) : t.type === 'diff' ? (
-                            <GitCompare size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? '#4ade80' : 'var(--text-muted)' }} />
-                          ) : t.type === 'grid' ? (
-                            <LayoutGrid size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
-                          ) : (
-                            <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
-                          )}
-                          <span className="tab-title-container">
-                            <span className="tab-title">{displayName}</span>
-                            {shellType && (
-                              <span className="tab-shell-type">({shellType === 'powershell' ? 'ps' : shellType})</span>
-                            )}
-                          </span>
-                          <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)}>×</span>
-                        </div>
-                      </Fragment>
+                      <div className="tab-group-badge" title={`Branch: ${branchName}`}>
+                        <GitBranch size={10} />
+                        <span>{branchName}</span>
+                      </div>
                     );
-                  });
-                })()}
-                {/* New Terminal button */}
-                <button
-                  className="action-btn shrink-0"
-                  onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')}
-                  title="New terminal (Alt+T)"
-                  style={{ marginLeft: '6px' }}
-                >
-                  <Plus size={14} />
-                </button>
-                {/* Terminal Grid button */}
-                <button
-                  className="action-btn shrink-0"
-                  onClick={openGridTab}
-                  title="New Terminal Grid"
-                  style={{ marginLeft: '4px' }}
-                >
-                  <LayoutGrid size={14} />
-                </button>
+                  })()}
+                  {(() => {
+                    let prevBranch: string | null = null;
+                    return visibleTabs.map(t => {
+                      const isFile = t.type === 'file';
+                      const isDiff = t.type === 'diff';
+                      const isGrid = t.type === 'grid';
+                      const isTerminal = t.type === 'terminal';
+                      const focusedInst = isTerminal && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
+                      const shellType = focusedInst?.shellType || '';
+                      const displayName = (isFile || isDiff || isGrid) ? t.name : (focusedInst?.name || t.name);
+                      const branch = getTabGitBranch(t);
+
+                      const showGroupHeader = panelWorktreePath === null && branch && branch !== prevBranch;
+                      prevBranch = branch || null;
+
+                      return (
+                        <Fragment key={t.id}>
+                          {showGroupHeader && (
+                            <div className="tab-group-badge" title={`Branch: ${branch}`}>
+                              <GitBranch size={10} />
+                              <span>{branch}</span>
+                            </div>
+                          )}
+                          <div 
+                            className={`tab ${activeTabId === t.id ? 'tab-active' : ''} ${draggingTabId === t.id ? 'dragging' : ''}`}
+                            draggable={true}
+                            onDragStart={(e) => handleTabDragStart(e, t.id)}
+                            onDragOver={handleTabDragOver}
+                            onDragEnd={handleTabDragEnd}
+                            onDrop={(e) => handleTabDrop(e, t.id)}
+                            onClick={() => handleTabClick(t)}
+                            onMouseEnter={(e) => handleTabMouseEnter(e, t)}
+                            onMouseLeave={handleTabMouseLeave}
+                            onContextMenu={(e) => handleTabContextMenu(e, t.id)}
+                          >
+                            {t.type === 'file' ? (
+                              <FileCode size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
+                            ) : t.type === 'diff' ? (
+                              <GitCompare size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? '#4ade80' : 'var(--text-muted)' }} />
+                            ) : t.type === 'grid' ? (
+                              <LayoutGrid size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
+                            ) : (
+                              <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
+                            )}
+                            <span className="tab-title-container">
+                              <span className="tab-title">{displayName}</span>
+                              {shellType && (
+                                <span className="tab-shell-type">({shellType === 'powershell' ? 'ps' : shellType})</span>
+                              )}
+                            </span>
+                            <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)}>×</span>
+                          </div>
+                        </Fragment>
+                      );
+                    });
+                  })()}
+                  {/* New Terminal button */}
+                  <button
+                    className="action-btn shrink-0"
+                    onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')}
+                    title="New terminal (Alt+T)"
+                    style={{ marginLeft: '6px' }}
+                  >
+                    <Plus size={14} />
+                  </button>
+                  {/* Terminal Grid button */}
+                  <button
+                    className="action-btn shrink-0"
+                    onClick={openGridTab}
+                    title="New Terminal Grid"
+                    style={{ marginLeft: '4px' }}
+                  >
+                    <LayoutGrid size={14} />
+                  </button>
+                </div>
+
+                {/* Tabs list dropdown switcher */}
+                {filteredTabs.length > 1 && (
+                  <div className="tabs-dropdown-wrapper" style={{ position: 'relative', display: 'inline-flex', WebkitAppRegion: 'no-drag' } as any}>
+                    <button
+                      className={`action-btn shrink-0 tabs-dropdown-btn ${showTabsDropdown ? 'active' : ''}`}
+                      onClick={(e) => { e.stopPropagation(); setShowTabsDropdown(!showTabsDropdown); }}
+                      title="View Open Tabs"
+                      style={{ marginLeft: '4px', marginRight: '8px' }}
+                    >
+                      <ChevronDown size={14} />
+                    </button>
+                    {showTabsDropdown && (
+                      <TabsDropdown
+                        filteredTabs={filteredTabs}
+                        activeTabId={activeTabId}
+                        setActiveTabId={setActiveTabId}
+                        closeTerminal={closeTerminal}
+                        terminalInstances={terminalInstances}
+                        onClose={() => setShowTabsDropdown(false)}
+                        getTabGitBranch={getTabGitBranch}
+                        handleCloseOtherTabs={handleCloseOtherTabs}
+                        handleCloseAllTabs={handleCloseAllTabs}
+                        moveTab={moveTab}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Tabs list dropdown switcher */}
-              {filteredTabs.length > 1 && (
-                <div className="tabs-dropdown-wrapper" style={{ position: 'relative', display: 'inline-flex', WebkitAppRegion: 'no-drag' } as any}>
-                  <button
-                    className={`action-btn shrink-0 tabs-dropdown-btn ${showTabsDropdown ? 'active' : ''}`}
-                    onClick={(e) => { e.stopPropagation(); setShowTabsDropdown(!showTabsDropdown); }}
-                    title="View Open Tabs"
-                    style={{ marginLeft: '4px', marginRight: '8px' }}
+              {/* Quick Launch Bar */}
+              <div className="quick-launch-bar flex items-center gap-1.5 px-3 py-1 bg-[var(--bg-sidebar)] border-b border-[var(--border-color)] overflow-x-auto select-none desktop-only" style={{ height: '32px', minHeight: '32px', WebkitAppRegion: 'no-drag' } as any}>
+                <span className="text-[10px] uppercase font-bold text-[var(--color-primary)] tracking-wider flex items-center gap-1 mr-2" style={{ whiteSpace: 'nowrap' }}>
+                  <Zap size={11} style={{ color: 'var(--color-primary)' }} /> Quick Launch:
+                </span>
+                {savedPrompts.map(prompt => (
+                  <div 
+                    key={prompt.id} 
+                    className="quick-launch-item group relative flex items-center bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] rounded px-2 py-0.5 text-[var(--text-main)] cursor-pointer transition-all duration-150"
+                    title={`Run: ${prompt.command}\nPath: ${prompt.cwd}\nShell: ${prompt.shellType}`}
+                    onClick={() => handleRunSavedPrompt(prompt)}
                   >
-                    <ChevronDown size={14} />
-                  </button>
-                  {showTabsDropdown && (
-                    <TabsDropdown
-                      filteredTabs={filteredTabs}
-                      activeTabId={activeTabId}
-                      setActiveTabId={setActiveTabId}
-                      closeTerminal={closeTerminal}
-                      terminalInstances={terminalInstances}
-                      onClose={() => setShowTabsDropdown(false)}
-                      getTabGitBranch={getTabGitBranch}
-                      handleCloseOtherTabs={handleCloseOtherTabs}
-                      handleCloseAllTabs={handleCloseAllTabs}
-                      moveTab={moveTab}
-                    />
-                  )}
-                </div>
-              )}
-            </div>
+                    <span className="font-mono text-[11px] font-medium text-[var(--text-main)]" style={{ whiteSpace: 'nowrap' }}>
+                      {prompt.name}
+                    </span>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleDeleteSavedPrompt(prompt.id); }} 
+                      className="ml-1.5 text-[var(--text-muted)] hover:text-red-400 font-sans font-bold flex items-center justify-center"
+                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, fontSize: '12px', lineHeight: 1 }}
+                      title="Delete Shortcut"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                <button 
+                  onClick={() => {
+                    setSavePromptDefaultCwd(panelWorkspace?.path || workspaces[0]?.path || '');
+                    setSavePromptDefaultShell(defaultShell);
+                    setSavePromptInitialName('');
+                    setShowSavePromptModal(true);
+                  }} 
+                  className="flex items-center gap-0.5 bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] border border-dashed border-[var(--border-color)] rounded px-2 py-0.5 text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer transition-all duration-150 text-[11px]"
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  <Plus size={10} /> Add Shortcut
+                </button>
+              </div>
+            </>
           )}
           {filteredTabs.length === 0 ? (
             
@@ -1226,6 +1315,7 @@ export default function App() {
                       fontFamily={MONO_FONTS[fontMono as keyof typeof MONO_FONTS]}
                       fontWeight={fontMonoWeight}
                       refreshTriggers={refreshTriggers}
+                      clearInitialCommand={clearInitialCommand}
                     />
                   );
                 }
@@ -1250,6 +1340,7 @@ export default function App() {
                       accentColor={accentColor}
                       themeBackground={THEMES[theme]?.bgMain}
                       themeForeground={THEMES[theme]?.textMain}
+                      clearInitialCommand={clearInitialCommand}
                     />
                   );
                 }
@@ -1379,6 +1470,16 @@ export default function App() {
         }}
       />
 
+      <SavePromptModal
+        show={showSavePromptModal}
+        onClose={() => setShowSavePromptModal(false)}
+        onSubmit={handleSavePromptSubmit}
+        workspaces={workspaces}
+        defaultCwd={savePromptDefaultCwd}
+        defaultShellType={savePromptDefaultShell}
+        initialName={savePromptInitialName}
+      />
+
       <Footer
         panelWorkspace={panelWorkspace}
         panelWorktreePath={panelWorktreePath}
@@ -1413,6 +1514,19 @@ export default function App() {
         handleCloseAllTabs={handleCloseAllTabs}
         setActiveTabId={setActiveTabId}
         splitFocusedTerminal={splitFocusedTerminal}
+        onSavePromptShortcut={(tabId) => {
+          setTabContextMenu(null);
+          const tab = tabs.find(t => t.id === tabId);
+          if (tab && tab.type === 'terminal' && tab.focusedTerminalId) {
+            const inst = terminalInstances[tab.focusedTerminalId];
+            if (inst) {
+              setSavePromptDefaultCwd(inst.cwd);
+              setSavePromptDefaultShell(inst.shellType);
+              setSavePromptInitialName(inst.name);
+              setShowSavePromptModal(true);
+            }
+          }
+        }}
       />
     </div>
   );

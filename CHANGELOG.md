@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.243] - 2026-07-02
+
+### Added
+- **Saved Prompt Shortcuts (Quick Launch)**: Menambahkan fitur shortcut prompt perintah tersimpan.
+  - Pengguna dapat menyimpan perintah/prompt terminal yang sering digunakan via opsi "Save as Shortcut..." di menu klik-kanan (context menu) tab terminal.
+  - Shortcut yang disimpan akan muncul sebagai tombol/pills di area "Quick Launch" bar baru tepat di bawah tab bar utama.
+  - Klik pada tombol shortcut akan membuka tab terminal baru dengan CWD dan shell yang sesuai, lalu otomatis menjalankan perintah yang tersimpan setelah delay aman 600ms (auto-execution).
+  - Menambahkan tombol "Add Shortcut" di Quick Launch bar untuk membuat shortcut baru secara manual melalui form modal yang terintegrasi (`SavePromptModal`).
+  - Shortcut tersimpan dipersistenkan di `localStorage` dan dapat dihapus dengan mengklik tombol `×` pada masing-masing pill shortcut.
+
 ## [1.3.242] - 2026-07-02
 
 ### Added

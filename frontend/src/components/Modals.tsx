@@ -764,3 +764,136 @@ export const InputModal: React.FC<InputModalProps> = ({
     </div>
   );
 };
+
+interface SavePromptModalProps {
+  show: boolean;
+  onClose: () => void;
+  onSubmit: (name: string, command: string, cwd: string, shellType: string) => void;
+  workspaces: WorkspaceInfo[];
+  defaultCwd: string;
+  defaultShellType: string;
+  initialName?: string;
+}
+
+export const SavePromptModal: React.FC<SavePromptModalProps> = ({
+  show,
+  onClose,
+  onSubmit,
+  workspaces,
+  defaultCwd,
+  defaultShellType,
+  initialName = ''
+}) => {
+  const [name, setName] = React.useState('');
+  const [command, setCommand] = React.useState('');
+  const [cwd, setCwd] = React.useState('');
+  const [shellType, setShellType] = React.useState('');
+
+  React.useEffect(() => {
+    if (show) {
+      setName(initialName || '');
+      setCommand('');
+      setCwd(defaultCwd || '');
+      setShellType(defaultShellType || 'powershell');
+    }
+  }, [show, initialName, defaultCwd, defaultShellType]);
+
+  if (!show) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim() && command.trim() && cwd.trim()) {
+      onSubmit(name.trim(), command.trim(), cwd.trim(), shellType);
+    }
+  };
+
+  const shellOptions = [
+    { value: 'powershell', label: 'Powershell' },
+    { value: 'cmd', label: 'Command Prompt' },
+    { value: 'gitbash', label: 'Git Bash' },
+    { value: 'wsl', label: 'WSL' }
+  ];
+
+  // Map workspace directories for dropdown
+  const workspaceOptions = workspaces.map(ws => ({
+    value: ws.path,
+    label: ws.name
+  }));
+
+  return (
+    <div className="modal-overlay" style={{ zIndex: 9999 }}>
+      <form onSubmit={handleSubmit} className="modal-content glass-panel" style={{ maxWidth: '520px' }}>
+        <div className="modal-header">
+          <h3 className="modal-title">Save Prompt Shortcut</h3>
+          <button 
+            type="button" 
+            className="action-btn" 
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </div>
+        
+        <FormField label="Shortcut Name">
+          <Input 
+            type="text" 
+            placeholder="e.g. Run Dev, Build Project" 
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            autoFocus
+          />
+        </FormField>
+
+        <FormField label="Command / Prompt to run">
+          <Input 
+            type="text" 
+            placeholder="e.g. npm run dev" 
+            value={command}
+            onChange={(e) => setCommand(e.target.value)}
+            required
+          />
+        </FormField>
+
+        <FormField label="Working Directory (CWD)">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <Input 
+              type="text" 
+              placeholder="e.g. D:\projects\my-app" 
+              value={cwd}
+              onChange={(e) => setCwd(e.target.value)}
+              required
+            />
+            {workspaceOptions.length > 0 && (
+              <Select 
+                options={[
+                  { value: '', label: '-- Select from Workspaces --' },
+                  ...workspaceOptions
+                ]}
+                value={workspaceOptions.find(o => o.value === cwd) ? cwd : ''}
+                onChange={(val) => val && setCwd(val)}
+              />
+            )}
+          </div>
+        </FormField>
+
+        <FormField label="Shell Type">
+          <Select 
+            options={shellOptions}
+            value={shellType}
+            onChange={(val) => setShellType(val)}
+          />
+        </FormField>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary">
+            Save Shortcut
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+};
