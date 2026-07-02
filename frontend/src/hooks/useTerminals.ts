@@ -672,16 +672,24 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
 
   const openGridTab = useCallback(() => {
     const tabId = `grid-${Date.now()}`;
+    
+    const activeIds: string[] = [];
+    tabs.forEach(t => {
+      if (t.type === 'terminal' && t.layout) {
+        activeIds.push(...getTerminalIds(t.layout));
+      }
+    });
+
     const newTab: TabData = {
       id: tabId,
       name: 'Terminal Grid',
       type: 'grid',
-      gridTerminalIds: []
+      gridTerminalIds: activeIds
     };
     setTabs(prev => [...prev, newTab]);
     setActiveTabId(tabId);
     onTerminalOpen?.();
-  }, [onTerminalOpen]);
+  }, [tabs, onTerminalOpen]);
 
   return {
     tabs,

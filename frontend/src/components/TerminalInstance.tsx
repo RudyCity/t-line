@@ -53,6 +53,7 @@ interface TerminalInstanceProps {
   accentColor?: string;
   themeBackground?: string;
   themeForeground?: string;
+  disableAutoFocus?: boolean;
 }
 
 // ── Search Bar Sub-Component ──────────────────────────────────
@@ -356,7 +357,8 @@ export function TerminalInstance({
   tab, active, wsConnected, fontSize,
   onTitleChange, onActiveProcessesChange, onFocus, refreshTrigger,
   isFocusedPane = false, pid,
-  fontFamily, fontWeight, accentColor, themeBackground, themeForeground
+  fontFamily, fontWeight, accentColor, themeBackground, themeForeground,
+  disableAutoFocus = false
 }: TerminalInstanceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -808,10 +810,12 @@ export function TerminalInstance({
   useEffect(() => {
     if (active) {
       debouncedFit();
-      const timer = setTimeout(() => { terminalRef.current?.focus(); }, 80);
-      return () => clearTimeout(timer);
+      if (!disableAutoFocus) {
+        const timer = setTimeout(() => { terminalRef.current?.focus(); }, 80);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [active, debouncedFit]);
+  }, [active, debouncedFit, disableAutoFocus]);
 
   // ── Font size, Family & Weight ──────────────────────────────
   useEffect(() => {

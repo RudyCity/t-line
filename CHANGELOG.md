@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.218] - 2026-07-02
+
+### Added
+- **Tab Auto-Population**: Pre-populates new Terminal Grid Monitor tabs with all currently open terminal sessions upon creation, eliminating the need to manually configure them one by one.
+- **Tab Label & Header Resolution**: Resolved terminal items to their parent Tab names (e.g. `Shell (t-line)`) in the dropdown selector, suggestions list, and grid card headers, making it easy to identify and display existing tabs.
+- **Unfocused Grid Session Connection**: Implemented a `disableAutoFocus` prop on `TerminalInstance` to connect and initialize all unfocused grid cards in the background without stealing active browser keyboard focus.
+
 ## [1.3.217] - 2026-07-02
 
 ### Added

@@ -706,6 +706,19 @@ export function TerminalGridTab({
                       </div>
                       {group.terms.map(t => {
                         const isChecked = selectedTerminalIds.includes(t.id);
+                        const parentTab = tabs.find(tabNode => {
+                          if (tabNode.type === 'terminal' && tabNode.layout) {
+                            const checkNode = (node: any): boolean => {
+                              if (!node) return false;
+                              if (node.type === 'leaf') return node.terminalId === t.id;
+                              return checkNode(node.first) || checkNode(node.second);
+                            };
+                            return checkNode(tabNode.layout);
+                          }
+                          return false;
+                        });
+                        const displayName = parentTab ? parentTab.name : t.name;
+
                         return (
                           <div 
                             key={t.id} 
@@ -716,7 +729,7 @@ export function TerminalGridTab({
                               <div className={`custom-checkbox ${isChecked ? 'checked' : ''}`}>
                                 {isChecked && <Check size={10} className="custom-checkbox-tick" strokeWidth={3} />}
                               </div>
-                              <span className="dropdown-term-name" title={t.name}>{t.name}</span>
+                              <span className="dropdown-term-name" title={displayName}>{displayName}</span>
                             </div>
                             <span className="dropdown-term-shell">{t.shellType}</span>
                           </div>
@@ -748,6 +761,19 @@ export function TerminalGridTab({
                 <div className="suggestions-title">Currently Running Terminals</div>
                 {activeTerminals.map(t => {
                   const ws = getWorkspaceForPath(t.cwd);
+                  const parentTab = tabs.find(tabNode => {
+                    if (tabNode.type === 'terminal' && tabNode.layout) {
+                      const checkNode = (node: any): boolean => {
+                        if (!node) return false;
+                        if (node.type === 'leaf') return node.terminalId === t.id;
+                        return checkNode(node.first) || checkNode(node.second);
+                      };
+                      return checkNode(tabNode.layout);
+                    }
+                    return false;
+                  });
+                  const displayName = parentTab ? parentTab.name : t.name;
+
                   return (
                     <div 
                       key={t.id}
@@ -756,7 +782,7 @@ export function TerminalGridTab({
                     >
                       <div className="suggestion-details">
                         <TerminalIcon size={12} style={{ color: 'var(--text-muted)' }} />
-                        <span className="suggestion-name" title={t.name}>{t.name}</span>
+                        <span className="suggestion-name" title={displayName}>{displayName}</span>
                         <span className="suggestion-ws">({ws?.name || 'External'})</span>
                       </div>
                       <Plus size={12} style={{ color: 'var(--color-primary)' }} />
@@ -776,6 +802,19 @@ export function TerminalGridTab({
               const ws = getWorkspaceForPath(term.cwd);
               const pids = term.activeProcesses || [];
 
+              const parentTab = tabs.find(tabNode => {
+                if (tabNode.type === 'terminal' && tabNode.layout) {
+                  const checkNode = (node: any): boolean => {
+                    if (!node) return false;
+                    if (node.type === 'leaf') return node.terminalId === termId;
+                    return checkNode(node.first) || checkNode(node.second);
+                  };
+                  return checkNode(tabNode.layout);
+                }
+                return false;
+              });
+              const displayName = parentTab ? parentTab.name : term.name;
+
               return (
                 <div 
                   key={termId}
@@ -785,7 +824,7 @@ export function TerminalGridTab({
                   {/* Card Header */}
                   <div className="grid-card-header" onClick={() => setFocusedTermId(termId)}>
                     <div className="grid-card-title-area">
-                      <span className="grid-card-title" title={term.name}>{term.name}</span>
+                      <span className="grid-card-title" title={displayName}>{displayName}</span>
                       {ws && (
                         <span className="grid-badge grid-badge-workspace" title={ws.path}>
                           {ws.name}
@@ -816,7 +855,8 @@ export function TerminalGridTab({
                   <div className="grid-card-body">
                     <TerminalInstance
                       tab={term as any}
-                      active={!!(wsConnected && isFocused)}
+                      active={wsConnected}
+                      disableAutoFocus={!isFocused}
                       wsConnected={wsConnected}
                       fontSize={terminalFontSize - 1} // slightly smaller font for grid cards
                       onTitleChange={(title) => handleTitleChange(term.id, title)}
