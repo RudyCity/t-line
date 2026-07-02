@@ -438,10 +438,12 @@ function createWindow(urlOrPath) {
     title: 't-line Workspace Manager',
     backgroundColor: '#0b0f19',
     frame: false, // Make window frameless
+    show: false, // Don't show the window until it is ready-to-show
     icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      backgroundThrottling: true, // Enable background throttling of JS timers
       preload: path.join(__dirname, 'preload.js')
     }
   });
@@ -467,7 +469,11 @@ function createWindow(urlOrPath) {
   } else {
     mainWindow.loadFile(urlOrPath);
   }
-  mainWindow.maximize();
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.maximize();
+    mainWindow.show();
+  });
 
   mainWindow.on('close', (event) => {
     if (!isQuitting) {
@@ -834,7 +840,16 @@ app.on('ready', async () => {
   }
 
   // Periodic polling check to update status in real-time
+  let pollCounter = 0;
   setInterval(async () => {
+    const isWindowActive = mainWindow && mainWindow.isVisible() && !mainWindow.isMinimized();
+    pollCounter++;
+
+    // If window is inactive/hidden, poll only once every 15 seconds (every 3rd tick) to save resources
+    if (!isWindowActive && pollCounter % 3 !== 0) {
+      return;
+    }
+
     const running = await isBackendRunning(port);
     const newStatus = running ? 'running' : 'stopped';
     

@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.230] - 2026-07-02
+
+### Changed
+- **Electron Performance Optimizations**: 
+  - Prevented window visual flickering by hiding the window creation initially (`show: false`) and showing it only after the `ready-to-show` event fires.
+  - Enabled Electron's `backgroundThrottling: true` to throttle CPU and timers when the window is hidden or minimized.
+  - Throttled background status/session polling from every 5 seconds to every 15 seconds when the main window is hidden or minimized, reducing local HTTP overhead and CPU consumption.
+
 ## [1.3.229] - 2026-07-02
 
 ### Fixed
