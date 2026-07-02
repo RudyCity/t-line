@@ -362,10 +362,10 @@ export function TerminalGridTab({
           right: 0;
           width: 320px;
           max-height: 400px;
-          background: var(--bg-card);
+          background: var(--bg-main);
           border: 1px solid var(--border-color);
           border-radius: 8px;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
           display: flex;
           flex-direction: column;
           overflow: hidden;

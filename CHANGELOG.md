@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.222] - 2026-07-02
+
+### Fixed
+- **Dropdown Background Transparency**: Set the layout selector popover background to use `var(--bg-main)` and strengthened the drop shadow, ensuring it is 100% solid and opaque so terminal content underneath does not overlap or show through the dropdown menu options.
+
 ## [1.3.221] - 2026-07-02
 
 ### Added
