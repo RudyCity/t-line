@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.257] - 2026-07-02
+
+### Fixed
+- **Strict Mobile Font Size Enforcement**: Memastikan [TerminalInstance](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx#L221) di perangkat mobile/tablet selalu menerapkan **`9px`** secara langsung saat halaman direfresh/dibuka, mengabaikan nilai prop font desktop lama dari memori browser.
+
 ## [1.3.256] - 2026-07-02
 
 ### Fixed

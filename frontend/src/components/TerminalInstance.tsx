@@ -218,7 +218,9 @@ export function TerminalInstance({
     setContextMenu(null);
   }, []);
 
-  const actualFontSize = fontSize;
+  const isMobileOrTablet = typeof window !== 'undefined' && (window.innerWidth <= 1024 || ('ontouchstart' in window && window.innerWidth < 1280));
+  const mobileSavedFont = typeof window !== 'undefined' ? localStorage.getItem('tline-mobile-font-size') : null;
+  const actualFontSize = isMobileOrTablet ? (mobileSavedFont ? parseInt(mobileSavedFont, 10) : 9) : fontSize;
 
   const debouncedFit = useCallback(
     (() => {
