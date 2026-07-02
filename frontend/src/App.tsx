@@ -917,7 +917,47 @@ export default function App() {
             </span>
           </div>
 
-          {/* Tabs are now merged in the content area below */}
+          {/* Mobile Tab Bar — scrollable tabs in header on mobile/tablet */}
+          {filteredTabs.length > 0 && (
+            <div className="mobile-tab-bar mobile-only">
+              {filteredTabs.map(t => {
+                const isActive = activeTabId === t.id;
+                const focusedInst = t.type === 'terminal' && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
+                const displayName = (t.type === 'file' || t.type === 'diff' || t.type === 'grid') ? t.name : (focusedInst?.name || t.name);
+                return (
+                  <button
+                    key={t.id}
+                    className={`mobile-tab-item ${isActive ? 'mobile-tab-active' : ''}`}
+                    onClick={() => handleTabClick(t)}
+                  >
+                    {t.type === 'file' ? (
+                      <FileCode size={11} className="shrink-0" />
+                    ) : t.type === 'diff' ? (
+                      <GitCompare size={11} className="shrink-0" />
+                    ) : t.type === 'grid' ? (
+                      <LayoutGrid size={11} className="shrink-0" />
+                    ) : (
+                      <TerminalIcon size={11} className="shrink-0" />
+                    )}
+                    <span className="mobile-tab-name">{displayName}</span>
+                    <span
+                      className="mobile-tab-close"
+                      onClick={(e) => { e.stopPropagation(); closeTerminal(t.id, e as any); }}
+                    >
+                      ×
+                    </span>
+                  </button>
+                );
+              })}
+              <button
+                className="mobile-tab-new"
+                onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')}
+                title="New Terminal"
+              >
+                <Plus size={13} />
+              </button>
+            </div>
+          )}
 
           <div className="top-bar-actions flex items-center gap-2 shrink-0">
             <button 

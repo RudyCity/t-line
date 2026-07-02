@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.237] - 2026-07-02
+
+### Added
+- **Mobile Tab Bar di Header**: Pada layar mobile/tablet (≤768px), tab-tab terminal kini tampil langsung di header (top-bar) sebagai strip horizontal yang dapat discroll. Mengklik tab langsung berpindah ke terminal tersebut. Setiap tab menampilkan ikon tipe (terminal, file, diff, grid), nama tab, dan tombol tutup (×). Tombol `+` di ujung kanan strip memungkinkan membuka terminal baru langsung dari header.
+
 ## [1.3.236] - 2026-07-02
 
 ### Fixed

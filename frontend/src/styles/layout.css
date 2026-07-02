@@ -330,7 +330,21 @@
   }
 
   .top-bar {
-    padding: 0 12px;
+    padding: 0 8px;
+    gap: 4px;
+  }
+
+  .top-bar-info {
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .top-bar-actions {
+    flex-shrink: 0;
+  }
+
+  .mobile-tab-bar {
+    display: flex !important;
   }
 
   .top-bar .action-btn {
@@ -515,6 +529,102 @@ body.tab-dragging .drag-drop-overlay {
 
 .theme-light .right-sidebar {
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Mobile Tab Bar — shown inside top-bar on mobile/tablet */
+.mobile-tab-bar {
+  display: none; /* hidden by default, shown in media query */
+  flex: 1;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 4px;
+  padding: 0 6px;
+  height: 100%;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  -webkit-app-region: no-drag;
+}
+
+.mobile-tab-bar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.mobile-tab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+  height: 28px;
+}
+
+.mobile-tab-item:active {
+  opacity: 0.8;
+}
+
+.mobile-tab-active {
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent) !important;
+  border-color: color-mix(in srgb, var(--color-primary) 35%, transparent) !important;
+  color: var(--color-primary) !important;
+}
+
+.mobile-tab-name {
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  font-size: 0.75rem;
+  border-radius: 3px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.mobile-tab-close:hover,
+.mobile-tab-item:hover .mobile-tab-close {
+  opacity: 1;
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.mobile-tab-new {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px dashed var(--border-color);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  height: 28px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.mobile-tab-new:hover {
+  background: var(--surface-overlay);
+  color: var(--text-main);
 }
 
 /* Content Tabs Bar (Option 3: merged tabs into content/terminal panel) */
