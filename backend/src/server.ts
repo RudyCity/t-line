@@ -31,6 +31,53 @@ import fsRouter, { registerFileChangeCallback } from './fsRoutes';
 
 dotenv.config();
 
+// Override console methods to write logs to a file in os.homedir()
+const BACKEND_LOG_FILE = path.join(os.homedir(), '.tline-backend.log');
+
+function logToFile(level: 'INFO' | 'ERROR', args: any[]) {
+  const timestamp = new Date().toISOString();
+  const message = args.map(arg => {
+    if (arg instanceof Error) return arg.stack || arg.message;
+    if (typeof arg === 'object') {
+      try {
+        return JSON.stringify(arg);
+      } catch (e) {
+        return String(arg);
+      }
+    }
+    return String(arg);
+  }).join(' ');
+
+  const logLine = `[${timestamp}] [${level}] ${message}\n`;
+  try {
+    if (fs.existsSync(BACKEND_LOG_FILE) && fs.statSync(BACKEND_LOG_FILE).size > 5 * 1024 * 1024) {
+      fs.writeFileSync(BACKEND_LOG_FILE, `[${timestamp}] [INFO] Log file rotated (exceeded 5MB limit)\n`);
+    }
+    fs.appendFileSync(BACKEND_LOG_FILE, logLine);
+  } catch (err) {}
+}
+
+const originalLog = console.log;
+const originalError = console.error;
+const originalWarn = console.warn;
+
+console.log = (...args: any[]) => {
+  originalLog.apply(console, args);
+  logToFile('INFO', args);
+};
+
+console.error = (...args: any[]) => {
+  originalError.apply(console, args);
+  logToFile('ERROR', args);
+};
+
+console.warn = (...args: any[]) => {
+  originalWarn.apply(console, args);
+  logToFile('INFO', args);
+};
+
+console.log(`[system] Logger initialized. Writing backend logs to: ${BACKEND_LOG_FILE}`);
+
 const app = express();
 const port = process.env.PORT || 5779;
 
@@ -176,7 +223,7 @@ app.get('/api/auth/setup-status', (req, res) => {
 });
 
 app.get('/api/system/version', (req, res) => {
-  let appVersion = '1.3.213';
+  let appVersion = '1.3.214';
   try {
     const packageJsonPath = path.join(__dirname, '..', 'package.json');
     if (fs.existsSync(packageJsonPath)) {

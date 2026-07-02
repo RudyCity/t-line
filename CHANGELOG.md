@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.214] - 2026-07-02
+
+### Added
+- **Backend Persistent Log File**: Added global overrides for `console.log`, `console.error`, and `console.warn` inside the backend workspace to automatically save all logs, warnings, errors, and stack traces to `~/.tline-backend.log` with a 5MB auto-rotation limit. This ensures logs are preserved even during local development restarts and terminal window closures.
+
 ## [1.3.213] - 2026-07-02
 
 ### Added
