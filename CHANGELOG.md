@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.223] - 2026-07-02
+
+### Fixed
+- **Terminal Tab Auto-Focus**: Fixed a race condition on mount and tab switching where newly opened or switched terminal tabs would not focus the text entry cursor. Introduced a reactive `isInitialized` state that triggers focus once xterm.js has finished setting up the terminal DOM and textarea elements.
+
 ## [1.3.222] - 2026-07-02
 
 ### Fixed

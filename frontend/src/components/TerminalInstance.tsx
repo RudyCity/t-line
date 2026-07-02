@@ -374,6 +374,7 @@ export function TerminalInstance({
   const [cursorPos, setCursorPos] = useState({ col: 1, row: 1 });
   const [smartPasteText, setSmartPasteText] = useState<string | null>(null);
   const [localPid, setLocalPid] = useState<number | undefined>(pid);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     setLocalPid(pid);
@@ -750,6 +751,8 @@ export function TerminalInstance({
       container.addEventListener('touchend', handleFocusTrigger, true);
     }
 
+    setIsInitialized(true);
+
     return () => {
       window.removeEventListener('resize', handleResize);
       resizeObserver.disconnect();
@@ -768,6 +771,7 @@ export function TerminalInstance({
       wsManager.send(JSON.stringify({ type: 'suspend', id: tab.id }));
       wsManager.removeListener(tab.id);
       terminalRef.current = null;
+      setIsInitialized(false);
       term.dispose();
     };
   }, [tab.id, debouncedFit, scheduleWrite]);
@@ -808,14 +812,21 @@ export function TerminalInstance({
 
   // ── Active tab: refit + focus ──────────────────────────────
   useEffect(() => {
-    if (active) {
+    if (active && isInitialized) {
       debouncedFit();
       if (!disableAutoFocus) {
-        const timer = setTimeout(() => { terminalRef.current?.focus(); }, 80);
+        const timer = setTimeout(() => {
+          if (terminalRef.current) {
+            terminalRef.current.focus();
+            if (terminalRef.current.textarea) {
+              terminalRef.current.textarea.focus();
+            }
+          }
+        }, 120);
         return () => clearTimeout(timer);
       }
     }
-  }, [active, debouncedFit, disableAutoFocus]);
+  }, [active, debouncedFit, disableAutoFocus, isInitialized]);
 
   // ── Font size, Family & Weight ──────────────────────────────
   useEffect(() => {
