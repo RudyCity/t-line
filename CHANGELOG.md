@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.260] - 2026-07-02
+
+### Added / Fixed
+- **Enabled Monaco Editor Word Wrap & Fixed Mobile File Header Layout**:
+  - Mengaktifkan fitur Word Wrap (`wordWrap: 'on'`) pada Monaco Editor di [FileViewerTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/FileViewerTab.tsx#L623) agar kode/teks panjang otomatis terpotong rapi ke baris berikutnya di layar mobile tanpa perlu scroll horizontal.
+  - Memperbaiki layout flex header file viewer agar label status (`Auto-save active`, `Saved`, `Modified`) tidak tertekan atau terlipat secara vertikal (`whitespace-nowrap shrink-0`) di layar sentuh/mobile yang sempit.
+
 ## [1.3.259] - 2026-07-02
 
 ### Changed

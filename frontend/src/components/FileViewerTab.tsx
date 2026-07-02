@@ -539,20 +539,20 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
   return (
     <div className="flex flex-col flex-1 w-full h-full bg-[var(--bg-main)] overflow-hidden">
       {/* File Header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0">
-        <div className="flex items-center gap-2 truncate">
+      <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0 min-h-[36px]">
+        <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
           <FileCode size={14} className="text-purple-400 shrink-0" />
           <span className="text-xs font-mono text-[var(--text-muted)] truncate" title={filePath}>
             {filePath}
           </span>
           {saveError && (
-            <span className="text-[10px] text-red-400 font-semibold truncate ml-2">({saveError})</span>
+            <span className="text-[10px] text-red-400 font-semibold truncate ml-2 shrink-0">({saveError})</span>
           )}
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
           {isSvg && (
-            <div className="flex items-center bg-[var(--bg-card)] rounded-md p-0.5 border border-[var(--border-color)] mr-2">
+            <div className="flex items-center bg-[var(--bg-card)] rounded-md p-0.5 border border-[var(--border-color)] mr-2 shrink-0">
               <button
                 onClick={() => setViewMode('preview')}
                 className={`px-2 py-0.5 rounded text-[10px] font-medium transition duration-150 cursor-pointer ${
@@ -576,23 +576,23 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
             </div>
           )}
           {saving ? (
-            <div className="flex items-center gap-1.5 text-[11px] text-purple-400 font-medium animate-pulse">
-              <span className="h-1.5 w-1.5 rounded-full bg-purple-500 animate-ping" />
+            <div className="flex items-center gap-1.5 text-[11px] text-purple-400 font-medium animate-pulse whitespace-nowrap">
+              <span className="h-1.5 w-1.5 rounded-full bg-purple-500 animate-ping shrink-0" />
               <span>Saving...</span>
             </div>
           ) : saveSuccess ? (
-            <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
-              <Check size={12} />
+            <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-medium whitespace-nowrap">
+              <Check size={12} className="shrink-0" />
               <span>Saved</span>
             </div>
           ) : isDirty ? (
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-purple-400 font-semibold px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20">
+            <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
+              <span className="text-[10px] text-purple-400 font-semibold px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 whitespace-nowrap">
                 Modified
               </span>
               <button
                 onClick={handleRevert}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] rounded transition-all duration-150 cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] rounded transition-all duration-150 cursor-pointer whitespace-nowrap"
                 title="Revert changes"
               >
                 <RotateCcw size={12} />
@@ -600,7 +600,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
               </button>
             </div>
           ) : (
-            <span className="text-[11px] text-slate-500 font-medium">Auto-save active</span>
+            <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap shrink-0">Auto-save active</span>
           )}
         </div>
       </div>
@@ -625,6 +625,8 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
             fontSize: window.innerWidth <= 768 ? 11 : 13,
             lineHeight: 20,
             automaticLayout: true,
+            wordWrap: 'on',
+            wrappingStrategy: 'advanced',
             scrollbar: {
               vertical: 'auto',
               horizontal: 'auto',
