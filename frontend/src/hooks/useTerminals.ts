@@ -131,7 +131,8 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
   const [terminalFontSize, setTerminalFontSize] = useState<number>(() => {
     const saved = localStorage.getItem('tline-terminal-font-size');
     if (saved) return parseInt(saved, 10);
-    return window.innerWidth <= 768 ? 9 : 12;
+    const isMobileOrTablet = typeof window !== 'undefined' && (window.innerWidth <= 1024 || ('ontouchstart' in window && window.innerWidth < 1280));
+    return isMobileOrTablet ? 9 : 12;
   });
 
   const [refreshTriggers, setRefreshTriggers] = useState<Record<string, number>>({});

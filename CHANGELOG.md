@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.254] - 2026-07-02
+
+### Changed
+- **Default Terminal Font Size for Mobile & Tablet**: Mengubah ukuran default font terminal pada perangkat mobile & tablet (`<= 1024px` atau perangkat layar sentuh) menjadi **9px** (sebelumnya default 12px) untuk memaksimalkan jumlah kolom/baris terminal yang muat di layar.
+
 ## [1.3.253] - 2026-07-02
 
 ### Changed
