@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.246] - 2026-07-02
+
+### Changed
+- **Mobile/Tablet Terminal Split Button UX**: Memindahkan tombol split pane di perangkat mobile/tablet dari posisi kanan bawah ke **kanan atas**, dengan desain yang lebih minimalis.
+  - Tombol split tidak lagi selalu terlihat di layar — kini tersembunyi by default dan hanya muncul saat user mengetuk ikon split kecil di pojok kanan atas setiap pane terminal.
+  - Menampilkan panel aksi (split horizontal, split vertikal, close pane) hanya saat toggle aktif, lalu menutup otomatis setelah aksi dipilih.
+  - Desktop tetap menggunakan perilaku hover-to-reveal yang sama seperti sebelumnya.
+  - Refactor `SplitLayoutRenderer.tsx`: logika leaf node dipisah ke komponen `LeafPane` tersendiri agar dapat menggunakan `useState` (React Hooks rule) secara aman.
+
 ## [1.3.245] - 2026-07-02
 
 ### Fixed
