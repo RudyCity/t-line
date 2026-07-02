@@ -496,21 +496,50 @@ function parsePsOutput(psContent: string): any[] {
   return processes;
 }
 
-export function getActiveProcessesForPid(shellPid: number): Promise<ActiveProcessSummary[]> {
-  return new Promise((resolve) => {
+let cachedProcesses: any[] = [];
+let lastFetchTime = 0;
+let pendingFetchPromise: Promise<any[]> | null = null;
+
+function getAllProcesses(): Promise<any[]> {
+  const now = Date.now();
+  if (now - lastFetchTime < 2000 && cachedProcesses.length > 0) {
+    return Promise.resolve(cachedProcesses);
+  }
+  if (pendingFetchPromise) {
+    return pendingFetchPromise;
+  }
+
+  pendingFetchPromise = new Promise<any[]>((resolve) => {
     const isWin = os.platform() === 'win32';
     const cmd = isWin
       ? 'wmic process get CommandLine,Name,ParentProcessId,ProcessId /FORMAT:csv'
       : 'ps -ax -o pid,ppid,comm,command 2>/dev/null || ps -ax -o pid,ppid,comm,args';
 
     exec(cmd, { maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
+      pendingFetchPromise = null;
       if (err || !stdout) {
-        resolve([]);
+        resolve(cachedProcesses);
         return;
       }
       try {
         const processes = isWin ? parseWmicCsv(stdout) : parsePsOutput(stdout);
-        
+        cachedProcesses = processes;
+        lastFetchTime = Date.now();
+        resolve(processes);
+      } catch (e) {
+        console.error('Error parsing processes:', e);
+        resolve(cachedProcesses);
+      }
+    });
+  });
+
+  return pendingFetchPromise;
+}
+
+export function getActiveProcessesForPid(shellPid: number): Promise<ActiveProcessSummary[]> {
+  return new Promise((resolve) => {
+    getAllProcesses().then((processes) => {
+      try {
         // Build ppid map
         const ppidMap = new Map<number, any[]>();
         for (const proc of processes) {

@@ -492,26 +492,40 @@ export function TerminalInstance({
   const debouncedFit = useCallback(
     (() => {
       let timeouts: NodeJS.Timeout[] = [];
-      return () => {
+      let lastCall = 0;
+      let rafId: number | null = null;
+
+      const performFit = () => {
         try {
           if (containerRef.current && containerRef.current.clientWidth > 0 && containerRef.current.clientHeight > 0) {
             fitAddonRef.current?.fit();
           }
         } catch (e) {}
+      };
 
+      return () => {
+        const now = Date.now();
+
+        // Throttle synchronous fit operations using requestAnimationFrame
+        if (now - lastCall > 50) {
+          lastCall = now;
+          if (rafId === null) {
+            rafId = requestAnimationFrame(() => {
+              rafId = null;
+              performFit();
+            });
+          }
+        }
+
+        // Clear existing transition timers
         timeouts.forEach(clearTimeout);
         timeouts = [];
 
-        const intervals = [50, 150, 300, 500];
+        // Schedule fit intervals to handle transition-based panels (e.g. split panels)
+        const intervals = [100, 250, 500];
         intervals.forEach(ms => {
           const tid = setTimeout(() => {
-            try {
-              if (containerRef.current && containerRef.current.clientWidth > 0 && containerRef.current.clientHeight > 0) {
-                fitAddonRef.current?.fit();
-              }
-            } catch (e) {
-              console.error('Interval fit failed:', e);
-            }
+            performFit();
           }, ms);
           timeouts.push(tid);
         });

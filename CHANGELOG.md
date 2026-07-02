@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.215] - 2026-07-02
+
+### Added
+- **Process List Caching**: Implemented a global cached process tree fetcher in `backend/src/terminalManager.ts` with a 2-second TTL. This aggregates concurrent PTY status polling requests across multiple terminals (e.g., in split panes) into a single system command invocation, greatly reducing background CPU load and UI stutters.
+
+### Changed
+- **Terminal Resize Fitting Throttling**: Optimized the `debouncedFit` handler in `frontend/src/components/TerminalInstance.tsx` by using `requestAnimationFrame` with a 50ms throttle during active drag-resizing, and debouncing layout updates to avoid layout thrashing and redundant timers.
+
 ## [1.3.214] - 2026-07-02
 
 ### Added
