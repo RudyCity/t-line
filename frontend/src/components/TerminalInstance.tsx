@@ -498,7 +498,7 @@ export function TerminalInstance({
     setContextMenu(null);
   }, []);
 
-  const actualFontSize = window.innerWidth <= 768 ? 8 : fontSize;
+  const actualFontSize = fontSize;
 
   const debouncedFit = useCallback(
     (() => {
@@ -839,6 +839,10 @@ export function TerminalInstance({
         if (fontWeight) {
           terminalRef.current.options.fontWeight = fontWeight as any;
         }
+        // Force xterm to fit after options change
+        setTimeout(() => {
+          debouncedFit();
+        }, 50);
       } catch (e) {
         console.error('Error changing terminal font settings:', e);
       }

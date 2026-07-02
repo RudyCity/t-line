@@ -129,7 +129,8 @@ export function removeLeaf(node: SplitLayoutNode, targetId: string): SplitLayout
 export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () => void) {
   const [terminalFontSize, setTerminalFontSize] = useState<number>(() => {
     const saved = localStorage.getItem('tline-terminal-font-size');
-    return saved ? parseInt(saved, 10) : 12;
+    if (saved) return parseInt(saved, 10);
+    return window.innerWidth <= 768 ? 9 : 12;
   });
 
   const [refreshTriggers, setRefreshTriggers] = useState<Record<string, number>>({});

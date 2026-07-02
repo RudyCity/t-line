@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.234] - 2026-07-02
+
+### Fixed
+- **Terminal Font Scaling on Mobile/Tablet**: Removed the hardcoded 8px terminal font size lock on mobile/tablet screens. Font size changes now correctly respect the user's settings.
+- **Terminal Font Options Fit Refresh**: Added a forced xterm layout recalculation (`fit()`) after changing the font size, font family, or font weight options to ensure immediate visual alignment.
+
 ## [1.3.233] - 2026-07-02
 
 ### Added
