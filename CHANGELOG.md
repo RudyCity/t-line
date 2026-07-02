@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.241] - 2026-07-02
+
+### Fixed
+- **Terminal Focus & Selection Bug**: Memperbaiki bug di mana menyeleksi teks (text selection) di terminal sering terhapus otomatis ketika mouse dilepas. Hal ini dikarenakan capture-phase event listener click/touchend yang memaksa fokus kembali ke textarea terminal. Kini, programmatic focus dinonaktifkan ketika target klik berada di dalam `.xterm` atau ketika terminal memiliki seleksi aktif, memulihkan perilaku klik dan seleksi teks bawaan terminal yang sebenarnya.
+
 ## [1.3.240] - 2026-07-02
 
 ### Fixed

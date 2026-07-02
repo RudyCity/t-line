@@ -737,9 +737,15 @@ export function TerminalInstance({
         return;
       }
       if (terminalRef.current) {
-        terminalRef.current.focus();
-        if (terminalRef.current.textarea) {
-          terminalRef.current.textarea.focus();
+        const insideXterm = target.closest('.xterm');
+        const isAlreadyFocused = document.activeElement === terminalRef.current.textarea;
+        const hasSelection = terminalRef.current.hasSelection();
+
+        if (!insideXterm && !isAlreadyFocused && !hasSelection) {
+          terminalRef.current.focus();
+          if (terminalRef.current.textarea) {
+            terminalRef.current.textarea.focus();
+          }
         }
         onFocusRef.current?.();
       }
@@ -817,9 +823,13 @@ export function TerminalInstance({
       if (!disableAutoFocus) {
         const timer = setTimeout(() => {
           if (terminalRef.current) {
-            terminalRef.current.focus();
-            if (terminalRef.current.textarea) {
-              terminalRef.current.textarea.focus();
+            const isAlreadyFocused = document.activeElement === terminalRef.current.textarea;
+            const hasSelection = terminalRef.current.hasSelection();
+            if (!isAlreadyFocused && !hasSelection) {
+              terminalRef.current.focus();
+              if (terminalRef.current.textarea) {
+                terminalRef.current.textarea.focus();
+              }
             }
           }
         }, 120);
@@ -906,8 +916,14 @@ export function TerminalInstance({
     const target = e.target as HTMLElement;
     if (target.closest('input') || target.closest('button') || target.closest('select') || target.closest('a')) return;
     if (terminalRef.current) {
-      terminalRef.current.focus();
-      if (terminalRef.current.textarea) terminalRef.current.textarea.focus();
+      const insideXterm = target.closest('.xterm');
+      const isAlreadyFocused = document.activeElement === terminalRef.current.textarea;
+      const hasSelection = terminalRef.current.hasSelection();
+
+      if (!insideXterm && !isAlreadyFocused && !hasSelection) {
+        terminalRef.current.focus();
+        if (terminalRef.current.textarea) terminalRef.current.textarea.focus();
+      }
       onFocusRef.current?.();
     }
   };
