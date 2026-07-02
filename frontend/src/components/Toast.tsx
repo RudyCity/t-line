@@ -17,7 +17,10 @@ export function Toast() {
         id,
         message: customEvent.detail.message || 'Session Re-attached'
       };
-      setToasts(prev => [...prev, newToast]);
+      setToasts(prev => {
+        const next = [...prev, newToast];
+        return next.slice(-2);
+      });
 
       setTimeout(() => {
         setToasts(prev => prev.filter(t => t.id !== id));

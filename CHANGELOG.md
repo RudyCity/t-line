@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.225] - 2026-07-02
+
+### Changed
+- **Toast Notifications Customization**: Limited the active toast count to a maximum of 2 to avoid cluttering the screen. Moved the toast notification container to the bottom-right corner of the application.
+- **Session Re-attached Toast ID Display**: Appended the terminal session ID to the "Session Re-attached" toast notification message.
+
 ## [1.3.224] - 2026-07-02
 
 ### Added

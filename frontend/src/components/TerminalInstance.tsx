@@ -702,7 +702,7 @@ export function TerminalInstance({
         term.write('\r\n\r\n[Process Exited]\r\n');
       } else if (payload.type === 're-attached') {
         window.dispatchEvent(new CustomEvent('tline-toast', {
-          detail: { message: 'Session Re-attached' }
+          detail: { message: `Session Re-attached (${tab.id})` }
         }));
       }
     });
