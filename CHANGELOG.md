@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.242] - 2026-07-02
+
+### Added
+- **WebGL GPU-Accelerated Renderer**: Menginstal `@xterm/addon-webgl` dan mengintegrasikannya sebagai render engine utama di `TerminalInstance.tsx`. Jika terjadi context loss pada WebGL (GPU reset/crash), addon otomatis didispose agar xterm.js kembali ke renderer bawaan secara mulus. Jika WebGL tidak didukung oleh browser/lingkungan, sistem secara otomatis melakukan fallback bertahap (progressive fallback) ke Canvas renderer, lalu ke DOM renderer, memastikan performa rendering throughput data yang tinggi dan responsif.
+- **Refactoring & Modulerisasi Terminal**: Memisahkan subkomponen pendukung terminal (`TerminalSearchBar`, `SmartPasteConfirm`, `TerminalStatusBar`, dan `TerminalContextMenu`) dari `TerminalInstance.tsx` ke file baru [TerminalSubComponents.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalSubComponents.tsx) demi menjaga kepatuhan batas panjang file maksimal 1000 baris.
+
 ## [1.3.241] - 2026-07-02
 
 ### Fixed
