@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.236] - 2026-07-02
+
+### Fixed
+- **Terminal Tidak Berfungsi di Workspace Non-Git**: Workspace yang bukan repository Git (folder biasa tanpa `.git`) kini dapat membuka terminal dengan benar. Root cause: `handleWorkspaceClick` selalu men-set `panelWorktreePath` ke `ws.path`, padahal untuk workspace non-git tidak ada worktrees — sehingga `filteredTabs` memfilter semua tab keluar karena worktree target tidak ditemukan.
+- **Sync Worktree Path Salah untuk Non-Git**: `useEffect` sinkronisasi panel di `App.tsx` juga di-fix: workspace non-git kini selalu menggunakan `panelWorktreePath = null`, sedangkan git workspace menggunakan path `mainWt` yang akurat (bukan `ws.path` yang sebelumnya bisa berbeda dari path worktree utama).
+
 ## [1.3.235] - 2026-07-02
 
 ### Fixed
