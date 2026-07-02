@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.229] - 2026-07-02
+
+### Fixed
+- **Workspace Disappearance on Password Change**: Fixed a bug where changing the master password deleted all workspaces from the configuration. The application now properly merges and preserves existing configuration options (like the `workspaces` array) when updating the master password.
+
 ## [1.3.228] - 2026-07-02
 
 ### Fixed

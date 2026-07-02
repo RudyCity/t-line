@@ -10,6 +10,7 @@ const CONFIG_FILE = path.join(os.homedir(), '.tline-config.json');
 interface AppConfig {
   masterPasswordHash: string;
   jwtSecret: string;
+  [key: string]: any;
 }
 
 // Generate an ephemeral bypass token for the local Electron instance on each startup
@@ -82,7 +83,9 @@ export function setupMasterPassword(password: string): boolean {
   const hash = bcrypt.hashSync(password, salt);
   const jwtSecret = crypto.randomBytes(64).toString('hex');
   
+  const existingConfig = loadConfig() || {};
   saveConfig({
+    ...existingConfig,
     masterPasswordHash: hash,
     jwtSecret
   });
