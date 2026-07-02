@@ -250,7 +250,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
   }, []);
 
   const handleZoomOut = useCallback(() => {
-    setTerminalFontSize(prev => Math.max(prev - 1, 8));
+    setTerminalFontSize(prev => Math.max(prev - 1, 5));
   }, []);
 
   const findWorkspaceIdForPath = useCallback((path: string): string | undefined => {

@@ -543,7 +543,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <FormField label={`Terminal Font Size (${terminalFontSize}px)`} className="mb-0">
                   <input
                     type="range"
-                    min="8"
+                    min="5"
                     max="24"
                     value={terminalFontSize}
                     onChange={(e) => setTerminalFontSize(Number(e.target.value))}

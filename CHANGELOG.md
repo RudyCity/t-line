@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.259] - 2026-07-02
+
+### Changed
+- **Lower Minimum Terminal Font Size to 5px**: Menurunkan batas minimum font size terminal dari `8px` menjadi **`5px`**.
+  - Diperbarui pada handler zoom out ([useTerminals.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useTerminals.ts#L253)) serta slider range input pada modal pengaturan ([SettingsModal.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SettingsModal.tsx#L546)).
+
 ## [1.3.258] - 2026-07-02
 
 ### Fixed
