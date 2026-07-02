@@ -508,7 +508,7 @@ let pendingFetchPromise: Promise<any[]> | null = null;
 
 function getAllProcesses(): Promise<any[]> {
   const now = Date.now();
-  if (now - lastFetchTime < 2000 && cachedProcesses.length > 0) {
+  if (now - lastFetchTime < 5000 && cachedProcesses.length > 0) {
     return Promise.resolve(cachedProcesses);
   }
   if (pendingFetchPromise) {

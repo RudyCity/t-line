@@ -631,7 +631,7 @@ wss.on('connection', (ws: WebSocket) => {
       } catch (e) {
         clearInterval(titleInterval);
       }
-    }, 1000);
+    }, 3000);
 
     const processInterval = setInterval(async () => {
       if (ws.readyState !== WebSocket.OPEN) {
@@ -655,7 +655,7 @@ wss.on('connection', (ws: WebSocket) => {
       } catch (e) {
         clearInterval(processInterval);
       }
-    }, 2500);
+    }, 5000);
 
     // Return a cleanup function
     return () => {
@@ -790,6 +790,16 @@ wss.on('connection', (ws: WebSocket) => {
     activeTerminals.clear();
   });
 });
+
+// Periodic garbage collection to keep memory usage low (triggered if node --expose-gc is enabled)
+if (typeof global.gc === 'function') {
+  const gcFn = global.gc;
+  setInterval(() => {
+    try {
+      gcFn();
+    } catch (e) {}
+  }, 60000);
+}
 
 // Start Server
 server.listen(port, () => {

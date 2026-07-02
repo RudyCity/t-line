@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.231] - 2026-07-02
+
+### Changed
+- **RAM and CPU Optimizations**: 
+  - Exposed Node.js Garbage Collection (`--expose-gc`) in both Electron main process and Backend fork configurations.
+  - Registered window state observers (`minimize`, `hide`) to manually invoke garbage collection and release memory back to the OS immediately after user minimizes or hides the app window.
+  - Implemented a 60-second periodic garbage collection schedule in the backend service.
+  - Extended backend process lookup cache lifetime from 2 seconds to 5 seconds to reduce expensive process listing command (wmic / ps) CPU overhead.
+  - Reduced terminal process title update interval from 1s to 3s, and terminal process tree polling interval from 2.5s to 5s.
+
 ## [1.3.230] - 2026-07-02
 
 ### Changed

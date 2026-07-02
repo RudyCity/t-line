@@ -9,8 +9,8 @@ const { initAutoUpdater } = require('./updater');
 // Disable hardware acceleration to prevent GPU process crash (error code -1073741819)
 app.disableHardwareAcceleration();
 
-// Limit V8 heap memory usage for main and renderer processes to prevent memory bloat (forces GC earlier)
-app.commandLine.appendSwitch('js-flags', '--max-old-space-size=384');
+// Limit V8 heap memory usage for main and renderer processes to prevent memory bloat (forces GC earlier) and expose garbage collector
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=384 --expose-gc');
 // Prune GPU resources and command buffers when idle to free memory
 app.commandLine.appendSwitch('prune-gpu-command-buffer');
 
@@ -45,6 +45,14 @@ function updateBackendStatus(newStatus) {
     if (mainWindow) {
       mainWindow.webContents.send('backend-status-change', backendStatus);
     }
+  }
+}
+
+function requestGC() {
+  if (global.gc) {
+    try {
+      global.gc();
+    } catch (e) {}
   }
 }
 
@@ -292,7 +300,7 @@ function startBackend() {
     backendProcess = utilityProcess.fork(scriptPath, [], {
       env: spawnEnv,
       stdio: 'pipe',
-      execArgv: ['--max-old-space-size=512']
+      execArgv: ['--max-old-space-size=512', '--expose-gc']
     });
   }
 
@@ -481,6 +489,14 @@ function createWindow(urlOrPath) {
       mainWindow.hide();
       showMinimizeNotification();
     }
+  });
+
+  mainWindow.on('minimize', () => {
+    setTimeout(requestGC, 1000);
+  });
+
+  mainWindow.on('hide', () => {
+    setTimeout(requestGC, 1000);
   });
 
   mainWindow.on('closed', () => {
