@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.262] - 2026-07-02
+
+### Changed
+- **Hide Duplicated Footer Controls on Mobile & Tablet (`<= 1024px`)**:
+  - Mengubah breakpoint responsif kontrol tengah (Zoom in/out font, selector default shell, tombol restart terminal) dan kontrol kanan (Cloudflare Tunnel status, URL, tombol start Quick/Custom & Stop) pada [Footer.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/Footer.tsx#L288) dari `hidden sm:flex` / `hidden md:flex` menjadi **`hidden lg:flex`**.
+  - Kontrol-kontrol tersebut kini disembunyikan dari Footer pada tampilan Mobile & Tablet (`<= 1024px`) agar footer tidak berantakan/berlapis, karena semua fungsi tersebut sudah tersedia lengkap pada Menu Kanan ([RightSidebar.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/RightSidebar.tsx#L167)).
+
 ## [1.3.261] - 2026-07-02
 
 ### Fixed

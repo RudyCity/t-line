@@ -195,10 +195,10 @@ export function Footer({
           </span>
         )}
 
-        {/* System Resource Stats */}
+        {/* System Resource Stats — hidden on mobile & tablet */}
         {systemStats && (
           <div 
-            className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all duration-200 shadow-inner cursor-default relative group"
+            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all duration-200 shadow-inner cursor-default relative group"
             style={{
               backgroundColor: 'color-mix(in srgb, var(--bg-main) 60%, transparent)',
               borderColor: 'var(--border-color)',
@@ -284,8 +284,8 @@ export function Footer({
         )}
       </div>
 
-      {/* Center Section: Workspace Context & Zoom/Shell Controls — hidden on mobile */}
-      <div className="hidden sm:flex items-center gap-4">
+      {/* Center Section: Workspace Context & Zoom/Shell Controls — hidden on mobile & tablet */}
+      <div className="hidden lg:flex items-center gap-4">
         {panelWorkspace && (
           <div className="flex items-center gap-2 text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>
             <span
@@ -430,8 +430,8 @@ export function Footer({
         </div>
       </div>
 
-      {/* Right Section: Cloudflare Tunnel & Status — hidden on mobile */}
-      <div className="hidden sm:flex items-center gap-2.5">
+      {/* Right Section: Cloudflare Tunnel & Status — hidden on mobile & tablet */}
+      <div className="hidden lg:flex items-center gap-2.5">
         {/* Cloudflare Tunnel status */}
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] hidden md:inline-block" style={{ color: 'var(--text-muted)' }}>Cloudflare Tunnel:</span>
