@@ -502,83 +502,90 @@ function parsePsOutput(psContent: string): any[] {
   return processes;
 }
 
-let cachedProcesses: any[] = [];
-let lastFetchTime = 0;
-let pendingFetchPromise: Promise<any[]> | null = null;
-
-function getAllProcesses(): Promise<any[]> {
-  const now = Date.now();
-  if (now - lastFetchTime < 5000 && cachedProcesses.length > 0) {
-    return Promise.resolve(cachedProcesses);
-  }
-  if (pendingFetchPromise) {
-    return pendingFetchPromise;
-  }
-
-  pendingFetchPromise = new Promise<any[]>((resolve) => {
+function getChildrenForPids(pids: number[]): Promise<any[]> {
+  if (pids.length === 0) return Promise.resolve([]);
+  return new Promise((resolve) => {
     const isWin = os.platform() === 'win32';
     const cmd = isWin
-      ? 'wmic process get CommandLine,Name,ParentProcessId,ProcessId /FORMAT:csv'
-      : 'ps -ax -o pid,ppid,comm,command 2>/dev/null || ps -ax -o pid,ppid,comm,args';
+      ? `wmic process where "${pids.map(pid => `ParentProcessId=${pid}`).join(' or ')}" get CommandLine,Name,ParentProcessId,ProcessId /FORMAT:csv`
+      : `ps -ax -o pid,ppid,comm,command 2>/dev/null || ps -ax -o pid,ppid,comm,args`;
 
     exec(cmd, { maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
-      pendingFetchPromise = null;
-      if (err || !stdout) {
-        resolve(cachedProcesses);
+      if (!stdout) {
+        resolve([]);
         return;
       }
       try {
         const processes = isWin ? parseWmicCsv(stdout) : parsePsOutput(stdout);
-        cachedProcesses = processes;
-        lastFetchTime = Date.now();
-        resolve(processes);
+        if (!isWin) {
+          // On Unix, since we fetched all processes, filter them here to only children of the pids
+          const pidSet = new Set(pids);
+          const filtered = processes.filter(p => pidSet.has(p.ppid));
+          resolve(filtered);
+        } else {
+          resolve(processes);
+        }
       } catch (e) {
-        console.error('Error parsing processes:', e);
-        resolve(cachedProcesses);
+        resolve([]);
       }
     });
   });
-
-  return pendingFetchPromise;
 }
 
-export function getActiveProcessesForPid(shellPid: number): Promise<ActiveProcessSummary[]> {
+function getDescendantsForPid(shellPid: number): Promise<any[]> {
   return new Promise((resolve) => {
-    getAllProcesses().then((processes) => {
-      try {
-        // Build ppid map
-        const ppidMap = new Map<number, any[]>();
-        for (const proc of processes) {
-          if (!ppidMap.has(proc.ppid)) {
-            ppidMap.set(proc.ppid, []);
-          }
-          ppidMap.get(proc.ppid)!.push(proc);
-        }
+    const descendants: any[] = [];
+    const queue = [shellPid];
+    const visited = new Set<number>();
 
-        // Traverse descendants
-        const descendants: any[] = [];
-        const queue = [shellPid];
-        const visited = new Set<number>();
+    const next = () => {
+      const pidsToQuery = queue.filter(pid => !visited.has(pid));
+      if (pidsToQuery.length === 0) {
+        resolve(descendants);
+        return;
+      }
+      pidsToQuery.forEach(pid => visited.add(pid));
 
-        while (queue.length > 0) {
-          const current = queue.shift()!;
-          if (visited.has(current)) continue;
-          visited.add(current);
+      getChildrenForPids(pidsToQuery).then((children) => {
+        // Remove queried PIDs from queue
+        pidsToQuery.forEach(pid => {
+          const idx = queue.indexOf(pid);
+          if (idx > -1) queue.splice(idx, 1);
+        });
 
-          const children = ppidMap.get(current);
-          if (children) {
-            for (const child of children) {
-              descendants.push(child);
+        if (children.length > 0) {
+          descendants.push(...children);
+          children.forEach(child => {
+            if (!visited.has(child.pid)) {
               queue.push(child.pid);
             }
-          }
+          });
         }
+        next();
+      });
+    };
 
+    next();
+  });
+}
+
+// Cache active processes per shell PID to avoid spamming process checks
+const activeProcessesCache = new Map<number, { time: number; data: ActiveProcessSummary[] }>();
+
+export function getActiveProcessesForPid(shellPid: number): Promise<ActiveProcessSummary[]> {
+  const now = Date.now();
+  const cached = activeProcessesCache.get(shellPid);
+  if (cached && now - cached.time < 4000) {
+    return Promise.resolve(cached.data);
+  }
+
+  return new Promise((resolve) => {
+    getDescendantsForPid(shellPid).then((descendants) => {
+      try {
         // Filter and map to ActiveProcessSummary
         const summaries: ActiveProcessSummary[] = descendants
           .filter(p => {
             const nameLower = p.name.toLowerCase();
-            // Exclude shell helpers that are not actual active user commands
             return nameLower !== 'conhost.exe' && 
                    nameLower !== 'openconsole.exe' && 
                    p.pid !== shellPid;
@@ -604,6 +611,7 @@ export function getActiveProcessesForPid(shellPid: number): Promise<ActiveProces
             };
           });
 
+        activeProcessesCache.set(shellPid, { time: now, data: summaries });
         resolve(summaries);
       } catch (e) {
         console.error('Error in getActiveProcessesForPid:', e);

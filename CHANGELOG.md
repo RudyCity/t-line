@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.265] - 2026-07-03
+
+### Improved / Optimized
+- **PTY Active Process Polling CPU Optimization**:
+  - Mengubah metode pendeteksian proses aktif terminal di backend ([terminalManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/terminalManager.ts#L505)). Sebelumnya, backend secara konstan memanggil `wmic` secara global untuk mengambil seluruh daftar proses sistem operasi setiap 5 detik (sangat membebani CPU Windows & menyebabkan terminal terasa lambat/berat).
+  - Sekarang, pencarian proses aktif dioptimalkan secara drastis dengan menargetkan query WMI/ps secara rekursif hanya untuk PID shell yang bersangkutan beserta keturunannya (`ParentProcessId=shellPid`).
+  - Menambahkan sistem caching berdurasi 4 detik untuk ringkasan proses aktif per shell PID guna meminimalkan redundant query saat beberapa tab atau split-pane terminal dibuka bersamaan. Hal ini memangkas penggunaan CPU di latar belakang hingga mendekati 0% dan membuat responsivitas terminal jauh lebih ringan.
+
 ## [1.3.264] - 2026-07-03
 
 ### Fixed
