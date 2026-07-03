@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.264] - 2026-07-03
+
+### Fixed
+- **Double Caret (Cursor) in Terminal & Focus Interception**:
+  - Membatasi CSS positioning `.xterm-helper-textarea` ke perangkat mobile/tablet (layar sentuh / lebar <= 1024px) menggunakan media query `@media (pointer: coarse) or (max-width: 1024px)` pada [layout.css](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/layout.css#L565). Hal ini menghilangkan caret/kursor kedip kedua (double caret) di pojok bawah/kiri terminal pada browser desktop.
+  - Mengubah listener event penanganan fokus terminal pada [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx#L527) dan wrapper pane dari event `click` menjadi event `mousedown` pada fase capture (`true`). Hal ini mencegah aplikasi dalam terminal yang mengaktifkan deteksi mouse (seperti `claudecode` atau `superagent`) menangkap (intercept) dan mematikan (eat) event klik, sehingga terminal tetap dapat difokuskan dengan normal saat diklik.
+
 ## [1.3.263] - 2026-07-02
 
 ### Fixed

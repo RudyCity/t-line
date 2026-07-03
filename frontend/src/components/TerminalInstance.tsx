@@ -524,7 +524,7 @@ export function TerminalInstance({
 
     const container = containerRef.current;
     if (container) {
-      container.addEventListener('click', handleFocusTrigger, true);
+      container.addEventListener('mousedown', handleFocusTrigger, true);
       container.addEventListener('touchend', handleFocusTrigger, true);
     }
 
@@ -534,7 +534,7 @@ export function TerminalInstance({
       window.removeEventListener('resize', handleResize);
       resizeObserver.disconnect();
       if (container) {
-        container.removeEventListener('click', handleFocusTrigger, true);
+        container.removeEventListener('mousedown', handleFocusTrigger, true);
         container.removeEventListener('touchend', handleFocusTrigger, true);
       }
       if (rafHandleRef.current !== null) {
@@ -757,7 +757,7 @@ export function TerminalInstance({
     <div
       className={`terminal-pane-root${isFocusedPane ? ' terminal-pane-focused' : ''}`}
       style={{ backgroundColor: themeBackground || '#0b0f19' }}
-      onClick={handleTerminalFocus}
+      onMouseDown={handleTerminalFocus}
       onTouchEnd={handleTerminalFocus}
       onContextMenu={handleContextMenu}
     >
