@@ -87,6 +87,8 @@ export function TerminalInstance({
   const onTitleChangeRef = useRef(onTitleChange);
   const onActiveProcessesChangeRef = useRef(onActiveProcessesChange);
   const onFocusRef = useRef(onFocus);
+  // Callback ref used by silence-detection to signal incoming PTY data.
+  const onPtyDataRef = useRef<(() => void) | null>(null);
 
   const [showSearch, setShowSearch] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -463,6 +465,8 @@ export function TerminalInstance({
     wsManager.subscribe(tab.id, (payload) => {
       if (payload.type === 'data') {
         scheduleWrite(payload.data);
+        // Notify silence-detection hook whenever PTY sends output.
+        onPtyDataRef.current?.();
       } else if (payload.type === 'replay') {
         scheduleWrite(payload.data);
       } else if (payload.type === 'title') {
@@ -602,21 +606,45 @@ export function TerminalInstance({
     }
   }, [active, wsConnected, tab.id, tab.cwd, tab.shellType]);
 
-  // ── Auto-execute saved prompt shortcut once ──────────────────
+  // ── Auto-execute saved prompt shortcut once (silence-detection) ───────────
+  // Instead of a fixed delay, we wait until the shell output stream has been
+  // quiet for SILENCE_MS (prompt is ready), with a FALLBACK_MS hard limit.
+  const SILENCE_MS = 300;
+  const FALLBACK_MS = 4000;
   const initialCommandSent = useRef(false);
   useEffect(() => {
-    if (wsConnected && isInitialized && tab.initialCommand && !initialCommandSent.current) {
+    if (!wsConnected || !isInitialized || !tab.initialCommand || initialCommandSent.current) return;
+
+    const sendCommand = () => {
+      if (initialCommandSent.current) return;
       initialCommandSent.current = true;
-      const timer = setTimeout(() => {
-        wsManager.send(JSON.stringify({
-          type: 'data',
-          id: tab.id,
-          data: tab.initialCommand + '\r'
-        }));
-        onClearInitialCommand?.(tab.id);
-      }, 600);
-      return () => clearTimeout(timer);
-    }
+      // Detach the pty-data listener before sending.
+      onPtyDataRef.current = null;
+      wsManager.send(JSON.stringify({
+        type: 'data',
+        id: tab.id,
+        data: tab.initialCommand + '\r'
+      }));
+      onClearInitialCommand?.(tab.id);
+    };
+
+    // Silence timer: reset every time PTY emits data.
+    let silenceTimer: ReturnType<typeof setTimeout> = setTimeout(sendCommand, SILENCE_MS);
+
+    // Fallback: fire unconditionally after FALLBACK_MS if silence never comes.
+    const fallbackTimer = setTimeout(sendCommand, FALLBACK_MS);
+
+    // Hook into the PTY data stream via the ref.
+    onPtyDataRef.current = () => {
+      clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(sendCommand, SILENCE_MS);
+    };
+
+    return () => {
+      onPtyDataRef.current = null;
+      clearTimeout(silenceTimer);
+      clearTimeout(fallbackTimer);
+    };
   }, [wsConnected, isInitialized, tab.initialCommand, tab.id, onClearInitialCommand]);
 
   // ── Manual refresh trigger ─────────────────────────────────

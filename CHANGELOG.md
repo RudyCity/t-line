@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.266] - 2026-07-03
+
+### Fixed
+- **Quick Launch Reliability (Silence-Detection)**:
+  - Mengganti delay statis 600ms saat mengirim perintah dari Quick Launch shortcut dengan algoritma **silence-detection** yang lebih andal di [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx).
+  - Sebelumnya, jika proses startup shell (misalnya PowerShell profile) memerlukan waktu lebih dari 600ms, perintah shortcut dikirim terlalu dini dan "hilang" atau tidak tereksekusi sama sekali — menyebabkan fitur Quick Launch kadang berhasil kadang tidak.
+  - Sekarang, sistem mendengarkan output stream PTY: setiap kali terminal mengeluarkan data, timer 300ms direset. Perintah baru dikirim setelah output terhenti selama 300ms (tanda prompt siap). Terdapat fallback otomatis 4 detik untuk shell yang tidak mengeluarkan output sama sekali.
+
 ## [1.3.265] - 2026-07-03
 
 ### Improved / Optimized
