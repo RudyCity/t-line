@@ -496,6 +496,19 @@ app.post('/api/sync/state', authMiddleware, (req, res) => {
       savedPrompts: savedPrompts || []
     };
     fs.writeFileSync(SYNC_FILE, JSON.stringify(state, null, 2), 'utf8');
+
+    // Broadcast updated state to all connected clients
+    const payload = JSON.stringify({
+      id: 'sync_state',
+      type: 'sync_update',
+      state
+    });
+    for (const ws of activeWebSockets) {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(payload);
+      }
+    }
+
     res.json({ success: true });
   } catch (err: any) {
     console.error('Failed to write sync file:', err);

@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.277] - 2026-07-04
+
+### Added / Changed
+- **Sinkronisasi Tab Real-time via WebSocket**:
+  - Mengintegrasikan penyiaran (broadcast) perubahan state sinkronisasi terpusat ke semua klien WebSocket yang sedang terhubung dari backend saat menerima pembaruan state.
+  - Menambahkan langganan (subscription) event `sync_update` pada sisi frontend menggunakan WebSocket manager agar tab baru, tab ditutup, file yang dibuka, maupun perubahan Quick Launch di mobile langsung terbuka/diperbarui secara real-time di desktop secara instan tanpa perlu memuat ulang halaman (refreshed).
+
 ## [1.3.276] - 2026-07-04
 
 ### Added / Changed

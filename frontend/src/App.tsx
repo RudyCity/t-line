@@ -572,8 +572,42 @@ export default function App() {
     if (isAuthenticated) {
       wsManager.connect();
       wsManager.setOnConnectionChange(setWsConnected);
+
+      // Subscribe to real-time tab & quick launch sync updates
+      wsManager.subscribe('sync_state', (payload) => {
+        if (payload.type === 'sync_update') {
+          const { state } = payload;
+          const stateStr = JSON.stringify(state);
+
+          // If the received state is identical to our last sync state, do nothing (avoid loops)
+          if (stateStr === lastSyncState.current) {
+            return;
+          }
+
+          // Update React states
+          if (state.tabs && Array.isArray(state.tabs)) {
+            setTabs(state.tabs);
+          }
+          if (state.terminalInstances && typeof state.terminalInstances === 'object') {
+            setTerminalInstances(state.terminalInstances);
+          }
+          if (state.savedPrompts && Array.isArray(state.savedPrompts)) {
+            setSavedPrompts(state.savedPrompts);
+            localStorage.setItem('tline-saved-prompts', JSON.stringify(state.savedPrompts));
+          }
+
+          // Save the last synced state
+          lastSyncState.current = stateStr;
+          console.log('[Sync] Received real-time state update from server.');
+        }
+      });
+
       fetchDashboardData();
       fetchLocalVersion();
+
+      return () => {
+        wsManager.unsubscribe('sync_state');
+      };
     }
   }, [isAuthenticated, fetchLocalVersion]);
 
