@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.272] - 2026-07-04
+
+### Added / Changed
+- **Dukungan Tampilan Semua Branch Git & Integrasi Checkout**:
+  - Menampilkan semua branch Git lokal di sidebar explorer, bahkan untuk branch yang belum didaftarkan sebagai worktree (ditandai dengan badge `git` abu-abu).
+  - Mengklik branch non-worktree akan memicu dialog konfirmasi switch branch untuk melakukan checkout branch tersebut di dalam direktori workspace utama.
+  - Untuk branch yang telah terdaftar sebagai worktree, perilaku tetap sama (fokus langsung ke direktori worktree bersangkutan tanpa dialog konfirmasi).
+
 ## [1.3.271] - 2026-07-04
 
 ### Changed

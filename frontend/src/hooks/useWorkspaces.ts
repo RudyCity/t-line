@@ -15,6 +15,7 @@ export interface WorkspaceInfo {
   path: string;
   isGit: boolean;
   worktrees: WorktreeInfo[];
+  branches?: string[];
   defaultShell?: string;
 }
 

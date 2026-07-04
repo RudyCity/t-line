@@ -55,6 +55,7 @@ interface WorkspaceInfo {
   path: string;
   isGit: boolean;
   worktrees: WorktreeInfo[];
+  branches?: string[];
   defaultShell?: string;
 }
 
@@ -304,12 +305,18 @@ export async function getWorkspaceInfo(workspace: WorkspaceConfig): Promise<Work
     }
   }
 
+  let branches: string[] = [];
+  if (isGit) {
+    branches = await getRepoBranches(normalizedPath);
+  }
+
   const info: WorkspaceInfo = {
     id: Buffer.from(normalizedPath).toString('base64'),
     name,
     path: normalizedPath,
     isGit,
     worktrees,
+    branches,
     defaultShell: workspace.defaultShell || 'powershell'
   };
 

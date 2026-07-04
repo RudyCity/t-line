@@ -170,6 +170,7 @@ interface SidebarContentPanelProps {
   onOpenBranchModal?: () => void;
   openDiffTab?: (commitHash: string, filePath: string, workspaceId: string, worktreePath?: string, compareWithWorktree?: boolean) => void;
   onCheckpointChange?: () => void;
+  onBranchCheckoutClick?: (wsId: string, branchName: string) => void;
 }
 
 
@@ -194,6 +195,7 @@ export function SidebarContentPanel({
   workspaceActiveTab,
   onWorkspaceClick,
   onWorktreeClick,
+  onBranchCheckoutClick,
   changedFiles = [],
   gitStatusLoading = false,
   refreshGitStatus,
@@ -315,6 +317,7 @@ export function SidebarContentPanel({
               workspaceActiveTab={workspaceActiveTab}
               onWorkspaceClick={onWorkspaceClick}
               onWorktreeClick={onWorktreeClick}
+              onBranchCheckoutClick={onBranchCheckoutClick}
               setPanelWorkspace={setPanelWorkspace}
               setActivePanel={setActivePanel}
               handleOpenWorktreeModal={handleOpenWorktreeModal}

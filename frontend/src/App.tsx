@@ -448,7 +448,8 @@ export default function App() {
     handleOpenEditWorkspaceModal,
     handleUpdateWorkspaceSubmit,
     handleWorkspaceClick,
-    handleWorktreeClick
+    handleWorktreeClick,
+    handleBranchCheckoutClick
   } = useWorkspaceHandlers({
     rawHandleRemoveWorkspace,
     handleRemoveWorktree,
@@ -466,6 +467,7 @@ export default function App() {
     closeTerminal,
     setPanelWorkspace,
     showConfirm,
+    showAlert,
     setSidebarOpen,
     panelWorkspace,
     panelWorktreePath,
@@ -900,6 +902,7 @@ export default function App() {
             workspaceActiveTab={workspaceActiveTab}
             onWorkspaceClick={handleWorkspaceClick}
             onWorktreeClick={handleWorktreeClick}
+            onBranchCheckoutClick={handleBranchCheckoutClick}
             changedFiles={changedFiles}
             gitStatusLoading={gitStatusLoading}
             refreshGitStatus={() => fetchGitStatus(true)}

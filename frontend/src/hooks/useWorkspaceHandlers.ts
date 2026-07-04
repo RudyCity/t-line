@@ -72,6 +72,7 @@ interface WorkspaceHandlersProps {
     confirmLabel?: string,
     cancelLabel?: string
   ) => void;
+  showAlert: (title: string, message: string) => void;
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
   panelWorkspace: WorkspaceInfo | null;
   panelWorktreePath: string | null;
@@ -94,6 +95,7 @@ export function useWorkspaceHandlers({
   closeTerminal,
   setPanelWorkspace,
   showConfirm,
+  showAlert,
   setSidebarOpen,
   panelWorkspace,
   panelWorktreePath,
@@ -389,6 +391,42 @@ export function useWorkspaceHandlers({
     setSidebarOpen(false);
   }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);
 
+  const handleBranchCheckoutClick = useCallback((workspaceId: string, branchName: string) => {
+    const ws = workspaces.find(w => w.id === workspaceId);
+    if (!ws) return;
+
+    showConfirm(
+      'Switch Branch',
+      `Are you sure you want to checkout and switch to branch "${branchName}" in main workspace "${ws.name}"?`,
+      async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const res = await fetch(`/api/workspaces/${ws.id}/git/checkout`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ branchName })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            window.dispatchEvent(new CustomEvent('tline-toast', {
+              detail: { message: `Successfully checked out to branch ${branchName}` }
+            }));
+          } else {
+            showAlert('Checkout Error', data.output || 'Checkout failed.');
+          }
+        } catch (e: any) {
+          showAlert('Checkout Error', e.message || 'Checkout failed.');
+        }
+      },
+      'primary',
+      'Checkout',
+      'Cancel'
+    );
+  }, [workspaces, showConfirm, showAlert]);
+
   return {
     editingWorkspace,
     setEditingWorkspace,
@@ -400,6 +438,7 @@ export function useWorkspaceHandlers({
     handleUpdateWorkspaceSubmit,
     handleWorkspaceClick,
     handleWorktreeClick,
+    handleBranchCheckoutClick,
     getWorkspaceForTab
   };
 }

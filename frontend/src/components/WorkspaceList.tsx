@@ -48,6 +48,7 @@ export interface WorkspaceListProps {
   workspaceActiveTab: WorkspaceActiveTabMap;
   onWorkspaceClick: (wsId: string) => void;
   onWorktreeClick: (wsId: string, wtPath: string) => void;
+  onBranchCheckoutClick?: (wsId: string, branchName: string) => void;
   setPanelWorkspace: (ws: WorkspaceInfo | null) => void;
   setActivePanel: (panel: 'workspaces' | 'explorer' | 'changes') => void;
   handleOpenWorktreeModal: (w: WorkspaceInfo) => void;
@@ -204,6 +205,7 @@ interface WorktreeListProps {
   deletingWorktreePaths?: string[];
   panelWorktreePath: string | null;
   panelWorkspace?: WorkspaceInfo | null;
+  onBranchCheckoutClick?: (wsId: string, branchName: string) => void;
 }
 
 function WorktreeList({
@@ -221,7 +223,8 @@ function WorktreeList({
   isPathInWorktree,
   deletingWorktreePaths = [],
   panelWorktreePath,
-  panelWorkspace
+  panelWorkspace,
+  onBranchCheckoutClick
 }: WorktreeListProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -266,33 +269,67 @@ function WorktreeList({
     return mainWt ? mainWt.path : null;
   }, [w, tabs, workspaceActiveTab, terminalInstances]);
 
-  const sortedWts = useMemo(
-    () => {
-      const wts = w.worktrees || [];
-      return [...wts].sort((a, b) => (a.isMain ? -1 : b.isMain ? 1 : 0));
-    },
-    [w.worktrees]
-  );
+  // Combine all repo branches with worktrees
+  const branchItems = useMemo(() => {
+    const wts = w.worktrees || [];
+    const localBranches = w.branches || [];
+    
+    const allBranches = Array.from(new Set([
+      ...wts.map(wt => wt.branch).filter(Boolean),
+      ...localBranches
+    ])) as string[];
 
-  const visibleWts = useMemo(() => {
-    if (isActive) {
-      return expanded || sortedWts.length <= BRANCH_LIMIT
-        ? sortedWts
-        : sortedWts.slice(0, BRANCH_LIMIT);
-    } else {
-      const activeWt = sortedWts.find(wt => wt.path === activeWtPathForWorkspace);
-      return activeWt ? [activeWt] : (sortedWts.length > 0 ? [sortedWts[0]] : []);
+    const items = allBranches.map(branchName => {
+      const wt = wts.find(wt => wt.branch === branchName);
+      
+      return {
+        branch: branchName,
+        wtPath: wt ? wt.path : null,
+        isMain: wt ? wt.isMain : false,
+        isDirty: wt ? wt.isDirty : false,
+        dirtyCount: wt ? wt.dirtyCount : 0,
+        commit: wt ? wt.commit : 'not-checked-out',
+        hasWorktree: !!wt
+      };
+    });
+
+    return items.sort((a, b) => {
+      if (a.isMain) return -1;
+      if (b.isMain) return 1;
+      if (a.hasWorktree && !b.hasWorktree) return -1;
+      if (!a.hasWorktree && b.hasWorktree) return 1;
+      return a.branch.localeCompare(b.branch);
+    });
+  }, [w.worktrees, w.branches]);
+
+  const activeBranchName = useMemo(() => {
+    if (activeWtPathForWorkspace) {
+      const wt = w.worktrees?.find(wt => wt.path === activeWtPathForWorkspace);
+      if (wt && wt.branch) return wt.branch;
     }
-  }, [isActive, expanded, sortedWts, activeWtPathForWorkspace]);
+    const mainWt = w.worktrees?.find(wt => wt.isMain);
+    return mainWt?.branch || 'main';
+  }, [w.worktrees, activeWtPathForWorkspace]);
 
-  const hiddenCount = sortedWts.length - BRANCH_LIMIT;
+  const visibleItems = useMemo(() => {
+    if (isActive) {
+      return expanded || branchItems.length <= BRANCH_LIMIT
+        ? branchItems
+        : branchItems.slice(0, BRANCH_LIMIT);
+    } else {
+      const activeItem = branchItems.find(item => item.branch === activeBranchName);
+      return activeItem ? [activeItem] : (branchItems.length > 0 ? [branchItems[0]] : []);
+    }
+  }, [isActive, expanded, branchItems, activeBranchName]);
 
-  if (!w.isGit || !w.worktrees || w.worktrees.length === 0) return null;
+  const hiddenCount = branchItems.length - BRANCH_LIMIT;
+
+  if (!w.isGit) return null;
 
   return (
     <div className="mt-0.5 flex flex-col">
-      {visibleWts.map((wt, idx) => {
-        const isLast = idx === visibleWts.length - 1 && (expanded || sortedWts.length <= BRANCH_LIMIT);
+      {visibleItems.map((item, idx) => {
+        const isLast = idx === visibleItems.length - 1 && (expanded || branchItems.length <= BRANCH_LIMIT);
 
         // Find which worktree owns the active tab
         const activeTab = tabs.find(t => t.id === activeTabId);
@@ -330,24 +367,24 @@ function WorktreeList({
           }
         }
 
-        const isSelectedWt = panelWorktreePath === wt.path || (wt.isMain && panelWorktreePath === null && panelWorkspace?.id === w.id);
-        const isWtActive = isSelectedWt || (panelWorktreePath === null && tabWorktreePath === wt.path);
+        const isSelectedWt = item.wtPath ? (panelWorktreePath === item.wtPath || (item.isMain && panelWorktreePath === null && panelWorkspace?.id === w.id)) : false;
+        const isWtActive = item.hasWorktree && (isSelectedWt || (panelWorktreePath === null && tabWorktreePath === item.wtPath));
 
-        const wtProcesses = getRunningProcessesForPath(wt.path, terminalInstances);
+        const wtProcesses = item.wtPath ? getRunningProcessesForPath(item.wtPath, terminalInstances) : [];
         const hasWtRunning = wtProcesses.length > 0;
         const isWtClaudeActive = wtProcesses.some(p => p.isClaude);
         const isWtGeminiActive = wtProcesses.some(p => p.isGemini);
         const isWtCursorActive = wtProcesses.some(p => p.isCursor);
         const isWtSuperagentActive = wtProcesses.some(p => p.isSuperagent);
 
-        if (deletingWorktreePaths?.includes(wt.path)) {
+        if (item.wtPath && deletingWorktreePaths?.includes(item.wtPath)) {
           return (
-            <div key={wt.path} className={`tree-connector-wrapper ${isLast ? 'tree-item-last' : ''} opacity-60 animate-pulse pointer-events-none`}>
+            <div key={item.branch} className={`tree-connector-wrapper ${isLast ? 'tree-item-last' : ''} opacity-60 animate-pulse pointer-events-none`}>
               <div className="tree-connector" />
               <div className="tree-item-content">
                 <div className="flex items-center gap-2 py-1 px-1.5 text-[10px] text-red-300 font-mono">
                   <span className="h-2 w-2 rounded-full border border-red-400 border-t-transparent animate-spin shrink-0" />
-                  <span className="truncate">Removing {wt.branch || 'detached'}...</span>
+                  <span className="truncate">Removing {item.branch}...</span>
                 </div>
               </div>
             </div>
@@ -356,7 +393,7 @@ function WorktreeList({
 
         return (
           <div
-            key={wt.path}
+            key={item.branch}
             className={`tree-connector-wrapper ${isLast ? 'tree-item-last' : ''}`}
           >
             <div className="tree-connector" />
@@ -390,20 +427,26 @@ function WorktreeList({
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (wt.isMain) {
-                    onWorkspaceClick(w.id);
+                  if (item.hasWorktree) {
+                    if (item.isMain) {
+                      onWorkspaceClick(w.id);
+                    } else {
+                      onWorktreeClick(w.id, item.wtPath!);
+                    }
                   } else {
-                    onWorktreeClick(w.id, wt.path);
+                    if (onBranchCheckoutClick) {
+                      onBranchCheckoutClick(w.id, item.branch);
+                    }
                   }
                 }}
               >
-                <div className="flex items-center gap-1.5 truncate flex-1 min-w-0" title={wt.path}>
+                <div className="flex items-center gap-1.5 truncate flex-1 min-w-0" title={item.wtPath || `${w.path} (branch: ${item.branch})`}>
                   <div className="relative flex items-center shrink-0">
                     <GitBranch 
                       size={10} 
                       className="shrink-0" 
                       style={{
-                        color: isWtActive ? 'var(--color-primary)' : (wt.isDirty ? '#f59e0b' : 'var(--text-muted)')
+                        color: isWtActive ? 'var(--color-primary)' : (item.hasWorktree ? (item.isDirty ? '#f59e0b' : 'var(--text-muted)') : 'rgba(148, 163, 184, 0.4)')
                       }}
                     />
                     {hasWtRunning && (
@@ -413,15 +456,14 @@ function WorktreeList({
                   <span 
                     className="truncate text-[11px]"
                     style={{
-                      color: isWtActive ? 'var(--color-primary)' : (wt.isDirty ? '#f59e0b' : 'var(--text-muted)')
+                      color: isWtActive ? 'var(--color-primary)' : (item.hasWorktree ? (item.isDirty ? '#f59e0b' : 'var(--text-muted)') : 'rgba(148, 163, 184, 0.4)')
                     }}
                   >
-                    {wt.branch || 'detached'}
+                    {item.branch}
                   </span>
-                  <span className={`badge ${wt.isMain ? 'badge-main' : 'badge-worktree'} shrink-0 text-[9px] px-1 py-0`}>
-                    {wt.isMain ? 'main' : 'wt'}
+                  <span className={`badge ${item.isMain ? 'badge-main' : item.hasWorktree ? 'badge-worktree' : 'badge-branch-inactive'} shrink-0 text-[9px] px-1 py-0`}>
+                    {item.isMain ? 'main' : item.hasWorktree ? 'wt' : 'git'}
                   </span>
-                  {/* Active worktree badge check icon removed */}
 
                   {/* Compact process badges for worktree */}
                   {isWtClaudeActive && (
@@ -446,24 +488,26 @@ function WorktreeList({
                   )}
                 </div>
 
-                <div className={`flex gap-1 shrink-0 ${isMobile ? '' : 'opacity-0 group-hover/item:opacity-100 transition-opacity duration-150'}`}>
-                  <button
-                    className="action-btn"
-                    onClick={(e) => { e.stopPropagation(); openTerminal(wt.isMain ? w.name : `${w.name} (${wt.branch || 'detached'})`, wt.path, w.defaultShell); }}
-                    title={`Open terminal here (${w.defaultShell || 'default'})`}
-                  >
-                    <TerminalIcon size={10} />
-                  </button>
-                  {!wt.isMain && (
+                {item.hasWorktree && (
+                  <div className={`flex gap-1 shrink-0 ${isMobile ? '' : 'opacity-0 group-hover/item:opacity-100 transition-opacity duration-150'}`}>
                     <button
-                      className="action-btn action-btn-danger"
-                      onClick={(e) => { e.stopPropagation(); handleRemoveWorktree(w.path, wt.path); }}
-                      title="Delete worktree"
+                      className="action-btn"
+                      onClick={(e) => { e.stopPropagation(); openTerminal(item.isMain ? w.name : `${w.name} (${item.branch})`, item.wtPath!, w.defaultShell); }}
+                      title={`Open terminal here (${w.defaultShell || 'default'})`}
                     >
-                      <Trash2 size={10} />
+                      <TerminalIcon size={10} />
                     </button>
-                  )}
-                </div>
+                    {!item.isMain && (
+                      <button
+                        className="action-btn action-btn-danger"
+                        onClick={(e) => { e.stopPropagation(); handleRemoveWorktree(w.path, item.wtPath!); }}
+                        title="Delete worktree"
+                      >
+                        <Trash2 size={10} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -471,7 +515,7 @@ function WorktreeList({
       })}
 
       {/* Expand / Collapse toggle */}
-      {isActive && sortedWts.length > BRANCH_LIMIT && (
+      {isActive && hiddenCount > 0 && (
         <button
           className="ws-branch-toggle"
           onClick={(e) => { e.stopPropagation(); setExpanded(v => !v); }}
@@ -501,6 +545,7 @@ export function WorkspaceList({
   workspaceActiveTab,
   onWorkspaceClick,
   onWorktreeClick,
+  onBranchCheckoutClick,
   setPanelWorkspace,
   setActivePanel,
   handleOpenWorktreeModal,
@@ -732,6 +777,7 @@ export function WorkspaceList({
                   deletingWorktreePaths={deletingWorktreePaths}
                   panelWorktreePath={panelWorktreePath}
                   panelWorkspace={panelWorkspace}
+                  onBranchCheckoutClick={onBranchCheckoutClick}
                 />
               </div>
             );
