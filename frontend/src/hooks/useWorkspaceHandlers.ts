@@ -320,58 +320,39 @@ export function useWorkspaceHandlers({
     const ws = workspaces.find(w => w.id === workspaceId);
     if (!ws) return;
 
-    const mainWt = (ws.isGit && ws.worktrees) ? ws.worktrees.find(wt => wt.isMain) : null;
-    const targetPath = mainWt ? mainWt.path : ws.path;
-    const currentPath = panelWorktreePath || panelWorkspace?.path;
-    const isDifferent = currentPath && currentPath !== targetPath;
-
-    const performSwitch = () => {
-      setPanelWorkspace(ws);
-      // For non-git workspaces there are no worktrees, so keep panelWorktreePath null.
-      // For git workspaces, select the main worktree path so tabs belonging to the
-      // main branch are shown by default.
-      if (ws.isGit && ws.worktrees && ws.worktrees.length > 0) {
-        setPanelWorktreePath(mainWt ? mainWt.path : null);
-      } else {
-        setPanelWorktreePath(null);
-      }
-
-      // Find any open tab that matches the main branch/workspace path
-      const matchedTab = tabs.find(tab => {
-        if (tab.type === 'file' && tab.filePath) {
-          return isPathInWorktree(tab.filePath, ws.path);
-        }
-        if (tab.type === 'terminal' && tab.layout) {
-          const termIds = getTerminalIds(tab.layout);
-          return termIds.some(id => {
-            const inst = terminalInstances[id];
-            return inst && isPathInWorktree(inst.cwd, ws.path);
-          });
-        }
-        return false;
-      });
-
-      if (matchedTab) {
-        setActiveTabId(matchedTab.id);
-      } else {
-        openTerminal(ws.name, ws.path, ws.defaultShell);
-      }
-      setSidebarOpen(false);
-    };
-
-    if (isDifferent) {
-      showConfirm(
-        'Switch Workspace / Branch',
-        `Are you sure you want to switch focus to "${ws.name}"?`,
-        performSwitch,
-        'primary',
-        'Switch',
-        'Cancel'
-      );
+    setPanelWorkspace(ws);
+    // For non-git workspaces there are no worktrees, so keep panelWorktreePath null.
+    // For git workspaces, select the main worktree path so tabs belonging to the
+    // main branch are shown by default.
+    if (ws.isGit && ws.worktrees && ws.worktrees.length > 0) {
+      const mainWt = ws.worktrees.find(wt => wt.isMain);
+      setPanelWorktreePath(mainWt ? mainWt.path : null);
     } else {
-      performSwitch();
+      setPanelWorktreePath(null);
     }
-  }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen, showConfirm]);
+
+    // Find any open tab that matches the main branch/workspace path
+    const matchedTab = tabs.find(tab => {
+      if (tab.type === 'file' && tab.filePath) {
+        return isPathInWorktree(tab.filePath, ws.path);
+      }
+      if (tab.type === 'terminal' && tab.layout) {
+        const termIds = getTerminalIds(tab.layout);
+        return termIds.some(id => {
+          const inst = terminalInstances[id];
+          return inst && isPathInWorktree(inst.cwd, ws.path);
+        });
+      }
+      return false;
+    });
+
+    if (matchedTab) {
+      setActiveTabId(matchedTab.id);
+    } else {
+      openTerminal(ws.name, ws.path, ws.defaultShell);
+    }
+    setSidebarOpen(false);
+  }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);
 
   const handleWorktreeClick = useCallback((workspaceId: string, wtPath: string) => {
     const ws = workspaces.find(w => w.id === workspaceId);

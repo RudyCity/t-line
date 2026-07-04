@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.270] - 2026-07-04
+
+### Changed
+- **Bypass Konfirmasi untuk Perpindahan Workspace**:
+  - Menghapus modal konfirmasi (`showConfirm`) saat pengguna berpindah workspace langsung dari header repositori pada [useWorkspaceHandlers.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useWorkspaceHandlers.ts). Perpindahan antar-workspace kini berjalan instan tanpa dialog.
+  - Tetap mempertahankan modal konfirmasi untuk perpindahan antar branch/worktree di bawah workspace yang bersangkutan.
+
 ## [1.3.269] - 2026-07-04
 
 ### Changed / Added
