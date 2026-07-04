@@ -843,6 +843,21 @@ export function TerminalInstance({
     return () => window.removeEventListener('keydown', handleKey);
   }, [active]);
 
+  // ── Scroll to bottom trigger event listener ─────────────────
+  useEffect(() => {
+    const handleScrollEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ terminalId?: string }>;
+      const targetId = customEvent.detail?.terminalId;
+      if (!targetId || targetId === tab.id) {
+        if (terminalRef.current) {
+          terminalRef.current.scrollToBottom();
+        }
+      }
+    };
+    window.addEventListener('tline-scroll-to-bottom', handleScrollEvent);
+    return () => window.removeEventListener('tline-scroll-to-bottom', handleScrollEvent);
+  }, [tab.id]);
+
   const handleTerminalFocus = (e: React.MouseEvent | React.TouchEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest('input') || target.closest('button') || target.closest('select') || target.closest('a')) return;

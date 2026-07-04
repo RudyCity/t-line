@@ -568,6 +568,14 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
               name: inst ? inst.name : t.name
             };
           }
+        } else if (t.type === 'grid') {
+          if (t.gridTerminalIds?.includes(terminalId)) {
+            setActiveTabId(t.id);
+            return {
+              ...t,
+              focusedTerminalId: terminalId
+            };
+          }
         }
         return t;
       })

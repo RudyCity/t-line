@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.280] - 2026-07-04
+
+### Added / Changed
+- **Scroll to Bottom di Footer Terminal**:
+  - Menambahkan tombol "Scroll to bottom" (dengan ikon `ChevronDown`) pada footer utama aplikasi saat tab bertipe `terminal` atau `grid` aktif.
+  - Mengimplementasikan listener event `tline-scroll-to-bottom` di [TerminalInstance.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx) yang secara dinamis memicu fungsi `scrollToBottom()` bawaan xterm.js pada terminal instance yang sedang aktif.
+  - Memperbarui `focusTerminal` di [useTerminals.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useTerminals.ts) dan properti `onFocus` pada terminal grid di [TerminalGridTab.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalGridTab.tsx) agar status terminal terfokus dapat dilacak dengan presisi baik di tab biasa maupun grid.
+
 ## [1.3.279] - 2026-07-04
 
 ### Added / Changed

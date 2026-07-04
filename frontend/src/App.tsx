@@ -1675,6 +1675,15 @@ export default function App() {
         handleStopTunnel={handleStopTunnel}
         activeTabType={tabs.find(t => t.id === activeTabId)?.type || null}
         onRefreshTerminal={() => refreshTerminal(tabs.find(t => t.id === activeTabId)?.focusedTerminalId || '')}
+        onScrollToBottomTerminal={() => {
+          const activeTab = tabs.find(t => t.id === activeTabId);
+          const termId = activeTab?.focusedTerminalId;
+          if (termId) {
+            window.dispatchEvent(new CustomEvent('tline-scroll-to-bottom', { detail: { terminalId: termId } }));
+          } else if (activeTab?.type === 'terminal' && activeTab.layout?.type === 'leaf') {
+            window.dispatchEvent(new CustomEvent('tline-scroll-to-bottom', { detail: { terminalId: activeTab.layout.terminalId } }));
+          }
+        }}
         activeTabPath={getActiveTabPath()}
         appVersion={appVersion}
         updateAvailable={updateAvailable}

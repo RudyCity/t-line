@@ -1072,7 +1072,7 @@ export function TerminalGridTab({
                       fontSize={terminalFontSize - 1} // slightly smaller font for grid cards
                       onTitleChange={(title) => handleTitleChange(term.id, title)}
                       onActiveProcessesChange={(processes) => handleActiveProcessesChange?.(term.id, processes)}
-                      onFocus={() => setFocusedTermId(term.id)}
+                      onFocus={() => { setFocusedTermId(term.id); focusTerminal(term.id); }}
                       refreshTrigger={refreshTriggers?.[term.id] || 0}
                       isFocusedPane={isFocused}
                       fontFamily={fontFamily}

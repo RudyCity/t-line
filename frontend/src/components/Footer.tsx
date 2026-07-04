@@ -1,5 +1,5 @@
 import React from 'react';
-import { GitBranch, ZoomIn, ZoomOut, ExternalLink, Copy, Check, Info, Terminal, Folder, Globe, RefreshCw, Cpu } from 'lucide-react';
+import { GitBranch, ZoomIn, ZoomOut, ExternalLink, Copy, Check, Info, Terminal, Folder, Globe, RefreshCw, Cpu, ChevronDown } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { Toast } from './Toast';
 import { SystemStats } from '../hooks/useSystemStats';
@@ -34,6 +34,7 @@ export interface FooterProps {
   handleStopTunnel: () => void;
   activeTabType?: 'terminal' | 'file' | 'diff' | 'grid' | null;
   onRefreshTerminal?: () => void;
+  onScrollToBottomTerminal?: () => void;
   activeTabPath?: string;
   appVersion?: string;
   updateAvailable?: boolean;
@@ -56,6 +57,7 @@ export function Footer({
   tunnelLoading,
   activeTabType,
   onRefreshTerminal,
+  onScrollToBottomTerminal,
   activeTabPath,
   appVersion,
   updateAvailable,
@@ -409,19 +411,38 @@ export function Footer({
           />
         </div>
 
-        {activeTabType === 'terminal' && onRefreshTerminal && (
+        {(activeTabType === 'terminal' || activeTabType === 'grid') && (
           <>
-            <div className="w-px h-3.5 bg-[var(--border-color)]" />
-            <button
-              onClick={onRefreshTerminal}
-              className="hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none"
-              style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
-              onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
-              onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-              title="Restart current terminal process"
-            >
-              <RefreshCw size={11} className="hover:rotate-45 transition-transform duration-200" />
-            </button>
+            {onRefreshTerminal && (
+              <>
+                <div className="w-px h-3.5 bg-[var(--border-color)]" />
+                <button
+                  onClick={onRefreshTerminal}
+                  className="hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none"
+                  style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
+                  onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
+                  onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                  title="Restart current terminal process"
+                >
+                  <RefreshCw size={11} className="hover:rotate-45 transition-transform duration-200" />
+                </button>
+              </>
+            )}
+            {onScrollToBottomTerminal && (
+              <>
+                <div className="w-px h-3.5 bg-[var(--border-color)]" />
+                <button
+                  onClick={onScrollToBottomTerminal}
+                  className="hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none"
+                  style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
+                  onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
+                  onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                  title="Scroll terminal to bottom"
+                >
+                  <ChevronDown size={12} className="hover:translate-y-0.5 transition-transform duration-200" />
+                </button>
+              </>
+            )}
           </>
         )}
       </div>
