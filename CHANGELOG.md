@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.269] - 2026-07-04
+
+### Changed / Added
+- **Optimasi Tampilan Branch Terfokus pada Workspace Non-Aktif**:
+  - Mengubah logika list worktree pada [WorkspaceList.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/WorkspaceList.tsx) agar tetap menampilkan branch/worktree yang sedang terfokus (aktif) pada workspace non-aktif, alih-alih menyembunyikannya secara total.
+  - Untuk workspace yang sedang tidak difokuskan secara global, list branch-nya disaring hanya menampilkan 1 item branch yang aktif di workspace tersebut, sementara branch-branch lain yang tidak aktif pada workspace tersebut disembunyikan.
+  - Untuk workspace yang sedang aktif secara global, semua branch/worktree tetap ditampilkan secara penuh dengan opsi expand/collapse toggle.
+
 ## [1.3.268] - 2026-07-04
 
 ### Changed / Added

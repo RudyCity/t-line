@@ -195,6 +195,7 @@ interface WorktreeListProps {
   activeTabId: string;
   tabs: TabData[];
   terminalInstances: Record<string, any>;
+  workspaceActiveTab: WorkspaceActiveTabMap;
   openTerminal: (name: string, path: string, shell?: string) => void;
   handleRemoveWorktree: (repoPath: string, wtPath: string) => void;
   onWorkspaceClick: (wsId: string) => void;
@@ -212,6 +213,7 @@ function WorktreeList({
   activeTabId,
   tabs,
   terminalInstances,
+  workspaceActiveTab,
   openTerminal,
   handleRemoveWorktree,
   onWorkspaceClick,
@@ -223,6 +225,47 @@ function WorktreeList({
 }: WorktreeListProps) {
   const [expanded, setExpanded] = useState(false);
 
+  const activeWtPathForWorkspace = useMemo(() => {
+    const wsActiveTabId = workspaceActiveTab[w.id];
+    const wsActiveTab = tabs.find(t => t.id === wsActiveTabId);
+    
+    let tabPath = '';
+    if (wsActiveTab) {
+      if (wsActiveTab.type === 'file') {
+        tabPath = wsActiveTab.filePath || '';
+      } else if (wsActiveTab.type === 'terminal' && wsActiveTab.layout) {
+        const focusedId = wsActiveTab.focusedTerminalId;
+        const inst = focusedId ? terminalInstances[focusedId] : null;
+        if (inst && inst.cwd) {
+          tabPath = inst.cwd;
+        }
+        if (!tabPath) {
+          const termIds = getTerminalIds(wsActiveTab.layout);
+          for (const id of termIds) {
+            const inst = terminalInstances[id];
+            if (inst && inst.cwd) {
+              tabPath = inst.cwd;
+              break;
+            }
+          }
+        }
+      }
+    }
+    
+    if (tabPath) {
+      const wts = w.worktrees || [];
+      const sortedWts = [...wts].sort((a, b) => b.path.length - a.path.length);
+      for (const wtItem of sortedWts) {
+        if (isPathInWorktree(tabPath, wtItem.path)) {
+          return wtItem.path;
+        }
+      }
+    }
+    
+    const mainWt = w.worktrees?.find(wt => wt.isMain);
+    return mainWt ? mainWt.path : null;
+  }, [w, tabs, workspaceActiveTab, terminalInstances]);
+
   const sortedWts = useMemo(
     () => {
       const wts = w.worktrees || [];
@@ -231,13 +274,20 @@ function WorktreeList({
     [w.worktrees]
   );
 
-  const visibleWts = expanded || sortedWts.length <= BRANCH_LIMIT
-    ? sortedWts
-    : sortedWts.slice(0, BRANCH_LIMIT);
+  const visibleWts = useMemo(() => {
+    if (isActive) {
+      return expanded || sortedWts.length <= BRANCH_LIMIT
+        ? sortedWts
+        : sortedWts.slice(0, BRANCH_LIMIT);
+    } else {
+      const activeWt = sortedWts.find(wt => wt.path === activeWtPathForWorkspace);
+      return activeWt ? [activeWt] : (sortedWts.length > 0 ? [sortedWts[0]] : []);
+    }
+  }, [isActive, expanded, sortedWts, activeWtPathForWorkspace]);
 
   const hiddenCount = sortedWts.length - BRANCH_LIMIT;
 
-  if (!isActive || !w.isGit || !w.worktrees || w.worktrees.length === 0) return null;
+  if (!w.isGit || !w.worktrees || w.worktrees.length === 0) return null;
 
   return (
     <div className="mt-0.5 flex flex-col">
@@ -421,7 +471,7 @@ function WorktreeList({
       })}
 
       {/* Expand / Collapse toggle */}
-      {sortedWts.length > BRANCH_LIMIT && (
+      {isActive && sortedWts.length > BRANCH_LIMIT && (
         <button
           className="ws-branch-toggle"
           onClick={(e) => { e.stopPropagation(); setExpanded(v => !v); }}
@@ -673,6 +723,7 @@ export function WorkspaceList({
                   activeTabId={activeTabId}
                   tabs={tabs}
                   terminalInstances={terminalInstances}
+                  workspaceActiveTab={workspaceActiveTab}
                   openTerminal={openTerminal}
                   handleRemoveWorktree={handleRemoveWorktree}
                   onWorkspaceClick={onWorkspaceClick}
