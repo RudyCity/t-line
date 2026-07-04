@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.283] - 2026-07-04
+
+### Added / Changed
+- **Peningkatan Sinkronisasi Dimensi & Manajemen Daya/Bandwidth Terminal**:
+  - **Broadcast Resize Terminal**: Backend memancarkan event `resize_broadcast` ke seluruh klien tersambung lainnya ketika sebuah klien melakukan resize dimensi terminal. Ditambah proteksi loop pencocokan dimensi di backend agar terhindar dari pemanggilan resize berantai tak berujung.
+  - **Exponential Backoff Reconnect**: Mengubah sistem coba-koneksi-kembali WebSocket yang sebelumnya bernilai statis 3s menjadi jeda eksponensial (berkembang dari 1.5s s/d maksimal 15s) untuk meringankan load server dan menstabilkan reconnect saat offline.
+  - **Auto-Suspend Terminal Inaktif di Koneksi Remote**: Menerapkan detektor koneksi remote (bukan localhost). Bila koneksi terdeteksi remote dan tidak ada input/output selama 5 menit, terminal akan disuspensi secara otomatis (memutuskan aliran WebSocket dan merilis listener untuk menghemat kuota data & daya baterai) dengan visualisasi overlay buram dan tombol "Click to Resume" yang mulus.
+
 ## [1.3.282] - 2026-07-04
 
 ### Added / Changed

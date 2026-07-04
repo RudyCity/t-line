@@ -182,6 +182,8 @@ interface TerminalSession {
   isDetached: boolean;
   shellType: string;
   cwd: string;
+  cols: number;
+  rows: number;
   /** Rolling output buffer for replay on reconnect */
   outputBufferChunks: string[];
   outputBufferLength: number;
@@ -265,6 +267,8 @@ export class TerminalManager {
       isDetached: false,
       shellType,
       cwd: cwd || normalizedCwd,
+      cols: cols || 80,
+      rows: rows || 24,
       outputBufferChunks: [],
       outputBufferLength: 0,
       pendingFlushChunks: [],
@@ -357,6 +361,24 @@ export class TerminalManager {
 
   getTerminal(id: string): ITerminal | undefined {
     return this.terminals.get(id);
+  }
+
+  resizeTerminal(id: string, cols: number, rows: number): boolean {
+    const session = this.sessions.get(id);
+    if (session) {
+      if (session.cols === cols && session.rows === rows) {
+        return false;
+      }
+      session.cols = cols;
+      session.rows = rows;
+      try {
+        session.terminal.resize(cols, rows);
+        return true;
+      } catch (e) {
+        console.error(`Error resizing terminal ${id}:`, e);
+      }
+    }
+    return false;
   }
 
   /** Get the output buffer for replay on reconnect */

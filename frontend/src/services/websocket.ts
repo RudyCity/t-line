@@ -4,6 +4,8 @@ class TerminalWebSocketManager {
   private messageQueue: string[] = [];
   private token: string = '';
   private onConnectionChange: (connected: boolean) => void = () => {};
+  private reconnectAttempts: number = 0;
+  private reconnectTimer: any = null;
 
   constructor() {
     this.token = localStorage.getItem('token') || '';
@@ -44,6 +46,11 @@ class TerminalWebSocketManager {
 
       this.ws.onopen = () => {
         console.log('Terminal WebSocket Connected.');
+        this.reconnectAttempts = 0;
+        if (this.reconnectTimer) {
+          clearTimeout(this.reconnectTimer);
+          this.reconnectTimer = null;
+        }
         this.onConnectionChange(true);
         // Flush queue
         while (this.messageQueue.length > 0) {
@@ -68,8 +75,16 @@ class TerminalWebSocketManager {
       this.ws.onclose = () => {
         console.log('Terminal WebSocket Closed.');
         this.onConnectionChange(false);
-        // Retry connection after 3 seconds
-        setTimeout(() => this.connect(), 3000);
+        
+        // Exponential backoff reconnect
+        this.reconnectAttempts++;
+        const delay = Math.min(1000 * Math.pow(1.5, this.reconnectAttempts), 15000);
+        console.log(`Retrying terminal WebSocket connection in ${(delay / 1000).toFixed(1)}s (attempt ${this.reconnectAttempts})...`);
+        
+        if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = setTimeout(() => {
+          this.connect();
+        }, delay);
       };
 
       this.ws.onerror = (err) => {

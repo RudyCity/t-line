@@ -42,6 +42,12 @@ const isMobileDevice = typeof window !== 'undefined' && (
   'ontouchstart' in window
 );
 
+const isRemoteConnection = () => {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname;
+  return host !== 'localhost' && host !== '127.0.0.1' && host !== '::1';
+};
+
 interface TerminalTab {
   id: string;
   name: string;
@@ -102,6 +108,84 @@ export function TerminalInstance({
   const [smartPasteText, setSmartPasteText] = useState<string | null>(null);
   const [localPid, setLocalPid] = useState<number | undefined>(pid);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isSuspended, setIsSuspended] = useState(false);
+
+  const idleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const resetIdleTimer = useCallback(() => {
+    if (!isRemoteConnection() || isSuspended) return;
+
+    if (idleTimeoutRef.current) {
+      clearTimeout(idleTimeoutRef.current);
+    }
+
+    idleTimeoutRef.current = setTimeout(() => {
+      console.log(`[Terminal] Suspending terminal ${tab.id} due to inactivity.`);
+      setIsSuspended(true);
+      wsManager.send(JSON.stringify({ type: 'suspend', id: tab.id }));
+      wsManager.removeListener(tab.id);
+    }, 300000);
+  }, [tab.id, isSuspended]);
+
+  const handleResume = useCallback(() => {
+    setIsSuspended(false);
+    
+    const term = terminalRef.current;
+    if (term && containerRef.current) {
+      try {
+        fitAddonRef.current?.fit();
+      } catch (e) {}
+
+      const actualCols = term.cols || 80;
+      const actualRows = term.rows || 24;
+
+      wsManager.subscribe(tab.id, (payload) => {
+        if (payload.type === 'data') {
+          term.write(payload.data);
+          resetIdleTimer();
+          onPtyDataRef.current?.();
+        } else if (payload.type === 'replay') {
+          term.write(payload.data);
+          resetIdleTimer();
+        } else if (payload.type === 'resize_broadcast') {
+          try {
+            term.resize(payload.cols, payload.rows);
+          } catch (e) {}
+        } else if (payload.type === 'title') {
+          onTitleChangeRef.current?.(payload.title);
+        } else if (payload.type === 'activeProcesses') {
+          onActiveProcessesChangeRef.current?.(payload.processes);
+        } else if (payload.type === 'pid') {
+          setLocalPid(payload.pid);
+        } else if (payload.type === 'exit') {
+          term.write('\r\n\r\n[Process Exited]\r\n');
+        } else if (payload.type === 're-attached') {
+          window.dispatchEvent(new CustomEvent('tline-toast', {
+            detail: { message: `Session Re-attached (${tab.id})` }
+          }));
+        }
+      });
+
+      wsManager.send(JSON.stringify({
+        type: 'init',
+        id: tab.id,
+        cwd: tab.cwd,
+        cols: actualCols,
+        rows: actualRows,
+        shellType: tab.shellType
+      }));
+
+      term.focus();
+    }
+  }, [tab, resetIdleTimer]);
+
+  useEffect(() => {
+    return () => {
+      if (idleTimeoutRef.current) {
+        clearTimeout(idleTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setLocalPid(pid);
@@ -463,14 +547,19 @@ export function TerminalInstance({
       setCursorPos({ col: buf.cursorX + 1, row: buf.cursorY + 1 });
     });
 
-    // ── WebSocket subscriptions ────────────────────────────
     wsManager.subscribe(tab.id, (payload) => {
       if (payload.type === 'data') {
         scheduleWrite(payload.data);
+        resetIdleTimer();
         // Notify silence-detection hook whenever PTY sends output.
         onPtyDataRef.current?.();
       } else if (payload.type === 'replay') {
         scheduleWrite(payload.data);
+        resetIdleTimer();
+      } else if (payload.type === 'resize_broadcast') {
+        try {
+          term.resize(payload.cols, payload.rows);
+        } catch (e) {}
       } else if (payload.type === 'title') {
         onTitleChangeRef.current?.(payload.title);
       } else if (payload.type === 'activeProcesses') {
@@ -492,6 +581,7 @@ export function TerminalInstance({
 
     term.onData((data) => {
       wsManager.send(JSON.stringify({ type: 'data', id: tab.id, data }));
+      resetIdleTimer();
     });
 
     term.onResize(({ cols, rows }) => {
@@ -499,6 +589,7 @@ export function TerminalInstance({
     });
 
     debouncedFit();
+    resetIdleTimer();
 
     // ── Window and Container resize ────────────────────────
     const handleResize = () => { debouncedFit(); };
@@ -888,6 +979,59 @@ export function TerminalInstance({
       onTouchEnd={handleTerminalFocus}
       onContextMenu={handleContextMenu}
     >
+      {isSuspended && (
+        <div 
+          className="terminal-suspended-overlay"
+          onClick={handleResume}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(11, 15, 25, 0.85)',
+            backdropFilter: 'blur(3px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10,
+            cursor: 'pointer',
+            textAlign: 'center',
+            padding: '20px'
+          }}
+        >
+          <div style={{
+            color: accentColor || '#3b82f6',
+            fontSize: '1.25rem',
+            fontWeight: 'bold',
+            marginBottom: '8px'
+          }}>
+            Terminal Suspended
+          </div>
+          <div style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '16px' }}>
+            Inactivity timeout of 5 minutes reached.
+          </div>
+          <button 
+            style={{
+              backgroundColor: accentColor || '#3b82f6',
+              color: '#ffffff',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleResume();
+            }}
+          >
+            Click to Resume
+          </button>
+        </div>
+      )}
       {showSearch && (
         <TerminalSearchBar searchAddon={searchAddonRef.current} onClose={closeSearch} />
       )}

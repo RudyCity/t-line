@@ -809,9 +809,19 @@ wss.on('connection', (ws: WebSocket) => {
         }
       } else if (type === 'resize') {
         const { cols, rows } = payload;
-        const term = terminalManager.getTerminal(id);
-        if (term) {
-          term.resize(cols, rows);
+        const resized = terminalManager.resizeTerminal(id, cols, rows);
+        if (resized) {
+          const session = (terminalManager as any).sessions.get(id);
+          if (session) {
+            const payloadStr = JSON.stringify({ type: 'resize_broadcast', id, cols, rows });
+            for (const [wsKey, sender] of session.senders.entries()) {
+              if (wsKey !== ws && wsKey.readyState === WebSocket.OPEN) {
+                try {
+                  wsKey.send(payloadStr);
+                } catch (e) {}
+              }
+            }
+          }
         }
       } else if (type === 'close') {
         console.log(`[WS] Received close command for terminal: id=${id}`);
