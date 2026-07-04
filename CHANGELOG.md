@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.276] - 2026-07-04
+
+### Added / Changed
+- **Sinkronisasi Tab Aktif & Quick Launch Terpusat**:
+  - Menambahkan endpoint REST API di backend (`/api/sync/state`) untuk menyimpan dan membaca data tab aktif, saved prompts (Quick Launch), dan informasi instance terminal.
+  - Mengintegrasikan mekanisme fetch saat login/start dan debounced auto-upload di frontend, sehingga tab dan pintasan Quick Launch tersinkronisasi secara real-time antar perangkat (desktop & mobile).
+- **Perbaikan Responsivitas Terminal Grid di Mobile**:
+  - Memperbaiki tata letak terminal grid agar mengecil secara dinamis menggunakan formula `min(100%, cardWidth)` untuk mencegah overflow dan menumpuk secara vertikal (vertical stack) dengan rapi pada layar mobile/tablet.
+
 ## [1.3.275] - 2026-07-04
 
 ### Added / Changed

@@ -107,6 +107,10 @@ export default function App() {
   const [rightMenuOpen, setRightMenuOpen] = useState<boolean>(false);
   const [showShortcutModal, setShowShortcutModal] = useState<boolean>(false);
   const [showBranchModal, setShowBranchModal] = useState<boolean>(false);
+
+  // Sync state refs (Option A)
+  const lastSyncState = useRef<string>('');
+  const hasFetchedSyncState = useRef<boolean>(false);
   const [savedPrompts, setSavedPrompts] = useState<SavedPrompt[]>(() => {
     try {
       const saved = localStorage.getItem('tline-saved-prompts');
@@ -687,10 +691,88 @@ export default function App() {
     }
   };
 
+  const fetchSyncState = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const res = await fetch('/api/sync/state', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Update states only if they are not empty or exist
+        if (data.tabs && Array.isArray(data.tabs)) {
+          setTabs(data.tabs);
+        }
+        if (data.terminalInstances && typeof data.terminalInstances === 'object') {
+          setTerminalInstances(data.terminalInstances);
+        }
+        if (data.savedPrompts && Array.isArray(data.savedPrompts)) {
+          setSavedPrompts(data.savedPrompts);
+          localStorage.setItem('tline-saved-prompts', JSON.stringify(data.savedPrompts));
+        }
+        
+        // Also update the last sync state reference to prevent re-upload loop
+        const stateStr = JSON.stringify({
+          tabs: data.tabs || [],
+          terminalInstances: data.terminalInstances || {},
+          savedPrompts: data.savedPrompts || []
+        });
+        lastSyncState.current = stateStr;
+      }
+    } catch (e) {
+      console.error('Failed to fetch sync state:', e);
+    } finally {
+      hasFetchedSyncState.current = true;
+    }
+  };
+
+  // Synchronize state changes to backend (Option A)
+  useEffect(() => {
+    if (!isAuthenticated || !hasFetchedSyncState.current) return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const currentState = {
+      tabs,
+      terminalInstances,
+      savedPrompts
+    };
+    const currentStateStr = JSON.stringify(currentState);
+
+    // If the state hasn't changed from the last fetched/saved one, don't re-upload
+    if (currentStateStr === lastSyncState.current) {
+      return;
+    }
+
+    // Debounce the save request by 1.5 seconds
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/sync/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: currentStateStr
+        });
+        if (res.ok) {
+          lastSyncState.current = currentStateStr;
+          console.log('[Sync] State synchronized to server successfully.');
+        }
+      } catch (err) {
+        console.error('[Sync] Failed to upload state to server:', err);
+      }
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [tabs, terminalInstances, savedPrompts, isAuthenticated]);
+
   const fetchDashboardData = () => {
     fetchWorkspaces();
     fetchTunnelStatus();
     checkActiveSessions();
+    fetchSyncState();
   };
 
   const handleMobileKeyInput = (data: string) => {

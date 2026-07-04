@@ -996,7 +996,7 @@ export function TerminalGridTab({
             )}
           </div>
         ) : (
-          <div className="terminal-grid-layout" style={{ gridTemplateColumns: `repeat(auto-fit, minmax(${cardWidth}px, 1fr))` }}>
+          <div className="terminal-grid-layout" style={{ gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${cardWidth}px), 1fr))` }}>
             {selectedTerminalIds.map(termId => {
               const term = terminalInstances[termId];
               if (!term) return null;

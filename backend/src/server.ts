@@ -471,6 +471,38 @@ app.get('/api/terminals/active', authMiddleware, (req, res) => {
   res.json(terminalManager.listTerminals());
 });
 
+// Centralized tab and quick-launch state sync
+const SYNC_FILE = path.join(os.homedir(), '.tline-sync.json');
+
+app.get('/api/sync/state', authMiddleware, (req, res) => {
+  try {
+    if (fs.existsSync(SYNC_FILE)) {
+      const data = fs.readFileSync(SYNC_FILE, 'utf8');
+      return res.json(JSON.parse(data));
+    }
+    return res.json({ tabs: [], terminalInstances: {}, savedPrompts: [] });
+  } catch (err: any) {
+    console.error('Failed to read sync file:', err);
+    res.status(500).json({ error: 'Failed to read sync state.' });
+  }
+});
+
+app.post('/api/sync/state', authMiddleware, (req, res) => {
+  try {
+    const { tabs, terminalInstances, savedPrompts } = req.body;
+    const state = {
+      tabs: tabs || [],
+      terminalInstances: terminalInstances || {},
+      savedPrompts: savedPrompts || []
+    };
+    fs.writeFileSync(SYNC_FILE, JSON.stringify(state, null, 2), 'utf8');
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Failed to write sync file:', err);
+    res.status(500).json({ error: 'Failed to save sync state.' });
+  }
+});
+
 // Serve frontend routing fallback in production
 if (fs.existsSync(frontendDistPath)) {
   app.get('*', (req, res) => {
