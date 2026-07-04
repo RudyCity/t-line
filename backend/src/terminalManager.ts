@@ -132,7 +132,17 @@ class SpawnTerminal implements ITerminal {
   }
 
   write(data: string): void {
-    if (this.child.stdin.writable) { this.child.stdin.write(data); }
+    if (this.child.stdin.writable) {
+      // child_process.spawn stdin expects standard newlines (\r\n on Windows, \n on POSIX)
+      // instead of carriage returns (\r) used by pty/xterm.
+      let normalized = data;
+      if (os.platform() === 'win32') {
+        normalized = data.replace(/\r(?!\n)/g, '\r\n').replace(/(?<!\r)\n/g, '\r\n');
+      } else {
+        normalized = data.replace(/\r/g, '\n');
+      }
+      this.child.stdin.write(normalized);
+    }
   }
 
   resize(cols: number, rows: number): void {

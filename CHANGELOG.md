@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.281] - 2026-07-04
+
+### Added / Changed
+- **Penyelesaian Loop Rekursif & Masalah Spasi Path Bun Run Dev**:
+  - Membuat script runner `dev.js` terpadu di root project yang mendeteksi runtime (`bun` vs `npm`) dan mengeksekusi workspace backend dan frontend dengan aman tanpa memicu loop penafsiran ulang/intersepsi perintah bun di Windows.
+- **Normalisasi Baris Baru (Newline) pada Terminal Fallback (SpawnTerminal)**:
+  - Mengonversi carriage return (`\r`) menjadi newline platform yang sesuai (`\r\n` di Windows, `\n` di POSIX) saat menulis input ke standard input child process di mode terminal fallback (`SpawnTerminal`).
+  - Menghilangkan bug di mana pintasan *Quick Launch* (seperti `bun run dev`) atau input ketukan Enter tidak merespon/macet di terminal fallback ketika `node-pty` gagal dimuat di bawah bun.
+
 ## [1.3.280] - 2026-07-04
 
 ### Added / Changed
