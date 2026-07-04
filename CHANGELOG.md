@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.275] - 2026-07-04
+
+### Added / Changed
+- **Dukungan Shortcut Help dan Quick Launch di Mobile/Tablet**:
+  - Menambahkan menu Keyboard Shortcuts (info shortcut) ke dalam RightSidebar untuk pengguna perangkat seluler/tablet.
+  - Menambahkan menu dan fungsionalitas Quick Launch ke dalam RightSidebar sehingga pintasan perintah/prompt tersimpan dapat dijalankan, dihapus, dan ditambahkan dari perangkat mobile/tablet.
+
 ## [1.3.274] - 2026-07-04
 
 ### Added / Changed

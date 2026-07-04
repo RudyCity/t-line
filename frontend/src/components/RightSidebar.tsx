@@ -2,10 +2,18 @@ import React from 'react';
 import {
   Plus, Terminal as TerminalIcon, FileCode, Settings, LogOut, X,
   ZoomIn, ZoomOut, Globe, ExternalLink, Copy, Check, Info, RefreshCw,
-  LayoutGrid, GitCompare
+  LayoutGrid, GitCompare, Zap, HelpCircle
 } from 'lucide-react';
 import { TabData, TerminalInstanceData, WorkspaceInfo } from '../hooks/useTerminals';
 import { Select } from './Form';
+
+interface SavedPrompt {
+  id: string;
+  name: string;
+  command: string;
+  cwd: string;
+  shellType: string;
+}
 
 interface RightSidebarProps {
   isOpen: boolean;
@@ -38,6 +46,13 @@ interface RightSidebarProps {
   tunnelLoading: boolean;
   handleStartTunnel: (type: 'quick' | 'token') => void;
   handleStopTunnel: () => void;
+  // Saved Prompts (Quick Launch)
+  savedPrompts?: SavedPrompt[];
+  onRunSavedPrompt?: (prompt: SavedPrompt) => void;
+  onDeleteSavedPrompt?: (id: string) => void;
+  onAddSavedPrompt?: () => void;
+  // Shortcut help
+  onShowShortcutHelp?: () => void;
 }
 
 export function RightSidebar({
@@ -64,6 +79,11 @@ export function RightSidebar({
   tunnelLoading,
   handleStartTunnel,
   handleStopTunnel,
+  savedPrompts = [],
+  onRunSavedPrompt,
+  onDeleteSavedPrompt,
+  onAddSavedPrompt,
+  onShowShortcutHelp,
 }: RightSidebarProps) {
   const [copied, setCopied] = React.useState(false);
 
@@ -159,6 +179,59 @@ export function RightSidebar({
             })}
             {tabs.length === 0 && (
               <div className="text-center py-8 text-xs text-[var(--text-muted)] font-medium">No active tabs</div>
+            )}
+          </div>
+        </div>
+
+        {/* ─── Quick Launch (mobile only) ─── */}
+        <div className="flex flex-col gap-3 pt-4 border-t border-[var(--border-color)]">
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] font-bold flex items-center gap-1.5">
+              <Zap size={12} className="text-amber-400" />
+              Quick Launch
+            </span>
+            <button
+              onClick={() => {
+                onAddSavedPrompt?.();
+                onClose();
+              }}
+              className="px-2.5 py-1 rounded bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--color-primary)] text-[var(--text-main)] text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+            >
+              <Plus size={11} />
+              <span>Add</span>
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {savedPrompts.map(prompt => (
+              <div
+                key={prompt.id}
+                onClick={() => {
+                  onRunSavedPrompt?.(prompt);
+                  onClose();
+                }}
+                className="flex items-center justify-between p-3 rounded-lg border bg-[var(--bg-card)]/50 border-[var(--border-color)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer group"
+              >
+                <div className="flex flex-col gap-0.5 overflow-hidden flex-1">
+                  <span className="text-xs font-semibold text-[var(--text-main)] truncate">{prompt.name}</span>
+                  <span className="text-[10px] font-mono text-[var(--text-muted)] truncate">{prompt.command}</span>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteSavedPrompt?.(prompt.id);
+                  }}
+                  className="text-slate-500 hover:text-red-400 p-1 rounded transition-colors text-sm font-bold opacity-80 hover:opacity-100 ml-2"
+                  title="Delete Shortcut"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {savedPrompts.length === 0 && (
+              <div className="text-center py-4 text-xs text-[var(--text-muted)] border border-dashed border-[var(--border-color)] rounded-lg">
+                No quick launch shortcuts added yet
+              </div>
             )}
           </div>
         </div>
@@ -329,6 +402,20 @@ export function RightSidebar({
         {/* Quick Actions Section */}
         <div className="flex flex-col gap-2 pt-4 border-t border-[var(--border-color)]">
           <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] font-bold mb-1">Actions</span>
+          <button
+            className="flex items-center gap-3 p-3 rounded-lg border text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-all text-xs font-medium cursor-pointer w-full text-left"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--bg-card) 50%, transparent)',
+              borderColor: 'var(--border-color)'
+            }}
+            onClick={() => {
+              onShowShortcutHelp?.();
+              onClose();
+            }}
+          >
+            <HelpCircle size={14} className="text-[var(--text-muted)]" />
+            <span>Keyboard Shortcuts</span>
+          </button>
           <button
             className="flex items-center gap-3 p-3 rounded-lg border text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-all text-xs font-medium cursor-pointer w-full text-left"
             style={{

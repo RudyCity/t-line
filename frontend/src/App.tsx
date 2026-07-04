@@ -961,6 +961,16 @@ export default function App() {
         tunnelLoading={tunnelLoading}
         handleStartTunnel={handleStartTunnel}
         handleStopTunnel={handleStopTunnel}
+        savedPrompts={savedPrompts}
+        onRunSavedPrompt={handleRunSavedPrompt}
+        onDeleteSavedPrompt={handleDeleteSavedPrompt}
+        onAddSavedPrompt={() => {
+          setSavePromptDefaultCwd(panelWorkspace?.path || workspaces[0]?.path || '');
+          setSavePromptDefaultShell(defaultShell);
+          setSavePromptInitialName('');
+          setShowSavePromptModal(true);
+        }}
+        onShowShortcutHelp={() => setShowShortcutModal(true)}
       />
 
       {/* Main Panel */}
