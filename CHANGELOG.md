@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.286] - 2026-07-04
+
+### Added / Changed
+- **Sinkronisasi Deteksi Prompt Asinkron xterm.js**:
+  - Mengatasi masalah di mana pendeteksian prompt asinkron di [TerminalInstance.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx) gagal (karena xterm.js melakukan antrean penulisan buffer secara asinkron menggunakan requestAnimationFrame, sedangkan pembacaan status prompt terjadi seketika di waktu penerimaan paket data WebSocket).
+  - Menunda pengecekan prompt kesiapan buffer terminal sebanyak `50ms` (menggunakan debounced timeout) agar xterm.js selesai memproses dan menggambar prompt di buffer, sehingga eksekusi perintah otomatis seperti `bun run dev` dan `.\orbit.exe dashboard --full` kembali berjalan secara langsung dan andal tanpa harus menunggu fallback delay 1.5 detik.
+
 ## [1.3.285] - 2026-07-04
 
 ### Added / Changed

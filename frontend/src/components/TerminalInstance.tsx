@@ -818,6 +818,8 @@ export function TerminalInstance({
       onClearInitialCommand?.(tab.id);
     };
 
+    let checkTimeout: ReturnType<typeof setTimeout> | null = null;
+
     // Initial silence timer: wait 1500ms or until PTY data detects prompt
     let silenceTimer: ReturnType<typeof setTimeout> = setTimeout(sendCommand, 1500);
 
@@ -827,16 +829,26 @@ export function TerminalInstance({
     // Hook into the PTY data stream via the ref.
     onPtyDataRef.current = () => {
       clearTimeout(silenceTimer);
-      const term = terminalRef.current;
-      const promptReady = term ? isPromptReady(term) : false;
-      const delay = promptReady ? 300 : 1500;
-      silenceTimer = setTimeout(sendCommand, delay);
+      if (checkTimeout) clearTimeout(checkTimeout);
+
+      checkTimeout = setTimeout(() => {
+        checkTimeout = null;
+        if (initialCommandSent.current) return;
+
+        const term = terminalRef.current;
+        const promptReady = term ? isPromptReady(term) : false;
+        const delay = promptReady ? 300 : 1500;
+
+        clearTimeout(silenceTimer);
+        silenceTimer = setTimeout(sendCommand, delay);
+      }, 50);
     };
 
     return () => {
       onPtyDataRef.current = null;
       clearTimeout(silenceTimer);
       clearTimeout(fallbackTimer);
+      if (checkTimeout) clearTimeout(checkTimeout);
     };
   }, [wsConnected, isInitialized, tab.initialCommand, tab.id, onClearInitialCommand]);
 
