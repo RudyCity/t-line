@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.274] - 2026-07-04
+
+### Added / Changed
+- **Peningkatan Visual Indikator Penghapusan & Proses Aktif Worktree**:
+  - Memperbaiki animasi loading penghapusan worktree (`Removing...`) agar ter-nesting dengan indah di tingkat direktori child, mempertahankan tajuk branch tetap terlihat.
+  - Memasukkan kembali indikator proses aktif (dot warna hijau) yang menempel pada ikon `FolderOpen` untuk worktree yang sedang memiliki terminal aktif.
+
 ## [1.3.273] - 2026-07-04
 
 ### Added / Changed

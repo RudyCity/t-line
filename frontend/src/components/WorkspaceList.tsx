@@ -393,20 +393,6 @@ function WorktreeList({
         const isWtCursorActive = wtProcesses.some(p => p.isCursor);
         const isWtSuperagentActive = wtProcesses.some(p => p.isSuperagent);
 
-        if (item.wtPath && deletingWorktreePaths?.includes(item.wtPath)) {
-          return (
-            <div key={item.branch} className={`tree-connector-wrapper ${isLast ? 'tree-item-last' : ''} opacity-60 animate-pulse pointer-events-none`}>
-              <div className="tree-connector" />
-              <div className="tree-item-content">
-                <div className="flex items-center gap-2 py-1 px-1.5 text-[10px] text-red-300 font-mono">
-                  <span className="h-2 w-2 rounded-full border border-red-400 border-t-transparent animate-spin shrink-0" />
-                  <span className="truncate">Removing {item.branch}...</span>
-                </div>
-              </div>
-            </div>
-          );
-        }
-
         return (
           <React.Fragment key={item.branch}>
             {/* Branch Header Row */}
@@ -479,114 +465,129 @@ function WorktreeList({
 
             {/* Worktree Indented Path Row */}
             {item.hasWorktree && item.wtPath && (
-              <div
-                className={`tree-connector-wrapper ${isLast ? 'tree-item-last' : ''}`}
-                style={{ marginLeft: '32px' }}
-              >
-                <div className="tree-connector" />
-                <div className="tree-item-content">
-                  <div
-                    className={`flex items-center justify-between py-0.5 px-1.5 rounded-md transition-all text-xs cursor-pointer group/item ${
-                      isWtActive ? 'font-semibold border' : ''
-                    }`}
-                    style={{
-                      backgroundColor: isWtActive 
-                        ? 'color-mix(in srgb, var(--color-primary) 10%, transparent)' 
-                        : 'transparent',
-                      borderColor: isWtActive 
-                        ? 'color-mix(in srgb, var(--color-primary) 20%, transparent)' 
-                        : 'transparent',
-                      color: isWtActive 
-                        ? 'var(--color-primary)' 
-                        : 'var(--text-muted)'
-                    }}
-                    onMouseOver={(e) => {
-                      if (!isWtActive) {
-                        e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)';
-                        e.currentTarget.style.color = 'var(--text-main)';
-                      }
-                    }}
-                    onMouseOut={(e) => {
-                      if (!isWtActive) {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = 'var(--text-muted)';
-                      }
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (item.isMain) {
-                        onWorkspaceClick(w.id);
-                      } else {
-                        onWorktreeClick(w.id, item.wtPath!);
-                      }
-                    }}
-                  >
-                    <div className="flex items-center gap-1.5 truncate flex-1 min-w-0" title={item.wtPath}>
-                      <div className="relative flex items-center shrink-0">
-                        <FolderOpen 
-                          size={10} 
-                          className="shrink-0"
-                          style={{
-                            color: isWtActive ? 'var(--color-primary)' : (item.isDirty ? '#f59e0b' : 'var(--text-muted)')
-                          }}
-                        />
-                        {hasWtRunning && (
-                          <span className="absolute -bottom-0.5 -right-0.5 ws-active-dot" style={{ width: '4px', height: '4px', boxShadow: '0 0 4px #10b981' }} title="Active processes running in terminal" />
-                        )}
-                      </div>
-                      <span 
-                        className="truncate text-[10px] font-mono opacity-80"
-                        style={{
-                          color: isWtActive ? 'var(--color-primary)' : (item.isDirty ? '#f59e0b' : 'var(--text-muted)')
-                        }}
-                      >
-                        {getRelativeWtPath(item.wtPath, w.path)}
-                      </span>
-
-                      {/* Compact process badges for worktree */}
-                      {isWtClaudeActive && (
-                        <span className="ws-active-process-badge ws-badge-claude shrink-0 scale-[0.85] origin-left" style={{ fontSize: '7px', height: '12px', padding: '0 3px' }} title="Claude Code running">
-                          Claude
-                        </span>
-                      )}
-                      {isWtGeminiActive && (
-                        <span className="ws-active-process-badge ws-badge-gemini shrink-0 scale-[0.85] origin-left" style={{ fontSize: '7px', height: '12px', padding: '0 3px' }} title="Gemini CLI running">
-                          Gemini
-                        </span>
-                      )}
-                      {isWtCursorActive && (
-                        <span className="ws-active-process-badge ws-badge-cursor shrink-0 scale-[0.85] origin-left" style={{ fontSize: '7px', height: '12px', padding: '0 3px' }} title="Cursor running">
-                          Cursor
-                        </span>
-                      )}
-                      {isWtSuperagentActive && (
-                        <span className="ws-active-process-badge ws-badge-superagent shrink-0 scale-[0.85] origin-left" style={{ fontSize: '7px', height: '12px', padding: '0 3px' }} title="Superagent running">
-                          Superagent
-                        </span>
-                      )}
-                    </div>
-
-                    <div className={`flex gap-1 shrink-0 ${isMobile ? '' : 'opacity-0 group-hover/item:opacity-100 transition-opacity duration-150'}`}>
-                      <button
-                        className="action-btn"
-                        onClick={(e) => { e.stopPropagation(); openTerminal(item.isMain ? w.name : `${w.name} (${item.branch})`, item.wtPath!, w.defaultShell); }}
-                        title={`Open terminal here (${w.defaultShell || 'default'})`}
-                      >
-                        <TerminalIcon size={10} />
-                      </button>
-                      {!item.isMain && (
-                        <button
-                          className="action-btn action-btn-danger"
-                          onClick={(e) => { e.stopPropagation(); handleRemoveWorktree(w.path, item.wtPath!); }}
-                          title="Delete worktree"
-                        >
-                          <Trash2 size={10} />
-                        </button>
-                      )}
+              deletingWorktreePaths?.includes(item.wtPath) ? (
+                <div
+                  className={`tree-connector-wrapper ${isLast ? 'tree-item-last' : ''} opacity-60 animate-pulse pointer-events-none`}
+                  style={{ marginLeft: '32px' }}
+                >
+                  <div className="tree-connector" />
+                  <div className="tree-item-content">
+                    <div className="flex items-center gap-2 py-1 px-1.5 text-[10px] text-red-300 font-mono">
+                      <span className="h-2 w-2 rounded-full border border-red-400 border-t-transparent animate-spin shrink-0" />
+                      <span className="truncate">Removing worktree...</span>
                     </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div
+                  className={`tree-connector-wrapper ${isLast ? 'tree-item-last' : ''}`}
+                  style={{ marginLeft: '32px' }}
+                >
+                  <div className="tree-connector" />
+                  <div className="tree-item-content">
+                    <div
+                      className={`flex items-center justify-between py-0.5 px-1.5 rounded-md transition-all text-xs cursor-pointer group/item ${
+                        isWtActive ? 'font-semibold border' : ''
+                      }`}
+                      style={{
+                        backgroundColor: isWtActive 
+                          ? 'color-mix(in srgb, var(--color-primary) 10%, transparent)' 
+                          : 'transparent',
+                        borderColor: isWtActive 
+                          ? 'color-mix(in srgb, var(--color-primary) 20%, transparent)' 
+                          : 'transparent',
+                        color: isWtActive 
+                          ? 'var(--color-primary)' 
+                          : 'var(--text-muted)'
+                      }}
+                      onMouseOver={(e) => {
+                        if (!isWtActive) {
+                          e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)';
+                          e.currentTarget.style.color = 'var(--text-main)';
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (!isWtActive) {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.color = 'var(--text-muted)';
+                        }
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (item.isMain) {
+                          onWorkspaceClick(w.id);
+                        } else {
+                          onWorktreeClick(w.id, item.wtPath!);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-1.5 truncate flex-1 min-w-0" title={item.wtPath}>
+                        <div className="relative flex items-center shrink-0">
+                          <FolderOpen 
+                            size={10} 
+                            className="shrink-0"
+                            style={{
+                              color: isWtActive ? 'var(--color-primary)' : (item.isDirty ? '#f59e0b' : 'var(--text-muted)')
+                            }}
+                          />
+                          {hasWtRunning && (
+                            <span className="absolute -bottom-0.5 -right-0.5 ws-active-dot" style={{ width: '4px', height: '4px', boxShadow: '0 0 4px #10b981' }} title="Active processes running in terminal" />
+                          )}
+                        </div>
+                        <span 
+                          className="truncate text-[10px] font-mono opacity-80"
+                          style={{
+                            color: isWtActive ? 'var(--color-primary)' : (item.isDirty ? '#f59e0b' : 'var(--text-muted)')
+                          }}
+                        >
+                          {getRelativeWtPath(item.wtPath, w.path)}
+                        </span>
+
+                        {/* Compact process badges for worktree */}
+                        {isWtClaudeActive && (
+                          <span className="ws-active-process-badge ws-badge-claude shrink-0 scale-[0.85] origin-left" style={{ fontSize: '7px', height: '12px', padding: '0 3px' }} title="Claude Code running">
+                            Claude
+                          </span>
+                        )}
+                        {isWtGeminiActive && (
+                          <span className="ws-active-process-badge ws-badge-gemini shrink-0 scale-[0.85] origin-left" style={{ fontSize: '7px', height: '12px', padding: '0 3px' }} title="Gemini CLI running">
+                            Gemini
+                          </span>
+                        )}
+                        {isWtCursorActive && (
+                          <span className="ws-active-process-badge ws-badge-cursor shrink-0 scale-[0.85] origin-left" style={{ fontSize: '7px', height: '12px', padding: '0 3px' }} title="Cursor running">
+                            Cursor
+                          </span>
+                        )}
+                        {isWtSuperagentActive && (
+                          <span className="ws-active-process-badge ws-badge-superagent shrink-0 scale-[0.85] origin-left" style={{ fontSize: '7px', height: '12px', padding: '0 3px' }} title="Superagent running">
+                            Superagent
+                          </span>
+                        )}
+                      </div>
+
+                      <div className={`flex gap-1 shrink-0 ${isMobile ? '' : 'opacity-0 group-hover/item:opacity-100 transition-opacity duration-150'}`}>
+                        <button
+                          className="action-btn"
+                          onClick={(e) => { e.stopPropagation(); openTerminal(item.isMain ? w.name : `${w.name} (${item.branch})`, item.wtPath!, w.defaultShell); }}
+                          title={`Open terminal here (${w.defaultShell || 'default'})`}
+                        >
+                          <TerminalIcon size={10} />
+                        </button>
+                        {!item.isMain && (
+                          <button
+                            className="action-btn action-btn-danger"
+                            onClick={(e) => { e.stopPropagation(); handleRemoveWorktree(w.path, item.wtPath!); }}
+                            title="Delete worktree"
+                          >
+                            <Trash2 size={10} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
             )}
           </React.Fragment>
         );
