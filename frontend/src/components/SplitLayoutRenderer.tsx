@@ -361,6 +361,7 @@ export function SplitLayoutRenderer({
           accentColor={accentColor}
           themeBackground={themeBackground}
           themeForeground={themeForeground}
+          clearInitialCommand={clearInitialCommand}
         />
       </Panel>
       <PanelResizeHandle
@@ -396,6 +397,7 @@ export function SplitLayoutRenderer({
           accentColor={accentColor}
           themeBackground={themeBackground}
           themeForeground={themeForeground}
+          clearInitialCommand={clearInitialCommand}
         />
       </Panel>
     </PanelGroup>

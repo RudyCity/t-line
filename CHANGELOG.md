@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.284] - 2026-07-04
+
+### Added / Changed
+- **Penyelesaian Masalah Eksekusi Perintah Awal Terminal (Quick Launch)**:
+  - Meningkatkan stabilitas auto-run *Quick Launch* dengan memperpanjang `SILENCE_MS` dari 300ms ke 1000ms dan `FALLBACK_MS` dari 4s ke 6s di [TerminalInstance.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx). Hal ini mencegah pemotongan/swallowing perintah saat shell (seperti PowerShell atau Bash) sedang melakukan pemuatan lambat profil startup.
+  - Memperbaiki pengiriman properti `clearInitialCommand` pada child components di [SplitLayoutRenderer.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SplitLayoutRenderer.tsx) agar status perintah awal tersapu bersih dengan tepat di semua layout pane (termasuk layout split/grid).
+
 ## [1.3.283] - 2026-07-04
 
 ### Added / Changed

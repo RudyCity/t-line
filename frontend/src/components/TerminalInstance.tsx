@@ -778,8 +778,8 @@ export function TerminalInstance({
   // ── Auto-execute saved prompt shortcut once (silence-detection) ───────────
   // Instead of a fixed delay, we wait until the shell output stream has been
   // quiet for SILENCE_MS (prompt is ready), with a FALLBACK_MS hard limit.
-  const SILENCE_MS = 300;
-  const FALLBACK_MS = 4000;
+  const SILENCE_MS = 1000;
+  const FALLBACK_MS = 6000;
   const initialCommandSent = useRef(false);
   useEffect(() => {
     if (!wsConnected || !isInitialized || !tab.initialCommand || initialCommandSent.current) return;
