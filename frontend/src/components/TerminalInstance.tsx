@@ -44,8 +44,30 @@ const isMobileDevice = typeof window !== 'undefined' && (
 
 const isRemoteConnection = () => {
   if (typeof window === 'undefined') return false;
+  const protocol = window.location.protocol;
   const host = window.location.hostname;
+  if (protocol === 'file:' || !host || window.navigator.userAgent.includes('Electron')) {
+    return false;
+  }
   return host !== 'localhost' && host !== '127.0.0.1' && host !== '::1';
+};
+
+const isPromptReady = (term: Terminal) => {
+  try {
+    const activeBuf = term.buffer.active;
+    const cursorY = activeBuf.cursorY;
+    for (let y = cursorY; y >= Math.max(0, cursorY - 1); y--) {
+      const line = activeBuf.getLine(y);
+      if (!line) continue;
+      const text = line.translateToString(true).trim();
+      if (text.endsWith('>') || text.endsWith('$') || text.endsWith('%') || text.endsWith('#')) {
+        return true;
+      }
+    }
+  } catch (e) {
+    console.error('Error checking prompt readiness:', e);
+  }
+  return false;
 };
 
 interface TerminalTab {
@@ -778,8 +800,7 @@ export function TerminalInstance({
   // ── Auto-execute saved prompt shortcut once (silence-detection) ───────────
   // Instead of a fixed delay, we wait until the shell output stream has been
   // quiet for SILENCE_MS (prompt is ready), with a FALLBACK_MS hard limit.
-  const SILENCE_MS = 1000;
-  const FALLBACK_MS = 6000;
+  const FALLBACK_MS = 8000;
   const initialCommandSent = useRef(false);
   useEffect(() => {
     if (!wsConnected || !isInitialized || !tab.initialCommand || initialCommandSent.current) return;
@@ -797,8 +818,8 @@ export function TerminalInstance({
       onClearInitialCommand?.(tab.id);
     };
 
-    // Silence timer: reset every time PTY emits data.
-    let silenceTimer: ReturnType<typeof setTimeout> = setTimeout(sendCommand, SILENCE_MS);
+    // Initial silence timer: wait 1500ms or until PTY data detects prompt
+    let silenceTimer: ReturnType<typeof setTimeout> = setTimeout(sendCommand, 1500);
 
     // Fallback: fire unconditionally after FALLBACK_MS if silence never comes.
     const fallbackTimer = setTimeout(sendCommand, FALLBACK_MS);
@@ -806,7 +827,10 @@ export function TerminalInstance({
     // Hook into the PTY data stream via the ref.
     onPtyDataRef.current = () => {
       clearTimeout(silenceTimer);
-      silenceTimer = setTimeout(sendCommand, SILENCE_MS);
+      const term = terminalRef.current;
+      const promptReady = term ? isPromptReady(term) : false;
+      const delay = promptReady ? 300 : 1500;
+      silenceTimer = setTimeout(sendCommand, delay);
     };
 
     return () => {

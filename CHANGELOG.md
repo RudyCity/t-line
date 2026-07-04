@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.285] - 2026-07-04
+
+### Added / Changed
+- **Penyelesaian Auto-Run Command Lambat & Perbaikan Detektor Electron**:
+  - **Detektor Prompt Cerdas (isPromptReady)**: Menambahkan utilitas pendeteksi kesiapan prompt xterm.js di [TerminalInstance.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx). Jika prompt terminal aktif dideteksi siap (`>`, `$`, `%`, `#`), penundaan auto-run dipersingkat menjadi 300ms. Jika belum siap (sedang menjalankan posh-git/starship/pemuatan profil startup lambat), delay disesuaikan secara dinamis hingga 1500ms dari keheningan aliran data PTY.
+  - **Pengecualian Detektor Remote Electron**: Memperbarui penentu koneksi remote `isRemoteConnection()` agar mengecualikan desktop app (Electron) yang menggunakan skema `file:`, hostname kosong, or agent Electron, sehingga fitur auto-suspend 5-menit tidak aktif pada aplikasi desktop lokal.
+
 ## [1.3.284] - 2026-07-04
 
 ### Added / Changed
