@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.273] - 2026-07-04
+
+### Added / Changed
+- **Struktur Hirarki Branch dan Worktree (Menjorok)**:
+  - Menyusun visualisasi branch Git dan worktree menjadi berjenjang (nested).
+  - Branch ditampilkan sebagai entitas induk (parent) dengan ikon `GitBranch`.
+  - Jika branch tersebut memiliki direktori worktree fisik, direktori tersebut akan ditampilkan di bawahnya (child) menjorok ke dalam (`margin-left: 32px`) menggunakan ikon `FolderOpen` dan path relatif yang ringkas.
+  - Memindahkan indikator proses aktif (seperti Claude, Gemini, Cursor) dan tombol tindakan (Terminal, Hapus) ke baris direktori worktree fisik agar sesuai konteks operasionalnya.
+
 ## [1.3.272] - 2026-07-04
 
 ### Added / Changed
