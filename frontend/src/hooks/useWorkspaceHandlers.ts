@@ -320,39 +320,58 @@ export function useWorkspaceHandlers({
     const ws = workspaces.find(w => w.id === workspaceId);
     if (!ws) return;
 
-    setPanelWorkspace(ws);
-    // For non-git workspaces there are no worktrees, so keep panelWorktreePath null.
-    // For git workspaces, select the main worktree path so tabs belonging to the
-    // main branch are shown by default.
-    if (ws.isGit && ws.worktrees && ws.worktrees.length > 0) {
-      const mainWt = ws.worktrees.find(wt => wt.isMain);
-      setPanelWorktreePath(mainWt ? mainWt.path : null);
-    } else {
-      setPanelWorktreePath(null);
-    }
+    const mainWt = (ws.isGit && ws.worktrees) ? ws.worktrees.find(wt => wt.isMain) : null;
+    const targetPath = mainWt ? mainWt.path : ws.path;
+    const currentPath = panelWorktreePath || panelWorkspace?.path;
+    const isDifferent = currentPath && currentPath !== targetPath;
 
-    // Find any open tab that matches the main branch/workspace path
-    const matchedTab = tabs.find(tab => {
-      if (tab.type === 'file' && tab.filePath) {
-        return isPathInWorktree(tab.filePath, ws.path);
+    const performSwitch = () => {
+      setPanelWorkspace(ws);
+      // For non-git workspaces there are no worktrees, so keep panelWorktreePath null.
+      // For git workspaces, select the main worktree path so tabs belonging to the
+      // main branch are shown by default.
+      if (ws.isGit && ws.worktrees && ws.worktrees.length > 0) {
+        setPanelWorktreePath(mainWt ? mainWt.path : null);
+      } else {
+        setPanelWorktreePath(null);
       }
-      if (tab.type === 'terminal' && tab.layout) {
-        const termIds = getTerminalIds(tab.layout);
-        return termIds.some(id => {
-          const inst = terminalInstances[id];
-          return inst && isPathInWorktree(inst.cwd, ws.path);
-        });
-      }
-      return false;
-    });
 
-    if (matchedTab) {
-      setActiveTabId(matchedTab.id);
+      // Find any open tab that matches the main branch/workspace path
+      const matchedTab = tabs.find(tab => {
+        if (tab.type === 'file' && tab.filePath) {
+          return isPathInWorktree(tab.filePath, ws.path);
+        }
+        if (tab.type === 'terminal' && tab.layout) {
+          const termIds = getTerminalIds(tab.layout);
+          return termIds.some(id => {
+            const inst = terminalInstances[id];
+            return inst && isPathInWorktree(inst.cwd, ws.path);
+          });
+        }
+        return false;
+      });
+
+      if (matchedTab) {
+        setActiveTabId(matchedTab.id);
+      } else {
+        openTerminal(ws.name, ws.path, ws.defaultShell);
+      }
+      setSidebarOpen(false);
+    };
+
+    if (isDifferent) {
+      showConfirm(
+        'Switch Workspace / Branch',
+        `Are you sure you want to switch focus to "${ws.name}"?`,
+        performSwitch,
+        'primary',
+        'Switch',
+        'Cancel'
+      );
     } else {
-      openTerminal(ws.name, ws.path, ws.defaultShell);
+      performSwitch();
     }
-    setSidebarOpen(false);
-  }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);
+  }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen, showConfirm]);
 
   const handleWorktreeClick = useCallback((workspaceId: string, wtPath: string) => {
     const ws = workspaces.find(w => w.id === workspaceId);
@@ -367,27 +386,48 @@ export function useWorkspaceHandlers({
       return;
     }
 
-    setPanelWorkspace(ws);
-    setPanelWorktreePath(wtPath); // Set active worktree path!
+    const currentPath = panelWorktreePath || panelWorkspace?.path;
+    const isDifferent = currentPath && currentPath !== wtPath;
 
-    const matchedTab = tabs.find(tab => {
-      if (tab.type === 'terminal' && tab.layout) {
-        const termIds = getTerminalIds(tab.layout);
-        return termIds.some(id => {
-          const inst = terminalInstances[id];
-          return inst && isPathInWorktree(inst.cwd, wtPath);
-        });
+    const wt = ws.worktrees?.find(w => w.path === wtPath);
+    const branchName = wt?.branch || 'detached';
+
+    const performSwitch = () => {
+      setPanelWorkspace(ws);
+      setPanelWorktreePath(wtPath); // Set active worktree path!
+
+      const matchedTab = tabs.find(tab => {
+        if (tab.type === 'terminal' && tab.layout) {
+          const termIds = getTerminalIds(tab.layout);
+          return termIds.some(id => {
+            const inst = terminalInstances[id];
+            return inst && isPathInWorktree(inst.cwd, wtPath);
+          });
+        }
+        return false;
+      });
+
+      if (matchedTab) {
+        setActiveTabId(matchedTab.id);
+      } else {
+        openTerminal(ws.name, wtPath, ws.defaultShell);
       }
-      return false;
-    });
+      setSidebarOpen(false);
+    };
 
-    if (matchedTab) {
-      setActiveTabId(matchedTab.id);
+    if (isDifferent) {
+      showConfirm(
+        'Switch Worktree / Branch',
+        `Are you sure you want to switch focus to branch "${branchName}"?`,
+        performSwitch,
+        'primary',
+        'Switch',
+        'Cancel'
+      );
     } else {
-      openTerminal(ws.name, wtPath, ws.defaultShell);
+      performSwitch();
     }
-    setSidebarOpen(false);
-  }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);
+  }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen, showConfirm]);
 
   return {
     editingWorkspace,

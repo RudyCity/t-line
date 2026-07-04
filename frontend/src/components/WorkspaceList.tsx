@@ -190,6 +190,7 @@ const BRANCH_LIMIT = 3;
 
 interface WorktreeListProps {
   w: WorkspaceInfo;
+  isActive: boolean;
   isMobile: boolean;
   activeTabId: string;
   tabs: TabData[];
@@ -206,6 +207,7 @@ interface WorktreeListProps {
 
 function WorktreeList({
   w,
+  isActive,
   isMobile,
   activeTabId,
   tabs,
@@ -235,7 +237,7 @@ function WorktreeList({
 
   const hiddenCount = sortedWts.length - BRANCH_LIMIT;
 
-  if (!w.isGit || !w.worktrees || w.worktrees.length === 0) return null;
+  if (!isActive || !w.isGit || !w.worktrees || w.worktrees.length === 0) return null;
 
   return (
     <div className="mt-0.5 flex flex-col">
@@ -545,138 +547,145 @@ export function WorkspaceList({
 
       {/* ── Workspace cards ── */}
       <div className="workspace-list flex flex-col gap-1.5 px-3">
-        {displayedWorkspaces.map(w => {
-          const isActive = (panelWorkspace?.id === w.id) || (activeWorkspaceId === w.id);
-          const wts = w.worktrees || [];
-          const totalDirty = wts.reduce((acc, wt) => acc + (wt.dirtyCount ?? 0), 0);
-          const hasDirtyChanges = totalDirty > 0;
-          const isDropdownOpen = openDropdownId === w.id;
+        {(() => {
+          const hasAnyActive = displayedWorkspaces.some(w => (panelWorkspace?.id === w.id) || (activeWorkspaceId === w.id));
+          return displayedWorkspaces.map(w => {
+            const isActive = (panelWorkspace?.id === w.id) || (activeWorkspaceId === w.id);
+            const isDimmed = hasAnyActive && !isActive;
+            const wts = w.worktrees || [];
+            const totalDirty = wts.reduce((acc, wt) => acc + (wt.dirtyCount ?? 0), 0);
+            const hasDirtyChanges = totalDirty > 0;
+            const isDropdownOpen = openDropdownId === w.id;
 
-          const runningProcesses = getRunningProcessesForPath(w.path, terminalInstances);
-          const hasRunning = runningProcesses.length > 0;
-          const isClaudeActive = runningProcesses.some(p => p.isClaude);
-          const isGeminiActive = runningProcesses.some(p => p.isGemini);
-          const isCursorActive = runningProcesses.some(p => p.isCursor);
-          const isSuperagentActive = runningProcesses.some(p => p.isSuperagent);
+            const runningProcesses = getRunningProcessesForPath(w.path, terminalInstances);
+            const hasRunning = runningProcesses.length > 0;
+            const isClaudeActive = runningProcesses.some(p => p.isClaude);
+            const isGeminiActive = runningProcesses.some(p => p.isGemini);
+            const isCursorActive = runningProcesses.some(p => p.isCursor);
+            const isSuperagentActive = runningProcesses.some(p => p.isSuperagent);
 
-          if (deletingWorkspacePaths?.includes(w.path)) {
-            return (
-              <div key={w.id} className="ws-card animate-pulse pointer-events-none opacity-60 flex items-center justify-between py-3 px-3.5 border border-red-500/20 bg-red-500/5 rounded-lg">
-                <div className="flex items-center gap-2 font-sans">
-                  <span className="h-3 w-3 rounded-full border-2 border-red-400 border-t-transparent animate-spin shrink-0" />
-                  <span className="text-[11px] font-semibold text-red-300">Removing {w.name}...</span>
+            if (deletingWorkspacePaths?.includes(w.path)) {
+              return (
+                <div key={w.id} className="ws-card animate-pulse pointer-events-none opacity-60 flex items-center justify-between py-3 px-3.5 border border-red-500/20 bg-red-500/5 rounded-lg">
+                  <div className="flex items-center gap-2 font-sans">
+                    <span className="h-3 w-3 rounded-full border-2 border-red-400 border-t-transparent animate-spin shrink-0" />
+                    <span className="text-[11px] font-semibold text-red-300">Removing {w.name}...</span>
+                  </div>
                 </div>
-              </div>
-            );
-          }
+              );
+            }
 
-          return (
-            <div
-              key={w.id}
-              className={`ws-card group cursor-pointer ${
-                isActive
-                  ? 'ws-card-active'
-                  : hasDirtyChanges
-                  ? 'ws-card-dirty'
-                  : 'ws-card-idle'
-              } ${isDropdownOpen ? 'ws-card-dropdown-open' : ''}`}
-              onClick={() => onWorkspaceClick(w.id)}
-            >
-              {/* Header row */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 font-medium truncate min-w-0 flex-1">
-                  <div className="relative flex items-center shrink-0">
-                    <Folder
-                      size={14}
-                      className="shrink-0"
+            return (
+              <div
+                key={w.id}
+                className={`ws-card group cursor-pointer ${
+                  isActive
+                    ? 'ws-card-active'
+                    : hasDirtyChanges
+                    ? 'ws-card-dirty'
+                    : 'ws-card-idle'
+                } ${isDropdownOpen ? 'ws-card-dropdown-open' : ''} ${
+                  isDimmed ? 'ws-card-dimmed' : ''
+                }`}
+                onClick={() => onWorkspaceClick(w.id)}
+              >
+                {/* Header row */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 font-medium truncate min-w-0 flex-1">
+                    <div className="relative flex items-center shrink-0">
+                      <Folder
+                        size={14}
+                        className="shrink-0"
+                        style={{
+                          color: isActive ? 'var(--color-primary)' : (hasDirtyChanges ? '#f59e0b' : 'var(--text-muted)')
+                        }}
+                      />
+                      {hasRunning && (
+                        <span className="absolute -bottom-0.5 -right-0.5 ws-active-dot" title="Active processes running in terminal" />
+                      )}
+                    </div>
+                    <span
+                      className="text-[12px] font-semibold tracking-wide truncate"
                       style={{
-                        color: isActive ? 'var(--color-primary)' : (hasDirtyChanges ? '#f59e0b' : 'var(--text-muted)')
+                        color: isActive ? 'var(--color-primary)' : 'var(--text-main)'
                       }}
-                    />
-                    {hasRunning && (
-                      <span className="absolute -bottom-0.5 -right-0.5 ws-active-dot" title="Active processes running in terminal" />
+                      title={w.path}
+                    >
+                      {w.name}
+                    </span>
+
+                    {isActive && (
+                      <span className="ws-active-badge shrink-0" title="Active workspace tab">
+                        <Check size={9} strokeWidth={3} />
+                      </span>
+                    )}
+
+
+                    {/* Active processes badges */}
+                    {isClaudeActive && (
+                      <span className="ws-active-process-badge ws-badge-claude shrink-0" title="Claude Code running">
+                        Claude
+                      </span>
+                    )}
+                    {isGeminiActive && (
+                      <span className="ws-active-process-badge ws-badge-gemini shrink-0" title="Gemini CLI running">
+                        Gemini
+                      </span>
+                    )}
+                    {isCursorActive && (
+                      <span className="ws-active-process-badge ws-badge-cursor shrink-0" title="Cursor running">
+                        Cursor
+                      </span>
+                    )}
+                    {isSuperagentActive && (
+                      <span className="ws-active-process-badge ws-badge-superagent shrink-0" title="Superagent running">
+                        Superagent
+                      </span>
+                    )}
+                    {hasRunning && !isClaudeActive && !isGeminiActive && !isCursorActive && !isSuperagentActive && (
+                      <span className="ws-active-process-badge ws-badge-general shrink-0" title={`${runningProcesses[0].name} running`}>
+                        Active
+                      </span>
                     )}
                   </div>
-                  <span
-                    className="text-[12px] font-semibold tracking-wide truncate"
-                    style={{
-                      color: isActive ? 'var(--color-primary)' : 'var(--text-main)'
-                    }}
-                    title={w.path}
-                  >
-                    {w.name}
-                  </span>
 
-                  {isActive && (
-                    <span className="ws-active-badge shrink-0" title="Active workspace tab">
-                      <Check size={9} strokeWidth={3} />
-                    </span>
-                  )}
-
-
-                  {/* Active processes badges */}
-                  {isClaudeActive && (
-                    <span className="ws-active-process-badge ws-badge-claude shrink-0" title="Claude Code running">
-                      Claude
-                    </span>
-                  )}
-                  {isGeminiActive && (
-                    <span className="ws-active-process-badge ws-badge-gemini shrink-0" title="Gemini CLI running">
-                      Gemini
-                    </span>
-                  )}
-                  {isCursorActive && (
-                    <span className="ws-active-process-badge ws-badge-cursor shrink-0" title="Cursor running">
-                      Cursor
-                    </span>
-                  )}
-                  {isSuperagentActive && (
-                    <span className="ws-active-process-badge ws-badge-superagent shrink-0" title="Superagent running">
-                      Superagent
-                    </span>
-                  )}
-                  {hasRunning && !isClaudeActive && !isGeminiActive && !isCursorActive && !isSuperagentActive && (
-                    <span className="ws-active-process-badge ws-badge-general shrink-0" title={`${runningProcesses[0].name} running`}>
-                      Active
-                    </span>
-                  )}
+                  <WorkspaceActions
+                    w={w}
+                    setPanelWorkspace={setPanelWorkspace}
+                    setActivePanel={setActivePanel}
+                    handleOpenWorktreeModal={handleOpenWorktreeModal}
+                    openTerminal={openTerminal}
+                    handleRemoveWorkspace={handleRemoveWorkspace}
+                    onEditWorkspace={onEditWorkspace}
+                    open={isDropdownOpen}
+                    setOpen={(isOpen) => setOpenDropdownId(isOpen ? w.id : null)}
+                  />
                 </div>
 
-                <WorkspaceActions
+                {/* Path */}
+                <div className="ws-path-row" title={w.path}>{w.path}</div>
+
+                {/* Worktree branches (collapsible) */}
+                <WorktreeList
                   w={w}
-                  setPanelWorkspace={setPanelWorkspace}
-                  setActivePanel={setActivePanel}
-                  handleOpenWorktreeModal={handleOpenWorktreeModal}
+                  isActive={isActive}
+                  isMobile={isMobile}
+                  activeTabId={activeTabId}
+                  tabs={tabs}
+                  terminalInstances={terminalInstances}
                   openTerminal={openTerminal}
-                  handleRemoveWorkspace={handleRemoveWorkspace}
-                  onEditWorkspace={onEditWorkspace}
-                  open={isDropdownOpen}
-                  setOpen={(isOpen) => setOpenDropdownId(isOpen ? w.id : null)}
+                  handleRemoveWorktree={handleRemoveWorktree}
+                  onWorkspaceClick={onWorkspaceClick}
+                  onWorktreeClick={onWorktreeClick}
+                  isPathInWorktree={isPathInWorktree}
+                  deletingWorktreePaths={deletingWorktreePaths}
+                  panelWorktreePath={panelWorktreePath}
+                  panelWorkspace={panelWorkspace}
                 />
               </div>
-
-              {/* Path */}
-              <div className="ws-path-row" title={w.path}>{w.path}</div>
-
-              {/* Worktree branches (collapsible) */}
-              <WorktreeList
-                w={w}
-                isMobile={isMobile}
-                activeTabId={activeTabId}
-                tabs={tabs}
-                terminalInstances={terminalInstances}
-                openTerminal={openTerminal}
-                handleRemoveWorktree={handleRemoveWorktree}
-                onWorkspaceClick={onWorkspaceClick}
-                onWorktreeClick={onWorktreeClick}
-                isPathInWorktree={isPathInWorktree}
-                deletingWorktreePaths={deletingWorktreePaths}
-                panelWorktreePath={panelWorktreePath}
-                panelWorkspace={panelWorkspace}
-              />
-            </div>
-          );
-        })}
+            );
+          });
+        })()}
 
         {displayedWorkspaces.length === 0 && search && (
           <div className="ws-empty-search">

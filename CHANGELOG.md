@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.268] - 2026-07-04
+
+### Changed / Added
+- **Peningkatan Visual Indentasi & Fokus Workspace / Worktree**:
+  - Memperlebar indentasi visual daftar worktree di panel samping dari `20px` menjadi `32px` serta menyesuaikan posisi garis putus-putus (`tree-connector`) agar struktur pohon lebih menjorok dan terlihat jelas di [components.css](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/components.css).
+  - Menyembunyikan daftar worktree untuk workspace yang sedang tidak aktif di [WorkspaceList.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/WorkspaceList.tsx) agar hanya branch/worktree dari workspace fokus yang ditampilkan.
+  - Menerapkan efek visual redup/gelap (`.ws-card-dimmed`) pada workspace card yang tidak aktif untuk mengarahkan fokus pengguna ke workspace/branch yang sedang dibuka.
+  - Menambahkan modal dialog konfirmasi sebelum berpindah workspace atau worktree branch aktif pada [useWorkspaceHandlers.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useWorkspaceHandlers.ts) untuk mencegah kesalahan klik/pindah fokus yang tidak disengaja.
+
 ## [1.3.267] - 2026-07-04
 
 ### Changed / Added

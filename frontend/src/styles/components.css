@@ -126,6 +126,16 @@
   box-shadow: var(--card-active-shadow, 0 0 10px color-mix(in srgb, var(--color-primary) 10%, transparent));
 }
 
+.ws-card-dimmed {
+  opacity: 0.45;
+  filter: saturate(0.6) brightness(0.85);
+}
+
+.ws-card-dimmed:hover {
+  opacity: 0.8;
+  filter: saturate(0.9) brightness(0.95);
+}
+
 .ws-card-dirty {
   border-color: transparent;
   background: rgba(245, 158, 11, 0.04);
@@ -488,7 +498,7 @@
 
 .tree-connector {
   position: relative;
-  width: 20px;
+  width: 32px;
   align-self: stretch;
   flex-shrink: 0;
 }
@@ -496,7 +506,7 @@
 .tree-connector::before {
   content: '';
   position: absolute;
-  left: 8px;
+  left: 14px;
   top: 0;
   bottom: 0;
   width: 1px;
@@ -510,9 +520,9 @@
 .tree-connector::after {
   content: '';
   position: absolute;
-  left: 8px;
+  left: 14px;
   top: 50%;
-  width: 8px;
+  width: 14px;
   height: 1px;
   border-top: 1px dashed var(--tree-connector-color);
 }
