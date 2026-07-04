@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.278] - 2026-07-04
+
+### Added / Changed
+- **Isolasi Quick Launch per Project/Workspace**:
+  - Menyaring daftar pintasan Quick Launch baik di dropdown desktop maupun di sidebar mobile secara dinamis berdasarkan workspace terfokus saat ini (`panelWorkspace.path`).
+  - Menampilkan nama workspace di judul dropdown Quick Launch untuk memperjelas konteks proyek yang sedang aktif.
+
 ## [1.3.277] - 2026-07-04
 
 ### Added / Changed

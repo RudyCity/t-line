@@ -119,6 +119,7 @@ export default function App() {
       return [];
     }
   });
+
   const [showSavePromptModal, setShowSavePromptModal] = useState<boolean>(false);
   const [showQuickLaunchDropdown, setShowQuickLaunchDropdown] = useState<boolean>(false);
   const [savePromptDefaultCwd, setSavePromptDefaultCwd] = useState<string>('');
@@ -195,6 +196,15 @@ export default function App() {
   // Active panel state: 'workspaces' | 'explorer' | 'changes' | 'checkpoints'
   const [activePanel, setActivePanel] = useState<'workspaces' | 'explorer' | 'changes' | 'checkpoints' | 'tabs'>('workspaces');
   const [panelWorkspace, setPanelWorkspace] = useState<WorkspaceInfo | null>(null);
+
+  const activeWorkspacePrompts = useMemo(() => {
+    if (!panelWorkspace) return savedPrompts;
+    const wsPath = panelWorkspace.path.toLowerCase().replace(/\\/g, '/');
+    return savedPrompts.filter(p => {
+      const pCwd = p.cwd.toLowerCase().replace(/\\/g, '/');
+      return pCwd.startsWith(wsPath);
+    });
+  }, [savedPrompts, panelWorkspace]);
   const [panelWorktreePath, setPanelWorktreePath] = useState<string | null>(null);
   const [showTabsDropdown, setShowTabsDropdown] = useState<boolean>(false);
 
@@ -1077,7 +1087,7 @@ export default function App() {
         tunnelLoading={tunnelLoading}
         handleStartTunnel={handleStartTunnel}
         handleStopTunnel={handleStopTunnel}
-        savedPrompts={savedPrompts}
+        savedPrompts={activeWorkspacePrompts}
         onRunSavedPrompt={handleRunSavedPrompt}
         onDeleteSavedPrompt={handleDeleteSavedPrompt}
         onAddSavedPrompt={() => {
@@ -1334,7 +1344,7 @@ export default function App() {
                       >
                         <div style={{ padding: '8px 12px 6px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <Zap size={12} /> Quick Launch
+                            <Zap size={12} /> Quick Launch {panelWorkspace && `(${panelWorkspace.name})`}
                           </span>
                           <button
                             onClick={() => {
@@ -1350,10 +1360,10 @@ export default function App() {
                             <Plus size={11} /> Add
                           </button>
                         </div>
-                        {savedPrompts.length === 0 ? (
-                          <div style={{ padding: '14px 12px', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>No shortcuts added yet</div>
+                        {activeWorkspacePrompts.length === 0 ? (
+                          <div style={{ padding: '14px 12px', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>No shortcuts for this workspace</div>
                         ) : (
-                          savedPrompts.map(prompt => (
+                          activeWorkspacePrompts.map(prompt => (
                             <div
                               key={prompt.id}
                               className="tabs-dropdown-item"
