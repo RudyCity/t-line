@@ -176,8 +176,8 @@ const FLUSH_INTERVAL_MS = 16;
 
 interface TerminalSession {
   terminal: ITerminal;
-  sender: ((data: string) => void) | null;
-  onExit?: ((code: number) => void) | null;
+  senders: Map<any, (data: string) => void>;
+  onExits: Map<any, (code: number) => void>;
   cleanupTimeout: NodeJS.Timeout | null;
   isDetached: boolean;
   shellType: string;
@@ -259,7 +259,8 @@ export class TerminalManager {
 
     const session: TerminalSession = {
       terminal,
-      sender: null,
+      senders: new Map(),
+      onExits: new Map(),
       cleanupTimeout: null,
       isDetached: false,
       shellType,
@@ -288,8 +289,12 @@ export class TerminalManager {
         const combined = sess.pendingFlushChunks.join('');
         sess.pendingFlushChunks = [];
 
-        if (sess.sender) {
-          sess.sender(combined);
+        for (const sender of sess.senders.values()) {
+          try {
+            sender(combined);
+          } catch (e) {
+            console.error(`Error sending combined data to sender for terminal ${id}:`, e);
+          }
         }
       }, FLUSH_INTERVAL_MS);
     };
@@ -311,11 +316,17 @@ export class TerminalManager {
         }
       }
 
-      if (activeSess.sender) {
+      if (activeSess.senders.size > 0) {
         // If there are no pending flush chunks, no flush timer, and data is small,
         // send it immediately for instant key-press feedback.
         if (activeSess.pendingFlushChunks.length === 0 && activeSess.flushTimer === null && data.length <= 5) {
-          activeSess.sender(data);
+          for (const sender of activeSess.senders.values()) {
+            try {
+              sender(data);
+            } catch (e) {
+              console.error(`Error sending fast data to sender for terminal ${id}:`, e);
+            }
+          }
         } else {
           // Accumulate chunk into pending flush queue
           activeSess.pendingFlushChunks.push(data);
@@ -328,7 +339,13 @@ export class TerminalManager {
       console.log(`[PTY] Terminal process exited: id=${id}, code=${code}`);
       const activeSess = this.sessions.get(id);
       if (activeSess) {
-        if (activeSess.onExit) activeSess.onExit(code);
+        for (const onExit of activeSess.onExits.values()) {
+          try {
+            onExit(code);
+          } catch (e) {
+            console.error(`Error calling onExit callback for terminal ${id}:`, e);
+          }
+        }
         if (activeSess.cleanupTimeout) clearTimeout(activeSess.cleanupTimeout);
         this.sessions.delete(id);
         this.terminals.delete(id);
@@ -357,36 +374,50 @@ export class TerminalManager {
     }
   }
 
-  setSender(id: string, sender: ((data: string) => void) | null, onExit?: ((code: number) => void) | null) {
+  setSender(id: string, key: any, sender: ((data: string) => void) | null, onExit?: ((code: number) => void) | null) {
     const session = this.sessions.get(id);
     if (session) {
-      session.sender = sender;
-      if (onExit !== undefined) session.onExit = onExit;
       if (sender) {
+        session.senders.set(key, sender);
+        if (onExit) {
+          session.onExits.set(key, onExit);
+        }
         if (session.cleanupTimeout) {
           clearTimeout(session.cleanupTimeout);
           session.cleanupTimeout = null;
           console.log(`PTY Session ${id} successfully re-attached to socket.`);
         }
         session.isDetached = false;
+      } else {
+        session.senders.delete(key);
+        session.onExits.delete(key);
+        if (session.senders.size === 0) {
+          session.isDetached = true;
+        }
       }
     }
   }
 
   /** Detach session: keep alive for 10 minutes */
-  detachSession(id: string) {
+  detachSession(id: string, key: any) {
     const session = this.sessions.get(id);
     if (session) {
-      session.sender = null;
-      session.isDetached = true;
-      if (session.cleanupTimeout) clearTimeout(session.cleanupTimeout);
+      session.senders.delete(key);
+      session.onExits.delete(key);
+      
+      if (session.senders.size === 0) {
+        session.isDetached = true;
+        if (session.cleanupTimeout) clearTimeout(session.cleanupTimeout);
 
-      session.cleanupTimeout = setTimeout(() => {
-        console.log(`PTY Session ${id} was detached for 10 minutes. Cleaning up terminal process.`);
-        this.removeTerminal(id);
-      }, 600000);
+        session.cleanupTimeout = setTimeout(() => {
+          console.log(`PTY Session ${id} was detached for 10 minutes. Cleaning up terminal process.`);
+          this.removeTerminal(id);
+        }, 600000);
 
-      console.log(`PTY Session ${id} detached. Keeping alive for 10 minutes.`);
+        console.log(`PTY Session ${id} detached (no active senders). Keeping alive for 10 minutes.`);
+      } else {
+        console.log(`PTY Session ${id} detached connection, but still has ${session.senders.size} active senders.`);
+      }
     }
   }
 

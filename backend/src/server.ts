@@ -737,6 +737,7 @@ wss.on('connection', (ws: WebSocket) => {
 
           terminalManager.setSender(
             id,
+            ws,
             (data) => {
               if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: 'data', id, data }));
@@ -777,6 +778,7 @@ wss.on('connection', (ws: WebSocket) => {
 
           terminalManager.setSender(
             id,
+            ws,
             (data) => {
               if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: 'data', id, data }));
@@ -817,7 +819,7 @@ wss.on('connection', (ws: WebSocket) => {
         activeTerminals.delete(id);
       } else if (type === 'suspend') {
         console.log(`[WS] Received suspend command for terminal: id=${id}`);
-        terminalManager.setSender(id, null);
+        terminalManager.setSender(id, ws, null);
       }
     } catch (e) {
       console.error('WS Message parsing error:', e);
@@ -830,7 +832,7 @@ wss.on('connection', (ws: WebSocket) => {
     // Put active terminals spawned by this connection into detached state (keep-alive)
     for (const termId of activeTerminals) {
       console.log(`[WS] Detaching terminal session: id=${termId}`);
-      terminalManager.detachSession(termId);
+      terminalManager.detachSession(termId, ws);
     }
     activeTerminals.clear();
   });

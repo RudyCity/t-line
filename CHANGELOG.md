@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.282] - 2026-07-04
+
+### Added / Changed
+- **Multiplexing Terminal dan Sinkronisasi Sesi Multi-klien**:
+  - Mengubah penanganan PTY session di `TerminalManager` agar mendukung beberapa WebSocket senders dan exit callbacks sekaligus (menggunakan `Map` berbasis key socket unik `ws`).
+  - Mencegah masalah di mana sesi terminal terputus atau tidak tersinkronisasi outputnya (beku/freeze) ketika diakses secara bersamaan lewat remote tunnel (seperti HP/tablet) dan aplikasi desktop lokal.
+  - Memastikan event `suspend` atau penutupan koneksi satu klien tidak menghentikan sesi terminal yang masih memiliki koneksi aktif dari klien lain.
+
 ## [1.3.281] - 2026-07-04
 
 ### Added / Changed
