@@ -367,48 +367,27 @@ export function useWorkspaceHandlers({
       return;
     }
 
-    const currentPath = panelWorktreePath || panelWorkspace?.path;
-    const isDifferent = currentPath && currentPath !== wtPath;
+    setPanelWorkspace(ws);
+    setPanelWorktreePath(wtPath); // Set active worktree path!
 
-    const wt = ws.worktrees?.find(w => w.path === wtPath);
-    const branchName = wt?.branch || 'detached';
-
-    const performSwitch = () => {
-      setPanelWorkspace(ws);
-      setPanelWorktreePath(wtPath); // Set active worktree path!
-
-      const matchedTab = tabs.find(tab => {
-        if (tab.type === 'terminal' && tab.layout) {
-          const termIds = getTerminalIds(tab.layout);
-          return termIds.some(id => {
-            const inst = terminalInstances[id];
-            return inst && isPathInWorktree(inst.cwd, wtPath);
-          });
-        }
-        return false;
-      });
-
-      if (matchedTab) {
-        setActiveTabId(matchedTab.id);
-      } else {
-        openTerminal(ws.name, wtPath, ws.defaultShell);
+    const matchedTab = tabs.find(tab => {
+      if (tab.type === 'terminal' && tab.layout) {
+        const termIds = getTerminalIds(tab.layout);
+        return termIds.some(id => {
+          const inst = terminalInstances[id];
+          return inst && isPathInWorktree(inst.cwd, wtPath);
+        });
       }
-      setSidebarOpen(false);
-    };
+      return false;
+    });
 
-    if (isDifferent) {
-      showConfirm(
-        'Switch Worktree / Branch',
-        `Are you sure you want to switch focus to branch "${branchName}"?`,
-        performSwitch,
-        'primary',
-        'Switch',
-        'Cancel'
-      );
+    if (matchedTab) {
+      setActiveTabId(matchedTab.id);
     } else {
-      performSwitch();
+      openTerminal(ws.name, wtPath, ws.defaultShell);
     }
-  }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen, showConfirm]);
+    setSidebarOpen(false);
+  }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);
 
   return {
     editingWorkspace,

@@ -32,6 +32,7 @@ export const BranchModal: React.FC<BranchModalProps> = ({
 
   const [deletingBranch, setDeletingBranch] = useState<string | null>(null);
   const [forceDeleteBranch, setForceDeleteBranch] = useState<string | null>(null);
+  const [checkoutConfirmBranch, setCheckoutConfirmBranch] = useState<string | null>(null);
 
   const fetchBranches = useCallback(async () => {
     if (!workspace) return;
@@ -65,6 +66,7 @@ export const BranchModal: React.FC<BranchModalProps> = ({
       setSyncAction(null);
       setDeletingBranch(null);
       setForceDeleteBranch(null);
+      setCheckoutConfirmBranch(null);
     }
   }, [show, workspace, fetchBranches]);
 
@@ -273,11 +275,26 @@ export const BranchModal: React.FC<BranchModalProps> = ({
                 );
               }
 
+              if (checkoutConfirmBranch === b) {
+                return (
+                  <div key={b} className="bm-list-item bm-list-item--confirm">
+                    <span className="bm-confirm-label">
+                      <GitBranch size={13} />
+                      {`Switch to branch '${b}'?`}
+                    </span>
+                    <span className="bm-confirm-actions">
+                      <button className="bm-confirm-yes" onClick={() => { handleCheckout(b); setCheckoutConfirmBranch(null); }}>Switch</button>
+                      <button className="bm-confirm-cancel" onClick={() => setCheckoutConfirmBranch(null)}>Cancel</button>
+                    </span>
+                  </div>
+                );
+              }
+
               return (
                 <div
                   key={b}
                   className={`bm-list-item${isActive ? ' bm-list-item--active' : ''}`}
-                  onClick={() => { if (!isActive && !syncAction && !loadingBranches) handleCheckout(b); }}
+                  onClick={() => { if (!isActive && !syncAction && !loadingBranches) setCheckoutConfirmBranch(b); }}
                 >
                   <span className="bm-list-item-left">
                     <GitBranch size={12} />

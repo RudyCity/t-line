@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.271] - 2026-07-04
+
+### Changed
+- **Bypass Konfirmasi Perpindahan Worktree & Proteksi Checkout Branch**:
+  - Menghapus modal konfirmasi (`showConfirm`) saat berpindah direktori worktree di panel samping pada [useWorkspaceHandlers.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useWorkspaceHandlers.ts). Perpindahan fokus antar-folder worktree kini berjalan instan.
+  - Memindahkan dialog konfirmasi ke aksi pemindahan/checkout branch aktif pada worktree/workspace di dalam [BranchModal.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BranchModal.tsx) dengan meluncurkan prompt Switch/Cancel inline untuk mencegah checkout yang tidak diinginkan.
+
 ## [1.3.270] - 2026-07-04
 
 ### Changed
