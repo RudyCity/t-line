@@ -406,6 +406,15 @@ export default function App() {
     return () => window.removeEventListener('tline-zoom', handleZoomEvent);
   }, [handleZoomIn, handleZoomOut]);
 
+  // Listen to terminal focus events to show virtual touch keyboard on mobile
+  useEffect(() => {
+    const handleFocusEvent = () => {
+      setShowMobileKeyboard(true);
+    };
+    window.addEventListener('tline-terminal-focus', handleFocusEvent);
+    return () => window.removeEventListener('tline-terminal-focus', handleFocusEvent);
+  }, []);
+
   const [fsChangeTrigger, setFsChangeTrigger] = useState<number>(0);
 
   // Global WebSocket listener for file system changes

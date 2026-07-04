@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.267] - 2026-07-04
+
+### Changed / Added
+- **Suppress Native Keyboard & Auto-Open t-line Keyboard**:
+  - Menonaktifkan keyboard native bawaan pada perangkat mobile/tablet saat terminal diklik atau difokuskan dengan mengatur `inputmode="none"` pada xterm textarea di [TerminalInstance.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx).
+  - Mengirimkan custom event `tline-terminal-focus` dari terminal ke container window saat terminal difokuskan di perangkat mobile/tablet.
+  - Menangkap custom event `tline-terminal-focus` pada [App.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx) untuk secara otomatis membuka/menampilkan keyboard virtual `t-line` bawaan aplikasi demi pengalaman mengetik mobile yang mulus.
+
 ## [1.3.266] - 2026-07-03
 
 ### Fixed

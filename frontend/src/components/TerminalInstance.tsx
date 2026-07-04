@@ -36,6 +36,11 @@ function isLightColor(color: string | undefined): boolean {
   return false;
 }
 
+const isMobileDevice = typeof window !== 'undefined' && (
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+  window.innerWidth <= 768 || 
+  'ontouchstart' in window
+);
 
 interface TerminalTab {
   id: string;
@@ -363,9 +368,6 @@ export function TerminalInstance({
     term.open(containerRef.current);
 
     // ── GPU renderers (load after open with progressive fallback) ──
-    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-      (typeof window !== 'undefined' && (window.innerWidth <= 768 || 'ontouchstart' in window));
-
     let isWebglLoaded = false;
     if (!isMobileDevice) {
       try {
@@ -425,7 +427,7 @@ export function TerminalInstance({
     };
 
     if (term.textarea) {
-      term.textarea.setAttribute('inputmode', isMobileDevice ? 'text' : 'none');
+      term.textarea.setAttribute('inputmode', 'none');
       term.textarea.addEventListener('paste', handlePasteEvent, true);
     }
 
@@ -519,10 +521,14 @@ export function TerminalInstance({
         if (!hasSelection) {
           terminalRef.current.focus();
           if (terminalRef.current.textarea) {
+            terminalRef.current.textarea.setAttribute('inputmode', 'none');
             terminalRef.current.textarea.focus();
           }
         }
         onFocusRef.current?.();
+        if (isMobileDevice) {
+          window.dispatchEvent(new CustomEvent('tline-terminal-focus'));
+        }
       }
     };
 
@@ -773,9 +779,15 @@ export function TerminalInstance({
 
       if (!hasSelection) {
         terminalRef.current.focus();
-        if (terminalRef.current.textarea) terminalRef.current.textarea.focus();
+        if (terminalRef.current.textarea) {
+          terminalRef.current.textarea.setAttribute('inputmode', 'none');
+          terminalRef.current.textarea.focus();
+        }
       }
       onFocusRef.current?.();
+      if (isMobileDevice) {
+        window.dispatchEvent(new CustomEvent('tline-terminal-focus'));
+      }
     }
   };
 
