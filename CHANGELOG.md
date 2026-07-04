@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.287] - 2026-07-04
+
+### Added / Changed
+- **Perbaikan Pembatalan Timer & Eksekusi Otomatis Perintah Panjang (Orbit & Command Lainnya)**:
+  - Memperbaiki penguncian eksekusi perintah di [TerminalInstance.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx). Sebelumnya, saat PTY memancarkan data secara berkelanjutan (misal output git/profil prompt), `clearTimeout` dipanggil terus-menerus sehingga perintah panjang seperti `.\orbit.exe dashboard --full` dibatalkan berulang kali.
+  - Setelah prompt siap terdeteksi (`isPromptReady`), eksekusi dikunci (*locked*) dan dipicu dalam `150ms` tanpa bisa dibatalkan oleh sinyal PTY data berikutnya, menjamin seluruh pintasan Quick Launch berjalan konsisten.
+
 ## [1.3.286] - 2026-07-04
 
 ### Added / Changed

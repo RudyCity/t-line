@@ -798,56 +798,67 @@ export function TerminalInstance({
   }, [active, wsConnected, tab.id, tab.cwd, tab.shellType]);
 
   // ── Auto-execute saved prompt shortcut once (silence-detection) ───────────
-  // Instead of a fixed delay, we wait until the shell output stream has been
-  // quiet for SILENCE_MS (prompt is ready), with a FALLBACK_MS hard limit.
-  const FALLBACK_MS = 8000;
+  const FALLBACK_MS = 6000;
   const initialCommandSent = useRef(false);
   useEffect(() => {
     if (!wsConnected || !isInitialized || !tab.initialCommand || initialCommandSent.current) return;
 
+    let scheduledTimer: ReturnType<typeof setTimeout> | null = null;
+    let checkTimeout: ReturnType<typeof setTimeout> | null = null;
+
     const sendCommand = () => {
       if (initialCommandSent.current) return;
       initialCommandSent.current = true;
-      // Detach the pty-data listener before sending.
       onPtyDataRef.current = null;
+      if (scheduledTimer) clearTimeout(scheduledTimer);
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      if (checkTimeout) clearTimeout(checkTimeout);
+
+      const cmdStr = tab.initialCommand?.endsWith('\r') || tab.initialCommand?.endsWith('\n')
+        ? tab.initialCommand
+        : tab.initialCommand + '\r';
+
       wsManager.send(JSON.stringify({
         type: 'data',
         id: tab.id,
-        data: tab.initialCommand + '\r'
+        data: cmdStr
       }));
       onClearInitialCommand?.(tab.id);
     };
 
-    let checkTimeout: ReturnType<typeof setTimeout> | null = null;
-
-    // Initial silence timer: wait 1500ms or until PTY data detects prompt
-    let silenceTimer: ReturnType<typeof setTimeout> = setTimeout(sendCommand, 1500);
-
-    // Fallback: fire unconditionally after FALLBACK_MS if silence never comes.
+    // Fallback: fire unconditionally after FALLBACK_MS
     const fallbackTimer = setTimeout(sendCommand, FALLBACK_MS);
 
-    // Hook into the PTY data stream via the ref.
-    onPtyDataRef.current = () => {
-      clearTimeout(silenceTimer);
-      if (checkTimeout) clearTimeout(checkTimeout);
+    // Initial check timer
+    scheduledTimer = setTimeout(sendCommand, 1500);
 
+    onPtyDataRef.current = () => {
+      if (initialCommandSent.current) return;
+
+      if (checkTimeout) clearTimeout(checkTimeout);
       checkTimeout = setTimeout(() => {
         checkTimeout = null;
         if (initialCommandSent.current) return;
 
         const term = terminalRef.current;
         const promptReady = term ? isPromptReady(term) : false;
-        const delay = promptReady ? 300 : 1500;
 
-        clearTimeout(silenceTimer);
-        silenceTimer = setTimeout(sendCommand, delay);
+        if (promptReady) {
+          // Prompt is ready! Schedule sendCommand with 150ms delay
+          if (scheduledTimer) clearTimeout(scheduledTimer);
+          scheduledTimer = setTimeout(sendCommand, 150);
+        } else {
+          // Prompt not ready yet; reschedule fallback silence timer for 1200ms
+          if (scheduledTimer) clearTimeout(scheduledTimer);
+          scheduledTimer = setTimeout(sendCommand, 1200);
+        }
       }, 50);
     };
 
     return () => {
       onPtyDataRef.current = null;
-      clearTimeout(silenceTimer);
-      clearTimeout(fallbackTimer);
+      if (scheduledTimer) clearTimeout(scheduledTimer);
+      if (fallbackTimer) clearTimeout(fallbackTimer);
       if (checkTimeout) clearTimeout(checkTimeout);
     };
   }, [wsConnected, isInitialized, tab.initialCommand, tab.id, onClearInitialCommand]);
