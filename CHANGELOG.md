@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.279] - 2026-07-04
+
+### Added / Changed
+- **Peta Klik Presisi Terminal & Pemetaan Sentuhan ke Mouse (Mobile/Tablet)**:
+  - Mengimplementasikan pendeteksi ketukan (tap) menggunakan `touchstart` dan `touchend` di dalam container terminal xterm.js pada [TerminalInstance.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx).
+  - Mengonversi tap layar tersebut menjadi event mouse virtual (`mousedown`, `mouseup`, `click`) di koordinat tepat sentuhan dan mengirimkannya langsung ke elemen target xterm.js.
+  - Memperbaiki dukungan interaksi CLI interaktif (seperti Claude Code, agy, micro editor, atau tombol expand) agar bisa diklik sesuai dengan posisinya di layar sentuh, sekaligus mempertahankan fungsi *suppress* keyboard native dan auto-open keyboard virtual bawaan tline.
+
 ## [1.3.278] - 2026-07-04
 
 ### Added / Changed
