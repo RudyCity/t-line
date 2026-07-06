@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.288] - 2026-07-06
+
+### Added / Changed
+- **Perbaikan Keyboard Shortcut Terminal (Ctrl+C / Copy & Interrupt) dan Refaktorisasi Kode**:
+  - **Penghindaran Intersepsi Shortcut Electron**: Memodifikasi pembuatan menu aplikasi di [main.js](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop/main.js) agar Edit menu (dengan shortcut copy/paste default role) hanya dipasang pada macOS. Pada Windows/Linux, menu ini dilewati sehingga Electron tidak mencegat penekanan tombol `Ctrl+C` dan `Ctrl+V` secara global di tingkat window. Ini mengembalikan kemampuan terminal untuk menerima input `Ctrl+C` (untuk membatalkan/menghentikan perintah aktif) secara langsung.
+  - **Dukungan Copy Cerdas Renderer**: Memperbarui penanganan tombol keyboard di [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx) agar mendukung `Ctrl+C` (Windows/Linux) dan `Cmd+C` (macOS) secara cerdas: jika ada teks yang diseleksi di terminal, shortcut tersebut akan menyalin teks ke clipboard, sedangkan jika tidak ada teks yang diseleksi, `Ctrl+C` akan dikirimkan ke PTY shell untuk interupsi proses (SIGINT).
+  - **Utilitas Clipboard Robust**: Menambahkan helper `copyToClipboard` di [TerminalHelpers.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalHelpers.ts) yang mendeteksi ketersediaan `navigator.clipboard` dalam konteks aman (secure context), dengan fallback otomatis menggunakan seleksi elemen `textarea` tiruan dan `document.execCommand('copy')` agar fungsi Copy tetap bekerja di semua konteks HTTP non-aman.
+  - **Refaktorisasi Batas File 1000 Baris**: Memindahkan berbagai tipe data, fungsi helper penilai warna/kondisi, detektor mobile, dan pembuat tema terminal dari `TerminalInstance.tsx` ke file helper baru [TerminalHelpers.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalHelpers.ts). Tindakan ini sukses memangkas baris kode `TerminalInstance.tsx` dari **1128** baris menjadi **996** baris, memenuhi aturan ketat basis kode (di bawah 1000 baris).
+
 ## [1.3.287] - 2026-07-04
 
 ### Added / Changed
