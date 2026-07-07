@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.303] - 2026-07-07
+
+### Added / Changed
+- **Penyembunyian Teks Tab Sidebar Saat Sempit (Dynamic Sidebar Tab Text Collapse)**:
+  - Menyembunyikan teks label tab menu kiri (`Workspaces`, `Explorer`, `Changes`, `Snapshots`) secara dinamis jika lebar sidebar di-resize di bawah `280px` agar tampilan tetap bersih, tidak bertumpuk/terpotong.
+  - Memosisikan lencana (badge) jumlah perubahan file Git secara melayang di atas icon `GitCompare` saat teks menu disembunyikan.
+
 ## [1.3.302] - 2026-07-07
 
 ### Added / Changed

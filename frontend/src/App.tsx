@@ -903,6 +903,8 @@ export default function App() {
     return '';
   };
 
+  const showTabText = !sidebarCollapsed && sidebarWidth >= 280;
+
   return (
     <div className="app-container">
       <UpdateNotification />
@@ -952,7 +954,7 @@ export default function App() {
             title="Workspaces"
           >
             <Folder size={15} />
-            {!sidebarCollapsed && <span>Workspaces</span>}
+            {showTabText && <span>Workspaces</span>}
           </button>
           <button
             className={`sidebar-panel-tab ${activePanel === 'explorer' ? 'active' : ''}`}
@@ -966,7 +968,7 @@ export default function App() {
             title="File Explorer"
           >
             <FolderTree size={15} />
-            {!sidebarCollapsed && <span>Explorer</span>}
+            {showTabText && <span>Explorer</span>}
           </button>
           <button
             className={`sidebar-panel-tab ${activePanel === 'changes' ? 'active' : ''}`}
@@ -981,7 +983,7 @@ export default function App() {
           >
             <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
               <GitCompare size={15} />
-              {sidebarCollapsed && changedFiles.length > 0 && (
+              {!showTabText && changedFiles.length > 0 && (
                 <span
                   style={{
                     position: 'absolute',
@@ -1006,7 +1008,7 @@ export default function App() {
                 </span>
               )}
             </div>
-            {!sidebarCollapsed && (
+            {showTabText && (
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 Changes
                 {changedFiles.length > 0 && (
@@ -1027,7 +1029,7 @@ export default function App() {
             title="Checkpoints & Snapshots"
           >
             <Camera size={15} />
-            {!sidebarCollapsed && <span>Snapshots</span>}
+            {showTabText && <span>Snapshots</span>}
           </button>
         </div>
 
