@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.332] - 2026-07-07
+
+### Fixed
+- **Fix Native Webview Overlay Visibility Race Condition**:
+  - Di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx), menyinkronkan status visibilitas webview segera setelah inisialisasi/pembuatan selesai.
+  - Ini mengatasi kondisi balapan (*race condition*) di mana pengguna berpindah ke tab lain (seperti terminal) saat webview sedang loading, yang menyebabkan efek visibilitas terlewati dan membuat webview native tetap muncul menimpa tab aktif lainnya.
+
 ## [1.3.331] - 2026-07-07
 
 ### Improved

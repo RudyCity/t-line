@@ -215,6 +215,11 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
 
         if (!active || !containerRef.current || !webviewInstance || tauriWebviewRef.current !== webviewInstance) return;
 
+        // Immediately sync visibility state in case tab became inactive during load
+        if (!isActiveRef.current) {
+          await webviewInstance.hide().catch(() => {});
+        }
+
         // Position and size update loop (requestAnimationFrame is extremely smooth)
         let lastRect = { left: 0, top: 0, width: 0, height: 0 };
         let consecutiveErrorCount = 0;
