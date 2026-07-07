@@ -74,8 +74,8 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
 
   const containerRef = useRef<HTMLDivElement>(null);
   const tauriWebviewRef = useRef<any>(null);
-  const useElectronWebview = false; // Always use proxy iframe instead of native Electron webview
-  const useTauriWebview = false;    // Always use proxy iframe instead of native Tauri webview
+  const useElectronWebview = isElectron; // Use native Electron webview tag when in Electron
+  const useTauriWebview = false;         // Always use proxy iframe instead of native Tauri webview
 
   const openInSystemBrowser = async (url: string) => {
     try {

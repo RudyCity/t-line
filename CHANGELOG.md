@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.338] - 2026-07-07
+
+### Changed
+- **Restore Native Electron Webview Tag**:
+  - Mengembalikan penggunaan tag `<webview>` native untuk lingkungan Electron di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx).
+  - Ini memulihkan fungsi navigasi dan Developer Tools (inspect element) secara penuh dalam Electron, sementara lingkungan Tauri dan Web tetap menggunakan proxy iframe.
+
 ## [1.3.337] - 2026-07-07
 
 ### Fixed
