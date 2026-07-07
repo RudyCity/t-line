@@ -175,7 +175,12 @@ const previewProxy = createProxyMiddleware({
         proxyRes.pipe(res);
       }
     },
-    error: (err, req, res) => {
+    error: (err: any, req, res) => {
+      // ECONNABORTED / ECONNRESET / EPIPE = browser navigated away mid-request.
+      // This is completely normal and expected — silently ignore to avoid log spam.
+      if (err.code === 'ECONNABORTED' || err.code === 'ECONNRESET' || err.code === 'EPIPE') {
+        return;
+      }
       console.error('[Preview Proxy Error]:', err);
       const response = res as any;
       if (response.headersSent) return;
