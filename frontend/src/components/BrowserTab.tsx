@@ -27,10 +27,11 @@ interface InspectedElement {
 
 interface BrowserTabProps {
   tab: TabData;
+  isActive: boolean;
   onUpdateTabName?: (newName: string) => void;
 }
 
-export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
+export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTabProps) {
   const [urlInput, setUrlInput] = useState(tab.url || 'http://localhost:3000');
   const [activeUrl, setActiveUrl] = useState(tab.url || 'http://localhost:3000');
   const [isInspecting, setIsInspecting] = useState(false);
@@ -54,6 +55,11 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
   const [webviewEl, setWebviewEl] = useState<any>(null);
   const isElectron = typeof window !== 'undefined' && window.navigator.userAgent.toLowerCase().includes('electron');
   const isTauri = typeof (window as any).__TAURI__ !== 'undefined';
+
+  const isActiveRef = useRef(isActive);
+  useEffect(() => {
+    isActiveRef.current = isActive;
+  }, [isActive]);
 
   const isLocalUrl = (url: string): boolean => {
     try {
@@ -214,6 +220,15 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
         let consecutiveErrorCount = 0;
         const updateLoop = async () => {
           if (!active || !containerRef.current || !webviewInstance || tauriWebviewRef.current !== webviewInstance) return;
+
+          // Skip position/size syncing if the tab is inactive
+          if (!isActiveRef.current) {
+            if (active && tauriWebviewRef.current === webviewInstance) {
+              requestAnimationFrame(updateLoop);
+            }
+            return;
+          }
+
           const r = containerRef.current.getBoundingClientRect();
 
           // Only call Tauri APIs if bounds actually changed
@@ -265,6 +280,27 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
       }
     };
   }, [useTauriWebview, tab.id, activeUrl]);
+
+  // Handle Webview visibility on isActive change
+  useEffect(() => {
+    if (tauriWebviewRef.current && useTauriWebview) {
+      if (isActive) {
+        tauriWebviewRef.current.show()
+          .then(async () => {
+            const { LogicalPosition, LogicalSize } = await import('@tauri-apps/api/dpi');
+            await new Promise(resolve => setTimeout(resolve, 50));
+            if (containerRef.current && tauriWebviewRef.current) {
+              const r = containerRef.current.getBoundingClientRect();
+              await tauriWebviewRef.current.setPosition(new LogicalPosition(r.left, r.top)).catch(() => {});
+              await tauriWebviewRef.current.setSize(new LogicalSize(r.width, r.height)).catch(() => {});
+            }
+          })
+          .catch((err: any) => console.warn('[BrowserTab] Failed to show webview:', err));
+      } else {
+        tauriWebviewRef.current.hide().catch((err: any) => console.warn('[BrowserTab] Failed to hide webview:', err));
+      }
+    }
+  }, [isActive, useTauriWebview]);
 
   // Listen to console messages if in Electron
   useEffect(() => {
@@ -501,7 +537,10 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
   const proxyUrl = `/api/preview-proxy?target=${encodeURIComponent(activeUrl)}`;
 
   return (
-    <div className="flex flex-col h-full w-full bg-[var(--bg-main)] text-[var(--text-main)] overflow-hidden">
+    <div 
+      className="flex flex-col h-full w-full bg-[var(--bg-main)] text-[var(--text-main)] overflow-hidden"
+      style={{ display: isActive ? 'flex' : 'none' }}
+    >
       {/* Top Navbar */}
       <div className="flex items-center gap-2 p-2 bg-[var(--bg-card)] border-b border-[var(--border-color)]">
         <button 

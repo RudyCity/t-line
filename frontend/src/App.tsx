@@ -1518,20 +1518,22 @@ export default function App() {
             <div className="terminal-container">
 
 
+              {/* Persistent Browser Tabs (kept in DOM to avoid reloading on tab switch) */}
+              {tabs.filter(t => t.type === 'browser').map(tab => (
+                <BrowserTab
+                  key={tab.id}
+                  tab={tab}
+                  isActive={tab.id === activeTabId}
+                  onUpdateTabName={(newName) => {
+                    setTabs(prev => prev.map(t => t.id === tab.id ? { ...t, name: newName } : t));
+                  }}
+                />
+              ))}
+
               {(() => {
                 const activeTab = tabs.find(t => t.id === activeTabId);
                 if (!activeTab) return null;
-                if (activeTab.type === 'browser') {
-                  return (
-                    <BrowserTab
-                      key={activeTab.id}
-                      tab={activeTab}
-                      onUpdateTabName={(newName) => {
-                        setTabs(prev => prev.map(t => t.id === activeTab.id ? { ...t, name: newName } : t));
-                      }}
-                    />
-                  );
-                }
+                if (activeTab.type === 'browser') return null;
                 if (activeTab.type === 'file') {
                   return (
                     <FileViewerTab

@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.331] - 2026-07-07
+
+### Improved
+- **Persist Browser Tabs State on Tab Switching**:
+  - Di [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx), semua tab bertipe `browser` kini di-render sekaligus di dalam DOM dan disembunyikan/ditampilkan menggunakan properti `isActive` & inline CSS `display: flex/none` alih-alih di-unmount ketika tidak aktif. Hal ini mencegah browser tab memuat ulang/reload halamannya setiap kali berganti tab.
+  - Di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx), menambahkan efek visibility menggunakan `.show()` dan `.hide()` pada objek Tauri `Webview` untuk menyembunyikan/menampilkan child webview native ketika status tab aktif/tidak aktif, serta menjeda loop sinkronisasi bounds saat tab sedang tidak aktif.
+
 ## [1.3.330] - 2026-07-07
 
 ### Fixed
