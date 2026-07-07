@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.342] - 2026-07-07
+
+### Changed
+- **Set Default Proxy Target to Empty**:
+  - Mengubah default target proxy dari `https://www.google.com` menjadi kosong (`""`) di [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts).
+  - Ini memastikan proxy server tidak lagi membuka Google secara default jika tidak ada target URL spesifik yang didefinisikan, melainkan langsung menyajikan halaman Welcome/Offline Preview yang terintegrasi dengan tema pengguna.
+
 ## [1.3.341] - 2026-07-07
 
 ### Changed

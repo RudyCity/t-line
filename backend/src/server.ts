@@ -84,7 +84,7 @@ console.log(`[system] Logger initialized. Writing backend logs to: ${BACKEND_LOG
 const app = express();
 const port = process.env.PORT || 5779;
 
-let currentProxyTarget = 'https://www.google.com';
+let currentProxyTarget = '';
 
 const sanitizeHeaders = (proxyHeaders: any) => {
   const headers = { ...proxyHeaders };
@@ -107,7 +107,7 @@ const sanitizeHeaders = (proxyHeaders: any) => {
 };
 
 const previewProxy = createProxyMiddleware({
-  target: currentProxyTarget,
+  target: 'http://localhost',
   changeOrigin: true,
   secure: false, // Support self-signed certificates and dev https setups
   ws: true,
@@ -127,7 +127,7 @@ const previewProxy = createProxyMiddleware({
     if (target) {
       currentProxyTarget = target.replace(/\/$/, '');
     }
-    return currentProxyTarget;
+    return currentProxyTarget || 'http://localhost';
   },
   selfHandleResponse: true,
   on: {
