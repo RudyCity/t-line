@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Globe, RotateCw, Bug, MousePointer, Check, 
   AlertCircle, ShieldAlert, Code2, Sparkles, Layout,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, ExternalLink, MonitorSmartphone
 } from 'lucide-react';
 import { TabData } from '../hooks/useTerminals';
 
@@ -43,6 +43,7 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
   const [helperReady, setHelperReady] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
+  const [forceProxy, setForceProxy] = useState(false);
 
   // States for resizable / collapsible DevTools drawer
   const [devtoolsHeight, setDevtoolsHeight] = useState(280);
@@ -52,6 +53,30 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [webviewEl, setWebviewEl] = useState<any>(null);
   const isElectron = typeof window !== 'undefined' && window.navigator.userAgent.toLowerCase().includes('electron');
+
+  const isLocalUrl = (url: string): boolean => {
+    try {
+      const parsed = new URL(url);
+      return parsed.hostname === 'localhost'
+        || parsed.hostname === '127.0.0.1'
+        || parsed.hostname.startsWith('192.168.')
+        || parsed.hostname.endsWith('.local')
+        || parsed.protocol === 'file:';
+    } catch { return false; }
+  };
+
+  const openInSystemBrowser = async (url: string) => {
+    try {
+      await fetch('/api/browser/open', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+    } catch (e) {
+      // Fallback: try window.open
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   // Listen to console messages if in Electron
   useEffect(() => {
@@ -186,6 +211,7 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
     setHelperReady(false);
     setLogs([]);
     setInspectedElement(null);
+    setForceProxy(false);
     setIframeKey(prev => prev + 1);
 
     // Update tab name dynamically
@@ -331,8 +357,8 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
 
       {/* Main Workspace Split (Iframe top, DevTools bottom) */}
       <div className="flex-1 flex flex-col min-h-0">
-        {/* Iframe Preview Container */}
-        <div className="flex-1 bg-white relative min-h-[250px]">
+        {/* Iframe / External Preview Container */}
+        <div className="flex-1 bg-[var(--bg-main)] relative min-h-[250px] flex flex-col">
           {isElectron ? (
             <webview 
               key={iframeKey}
@@ -342,7 +368,52 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
               style={{ width: '100%', height: '100%', border: 'none' }}
               allowpopups={true}
             />
+          ) : !isLocalUrl(activeUrl) && !forceProxy ? (
+            /* External URL landing page */
+            <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8 text-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                  <Globe size={28} className="text-purple-400" />
+                </div>
+                <h2 className="text-[var(--text-main)] font-semibold text-lg">External Website</h2>
+                <p className="text-[var(--text-muted)] text-sm max-w-sm leading-relaxed">
+                  Browser preview menggunakan proxy dan paling optimal untuk 
+                  <strong className="text-purple-400"> local development apps</strong> (localhost).
+                  <br /><br />
+                  Situs eksternal seperti Google, YouTube, dan website kompleks lainnya memerlukan browser asli untuk berfungsi dengan benar.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 w-full max-w-sm">
+                {/* Open in system browser */}
+                <button
+                  onClick={() => openInSystemBrowser(activeUrl)}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-md"
+                >
+                  <ExternalLink size={15} />
+                  Buka di System Browser
+                </button>
+
+                {/* Force proxy anyway */}
+                <button
+                  onClick={() => {
+                    setForceProxy(true);
+                    setIframeKey(prev => prev + 1);
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-transparent hover:bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] text-sm font-medium rounded-lg transition-colors"
+                  title="Coba buka via proxy (mungkin tidak sempurna)"
+                >
+                  <MonitorSmartphone size={14} />
+                  Coba via Proxy Preview
+                </button>
+              </div>
+
+              <div className="text-[10px] text-[var(--text-muted)] font-mono bg-[var(--bg-card)] border border-[var(--border-color)] px-3 py-2 rounded-md max-w-sm break-all">
+                {activeUrl}
+              </div>
+            </div>
           ) : (
+            /* Local URL proxy iframe */
             <iframe 
               key={iframeKey}
               ref={iframeRef}
@@ -353,7 +424,7 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
             />
           )}
           
-          {!isElectron && isInspecting && (
+          {!isElectron && isLocalUrl(activeUrl) && isInspecting && (
             <div className="absolute inset-0 pointer-events-none border-2 border-dashed border-purple-500/40 bg-purple-500/5 flex items-center justify-center">
               <span className="bg-[var(--bg-card)] border border-[var(--border-color)] text-purple-400 text-xs px-3 py-1.5 rounded-full font-semibold shadow-md pointer-events-auto">
                 🔍 Click any element on the page to inspect it
@@ -361,6 +432,7 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
             </div>
           )}
         </div>
+
 
         {/* DevTools Drawer (Obsidian Theme style) */}
         <div 

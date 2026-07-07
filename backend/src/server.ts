@@ -202,6 +202,39 @@ app.use(cors());
 app.use(express.json());
 
 // ----------------------------------------------------
+// Open URL in System Default Browser
+// ----------------------------------------------------
+app.post('/api/browser/open', (req, res) => {
+  const { url } = req.body as { url: string };
+  if (!url) return res.status(400).json({ error: 'URL is required' });
+  try {
+    new URL(url); // Validate URL format
+  } catch {
+    return res.status(400).json({ error: 'Invalid URL' });
+  }
+
+  const { exec } = require('child_process');
+  const safeUrl = url.replace(/"/g, '');
+
+  let command: string;
+  if (process.platform === 'win32') {
+    command = `start "" "${safeUrl}"`;
+  } else if (process.platform === 'darwin') {
+    command = `open "${safeUrl}"`;
+  } else {
+    command = `xdg-open "${safeUrl}"`;
+  }
+
+  exec(command, (err: any) => {
+    if (err) {
+      console.error('[Browser] Failed to open URL:', err);
+      return res.status(500).json({ error: 'Failed to open browser' });
+    }
+  });
+  res.json({ ok: true });
+});
+
+// ----------------------------------------------------
 // Cloudflare Tunnel & IP Access Rules Manager
 // ----------------------------------------------------
 const RULES_FILE = path.join(os.homedir(), '.tline-ip-rules.json');
