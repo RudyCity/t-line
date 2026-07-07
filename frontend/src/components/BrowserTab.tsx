@@ -53,6 +53,7 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [webviewEl, setWebviewEl] = useState<any>(null);
   const isElectron = typeof window !== 'undefined' && window.navigator.userAgent.toLowerCase().includes('electron');
+  const isTauri = typeof (window as any).__TAURI__ !== 'undefined';
 
   const isLocalUrl = (url: string): boolean => {
     try {
@@ -73,8 +74,33 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
         body: JSON.stringify({ url }),
       });
     } catch (e) {
-      // Fallback: try window.open
       window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const openInTauriBrowser = (url: string) => {
+    try {
+      // Use Tauri WebviewWindow API (available via withGlobalTauri: true)
+      const tauri = (window as any).__TAURI__;
+      if (tauri?.webviewWindow?.WebviewWindow) {
+        const label = 'browser-' + Date.now();
+        const hostname = (() => { try { return new URL(url).hostname; } catch { return url; } })();
+        new tauri.webviewWindow.WebviewWindow(label, {
+          url,
+          title: `Browser — ${hostname}`,
+          width: 1280,
+          height: 820,
+          decorations: true,
+          resizable: true,
+          center: true,
+        });
+      } else {
+        // Fallback: open in system browser
+        openInSystemBrowser(url);
+      }
+    } catch (e) {
+      console.warn('[BrowserTab] WebviewWindow failed, falling back to system browser:', e);
+      openInSystemBrowser(url);
     }
   };
 
@@ -377,24 +403,36 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
                 </div>
                 <h2 className="text-[var(--text-main)] font-semibold text-lg">External Website</h2>
                 <p className="text-[var(--text-muted)] text-sm max-w-sm leading-relaxed">
-                  Browser preview menggunakan proxy dan paling optimal untuk 
-                  <strong className="text-purple-400"> local development apps</strong> (localhost).
+                  Browser preview paling optimal untuk{' '}
+                  <strong className="text-purple-400">local development apps</strong> (localhost).
                   <br /><br />
-                  Situs eksternal seperti Google, YouTube, dan website kompleks lainnya memerlukan browser asli untuk berfungsi dengan benar.
+                  {isTauri
+                    ? 'Klik di bawah untuk membuka situs ini di Browser Window terpisah dengan kemampuan browsing penuh.'
+                    : 'Situs eksternal seperti Google dan YouTube memerlukan browser asli untuk berfungsi dengan benar.'}
                 </p>
               </div>
 
               <div className="flex flex-col gap-3 w-full max-w-sm">
-                {/* Open in system browser */}
-                <button
-                  onClick={() => openInSystemBrowser(activeUrl)}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-md"
-                >
-                  <ExternalLink size={15} />
-                  Buka di System Browser
-                </button>
+                {/* Primary action — depends on platform */}
+                {isTauri ? (
+                  <button
+                    onClick={() => openInTauriBrowser(activeUrl)}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-md"
+                  >
+                    <ExternalLink size={15} />
+                    Buka Browser Window
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => openInSystemBrowser(activeUrl)}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-md"
+                  >
+                    <ExternalLink size={15} />
+                    Buka di System Browser
+                  </button>
+                )}
 
-                {/* Force proxy anyway */}
+                {/* Fallback: Force proxy */}
                 <button
                   onClick={() => {
                     setForceProxy(true);
@@ -412,6 +450,7 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
                 {activeUrl}
               </div>
             </div>
+
           ) : (
             /* Local URL proxy iframe */
             <iframe 
