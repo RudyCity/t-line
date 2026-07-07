@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.308] - 2026-07-07
+
+### Added / Changed
+- **Resizable & Collapsible DevTools Drawer di Tab Browser**:
+  - Menambahkan bar pengubah ukuran (*resize handle*) interaktif di atas panel DevTools sehingga tinggi panel dapat diatur dengan menyeret (*drag*) mouse.
+  - Mematikan sementara *pointer events* pada *iframe* pratinjau ketika proses pengubahan ukuran sedang berlangsung untuk mencegah *lag* atau macet akibat tangkapan event oleh *iframe*.
+  - Menambahkan tombol *collapse/expand* (toggle chevron) di pojok kanan atas *header* DevTools dan mendukung klik-ganda (*double-click*) pada *header* untuk menyembunyikan atau menampilkan panel DevTools dengan animasi transisi yang mulus.
+  - Secara otomatis memperluas (*expand*) kembali panel DevTools ketika pengguna mengeklik tab *Console Errors* atau *Element Inspector* saat dalam kondisi tersembunyi.
+
 ## [1.3.307] - 2026-07-07
 
 ### Added / Changed
