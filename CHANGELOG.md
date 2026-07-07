@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.347] - 2026-07-07
+
+### Fixed
+- **Tauri Action Version in Workflow**:
+  - Mengubah referensi `tauri-apps/tauri-action` dari `@v2` ke `@v0` di dalam `.github/workflows/release.yml` ([release.yml](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/.github/workflows/release.yml)) untuk memperbaiki error resolusi tag action pada server runner GitHub Actions.
+
 ## [1.3.346] - 2026-07-07
 
 ### Removed

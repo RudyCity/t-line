@@ -56,7 +56,7 @@ jobs:
         run: npm run copy-assets --workspace=desktop-tauri
 
       - name: Build Tauri Desktop (Package & Publish)
-        uses: tauri-apps/tauri-action@v2
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
