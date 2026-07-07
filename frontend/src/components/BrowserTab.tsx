@@ -50,13 +50,13 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
   const [isResizing, setIsResizing] = useState(false);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const webviewRef = useRef<any>(null);
+  const [webviewEl, setWebviewEl] = useState<any>(null);
   const isElectron = typeof window !== 'undefined' && window.navigator.userAgent.toLowerCase().includes('electron');
 
   // Listen to console messages if in Electron
   useEffect(() => {
-    if (!isElectron || !webviewRef.current) return;
-    const webview = webviewRef.current;
+    if (!isElectron || !webviewEl) return;
+    const webview = webviewEl;
 
     const handleConsoleMessage = (e: any) => {
       if (e.level === 2) {
@@ -77,7 +77,7 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
     return () => {
       webview.removeEventListener('console-message', handleConsoleMessage);
     };
-  }, [isElectron, iframeKey, webviewRef.current]);
+  }, [isElectron, iframeKey, webviewEl]);
 
   // Drag handler to resize DevTools drawer
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -278,9 +278,9 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
         {isElectron ? (
           <button 
             onClick={() => {
-              if (webviewRef.current) {
+              if (webviewEl) {
                 try {
-                  webviewRef.current.openDevTools();
+                  webviewEl.openDevTools();
                 } catch (e) {
                   console.error('Failed to open native devtools:', e);
                 }
@@ -315,7 +315,7 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
           {isElectron ? (
             <webview 
               key={iframeKey}
-              ref={webviewRef}
+              ref={setWebviewEl}
               src={activeUrl}
               className={`w-full h-full border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
               style={{ width: '100%', height: '100%', border: 'none' }}

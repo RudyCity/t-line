@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.311] - 2026-07-07
+
+### Added / Changed
+- **Fix Console Errors Capture (Electron & Iframe)**:
+  - Mengubah cara `<webview>` di Electron didaftarkan *event listener* `console-message`-nya di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) dengan menggunakan Callback Ref State (`webviewEl`) alih-alih `webviewRef.current` di dependency array `useEffect`, memastikan listener sukses terpasang saat komponen dimount.
+  - Menghapus atribut `defer` dari tag `<script src="tline-helper.js">` di proxy preview [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) agar script memblokir parsing dan dieksekusi sedini mungkin (sinkron), sehingga dapat menangkap error JavaScript yang terjadi pada saat load-time awal (sebelum DOM sepenuhnya termuat).
+
 ## [1.3.310] - 2026-07-07
 
 ### Added / Changed
