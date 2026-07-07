@@ -128,7 +128,7 @@ const previewProxy = createProxyMiddleware({
         proxyRes.on('end', () => {
           let html = body.toString('utf8');
           const baseTag = `<base href="/api/preview-proxy/">`;
-          const helperScript = `<script src="/tline-helper.js" defer></script>`;
+          const helperScript = `<script src="tline-helper.js" defer></script>`;
           if (html.includes('<head>')) {
             html = html.replace('<head>', `<head>\n  ${baseTag}\n  ${helperScript}`);
           } else {

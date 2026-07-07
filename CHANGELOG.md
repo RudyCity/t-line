@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.307] - 2026-07-07
+
+### Added / Changed
+- **Fix Preview Helper Path**:
+  - Mengubah pemanggilan `tline-helper.js` pada injektor proxy pratinjau di [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) dari absolute path (`/tline-helper.js`) menjadi relative path (`tline-helper.js`) agar dapat di-resolve dengan benar menggunakan tag `<base href="/api/preview-proxy/">` di browser dan menghindari error status 404.
+
 ## [1.3.306] - 2026-07-07
 
 ### Added / Changed
