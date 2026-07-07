@@ -627,11 +627,22 @@ export default function App() {
         }
       });
 
+      const handleGlobalMessage = (payload: any) => {
+        if (payload.type === 'activeProcesses') {
+          handleActiveProcessesChange(payload.id, payload.processes);
+        } else if (payload.type === 'title') {
+          handleTitleChange(payload.id, payload.title);
+        }
+      };
+
+      wsManager.addGlobalMessageListener(handleGlobalMessage);
+
       fetchDashboardData();
       fetchLocalVersion();
 
       return () => {
         wsManager.unsubscribe('sync_state');
+        wsManager.removeGlobalMessageListener(handleGlobalMessage);
       };
     }
   }, [isAuthenticated, fetchLocalVersion]);

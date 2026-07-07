@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.302] - 2026-07-07
+
+### Added / Changed
+- **Sinkronisasi Status Proses Aktif Global (Global WS Process/Title Sync)**:
+  - Memperbaiki bug di mana mematikan proses agent (seperti `superagent`) atau mengubah judul shell saat tab terminal sedang tidak fokus (unmounted/suspended) menyebabkan status lencana (badges) pada sidebar tersangkut (stuck) dan tidak terupdate di frontend.
+  - Menambahkan dukungan `globalMsgListeners` di `TerminalWebSocketManager` untuk menerima dan mendistribusikan event `activeProcesses` dan `title` secara terus menerus ke global React state `terminalInstances`, bahkan jika komponen visual terminal individual telah di-unmount dari DOM.
+
 ## [1.3.301] - 2026-07-07
 
 ### Added / Changed

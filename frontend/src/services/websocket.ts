@@ -6,6 +6,15 @@ class TerminalWebSocketManager {
   private onConnectionChange: (connected: boolean) => void = () => {};
   private reconnectAttempts: number = 0;
   private reconnectTimer: any = null;
+  private globalMsgListeners: Array<(payload: any) => void> = [];
+
+  addGlobalMessageListener(cb: (payload: any) => void) {
+    this.globalMsgListeners.push(cb);
+  }
+
+  removeGlobalMessageListener(cb: (payload: any) => void) {
+    this.globalMsgListeners = this.globalMsgListeners.filter(l => l !== cb);
+  }
 
   constructor() {
     this.token = localStorage.getItem('token') || '';
@@ -63,6 +72,11 @@ class TerminalWebSocketManager {
         try {
           const payload = JSON.parse(event.data);
           const { id } = payload;
+          
+          this.globalMsgListeners.forEach(listener => {
+            try { listener(payload); } catch(e) {}
+          });
+
           const listener = this.listeners.get(id);
           if (listener) {
             listener(payload);
