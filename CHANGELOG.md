@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.343] - 2026-07-07
+
+### Changed
+- **Remove Shadows from Web Preview Cards & Buttons**:
+  - Menghapus property `box-shadow` pada card dan button di halaman offline proxy [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts).
+  - Menghapus class `shadow-lg` pada native React welcome card di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx).
+  - Ini memberikan gaya flat minimalis yang lebih bersih dan modern, selaras dengan estetika Obsidian.
+
 ## [1.3.342] - 2026-07-07
 
 ### Changed

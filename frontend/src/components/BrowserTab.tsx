@@ -635,7 +635,7 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
         <div className="flex-1 bg-[var(--bg-main)] relative min-h-[250px] flex flex-col">
           {!activeUrl ? (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[var(--bg-main)] select-none">
-              <div className="max-w-md w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-8 shadow-lg backdrop-blur-sm">
+              <div className="max-w-md w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-8 backdrop-blur-sm">
                 <div className="w-16 h-16 rounded-2xl bg-[var(--color-primary-glow)] border border-[var(--color-primary-hover)] flex items-center justify-center mx-auto mb-6">
                   <Globe size={28} className="text-[var(--accent-color)] animate-pulse" />
                 </div>
