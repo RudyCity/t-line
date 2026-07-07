@@ -88,17 +88,38 @@ let currentProxyTarget = '';
 
 const sanitizeHeaders = (proxyHeaders: any) => {
   const headers = { ...proxyHeaders };
-  delete headers['content-security-policy'];
-  delete headers['x-frame-options'];
   
-  if (headers['location']) {
-    const redirectUrl = headers['location'];
+  // Case-insensitive deletion of security headers
+  for (const key of Object.keys(headers)) {
+    const lowerKey = key.toLowerCase();
+    if (
+      lowerKey === 'content-security-policy' ||
+      lowerKey === 'content-security-policy-report-only' ||
+      lowerKey === 'x-frame-options' ||
+      lowerKey === 'frame-options'
+    ) {
+      delete headers[key];
+    }
+  }
+
+  // Find location redirect header case-insensitively
+  let locationKey = 'location';
+  let redirectUrl = '';
+  for (const key of Object.keys(headers)) {
+    if (key.toLowerCase() === 'location') {
+      locationKey = key;
+      redirectUrl = headers[key] as string;
+      break;
+    }
+  }
+  
+  if (redirectUrl) {
     try {
       // Check if it's an absolute URL
       const parsedRedirect = new URL(redirectUrl);
       const targetOrigin = parsedRedirect.origin;
       const targetPath = parsedRedirect.pathname + parsedRedirect.search + parsedRedirect.hash;
-      headers['location'] = `/api/preview-proxy${targetPath}${targetPath.includes('?') ? '&' : '?'}target=${encodeURIComponent(targetOrigin)}`;
+      headers[locationKey] = `/api/preview-proxy${targetPath}${targetPath.includes('?') ? '&' : '?'}target=${encodeURIComponent(targetOrigin)}`;
     } catch (e) {
       // If it's already a relative path, let the browser handle it relative to <base> tag
     }
@@ -169,6 +190,10 @@ const previewProxy = createProxyMiddleware({
           }
 
           let html = decompressedBody.toString('utf8');
+
+          // Strip http-equiv="content-security-policy" meta tags case-insensitively
+          html = html.replace(/<meta\s+[^>]*http-equiv=["']content-security-policy["'][^>]*>/gi, '');
+
           const baseTag = `<base href="/api/preview-proxy/">`;
           // Inject the current proxy target as a global variable so the helper script
           // can correctly resolve relative URLs against the real target origin
@@ -714,7 +739,20 @@ app.get('/api/sync/state', authMiddleware, (req, res) => {
   try {
     if (fs.existsSync(SYNC_FILE)) {
       const data = fs.readFileSync(SYNC_FILE, 'utf8');
-      return res.json(JSON.parse(data));
+      const parsed = JSON.parse(data);
+      if (parsed.tabs && Array.isArray(parsed.tabs)) {
+        parsed.tabs = parsed.tabs.map((t: any) => {
+          if (t.type === 'browser' && t.url) {
+            if (t.url.startsWith('http://localhost:3000')) {
+              t.url = t.url.replace('http://localhost:3000', 'http://localhost:4333');
+            } else if (t.url.startsWith('http://127.0.0.1:3000')) {
+              t.url = t.url.replace('http://127.0.0.1:3000', 'http://localhost:4333');
+            }
+          }
+          return t;
+        });
+      }
+      return res.json(parsed);
     }
     return res.json({ tabs: [], terminalInstances: {}, savedPrompts: [] });
   } catch (err: any) {

@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.345] - 2026-07-07
+
+### Added
+- **Intercept Fetch and XMLHttpRequest in Preview Proxy**:
+  - Meng-override `window.fetch` dan `window.XMLHttpRequest` di dalam script pembantu pratinjau `tline-helper.js` ([tline-helper-code.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/tline-helper-code.ts)) untuk merutekan request API dan asset relatif/absolut melewati proxy `/api/preview-proxy`, menyelesaikan masalah CORS dan relative-path URL resolving.
+- **Case-Insensitive Security Header & Meta Tag Removal**:
+  - Menghapus header security (`Content-Security-Policy`, `X-Frame-Options`, dll.) dan meta tag `<meta http-equiv="Content-Security-Policy" ...>` secara case-insensitive saat merender halaman proxied untuk menghindari pemblokiran iframe.
+- **Automatic Port 3000 to 4333 Migration**:
+  - Menambahkan migrasi otomatis untuk tab preview lokal yang tersimpan di `localStorage` ([useTerminals.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useTerminals.ts)) dan file sinkronisasi pusat ([server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts)) dari port `3000` ke `4333`.
+
 ## [1.3.344] - 2026-07-07
 
 ### Changed

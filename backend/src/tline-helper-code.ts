@@ -18,13 +18,31 @@ export const TLINE_HELPER_CODE = `(function() {
     return null;
   }
 
+  function getRealCurrentUrl() {
+    var proxyTarget = getProxyTarget();
+    if (!proxyTarget) return window.location.href;
+    var path = window.location.pathname;
+    var prefix = '/api/preview-proxy';
+    var subPath = path.indexOf(prefix) === 0 ? path.substring(prefix.length) : path;
+    if (subPath && subPath.charAt(0) !== '/') {
+      subPath = '/' + subPath;
+    }
+    var targetBase = proxyTarget.replace(/[/]$/, '');
+    return targetBase + subPath + window.location.search + window.location.hash;
+  }
+
   function proxyNavigateUrl(url) {
     try {
-      // Use the REAL target origin (e.g. https://www.google.com) as base,
-      // NOT window.location.href (which would be localhost and break relative URLs like /search)
-      var proxyTarget = getProxyTarget();
-      var base = proxyTarget ? proxyTarget + '/' : window.location.href;
-      var absoluteUrl = new URL(url, base).href;
+      if (!url) return null;
+      var urlStr = String(url);
+      if (urlStr.indexOf('/api/preview-proxy') >= 0) {
+        return url;
+      }
+      if (/^(wss?:|data:|blob:)/i.test(urlStr)) {
+        return url;
+      }
+      var realBase = getRealCurrentUrl();
+      var absoluteUrl = new URL(urlStr, realBase).href;
       if (/^https?:\\/\\//i.test(absoluteUrl)) {
         var parsedUrl = new URL(absoluteUrl);
         var targetOrigin = parsedUrl.origin;
@@ -34,6 +52,60 @@ export const TLINE_HELPER_CODE = `(function() {
       }
     } catch(e) {}
     return null;
+  }
+
+  // Override window.fetch to route API calls through the proxy
+  try {
+    var _origFetch = window.fetch;
+    window.fetch = function(input, init) {
+      var url = '';
+      if (typeof input === 'string') {
+        url = input;
+      } else if (input && typeof input === 'object' && 'url' in input) {
+        url = input.url;
+      } else if (input && typeof input.toString === 'function') {
+        url = input.toString();
+      }
+      
+      if (url) {
+        var proxied = proxyNavigateUrl(url);
+        if (proxied) {
+          if (typeof input === 'string') {
+            input = proxied;
+          } else if (input && typeof input === 'object' && 'url' in input) {
+            try {
+              var reqClone = new Request(proxied, input);
+              input = reqClone;
+            } catch(reqErr) {
+              try {
+                var clonedInput = input.clone();
+                Object.defineProperty(clonedInput, 'url', { value: proxied, writable: true });
+                input = clonedInput;
+              } catch(cloneErr) {}
+            }
+          }
+        }
+      }
+      return _origFetch.call(this, input, init);
+    };
+  } catch (e) {
+    console.warn('[t-line-helper] Could not override fetch:', e);
+  }
+
+  // Override window.XMLHttpRequest to route API calls through the proxy
+  try {
+    var _origXHR = window.XMLHttpRequest;
+    window.XMLHttpRequest = function() {
+      var xhr = new _origXHR();
+      var _origOpen = xhr.open;
+      xhr.open = function(method, url, async, user, password) {
+        var proxied = proxyNavigateUrl(url);
+        return _origOpen.call(xhr, method, proxied || url, async !== false, user, password);
+      };
+      return xhr;
+    };
+  } catch (e) {
+    console.warn('[t-line-helper] Could not override XMLHttpRequest:', e);
   }
 
   // Override Location.prototype.href setter

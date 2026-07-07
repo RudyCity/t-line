@@ -151,6 +151,13 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
           if (t.type === 'grid' && !t.gridTerminalIds) {
             return { ...t, gridTerminalIds: [] };
           }
+          if (t.type === 'browser' && t.url) {
+            if (t.url.startsWith('http://localhost:3000')) {
+              t.url = t.url.replace('http://localhost:3000', 'http://localhost:4333');
+            } else if (t.url.startsWith('http://127.0.0.1:3000')) {
+              t.url = t.url.replace('http://127.0.0.1:3000', 'http://localhost:4333');
+            }
+          }
           return t;
         });
       }
