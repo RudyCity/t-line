@@ -68,7 +68,7 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const tauriWebviewRef = useRef<any>(null);
-  const useTauriWebview = isTauri && !isLocalUrl(tab.url || activeUrl);
+  const useTauriWebview = isTauri && !isLocalUrl(activeUrl);
 
   const openInSystemBrowser = async (url: string) => {
     try {

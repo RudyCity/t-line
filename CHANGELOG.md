@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.325] - 2026-07-07
+
+### Fixed
+- **Fix useTauriWebview untuk Membaca activeUrl Alih-alih tab.url**:
+  - Di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx), variabel `useTauriWebview` diubah agar mendeteksi tipe URL dari `activeUrl` alih-alih `tab.url || activeUrl`.
+  - Sebelumnya, `tab.url` tidak pernah diupdate ketika pengguna mengetik dan menavigasi ke URL baru (seperti `google.com`) di address bar. Hal ini membuat `useTauriWebview` tetap bernilai `false` (karena default tab.url adalah localhost yang merupakan local URL), sehingga memaksa mode Iframe/Proxy untuk URL eksternal yang kemudian diblokir oleh Google (karena X-Frame-Options/CSP).
+
 ## [1.3.324] - 2026-07-07
 
 ### Fixed
