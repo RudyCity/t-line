@@ -187,31 +187,19 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
         tauriWebviewRef.current = webviewInstance;
 
         // Wait for the webview to be fully created before starting the update loop
-        try {
-          await new Promise<void>((resolve, reject) => {
-            let resolved = false;
-            const cleanup = () => { resolved = true; };
-            webviewInstance.once('tauri://created', () => {
-              if (resolved) return;
-              cleanup();
-              resolve();
-            });
-            webviewInstance.once('tauri://error', (err) => {
-              if (resolved) return;
-              cleanup();
-              reject(err || new Error('Tauri emitted webview creation error'));
-            });
-            setTimeout(() => {
-              if (resolved) return;
-              cleanup();
-              reject(new Error('Timeout waiting for webview creation'));
-            }, 1000); // 1000ms fallback timeout
-          });
-        } catch (err) {
-          console.error('[BrowserTab] Native webview creation failed or timed out:', err);
-          tauriWebviewRef.current = null;
-          return;
-        }
+        // Register error listener asynchronously
+        webviewInstance.once('tauri://error', (err) => {
+          console.error('[BrowserTab] Native webview error:', err);
+          if (webviewInstance) {
+            webviewInstance.close().catch(() => {});
+          }
+          if (tauriWebviewRef.current === webviewInstance) {
+            tauriWebviewRef.current = null;
+          }
+        });
+
+        // Wait a short delay for the native webview registration
+        await new Promise((resolve) => setTimeout(resolve, 150));
 
         if (!active || !containerRef.current || !webviewInstance || tauriWebviewRef.current !== webviewInstance) return;
 

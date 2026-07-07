@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.334] - 2026-07-07
+
+### Fixed
+- **Fix Webview Creation Timeout**:
+  - Di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx), menghapus logika *promise blocking* yang menunggu event `"tauri://created"` pada objek `Webview` anak dinamis, karena event tersebut tidak selalu dipancarkan oleh instance `Webview` di Tauri v2. Logika ini diganti dengan penundaan non-blokir singkat (150ms) dan pendengar galat `"tauri://error"` asinkron, mencegah kegagalan inisialisasi akibat timeout.
+
 ## [1.3.333] - 2026-07-07
 
 ### Added
