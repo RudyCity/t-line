@@ -353,6 +353,7 @@ export class TerminalManager {
         if (activeSess.cleanupTimeout) clearTimeout(activeSess.cleanupTimeout);
         this.sessions.delete(id);
         this.terminals.delete(id);
+        activeProcessesCache.delete(activeSess.terminal.getPid());
       }
     });
 
