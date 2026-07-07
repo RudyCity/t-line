@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.299] - 2026-07-07
+
+### Added / Changed
+- **Icon Close & Window Controls Desktop Tauri**:
+  - Menambahkan controls window (Minimize, Maximize/Restore, Close) untuk desktop berbasis Tauri v2 di frontend [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx).
+  - Menyambungkan window controls ke API window Tauri v2 (`getCurrentWindow`) via objek global `window.__TAURI__.window`.
+  - Menambahkan attribute `data-tauri-drag-region` pada topbar dan sidebar header di [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx) agar window bisa di-drag dengan normal.
+  - Membuka permission window controls (`core:window:default`, `core:window:allow-close`, `core:window:allow-minimize`, `core:window:allow-toggle-maximize`, `core:window:allow-start-dragging`) di file capability [default.json](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/capabilities/default.json).
+
 ## [1.3.298] - 2026-07-07
 
 ### Added / Changed

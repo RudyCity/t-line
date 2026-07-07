@@ -575,6 +575,21 @@ export default function App() {
       return () => {
         if (unsubscribe) unsubscribe();
       };
+    } else if ((window as any).__TAURI__) {
+      const { getCurrentWindow } = (window as any).__TAURI__.window;
+      const appWindow = getCurrentWindow();
+      appWindow.isMaximized().then(setIsMaximized);
+      
+      let unlisten: (() => void) | undefined;
+      appWindow.onResized(() => {
+        appWindow.isMaximized().then(setIsMaximized);
+      }).then((unsub: () => void) => {
+        unlisten = unsub;
+      });
+
+      return () => {
+        if (unlisten) unlisten();
+      };
     }
   }, []);
 
@@ -892,7 +907,7 @@ export default function App() {
           }}
         >
         
-        <div className="sidebar-header" style={{ padding: sidebarCollapsed ? '12px 0' : '12px 16px', gap: '8px', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'space-between' }}>
+        <div className="sidebar-header" data-tauri-drag-region style={{ padding: sidebarCollapsed ? '12px 0' : '12px 16px', gap: '8px', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <TPlusLogo size={28} />
             {!sidebarCollapsed && (
@@ -1103,7 +1118,7 @@ export default function App() {
       <div className="main-panel">
         
         {/* Topbar */}
-        <div className="top-bar flex items-center justify-between">
+        <div className="top-bar flex items-center justify-between" data-tauri-drag-region>
           <div className="top-bar-info flex items-center gap-4 shrink-0">
             <button 
               className="action-btn" 
@@ -1213,21 +1228,52 @@ export default function App() {
               </button>
             </div>
 
-            {/* Window Controls (Electron Native style) */}
-            {(window as any).electron && (
+            {/* Window Controls (Electron or Tauri style) */}
+            {((window as any).electron || (window as any).__TAURI__) && (
               <div className="window-controls flex items-center gap-0.5 desktop-only" style={{ WebkitAppRegion: 'no-drag' } as any}>
-                <button type="button" className="window-control-btn" onClick={() => (window as any).electron.minimize()} title="Minimize">
+                <button 
+                  type="button" 
+                  className="window-control-btn" 
+                  onClick={async () => {
+                    if ((window as any).electron) {
+                      (window as any).electron.minimize();
+                    } else if ((window as any).__TAURI__) {
+                      const { getCurrentWindow } = (window as any).__TAURI__.window;
+                      await getCurrentWindow().minimize();
+                    }
+                  }} 
+                  title="Minimize"
+                >
                   <span style={{ fontSize: '10px' }}>—</span>
                 </button>
                 <button 
                   type="button" 
                   className="window-control-btn" 
-                  onClick={() => (window as any).electron.maximize()} 
+                  onClick={async () => {
+                    if ((window as any).electron) {
+                      (window as any).electron.maximize();
+                    } else if ((window as any).__TAURI__) {
+                      const { getCurrentWindow } = (window as any).__TAURI__.window;
+                      await getCurrentWindow().toggleMaximize();
+                    }
+                  }} 
                   title={isMaximized ? "Restore" : "Maximize"}
                 >
                   <span style={{ fontSize: '10px' }}>{isMaximized ? "❐" : "▢"}</span>
                 </button>
-                <button type="button" className="window-control-btn window-control-btn-close" onClick={() => (window as any).electron.close()} title="Close">
+                <button 
+                  type="button" 
+                  className="window-control-btn window-control-btn-close" 
+                  onClick={async () => {
+                    if ((window as any).electron) {
+                      (window as any).electron.close();
+                    } else if ((window as any).__TAURI__) {
+                      const { getCurrentWindow } = (window as any).__TAURI__.window;
+                      await getCurrentWindow().close();
+                    }
+                  }} 
+                  title="Close"
+                >
                   <span style={{ fontSize: '10px' }}>✕</span>
                 </button>
               </div>
