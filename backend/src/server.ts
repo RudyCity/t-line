@@ -472,6 +472,11 @@ app.put('/api/workspaces', authMiddleware, (req, res) => {
   }
 });
 
+app.get('/api/preview-proxy/tline-helper.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.send(TLINE_HELPER_CODE);
+});
+
 app.use('/api/preview-proxy', previewProxy);
 
 app.get('/tline-helper.js', (req, res) => {

@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.310] - 2026-07-07
+
+### Added / Changed
+- **Fix Element Inspection in Browser (Iframe Proxy)**:
+  - Menambahkan route khusus `/api/preview-proxy/tline-helper.js` pada backend Express sebelum middleware proxy terdaftar untuk menyajikan script `tline-helper.js` secara langsung.
+  - Memperbaiki bug di mana request helper script terserap oleh middleware `previewProxy` dan diteruskan ke aplikasi target, mengakibatkan error 404 status dan kegagalan fitur Element Inspection di browser.
+
 ## [1.3.309] - 2026-07-07
 
 ### Added / Changed
