@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.292] - 2026-07-07
+
+### Added / Changed
+- **Perbaikan Deteksi Proses Aktif Terminal (Windows CRCRLF wmic parse)**:
+  - Memperbaiki parsing CSV output dari perintah `wmic` di [terminalManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/terminalManager.ts) pada sistem Windows.
+  - Pada Windows, `wmic` sering mengembalikan carriage return berlipat (`\r\r\n`). Hal ini merusak pembacaan header CSV jika hanya di-split menggunakan regex `\r?\n`, menyebabkan header terbaca sebagai `\r` kosong dan seluruh baris anak proses gagal diurai (menjadi `NaN` / `undefined`).
+  - Memperbaiki kode dengan cara membersihkan seluruh karakter `\r` terlebih dahulu sebelum melakukan split baris, memastikan proses anak (seperti `superagent` atau `node.exe`) di bawah shell PTY terdeteksi dengan benar dan tidak menampilkan status "idle" secara keliru.
+
 ## [1.3.291] - 2026-07-07
 
 ### Added / Changed

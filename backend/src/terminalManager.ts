@@ -491,7 +491,8 @@ export interface ActiveProcessSummary {
 }
 
 function parseWmicCsv(csvContent: string): any[] {
-  const lines = csvContent.split(/\r?\n/);
+  const cleanContent = csvContent.replace(/\r/g, '');
+  const lines = cleanContent.split('\n').filter(line => line.trim() !== '');
   if (lines.length < 2) return [];
 
   const headerLine = lines[0];
