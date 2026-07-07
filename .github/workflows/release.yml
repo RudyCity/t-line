@@ -66,5 +66,6 @@ jobs:
           releaseDraft: true
           prerelease: false
           projectPath: './desktop-tauri'
+          args: --verbose
 
 

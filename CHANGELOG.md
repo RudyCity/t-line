@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.348] - 2026-07-07
+
+### Added
+- **Ad-Hoc macOS Code Signing**:
+  - Menambahkan konfigurasi `"macOS": { "signingIdentity": "-" }` di dalam [tauri.conf.json](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/tauri.conf.json) untuk menggunakan tanda tangan ad-hoc secara default pada target macOS. Ini menghindari kegagalan build/codesign di GitHub Actions runner yang tidak memiliki sertifikat Apple developer terkonfigurasi.
+
+### Changed
+- **Verbose Build Logs in CI**:
+  - Menambahkan argumen `args: --verbose` pada langkah `Build Tauri Desktop` di `.github/workflows/release.yml` ([release.yml](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/.github/workflows/release.yml)) untuk mencetak detail kompilasi Cargo dan Tauri secara mendalam demi kemudahan debugging jika ada error di runner.
+
 ## [1.3.347] - 2026-07-07
 
 ### Fixed
