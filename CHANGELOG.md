@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.328] - 2026-07-07
+
+### Added
+- **Enable Tauri Unstable Features in Cargo.toml**:
+  - Menambahkan fitur `"unstable"` pada dependensi `tauri` dan `tauri-build` di [Cargo.toml](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/Cargo.toml).
+  - Ini diperlukan karena API pembuatan webview anak secara dinamis (`new Webview(...)`) di Tauri v2 saat ini tergolong fitur tidak stabil (*unstable*) dan memicu pesan kesalahan: `"this feature requires the unstable flag on Cargo.toml"`.
+
 ## [1.3.327] - 2026-07-07
 
 ### Fixed
