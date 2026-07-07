@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.329] - 2026-07-07
+
+### Fixed
+- **Revert Unstable Flag from tauri-build**:
+  - Menghapus fitur `"unstable"` dari `tauri-build` di [Cargo.toml](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/Cargo.toml) karena `tauri-build` tidak memiliki opsi fitur tersebut dan memicu error kompilasi Cargo. Fitur `"unstable"` tetap dipertahankan pada dependensi `tauri` utama yang membutuhkannya.
+
 ## [1.3.328] - 2026-07-07
 
 ### Added
