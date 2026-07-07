@@ -264,16 +264,7 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
         });
       }
     };
-  }, [useTauriWebview, tab.id]);
-
-  // Handle URL navigation for native Tauri webview
-  useEffect(() => {
-    if (tauriWebviewRef.current && useTauriWebview) {
-      tauriWebviewRef.current.navigate(activeUrl).catch((err: any) => {
-        console.error('[BrowserTab] Native webview navigation failed:', err);
-      });
-    }
-  }, [activeUrl, useTauriWebview]);
+  }, [useTauriWebview, tab.id, activeUrl]);
 
   // Listen to console messages if in Electron
   useEffect(() => {

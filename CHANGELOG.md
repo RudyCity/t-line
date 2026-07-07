@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.330] - 2026-07-07
+
+### Fixed
+- **Fix Webview Navigation by Recreating on URL Change**:
+  - Menghapus pemanggilan `.navigate()` pada instance `Webview` di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx). Di Tauri v2, kelas frontend `Webview` tidak mengekspor metode `.navigate()`, sehingga memicu `TypeError`.
+  - Sekarang navigasi ditangani dengan menyertakan `activeUrl` ke dalam *dependency array* `useEffect` inisialisasi utama. Ketika URL pratinjau berubah, webview lama otomatis ditutup (*closed*) secara bersih dan webview baru dibuat dengan URL target yang baru.
+
 ## [1.3.329] - 2026-07-07
 
 ### Fixed
