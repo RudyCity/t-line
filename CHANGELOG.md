@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.294] - 2026-07-07
+
+### Added / Changed
+- **Perbaikan Pembajakan Fokus Tab Terminal oleh Terminal Grid (Tab Focus Hijacking)**:
+  - Memperbaiki bug di mana mengklik tab terminal tunggal (dedicated terminal) malah memaksa layar berpindah kembali ke tab Terminal Grid (jika terminal tersebut juga terdaftar di grid).
+  - Masalah ini terjadi karena `focusTerminal` di [useTerminals.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useTerminals.ts) secara naif memicu `setActiveTabId` untuk setiap tab yang berisi terminal tersebut (baik tipe `'terminal'` maupun `'grid'`), sehingga tab terakhir yang diproses (biasanya grid) membajak fokus.
+  - Memperbaiki penanganan dengan memeriksa apakah tab aktif saat ini (`activeTabId`) sudah memuat terminal tersebut; jika ya, fokus tab tetap dipertahankan. Jika tidak, ia akan memilih tab terbaik secara sekuensial (memprioritaskan tab terminal berdedikasi sebelum tab grid).
+
 ## [1.3.293] - 2026-07-07
 
 ### Added / Changed

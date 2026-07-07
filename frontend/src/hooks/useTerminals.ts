@@ -556,13 +556,38 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
   }, [activeTabId, terminalInstances]);
 
   const focusTerminal = useCallback((terminalId: string) => {
-    setTabs(prev =>
-      prev.map(t => {
+    setTabs(prev => {
+      const activeTab = prev.find(t => t.id === activeTabId);
+      
+      const tabContainsTerminal = (t: TabData) => {
+        if (t.type === 'terminal' && t.layout) {
+          return getTerminalIds(t.layout).includes(terminalId);
+        }
+        if (t.type === 'grid') {
+          return t.gridTerminalIds?.includes(terminalId);
+        }
+        return false;
+      };
+
+      let targetTabId = activeTabId;
+      if (activeTab && tabContainsTerminal(activeTab)) {
+        targetTabId = activeTab.id;
+      } else {
+        const matchingTab = prev.find(t => t.type === 'terminal' && t.layout && getTerminalIds(t.layout).includes(terminalId))
+          || prev.find(t => t.type === 'grid' && t.gridTerminalIds?.includes(terminalId));
+        if (matchingTab) {
+          targetTabId = matchingTab.id;
+        }
+      }
+
+      if (targetTabId !== activeTabId) {
+        setActiveTabId(targetTabId);
+      }
+
+      return prev.map(t => {
         if (t.type === 'terminal' && t.layout) {
           const termIds = getTerminalIds(t.layout);
           if (termIds.includes(terminalId)) {
-            setActiveTabId(t.id);
-            // Sync tab name with focused terminal pane name
             const inst = terminalInstances[terminalId];
             return {
               ...t,
@@ -572,7 +597,6 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
           }
         } else if (t.type === 'grid') {
           if (t.gridTerminalIds?.includes(terminalId)) {
-            setActiveTabId(t.id);
             return {
               ...t,
               focusedTerminalId: terminalId
@@ -580,9 +604,9 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
           }
         }
         return t;
-      })
-    );
-  }, [terminalInstances]);
+      });
+    });
+  }, [activeTabId, terminalInstances]);
 
   const handleTitleChange = useCallback((id: string, title: string) => {
     if (!title || !title.trim()) return;
