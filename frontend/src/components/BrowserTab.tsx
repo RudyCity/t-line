@@ -379,6 +379,18 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
             <span>{isInspecting ? 'Inspecting...' : 'Inspect Element'}</span>
           </button>
         )}
+
+        {/* Tauri: open current URL in a full browser window */}
+        {isTauri && !isLocalUrl(activeUrl) && (
+          <button
+            onClick={() => openInTauriBrowser(activeUrl)}
+            className="flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold border border-[var(--border-color)] text-[var(--text-muted)] hover:text-purple-400 hover:border-purple-500/50 hover:bg-purple-500/10 transition-all cursor-pointer"
+            title="Buka di window browser terpisah untuk browsing penuh"
+          >
+            <ExternalLink size={13} />
+            <span>Pop-out</span>
+          </button>
+        )}
       </div>
 
       {/* Main Workspace Split (Iframe top, DevTools bottom) */}
@@ -394,8 +406,8 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
               style={{ width: '100%', height: '100%', border: 'none' }}
               allowpopups={true}
             />
-          ) : !isLocalUrl(activeUrl) && !forceProxy ? (
-            /* External URL landing page */
+          ) : !isTauri && !isLocalUrl(activeUrl) && !forceProxy ? (
+            /* External URL landing page — Web mode only (not Tauri) */
             <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8 text-center">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
@@ -406,53 +418,31 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
                   Browser preview paling optimal untuk{' '}
                   <strong className="text-purple-400">local development apps</strong> (localhost).
                   <br /><br />
-                  {isTauri
-                    ? 'Klik di bawah untuk membuka situs ini di Browser Window terpisah dengan kemampuan browsing penuh.'
-                    : 'Situs eksternal seperti Google dan YouTube memerlukan browser asli untuk berfungsi dengan benar.'}
+                  Situs eksternal memerlukan browser asli untuk berfungsi dengan benar.
                 </p>
               </div>
-
               <div className="flex flex-col gap-3 w-full max-w-sm">
-                {/* Primary action — depends on platform */}
-                {isTauri ? (
-                  <button
-                    onClick={() => openInTauriBrowser(activeUrl)}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-md"
-                  >
-                    <ExternalLink size={15} />
-                    Buka Browser Window
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => openInSystemBrowser(activeUrl)}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-md"
-                  >
-                    <ExternalLink size={15} />
-                    Buka di System Browser
-                  </button>
-                )}
-
-                {/* Fallback: Force proxy */}
                 <button
-                  onClick={() => {
-                    setForceProxy(true);
-                    setIframeKey(prev => prev + 1);
-                  }}
+                  onClick={() => openInSystemBrowser(activeUrl)}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-md"
+                >
+                  <ExternalLink size={15} />
+                  Buka di System Browser
+                </button>
+                <button
+                  onClick={() => { setForceProxy(true); setIframeKey(prev => prev + 1); }}
                   className="flex items-center justify-center gap-2 px-4 py-2.5 bg-transparent hover:bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] text-sm font-medium rounded-lg transition-colors"
-                  title="Coba buka via proxy (mungkin tidak sempurna)"
                 >
                   <MonitorSmartphone size={14} />
                   Coba via Proxy Preview
                 </button>
               </div>
-
               <div className="text-[10px] text-[var(--text-muted)] font-mono bg-[var(--bg-card)] border border-[var(--border-color)] px-3 py-2 rounded-md max-w-sm break-all">
                 {activeUrl}
               </div>
             </div>
-
           ) : (
-            /* Local URL proxy iframe */
+            /* Proxy iframe — local URLs always, external URLs in Tauri or forceProxy */
             <iframe 
               key={iframeKey}
               ref={iframeRef}
