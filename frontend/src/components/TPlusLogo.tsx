@@ -9,8 +9,8 @@ export const TPlusLogo = ({ size = 16 }: { size?: number }) => (
   >
     <defs>
       <linearGradient id="glyph-grad-inline" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#6366f1" />
-        <stop offset="100%" stop-color="#06b6d4" />
+        <stop offset="0%" stopColor="#6366f1" />
+        <stop offset="100%" stopColor="#06b6d4" />
       </linearGradient>
     </defs>
     <path 

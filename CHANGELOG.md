@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.306] - 2026-07-07
+
+### Added / Changed
+- **Fix React SVG Warning**:
+  - Mengubah properti SVG `stop-color` menjadi `stopColor` (camelCase) pada komponen [TPlusLogo.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TPlusLogo.tsx) untuk memperbaiki peringatan DOM tidak valid di konsol browser.
+
 ## [1.3.305] - 2026-07-07
 
 ### Added / Changed
