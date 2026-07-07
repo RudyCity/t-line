@@ -34,7 +34,7 @@ export function useSystemStats(isAuthenticated: boolean) {
         if (!res.ok) throw new Error('Failed to fetch system stats');
         const data = await res.json();
 
-        // Check if running in Electron and fetch desktop metrics
+        // Check if running in Electron or Tauri and fetch desktop metrics
         let desktop = undefined;
         if ((window as any).electron?.getMemoryUsage) {
           try {
@@ -44,6 +44,15 @@ export function useSystemStats(isAuthenticated: boolean) {
             }
           } catch (e) {
             console.error('Failed to fetch desktop memory usage:', e);
+          }
+        } else if ((window as any).__TAURI__?.core?.invoke) {
+          try {
+            const tauriStats = await (window as any).__TAURI__.core.invoke('get_memory_usage');
+            if (tauriStats) {
+              desktop = tauriStats;
+            }
+          } catch (e) {
+            console.error('Failed to fetch Tauri desktop memory usage:', e);
           }
         }
 

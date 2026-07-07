@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.296] - 2026-07-07
+
+### Added / Changed
+- **Migrasi Desktop Wrapper ke Tauri v2 untuk Optimasi RAM (<100MB)**:
+  - Membuat sub-workspace baru [desktop-tauri](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri) sebagai wrapper desktop alternatif berbasis Tauri v2 untuk memangkas penggunaan memori RAM hingga di bawah 100MB (gabungan proses frontend & backend).
+  - Mengimplementasikan Rust launcher di [lib.rs](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/src/lib.rs) untuk meluncurkan backend Node.js, memantau kesiapan server melalui TCP polling port `5779`, mem-bypass auth token ke webview, dan mematikan proses backend secara otomatis menggunakan `taskkill` di Windows pada saat keluar.
+  - Menambahkan skrip [copy-assets.js](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/copy-assets.js) untuk bundling otomatis dan menyusun dependensi `node_modules` lokal produksi agar terkemas sebagai bundle resources Tauri.
+  - Menambahkan perintah pintasan `npm run tauri` dan `npm run build:tauri` pada root [package.json](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/package.json).
+  - Menambahkan Rust command `get_memory_usage` (menggunakan crate `sysinfo`) dan menghubungkannya ke hook [useSystemStats.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useSystemStats.ts) via `window.__TAURI__.core.invoke` untuk menampilkan info penggunaan RAM gabungan Tauri di footer secara real-time.
+
 ## [1.3.295] - 2026-07-07
 
 ### Added / Changed
