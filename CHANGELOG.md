@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.323] - 2026-07-07
+
+### Fixed
+- **Fix Spurious Webview Bounds Sync Failures at Startup**:
+  - Di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx), kita kini mendengarkan event `tauri://created` dan `tauri://error` dari Tauri webview instance (dengan fallback timeout 500ms) untuk memastikan webview native telah benar-benar dibuat dan terdaftar sebelum memulai loop bounds sync (`updateLoop`).
+  - Ini mengatasi transient error `"webview not found"` yang muncul saat mencoba menyinkronkan posisi/ukuran tepat setelah inisiasi sebelum webview Rust-side sepenuhnya siap, sehingga mencegah loop bounds sync terhenti sebelum waktunya.
+
 ## [1.3.322] - 2026-07-07
 
 ### Fixed

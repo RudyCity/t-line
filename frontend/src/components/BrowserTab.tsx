@@ -155,6 +155,23 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
 
         tauriWebviewRef.current = webviewInstance;
 
+        // Wait for the webview to be fully created before starting the update loop
+        try {
+          await new Promise<void>((resolve) => {
+            let resolved = false;
+            const done = () => {
+              if (resolved) return;
+              resolved = true;
+              resolve();
+            };
+            webviewInstance.once('tauri://created', done);
+            webviewInstance.once('tauri://error', done);
+            setTimeout(done, 500); // 500ms fallback timeout
+          });
+        } catch (_) {}
+
+        if (!active || !containerRef.current || !webviewInstance || tauriWebviewRef.current !== webviewInstance) return;
+
         // Position and size update loop (requestAnimationFrame is extremely smooth)
         let lastRect = { left: 0, top: 0, width: 0, height: 0 };
         let consecutiveErrorCount = 0;
