@@ -66,6 +66,10 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
     } catch { return false; }
   };
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const tauriWebviewRef = useRef<any>(null);
+  const useTauriWebview = isTauri && !isLocalUrl(tab.url || activeUrl);
+
   const openInSystemBrowser = async (url: string) => {
     try {
       await fetch('/api/browser/open', {
@@ -78,8 +82,14 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
     }
   };
 
-  const openInTauriBrowser = (url: string) => {
+  const openInTauriBrowser = async (url: string) => {
     try {
+      // Destroy the inline webview if it is active, to avoid having two webviews open
+      if (tauriWebviewRef.current) {
+        await tauriWebviewRef.current.close().catch(() => {});
+        tauriWebviewRef.current = null;
+      }
+
       // Use Tauri WebviewWindow API (available via withGlobalTauri: true)
       const tauri = (window as any).__TAURI__;
       if (tauri?.webviewWindow?.WebviewWindow) {
@@ -103,6 +113,102 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
       openInSystemBrowser(url);
     }
   };
+
+  // Tauri Child Webview Overlay Management
+  useEffect(() => {
+    if (!useTauriWebview || isElectron) return;
+
+    let active = true;
+    let webviewInstance: any = null;
+    const webviewLabel = 'inline-browser-webview-' + tab.id;
+
+    const initWebview = async () => {
+      // Small delay to let the container div mount and render in DOM
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (!active || !containerRef.current) return;
+
+      try {
+        const { Webview } = await import('@tauri-apps/api/webview');
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        const { LogicalPosition, LogicalSize } = await import('@tauri-apps/api/dpi');
+
+        const currentWindow = getCurrentWindow();
+        const rect = containerRef.current.getBoundingClientRect();
+
+        // Destroy any existing webview with this label first to prevent duplicate errors
+        try {
+          const oldWebview = await Webview.getByLabel(webviewLabel);
+          if (oldWebview) {
+            await oldWebview.close();
+          }
+        } catch (_) {}
+
+        if (!active || !containerRef.current) return;
+
+        webviewInstance = new Webview(currentWindow, webviewLabel, {
+          url: activeUrl,
+          x: rect.left,
+          y: rect.top,
+          width: rect.width,
+          height: rect.height,
+        });
+
+        tauriWebviewRef.current = webviewInstance;
+
+        // Position and size update loop (requestAnimationFrame is extremely smooth)
+        let lastRect = { left: 0, top: 0, width: 0, height: 0 };
+        const updateLoop = async () => {
+          if (!active || !containerRef.current || !webviewInstance) return;
+          const r = containerRef.current.getBoundingClientRect();
+
+          // Only call Tauri APIs if bounds actually changed
+          if (
+            Math.abs(r.left - lastRect.left) > 0.5 ||
+            Math.abs(r.top - lastRect.top) > 0.5 ||
+            Math.abs(r.width - lastRect.width) > 0.5 ||
+            Math.abs(r.height - lastRect.height) > 0.5
+          ) {
+            try {
+              await webviewInstance.setPosition(new LogicalPosition(r.left, r.top));
+              await webviewInstance.setSize(new LogicalSize(r.width, r.height));
+              lastRect = { left: r.left, top: r.top, width: r.width, height: r.height };
+            } catch (err) {
+              console.warn('[BrowserTab] Failed to sync webview bounds:', err);
+            }
+          }
+
+          if (active) {
+            requestAnimationFrame(updateLoop);
+          }
+        };
+
+        updateLoop();
+      } catch (err) {
+        console.error('[BrowserTab] Tauri Webview initialization failed:', err);
+      }
+    };
+
+    initWebview();
+
+    return () => {
+      active = false;
+      tauriWebviewRef.current = null;
+      if (webviewInstance) {
+        webviewInstance.close().catch((err: any) => {
+          console.warn('[BrowserTab] Failed to close webview on cleanup:', err);
+        });
+      }
+    };
+  }, [useTauriWebview]);
+
+  // Handle URL navigation for native Tauri webview
+  useEffect(() => {
+    if (tauriWebviewRef.current && useTauriWebview) {
+      tauriWebviewRef.current.navigate(activeUrl).catch((err: any) => {
+        console.error('[BrowserTab] Native webview navigation failed:', err);
+      });
+    }
+  }, [activeUrl, useTauriWebview]);
 
   // Listen to console messages if in Electron
   useEffect(() => {
@@ -254,7 +360,17 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
   const handleReload = () => {
     setHelperReady(false);
     setLogs([]);
-    setIframeKey(prev => prev + 1);
+    if (tauriWebviewRef.current && useTauriWebview) {
+      if (typeof tauriWebviewRef.current.reload === 'function') {
+        tauriWebviewRef.current.reload().catch(() => {
+          tauriWebviewRef.current.navigate(activeUrl).catch((err: any) => console.error(err));
+        });
+      } else {
+        tauriWebviewRef.current.navigate(activeUrl).catch((err: any) => console.error(err));
+      }
+    } else {
+      setIframeKey(prev => prev + 1);
+    }
   };
 
   const toggleInspect = () => {
@@ -405,6 +521,13 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
               className={`w-full h-full border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
               style={{ width: '100%', height: '100%', border: 'none' }}
               allowpopups={true}
+            />
+          ) : useTauriWebview ? (
+            /* Native Tauri Webview placeholder */
+            <div 
+              ref={containerRef} 
+              className={`w-full h-full bg-white ${isResizing ? 'pointer-events-none' : ''}`}
+              style={{ width: '100%', height: '100%' }}
             />
           ) : !isTauri && !isLocalUrl(activeUrl) && !forceProxy ? (
             /* External URL landing page — Web mode only (not Tauri) */
