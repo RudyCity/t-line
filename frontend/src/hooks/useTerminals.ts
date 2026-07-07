@@ -29,6 +29,8 @@ export interface ActiveProcessSummary {
   isGemini: boolean;
   isCursor: boolean;
   isSuperagent: boolean;
+  isAgy: boolean;
+  isOpenCode: boolean;
 }
 
 export interface TerminalInstanceData {

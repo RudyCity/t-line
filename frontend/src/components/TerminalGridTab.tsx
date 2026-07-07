@@ -1091,7 +1091,7 @@ export function TerminalGridTab({
                       <span style={{ fontStyle: 'italic', opacity: 0.6 }}>idle</span>
                     ) : (
                       pids.map(p => {
-                        const isAiAgent = p.isClaude || p.isGemini || p.isSuperagent;
+                        const isAiAgent = p.isClaude || p.isGemini || p.isSuperagent || p.isAgy || p.isOpenCode;
                         return (
                           <span 
                             key={p.pid} 

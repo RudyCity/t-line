@@ -488,6 +488,8 @@ export interface ActiveProcessSummary {
   isGemini: boolean;
   isCursor: boolean;
   isSuperagent: boolean;
+  isAgy: boolean;
+  isOpenCode: boolean;
 }
 
 function parseWmicCsv(csvContent: string): any[] {
@@ -663,6 +665,8 @@ export function getActiveProcessesForPid(shellPid: number): Promise<ActiveProces
             const isGemini = cmdLower.includes('gemini') || cmdLower.includes('google/generative-ai');
             const isCursor = cmdLower.includes('cursor') || nameLower.includes('cursor');
             const isSuperagent = cmdLower.includes('superagent') || cmdLower.includes('superagent-cli');
+            const isAgy = cmdLower.includes('agy') || nameLower.includes('agy');
+            const isOpenCode = cmdLower.includes('opencode') || cmdLower.includes('open-code') || nameLower.includes('opencode') || nameLower.includes('open-code');
 
             return {
               pid: p.pid,
@@ -672,7 +676,9 @@ export function getActiveProcessesForPid(shellPid: number): Promise<ActiveProces
               isClaude,
               isGemini,
               isCursor,
-              isSuperagent
+              isSuperagent,
+              isAgy,
+              isOpenCode
             };
           });
 

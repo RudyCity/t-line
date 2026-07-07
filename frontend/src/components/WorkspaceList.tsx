@@ -392,6 +392,8 @@ function WorktreeList({
         const isWtGeminiActive = wtProcesses.some(p => p.isGemini);
         const isWtCursorActive = wtProcesses.some(p => p.isCursor);
         const isWtSuperagentActive = wtProcesses.some(p => p.isSuperagent);
+        const isWtAgyActive = wtProcesses.some(p => p.isAgy);
+        const isWtOpenCodeActive = wtProcesses.some(p => p.isOpenCode);
 
         return (
           <React.Fragment key={item.branch}>
@@ -562,6 +564,16 @@ function WorktreeList({
                         {isWtSuperagentActive && (
                           <span className="ws-active-process-badge ws-badge-superagent shrink-0 scale-[0.85] origin-left" style={{ fontSize: '7px', height: '12px', padding: '0 3px' }} title="Superagent running">
                             Superagent
+                          </span>
+                        )}
+                        {isWtAgyActive && (
+                          <span className="ws-active-process-badge ws-badge-agy shrink-0 scale-[0.85] origin-left" style={{ fontSize: '7px', height: '12px', padding: '0 3px' }} title="Agy running">
+                            Agy
+                          </span>
+                        )}
+                        {isWtOpenCodeActive && (
+                          <span className="ws-active-process-badge ws-badge-opencode shrink-0 scale-[0.85] origin-left" style={{ fontSize: '7px', height: '12px', padding: '0 3px' }} title="OpenCode running">
+                            OpenCode
                           </span>
                         )}
                       </div>
@@ -737,6 +749,8 @@ export function WorkspaceList({
             const isGeminiActive = runningProcesses.some(p => p.isGemini);
             const isCursorActive = runningProcesses.some(p => p.isCursor);
             const isSuperagentActive = runningProcesses.some(p => p.isSuperagent);
+            const isAgyActive = runningProcesses.some(p => p.isAgy);
+            const isOpenCodeActive = runningProcesses.some(p => p.isOpenCode);
 
             if (deletingWorkspacePaths?.includes(w.path)) {
               return (
@@ -816,7 +830,17 @@ export function WorkspaceList({
                         Superagent
                       </span>
                     )}
-                    {hasRunning && !isClaudeActive && !isGeminiActive && !isCursorActive && !isSuperagentActive && (
+                    {isAgyActive && (
+                      <span className="ws-active-process-badge ws-badge-agy shrink-0" title="Agy running">
+                        Agy
+                      </span>
+                    )}
+                    {isOpenCodeActive && (
+                      <span className="ws-active-process-badge ws-badge-opencode shrink-0" title="OpenCode running">
+                        OpenCode
+                      </span>
+                    )}
+                    {hasRunning && !isClaudeActive && !isGeminiActive && !isCursorActive && !isSuperagentActive && !isAgyActive && !isOpenCodeActive && (
                       <span className="ws-active-process-badge ws-badge-general shrink-0" title={`${runningProcesses[0].name} running`}>
                         Active
                       </span>

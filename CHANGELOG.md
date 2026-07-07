@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.293] - 2026-07-07
+
+### Added / Changed
+- **Dukungan Deteksi Khusus AI Agent Tambahan (Agy & OpenCode)**:
+  - Menambahkan deteksi proses khusus dan visualisasi badge untuk AI agent **Agy** dan **OpenCode** (termasuk variasi keyword `open-code` dan `opencode`).
+  - Memperbarui interface data `ActiveProcessSummary` di sisi backend ([terminalManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/terminalManager.ts)) dan frontend ([useTerminals.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useTerminals.ts)).
+  - Mengintegrasikan styling badge khusus untuk Agy (emerald/green) dan OpenCode (indigo) di sidebar daftar workspace dan worktree ([WorkspaceList.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/WorkspaceList.tsx)) serta file CSS ([components.css](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/components.css)).
+  - Menyempurnakan fallback badge "Active" agar tidak bentrok atau muncul berlebih saat AI agent baru tersebut sedang berjalan.
+
 ## [1.3.292] - 2026-07-07
 
 ### Added / Changed
