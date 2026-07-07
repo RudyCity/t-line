@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.327] - 2026-07-07
+
+### Fixed
+- **Fix Webview Bounds Sync Loop when Creation Fails**:
+  - Di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx), loop `updateLoop` bounds sync kini tidak akan berjalan jika inisialisasi Tauri native webview gagal atau mengalami timeout.
+  - Sebelumnya, kegagalan pembuatan webview (misalnya akibat hilangnya izin atau ketidaktersediaan backend) tetap membuat loop bounds sync berjalan, sehingga memicu spam pesan error `Failed to sync webview bounds: webview not found`.
+
 ## [1.3.326] - 2026-07-07
 
 ### Fixed
