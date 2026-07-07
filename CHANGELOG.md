@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.314] - 2026-07-07
+
+### Fixed
+- **Fix URL Resolution Salah pada Navigasi JS dalam Proxy Browser**:
+  - Root cause: Saat Google (atau SPA lain) menavigasi menggunakan URL relatif seperti `/search?q=...`, fungsi `proxyNavigateUrl` di helper script meresolve URL menggunakan `window.location.href` (yaitu `http://localhost:5773/api/preview-proxy`) sebagai base — sehingga origin salah menjadi `http://localhost:5773` dan proxy memanggil t-line sendiri.
+  - **Fix 1 (server.ts):** Backend kini menginjeksikan `<script>window.__TLINE_PROXY_TARGET__="https://www.google.com";</script>` ke setiap halaman HTML yang diproxy, sehingga helper script selalu tahu origin target yang benar.
+  - **Fix 2 (tline-helper-code.ts):** Fungsi `getProxyTarget()` membaca `window.__TLINE_PROXY_TARGET__` (atau fallback ke cookie) untuk digunakan sebagai base URL resolusi, memastikan `/search?q=...` di-resolve menjadi `https://www.google.com/search?q=...` bukan `http://localhost:5773/search?q=...`.
+  - **Fix 3 (server.ts):** Query parameter `target=...` kini dihapus dari request yang diteruskan ke server target agar Google dan situs lain tidak bingung dengan parameter asing tersebut.
+
 ## [1.3.313] - 2026-07-07
 
 ### Added / Changed

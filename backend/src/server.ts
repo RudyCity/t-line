@@ -136,6 +136,12 @@ const previewProxy = createProxyMiddleware({
       if (target) {
         res.setHeader('Set-Cookie', `tline_proxy_target=${encodeURIComponent(target)}; Path=/; SameSite=Lax`);
       }
+      // Strip the 'target' param before forwarding to avoid confusing the target server
+      try {
+        const parsedPath = new URL(proxyReq.path, 'http://localhost');
+        parsedPath.searchParams.delete('target');
+        proxyReq.path = parsedPath.pathname + (parsedPath.search || '');
+      } catch (e) {}
       // Force target to send uncompressed content so we can modify the HTML safely
       proxyReq.setHeader('accept-encoding', 'identity');
     },
@@ -149,11 +155,14 @@ const previewProxy = createProxyMiddleware({
         proxyRes.on('end', () => {
           let html = body.toString('utf8');
           const baseTag = `<base href="/api/preview-proxy/">`;
+          // Inject the current proxy target as a global variable so the helper script
+          // can correctly resolve relative URLs against the real target origin
+          const targetVar = `<script>window.__TLINE_PROXY_TARGET__="${currentProxyTarget}";</script>`;
           const helperScript = `<script src="tline-helper.js"></script>`;
           if (html.includes('<head>')) {
-            html = html.replace('<head>', `<head>\n  ${baseTag}\n  ${helperScript}`);
+            html = html.replace('<head>', `<head>\n  ${baseTag}\n  ${targetVar}\n  ${helperScript}`);
           } else {
-            html = baseTag + helperScript + html;
+            html = baseTag + targetVar + helperScript + html;
           }
           const headers = sanitizeHeaders(proxyRes.headers);
           delete headers['content-length'];

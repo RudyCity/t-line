@@ -7,9 +7,24 @@ export const TLINE_HELPER_CODE = `(function() {
   // ----------------------------------------------------
   // 0. JS Navigation Interceptor (for SPAs and Google-style navigation)
   // ----------------------------------------------------
+  function getProxyTarget() {
+    // Injected by backend per-page: window.__TLINE_PROXY_TARGET__ = "https://www.google.com"
+    if (window.__TLINE_PROXY_TARGET__) return window.__TLINE_PROXY_TARGET__;
+    // Fallback: read from cookie set by proxy backend
+    try {
+      var match = document.cookie.match(/tline_proxy_target=([^;]+)/);
+      if (match) return decodeURIComponent(match[1]);
+    } catch(e) {}
+    return null;
+  }
+
   function proxyNavigateUrl(url) {
     try {
-      var absoluteUrl = new URL(url, window.location.href).href;
+      // Use the REAL target origin (e.g. https://www.google.com) as base,
+      // NOT window.location.href (which would be localhost and break relative URLs like /search)
+      var proxyTarget = getProxyTarget();
+      var base = proxyTarget ? proxyTarget + '/' : window.location.href;
+      var absoluteUrl = new URL(url, base).href;
       if (/^https?:\/\//i.test(absoluteUrl)) {
         var parsedUrl = new URL(absoluteUrl);
         var targetOrigin = parsedUrl.origin;
