@@ -538,8 +538,13 @@ export function TerminalInstance({
       }
       if (terminalRef.current) {
         const hasSelection = terminalRef.current.hasSelection();
+        // Only refocus if terminal isn't already focused.
+        // Calling focus() when already focused disrupts xterm.js mouse reporting:
+        // apps using mouse tracking (e.g. superagent, claudecode) rely on xterm.js
+        // forwarding click/scroll events to PTY — unnecessary focus calls interfere.
+        const isAlreadyFocused = document.activeElement === terminalRef.current.textarea;
 
-        if (!hasSelection) {
+        if (!hasSelection && !isAlreadyFocused) {
           terminalRef.current.focus();
           if (terminalRef.current.textarea) {
             terminalRef.current.textarea.setAttribute('inputmode', 'none');
@@ -880,8 +885,13 @@ export function TerminalInstance({
     if (target.closest('input') || target.closest('button') || target.closest('select') || target.closest('a')) return;
     if (terminalRef.current) {
       const hasSelection = terminalRef.current.hasSelection();
+      // Only refocus if the terminal isn't already focused.
+      // When an app enables mouse reporting (e.g. superagent), xterm.js forwards
+      // click/scroll events to PTY. Calling focus() again while already focused
+      // disrupts this forwarding, breaking scroll/click inside the app.
+      const isAlreadyFocused = document.activeElement === terminalRef.current.textarea;
 
-      if (!hasSelection) {
+      if (!hasSelection && !isAlreadyFocused) {
         terminalRef.current.focus();
         if (terminalRef.current.textarea) {
           terminalRef.current.textarea.setAttribute('inputmode', 'none');

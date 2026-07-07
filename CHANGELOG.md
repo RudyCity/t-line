@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.290] - 2026-07-07
+
+### Added / Changed
+- **Perbaikan Interupsi Mouse Tracking / Scroll & Click Terminal**:
+  - Mengatasi bug pada [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx) di mana scroll wheel dan mouse click pada aplikasi yang menggunakan *Mouse Reporting* (seperti `superagent` atau `claudecode`) tidak berfungsi (macet).
+  - Penyebabnya adalah pemanggilan programmatic `.focus()` dan `.textarea.focus()` yang berlebihan di phase capture (`handleFocusTrigger`) dan bubble (`handleTerminalFocus`) pada setiap event click/mousedown, yang menginterupsi pointer capture/propagation dari xterm.js ke shell PTY.
+  - Memperbaiki penanganan dengan mendeteksi status fokus aktif (`document.activeElement`) sebelum memicu `focus()`, sehingga event mouse/scroll diteruskan dengan lancar dan utuh tanpa distorsi.
+
 ## [1.3.288] - 2026-07-06
 
 ### Added / Changed
