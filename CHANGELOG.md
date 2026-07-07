@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.333] - 2026-07-07
+
+### Added
+- **Grant Webview Hide/Show Permissions in Capabilities**:
+  - Menambahkan `"core:webview:allow-webview-hide"` dan `"core:webview:allow-webview-show"` ke list izin di [default.json](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/capabilities/default.json).
+  - Tanpa izin ini, pemanggilan `.hide()` dan `.show()` pada Tauri dynamic Webview diblokir oleh sistem keamanan Tauri secara internal, sehingga menyebabkan webview Google/web pratinjau tetap muncul melayang di atas tab terminal atau berkas teks.
+
 ## [1.3.332] - 2026-07-07
 
 ### Fixed
