@@ -38,12 +38,6 @@ jobs:
       - name: Build Backend
         run: npm run build:backend
 
-      - name: Build Electron Desktop (Package & Publish)
-        working-directory: desktop
-        run: node copy-assets.js && npx electron-builder --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Install system dependencies (Ubuntu only)
         if: matrix.os == 'ubuntu-latest'
         run: |

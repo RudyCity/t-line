@@ -2,6 +2,19 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.346] - 2026-07-07
+
+### Removed
+- **Penghentian Dukungan Desktop Electron**:
+  - Menghapus folder workspace `desktop/` secara permanen karena pengembangan resmi dialihkan sepenuhnya ke desktop Tauri.
+  - Menghapus referensi workspace `desktop` dari root [package.json](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/package.json) serta menghapus script `build:desktop` dan `desktop`.
+  - Memperbarui script `build:exe` di root [package.json](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/package.json) untuk langsung menjalankan build Tauri (`npm run build:tauri`).
+
+### Changed
+- **Migrasi Workflow GitHub Actions**:
+  - Menghapus langkah `Build Electron Desktop` dari file workflow rilis `.github/workflows/release.yml` ([release.yml](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/.github/workflows/release.yml)) sehingga rilis multi-platform di GitHub Actions hanya berfokus pada build dan publikasi installer desktop-tauri.
+  - Meningkatkan versi aplikasi ke `1.3.346` di seluruh workspace (root, backend, frontend, desktop-tauri, dan konfigurasi tauri).
+
 ## [1.3.345] - 2026-07-07
 
 ### Added
