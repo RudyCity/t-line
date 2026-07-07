@@ -4,6 +4,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
+import zlib from 'zlib';
 import dotenv from 'dotenv';
 import os from 'os';
 import { exec } from 'child_process';
@@ -153,19 +154,51 @@ const previewProxy = createProxyMiddleware({
           body = Buffer.concat([body, chunk]);
         });
         proxyRes.on('end', () => {
-          let html = body.toString('utf8');
+          const contentEncoding = proxyRes.headers['content-encoding'] || '';
+          let decompressedBody = body;
+          try {
+            if (contentEncoding.includes('gzip')) {
+              decompressedBody = zlib.gunzipSync(body);
+            } else if (contentEncoding.includes('deflate')) {
+              decompressedBody = zlib.inflateSync(body);
+            } else if (contentEncoding.includes('br')) {
+              decompressedBody = zlib.brotliDecompressSync(body);
+            }
+          } catch (decompressError) {
+            console.error('[Preview Proxy] Failed to decompress body:', decompressError);
+          }
+
+          let html = decompressedBody.toString('utf8');
           const baseTag = `<base href="/api/preview-proxy/">`;
           // Inject the current proxy target as a global variable so the helper script
           // can correctly resolve relative URLs against the real target origin
           const targetVar = `<script>window.__TLINE_PROXY_TARGET__="${currentProxyTarget}";</script>`;
-          const helperScript = `<script src="tline-helper.js"></script>`;
-          if (html.includes('<head>')) {
-            html = html.replace('<head>', `<head>\n  ${baseTag}\n  ${targetVar}\n  ${helperScript}`);
+          const helperScript = `<script src="/api/preview-proxy/tline-helper.js"></script>`;
+          
+          // Robust case-insensitive head, html, or doctype tag injection
+          const headMatch = html.match(/<head\b[^>]*>/i);
+          if (headMatch && headMatch.index !== undefined) {
+            const insertIndex = headMatch.index + headMatch[0].length;
+            html = html.slice(0, insertIndex) + `\n  ${baseTag}\n  ${targetVar}\n  ${helperScript}` + html.slice(insertIndex);
           } else {
-            html = baseTag + targetVar + helperScript + html;
+            const htmlMatch = html.match(/<html\b[^>]*>/i);
+            if (htmlMatch && htmlMatch.index !== undefined) {
+              const insertIndex = htmlMatch.index + htmlMatch[0].length;
+              html = html.slice(0, insertIndex) + `\n  ${baseTag}\n  ${targetVar}\n  ${helperScript}` + html.slice(insertIndex);
+            } else {
+              const doctypeMatch = html.match(/<!doctype\s+html[^>]*>/i);
+              if (doctypeMatch && doctypeMatch.index !== undefined) {
+                const insertIndex = doctypeMatch.index + doctypeMatch[0].length;
+                html = html.slice(0, insertIndex) + `\n  ${baseTag}\n  ${targetVar}\n  ${helperScript}` + html.slice(insertIndex);
+              } else {
+                html = baseTag + targetVar + helperScript + html;
+              }
+            }
           }
+          
           const headers = sanitizeHeaders(proxyRes.headers);
           delete headers['content-length'];
+          delete headers['content-encoding'];
           res.writeHead(proxyRes.statusCode || 200, headers);
           res.end(html);
         });

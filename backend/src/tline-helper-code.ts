@@ -218,6 +218,7 @@ export const TLINE_HELPER_CODE = `(function() {
     if (!isInspectMode) return;
     e.stopPropagation();
     const target = e.target;
+    if (!(target instanceof Element)) return;
     if (target.id === 'tline-inspect-highlight') return;
 
     const rect = target.getBoundingClientRect();
@@ -235,12 +236,12 @@ export const TLINE_HELPER_CODE = `(function() {
 
     const target = e.target;
     const payload = {
-      tagName: target.tagName.toLowerCase(),
+      tagName: target.tagName ? target.tagName.toLowerCase() : '',
       id: target.id || '',
-      classes: Array.from(target.classList),
-      outerHTML: target.outerHTML.substring(0, 3000), // Safety limit
-      computedStyles: getImportantStyles(target),
-      selectorPath: getCssSelector(target)
+      classes: target.classList ? Array.from(target.classList) : [],
+      outerHTML: target.outerHTML ? target.outerHTML.substring(0, 3000) : '', // Safety limit
+      computedStyles: target instanceof Element ? getImportantStyles(target) : {},
+      selectorPath: target instanceof Element ? getCssSelector(target) : ''
     };
 
     window.parent.postMessage({

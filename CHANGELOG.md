@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.335] - 2026-07-07
+
+### Fixed
+- **Fix Element Inspection and Error Capturing in Browser (Iframe Proxy)**:
+  - Mengubah path script helper `tline-helper.js` dari relative ke absolute path `/api/preview-proxy/tline-helper.js` untuk mencegah konflik resolusi URL ketika target web app menggunakan tag `<base>` milik sendiri.
+  - Memperbaiki pencocokan tag `<head>` pada server proxy di [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) dengan menggunakan regular expression case-insensitive yang mendukung atribut, serta menambahkan fallback ke tag `<html>` atau `<!doctype html>` sebelum menempelkan script ke awal berkas.
+  - Menambahkan dukungan dekompresi otomatis (`gzip`, `deflate`, `br` via module `zlib`) untuk memproses respons HTML yang terkompresi dari server target sebelum dilakukan injeksi script helper.
+  - Menambahkan pemeriksaan tipe element (`instanceof Element`) dan keberadaan properti (`tagName`, `classList`) pada event handler mouseover dan klik di [tline-helper-code.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/tline-helper-code.ts) guna mencegah eksekusi error saat pengguna mengeklik/menyorot objek teks, SVG, atau window/document.
+
 ## [1.3.334] - 2026-07-07
 
 ### Fixed
