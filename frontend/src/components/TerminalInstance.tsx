@@ -518,6 +518,9 @@ export function TerminalInstance({
       wsManager.send(JSON.stringify({ type: 'resize', id: tab.id, cols, rows }));
     });
 
+    try {
+      fitAddon.fit();
+    } catch (e) {}
     debouncedFit();
     resetIdleTimer();
 

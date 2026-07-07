@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.291] - 2026-07-07
+
+### Added / Changed
+- **Penyelarasan Sinkronisasi Ukuran Awal Terminal (Initial Fit)**:
+  - Mengubah inisialisasi xterm.js di [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx) agar memicu `fitAddon.fit()` secara sinkron segera setelah terminal dibuka.
+  - Ini memastikan dimensi kolom dan baris yang sebenarnya dari container terhitung dengan tepat sebelum koneksi WebSocket mengirimkan pesan `init`.
+  - Mencegah masalah di mana PTY shell dan aplikasi interaktif di dalamnya (seperti `superagent` berbasis Ink) dimulai dengan dimensi default `80x24` yang menyebabkan UI terpotong di pojok dan mengharuskan user me-refresh terminal secara manual.
+
 ## [1.3.290] - 2026-07-07
 
 ### Added / Changed
