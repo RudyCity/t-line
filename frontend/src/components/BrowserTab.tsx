@@ -552,7 +552,7 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
               type="text" 
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="Enter local URL (e.g. http://localhost:3000)"
+              placeholder="Enter local URL (e.g. http://localhost:4333)"
               className="flex-1 bg-transparent border-none outline-none text-xs text-[var(--text-main)] font-mono"
             />
           </div>
@@ -657,10 +657,10 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
                   <div className="text-[10px] text-[var(--text-muted)] font-semibold mb-1">PRESET PORT POPULER:</div>
                   <div className="flex justify-center gap-2">
                     <button 
-                      onClick={() => { setUrlInput('http://localhost:3000'); setActiveUrl('http://localhost:3000'); }}
+                      onClick={() => { setUrlInput('http://localhost:4333'); setActiveUrl('http://localhost:4333'); }}
                       className="px-3 py-1.5 bg-[var(--surface-overlay)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)] text-[var(--text-main)] text-xs rounded transition-all font-mono"
                     >
-                      :3000
+                      :4333
                     </button>
                     <button 
                       onClick={() => { setUrlInput('http://localhost:5173'); setActiveUrl('http://localhost:5173'); }}

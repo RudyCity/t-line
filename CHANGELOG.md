@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.344] - 2026-07-07
+
+### Changed
+- **Update Default Web Preview Port Preset to 4333**:
+  - Mengubah placeholder input URL lokal dan preset port dari port `3000` menjadi `4333` di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) untuk menghindari konflik port.
+
 ## [1.3.343] - 2026-07-07
 
 ### Changed
