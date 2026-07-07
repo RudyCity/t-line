@@ -7,7 +7,7 @@
 ![t-line Interface Preview](preview.png)
 
 > [!IMPORTANT]
-> **Desktop Migration Notice**: **t-line** is migrating its primary desktop app wrapper from Electron to **Tauri v2** to drastically reduce resource consumption. The new Tauri wrapper lowers memory usage to **under 100MB RAM** (combined frontend and backend), provides a dynamic system tray with terminal session control, and native OS integrations. Electron is currently kept as a legacy option.
+> **Tauri v2 Native Desktop**: **t-line** uses **Tauri v2** as its primary desktop wrapper to drastically reduce resource consumption. This wrapper lowers memory usage to **under 100MB RAM** (combined frontend and backend), provides a dynamic system tray with terminal session control, and native OS integrations.
 
 ---
 
@@ -64,8 +64,8 @@ Modern software engineering requires juggling multiple branches, repositories, a
 * **One-Click Share**: Instantly expose the dashboard using Quick URL or a Custom Tunnel token.
 * **Access Control List (ACL)**: Detailed connection loggers let you monitor incoming requests, block specific IPs, or restrict WebSocket terminal access with built-in lockout protection.
 
-### 🪟 Desktop Integration (Tauri v2 & Electron)
-* **Lightweight Tauri v2 Desktop Wrapper (Recommended)**: Dramatically optimizes system resources, reducing total idle RAM footprint (combined frontend and backend processes) to **under 100MB**.
+### 🪟 Desktop Integration (Tauri v2)
+* **Lightweight Tauri v2 Desktop Wrapper**: Dramatically optimizes system resources, reducing total idle RAM footprint (combined frontend and backend processes) to **under 100MB**.
 * **Dynamic System Tray Menu**: Native system tray icon offering dashboard toggles, backend controls (Start, Stop, Restart), and active terminal session listings grouped by workspace.
 * **Close-to-Tray**: Runs background AI processes and terminal sessions continuously by hiding the main window on close.
 * **Single Instance Lock**: Powered by `tauri-plugin-single-instance` to prevent port binding and database conflicts.
@@ -80,7 +80,7 @@ Modern software engineering requires juggling multiple branches, repositories, a
 | :--- | :--- |
 | **Frontend** | React (TS), Vite, Tailwind CSS v4, Monaco Editor, xterm.js + Canvas / WebLinks / Image addons |
 | **Backend** | Node.js, Express, WebSocket (`ws`), `node-pty`, `bcryptjs`, OpenSSH CLI |
-| **Desktop** | **Tauri v2 (Rust)** [Recommended], Electron [Legacy] |
+| **Desktop** | **Tauri v2 (Rust)** |
 
 ---
 
@@ -104,7 +104,7 @@ Launches the Express backend and Vite frontend concurrently with hot reloading:
 npm run dev
 ```
 
-### 3. Launch Tauri Desktop Client (Recommended)
+### 3. Launch Tauri Desktop Client
 Launches the app using the lightweight Tauri v2 wrapper:
 ```powershell
 npm run tauri
@@ -114,17 +114,7 @@ npm run tauri
 Compiles assets and packages the app using Tauri:
 ```powershell
 npm run build:tauri
-```
-
-### 5. Launch Legacy Electron Client
-Runs the legacy Electron wrapper:
-```powershell
-npm run desktop
-```
-
-### 6. Build Legacy Electron Installer (`.exe`)
-Compiles frontend assets and packages the app using `electron-builder` inside `desktop/dist-exe/`:
-```powershell
+# Or using the alias:
 npm run build:exe
 ```
 
@@ -139,8 +129,7 @@ t-line/
 │   └── src/
 │       ├── hooks/    # Custom React hooks (useTerminals, useTunnel, useWorkspaces)
 │       └── components/
-├── desktop-tauri/    # Tauri v2 (Rust) wrapper (Recommended desktop wrapper)
-├── desktop/          # Legacy Electron wrapper, IPC bridge, Tray, & build configs
+├── desktop-tauri/    # Tauri v2 (Rust) desktop wrapper and configuration
 ├── preview.png       # Desktop application preview image
 └── package.json      # Root monorepo workspace configuration
 ```
