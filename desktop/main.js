@@ -477,6 +477,7 @@ function createWindow(urlOrPath) {
       nodeIntegration: false,
       contextIsolation: true,
       backgroundThrottling: true, // Enable background throttling of JS timers
+      webviewTag: true,
       preload: path.join(__dirname, 'preload.js')
     }
   });

@@ -50,6 +50,34 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
   const [isResizing, setIsResizing] = useState(false);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const webviewRef = useRef<any>(null);
+  const isElectron = typeof window !== 'undefined' && window.navigator.userAgent.toLowerCase().includes('electron');
+
+  // Listen to console messages if in Electron
+  useEffect(() => {
+    if (!isElectron || !webviewRef.current) return;
+    const webview = webviewRef.current;
+
+    const handleConsoleMessage = (e: any) => {
+      if (e.level === 2) {
+        const newLog: ConsoleErrorLog = {
+          id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          timestamp: new Date().toLocaleTimeString(),
+          message: e.message,
+          filename: e.sourceId || 'console',
+          lineno: e.line || 0,
+          colno: 0,
+          stack: null
+        };
+        setLogs(prev => [newLog, ...prev].slice(0, 100));
+      }
+    };
+
+    webview.addEventListener('console-message', handleConsoleMessage);
+    return () => {
+      webview.removeEventListener('console-message', handleConsoleMessage);
+    };
+  }, [isElectron, iframeKey, webviewRef.current]);
 
   // Drag handler to resize DevTools drawer
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -247,34 +275,64 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
           </button>
         </form>
 
-        <button 
-          onClick={toggleInspect}
-          className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold border transition-all ${
-            isInspecting 
-              ? 'bg-purple-600/20 border-purple-500 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.25)]' 
-              : 'bg-transparent border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
-          }`}
-          title="Inspect Element (Click and select an item in the preview)"
-        >
-          <MousePointer size={13} className={isInspecting ? 'animate-pulse' : ''} />
-          <span>{isInspecting ? 'Inspecting...' : 'Inspect Element'}</span>
-        </button>
+        {isElectron ? (
+          <button 
+            onClick={() => {
+              if (webviewRef.current) {
+                try {
+                  webviewRef.current.openDevTools();
+                } catch (e) {
+                  console.error('Failed to open native devtools:', e);
+                }
+              }
+            }}
+            className="flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer"
+            title="Open Native Chrome Developer Tools"
+          >
+            <Code2 size={13} />
+            <span>Open DevTools</span>
+          </button>
+        ) : (
+          <button 
+            onClick={toggleInspect}
+            className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold border transition-all ${
+              isInspecting 
+                ? 'bg-purple-600/20 border-purple-500 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.25)]' 
+                : 'bg-transparent border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
+            }`}
+            title="Inspect Element (Click and select an item in the preview)"
+          >
+            <MousePointer size={13} className={isInspecting ? 'animate-pulse' : ''} />
+            <span>{isInspecting ? 'Inspecting...' : 'Inspect Element'}</span>
+          </button>
+        )}
       </div>
 
       {/* Main Workspace Split (Iframe top, DevTools bottom) */}
       <div className="flex-1 flex flex-col min-h-0">
         {/* Iframe Preview Container */}
         <div className="flex-1 bg-white relative min-h-[250px]">
-          <iframe 
-            key={iframeKey}
-            ref={iframeRef}
-            src={proxyUrl} 
-            className={`w-full h-full border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
-            title="App Preview"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-          />
+          {isElectron ? (
+            <webview 
+              key={iframeKey}
+              ref={webviewRef}
+              src={activeUrl}
+              className={`w-full h-full border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              allowpopups={true}
+            />
+          ) : (
+            <iframe 
+              key={iframeKey}
+              ref={iframeRef}
+              src={proxyUrl} 
+              className={`w-full h-full border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
+              title="App Preview"
+              sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+            />
+          )}
           
-          {isInspecting && (
+          {!isElectron && isInspecting && (
             <div className="absolute inset-0 pointer-events-none border-2 border-dashed border-purple-500/40 bg-purple-500/5 flex items-center justify-center">
               <span className="bg-[var(--bg-card)] border border-[var(--border-color)] text-purple-400 text-xs px-3 py-1.5 rounded-full font-semibold shadow-md pointer-events-auto">
                 🔍 Click any element on the page to inspect it
@@ -348,8 +406,8 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
             {/* Helper status indicator & Collapse toggle */}
             <div className="flex items-center gap-3 text-[10px] font-medium text-[var(--text-muted)]">
               <div className="flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${helperReady ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`} />
-                <span>{helperReady ? 'Proxy Helper Active' : 'Connecting Helper...'}</span>
+                <div className={`w-1.5 h-1.5 rounded-full ${isElectron ? 'bg-green-500' : (helperReady ? 'bg-green-500' : 'bg-amber-500 animate-pulse')}`} />
+                <span>{isElectron ? 'Chromium Native Webview Active' : (helperReady ? 'Proxy Helper Active' : 'Connecting Helper...')}</span>
               </div>
 
               <button
