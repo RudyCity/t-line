@@ -1385,7 +1385,7 @@ export default function App() {
                   {/* New Browser Preview button */}
                   <button
                     className="action-btn shrink-0"
-                    onClick={() => openBrowserTab('http://localhost:3000', 'Preview', panelWorkspace?.id)}
+                    onClick={() => openBrowserTab('', 'Preview', panelWorkspace?.id)}
                     title="New Web Preview"
                     style={{ marginLeft: '6px' }}
                   >

@@ -2,6 +2,18 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.341] - 2026-07-07
+
+### Changed
+- **Default Browser Tab URL to Blank**:
+  - Mengubah inisialisasi default URL pada tab browser dari `http://localhost:3000` menjadi kosong (`""`) di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) and [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx).
+  - Menambahkan tampilan Welcome/Home View asli bernuansa t-line di dalam tab browser jika URL kosong, lengkap dengan panduan memulai server lokal dan tombol pintasan (preset) untuk port-port populer (`:3000`, `:5173`, `:8080`).
+
+### Fixed
+- **Dynamic Theme Color Integration on Offline Proxy Page**:
+  - Menambahkan pendeteksi tema aktif (`tline-theme` & `tline-accent-color` dari localStorage) ke dalam halaman error offline proxy di [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts).
+  - Halaman offline proxy sekarang otomatis menyesuaikan warna latar belakang, teks, kartu, border, dan aksen tombol dengan tema aktif pengguna (Dracula, Nord, Cyberpunk, Forest, Light Mode, dll.).
+
 ## [1.3.340] - 2026-07-07
 
 ### Added

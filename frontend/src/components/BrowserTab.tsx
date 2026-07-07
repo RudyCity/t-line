@@ -32,8 +32,8 @@ interface BrowserTabProps {
 }
 
 export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTabProps) {
-  const [urlInput, setUrlInput] = useState(tab.url || 'http://localhost:3000');
-  const [activeUrl, setActiveUrl] = useState(tab.url || 'http://localhost:3000');
+  const [urlInput, setUrlInput] = useState(tab.url || '');
+  const [activeUrl, setActiveUrl] = useState(tab.url || '');
   const [isInspecting, setIsInspecting] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'console' | 'inspector'>('console');
   
@@ -348,8 +348,8 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
 
   // Reset state when active tab ID changes to prevent state leaking
   useEffect(() => {
-    setUrlInput(tab.url || 'http://localhost:3000');
-    setActiveUrl(tab.url || 'http://localhost:3000');
+    setUrlInput(tab.url || '');
+    setActiveUrl(tab.url || '');
     setLogs([]);
     setInspectedElement(null);
     setIsInspecting(false);
@@ -633,7 +633,52 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
       <div className="flex-1 flex flex-col min-h-0">
         {/* Iframe / External Preview Container */}
         <div className="flex-1 bg-[var(--bg-main)] relative min-h-[250px] flex flex-col">
-          {useElectronWebview ? (
+          {!activeUrl ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[var(--bg-main)] select-none">
+              <div className="max-w-md w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-8 shadow-lg backdrop-blur-sm">
+                <div className="w-16 h-16 rounded-2xl bg-[var(--color-primary-glow)] border border-[var(--color-primary-hover)] flex items-center justify-center mx-auto mb-6">
+                  <Globe size={28} className="text-[var(--accent-color)] animate-pulse" />
+                </div>
+                <h2 className="text-[var(--text-main)] font-semibold text-base mb-2">Web Preview</h2>
+                <p className="text-[var(--text-muted)] text-[11px] leading-relaxed mb-6">
+                  Pratinjau aplikasi web Anda langsung di dalam t-line. Masukkan URL port server lokal Anda di atas untuk memulai.
+                </p>
+                
+                <div className="text-left bg-[var(--surface-overlay)] border border-[var(--border-color)] rounded-lg p-4 mb-6">
+                  <div className="text-[10px] font-bold text-[var(--accent-color)] uppercase tracking-wider mb-2">Langkah Memulai:</div>
+                  <ul className="text-[11px] text-[var(--text-muted)] space-y-2 list-decimal list-inside">
+                    <li>Jalankan server dev di tab <strong>Terminal</strong> (contoh: <code className="bg-black/35 px-1 py-0.5 rounded font-mono text-[var(--accent-color)]">npm run dev</code>).</li>
+                    <li>Salin URL lokal Anda ke kolom alamat di atas.</li>
+                    <li>Tekan tombol <strong>Go</strong> untuk memuat pratinjau.</li>
+                  </ul>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <div className="text-[10px] text-[var(--text-muted)] font-semibold mb-1">PRESET PORT POPULER:</div>
+                  <div className="flex justify-center gap-2">
+                    <button 
+                      onClick={() => { setUrlInput('http://localhost:3000'); setActiveUrl('http://localhost:3000'); }}
+                      className="px-3 py-1.5 bg-[var(--surface-overlay)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)] text-[var(--text-main)] text-xs rounded transition-all font-mono"
+                    >
+                      :3000
+                    </button>
+                    <button 
+                      onClick={() => { setUrlInput('http://localhost:5173'); setActiveUrl('http://localhost:5173'); }}
+                      className="px-3 py-1.5 bg-[var(--surface-overlay)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)] text-[var(--text-main)] text-xs rounded transition-all font-mono"
+                    >
+                      :5173
+                    </button>
+                    <button 
+                      onClick={() => { setUrlInput('http://localhost:8080'); setActiveUrl('http://localhost:8080'); }}
+                      className="px-3 py-1.5 bg-[var(--surface-overlay)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)] text-[var(--text-main)] text-xs rounded transition-all font-mono"
+                    >
+                      :8080
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : useElectronWebview ? (
             <webview 
               key={iframeKey}
               ref={setWebviewEl}

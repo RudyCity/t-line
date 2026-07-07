@@ -224,14 +224,36 @@ const previewProxy = createProxyMiddleware({
           <html>
           <head>
             <title>Web Preview Offline</title>
+            <script>
+              try {
+                const theme = localStorage.getItem('tline-theme') || 'default';
+                const accent = localStorage.getItem('tline-accent-color') || '#6366f1';
+                const themes = {
+                  default: { bgMain: '#05070c', textMain: '#f8fafc', bgCard: 'rgba(17, 24, 39, 0.45)', border: 'rgba(255, 255, 255, 0.06)', textMuted: '#94a3b8' },
+                  dracula: { bgMain: '#1e1f29', textMain: '#f8f8f2', bgCard: 'rgba(40, 42, 54, 0.5)', border: 'rgba(98, 114, 164, 0.2)', textMuted: '#6272a4' },
+                  cyberpunk: { bgMain: '#0b0813', textMain: '#f8fafc', bgCard: 'rgba(26, 15, 46, 0.45)', border: 'rgba(50, 24, 85, 0.55)', border: 'rgba(255, 0, 127, 0.15)', textMuted: '#ff007f' },
+                  forest: { bgMain: '#070d0a', textMain: '#f0fdf4', bgCard: 'rgba(16, 28, 21, 0.45)', border: 'rgba(16, 185, 129, 0.1)', textMuted: '#86efac' },
+                  nord: { bgMain: '#2e3440', textMain: '#eceff4', bgCard: 'rgba(46, 52, 64, 0.5)', border: 'rgba(76, 86, 106, 0.3)', textMuted: '#d8dee9' },
+                  light: { bgMain: '#f8fafc', textMain: '#0f172a', bgCard: 'rgba(255, 255, 255, 0.7)', border: 'rgba(0, 0, 0, 0.08)', textMuted: '#64748b' }
+                };
+                const preset = themes[theme] || themes.default;
+                const root = document.documentElement;
+                root.style.setProperty('--bg-main', preset.bgMain);
+                root.style.setProperty('--text-main', preset.textMain);
+                root.style.setProperty('--bg-card', preset.bgCard);
+                root.style.setProperty('--border-color', preset.border || preset.borderColor || 'rgba(255,255,255,0.06)');
+                root.style.setProperty('--text-muted', preset.textMuted);
+                root.style.setProperty('--accent-color', accent);
+              } catch(e) {}
+            </script>
             <style>
-              body { background: #0b0f19; color: #f3f4f6; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-              .card { max-width: 420px; width: 85%; background: rgba(17, 24, 39, 0.45); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 32px 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
+              body { background: var(--bg-main, #0b0f19); color: var(--text-main, #f3f4f6); font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+              .card { max-width: 420px; width: 85%; background: var(--bg-card, rgba(17, 24, 39, 0.45)); border: 1px solid var(--border-color, rgba(255, 255, 255, 0.06)); border-radius: 12px; padding: 32px 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
               .icon { font-size: 32px; margin-bottom: 16px; display: inline-block; }
-              h1 { font-size: 20px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #a855f7, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-              p { color: #9ca3af; font-size: 13px; line-height: 1.5; margin: 0 0 20px; }
-              code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; color: #e9d5ff; font-family: monospace; }
-              .btn { background: linear-gradient(135deg, #a855f7, #6366f1); color: white; border: none; padding: 10px 24px; font-size: 13px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(168,85,247,0.2); }
+              h1 { font-size: 20px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, var(--accent-color, #a855f7), var(--accent-color, #6366f1)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+              p { color: var(--text-muted, #9ca3af); font-size: 13px; line-height: 1.5; margin: 0 0 20px; }
+              code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; color: var(--accent-color, #e9d5ff); font-family: monospace; }
+              .btn { background: linear-gradient(135deg, var(--accent-color, #a855f7), var(--accent-color, #6366f1)); color: white; border: none; padding: 10px 24px; font-size: 13px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(168,85,247,0.2); }
               .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(168,85,247,0.35); }
             </style>
           </head>
