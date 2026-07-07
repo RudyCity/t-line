@@ -6,6 +6,9 @@
 
 ![t-line Interface Preview](preview.png)
 
+> [!IMPORTANT]
+> **Desktop Migration Notice**: **t-line** is migrating its primary desktop app wrapper from Electron to **Tauri v2** to drastically reduce resource consumption. The new Tauri wrapper lowers memory usage to **under 100MB RAM** (combined frontend and backend), provides a dynamic system tray with terminal session control, and native OS integrations. Electron is currently kept as a legacy option.
+
 ---
 
 ## ⚡ The Developer's Context-Switching Solution
@@ -26,6 +29,8 @@ Modern software engineering requires juggling multiple branches, repositories, a
 * **Concurrent Terminals**: Spawn and manage multiple sessions across PowerShell, CMD, Git Bash, or WSL.
 * **GPU Canvas Renderer**: Built-in `@xterm/addon-canvas` rendering delivers lightning-fast scrolling and reduces CPU utilization.
 * **Dynamic Process Polling**: Automatically polls background process names to update tab titles dynamically, solving native WinPTY title resolution limits on Windows.
+* **Recursive Process Tree Cleanup**: Kills all descendant/child processes (like running AI agents) recursively on terminal close (`taskkill /F /T` on Windows) to prevent background process leaks.
+* **Global WS Process & Title Sync**: Automatically synchronizes active process statuses and tab title indicators globally in React state, even when terminal tabs are unmounted from the DOM.
 * **Interactive Tooling & Images**: Support for `@xterm/addon-image` allows terminal previews and inline image rendering via sixel/iTerm2.
 * **Developer Safety Filters**: Smart paste warnings prevent accidental multi-line executions in active shells.
 * **Focus Ring Highlight**: Visually track active panes with a soft glowing purple focus ring.
@@ -42,6 +47,7 @@ Modern software engineering requires juggling multiple branches, repositories, a
 
 ### 📁 Unified Workspace Explorer & Editor
 * **Full-Bleed UI**: Clean borderless sidebar layout maximizing screen real estate.
+* **Dynamic Sidebar Tab Text Collapse**: Hides tab text labels dynamically when the sidebar is resized under `280px`, keeping the sidebar clean and maximizing the workspace area.
 * **Built-in Monaco Editor**: View and modify codebase files directly in editor tabs alongside terminal panes, complete with copy shortcuts and clean formatting.
 * **Interactive File Operations**: Create new files, folders, or rename/move existing items inside the explorer pane via header action buttons or right-click context menus.
 * **Theme-Aware SVG & Binary Previews**: Live visual vector previews for SVGs using dynamic blob URL regeneration (rendering edits in real-time) and safe warning dialogs for binary files to prevent text-load crashes.
@@ -58,10 +64,13 @@ Modern software engineering requires juggling multiple branches, repositories, a
 * **One-Click Share**: Instantly expose the dashboard using Quick URL or a Custom Tunnel token.
 * **Access Control List (ACL)**: Detailed connection loggers let you monitor incoming requests, block specific IPs, or restrict WebSocket terminal access with built-in lockout protection.
 
-### 🪟 Native Electron Desktop Integration
-* **Frameless App**: Draggable borderless UI that launches maximized with custom system control actions.
-* **Tray Minimization**: Minimize to taskbar/system tray on window close, with tray context menu backend lifecycle control.
-* **Single Instance Safety**: Detects active backend instances on port `3999` to prevent port binding conflicts.
+### 🪟 Desktop Integration (Tauri v2 & Electron)
+* **Lightweight Tauri v2 Desktop Wrapper (Recommended)**: Dramatically optimizes system resources, reducing total idle RAM footprint (combined frontend and backend processes) to **under 100MB**.
+* **Dynamic System Tray Menu**: Native system tray icon offering dashboard toggles, backend controls (Start, Stop, Restart), and active terminal session listings grouped by workspace.
+* **Close-to-Tray**: Runs background AI processes and terminal sessions continuously by hiding the main window on close.
+* **Single Instance Lock**: Powered by `tauri-plugin-single-instance` to prevent port binding and database conflicts.
+* **Startup Diagnostics**: Automatically checks for Node.js installation at startup with native dialog warnings.
+* **Frameless App**: Draggable borderless UI with custom window control systems (Minimize, Maximize, Close) and `data-tauri-drag-region` title bar areas.
 
 ---
 
@@ -71,7 +80,7 @@ Modern software engineering requires juggling multiple branches, repositories, a
 | :--- | :--- |
 | **Frontend** | React (TS), Vite, Tailwind CSS v4, Monaco Editor, xterm.js + Canvas / WebLinks / Image addons |
 | **Backend** | Node.js, Express, WebSocket (`ws`), `node-pty`, `bcryptjs`, OpenSSH CLI |
-| **Desktop** | Electron, Electron-Builder (Installer/Portable EXE) |
+| **Desktop** | **Tauri v2 (Rust)** [Recommended], Electron [Legacy] |
 
 ---
 
@@ -81,6 +90,7 @@ Modern software engineering requires juggling multiple branches, repositories, a
 * [Node.js](https://nodejs.org/) (LTS recommended)
 * Git configured in your system PATH
 * Windows 10/11 (Primary target OS)
+* Rust & Cargo (Required for Tauri desktop build)
 
 ### 1. Install Project Dependencies
 Run from the root directory:
@@ -89,19 +99,31 @@ npm install
 ```
 
 ### 2. Run in Development Mode
-Launches the Express backend (`3999`) and Vite frontend (`5173`) concurrently with hot reloading:
+Launches the Express backend and Vite frontend concurrently with hot reloading:
 ```powershell
 npm run dev
 ```
 
-### 3. Launch Electron Desktop Client
-Runs the full Electron application, bypassing backend spawn if port `3999` is already in use:
+### 3. Launch Tauri Desktop Client (Recommended)
+Launches the app using the lightweight Tauri v2 wrapper:
+```powershell
+npm run tauri
+```
+
+### 4. Build Standalone Tauri Installer
+Compiles assets and packages the app using Tauri:
+```powershell
+npm run build:tauri
+```
+
+### 5. Launch Legacy Electron Client
+Runs the legacy Electron wrapper:
 ```powershell
 npm run desktop
 ```
 
-### 4. Build Standalone Installer (`.exe`)
-Compiles frontend assets, transpiles TypeScript, and packages the app using `electron-builder` inside `desktop/dist-exe/`:
+### 6. Build Legacy Electron Installer (`.exe`)
+Compiles frontend assets and packages the app using `electron-builder` inside `desktop/dist-exe/`:
 ```powershell
 npm run build:exe
 ```
@@ -112,12 +134,13 @@ npm run build:exe
 
 ```
 t-line/
-├── backend/          # Express + WebSockets + node-pty server (Port 3999)
+├── backend/          # Express + WebSockets + node-pty server (Port 3999 / Tauri uses 5779)
 ├── frontend/         # React + Vite SPA (Vite + Tailwind CSS v4)
 │   └── src/
 │       ├── hooks/    # Custom React hooks (useTerminals, useTunnel, useWorkspaces)
 │       └── components/
-├── desktop/          # Electron wrapper, IPC bridge, Tray, & build configs
+├── desktop-tauri/    # Tauri v2 (Rust) wrapper (Recommended desktop wrapper)
+├── desktop/          # Legacy Electron wrapper, IPC bridge, Tray, & build configs
 ├── preview.png       # Desktop application preview image
 └── package.json      # Root monorepo workspace configuration
 ```
