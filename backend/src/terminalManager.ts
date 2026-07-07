@@ -639,7 +639,7 @@ const activeProcessesCache = new Map<number, { time: number; data: ActiveProcess
 export function getActiveProcessesForPid(shellPid: number): Promise<ActiveProcessSummary[]> {
   const now = Date.now();
   const cached = activeProcessesCache.get(shellPid);
-  if (cached && now - cached.time < 4000) {
+  if (cached && now - cached.time < 7000) {
     return Promise.resolve(cached.data);
   }
 

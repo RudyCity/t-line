@@ -676,7 +676,7 @@ wss.on('connection', (ws: WebSocket) => {
       } catch (e) {
         clearInterval(titleInterval);
       }
-    }, 3000);
+    }, 5000);
 
     const processInterval = setInterval(async () => {
       if (ws.readyState !== WebSocket.OPEN) {
@@ -700,7 +700,7 @@ wss.on('connection', (ws: WebSocket) => {
       } catch (e) {
         clearInterval(processInterval);
       }
-    }, 5000);
+    }, 8000);
 
     // Return a cleanup function
     return () => {
