@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.326] - 2026-07-07
+
+### Fixed
+- **Fix Webview Creation Permissions on Tauri (allow-create-webview)**:
+  - Menambahkan permission `"core:webview:allow-create-webview"` dan `"core:webview:allow-webview-close"` di [default.json](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/capabilities/default.json) pada desktop-tauri capabilities.
+  - Ini mengatasi kegagalan loading web preview external (seperti `google.com`) di tab Browser Preview pada lingkungan Tauri, yang sebelumnya gagal di-render karena frontend diblokir dari memanggil `new Webview(...)` secara dinamis.
+
 ## [1.3.325] - 2026-07-07
 
 ### Fixed
