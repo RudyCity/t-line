@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.324] - 2026-07-07
+
+### Fixed
+- **Fix Webview Label Conflict on Page Reload (F5 / Refresh)**:
+  - Menyimpan label webview unik yang aktif dalam `sessionStorage` (yang dipertahankan selama refresh di tab browser yang sama).
+  - Saat `BrowserTab` dimount/reload, ia membaca `sessionStorage` untuk menemukan label lama, mencari webview lama di backend Tauri dengan `Webview.getByLabel`, dan menutupnya.
+  - Menambahkan delay/tunda 250ms setelah penutupan webview lama agar Tauri backend sempat menyelesaikan proses penutupan dan pelepasan label sebelum webview baru dibuat.
+  - Menggunakan label webview acak yang unik (`inline-browser-webview-${tab.id}-${randomString}`) untuk menghindari tabrakan label di backend Tauri ketika webview baru dibuat.
+
 ## [1.3.323] - 2026-07-07
 
 ### Fixed

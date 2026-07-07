@@ -120,7 +120,7 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
 
     let active = true;
     let webviewInstance: any = null;
-    const webviewLabel = 'inline-browser-webview-' + tab.id;
+    const sessionStorageKey = 'tline-active-webview-label-' + tab.id;
 
     const initWebview = async () => {
       // Small delay to let the container div mount and render in DOM
@@ -135,17 +135,42 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
         const currentWindow = getCurrentWindow();
         const rect = containerRef.current.getBoundingClientRect();
 
-        // Destroy any existing webview with this label first to prevent duplicate errors
+        // 1. Retrieve the last active unique label from sessionStorage (handling F5 reload)
+        const lastLabel = sessionStorage.getItem(sessionStorageKey);
+        let closedOld = false;
+
+        if (lastLabel) {
+          try {
+            const oldWebview = await Webview.getByLabel(lastLabel);
+            if (oldWebview) {
+              await oldWebview.close();
+              closedOld = true;
+            }
+          } catch (_) {}
+          sessionStorage.removeItem(sessionStorageKey);
+        }
+
+        // Also try to close with the fallback default label (handling legacy labels)
         try {
-          const oldWebview = await Webview.getByLabel(webviewLabel);
-          if (oldWebview) {
-            await oldWebview.close();
+          const fallbackWebview = await Webview.getByLabel('inline-browser-webview-' + tab.id);
+          if (fallbackWebview) {
+            await fallbackWebview.close();
+            closedOld = true;
           }
         } catch (_) {}
 
+        // If we closed an old webview, wait a bit to let Tauri backend unregister the labels
+        if (closedOld) {
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
+
         if (!active || !containerRef.current) return;
 
-        webviewInstance = new Webview(currentWindow, webviewLabel, {
+        // Generate a unique label to prevent duplicate label conflict in Tauri backend
+        const uniqueLabel = 'inline-browser-webview-' + tab.id + '-' + Math.random().toString(36).substring(2, 9);
+        sessionStorage.setItem(sessionStorageKey, uniqueLabel);
+
+        webviewInstance = new Webview(currentWindow, uniqueLabel, {
           url: activeUrl,
           x: rect.left,
           y: rect.top,
@@ -220,6 +245,7 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
     return () => {
       active = false;
       tauriWebviewRef.current = null;
+      sessionStorage.removeItem(sessionStorageKey);
       if (webviewInstance) {
         webviewInstance.close().catch((err: any) => {
           console.warn('[BrowserTab] Failed to close webview on cleanup:', err);
