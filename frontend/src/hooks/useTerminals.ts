@@ -58,8 +58,9 @@ export type SplitLayoutNode =
 export interface TabData {
   id: string;
   name: string;
-  type: 'terminal' | 'file' | 'diff' | 'grid';
+  type: 'terminal' | 'file' | 'diff' | 'grid' | 'browser';
   filePath?: string;
+  url?: string;
   // For 'diff' type tabs
   commitHash?: string; // 'WORKTREE' for working-tree diffs
   worktreePath?: string; // for working-tree diff scoping
@@ -419,6 +420,27 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     onTerminalOpen?.();
   }, [tabs, onTerminalOpen]);
 
+  const openBrowserTab = useCallback((url: string, name = 'Preview') => {
+    const existing = tabs.find(t => t.type === 'browser' && t.url === url);
+    if (existing) {
+      setActiveTabId(existing.id);
+      onTerminalOpen?.();
+      return;
+    }
+
+    const tabId = `browser-${Date.now()}`;
+    const newTab: TabData = {
+      id: tabId,
+      name,
+      type: 'browser',
+      url
+    };
+
+    setTabs(prev => [...prev, newTab]);
+    setActiveTabId(tabId);
+    onTerminalOpen?.();
+  }, [tabs, onTerminalOpen]);
+
   const closeTerminal = useCallback((tabId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
 
@@ -763,6 +785,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     openTerminal,
     openFileTab,
     openDiffTab,
+    openBrowserTab,
     openGridTab,
     closeTerminal,
     closePane,

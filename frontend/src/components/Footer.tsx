@@ -32,7 +32,7 @@ export interface FooterProps {
   handleZoomOut: () => void;
   handleStartTunnel: (type: 'quick' | 'token') => void;
   handleStopTunnel: () => void;
-  activeTabType?: 'terminal' | 'file' | 'diff' | 'grid' | null;
+  activeTabType?: 'terminal' | 'file' | 'diff' | 'grid' | 'browser' | null;
   onRefreshTerminal?: () => void;
   onScrollToBottomTerminal?: () => void;
   activeTabPath?: string;

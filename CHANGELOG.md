@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.305] - 2026-07-07
+
+### Added / Changed
+- **Developer Browser Preview Tab dengan Error/Element Inspection & AI-Tagging (Option B)**:
+  - Menambahkan tipe tab `browser` baru di frontend untuk pratinjau situs web lokal (default: `http://localhost:3000`).
+  - Mengintegrasikan dynamic reverse proxy di backend Express (`/api/preview-proxy`) yang secara dinamis melayani aset, WebSocket HMR, dan menyuntikkan script helper (`tline-helper.js`).
+  - Mendukung penyalinan instan prompt Markdown yang kaya konteks (pesan error console, detail struktur HTML elemen, class, Computed CSS) ke clipboard melalui tombol ✨ **Tag to AI** (Opsi B).
+  - Menjamin kompatibilitas pratinjau jarak jauh (remote preview) dan inspeksi melalui Cloudflare Tunnel secara mulus.
+
 ## [1.3.304] - 2026-07-07
 
 ### Added / Changed

@@ -18,12 +18,14 @@ import {
   Camera,
   LayoutGrid,
   Zap,
-  X
+  X,
+  Globe
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { FileViewerTab } from './components/FileViewerTab';
 import { DiffViewerTab } from './components/DiffViewerTab';
 import { TerminalGridTab } from './components/TerminalGridTab';
+import BrowserTab from './components/BrowserTab';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
 import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal, ConfirmModal, WorkspaceEditModal, SavePromptModal } from './components/Modals';
 
@@ -296,6 +298,7 @@ export default function App() {
     openTerminal,
     openFileTab,
     openDiffTab,
+    openBrowserTab,
     openGridTab,
     closeTerminal,
     closePane,
@@ -1353,6 +1356,8 @@ export default function App() {
                               <GitCompare size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? '#4ade80' : 'var(--text-muted)' }} />
                             ) : t.type === 'grid' ? (
                               <LayoutGrid size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
+                            ) : t.type === 'browser' ? (
+                              <Globe size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                             ) : (
                               <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                             )}
@@ -1376,6 +1381,15 @@ export default function App() {
                     style={{ marginLeft: '6px' }}
                   >
                     <Plus size={14} />
+                  </button>
+                  {/* New Browser Preview button */}
+                  <button
+                    className="action-btn shrink-0"
+                    onClick={() => openBrowserTab('http://localhost:3000', 'Preview')}
+                    title="New Web Preview"
+                    style={{ marginLeft: '6px' }}
+                  >
+                    <Globe size={14} />
                   </button>
 
                 </div>
@@ -1507,6 +1521,16 @@ export default function App() {
               {(() => {
                 const activeTab = tabs.find(t => t.id === activeTabId);
                 if (!activeTab) return null;
+                if (activeTab.type === 'browser') {
+                  return (
+                    <BrowserTab
+                      tab={activeTab}
+                      onUpdateTabName={(newName) => {
+                        setTabs(prev => prev.map(t => t.id === activeTab.id ? { ...t, name: newName } : t));
+                      }}
+                    />
+                  );
+                }
                 if (activeTab.type === 'file') {
                   return (
                     <FileViewerTab

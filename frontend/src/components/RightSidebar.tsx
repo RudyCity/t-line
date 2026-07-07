@@ -34,7 +34,7 @@ interface RightSidebarProps {
   setDefaultShell: (val: string) => void;
   handleZoomIn: () => void;
   handleZoomOut: () => void;
-  activeTabType?: 'terminal' | 'file' | 'diff' | 'grid' | null;
+  activeTabType?: 'terminal' | 'file' | 'diff' | 'grid' | 'browser' | null;
   onRefreshTerminal?: () => void;
   // Tunnel (from footer right section)
   tunnelStatus: {
@@ -157,6 +157,8 @@ export function RightSidebar({
                       <GitCompare size={13} className={isActive ? 'text-[var(--color-primary)]' : 'text-[var(--text-muted)]'} />
                     ) : t.type === 'grid' ? (
                       <LayoutGrid size={13} className={isActive ? 'text-[var(--color-primary)]' : 'text-[var(--text-muted)]'} />
+                    ) : t.type === 'browser' ? (
+                      <Globe size={13} className={isActive ? 'text-[var(--color-primary)]' : 'text-[var(--text-muted)]'} />
                     ) : (
                       <TerminalIcon size={13} className={isActive ? 'text-[var(--color-primary)]' : 'text-[var(--text-muted)]'} />
                     )}

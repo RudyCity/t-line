@@ -28,6 +28,8 @@ import { terminalManager, getActiveProcessesForPid } from './terminalManager';
 import { tunnelManager } from './tunnelManager';
 import gitRouter, { registerWorkspaceChangeCallback } from './gitRoutes';
 import fsRouter, { registerFileChangeCallback } from './fsRoutes';
+import { createProxyMiddleware } from 'http-proxy-middleware';
+import { TLINE_HELPER_CODE } from './tline-helper-code';
 
 dotenv.config();
 
@@ -80,6 +82,86 @@ console.log(`[system] Logger initialized. Writing backend logs to: ${BACKEND_LOG
 
 const app = express();
 const port = process.env.PORT || 5779;
+
+let currentProxyTarget = 'http://localhost:3000';
+
+const previewProxy = createProxyMiddleware({
+  target: currentProxyTarget,
+  changeOrigin: true,
+  ws: true,
+  pathRewrite: {
+    '^/api/preview-proxy': '',
+  },
+  router: (req) => {
+    const urlParams = new URL(req.url || '', `http://${req.headers.host}`);
+    let target = urlParams.searchParams.get('target');
+    if (!target) {
+      const cookies = req.headers.cookie || '';
+      const match = cookies.match(/tline_proxy_target=([^;]+)/);
+      if (match) {
+        target = decodeURIComponent(match[1]);
+      }
+    }
+    if (target) {
+      currentProxyTarget = target.replace(/\/$/, '');
+    }
+    return currentProxyTarget;
+  },
+  selfHandleResponse: true,
+  on: {
+    proxyReq: (proxyReq, req, res) => {
+      const urlParams = new URL(req.url || '', `http://${req.headers.host}`);
+      const target = urlParams.searchParams.get('target');
+      if (target) {
+        res.setHeader('Set-Cookie', `tline_proxy_target=${encodeURIComponent(target)}; Path=/; SameSite=Lax`);
+      }
+    },
+    proxyRes: (proxyRes, req, res) => {
+      const contentType = proxyRes.headers['content-type'] || '';
+      if (contentType.includes('text/html')) {
+        let body = Buffer.from([]);
+        proxyRes.on('data', (chunk) => {
+          body = Buffer.concat([body, chunk]);
+        });
+        proxyRes.on('end', () => {
+          let html = body.toString('utf8');
+          const baseTag = `<base href="/api/preview-proxy/">`;
+          const helperScript = `<script src="/tline-helper.js" defer></script>`;
+          if (html.includes('<head>')) {
+            html = html.replace('<head>', `<head>\n  ${baseTag}\n  ${helperScript}`);
+          } else {
+            html = baseTag + helperScript + html;
+          }
+          const headers = { ...proxyRes.headers };
+          delete headers['content-length'];
+          delete headers['content-security-policy'];
+          res.writeHead(proxyRes.statusCode || 200, headers);
+          res.end(html);
+        });
+      } else {
+        const headers = { ...proxyRes.headers };
+        delete headers['content-security-policy'];
+        res.writeHead(proxyRes.statusCode || 200, headers);
+        proxyRes.pipe(res);
+      }
+    },
+    error: (err, req, res) => {
+      console.error('[Preview Proxy Error]:', err);
+      const response = res as any;
+      if (response.headersSent) return;
+      if (typeof response.writeHead === 'function') {
+        response.writeHead(502, { 'Content-Type': 'text/html' });
+        response.end(`
+          <div style="font-family: sans-serif; padding: 20px; color: #ef4444; background: #11111b; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box;">
+            <h2 style="margin-bottom: 8px;">Proxy Error: Target App Offline</h2>
+            <p style="color: #a1a1aa; margin-bottom: 16px;">Failed to connect to web application at <strong>${currentProxyTarget}</strong>.</p>
+            <p style="font-size: 13px; color: #6b7280;">Please check if your dev server is running on that port.</p>
+          </div>
+        `);
+      }
+    }
+  }
+});
 
 app.use(cors());
 app.use(express.json());
@@ -386,6 +468,13 @@ app.put('/api/workspaces', authMiddleware, (req, res) => {
   }
 });
 
+app.use('/api/preview-proxy', previewProxy);
+
+app.get('/tline-helper.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.send(TLINE_HELPER_CODE);
+});
+
 app.use('/api', gitRouter);
 app.use('/api/fs', fsRouter);
 
@@ -532,6 +621,15 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ noServer: true });
 
 server.on('upgrade', (request, socket, head) => {
+  const urlParams = new URL(request.url || '', `http://${request.headers.host}`);
+  const pathname = urlParams.pathname;
+
+  // Intercept preview proxy websocket upgrades (for HMR, etc.)
+  if (pathname.startsWith('/api/preview-proxy')) {
+    (previewProxy as any).upgrade(request, socket, head);
+    return;
+  }
+
   // IP block check for WebSocket
   const cfIp = request.headers['cf-connecting-ip'];
   let ip = 'unknown';
@@ -552,8 +650,6 @@ server.on('upgrade', (request, socket, head) => {
     return;
   }
 
-  const urlParams = new URL(request.url || '', `http://${request.headers.host}`);
-  const pathname = urlParams.pathname;
   const token = urlParams.searchParams.get('token');
 
   if (!token || !verifySocketToken(token)) {
