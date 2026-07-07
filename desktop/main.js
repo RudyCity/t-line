@@ -6,8 +6,33 @@ const os = require('os');
 const http = require('http');
 const { initAutoUpdater } = require('./updater');
 
-// Disable hardware acceleration to prevent GPU process crash (error code -1073741819)
-app.disableHardwareAcceleration();
+// ── Hardware acceleration with auto-revert on crash ──────────────
+// HW acceleration OFF => xterm canvas rendering falls back to CPU (high CPU).
+// We try to ENABLE it, but if the previous run crashed while enabled (no
+// clean exit recorded), we auto-revert to disabled to avoid the GPU crash
+// (-1073741819). State persists in userData/hwaccel_state.json.
+const hwStatePath = path.join(app.getPath('userData'), 'hwaccel_state.json');
+let hwAccelEnabled = true;
+try {
+  const prev = JSON.parse(fs.readFileSync(hwStatePath, 'utf8'));
+  if (prev.enabled === true && prev.lastRunClean === false) {
+    hwAccelEnabled = false; // previous run enabled HW accel but crashed => revert
+  } else {
+    hwAccelEnabled = prev.enabled !== false;
+  }
+} catch (e) {
+  hwAccelEnabled = true; // first run: try enabling
+}
+// Manual override to re-enable after an auto-revert (set TLINE_FORCE_HWACCEL=1)
+if (process.env.TLINE_FORCE_HWACCEL === '1') hwAccelEnabled = true;
+
+if (!hwAccelEnabled) {
+  app.disableHardwareAcceleration();
+}
+// Mark this run as not-yet-clean so a crash is detectable on next launch.
+try {
+  fs.writeFileSync(hwStatePath, JSON.stringify({ enabled: hwAccelEnabled, lastRunClean: false }));
+} catch (e) {}
 
 // Limit V8 heap memory usage for main and renderer processes to prevent memory bloat (forces GC earlier) and expose garbage collector
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=384 --expose-gc');
@@ -953,6 +978,10 @@ app.on('window-all-closed', () => {
 });
 
 app.on('quit', () => {
+  // Record clean exit so a crash is distinguishable from a normal shutdown
+  try {
+    fs.writeFileSync(hwStatePath, JSON.stringify({ enabled: hwAccelEnabled, lastRunClean: true }));
+  } catch (e) {}
   // Gracefully kill backend process on app quit
   if (backendProcess) {
     console.log('Terminating backend process...');

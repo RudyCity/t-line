@@ -325,7 +325,7 @@ export function TerminalInstance({
       fontWeightBold: 'bold',
       lineHeight: 1.2,
       letterSpacing: 0,
-      scrollback: 3000,
+      scrollback: 1000,
       scrollOnUserInput: true,
       fastScrollModifier: 'shift',
       fastScrollSensitivity: 5,
@@ -459,9 +459,22 @@ export function TerminalInstance({
     });
 
     // ── Cursor position tracking ───────────────────────────
+    // Coalesce cursor-move events into one rAF and skip no-op updates to
+    // avoid a React re-render storm on every cell write (major CPU sink).
+    let cursorRaf: number | null = null;
+    let lastCursor = { col: -1, row: -1 };
     term.onCursorMove(() => {
-      const buf = term.buffer.active;
-      setCursorPos({ col: buf.cursorX + 1, row: buf.cursorY + 1 });
+      if (cursorRaf !== null) return;
+      cursorRaf = requestAnimationFrame(() => {
+        cursorRaf = null;
+        const buf = term.buffer.active;
+        const col = buf.cursorX + 1;
+        const row = buf.cursorY + 1;
+        if (col !== lastCursor.col || row !== lastCursor.row) {
+          lastCursor = { col, row };
+          setCursorPos({ col, row });
+        }
+      });
     });
 
     wsManager.subscribe(tab.id, (payload) => {

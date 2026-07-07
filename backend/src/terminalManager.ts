@@ -164,8 +164,8 @@ class SpawnTerminal implements ITerminal {
 }
 
 // ── Session wrapper ────────────────────────────────────────
-const OUTPUT_BUFFER_MAX_LINES = 500;
-const OUTPUT_BUFFER_MAX_BYTES = 64 * 1024; // 64 KB (optimized to reduce memory footprint per terminal session)
+const OUTPUT_BUFFER_MAX_LINES = 200;
+const OUTPUT_BUFFER_MAX_BYTES = 32 * 1024; // 32 KB (reduced to lower RAM per terminal session)
 
 /**
  * FLUSH_INTERVAL_MS: How often to batch-flush PTY output to the WebSocket sender.
@@ -639,7 +639,7 @@ const activeProcessesCache = new Map<number, { time: number; data: ActiveProcess
 export function getActiveProcessesForPid(shellPid: number): Promise<ActiveProcessSummary[]> {
   const now = Date.now();
   const cached = activeProcessesCache.get(shellPid);
-  if (cached && now - cached.time < 7000) {
+  if (cached && now - cached.time < 9000) {
     return Promise.resolve(cached.data);
   }
 

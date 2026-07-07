@@ -700,7 +700,7 @@ wss.on('connection', (ws: WebSocket) => {
       } catch (e) {
         clearInterval(processInterval);
       }
-    }, 8000);
+    }, 10000);
 
     // Return a cleanup function
     return () => {
