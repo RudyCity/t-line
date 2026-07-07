@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.300] - 2026-07-07
+
+### Added / Changed
+- **Peningkatan Fungsionalitas Desktop Tauri (Paritas Fitur Electron)**:
+  - Mengintegrasikan System Tray Icon (Tray Icon) di Tauri v2 dengan menu dinamis yang sepenuhnya mereplikasi fungsionalitas Electron.
+  - Menu tray kini secara dinamis menampilkan status backend, opsi toggle dashboard, kontrol penuh backend (Start, Stop, Restart), dan sub-menu berisi daftar sesi PTY terminal aktif yang dikelompokkan berdasarkan workspace (termasuk informasi branch git). Mengklik sesi PTY akan memfokuskan window utama.
+  - Menambahkan *Close-to-Tray* dengan meng-intercept `WindowEvent::CloseRequested` untuk menyembunyikan window alih-alih keluar secara paksa, agar proses AI agent background tidak terhenti.
+  - Mengintegrasikan Single Instance Lock menggunakan plugin `tauri-plugin-single-instance` di Tauri v2 untuk mencegah konflik port `5779` dan database.
+  - Menambahkan validasi keberadaan Node.js pada saat startup dengan dialog peringatan native (cross-platform) jika Node.js belum terinstall.
+  - Mengoptimalkan konfigurasi resources di `tauri.conf.json` agar hanya membundel folder produksi (`dist`) dan `node_modules` internal, memotong file sampah workspace dan meminimalkan ukuran installer akhir.
+
 ## [1.3.299] - 2026-07-07
 
 ### Added / Changed
