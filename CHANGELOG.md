@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.340] - 2026-07-07
+
+### Added
+- **Premium Web Preview Offline Home Page**:
+  - Memperbarui halaman error 502/offline pada proxy server di [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts).
+  - Mengubah tampilan peringatan error merah mentah menjadi halaman sambutan pratinjau web bergaya Obsidian/t-line yang premium, lengkap dengan ikon, panduan instruksi cara menyalakan server development lokal, dan tombol penyegaran koneksi yang elegan.
+
 ## [1.3.339] - 2026-07-07
 
 ### Fixed

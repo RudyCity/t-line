@@ -220,11 +220,30 @@ const previewProxy = createProxyMiddleware({
       if (typeof response.writeHead === 'function') {
         response.writeHead(502, { 'Content-Type': 'text/html' });
         response.end(`
-          <div style="font-family: sans-serif; padding: 20px; color: #ef4444; background: #11111b; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box;">
-            <h2 style="margin-bottom: 8px;">Proxy Error: Target App Offline</h2>
-            <p style="color: #a1a1aa; margin-bottom: 16px;">Failed to connect to web application at <strong>${currentProxyTarget}</strong>.</p>
-            <p style="font-size: 13px; color: #6b7280;">Please check if your dev server is running on that port.</p>
-          </div>
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Web Preview Offline</title>
+            <style>
+              body { background: #0b0f19; color: #f3f4f6; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+              .card { max-width: 420px; width: 85%; background: rgba(17, 24, 39, 0.45); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 32px 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
+              .icon { font-size: 32px; margin-bottom: 16px; display: inline-block; }
+              h1 { font-size: 20px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #a855f7, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+              p { color: #9ca3af; font-size: 13px; line-height: 1.5; margin: 0 0 20px; }
+              code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; color: #e9d5ff; font-family: monospace; }
+              .btn { background: linear-gradient(135deg, #a855f7, #6366f1); color: white; border: none; padding: 10px 24px; font-size: 13px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(168,85,247,0.2); }
+              .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(168,85,247,0.35); }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <span class="icon">🌐</span>
+              <h1>Web Preview Offline</h1>
+              <p>Pratinjau web saat ini offline di <strong>${currentProxyTarget}</strong>.<br><br>Jalankan server pengembangan Anda (seperti <code>npm run dev</code>) di terminal, lalu klik tombol di bawah.</p>
+              <button class="btn" onclick="window.location.reload()">Segarkan Koneksi</button>
+            </div>
+          </body>
+          </html>
         `);
       }
     }
