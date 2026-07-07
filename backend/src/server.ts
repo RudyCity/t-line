@@ -115,6 +115,8 @@ const previewProxy = createProxyMiddleware({
       if (target) {
         res.setHeader('Set-Cookie', `tline_proxy_target=${encodeURIComponent(target)}; Path=/; SameSite=Lax`);
       }
+      // Force target to send uncompressed content so we can modify the HTML safely
+      proxyReq.setHeader('accept-encoding', 'identity');
     },
     proxyRes: (proxyRes, req, res) => {
       const contentType = proxyRes.headers['content-type'] || '';
