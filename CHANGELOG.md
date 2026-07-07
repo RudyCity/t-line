@@ -1,6 +1,14 @@
 # Changelog
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
+
+## [1.3.337] - 2026-07-07
+
+### Fixed
+- **Fix Element Inspection and Console Logging in Proxy Iframe**:
+  - Menghapus atribut `sandbox` pada tag `iframe` di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx).
+  - Ini mengatasi pembatasan keamanan Chromium/Electron yang memblokir komunikasi `postMessage` antar-jendela dan pembatasan cookie pada sandbox same-origin, memulihkan fungsi inspeksi elemen dan konsol error secara penuh saat menggunakan proxy.
+
 ## [1.3.336] - 2026-07-07
 
 ### Changed

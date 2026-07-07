@@ -692,7 +692,6 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
               src={proxyUrl} 
               className={`w-full h-full border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
               title="App Preview"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
             />
           )}
           
