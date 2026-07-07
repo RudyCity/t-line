@@ -1,6 +1,12 @@
 # Changelog
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
+## [1.3.336] - 2026-07-07
+
+### Changed
+- **Disable Native Webviews in Browser Tab**:
+  - Menonaktifkan penggunaan tag `<webview>` bawaan Electron dan overlay `Webview` native Tauri di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx).
+  - Mengarahkan pratinjau browser agar selalu menggunakan `iframe` via `preview-proxy` di semua platform (Electron, Tauri, dan Web), memberikan perilaku dan interoperabilitas pencarian/inspeksi elemen yang seragam.
 
 ## [1.3.335] - 2026-07-07
 

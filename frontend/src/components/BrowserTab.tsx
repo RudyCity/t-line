@@ -74,7 +74,8 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
 
   const containerRef = useRef<HTMLDivElement>(null);
   const tauriWebviewRef = useRef<any>(null);
-  const useTauriWebview = isTauri && !isLocalUrl(activeUrl);
+  const useElectronWebview = false; // Always use proxy iframe instead of native Electron webview
+  const useTauriWebview = false;    // Always use proxy iframe instead of native Tauri webview
 
   const openInSystemBrowser = async (url: string) => {
     try {
@@ -295,9 +296,9 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     }
   }, [isActive, useTauriWebview]);
 
-  // Listen to console messages if in Electron
+  // Listen to console messages if in Electron and using webview
   useEffect(() => {
-    if (!isElectron || !webviewEl) return;
+    if (!useElectronWebview || !webviewEl) return;
     const webview = webviewEl;
 
     const handleConsoleMessage = (e: any) => {
@@ -563,7 +564,7 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
           </button>
         </form>
 
-        {isElectron ? (
+        {useElectronWebview ? (
           <button 
             onClick={() => {
               if (webviewEl) {
@@ -632,7 +633,7 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
       <div className="flex-1 flex flex-col min-h-0">
         {/* Iframe / External Preview Container */}
         <div className="flex-1 bg-[var(--bg-main)] relative min-h-[250px] flex flex-col">
-          {isElectron ? (
+          {useElectronWebview ? (
             <webview 
               key={iframeKey}
               ref={setWebviewEl}
@@ -695,7 +696,7 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
             />
           )}
           
-          {!isElectron && isLocalUrl(activeUrl) && isInspecting && (
+          {!useElectronWebview && isLocalUrl(activeUrl) && isInspecting && (
             <div className="absolute inset-0 pointer-events-none border-2 border-dashed border-purple-500/40 bg-purple-500/5 flex items-center justify-center">
               <span className="bg-[var(--bg-card)] border border-[var(--border-color)] text-purple-400 text-xs px-3 py-1.5 rounded-full font-semibold shadow-md pointer-events-auto">
                 🔍 Click any element on the page to inspect it
@@ -770,8 +771,8 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
             {/* Helper status indicator & Collapse toggle */}
             <div className="flex items-center gap-3 text-[10px] font-medium text-[var(--text-muted)]">
               <div className="flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${isElectron ? 'bg-green-500' : (helperReady ? 'bg-green-500' : 'bg-amber-500 animate-pulse')}`} />
-                <span>{isElectron ? 'Chromium Native Webview Active' : (helperReady ? 'Proxy Helper Active' : 'Connecting Helper...')}</span>
+                <div className={`w-1.5 h-1.5 rounded-full ${useElectronWebview ? 'bg-green-500' : (helperReady ? 'bg-green-500' : 'bg-amber-500 animate-pulse')}`} />
+                <span>{useElectronWebview ? 'Chromium Native Webview Active' : (helperReady ? 'Proxy Helper Active' : 'Connecting Helper...')}</span>
               </div>
 
               <button
