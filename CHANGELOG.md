@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.304] - 2026-07-07
+
+### Added / Changed
+- **Pencegahan Crash xterm.js Viewport & Refactor TerminalInstance**:
+  - Memperbaiki bug crash uncaught TypeError `Cannot read properties of undefined (reading 'dimensions')` pada method `syncScrollArea` dari class `Viewport` di xterm.js dengan melakukan monkey-patching try/catch secara dinamis setelah terminal dibuka (`term.open()`).
+  - Merefaktor event handling mobile touch-to-mouse ke custom React hook [useTerminalTouchMapping.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useTerminalTouchMapping.ts).
+  - Mengurangi ukuran file [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx) menjadi di bawah limit 1000 baris kode (sekarang 968 baris) untuk mematuhi standar arsitektur proyek.
+
 ## [1.3.303] - 2026-07-07
 
 ### Added / Changed
