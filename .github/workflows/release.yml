@@ -38,9 +38,39 @@ jobs:
       - name: Build Backend
         run: npm run build:backend
 
-      - name: Build Desktop (Package & Publish)
+      - name: Build Electron Desktop (Package & Publish)
         working-directory: desktop
         run: node copy-assets.js && npx electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install system dependencies (Ubuntu only)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Setup Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './desktop-tauri/src-tauri -> target'
+
+      - name: Copy Assets for Tauri
+        run: npm run copy-assets --workspace=desktop-tauri
+
+      - name: Build Tauri Desktop (Package & Publish)
+        uses: tauri-apps/tauri-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: t-line-v__VERSION__
+          releaseName: 't-line v__VERSION__'
+          releaseBody: 'Release version v__VERSION__'
+          releaseDraft: true
+          prerelease: false
+          projectPath: './desktop-tauri'
+
 
