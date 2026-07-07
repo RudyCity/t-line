@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.295] - 2026-07-07
+
+### Added / Changed
+- **Penyederhanaan Tampilan Lencana Proses Aktif (Process Badges)**:
+  - Menyederhanakan tampilan lencana proses aktif seperti Superagent, Claude, Gemini, Cursor, Agy, dan OpenCode pada daftar workspace/worktree di sidebar.
+  - Menghilangkan efek animasi denyut (pulse animation), efek bayangan bercahaya (glow/box-shadow), gradasi warna, dan border.
+  - Mengubah latar belakang lencana menjadi warna solid yang datar (flat solid background) dengan kontras tinggi agar tetap terlihat mencolok namun bersih dan simpel.
+
 ## [1.3.294] - 2026-07-07
 
 ### Added / Changed

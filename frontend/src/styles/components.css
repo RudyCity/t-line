@@ -243,58 +243,35 @@
   line-height: 1;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  box-shadow: 0 0 8px var(--badge-shadow);
-  border: 1px solid var(--badge-border);
   color: #ffffff;
-  animation: ws-badge-pulse 2s infinite ease-in-out;
-}
-
-@keyframes ws-badge-pulse {
-  0% { opacity: 0.85; transform: scale(0.97); }
-  50% { opacity: 1; transform: scale(1.03); }
-  100% { opacity: 0.85; transform: scale(0.97); }
 }
 
 .ws-badge-claude {
-  background: linear-gradient(135deg, #d97706, #b45309); /* Claude amberish brown */
-  --badge-border: rgba(217, 119, 6, 0.4);
-  --badge-shadow: rgba(217, 119, 6, 0.15);
+  background-color: #d97706; /* Claude amber */
 }
 
 .ws-badge-gemini {
-  background: linear-gradient(135deg, #4f46e5, #06b6d4, #ec4899); /* Gemini purple/cyan/pink gradient */
-  --badge-border: rgba(6, 182, 212, 0.4);
-  --badge-shadow: rgba(6, 182, 212, 0.2);
+  background-color: #4f46e5; /* Gemini purple/indigo */
 }
 
 .ws-badge-cursor {
-  background: linear-gradient(135deg, #0d9488, #0f766e); /* Cursor teal */
-  --badge-border: rgba(13, 148, 136, 0.4);
-  --badge-shadow: rgba(13, 148, 136, 0.15);
+  background-color: #0d9488; /* Cursor teal */
 }
 
 .ws-badge-superagent {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8); /* Superagent blue */
-  --badge-border: rgba(59, 130, 246, 0.4);
-  --badge-shadow: rgba(59, 130, 246, 0.15);
+  background-color: #3b82f6; /* Superagent blue */
 }
 
 .ws-badge-agy {
-  background: linear-gradient(135deg, #10b981, #047857); /* Agy green/emerald */
-  --badge-border: rgba(16, 185, 129, 0.4);
-  --badge-shadow: rgba(16, 185, 129, 0.15);
+  background-color: #10b981; /* Agy green/emerald */
 }
 
 .ws-badge-opencode {
-  background: linear-gradient(135deg, #6366f1, #4f46e5); /* OpenCode indigo */
-  --badge-border: rgba(99, 102, 241, 0.4);
-  --badge-shadow: rgba(99, 102, 241, 0.15);
+  background-color: #6366f1; /* OpenCode indigo */
 }
 
 .ws-badge-general {
-  background: linear-gradient(135deg, #64748b, #475569); /* General slate */
-  --badge-border: rgba(100, 116, 139, 0.4);
-  --badge-shadow: rgba(100, 116, 139, 0.1);
+  background-color: #64748b; /* General slate */
 }
 
 /* ── Workspace Tree / Branch List ── */
