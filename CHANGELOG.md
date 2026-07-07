@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.298] - 2026-07-07
+
+### Added / Changed
+- **Pemisahan Perhitungan Memori Backend dan Desktop di Tauri**:
+  - Mengabaikan (exclude) PID proses backend Node.js dari penjumlahan memori proses anak di Tauri Command `get_memory_usage`.
+  - Ini mencegah memori backend dihitung dua kali (di B: dan D:) di footer, sehingga status memori D: benar-benar menunjukkan memori shell desktop murni (~56MB) secara akurat.
+
 ## [1.3.297] - 2026-07-07
 
 ### Added / Changed

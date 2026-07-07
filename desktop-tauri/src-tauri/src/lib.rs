@@ -31,13 +31,19 @@ fn get_bypass_token() -> Option<String> {
 }
 
 #[tauri::command]
-fn get_memory_usage() -> Result<serde_json::Value, String> {
+fn get_memory_usage(state: tauri::State<'_, BackendProcessState>) -> Result<serde_json::Value, String> {
     use sysinfo::{Pid, System};
     
     let mut sys = System::new();
     sys.refresh_processes();
 
     let current_pid = Pid::from(std::process::id() as usize);
+    
+    let mut backend_pid_val = None;
+    if let Some(child) = &*state.0.lock().unwrap() {
+        backend_pid_val = Some(Pid::from(child.id() as usize));
+    }
+
     let mut total_memory = 0u64;
     let mut main_memory = 0u64;
 
@@ -46,7 +52,10 @@ fn get_memory_usage() -> Result<serde_json::Value, String> {
             main_memory = process.memory();
             total_memory += process.memory();
         } else if process.parent() == Some(current_pid) {
-            total_memory += process.memory();
+            // Exclude backend process memory from the desktop wrapper memory calculation
+            if Some(*pid) != backend_pid_val {
+                total_memory += process.memory();
+            }
         }
     }
 
