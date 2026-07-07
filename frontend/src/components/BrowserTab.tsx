@@ -129,6 +129,17 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
           iframeRef.current.contentWindow.postMessage({ type: 'tline-start-inspect' }, '*');
         }
       }
+
+      if (type === 'tline-url-changed' && payload?.url) {
+        // Update the URL bar to reflect current navigation within the proxy
+        setUrlInput(payload.url);
+        if (onUpdateTabName) {
+          try {
+            const hostname = new URL(payload.url).hostname;
+            onUpdateTabName(`Preview: ${hostname}`);
+          } catch (_) {}
+        }
+      }
       
       if (type === 'tline-error') {
         const newLog: ConsoleErrorLog = {
@@ -158,7 +169,17 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
     if (e) e.preventDefault();
     let targetUrl = urlInput.trim();
     if (!/^https?:\/\//i.test(targetUrl)) {
-      targetUrl = 'http://' + targetUrl;
+      targetUrl = 'https://' + targetUrl;
+    }
+    // Auto-upgrade http -> https for non-localhost domains
+    if (/^http:\/\//i.test(targetUrl)) {
+      try {
+        const parsed = new URL(targetUrl);
+        const isLocal = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname.endsWith('.local');
+        if (!isLocal) {
+          targetUrl = targetUrl.replace(/^http:\/\//i, 'https://');
+        }
+      } catch (_) {}
     }
     setUrlInput(targetUrl);
     setActiveUrl(targetUrl);

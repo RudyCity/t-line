@@ -347,7 +347,20 @@ export const TLINE_HELPER_CODE = `(function() {
     }
   });
 
+
   // Send an initial handshake/ready message to the parent frame
   window.parent.postMessage({ type: 'tline-ready' }, '*');
+
+  // Notify parent of the current real URL (so URL bar stays in sync after navigation)
+  function notifyUrlChanged() {
+    var proxyTarget = getProxyTarget();
+    if (proxyTarget) {
+      try {
+        var realUrl = new URL(window.location.pathname + window.location.search + window.location.hash, proxyTarget + '/').href;
+        window.parent.postMessage({ type: 'tline-url-changed', payload: { url: realUrl } }, '*');
+      } catch(e) {}
+    }
+  }
+  notifyUrlChanged();
 })();
 `;
