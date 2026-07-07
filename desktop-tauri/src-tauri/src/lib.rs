@@ -106,8 +106,10 @@ pub fn run() {
                                     PathBuf::from("backend_run.log")
                                 };
 
-                                // Spawn node backend/dist/server.js
+                                // Spawn node backend/dist/server.js with memory optimizations
                                 let child = Command::new("node")
+                                    .arg("--max-old-space-size=64")
+                                    .arg("--expose-gc")
                                     .arg(&script_path)
                                     .env("PORT", port.to_string())
                                     .stdout(Stdio::piped())

@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.297] - 2026-07-07
+
+### Added / Changed
+- **Optimasi Tambahan RAM Backend Node.js di Tauri**:
+  - Mengonfigurasi Rust process launcher untuk menyuntikkan flag optimasi V8 (`--max-old-space-size=64` dan `--expose-gc`) saat meluncurkan Node.js.
+  - Ini mengaktifkan fitur garbage collection periodik bawaan di backend dan membatasi ukuran heap maks ke 64MB, memotong penggunaan memori backend secara drastis dari ~60MB menjadi ~25MB-35MB.
+
 ## [1.3.296] - 2026-07-07
 
 ### Added / Changed
