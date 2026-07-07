@@ -83,7 +83,7 @@ console.log(`[system] Logger initialized. Writing backend logs to: ${BACKEND_LOG
 const app = express();
 const port = process.env.PORT || 5779;
 
-let currentProxyTarget = 'http://localhost:3000';
+let currentProxyTarget = 'https://www.google.com';
 
 const previewProxy = createProxyMiddleware({
   target: currentProxyTarget,
@@ -135,12 +135,14 @@ const previewProxy = createProxyMiddleware({
           const headers = { ...proxyRes.headers };
           delete headers['content-length'];
           delete headers['content-security-policy'];
+          delete headers['x-frame-options'];
           res.writeHead(proxyRes.statusCode || 200, headers);
           res.end(html);
         });
       } else {
         const headers = { ...proxyRes.headers };
         delete headers['content-security-policy'];
+        delete headers['x-frame-options'];
         res.writeHead(proxyRes.statusCode || 200, headers);
         proxyRes.pipe(res);
       }
