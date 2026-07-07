@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.301] - 2026-07-07
+
+### Added / Changed
+- **Pembersihan Proses Anak Terminal (Recursive Process Tree Kill)**:
+  - Memperbaiki kebocoran proses (process leak) di mana menutup tab terminal di UI tidak mematikan proses anak/descendant (seperti `node.exe` yang menjalankan `superagent`) pada Windows dan Unix.
+  - Mengimplementasikan helper `killProcessTree` di [terminalManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/terminalManager.ts) yang menggunakan `taskkill /pid <PID> /f /t` pada Windows dan `pkill -P <PID>` pada Unix untuk secara rekursif mematikan seluruh pohon proses turunan saat sesi terminal di-kill.
+  - Ini memastikan badge proses aktif dan status memori terupdate secara instan dan akurat ketika terminal ditutup atau di-reset.
+
 ## [1.3.300] - 2026-07-07
 
 ### Added / Changed

@@ -71,6 +71,20 @@ try {
   console.warn('Native node-pty not available. Falling back to child_process.spawn.');
 }
 
+function killProcessTree(pid: number): void {
+  if (!pid) return;
+  const isWin = os.platform() === 'win32';
+  const cmd = isWin
+    ? `taskkill /pid ${pid} /f /t`
+    : `pkill -P ${pid} || kill -9 ${pid}`;
+  
+  exec(cmd, (err) => {
+    if (err) {
+      try { process.kill(pid, 'SIGKILL'); } catch (e) {}
+    }
+  });
+}
+
 export interface ITerminal {
   write(data: string): void;
   resize(cols: number, rows: number): void;
@@ -110,7 +124,14 @@ class PtyTerminal implements ITerminal {
     this.ptyProcess.onExit(({ exitCode }: { exitCode: number }) => cb(exitCode));
   }
 
-  kill(): void { this.ptyProcess.kill(); }
+  kill(): void {
+    const pid = this.getPid();
+    if (pid) {
+      killProcessTree(pid);
+    } else {
+      try { this.ptyProcess.kill(); } catch (e) {}
+    }
+  }
   getPid(): number { return this.ptyProcess.pid; }
   getProcessName(): string { return this.ptyProcess.process; }
 }
@@ -158,7 +179,14 @@ class SpawnTerminal implements ITerminal {
     this.child.on('exit', (code) => cb(code || 0));
   }
 
-  kill(): void { this.child.kill(); }
+  kill(): void {
+    const pid = this.getPid();
+    if (pid) {
+      killProcessTree(pid);
+    } else {
+      try { this.child.kill(); } catch (e) {}
+    }
+  }
   getPid(): number { return this.pid; }
   getProcessName(): string { return 'Shell'; }
 }
