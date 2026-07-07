@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.309] - 2026-07-07
+
+### Added / Changed
+- **Integrasi Chromium Native Webview pada Electron & Fallback Proxy di Tauri/Web**:
+  - Mengaktifkan tag `<webview>` di sisi Electron dengan menyetel `webviewTag: true` pada `webPreferences` (`desktop/main.js`).
+  - Merender browser native Chromium (`<webview>`) di lingkungan Electron secara langsung menggunakan URL target tanpa melalui proxy, menjamin dukungan penuh bagi *cookies*, *login session*, dan bypass CORS 100%.
+  - Memasang *event listener* `console-message` untuk menangkap error dari halaman tamu di dalam `<webview>` dan menampilkannya di drawer DevTools Obsidian.
+  - Menambahkan tombol "Open DevTools" di navbar saat di dalam Electron untuk meluncurkan developer tools Chromium native bawaan.
+  - Memelihara fallback otomatis menggunakan `iframe` dan reverse proxy backend untuk lingkungan non-Electron (seperti Tauri dan Web browser standar) agar fitur inspeksi elemen tetap berfungsi dengan baik.
+
 ## [1.3.308] - 2026-07-07
 
 ### Added / Changed
