@@ -157,8 +157,9 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
 
         // Position and size update loop (requestAnimationFrame is extremely smooth)
         let lastRect = { left: 0, top: 0, width: 0, height: 0 };
+        let consecutiveErrorCount = 0;
         const updateLoop = async () => {
-          if (!active || !containerRef.current || !webviewInstance) return;
+          if (!active || !containerRef.current || !webviewInstance || tauriWebviewRef.current !== webviewInstance) return;
           const r = containerRef.current.getBoundingClientRect();
 
           // Only call Tauri APIs if bounds actually changed
@@ -172,12 +173,21 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
               await webviewInstance.setPosition(new LogicalPosition(r.left, r.top));
               await webviewInstance.setSize(new LogicalSize(r.width, r.height));
               lastRect = { left: r.left, top: r.top, width: r.width, height: r.height };
+              consecutiveErrorCount = 0; // reset on success
             } catch (err) {
-              console.warn('[BrowserTab] Failed to sync webview bounds:', err);
+              consecutiveErrorCount++;
+              if (consecutiveErrorCount <= 5) {
+                console.warn('[BrowserTab] Failed to sync webview bounds:', err);
+              }
+              if (consecutiveErrorCount >= 10) {
+                console.error('[BrowserTab] Stopping webview bounds sync due to consecutive failures.');
+                active = false;
+                return;
+              }
             }
           }
 
-          if (active) {
+          if (active && tauriWebviewRef.current === webviewInstance) {
             requestAnimationFrame(updateLoop);
           }
         };
@@ -199,7 +209,7 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
         });
       }
     };
-  }, [useTauriWebview]);
+  }, [useTauriWebview, tab.id]);
 
   // Handle URL navigation for native Tauri webview
   useEffect(() => {
@@ -259,6 +269,17 @@ export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
   };
+
+  // Reset state when active tab ID changes to prevent state leaking
+  useEffect(() => {
+    setUrlInput(tab.url || 'http://localhost:3000');
+    setActiveUrl(tab.url || 'http://localhost:3000');
+    setLogs([]);
+    setInspectedElement(null);
+    setIsInspecting(false);
+    setHelperReady(false);
+    setIframeKey(prev => prev + 1);
+  }, [tab.id]);
 
   // Sync tab URL state if changed externally
   useEffect(() => {

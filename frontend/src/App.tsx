@@ -1524,6 +1524,7 @@ export default function App() {
                 if (activeTab.type === 'browser') {
                   return (
                     <BrowserTab
+                      key={activeTab.id}
                       tab={activeTab}
                       onUpdateTabName={(newName) => {
                         setTabs(prev => prev.map(t => t.id === activeTab.id ? { ...t, name: newName } : t));

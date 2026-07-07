@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.322] - 2026-07-07
+
+### Fixed
+- **Fix Infinite Webview Bounds Sync Loop**:
+  - Di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx), loop `updateLoop` bounds sync menggunakan `requestAnimationFrame` kini otomatis berhenti jika webview tidak lagi aktif/valid (`tauriWebviewRef.current !== webviewInstance`).
+  - Menambahkan pembatasan peringatan (`console.warn`) hingga maksimal 5 kali berturut-turut, dan menghentikan loop sepenuhnya setelah 10 kegagalan beruntun untuk menghindari console spamming 60+ FPS dengan error "webview not found".
+  - Di [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx), komponen `BrowserTab` kini diberikan properti `key={activeTab.id}` agar React melepas/unmount instance lama dan membuat yang baru saat berpindah tab.
+  - Menambahkan `useEffect` reset state pada pergantian `tab.id` di `BrowserTab.tsx` untuk membersihkan logs, URL input, dan element inspection state demi keamanan agar data tidak bocor antartab.
+
 ## [1.3.314] - 2026-07-07
 
 ### Fixed
