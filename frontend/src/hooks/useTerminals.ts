@@ -419,19 +419,14 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     setActiveTabId(tabId);
     onTerminalOpen?.();
   }, [tabs, onTerminalOpen]);
-
   const openBrowserTab = useCallback((url: string, name = 'Preview') => {
-    const existing = tabs.find(t => t.type === 'browser' && t.url === url);
-    if (existing) {
-      setActiveTabId(existing.id);
-      onTerminalOpen?.();
-      return;
-    }
-
     const tabId = `browser-${Date.now()}`;
+    const browserTabs = tabs.filter(t => t.type === 'browser');
+    const tabName = browserTabs.length > 0 ? `${name} ${browserTabs.length + 1}` : name;
+
     const newTab: TabData = {
       id: tabId,
-      name,
+      name: tabName,
       type: 'browser',
       url
     };
@@ -440,7 +435,6 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     setActiveTabId(tabId);
     onTerminalOpen?.();
   }, [tabs, onTerminalOpen]);
-
   const closeTerminal = useCallback((tabId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
 
