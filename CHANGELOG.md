@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.313] - 2026-07-07
+
+### Added / Changed
+- **Fix Navigasi JavaScript dalam Proxy Browser (Google Search & SPA)**:
+  - Menambahkan interceptor navigasi berbasis JavaScript pada [tline-helper-code.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/tline-helper-code.ts) dengan meng-override `Location.prototype.href` setter, `location.assign()`, `location.replace()`, `history.pushState()`, dan `history.replaceState()` sehingga semua navigasi programatik (termasuk Google Search yang tidak menggunakan klik link biasa) tetap dialihkan melalui proxy backend.
+
 ## [1.3.312] - 2026-07-07
 
 ### Added / Changed

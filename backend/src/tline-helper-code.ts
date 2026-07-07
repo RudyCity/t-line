@@ -5,6 +5,78 @@ export const TLINE_HELPER_CODE = `(function() {
   console.log('[t-line-helper] Initialized and listening for commands...');
 
   // ----------------------------------------------------
+  // 0. JS Navigation Interceptor (for SPAs and Google-style navigation)
+  // ----------------------------------------------------
+  function proxyNavigateUrl(url) {
+    try {
+      var absoluteUrl = new URL(url, window.location.href).href;
+      if (/^https?:\/\//i.test(absoluteUrl)) {
+        var parsedUrl = new URL(absoluteUrl);
+        var targetOrigin = parsedUrl.origin;
+        var targetPath = parsedUrl.pathname + parsedUrl.search + parsedUrl.hash;
+        var sep = targetPath.indexOf('?') >= 0 ? '&' : '?';
+        return '/api/preview-proxy' + targetPath + sep + 'target=' + encodeURIComponent(targetOrigin);
+      }
+    } catch(e) {}
+    return null;
+  }
+
+  // Override Location.prototype.href setter
+  try {
+    var _locProto = Location.prototype;
+    var _origHrefDesc = Object.getOwnPropertyDescriptor(_locProto, 'href');
+    if (_origHrefDesc && _origHrefDesc.set) {
+      Object.defineProperty(_locProto, 'href', {
+        get: _origHrefDesc.get,
+        set: function(url) {
+          var proxied = proxyNavigateUrl(url);
+          _origHrefDesc.set.call(this, proxied || url);
+        },
+        configurable: true
+      });
+    }
+
+    // Override location.assign
+    var _origAssign = _locProto.assign;
+    _locProto.assign = function(url) {
+      var proxied = proxyNavigateUrl(url);
+      return _origAssign.call(this, proxied || url);
+    };
+
+    // Override location.replace
+    var _origReplace = _locProto.replace;
+    _locProto.replace = function(url) {
+      var proxied = proxyNavigateUrl(url);
+      return _origReplace.call(this, proxied || url);
+    };
+  } catch(e) {
+    console.warn('[t-line-helper] Could not override location methods:', e);
+  }
+
+  // Override history.pushState / replaceState for SPA navigation
+  try {
+    var _origPushState = history.pushState;
+    history.pushState = function(state, title, url) {
+      if (url) {
+        var proxied = proxyNavigateUrl(String(url));
+        if (proxied) return _origPushState.call(this, state, title, proxied);
+      }
+      return _origPushState.apply(this, arguments);
+    };
+
+    var _origReplaceState = history.replaceState;
+    history.replaceState = function(state, title, url) {
+      if (url) {
+        var proxied = proxyNavigateUrl(String(url));
+        if (proxied) return _origReplaceState.call(this, state, title, proxied);
+      }
+      return _origReplaceState.apply(this, arguments);
+    };
+  } catch(e) {
+    console.warn('[t-line-helper] Could not override history methods:', e);
+  }
+
+  // ----------------------------------------------------
   // 1. Error Interception (Console, Global Errors, Promises)
   // ----------------------------------------------------
   function sendErrorToParent(errorData) {
