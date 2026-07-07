@@ -181,6 +181,72 @@ export const TLINE_HELPER_CODE = `(function() {
   }
 
   // ----------------------------------------------------
+  // 2.5. Link and Form Submission Interceptor (to keep browsing in proxy)
+  // ----------------------------------------------------
+  window.addEventListener('click', function(e) {
+    if (isInspectMode) return;
+
+    let target = e.target;
+    while (target && target.tagName !== 'A') {
+      target = target.parentNode;
+    }
+
+    if (target && target.tagName === 'A') {
+      const href = target.getAttribute('href');
+      if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+        let absoluteUrl;
+        try {
+          absoluteUrl = new URL(href, window.location.href).href;
+        } catch (err) {
+          return;
+        }
+
+        if (/^https?:\/\//i.test(absoluteUrl)) {
+          e.preventDefault();
+          try {
+            const parsedUrl = new URL(absoluteUrl);
+            const targetOrigin = parsedUrl.origin;
+            const targetPath = parsedUrl.pathname + parsedUrl.search + parsedUrl.hash;
+            var sep = targetPath.indexOf('?') >= 0 ? '&' : '?';
+            var newUrl = '/api/preview-proxy' + targetPath + sep + 'target=' + encodeURIComponent(targetOrigin);
+            window.location.href = newUrl;
+          } catch (err) {
+            console.error('[t-line-helper] Failed to navigate via proxy:', err);
+          }
+        }
+      }
+    }
+  }, true);
+
+  window.addEventListener('submit', function(e) {
+    const form = e.target;
+    if (!form) return;
+    const action = form.getAttribute('action');
+    if (action) {
+      let absoluteUrl;
+      try {
+        absoluteUrl = new URL(action, window.location.href).href;
+      } catch (err) {
+        return;
+      }
+
+      if (/^https?:\/\//i.test(absoluteUrl)) {
+        e.preventDefault();
+        try {
+          const parsedUrl = new URL(absoluteUrl);
+          const targetOrigin = parsedUrl.origin;
+          const targetPath = parsedUrl.pathname + parsedUrl.search + parsedUrl.hash;
+          document.cookie = 'tline_proxy_target=' + encodeURIComponent(targetOrigin) + '; path=/; SameSite=Lax';
+          form.setAttribute('action', '/api/preview-proxy' + targetPath);
+          form.submit();
+        } catch (err) {
+          console.error('[t-line-helper] Failed to submit form via proxy:', err);
+        }
+      }
+    }
+  }, true);
+
+  // ----------------------------------------------------
   // 3. Parent Message Listener
   // ----------------------------------------------------
   window.addEventListener('message', function(e) {

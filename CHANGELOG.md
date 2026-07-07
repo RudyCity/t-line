@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.312] - 2026-07-07
+
+### Added / Changed
+- **Peningkatan Proxy Browser Preview & Perubahan Default URL**:
+  - Mengubah default URL saat membuka tab Browser Preview dari `https://www.google.com` ke `http://localhost:3000` di [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx) dan [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) agar pengguna langsung terarah ke preview aplikasi lokal yang sedang dikembangkan.
+  - Menambahkan `secure: false` pada middleware proxy Express di [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) untuk mendukung proxy ke server lokal yang menggunakan HTTPS self-signed certificates.
+  - Mengimplementasikan sanitasi dan penulisan ulang (*rewriting*) header `Location` untuk respon redirect (3xx) di backend proxy agar navigasi redirect tetap berada di dalam lingkup proxy (`/api/preview-proxy`).
+  - Menambahkan interceptor navigasi klik link (`<a>`) dan pengiriman form (`<form>`) pada script helper ([tline-helper-code.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/tline-helper-code.ts)) untuk menangkap dan mengalihkan navigasi absolut/relatif agar tetap diproxy oleh backend.
+
 ## [1.3.311] - 2026-07-07
 
 ### Added / Changed

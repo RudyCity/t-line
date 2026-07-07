@@ -85,9 +85,30 @@ const port = process.env.PORT || 5779;
 
 let currentProxyTarget = 'https://www.google.com';
 
+const sanitizeHeaders = (proxyHeaders: any) => {
+  const headers = { ...proxyHeaders };
+  delete headers['content-security-policy'];
+  delete headers['x-frame-options'];
+  
+  if (headers['location']) {
+    const redirectUrl = headers['location'];
+    try {
+      // Check if it's an absolute URL
+      const parsedRedirect = new URL(redirectUrl);
+      const targetOrigin = parsedRedirect.origin;
+      const targetPath = parsedRedirect.pathname + parsedRedirect.search + parsedRedirect.hash;
+      headers['location'] = `/api/preview-proxy${targetPath}${targetPath.includes('?') ? '&' : '?'}target=${encodeURIComponent(targetOrigin)}`;
+    } catch (e) {
+      // If it's already a relative path, let the browser handle it relative to <base> tag
+    }
+  }
+  return headers;
+};
+
 const previewProxy = createProxyMiddleware({
   target: currentProxyTarget,
   changeOrigin: true,
+  secure: false, // Support self-signed certificates and dev https setups
   ws: true,
   pathRewrite: {
     '^/api/preview-proxy': '',
@@ -134,17 +155,13 @@ const previewProxy = createProxyMiddleware({
           } else {
             html = baseTag + helperScript + html;
           }
-          const headers = { ...proxyRes.headers };
+          const headers = sanitizeHeaders(proxyRes.headers);
           delete headers['content-length'];
-          delete headers['content-security-policy'];
-          delete headers['x-frame-options'];
           res.writeHead(proxyRes.statusCode || 200, headers);
           res.end(html);
         });
       } else {
-        const headers = { ...proxyRes.headers };
-        delete headers['content-security-policy'];
-        delete headers['x-frame-options'];
+        const headers = sanitizeHeaders(proxyRes.headers);
         res.writeHead(proxyRes.statusCode || 200, headers);
         proxyRes.pipe(res);
       }

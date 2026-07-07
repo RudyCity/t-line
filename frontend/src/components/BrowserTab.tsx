@@ -31,8 +31,8 @@ interface BrowserTabProps {
 }
 
 export default function BrowserTab({ tab, onUpdateTabName }: BrowserTabProps) {
-  const [urlInput, setUrlInput] = useState(tab.url || 'https://www.google.com');
-  const [activeUrl, setActiveUrl] = useState(tab.url || 'https://www.google.com');
+  const [urlInput, setUrlInput] = useState(tab.url || 'http://localhost:3000');
+  const [activeUrl, setActiveUrl] = useState(tab.url || 'http://localhost:3000');
   const [isInspecting, setIsInspecting] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'console' | 'inspector'>('console');
   
