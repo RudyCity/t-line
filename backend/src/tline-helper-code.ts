@@ -25,7 +25,7 @@ export const TLINE_HELPER_CODE = `(function() {
       var proxyTarget = getProxyTarget();
       var base = proxyTarget ? proxyTarget + '/' : window.location.href;
       var absoluteUrl = new URL(url, base).href;
-      if (/^https?:\/\//i.test(absoluteUrl)) {
+      if (/^https?:\\/\\//i.test(absoluteUrl)) {
         var parsedUrl = new URL(absoluteUrl);
         var targetOrigin = parsedUrl.origin;
         var targetPath = parsedUrl.pathname + parsedUrl.search + parsedUrl.hash;
@@ -289,7 +289,7 @@ export const TLINE_HELPER_CODE = `(function() {
           return;
         }
 
-        if (/^https?:\/\//i.test(absoluteUrl)) {
+        if (/^https?:\\/\\//i.test(absoluteUrl)) {
           e.preventDefault();
           try {
             const parsedUrl = new URL(absoluteUrl);
@@ -318,7 +318,7 @@ export const TLINE_HELPER_CODE = `(function() {
         return;
       }
 
-      if (/^https?:\/\//i.test(absoluteUrl)) {
+      if (/^https?:\\/\\//i.test(absoluteUrl)) {
         e.preventDefault();
         try {
           const parsedUrl = new URL(absoluteUrl);

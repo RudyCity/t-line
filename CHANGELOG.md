@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.339] - 2026-07-07
+
+### Fixed
+- **Fix SyntaxError in Proxy Helper Script**:
+  - Melakukan double-escape pada karakter slash regex (`/`) di [tline-helper-code.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/tline-helper-code.ts).
+  - Ini mencegah pemrosesan template string menganggap karakter escape backslash (`\`) sebagai string escape normal, yang sebelumnya mereduksi regex `://` menjadi `//` sehingga memicu `Uncaught SyntaxError: Unexpected token 'var'` di browser dan menghentikan seluruh logika helper script (termasuk navigasi, pencatatan konsol, dan inspeksi elemen).
+
 ## [1.3.338] - 2026-07-07
 
 ### Changed
