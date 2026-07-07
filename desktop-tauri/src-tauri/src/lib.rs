@@ -619,6 +619,19 @@ fn poll_backend(app_handle: tauri::AppHandle) {
 }
 
 #[tauri::command]
+fn open_webview_devtools(app: tauri::AppHandle, label: String) -> Result<(), String> {
+    if let Some(webview) = app.get_webview(&label) {
+        webview.open_devtools();
+        Ok(())
+    } else if let Some(webview_window) = app.get_webview_window(&label) {
+        webview_window.open_devtools();
+        Ok(())
+    } else {
+        Err(format!("Webview with label {} not found", label))
+    }
+}
+
+#[tauri::command]
 fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json::Value, String> {
     use sysinfo::{Pid, System};
     
@@ -678,7 +691,7 @@ pub fn run() {
             }
         }))
         .manage(state)
-        .invoke_handler(tauri::generate_handler![get_memory_usage])
+        .invoke_handler(tauri::generate_handler![get_memory_usage, open_webview_devtools])
         .setup(move |app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(

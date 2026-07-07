@@ -188,7 +188,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
 
         // Wait for the webview to be fully created before starting the update loop
         // Register error listener asynchronously
-        webviewInstance.once('tauri://error', (err) => {
+        webviewInstance.once('tauri://error', (err: any) => {
           console.error('[BrowserTab] Native webview error:', err);
           if (webviewInstance) {
             webviewInstance.close().catch(() => {});
@@ -576,6 +576,26 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
             }}
             className="flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer"
             title="Open Native Chrome Developer Tools"
+          >
+            <Code2 size={13} />
+            <span>Open DevTools</span>
+          </button>
+        ) : useTauriWebview ? (
+          <button 
+            onClick={async () => {
+              const activeLabel = tauriWebviewRef.current?.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
+              if (activeLabel && (window as any).__TAURI__?.core?.invoke) {
+                try {
+                  await (window as any).__TAURI__.core.invoke('open_webview_devtools', { label: activeLabel });
+                } catch (e) {
+                  console.error('Failed to open Tauri webview devtools:', e);
+                }
+              } else {
+                console.warn('[BrowserTab] No active webview or Tauri API not found');
+              }
+            }}
+            className="flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer"
+            title="Open Webview Developer Tools"
           >
             <Code2 size={13} />
             <span>Open DevTools</span>

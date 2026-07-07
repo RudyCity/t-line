@@ -10,6 +10,9 @@ All notable changes to the **t-line** workspace manager project will be document
   - Memperbaiki pencocokan tag `<head>` pada server proxy di [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) dengan menggunakan regular expression case-insensitive yang mendukung atribut, serta menambahkan fallback ke tag `<html>` atau `<!doctype html>` sebelum menempelkan script ke awal berkas.
   - Menambahkan dukungan dekompresi otomatis (`gzip`, `deflate`, `br` via module `zlib`) untuk memproses respons HTML yang terkompresi dari server target sebelum dilakukan injeksi script helper.
   - Menambahkan pemeriksaan tipe element (`instanceof Element`) dan keberadaan properti (`tagName`, `classList`) pada event handler mouseover dan klik di [tline-helper-code.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/tline-helper-code.ts) guna mencegah eksekusi error saat pengguna mengeklik/menyorot objek teks, SVG, atau window/document.
+- **Fix Webview Inspection (Tauri Dynamic Webview Overlay)**:
+  - Menambahkan command Tauri Rust `open_webview_devtools` pada [lib.rs](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/src/lib.rs) untuk membuka Developer Tools dari dynamic webview target secara langsung di desktop.
+  - Memperbarui navbar di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) agar merender tombol "Open DevTools" (yang memanggil command Rust tersebut) ketika preview dimuat menggunakan Tauri native webview, menggantikan tombol inspect element iframe biasa yang tidak berfungsi pada overlay native.
 
 ## [1.3.334] - 2026-07-07
 
