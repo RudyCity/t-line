@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.368] - 2026-07-08
+
+### Changed
+- **Agent Rules Update**:
+  - Updated rules in [AGENTS.md](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/.agents/AGENTS.md) to replace references to the deprecated Electron desktop component with `desktop-tauri`.
+
 ## [1.3.367] - 2026-07-08
 
 ### Added / Fixed
