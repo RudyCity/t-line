@@ -394,12 +394,14 @@ fn show_error_page(app_handle: &tauri::AppHandle) {
                         document.getElementById('status-text').innerText = 'Starting backend, please wait...';
                         document.getElementById('btn-start').disabled = true;
                         document.getElementById('btn-start').innerText = 'Starting...';
-                        window.__TAURI__.core.invoke('start_backend_command');
+                        
+                        document.title = "action:start_backend";
+                        window.close();
                         
                         let attempts = 0;
                         let interval = setInterval(() => {
                             attempts++;
-                            if (attempts > 5) {
+                            if (attempts > 15) {
                                 clearInterval(interval);
                                 window.location.reload();
                             } else {
@@ -416,7 +418,7 @@ fn show_error_page(app_handle: &tauri::AppHandle) {
                     }
 
                     function quitApp() {
-                        window.__TAURI__.core.invoke('quit_app');
+                        window.close();
                     }
                 </script>
             </body>
@@ -999,8 +1001,33 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.hide();
+                let is_error_page = if let Some(webview_window) = window.get_webview_window("main") {
+                    if let Ok(url) = webview_window.url() {
+                        url.scheme() == "data" || url.path().contains("error")
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                };
+
+                if is_error_page {
+                    api.prevent_close();
+                    let title = window.title().unwrap_or_default();
+                    if title == "action:start_backend" {
+                        println!("[tauri] Start backend requested from error page.");
+                        let _ = window.set_title("t-line Connection Error");
+                        spawn_backend(window.app_handle().clone());
+                    } else {
+                        println!("[tauri] Close app requested from error page. Exiting...");
+                        let state = window.state::<DesktopState>();
+                        stop_backend(&state);
+                        window.app_handle().exit(0);
+                    }
+                } else {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
             }
         })
         .build(tauri::generate_context!())
