@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.356] - 2026-07-08
+
+### Added
+- **Window Controls for Pre-Auth and Connection Error Screens**:
+  - Added a draggable custom title bar with minimize, maximize, and close buttons to the connection error page template.
+  - Implemented window controls support on the client-side pre-auth screens (Login, Loading, and Setup) to provide consistent frame controls on frameless windows.
+
 ## [1.3.355] - 2026-07-08
 
 ### Removed

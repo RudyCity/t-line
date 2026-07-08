@@ -858,8 +858,70 @@ export default function App() {
       }));
     }
   };
-  if (loading) {
+  const renderPreAuthWithControls = (content: React.ReactNode) => {
     return (
+      <div className="relative w-full h-full">
+        {((window as any).electron || (window as any).__TAURI__) && (
+          <div 
+            className="absolute top-0 left-0 right-0 h-8 flex justify-end items-center px-4 z-50 select-none"
+            data-tauri-drag-region
+          >
+            <div className="window-controls flex items-center gap-0.5" style={{ WebkitAppRegion: 'no-drag' } as any}>
+              <button 
+                type="button" 
+                className="window-control-btn" 
+                onClick={async () => {
+                  if ((window as any).electron) {
+                    (window as any).electron.minimize();
+                  } else if ((window as any).__TAURI__) {
+                    const { getCurrentWindow } = (window as any).__TAURI__.window;
+                    await getCurrentWindow().minimize();
+                  }
+                }} 
+                title="Minimize"
+              >
+                <span style={{ fontSize: '10px' }}>—</span>
+              </button>
+              <button 
+                type="button" 
+                className="window-control-btn" 
+                onClick={async () => {
+                  if ((window as any).electron) {
+                    (window as any).electron.maximize();
+                  } else if ((window as any).__TAURI__) {
+                    const { getCurrentWindow } = (window as any).__TAURI__.window;
+                    await getCurrentWindow().toggleMaximize();
+                  }
+                }} 
+                title={isMaximized ? "Restore" : "Maximize"}
+              >
+                <span style={{ fontSize: '10px' }}>{isMaximized ? "❐" : "▢"}</span>
+              </button>
+              <button 
+                type="button" 
+                className="window-control-btn window-control-btn-close" 
+                onClick={async () => {
+                  if ((window as any).electron) {
+                    (window as any).electron.close();
+                  } else if ((window as any).__TAURI__) {
+                    const { getCurrentWindow } = (window as any).__TAURI__.window;
+                    await getCurrentWindow().close();
+                  }
+                }} 
+                title="Close"
+              >
+                <span style={{ fontSize: '10px' }}>✕</span>
+              </button>
+            </div>
+          </div>
+        )}
+        {content}
+      </div>
+    );
+  };
+
+  if (loading) {
+    return renderPreAuthWithControls(
       <div className="auth-wrapper">
         <div className="welcome-panel">
           <Loader2 className="animate-spin text-purple-500" size={40} />
@@ -871,7 +933,7 @@ export default function App() {
 
   // Setup / Password Initialization Screen
   if (setupRequired) {
-    return (
+    return renderPreAuthWithControls(
       <SetupSecurityForm
         onSubmit={handleSetup}
         password={password}
@@ -883,7 +945,7 @@ export default function App() {
 
   // Login Screen
   if (!isAuthenticated) {
-    return (
+    return renderPreAuthWithControls(
       <LoginForm
         onSubmit={handleLogin}
         password={password}

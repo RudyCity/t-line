@@ -396,9 +396,49 @@ fn build_error_page_html(app_url: &str) -> String {
                         opacity: 0.5;
                         cursor: not-allowed;
                     }
+                    .titlebar {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        height: 32px;
+                        display: flex;
+                        justify-content: flex-end;
+                        align-items: center;
+                        padding-right: 8px;
+                        user-select: none;
+                        background: transparent;
+                        z-index: 1000;
+                    }
+                    .titlebar-btn {
+                        display: inline-flex;
+                        justify-content: center;
+                        align-items: center;
+                        width: 28px;
+                        height: 28px;
+                        cursor: pointer;
+                        transition: background-color 0.15s ease, color 0.15s ease;
+                        color: #94a3b8;
+                        font-size: 10px;
+                        font-weight: bold;
+                        border-radius: 4px;
+                    }
+                    .titlebar-btn:hover {
+                        background-color: rgba(255, 255, 255, 0.08);
+                        color: #f8fafc;
+                    }
+                    .titlebar-btn-close:hover {
+                        background-color: #ef4444;
+                        color: white;
+                    }
                 </style>
             </head>
             <body>
+                <div class="titlebar" data-tauri-drag-region style="-webkit-app-region: drag;">
+                    <div class="titlebar-btn" onclick="minimizeWindow()" title="Minimize" style="-webkit-app-region: no-drag;">—</div>
+                    <div class="titlebar-btn" id="btn-maximize" onclick="maximizeWindow()" title="Maximize" style="-webkit-app-region: no-drag;">▢</div>
+                    <div class="titlebar-btn titlebar-btn-close" onclick="closeWindow()" title="Close" style="-webkit-app-region: no-drag;">✕</div>
+                </div>
                 <div class="card">
                     <h1>Backend Offline</h1>
                     <p id="status-text">Timeout waiting for the backend server to start on port 5779. Please make sure no other process is using this port, and try starting the backend.</p>
@@ -409,6 +449,46 @@ fn build_error_page_html(app_url: &str) -> String {
                 </div>
                 <script>
                     const APP_URL = '__APP_URL__';
+
+                    async function minimizeWindow() {
+                        try {
+                            const { getCurrentWindow } = window.__TAURI__.window;
+                            await getCurrentWindow().minimize();
+                        } catch (err) {
+                            console.error(err);
+                        }
+                    }
+
+                    async function maximizeWindow() {
+                        try {
+                            const { getCurrentWindow } = window.__TAURI__.window;
+                            await getCurrentWindow().toggleMaximize();
+                        } catch (err) {
+                            console.error(err);
+                        }
+                    }
+
+                    async function closeWindow() {
+                        try {
+                            const { getCurrentWindow } = window.__TAURI__.window;
+                            await getCurrentWindow().close();
+                        } catch (err) {
+                            console.error(err);
+                        }
+                    }
+
+                    async function updateMaximizeIcon() {
+                        try {
+                            const { getCurrentWindow } = window.__TAURI__.window;
+                            const isMax = await getCurrentWindow().isMaximized();
+                            document.getElementById('btn-maximize').innerText = isMax ? '❐' : '▢';
+                        } catch (err) {
+                            console.error(err);
+                        }
+                    }
+
+                    window.addEventListener('resize', updateMaximizeIcon);
+                    window.addEventListener('DOMContentLoaded', updateMaximizeIcon);
 
                     function setStatus(message) {
                         document.getElementById('status-text').innerText = message;
