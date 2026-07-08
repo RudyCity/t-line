@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.351] - 2026-07-08
+
+### Added
+- **Status Loading pada Tray Menu**:
+  - Menambahkan status `"stopping"` untuk backend, sehingga saat mematikan/restart backend, status menu tray langsung menampilkan `t-line: Stopping...` dan menonaktifkan seluruh tombol aksi (Start/Stop/Restart).
+  - Mengubah penanganan aksi tray "Stop Backend" dan "Restart Backend" menjadi asynchronous (`stop_backend_async` dan `restart_backend_async`) untuk mencegah menu tray membeku (freeze) selama port dilepaskan.
+  - Memperbarui status backend ke `"running"` secara instan di menu tray begitu server aktif dalam thread `spawn_backend`, mengurangi delay polling dari 3 detik menjadi instan.
+
 ## [1.3.350] - 2026-07-08
 
 ### Added

@@ -166,6 +166,7 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
     let status_label = format!("t-line: {}", match status.as_str() {
         "running" => "Running",
         "starting" => "Starting...",
+        "stopping" => "Stopping...",
         _ => "Stopped",
     });
 
@@ -456,6 +457,18 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
         }
 
         if server_ready {
+            {
+                let state = app_handle_clone.state::<DesktopState>();
+                let mut status_guard = state.status.lock().unwrap();
+                *status_guard = "running".to_string();
+            }
+            if let Some(tray) = app_handle_clone.tray_by_id("main_tray") {
+                let state = app_handle_clone.state::<DesktopState>();
+                if let Ok(menu) = build_tray_menu(&app_handle_clone, &state) {
+                    let _ = tray.set_menu(Some(menu));
+                }
+            }
+
             if bypass_token.is_none() {
                 for _ in 0..5 {
                     bypass_token = get_bypass_token();
@@ -603,10 +616,46 @@ fn stop_backend(state: &DesktopState) {
     }
 }
 
-fn restart_backend(app_handle: &tauri::AppHandle) {
+fn stop_backend_async(app_handle: tauri::AppHandle) {
     let state = app_handle.state::<DesktopState>();
-    stop_backend(&state);
-    spawn_backend(app_handle.clone());
+    {
+        let mut status_guard = state.status.lock().unwrap();
+        *status_guard = "stopping".to_string();
+    }
+    if let Some(tray) = app_handle.tray_by_id("main_tray") {
+        if let Ok(menu) = build_tray_menu(&app_handle, &state) {
+            let _ = tray.set_menu(Some(menu));
+        }
+    }
+    let app_handle_clone = app_handle.clone();
+    thread::spawn(move || {
+        let state = app_handle_clone.state::<DesktopState>();
+        stop_backend(&state);
+        if let Some(tray) = app_handle_clone.tray_by_id("main_tray") {
+            if let Ok(menu) = build_tray_menu(&app_handle_clone, &state) {
+                let _ = tray.set_menu(Some(menu));
+            }
+        }
+    });
+}
+
+fn restart_backend_async(app_handle: tauri::AppHandle) {
+    let state = app_handle.state::<DesktopState>();
+    {
+        let mut status_guard = state.status.lock().unwrap();
+        *status_guard = "stopping".to_string();
+    }
+    if let Some(tray) = app_handle.tray_by_id("main_tray") {
+        if let Ok(menu) = build_tray_menu(&app_handle, &state) {
+            let _ = tray.set_menu(Some(menu));
+        }
+    }
+    let app_handle_clone = app_handle.clone();
+    thread::spawn(move || {
+        let state = app_handle_clone.state::<DesktopState>();
+        stop_backend(&state);
+        spawn_backend(app_handle_clone);
+    });
 }
 
 fn restart_desktop_app() {
@@ -647,6 +696,12 @@ fn poll_backend(app_handle: tauri::AppHandle) {
                     "running".to_string()
                 } else {
                     "starting".to_string()
+                }
+            } else if current_status == "stopping" {
+                if running {
+                    "stopping".to_string()
+                } else {
+                    "stopped".to_string()
                 }
             } else {
                 new_status
@@ -811,10 +866,9 @@ pub fn run() {
                     } else if id_str == "start_backend" {
                         spawn_backend(app_handle.clone());
                     } else if id_str == "stop_backend" {
-                        let state = app_handle.state::<DesktopState>();
-                        stop_backend(&state);
+                        stop_backend_async(app_handle.clone());
                     } else if id_str == "restart_backend" {
-                        restart_backend(app_handle);
+                        restart_backend_async(app_handle.clone());
                     } else if id_str == "restart_desktop" {
                         let state = app_handle.state::<DesktopState>();
                         stop_backend(&state);
