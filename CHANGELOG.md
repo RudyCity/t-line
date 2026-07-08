@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.355] - 2026-07-08
+
+### Removed
+- **Close Button on Connection Error Page**:
+  - Removed the "Close App" button and the `quitApp` JS function from the backend offline error page.
+  - Updated the error text to remove reference to closing the app.
+  - Removed the corresponding `error_page_close_uses_invoke` unit test.
+
 ## [1.3.354] - 2026-07-08
 
 ### Fixed

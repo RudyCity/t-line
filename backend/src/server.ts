@@ -297,6 +297,26 @@ const previewProxy = createProxyMiddleware({
   }
 });
 
+// Sanitize Origin header before CORS sees it. The Tauri webview (and some
+// browsers under privacy modes / sandboxed contexts) can send `Origin: null`
+// or other non-URL values. `cors@2.8.5` throws "Origin header is not a valid
+// URL" on those, crashing the request pipeline. Drop invalid origins so CORS
+// treats the request as a non-CORS / same-origin call.
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (typeof origin === 'string' && origin.length > 0) {
+    try {
+      // eslint-disable-next-line no-new
+      new URL(origin);
+    } catch {
+      delete req.headers.origin;
+    }
+  } else if (origin !== undefined) {
+    delete req.headers.origin;
+  }
+  next();
+});
+
 app.use(cors());
 app.use(express.json());
 

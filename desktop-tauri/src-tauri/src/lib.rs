@@ -72,6 +72,26 @@ fn get_bypass_token() -> Option<String> {
     }
 }
 
+fn app_base_url() -> &'static str {
+    if cfg!(debug_assertions) {
+        "http://localhost:5773"
+    } else {
+        "http://localhost:5779"
+    }
+}
+
+fn app_url_with_token(token: Option<String>) -> String {
+    let base_url = app_base_url();
+    match token {
+        Some(token) if !token.is_empty() => format!("{}/?token={}", base_url, token),
+        _ => base_url.to_string(),
+    }
+}
+
+fn current_app_url() -> String {
+    app_url_with_token(get_bypass_token())
+}
+
 fn is_node_installed() -> bool {
     Command::new("node")
         .arg("--version")
@@ -315,9 +335,8 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
     Ok(menu)
 }
 
-fn show_error_page(app_handle: &tauri::AppHandle) {
-    if let Some(main_window) = app_handle.get_webview_window("main") {
-        let error_html = r#"
+fn build_error_page_html(app_url: &str) -> String {
+    r#"
             <!DOCTYPE html>
             <html>
             <head>
@@ -382,51 +401,107 @@ fn show_error_page(app_handle: &tauri::AppHandle) {
             <body>
                 <div class="card">
                     <h1>Backend Offline</h1>
-                    <p id="status-text">Timeout waiting for the backend server to start on port 5779. Please make sure no other process is using this port, and try starting the backend or closing the app.</p>
+                    <p id="status-text">Timeout waiting for the backend server to start on port 5779. Please make sure no other process is using this port, and try starting the backend.</p>
                     <div class="btn-group">
                         <button id="btn-start" class="btn-primary" onclick="startBackend()">Start Backend</button>
-                        <button class="btn-secondary" onclick="window.location.reload()">Retry Connection</button>
-                        <button class="btn-danger" onclick="quitApp()">Close App</button>
+                        <button id="btn-retry" class="btn-secondary" onclick="retryConnection()">Retry Connection</button>
                     </div>
                 </div>
                 <script>
-                    function startBackend() {
-                        document.getElementById('status-text').innerText = 'Starting backend, please wait...';
-                        document.getElementById('btn-start').disabled = true;
-                        document.getElementById('btn-start').innerText = 'Starting...';
-                        
-                        document.title = "action:start_backend";
-                        window.close();
-                        
+                    const APP_URL = '__APP_URL__';
+
+                    function setStatus(message) {
+                        document.getElementById('status-text').innerText = message;
+                    }
+
+                    function setButtonsDisabled(disabled) {
+                        document.getElementById('btn-start').disabled = disabled;
+                        document.getElementById('btn-retry').disabled = disabled;
+                    }
+
+                    function checkBackendHealth() {
+                        return fetch('http://127.0.0.1:5779/api/health', { cache: 'no-store' })
+                            .then(res => {
+                                if (!res.ok) {
+                                    throw new Error('Backend returned ' + res.status);
+                                }
+                                return true;
+                            });
+                    }
+
+                    async function loadApp() {
+                        try {
+                            const appUrl = await window.__TAURI__.core.invoke('get_app_url');
+                            window.location.href = appUrl || APP_URL;
+                        } catch (err) {
+                            console.error(err);
+                            window.location.href = APP_URL;
+                        }
+                    }
+
+                    function retryConnection() {
+                        setButtonsDisabled(true);
+                        setStatus('Checking backend connection...');
+
+                        checkBackendHealth()
+                            .then(loadApp)
+                            .catch(() => {
+                                setStatus('Backend is still offline. Start it or try again in a moment.');
+                                setButtonsDisabled(false);
+                            });
+                    }
+
+                    function waitForBackend() {
                         let attempts = 0;
-                        let interval = setInterval(() => {
-                            attempts++;
-                            if (attempts > 15) {
-                                clearInterval(interval);
-                                window.location.reload();
-                            } else {
-                                fetch('http://127.0.0.1:5779/api/health')
-                                    .then(res => {
-                                        if (res.ok) {
-                                            clearInterval(interval);
-                                            window.location.reload();
-                                        }
-                                    })
-                                    .catch(() => {});
-                            }
+                        const interval = setInterval(() => {
+                            attempts += 1;
+                            checkBackendHealth()
+                                .then(() => {
+                                    clearInterval(interval);
+                                    loadApp();
+                                })
+                                .catch(() => {
+                                    if (attempts >= 20) {
+                                        clearInterval(interval);
+                                        setStatus('Backend did not become ready. Check the tray menu or backend log, then try again.');
+                                        setButtonsDisabled(false);
+                                        document.getElementById('btn-start').innerText = 'Start Backend';
+                                    }
+                                });
                         }, 1000);
                     }
 
-                    function quitApp() {
-                        document.title = "action:quit_app";
-                        window.close();
+                    async function startBackend() {
+                        setStatus('Starting backend, please wait...');
+                        setButtonsDisabled(true);
+                        document.getElementById('btn-start').innerText = 'Starting...';
+
+                        try {
+                            await window.__TAURI__.core.invoke('start_backend_command');
+                            waitForBackend();
+                        } catch (err) {
+                            console.error('start_backend_command failed', err);
+                            setStatus('Failed to start backend: ' + err);
+                            setButtonsDisabled(false);
+                            document.getElementById('btn-start').innerText = 'Start Backend';
+                        }
                     }
+
                 </script>
             </body>
             </html>
-        "#;
-        
-        let data_url = format!("data:text/html;charset=utf-8,{}", percent_encode_html(error_html));
+        "#.replace("__APP_URL__", app_url)
+}
+
+fn show_error_page(app_handle: &tauri::AppHandle) {
+    if let Some(main_window) = app_handle.get_webview_window("main") {
+        let app_url = current_app_url();
+        let error_html = build_error_page_html(&app_url);
+
+        let data_url = format!(
+            "data:text/html;charset=utf-8,{}",
+            percent_encode_html(&error_html)
+        );
         if let Ok(parsed_url) = tauri::Url::parse(&data_url) {
             main_window.navigate(parsed_url).ok();
         }
@@ -579,6 +654,50 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
             }
         }
 
+        // In dev mode the webview navigates to Vite (port 5773). spawn_backend
+        // only started the Node backend on 5779, leaving 5773 dead and the
+        // webview blank. Launch the Vite dev server here and wait for it.
+        if is_dev {
+            if !is_port_active(5773) {
+                if let Some(ws_root) = find_workspace_root() {
+                    println!("[tauri] Dev mode: Spawning Vite dev server from workspace root: {:?}", ws_root);
+                    #[cfg(windows)]
+                    {
+                        let _ = Command::new("cmd")
+                            .args(&["/c", "npm", "run", "dev:frontend"])
+                            .current_dir(&ws_root)
+                            .stdout(Stdio::null())
+                            .stderr(Stdio::null())
+                            .spawn();
+                    }
+                    #[cfg(not(windows))]
+                    {
+                        let _ = Command::new("npm")
+                            .args(&["run", "dev:frontend"])
+                            .current_dir(&ws_root)
+                            .stdout(Stdio::null())
+                            .stderr(Stdio::null())
+                            .spawn();
+                    }
+                } else {
+                    eprintln!("[tauri] Dev mode: could not locate workspace root; skipping Vite spawn.");
+                }
+            } else {
+                println!("[tauri] Dev mode: Vite already running on port 5773.");
+            }
+
+            let vite_start = Instant::now();
+            while vite_start.elapsed() < Duration::from_secs(30) {
+                if is_port_active(5773) {
+                    break;
+                }
+                thread::sleep(Duration::from_millis(250));
+            }
+            if !is_port_active(5773) {
+                eprintln!("[tauri] Dev mode: Vite dev server did not become ready on port 5773 within 30s.");
+            }
+        }
+
         let start_time = Instant::now();
         let mut server_ready = false;
         while start_time.elapsed() < Duration::from_secs(15) {
@@ -612,16 +731,7 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
                 }
             }
 
-            let base_url = if is_dev {
-                "http://localhost:5773"
-            } else {
-                "http://localhost:5779"
-            };
-
-            let url = match bypass_token {
-                Some(token) => format!("{}/?token={}", base_url, token),
-                None => base_url.to_string(),
-            };
+            let url = app_url_with_token(bypass_token);
 
             println!("[tauri] Server ready. Loading URL: {}", url);
 
@@ -854,6 +964,11 @@ fn start_backend_command(app: tauri::AppHandle) {
 }
 
 #[tauri::command]
+fn get_app_url() -> String {
+    current_app_url()
+}
+
+#[tauri::command]
 fn open_webview_devtools(app: tauri::AppHandle, label: String) -> Result<(), String> {
     if let Some(webview) = app.get_webview(&label) {
         webview.open_devtools();
@@ -926,7 +1041,13 @@ pub fn run() {
             }
         }))
         .manage(state)
-        .invoke_handler(tauri::generate_handler![get_memory_usage, open_webview_devtools, quit_app, start_backend_command])
+        .invoke_handler(tauri::generate_handler![
+            get_memory_usage,
+            open_webview_devtools,
+            quit_app,
+            start_backend_command,
+            get_app_url
+        ])
         .setup(move |app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -1002,36 +1123,8 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                let is_error_page = if let Some(webview_window) = window.get_webview_window("main") {
-                    if let Ok(url) = webview_window.url() {
-                        url.scheme() == "data" || url.path().contains("error")
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                };
-
-                if is_error_page {
-                    api.prevent_close();
-                    let title = window.title().unwrap_or_default();
-                    if title == "action:start_backend" {
-                        println!("[tauri] Start backend requested from error page.");
-                        let _ = window.set_title("t-line Connection Error");
-                        spawn_backend(window.app_handle().clone());
-                    } else if title == "action:quit_app" {
-                        println!("[tauri] Quit app requested from error page. Exiting...");
-                        let state = window.state::<DesktopState>();
-                        stop_backend(&state);
-                        window.app_handle().exit(0);
-                    } else {
-                        // Default: hide window (minimize to tray)
-                        let _ = window.hide();
-                    }
-                } else {
-                    api.prevent_close();
-                    let _ = window.hide();
-                }
+                api.prevent_close();
+                let _ = window.hide();
             }
         })
         .build(tauri::generate_context!())
@@ -1043,4 +1136,36 @@ pub fn run() {
             stop_backend(&state);
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_error_page_html;
+
+    #[test]
+    fn error_page_start_backend_uses_invoke() {
+        let html = build_error_page_html("http://localhost:5779");
+
+        assert!(html.contains("__TAURI__.core.invoke('start_backend_command')"));
+        assert!(!html.contains("document.title = \"action:start_backend\""));
+    }
+
+    #[test]
+    fn error_page_retry_loads_backend_after_health_check() {
+        let html = build_error_page_html("http://localhost:5779");
+
+        assert!(html.contains("function retryConnection()"));
+        assert!(html.contains("fetch('http://127.0.0.1:5779/api/health'"));
+        assert!(html.contains("const APP_URL = 'http://localhost:5779'"));
+        assert!(html.contains("window.location.href = APP_URL"));
+    }
+
+    #[test]
+    fn error_page_load_app_requests_current_url_from_tauri() {
+        let html = build_error_page_html("http://localhost:5779");
+
+        assert!(html.contains("__TAURI__.core.invoke('get_app_url')"));
+        assert!(html.contains("window.location.href = appUrl || APP_URL"));
+    }
+
 }
