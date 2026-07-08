@@ -452,6 +452,21 @@ app.get('/api/preview-proxy/tline-helper.js', (req, res) => {
   res.send(TLINE_HELPER_CODE);
 });
 
+app.post('/api/preview-proxy/event', (req, res) => {
+  const { type, payload, tabId } = req.body;
+  for (const ws of activeWebSockets) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'tline-preview-event',
+        tabId,
+        eventType: type,
+        payload
+      }));
+    }
+  }
+  res.json({ ok: true });
+});
+
 app.use('/api/preview-proxy', previewProxy);
 
 app.get('/tline-helper.js', (req, res) => {

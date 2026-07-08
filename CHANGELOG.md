@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.369] - 2026-07-08
+
+### Added / Changed
+- **WebSocket-Bridged Webview Inspection and Logging for Tauri**:
+  - Integrated a custom event bridging system that routes child webview click selection, console error capture, and load ready events via the Express proxy to the main UI window.
+  - Implemented HTTP POST `/api/preview-proxy/event` on the Express backend to capture events from the helper script and broadcast them to all active WebSocket clients.
+  - Configured `previewProxy.ts` to attach `tabId` to each proxied document request and inject `window.__TLINE_TAB_ID__` to partition events correctly.
+  - Added WebSocket listeners in `BrowserTab.tsx` to handle logs and element selections, enabling the bottom DevTools drawer in Tauri mode.
+  - Enabled programmatic script injection and inspect toggling in Tauri child Webviews using `Webview.eval()`, and granted the necessary `"core:webview:allow-eval"` capability.
+
 ## [1.3.368] - 2026-07-08
 
 ### Changed

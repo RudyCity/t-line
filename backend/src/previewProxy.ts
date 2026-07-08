@@ -89,15 +89,26 @@ export const previewProxy = createProxyMiddleware({
     proxyReq: (proxyReq, req, res) => {
       const acceptHeader = (req.headers.accept || '').toLowerCase();
       const isDocRequest = acceptHeader.includes('text/html');
-      const urlParams = new URL(req.url || '', `http://${req.headers.host}`);
-      const target = urlParams.searchParams.get('target');
-      if (target && isDocRequest) {
-        res.setHeader('Set-Cookie', `tline_proxy_target=${encodeURIComponent(target)}; Path=/; SameSite=Lax`);
-      }
-      // Strip the 'target' param before forwarding to avoid confusing the target server
+      const origUrl = (req as any).originalUrl || req.url || '';
+      try {
+        const urlParams = new URL(origUrl, `http://${req.headers.host || 'localhost'}`);
+        const target = urlParams.searchParams.get('target');
+        if (target && isDocRequest) {
+          res.setHeader('Set-Cookie', `tline_proxy_target=${encodeURIComponent(target)}; Path=/; SameSite=Lax`);
+        }
+        
+        // Capture tabId and attach to req for HTML injection in proxyRes
+        const tabId = urlParams.searchParams.get('tabId');
+        if (tabId) {
+          (req as any).tlineTabId = tabId;
+        }
+      } catch (e) {}
+
+      // Strip the 'target' and 'tabId' params before forwarding to avoid confusing the target server
       try {
         const parsedPath = new URL(proxyReq.path, 'http://localhost');
         parsedPath.searchParams.delete('target');
+        parsedPath.searchParams.delete('tabId');
         proxyReq.path = parsedPath.pathname + (parsedPath.search || '');
       } catch (e) {}
       // Force target to send uncompressed content so we can modify the HTML safely
@@ -133,7 +144,8 @@ export const previewProxy = createProxyMiddleware({
           const baseTag = `<base href="/api/preview-proxy/">`;
           // Inject the current proxy target as a global variable so the helper script
           // can correctly resolve relative URLs against the real target origin
-          const targetVar = `<script>window.__TLINE_PROXY_TARGET__="${currentProxyTarget}";</script>`;
+          const tabIdVar = `window.__TLINE_TAB_ID__="${(req as any).tlineTabId || ''}";`;
+          const targetVar = `<script>window.__TLINE_PROXY_TARGET__="${currentProxyTarget}"; ${tabIdVar}</script>`;
           const helperScript = `<script src="/api/preview-proxy/tline-helper.js"></script>`;
           
           // Robust case-insensitive head, html, or doctype tag injection

@@ -5,6 +5,7 @@ import {
   ChevronDown, ChevronUp, ExternalLink, MonitorSmartphone
 } from 'lucide-react';
 import { TabData } from '../hooks/useTerminals';
+import { wsManager } from '../services/websocket';
 
 interface ConsoleErrorLog {
   id: string;
@@ -77,6 +78,15 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
   const useElectronWebview = isElectron; // Use native Electron webview tag when in Electron
   const useTauriWebview = isTauri;       // Enable native Tauri webview overlay on Tauri platform
 
+  const getBackendProxyUrl = (url: string) => {
+    const proxyPath = `/api/preview-proxy?target=${encodeURIComponent(url)}&tabId=${tab.id}`;
+    let backendOrigin = window.location.origin;
+    if (backendOrigin.includes('localhost:5773') || backendOrigin.includes('127.0.0.1:5773')) {
+      backendOrigin = backendOrigin.replace('5773', '5779');
+    }
+    return `${backendOrigin}${proxyPath}`;
+  };
+
   const openInSystemBrowser = async (url: string) => {
     try {
       await fetch('/api/browser/open', {
@@ -146,8 +156,9 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
         const uniqueLabel = 'browser-webview-' + tab.id + '-' + Math.random().toString(36).substring(2, 9);
         sessionStorage.setItem(sessionStorageKey, uniqueLabel);
 
+        const targetUrl = activeUrl ? getBackendProxyUrl(activeUrl) : '';
         webviewInstance = new Webview(currentWindow, uniqueLabel, {
-          url: activeUrl,
+          url: targetUrl,
           x: rect.left,
           y: rect.top,
           width: rect.width,
@@ -388,6 +399,58 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     return () => window.removeEventListener('message', handleMessage);
   }, [isInspecting]);
 
+  // Listen to WebSocket preview events from native Webview
+  useEffect(() => {
+    if (!useTauriWebview) return;
+
+    const handleWsMessage = (payload: any) => {
+      if (payload.type === 'tline-preview-event' && payload.tabId === tab.id) {
+        const { eventType, payload: eventPayload } = payload;
+        
+        if (eventType === 'tline-ready') {
+          setHelperReady(true);
+          if (isInspecting && tauriWebviewRef.current) {
+            tauriWebviewRef.current.eval(`window.postMessage({ type: "tline-start-inspect" }, "*")`).catch(() => {});
+          }
+        }
+
+        if (eventType === 'tline-url-changed' && eventPayload?.url) {
+          setUrlInput(eventPayload.url);
+          if (onUpdateTabName) {
+            try {
+              const hostname = new URL(eventPayload.url).hostname;
+              onUpdateTabName(`Preview: ${hostname}`);
+            } catch (_) {}
+          }
+        }
+
+        if (eventType === 'tline-error') {
+          const newLog: ConsoleErrorLog = {
+            id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            timestamp: new Date().toLocaleTimeString(),
+            message: eventPayload.message,
+            filename: eventPayload.filename,
+            lineno: eventPayload.lineno,
+            colno: eventPayload.colno,
+            stack: eventPayload.stack
+          };
+          setLogs(prev => [newLog, ...prev].slice(0, 100));
+        }
+
+        if (eventType === 'tline-element-selected') {
+          setInspectedElement(eventPayload);
+          setIsInspecting(false);
+          setActiveSubTab('inspector');
+        }
+      }
+    };
+
+    wsManager.addGlobalMessageListener(handleWsMessage);
+    return () => {
+      wsManager.removeGlobalMessageListener(handleWsMessage);
+    };
+  }, [useTauriWebview, tab.id, isInspecting]);
+
   const handleNavigate = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     let targetUrl = urlInput.trim();
@@ -429,10 +492,12 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     if (tauriWebviewRef.current && useTauriWebview) {
       if (typeof tauriWebviewRef.current.reload === 'function') {
         tauriWebviewRef.current.reload().catch(() => {
-          tauriWebviewRef.current.navigate(activeUrl).catch((err: any) => console.error(err));
+          const targetUrl = activeUrl ? getBackendProxyUrl(activeUrl) : '';
+          tauriWebviewRef.current.navigate(targetUrl).catch((err: any) => console.error(err));
         });
       } else {
-        tauriWebviewRef.current.navigate(activeUrl).catch((err: any) => console.error(err));
+        const targetUrl = activeUrl ? getBackendProxyUrl(activeUrl) : '';
+        tauriWebviewRef.current.navigate(targetUrl).catch((err: any) => console.error(err));
       }
     } else {
       setIframeKey(prev => prev + 1);
@@ -442,7 +507,16 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
   const toggleInspect = () => {
     const nextState = !isInspecting;
     setIsInspecting(nextState);
-    if (iframeRef.current?.contentWindow) {
+    if (useTauriWebview && tauriWebviewRef.current) {
+      try {
+        const cmd = nextState ? 'tline-start-inspect' : 'tline-stop-inspect';
+        tauriWebviewRef.current.eval(`window.postMessage({ type: "${cmd}" }, "*")`).catch((e: any) => {
+          console.warn('[BrowserTab] Failed to eval inspect command in Webview:', e);
+        });
+      } catch (e) {
+        console.warn('[BrowserTab] Webview eval error:', e);
+      }
+    } else if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage({
         type: nextState ? 'tline-start-inspect' : 'tline-stop-inspect'
       }, '*');
@@ -497,7 +571,7 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
   };
 
   // Point the iframe to our dynamic proxy served by t-line's backend
-  const proxyUrl = `/api/preview-proxy?target=${encodeURIComponent(activeUrl)}`;
+  const proxyUrl = `/api/preview-proxy?target=${encodeURIComponent(activeUrl)}&tabId=${tab.id}`;
 
   return (
     <div 
@@ -533,57 +607,52 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
           </button>
         </form>
 
-        {useElectronWebview ? (
-          <button 
-            onClick={() => {
-              if (webviewEl) {
-                try {
-                  webviewEl.openDevTools();
-                } catch (e) {
-                  console.error('Failed to open native devtools:', e);
+        <div className="flex gap-2">
+          {/* Open DevTools button (available in Electron or Tauri) */}
+          {(useElectronWebview || useTauriWebview) && (
+            <button 
+              onClick={async () => {
+                if (useElectronWebview && webviewEl) {
+                  try {
+                    webviewEl.openDevTools();
+                  } catch (e) {
+                    console.error('Failed to open native devtools:', e);
+                  }
+                } else if (useTauriWebview) {
+                  const activeLabel = tauriWebviewRef.current?.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
+                  if (activeLabel && (window as any).__TAURI__?.core?.invoke) {
+                    try {
+                      await (window as any).__TAURI__.core.invoke('open_webview_devtools', { label: activeLabel });
+                    } catch (e) {
+                      console.error('Failed to open Tauri webview devtools:', e);
+                    }
+                  }
                 }
-              }
-            }}
-            className="flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer"
-            title="Open Native Chrome Developer Tools"
-          >
-            <Code2 size={13} />
-            <span>Open DevTools</span>
-          </button>
-        ) : useTauriWebview ? (
-          <button 
-            onClick={async () => {
-              const activeLabel = tauriWebviewRef.current?.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
-              if (activeLabel && (window as any).__TAURI__?.core?.invoke) {
-                try {
-                  await (window as any).__TAURI__.core.invoke('open_webview_devtools', { label: activeLabel });
-                } catch (e) {
-                  console.error('Failed to open Tauri webview devtools:', e);
-                }
-              } else {
-                console.warn('[BrowserTab] No active webview or Tauri API not found');
-              }
-            }}
-            className="flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer"
-            title="Open Webview Developer Tools"
-          >
-            <Code2 size={13} />
-            <span>Open DevTools</span>
-          </button>
-        ) : (
-          <button 
-            onClick={toggleInspect}
-            className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold border transition-all ${
-              isInspecting 
-                ? 'bg-purple-600/20 border-purple-500 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.25)]' 
-                : 'bg-transparent border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
-            }`}
-            title="Inspect Element (Click and select an item in the preview)"
-          >
-            <MousePointer size={13} className={isInspecting ? 'animate-pulse' : ''} />
-            <span>{isInspecting ? 'Inspecting...' : 'Inspect Element'}</span>
-          </button>
-        )}
+              }}
+              className="flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer"
+              title="Open Developer Tools"
+            >
+              <Code2 size={13} />
+              <span>Open DevTools</span>
+            </button>
+          )}
+
+          {/* Inspect Element button (available in iframe or Tauri Webview) */}
+          {!useElectronWebview && (
+            <button 
+              onClick={toggleInspect}
+              className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold border transition-all ${
+                isInspecting 
+                  ? 'bg-purple-600/20 border-purple-500 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.25)]' 
+                  : 'bg-transparent border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
+              }`}
+              title="Inspect Element (Click and select an item in the preview)"
+            >
+              <MousePointer size={13} className={isInspecting ? 'animate-pulse' : ''} />
+              <span>{isInspecting ? 'Inspecting...' : 'Inspect Element'}</span>
+            </button>
+          )}
+        </div>
 
       </div>
 
@@ -709,11 +778,10 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
 
 
         {/* DevTools Drawer (Obsidian Theme style) */}
-        {!useTauriWebview && (
-          <div 
-            style={{ height: isDevtoolsCollapsed ? '38px' : `${devtoolsHeight}px` }}
-            className={`border-t border-[var(--border-color)] bg-[var(--bg-card)] flex flex-col shrink-0 relative ${isResizing ? '' : 'transition-[height] duration-200'}`}
-          >
+        <div 
+          style={{ height: isDevtoolsCollapsed ? '38px' : `${devtoolsHeight}px` }}
+          className={`border-t border-[var(--border-color)] bg-[var(--bg-card)] flex flex-col shrink-0 relative ${isResizing ? '' : 'transition-[height] duration-200'}`}
+        >
           {/* Resize Handle */}
           {!isDevtoolsCollapsed && (
             <div 
@@ -942,8 +1010,7 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
 
             </div>
           )}
-          </div>
-        )}
+        </div>
 
       </div>
     </div>

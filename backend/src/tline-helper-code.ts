@@ -1,6 +1,7 @@
 export const TLINE_HELPER_CODE = `(function() {
-  // Only run if we are inside an iframe
-  if (window.self === window.top) return;
+  // Only run if we are inside an iframe OR if running under the preview proxy path
+  var isProxied = window.location.pathname.indexOf('/api/preview-proxy') === 0;
+  if (window.self === window.top && !isProxied) return;
 
   console.log('[t-line-helper] Initialized and listening for commands...');
 
@@ -166,11 +167,26 @@ export const TLINE_HELPER_CODE = `(function() {
   // ----------------------------------------------------
   // 1. Error Interception (Console, Global Errors, Promises)
   // ----------------------------------------------------
+  function sendPreviewEvent(type, payload) {
+    // 1. Send via postMessage to parent iframe (if any)
+    try {
+      window.parent.postMessage({ type: type, payload: payload }, '*');
+    } catch (e) {}
+
+    // 2. Send via HTTP POST to Express backend if we are running in the proxy
+    if (isProxied) {
+      try {
+        var tabId = window.__TLINE_TAB_ID__ || null;
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/preview-proxy/event', true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(JSON.stringify({ type: type, payload: payload, tabId: tabId }));
+      } catch (e) {}
+    }
+  }
+
   function sendErrorToParent(errorData) {
-    window.parent.postMessage({
-      type: 'tline-error',
-      payload: errorData
-    }, '*');
+    sendPreviewEvent('tline-error', errorData);
   }
 
   // Hook global uncaught errors
@@ -316,10 +332,7 @@ export const TLINE_HELPER_CODE = `(function() {
       selectorPath: target instanceof Element ? getCssSelector(target) : ''
     };
 
-    window.parent.postMessage({
-      type: 'tline-element-selected',
-      payload: payload
-    }, '*');
+    sendPreviewEvent('tline-element-selected', payload);
 
     disableInspectMode();
   }
@@ -422,7 +435,7 @@ export const TLINE_HELPER_CODE = `(function() {
 
 
   // Send an initial handshake/ready message to the parent frame
-  window.parent.postMessage({ type: 'tline-ready' }, '*');
+  sendPreviewEvent('tline-ready', null);
 
   // Notify parent of the current real URL (so URL bar stays in sync after navigation)
   function notifyUrlChanged() {
@@ -430,7 +443,7 @@ export const TLINE_HELPER_CODE = `(function() {
     if (proxyTarget) {
       try {
         var realUrl = new URL(window.location.pathname + window.location.search + window.location.hash, proxyTarget + '/').href;
-        window.parent.postMessage({ type: 'tline-url-changed', payload: { url: realUrl } }, '*');
+        sendPreviewEvent('tline-url-changed', { url: realUrl });
       } catch(e) {}
     }
   }
