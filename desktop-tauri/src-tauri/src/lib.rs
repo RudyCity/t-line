@@ -25,7 +25,7 @@ fn find_workspace_root() -> Option<PathBuf> {
     let exe_path = std::env::current_exe().ok()?;
     let mut path = exe_path.as_path();
     while let Some(parent) = path.parent() {
-        if parent.join("package.json").exists() && parent.join("backend").exists() {
+        if parent.join("package.json").exists() && parent.join("backend").exists() && parent.join("desktop-tauri").exists() {
             return Some(parent.to_path_buf());
         }
         path = parent;
@@ -541,24 +541,81 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
                             }
                             h1 { color: #f59e0b; margin-bottom: 16px; }
                             p { color: #94a3b8; line-height: 1.6; margin-bottom: 24px; }
+                            .btn-group {
+                                display: flex;
+                                gap: 12px;
+                                justify-content: center;
+                            }
                             button {
-                                background: #6366f1;
-                                color: white;
-                                border: none;
                                 padding: 10px 20px;
                                 border-radius: 8px;
                                 font-weight: 600;
                                 cursor: pointer;
+                                border: none;
+                                transition: all 0.2s;
                             }
-                            button:hover { background: #818cf8; }
+                            .btn-primary {
+                                background: #6366f1;
+                                color: white;
+                            }
+                            .btn-primary:hover:not(:disabled) { background: #818cf8; }
+                            .btn-secondary {
+                                background: rgba(255, 255, 255, 0.08);
+                                color: #e2e8f0;
+                                border: 1px solid rgba(255, 255, 255, 0.1);
+                            }
+                            .btn-secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.15); }
+                            .btn-danger {
+                                background: #ef4444;
+                                color: white;
+                            }
+                            .btn-danger:hover:not(:disabled) { background: #f87171; }
+                            button:disabled {
+                                opacity: 0.5;
+                                cursor: not-allowed;
+                            }
                         </style>
                     </head>
                     <body>
                         <div class="card">
                             <h1>Backend Offline</h1>
-                            <p>Timeout waiting for the backend server to start on port 5779. Please make sure no other process is using this port, and try restarting the backend from the system tray menu.</p>
-                            <button onclick="window.location.reload()">Retry Connection</button>
+                            <p id="status-text">Timeout waiting for the backend server to start on port 5779. Please make sure no other process is using this port, and try starting the backend or closing the app.</p>
+                            <div class="btn-group">
+                                <button id="btn-start" class="btn-primary" onclick="startBackend()">Start Backend</button>
+                                <button class="btn-secondary" onclick="window.location.reload()">Retry Connection</button>
+                                <button class="btn-danger" onclick="quitApp()">Close App</button>
+                            </div>
                         </div>
+                        <script>
+                            function startBackend() {
+                                document.getElementById('status-text').innerText = 'Starting backend, please wait...';
+                                document.getElementById('btn-start').disabled = true;
+                                document.getElementById('btn-start').innerText = 'Starting...';
+                                window.__TAURI__.core.invoke('start_backend_command');
+                                
+                                let attempts = 0;
+                                let interval = setInterval(() => {
+                                    attempts++;
+                                    if (attempts > 5) {
+                                        clearInterval(interval);
+                                        window.location.reload();
+                                    } else {
+                                        fetch('http://127.0.0.1:5779/api/health')
+                                            .then(res => {
+                                                if (res.ok) {
+                                                    clearInterval(interval);
+                                                    window.location.reload();
+                                                }
+                                            })
+                                            .catch(() => {});
+                                    }
+                                }, 1000);
+                            }
+
+                            function quitApp() {
+                                window.__TAURI__.core.invoke('quit_app');
+                            }
+                        </script>
                     </body>
                     </html>
                 "#;
@@ -759,6 +816,18 @@ fn poll_backend(app_handle: tauri::AppHandle) {
 }
 
 #[tauri::command]
+fn quit_app(app: tauri::AppHandle) {
+    let state = app.state::<DesktopState>();
+    stop_backend(&state);
+    app.exit(0);
+}
+
+#[tauri::command]
+fn start_backend_command(app: tauri::AppHandle) {
+    spawn_backend(app);
+}
+
+#[tauri::command]
 fn open_webview_devtools(app: tauri::AppHandle, label: String) -> Result<(), String> {
     if let Some(webview) = app.get_webview(&label) {
         webview.open_devtools();
@@ -831,7 +900,7 @@ pub fn run() {
             }
         }))
         .manage(state)
-        .invoke_handler(tauri::generate_handler![get_memory_usage, open_webview_devtools])
+        .invoke_handler(tauri::generate_handler![get_memory_usage, open_webview_devtools, quit_app, start_backend_command])
         .setup(move |app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(

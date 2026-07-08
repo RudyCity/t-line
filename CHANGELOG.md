@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.352] - 2026-07-08
+
+### Fixed
+- **Deteksi Root Workspace di Dev Mode**:
+  - Memperbaiki `find_workspace_root()` agar memeriksa keberadaan direktori `desktop-tauri` selain `backend` dan `package.json`. Ini mencegah folder `desktop-tauri` (yang juga memiliki folder `backend` hasil copy-assets dan `package.json`) disalahartikan sebagai root workspace saat pengembangan.
+- **Interaktivitas Error Page**:
+  - Menambahkan tombol aksi **Start Backend** dan **Close App** di halaman error webview.
+  - Mendaftarkan command baru di Rust (`quit_app` dan `start_backend_command`) dan mengintegrasikannya dengan UI HTML error page menggunakan global Tauri core invoke API.
+
 ## [1.3.351] - 2026-07-08
 
 ### Added
