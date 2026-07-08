@@ -46,6 +46,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
   const [iframeKey, setIframeKey] = useState(0);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const [forceProxy, setForceProxy] = useState(false);
+  const [bypassProxy, setBypassProxy] = useState(false);
 
   // States for resizable / collapsible DevTools drawer
   const [devtoolsHeight, setDevtoolsHeight] = useState(280);
@@ -156,7 +157,9 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
         const uniqueLabel = 'browser-webview-' + tab.id + '-' + Math.random().toString(36).substring(2, 9);
         sessionStorage.setItem(sessionStorageKey, uniqueLabel);
 
-        const targetUrl = activeUrl ? getBackendProxyUrl(activeUrl) : '';
+        const targetUrl = activeUrl 
+          ? (bypassProxy ? activeUrl : getBackendProxyUrl(activeUrl))
+          : '';
         webviewInstance = new Webview(currentWindow, uniqueLabel, {
           url: targetUrl,
           x: rect.left,
@@ -253,7 +256,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
         });
       }
     };
-  }, [useTauriWebview, tab.id, activeUrl]);
+  }, [useTauriWebview, tab.id, activeUrl, bypassProxy]);
 
   // Handle Webview visibility on isActive change
   useEffect(() => {
@@ -496,11 +499,15 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     if (tauriWebviewRef.current && useTauriWebview) {
       if (typeof tauriWebviewRef.current.reload === 'function') {
         tauriWebviewRef.current.reload().catch(() => {
-          const targetUrl = activeUrl ? getBackendProxyUrl(activeUrl) : '';
+          const targetUrl = activeUrl 
+            ? (bypassProxy ? activeUrl : getBackendProxyUrl(activeUrl))
+            : '';
           tauriWebviewRef.current.navigate(targetUrl).catch((err: any) => console.error(err));
         });
       } else {
-        const targetUrl = activeUrl ? getBackendProxyUrl(activeUrl) : '';
+        const targetUrl = activeUrl 
+          ? (bypassProxy ? activeUrl : getBackendProxyUrl(activeUrl))
+          : '';
         tauriWebviewRef.current.navigate(targetUrl).catch((err: any) => console.error(err));
       }
     } else {
@@ -645,8 +652,28 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
             </button>
           )}
 
-          {/* Inspect Element button (available in iframe or Tauri Webview) */}
-          {!useElectronWebview && (
+          {/* Direct Mode / Proxy Mode toggle for Tauri Webview */}
+          {useTauriWebview && (
+            <button 
+              onClick={() => {
+                setBypassProxy(prev => !prev);
+                setHelperReady(false);
+                setLogs([]);
+              }}
+              className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold border transition-all cursor-pointer ${
+                bypassProxy 
+                  ? 'bg-amber-600/20 border-amber-500 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.25)]' 
+                  : 'bg-transparent border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
+              }`}
+              title={bypassProxy ? "Proxy is Bypassed (Direct Mode). Logins and cookies work 100% natively." : "Proxy is Active. Custom Inspect Element is enabled."}
+            >
+              <MonitorSmartphone size={13} />
+              <span>{bypassProxy ? "Direct Mode" : "Proxy Mode"}</span>
+            </button>
+          )}
+
+          {/* Inspect Element button (available in iframe or Tauri Webview in Proxy Mode) */}
+          {!useElectronWebview && (!useTauriWebview || !bypassProxy) && (
             <button 
               onClick={toggleInspect}
               className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold border transition-all ${

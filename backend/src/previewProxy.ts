@@ -6,6 +6,15 @@ import { TLINE_HELPER_CODE } from './tline-helper-code';
 
 let currentProxyTarget = '';
 
+const rewriteSetCookie = (cookieStr: string): string => {
+  let parts = cookieStr.split(';').map(p => p.trim());
+  parts = parts.filter(part => {
+    const lower = part.toLowerCase();
+    return !lower.startsWith('domain=') && lower !== 'secure';
+  });
+  return parts.join('; ');
+};
+
 const sanitizeHeaders = (proxyHeaders: any) => {
   const headers = { ...proxyHeaders };
   
@@ -44,6 +53,25 @@ const sanitizeHeaders = (proxyHeaders: any) => {
       // If it's already a relative path, let the browser handle it relative to <base> tag
     }
   }
+
+  // Rewrite Set-Cookie headers so they work on HTTP localhost
+  let setCookieKey = '';
+  for (const key of Object.keys(headers)) {
+    if (key.toLowerCase() === 'set-cookie') {
+      setCookieKey = key;
+      break;
+    }
+  }
+  
+  if (setCookieKey && headers[setCookieKey]) {
+    const cookies = headers[setCookieKey];
+    if (Array.isArray(cookies)) {
+      headers[setCookieKey] = cookies.map(cookie => rewriteSetCookie(cookie));
+    } else if (typeof cookies === 'string') {
+      headers[setCookieKey] = rewriteSetCookie(cookies);
+    }
+  }
+
   return headers;
 };
 

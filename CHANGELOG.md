@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.372] - 2026-07-08
+
+### Added / Fixed
+- **Cookie Sanitization & Direct Mode Toggle**:
+  - Implemented automatic cookie attribute stripping (`Domain` and `Secure` attributes) in the preview proxy middleware. This allows target websites to set cookies and persist sessions on `http://localhost:5779` under Proxy Mode.
+  - Added a **"Direct Mode / Proxy Mode"** toggle button in the BrowserTab toolbar for Tauri Webviews, allowing developers to bypass the proxy completely and load sites directly (enabling complex OAuth redirects and native secure cookies).
+
 ## [1.3.371] - 2026-07-08
 
 ### Fixed
