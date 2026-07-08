@@ -171,6 +171,7 @@ fn get_folder_name(path: &str) -> String {
     p.split('/').last().unwrap_or("").to_string()
 }
 
+#[allow(dead_code)]
 fn percent_encode_html(html: &str) -> String {
     html.replace("%", "%25")
         .replace("#", "%23")
@@ -335,6 +336,7 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
     Ok(menu)
 }
 
+#[allow(dead_code)]
 fn build_error_page_html(app_url: &str) -> String {
     r#"
             <!DOCTYPE html>
@@ -575,14 +577,16 @@ fn build_error_page_html(app_url: &str) -> String {
 
 fn show_error_page(app_handle: &tauri::AppHandle) {
     if let Some(main_window) = app_handle.get_webview_window("main") {
-        let app_url = current_app_url();
-        let error_html = build_error_page_html(&app_url);
+        let base_url = if cfg!(debug_assertions) {
+            "http://localhost:5773"
+        } else if cfg!(windows) {
+            "http://tauri.localhost"
+        } else {
+            "tauri://localhost"
+        };
 
-        let data_url = format!(
-            "data:text/html;charset=utf-8,{}",
-            percent_encode_html(&error_html)
-        );
-        if let Ok(parsed_url) = tauri::Url::parse(&data_url) {
+        let error_url = format!("{}/error.html", base_url);
+        if let Ok(parsed_url) = tauri::Url::parse(&error_url) {
             main_window.navigate(parsed_url).ok();
         }
         main_window.show().ok();

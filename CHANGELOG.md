@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.357] - 2026-07-08
+
+### Fixed
+- **Tauri IPC Origin Validation on Connection Error Page**:
+  - Moved the offline connection error screen from a `data:` URI (which has a `null` origin and blocks Tauri IPC calls) to a static `error.html` served under the local asset protocol (`tauri://localhost/error.html` or `http://tauri.localhost/error.html` in production, and `http://localhost:5773/error.html` in development).
+  - This preserves the localhost/app origin context, resolving the `"Origin header is not a valid URL"` error and allowing the "Start Backend" and window commands to successfully execute via Tauri IPC.
+
 ## [1.3.356] - 2026-07-08
 
 ### Added

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>t-line Connection Error</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://127.0.0.1:5779;" />
+    <style>
+        body {
+            background-color: #05070c;
+            color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background: rgba(17, 24, 39, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+        }
+        h1 { color: #f59e0b; margin-bottom: 16px; }
+        p { color: #94a3b8; line-height: 1.6; margin-bottom: 24px; }
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #6366f1;
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) { background: #818cf8; }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: #e2e8f0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .btn-secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.15); }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .titlebar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 32px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding-right: 8px;
+            user-select: none;
+            background: transparent;
+            z-index: 1000;
+        }
+        .titlebar-btn {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            transition: background-color 0.15s ease, color 0.15s ease;
+            color: #94a3b8;
+            font-size: 10px;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+        .titlebar-btn:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #f8fafc;
+        }
+        .titlebar-btn-close:hover {
+            background-color: #ef4444;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="titlebar" data-tauri-drag-region style="-webkit-app-region: drag;">
+        <div class="titlebar-btn" onclick="minimizeWindow()" title="Minimize" style="-webkit-app-region: no-drag;">—</div>
+        <div class="titlebar-btn" id="btn-maximize" onclick="maximizeWindow()" title="Maximize" style="-webkit-app-region: no-drag;">▢</div>
+        <div class="titlebar-btn titlebar-btn-close" onclick="closeWindow()" title="Close" style="-webkit-app-region: no-drag;">✕</div>
+    </div>
+    <div class="card">
+        <h1>Backend Offline</h1>
+        <p id="status-text">Timeout waiting for the backend server to start on port 5779. Please make sure no other process is using this port, and try starting the backend.</p>
+        <div class="btn-group">
+            <button id="btn-start" class="btn-primary" onclick="startBackend()">Start Backend</button>
+            <button id="btn-retry" class="btn-secondary" onclick="retryConnection()">Retry Connection</button>
+        </div>
+    </div>
+    <script>
+        let APP_URL = 'http://localhost:5779'; // Fallback
+
+        async function initAppUrl() {
+            try {
+                if (window.__TAURI__ && window.__TAURI__.core) {
+                    const appUrl = await window.__TAURI__.core.invoke('get_app_url');
+                    if (appUrl) {
+                        APP_URL = appUrl;
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to get app URL', err);
+            }
+        }
+
+        initAppUrl();
+
+        async function minimizeWindow() {
+            try {
+                const { getCurrentWindow } = window.__TAURI__.window;
+                await getCurrentWindow().minimize();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function maximizeWindow() {
+            try {
+                const { getCurrentWindow } = window.__TAURI__.window;
+                await getCurrentWindow().toggleMaximize();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function closeWindow() {
+            try {
+                const { getCurrentWindow } = window.__TAURI__.window;
+                await getCurrentWindow().close();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function updateMaximizeIcon() {
+            try {
+                const { getCurrentWindow } = window.__TAURI__.window;
+                const isMax = await getCurrentWindow().isMaximized();
+                document.getElementById('btn-maximize').innerText = isMax ? '❐' : '▢';
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        window.addEventListener('resize', updateMaximizeIcon);
+        window.addEventListener('DOMContentLoaded', updateMaximizeIcon);
+
+        function setStatus(message) {
+            document.getElementById('status-text').innerText = message;
+        }
+
+        function setButtonsDisabled(disabled) {
+            document.getElementById('btn-start').disabled = disabled;
+            document.getElementById('btn-retry').disabled = disabled;
+        }
+
+        function checkBackendHealth() {
+            return fetch('http://127.0.0.1:5779/api/health', { cache: 'no-store' })
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error('Backend returned ' + res.status);
+                    }
+                    return true;
+                });
+        }
+
+        async function loadApp() {
+            try {
+                const appUrl = await window.__TAURI__.core.invoke('get_app_url');
+                window.location.href = appUrl || APP_URL;
+            } catch (err) {
+                console.error(err);
+                window.location.href = APP_URL;
+            }
+        }
+
+        function retryConnection() {
+            setButtonsDisabled(true);
+            setStatus('Checking backend connection...');
+
+            checkBackendHealth()
+                .then(loadApp)
+                .catch(() => {
+                    setStatus('Backend is still offline. Start it or try again in a moment.');
+                    setButtonsDisabled(false);
+                });
+        }
+
+        function waitForBackend() {
+            let attempts = 0;
+            const interval = setInterval(() => {
+                attempts += 1;
+                checkBackendHealth()
+                    .then(() => {
+                        clearInterval(interval);
+                        loadApp();
+                    })
+                    .catch(() => {
+                        if (attempts >= 20) {
+                            clearInterval(interval);
+                            setStatus('Backend did not become ready. Check the tray menu or backend log, then try again.');
+                            setButtonsDisabled(false);
+                            document.getElementById('btn-start').innerText = 'Start Backend';
+                        }
+                    });
+            }, 1000);
+        }
+
+        async function startBackend() {
+            setStatus('Starting backend, please wait...');
+            setButtonsDisabled(true);
+            document.getElementById('btn-start').innerText = 'Starting...';
+
+            try {
+                await window.__TAURI__.core.invoke('start_backend_command');
+                waitForBackend();
+            } catch (err) {
+                console.error('start_backend_command failed', err);
+                setStatus('Failed to start backend: ' + err);
+                setButtonsDisabled(false);
+                document.getElementById('btn-start').innerText = 'Start Backend';
+            }
+        }
+    </script>
+</body>
+</html>
