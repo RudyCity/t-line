@@ -20,6 +20,18 @@
     "core:webview:allow-set-webview-position",
     "core:webview:allow-set-webview-size",
     "core:webview:allow-webview-hide",
-    "core:webview:allow-webview-show"
+    "core:webview:allow-webview-show",
+    {
+      "identifier": "custom-commands-permission",
+      "description": "Allows custom commands",
+      "commands": {
+        "allow": [
+          "quit_app",
+          "start_backend_command",
+          "get_memory_usage",
+          "open_webview_devtools"
+        ]
+      }
+    }
   ]
 }

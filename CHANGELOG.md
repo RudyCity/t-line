@@ -9,6 +9,7 @@ All notable changes to the **t-line** workspace manager project will be document
   - Menambahkan pembersihan proses port `5773` dan `5779` secara otomatis di `dev.js` saat startup untuk menghindari konflik port (Address In Use) dari sisa proses sebelumnya yang menggantung.
   - Memperbarui pengecekan backend di Tauri (`lib.rs`) agar melakukan request validasi dengan bypass token. Jika port aktif namun tidak merespons atau token tidak cocok (misal dari sisa proses backend lama), proses tersebut langsung di-kill dan backend baru dijalankan secara bersih.
   - Menambahkan endpoint `/api/health` di backend agar halaman error offline di webview tidak terjebak dalam loop refresh tiada henti (reload loop) karena mendapatkan 404 pada health check.
+  - Menambahkan deklarasi izin `custom-commands-permission` di `capabilities/default.json` Tauri agar command Rust kustom (`quit_app`, `start_backend_command`, `get_memory_usage`, `open_webview_devtools`) bisa dipanggil oleh frontend, memperbaiki tombol "Close App" dan interaktivitas lainnya.
 
 ## [1.3.353] - 2026-07-08
 
