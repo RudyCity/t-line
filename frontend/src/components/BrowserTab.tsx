@@ -89,38 +89,6 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     }
   };
 
-  const openInTauriBrowser = async (url: string) => {
-    try {
-      // Destroy the inline webview if it is active, to avoid having two webviews open
-      if (tauriWebviewRef.current) {
-        await tauriWebviewRef.current.close().catch(() => {});
-        tauriWebviewRef.current = null;
-      }
-
-      // Use Tauri WebviewWindow API (available via withGlobalTauri: true)
-      const tauri = (window as any).__TAURI__;
-      if (tauri?.webviewWindow?.WebviewWindow) {
-        const label = 'browser-' + Date.now();
-        const hostname = (() => { try { return new URL(url).hostname; } catch { return url; } })();
-        new tauri.webviewWindow.WebviewWindow(label, {
-          url,
-          title: `Browser — ${hostname}`,
-          width: 1280,
-          height: 820,
-          decorations: true,
-          resizable: true,
-          center: true,
-        });
-      } else {
-        // Fallback: open in system browser
-        openInSystemBrowser(url);
-      }
-    } catch (e) {
-      console.warn('[BrowserTab] WebviewWindow failed, falling back to system browser:', e);
-      openInSystemBrowser(url);
-    }
-  };
-
   // Tauri Child Webview Overlay Management
   useEffect(() => {
     if (!useTauriWebview || isElectron) return;
@@ -616,17 +584,6 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
           </button>
         )}
 
-        {/* Tauri: open current URL in a full browser window */}
-        {isTauri && !isLocalUrl(activeUrl) && (
-          <button
-            onClick={() => openInTauriBrowser(activeUrl)}
-            className="flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold border border-[var(--border-color)] text-[var(--text-muted)] hover:text-purple-400 hover:border-purple-500/50 hover:bg-purple-500/10 transition-all cursor-pointer"
-            title="Buka di window browser terpisah untuk browsing penuh"
-          >
-            <ExternalLink size={13} />
-            <span>Pop-out</span>
-          </button>
-        )}
       </div>
 
       {/* Main Workspace Split (Iframe top, DevTools bottom) */}

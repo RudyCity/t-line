@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.366] - 2026-07-08
+
+### Removed
+- **Browser Pop-out Button**:
+  - Removed the "Pop-out" external browser link button from the Browser tab toolbar.
+  - Cleaned up the unused `openInTauriBrowser` helper function inside `BrowserTab.tsx`.
+
 ## [1.3.365] - 2026-07-08
 
 ### Fixed
