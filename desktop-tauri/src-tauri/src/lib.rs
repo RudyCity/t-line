@@ -418,6 +418,7 @@ fn show_error_page(app_handle: &tauri::AppHandle) {
                     }
 
                     function quitApp() {
+                        document.title = "action:quit_app";
                         window.close();
                     }
                 </script>
@@ -1018,11 +1019,14 @@ pub fn run() {
                         println!("[tauri] Start backend requested from error page.");
                         let _ = window.set_title("t-line Connection Error");
                         spawn_backend(window.app_handle().clone());
-                    } else {
-                        println!("[tauri] Close app requested from error page. Exiting...");
+                    } else if title == "action:quit_app" {
+                        println!("[tauri] Quit app requested from error page. Exiting...");
                         let state = window.state::<DesktopState>();
                         stop_backend(&state);
                         window.app_handle().exit(0);
+                    } else {
+                        // Default: hide window (minimize to tray)
+                        let _ = window.hide();
                     }
                 } else {
                     api.prevent_close();
