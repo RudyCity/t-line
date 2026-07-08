@@ -224,13 +224,8 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
               consecutiveErrorCount = 0; // reset on success
             } catch (err) {
               consecutiveErrorCount++;
-              if (consecutiveErrorCount <= 5) {
-                console.warn('[BrowserTab] Failed to sync webview bounds:', err);
-              }
-              if (consecutiveErrorCount >= 10) {
-                console.error('[BrowserTab] Stopping webview bounds sync due to consecutive failures.');
-                active = false;
-                return;
+              if (consecutiveErrorCount % 60 === 0) {
+                console.warn('[BrowserTab] Failed to sync webview bounds (retrying):', err);
               }
             }
           }
