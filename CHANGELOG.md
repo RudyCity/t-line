@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.370] - 2026-07-08
+
+### Fixed
+- **Tauri Compilation Error**:
+  - Removed the invalid `"core:webview:allow-eval"` permission entry from `capabilities/default.json` which was causing a panic (exit code 101) during `tauri dev` / `cargo run`. (In Tauri v2, webview JavaScript evaluation is a host-only API and does not require this guest capability).
+
 ## [1.3.369] - 2026-07-08
 
 ### Added / Changed
