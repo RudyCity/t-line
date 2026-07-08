@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.349] - 2026-07-08
+
+### Fixed
+- **Tauri Devtools Compilation in Production Build**:
+  - Mengaktifkan feature `"devtools"` pada dependensi `tauri` di dalam [Cargo.toml](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/Cargo.toml) untuk memperbaiki error kompilasi Rust `no method named open_devtools found` saat mem-build aplikasi dalam mode rilis/produksi di runner CI/CD.
+
 ## [1.3.348] - 2026-07-07
 
 ### Added
