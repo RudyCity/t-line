@@ -742,7 +742,18 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
         // only started the Node backend on 5779, leaving 5773 dead and the
         // webview blank. Launch the Vite dev server here and wait for it.
         if is_dev {
-            if !is_port_active(5773) {
+            // Wait up to 3 seconds for Vite to start if it was spawned by dev.js
+            let check_start = Instant::now();
+            let mut vite_active = false;
+            while check_start.elapsed() < Duration::from_secs(3) {
+                if is_port_active(5773) {
+                    vite_active = true;
+                    break;
+                }
+                thread::sleep(Duration::from_millis(200));
+            }
+
+            if !vite_active {
                 if let Some(ws_root) = find_workspace_root() {
                     println!("[tauri] Dev mode: Spawning Vite dev server from workspace root: {:?}", ws_root);
                     #[cfg(windows)]

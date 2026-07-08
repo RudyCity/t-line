@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.358] - 2026-07-08
+
+### Fixed
+- **Race Condition on Vite Dev Server Startup**:
+  - Added a 3-second startup delay check for the Vite dev server port (`5773`) in the Rust backend before attempting to spawn a new instance.
+  - This prevents Tauri from spawning duplicate Vite instances and clashing/killing the frontend dev server when running the application via the main orchestrator script (`npm run dev`).
+
 ## [1.3.357] - 2026-07-08
 
 ### Fixed
