@@ -187,8 +187,10 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
 
         if (!active || !containerRef.current || !webviewInstance || tauriWebviewRef.current !== webviewInstance) return;
 
-        // Immediately sync visibility state in case tab became inactive during load
-        if (!isActiveRef.current) {
+        // Immediately sync visibility state based on active tab state
+        if (isActiveRef.current) {
+          await webviewInstance.show().catch(() => {});
+        } else {
           await webviewInstance.hide().catch(() => {});
         }
 

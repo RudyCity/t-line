@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.373] - 2026-07-08
+
+### Fixed
+- **Tauri Native Webview Mount Visibility**:
+  - Resolved a race condition where the newly created native child webview overlay remained hidden on initial mount when the tab was active. Added an immediate explicit `.show()` call during the `initWebview` initialization flow if `isActiveRef.current` is true.
+
 ## [1.3.372] - 2026-07-08
 
 ### Added / Fixed
