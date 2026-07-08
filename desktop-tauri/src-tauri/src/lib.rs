@@ -19,6 +19,7 @@ struct DesktopState {
 
 fn is_port_active(port: u16) -> bool {
     TcpStream::connect(format!("127.0.0.1:{}", port)).is_ok()
+        || TcpStream::connect(format!("[::1]:{}", port)).is_ok()
 }
 
 fn find_workspace_root() -> Option<PathBuf> {

@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.361] - 2026-07-08
+
+### Fixed
+- **Dev Mode Frontend Restart Loop / Port Conflict**:
+  - Fixed an issue where the Rust backend failed to detect that Vite was already running on port 5773 because Vite was bound to the IPv6 loopback (`[::1]`) while the detection logic only checked the IPv4 loopback (`127.0.0.1`).
+  - Updated `is_port_active` in `desktop-tauri/src-tauri/src/lib.rs` to check both `127.0.0.1` and `[::1]`.
+  - Updated `checkPort` in `dev.js` to also check both `127.0.0.1` and `::1` loopbacks.
+  - This prevents Tauri from spawning a duplicate frontend dev process that killed the active one and crashed the launch runner.
+
 ## [1.3.360] - 2026-07-08
 
 ### Fixed

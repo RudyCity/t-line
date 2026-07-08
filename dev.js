@@ -15,7 +15,13 @@ function checkPort(port) {
       resolve(true);
     });
     client.on('error', () => {
-      resolve(false);
+      const client6 = net.connect({ port, host: '::1' }, () => {
+        client6.end();
+        resolve(true);
+      });
+      client6.on('error', () => {
+        resolve(false);
+      });
     });
   });
 }
