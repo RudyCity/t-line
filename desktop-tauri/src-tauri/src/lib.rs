@@ -343,61 +343,324 @@ fn build_error_page_html(app_url: &str) -> String {
             <html>
             <head>
                 <title>t-line Connection Error</title>
+                <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' http://127.0.0.1:5779;" />
+                
+                <!-- Premium Google Fonts -->
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Inter:wght@100..900&family=Poppins:ital,wght@0,100..900;1,100..900&family=Roboto:ital,wght@0,100..900;1,100..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Sora:wght@100..800&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Grotesk:wght@300..700&family=Manrope:wght@200..800&family=Work+Sans:ital,wght@0,100..900;1,100..900&family=Cabin:ital,wght@0,400..700;1,400..700&family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap" rel="stylesheet">
+
+                <script>
+                    // Load and apply theme and fonts dynamically from localStorage
+                    function applyThemeAndFonts() {
+                        try {
+                            const THEMES = {
+                                default: {
+                                    bgMain: '#05070c',
+                                    bgSidebar: '#090c14',
+                                    bgCard: 'rgba(17, 24, 39, 0.45)',
+                                    bgCardHover: 'rgba(31, 41, 55, 0.55)',
+                                    borderColor: 'rgba(255, 255, 255, 0.06)',
+                                    textMain: '#f8fafc',
+                                    textMuted: '#94a3b8',
+                                    textDark: '#64748b',
+                                    defaultAccent: '#6366f1',
+                                    bgRadialDot: 'rgba(255, 255, 255, 0.02)',
+                                },
+                                dracula: {
+                                    bgMain: '#1e1f29',
+                                    bgSidebar: '#282a36',
+                                    bgCard: 'rgba(40, 42, 54, 0.5)',
+                                    bgCardHover: 'rgba(68, 71, 90, 0.5)',
+                                    borderColor: 'rgba(98, 114, 164, 0.2)',
+                                    textMain: '#f8f8f2',
+                                    textMuted: '#6272a4',
+                                    textDark: '#44475a',
+                                    defaultAccent: '#bd93f9',
+                                    bgRadialDot: 'rgba(255, 255, 255, 0.01)',
+                                },
+                                cyberpunk: {
+                                    bgMain: '#0b0813',
+                                    bgSidebar: '#120924',
+                                    bgCard: 'rgba(26, 15, 46, 0.45)',
+                                    bgCardHover: 'rgba(50, 24, 85, 0.55)',
+                                    borderColor: 'rgba(255, 0, 127, 0.15)',
+                                    textMain: '#f8fafc',
+                                    textMuted: '#ff007f',
+                                    textDark: '#861f68',
+                                    defaultAccent: '#ff007f',
+                                    bgRadialDot: 'rgba(255, 255, 255, 0.02)',
+                                },
+                                forest: {
+                                    bgMain: '#070d0a',
+                                    bgSidebar: '#0c1712',
+                                    bgCard: 'rgba(16, 28, 21, 0.45)',
+                                    bgCardHover: 'rgba(24, 45, 34, 0.55)',
+                                    borderColor: 'rgba(16, 185, 129, 0.1)',
+                                    textMain: '#f0fdf4',
+                                    textMuted: '#86efac',
+                                    textDark: '#3f6212',
+                                    defaultAccent: '#10b981',
+                                    bgRadialDot: 'rgba(255, 255, 255, 0.01)',
+                                },
+                                nord: {
+                                    bgMain: '#2e3440',
+                                    bgSidebar: '#242933',
+                                    bgCard: 'rgba(46, 52, 64, 0.5)',
+                                    bgCardHover: 'rgba(59, 66, 82, 0.5)',
+                                    borderColor: 'rgba(76, 86, 106, 0.3)',
+                                    textMain: '#eceff4',
+                                    textMuted: '#d8dee9',
+                                    textDark: '#4c566a',
+                                    defaultAccent: '#88c0d0',
+                                    bgRadialDot: 'rgba(255, 255, 255, 0.01)',
+                                },
+                                light: {
+                                    bgMain: '#f8fafc',
+                                    bgSidebar: '#f1f5f9',
+                                    bgCard: 'rgba(255, 255, 255, 0.7)',
+                                    bgCardHover: 'rgba(241, 245, 249, 0.9)',
+                                    borderColor: 'rgba(0, 0, 0, 0.08)',
+                                    textMain: '#0f172a',
+                                    textMuted: '#64748b',
+                                    textDark: '#94a3b8',
+                                    defaultAccent: '#6366f1',
+                                    bgRadialDot: 'rgba(0, 0, 0, 0.02)',
+                                }
+                            };
+
+                            const UI_FONTS = {
+                                Outfit: "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                Inter: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                Poppins: "'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                Roboto: "'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                Montserrat: "'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                Ubuntu: "'Ubuntu', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                'Geist Sans': "'Geist Sans', 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                'SF Pro': "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, sans-serif",
+                                'Plus Jakarta Sans': "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                'Lato': "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                'Open Sans': "'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                'Nunito': "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                'Sora': "'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                'DM Sans': "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                'Space Grotesk': "'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                'Manrope': "'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                'Work Sans': "'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                'Cabin': "'Cabin', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                System: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                            };
+
+                            const theme = localStorage.getItem('tline-theme') || 'default';
+                            const accentColor = localStorage.getItem('tline-accent-color') || (THEMES[theme]?.defaultAccent || THEMES.default.defaultAccent);
+                            const fontSans = localStorage.getItem('tline-font-sans') || 'Outfit';
+                            const fontSansWeight = localStorage.getItem('tline-font-sans-weight') || '400';
+
+                            const preset = THEMES[theme] || THEMES.default;
+                            const root = document.documentElement;
+
+                            root.style.setProperty('--bg-main', preset.bgMain);
+                            root.style.setProperty('--bg-sidebar', preset.bgSidebar);
+                            root.style.setProperty('--bg-card', preset.bgCard);
+                            root.style.setProperty('--bg-card-hover', preset.bgCardHover);
+                            root.style.setProperty('--border-color', preset.borderColor);
+                            root.style.setProperty('--text-main', preset.textMain);
+                            root.style.setProperty('--text-muted', preset.textMuted);
+                            root.style.setProperty('--text-dark', preset.textDark);
+                            
+                            const fontSansValue = UI_FONTS[fontSans] || UI_FONTS.Outfit;
+                            root.style.setProperty('--font-sans', fontSansValue);
+                            root.style.setProperty('--font-sans-weight', fontSansWeight);
+
+                            root.className = `theme-${theme}`;
+
+                            root.style.setProperty('--accent-color', accentColor);
+                            root.style.setProperty('--color-primary', accentColor);
+
+                            const isLight = theme === 'light';
+                            root.style.setProperty(
+                                '--color-primary-hover',
+                                `color-mix(in srgb, ${accentColor} 80%, ${isLight ? '#000000' : '#ffffff'})`
+                            );
+                            root.style.setProperty(
+                                '--color-primary-glow',
+                                `color-mix(in srgb, ${accentColor} 35%, transparent)`
+                            );
+                            root.style.setProperty(
+                                '--border-glow',
+                                `color-mix(in srgb, ${accentColor} 15%, transparent)`
+                            );
+
+                            root.style.setProperty('--bg-radial-dot', preset.bgRadialDot);
+                            root.style.setProperty(
+                                '--bg-radial-glow1',
+                                `color-mix(in srgb, ${accentColor} 8%, transparent)`
+                            );
+
+                            if (isLight) {
+                                root.style.setProperty('--surface-overlay', 'rgba(0, 0, 0, 0.04)');
+                                root.style.setProperty('--surface-overlay-hover', 'rgba(0, 0, 0, 0.07)');
+                                root.style.setProperty('--glass-shadow', 'none');
+                                root.style.setProperty('--window-btn-hover-bg', 'rgba(0, 0, 0, 0.07)');
+                            } else {
+                                root.style.setProperty('--surface-overlay', 'rgba(255, 255, 255, 0.04)');
+                                root.style.setProperty('--surface-overlay-hover', 'rgba(255, 255, 255, 0.08)');
+                                root.style.setProperty('--glass-shadow', '0 8px 32px 0 rgba(0, 0, 0, 0.5)');
+                                root.style.setProperty('--window-btn-hover-bg', 'rgba(255, 255, 255, 0.08)');
+                            }
+                        } catch (e) {
+                            console.error('Error applying theme variables', e);
+                        }
+                    }
+                    applyThemeAndFonts();
+                </script>
+
                 <style>
+                    :root {
+                        --bg-main: #05070c;
+                        --bg-sidebar: #090c14;
+                        --bg-card: rgba(17, 24, 39, 0.45);
+                        --bg-card-hover: rgba(31, 41, 55, 0.55);
+                        --border-color: rgba(255, 255, 255, 0.06);
+                        --text-main: #f8fafc;
+                        --text-muted: #94a3b8;
+                        --text-dark: #64748b;
+                        --accent-color: #6366f1;
+                        --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        --font-sans-weight: 400;
+                    }
+
                     body {
-                        background-color: #05070c;
-                        color: #f8fafc;
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        background-color: var(--bg-main);
+                        color: var(--text-main);
+                        font-family: var(--font-sans);
+                        font-weight: var(--font-sans-weight);
                         display: flex;
                         flex-direction: column;
                         align-items: center;
                         justify-content: center;
                         height: 100vh;
                         margin: 0;
+                        overflow: hidden;
+                        position: relative;
                     }
+
+                    .bg-glow {
+                        position: absolute;
+                        width: 600px;
+                        height: 600px;
+                        background: radial-gradient(circle, var(--bg-radial-glow1) 0%, transparent 70%);
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        z-index: 0;
+                        pointer-events: none;
+                    }
+
+                    .bg-dots {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background-image: radial-gradient(var(--bg-radial-dot, rgba(255,255,255,0.02)) 1px, transparent 1px);
+                        background-size: 24px 24px;
+                        z-index: 0;
+                        pointer-events: none;
+                    }
+
                     .card {
-                        background: rgba(17, 24, 39, 0.45);
-                        border: 1px solid rgba(255, 255, 255, 0.06);
+                        background: var(--bg-card);
+                        border: 1px solid var(--border-color);
                         border-radius: 16px;
                         padding: 40px;
                         text-align: center;
                         max-width: 500px;
+                        backdrop-filter: blur(12px);
+                        -webkit-backdrop-filter: blur(12px);
+                        box-shadow: var(--glass-shadow, 0 8px 32px 0 rgba(0, 0, 0, 0.3));
+                        z-index: 1;
+                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                     }
-                    h1 { color: #f59e0b; margin-bottom: 16px; }
-                    p { color: #94a3b8; line-height: 1.6; margin-bottom: 24px; }
+                    
+                    .card:hover {
+                        background: var(--bg-card-hover);
+                        border-color: color-mix(in srgb, var(--accent-color) 30%, var(--border-color));
+                        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4), 0 0 20px 0 var(--border-glow);
+                    }
+
+                    h1 {
+                        color: var(--accent-color);
+                        margin-top: 0;
+                        margin-bottom: 16px;
+                        font-size: 28px;
+                        font-weight: 700;
+                        letter-spacing: -0.02em;
+                    }
+                    
+                    p {
+                        color: var(--text-muted);
+                        line-height: 1.6;
+                        margin-bottom: 28px;
+                        font-size: 15px;
+                    }
+                    
                     .btn-group {
                         display: flex;
                         gap: 12px;
                         justify-content: center;
                     }
+                    
                     button {
-                        padding: 10px 20px;
-                        border-radius: 8px;
+                        padding: 11px 24px;
+                        border-radius: 10px;
                         font-weight: 600;
+                        font-size: 14px;
                         cursor: pointer;
                         border: none;
-                        transition: all 0.2s;
+                        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                        font-family: var(--font-sans);
                     }
+                    
                     .btn-primary {
-                        background: #6366f1;
-                        color: white;
+                        background: var(--accent-color);
+                        color: #ffffff;
+                        box-shadow: 0 4px 14px 0 var(--color-primary-glow);
                     }
-                    .btn-primary:hover:not(:disabled) { background: #818cf8; }
+                    
+                    .btn-primary:hover:not(:disabled) {
+                        background: var(--color-primary-hover);
+                        transform: translateY(-1px);
+                        box-shadow: 0 6px 20px 0 var(--color-primary-glow);
+                    }
+                    
+                    .btn-primary:active:not(:disabled) {
+                        transform: translateY(0);
+                    }
+                    
                     .btn-secondary {
-                        background: rgba(255, 255, 255, 0.08);
-                        color: #e2e8f0;
-                        border: 1px solid rgba(255, 255, 255, 0.1);
+                        background: var(--surface-overlay);
+                        color: var(--text-main);
+                        border: 1px solid var(--border-color);
                     }
-                    .btn-secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.15); }
-                    .btn-danger {
-                        background: #ef4444;
-                        color: white;
+                    
+                    .btn-secondary:hover:not(:disabled) {
+                        background: var(--surface-overlay-hover);
+                        border-color: color-mix(in srgb, var(--accent-color) 20%, var(--border-color));
+                        transform: translateY(-1px);
                     }
-                    .btn-danger:hover:not(:disabled) { background: #f87171; }
+
+                    .btn-secondary:active:not(:disabled) {
+                        transform: translateY(0);
+                    }
+                    
                     button:disabled {
-                        opacity: 0.5;
+                        opacity: 0.4;
                         cursor: not-allowed;
+                        transform: none !important;
+                        box-shadow: none !important;
                     }
+                    
                     .titlebar {
                         position: absolute;
                         top: 0;
@@ -412,6 +675,7 @@ fn build_error_page_html(app_url: &str) -> String {
                         background: transparent;
                         z-index: 1000;
                     }
+                    
                     .titlebar-btn {
                         display: inline-flex;
                         justify-content: center;
@@ -420,22 +684,26 @@ fn build_error_page_html(app_url: &str) -> String {
                         height: 28px;
                         cursor: pointer;
                         transition: background-color 0.15s ease, color 0.15s ease;
-                        color: #94a3b8;
+                        color: var(--text-muted);
                         font-size: 10px;
                         font-weight: bold;
                         border-radius: 4px;
                     }
+                    
                     .titlebar-btn:hover {
-                        background-color: rgba(255, 255, 255, 0.08);
-                        color: #f8fafc;
+                        background-color: var(--window-btn-hover-bg);
+                        color: var(--text-main);
                     }
+                    
                     .titlebar-btn-close:hover {
-                        background-color: #ef4444;
-                        color: white;
+                        background-color: #ef4444 !important;
+                        color: white !important;
                     }
                 </style>
             </head>
             <body>
+                <div class="bg-dots"></div>
+                <div class="bg-glow"></div>
                 <div class="titlebar" data-tauri-drag-region style="-webkit-app-region: drag;">
                     <div class="titlebar-btn" onclick="minimizeWindow()" title="Minimize" style="-webkit-app-region: no-drag;">—</div>
                     <div class="titlebar-btn" id="btn-maximize" onclick="maximizeWindow()" title="Maximize" style="-webkit-app-region: no-drag;">▢</div>

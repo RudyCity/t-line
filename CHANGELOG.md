@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.359] - 2026-07-08
+
+### Changed
+- **Dynamic Theming on Connection Error Page**:
+  - Dynamically style the offline reconnection/connection error screen (`error.html` and the rust fallback string) based on the user's active theme and fonts stored in `localStorage`.
+  - Added links to Google Fonts inside `error.html` and configured Content-Security-Policy (CSP) to allow styling and fonts from Google sources.
+  - Implemented dot-grid backgrounds and radial accent glows to match the design aesthetics of the rest of the application.
+
 ## [1.3.358] - 2026-07-08
 
 ### Fixed
