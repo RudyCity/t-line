@@ -611,6 +611,7 @@ app.use((req, res, next) => {
 
   if (isFromPreviewProxy && !req.path.startsWith('/api') && req.path !== '/tline-helper.js') {
     req.url = `/api/preview-proxy${req.url}`;
+    req.originalUrl = `/api/preview-proxy${req.originalUrl}`;
     return previewProxy(req, res, next);
   }
   next();

@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.364] - 2026-07-08
+
+### Fixed
+- **Preview Proxy originalUrl Rewrite**:
+  - Rewrote both `req.url` and `req.originalUrl` inside the host-relative fallback middleware in `backend/src/server.ts`. This allows the path filter in `http-proxy-middleware` to recognize host-relative requests (like `/gen_204`) correctly and forward them.
+
 ## [1.3.363] - 2026-07-08
 
 ### Fixed
