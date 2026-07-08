@@ -75,7 +75,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
   const containerRef = useRef<HTMLDivElement>(null);
   const tauriWebviewRef = useRef<any>(null);
   const useElectronWebview = isElectron; // Use native Electron webview tag when in Electron
-  const useTauriWebview = false;         // Always use proxy iframe instead of native Tauri webview
+  const useTauriWebview = isTauri;       // Enable native Tauri webview overlay on Tauri platform
 
   const openInSystemBrowser = async (url: string) => {
     try {
@@ -127,7 +127,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
 
         // Also try to close with the fallback default label (handling legacy labels)
         try {
-          const fallbackWebview = await Webview.getByLabel('inline-browser-webview-' + tab.id);
+          const fallbackWebview = await Webview.getByLabel('browser-webview-' + tab.id);
           if (fallbackWebview) {
             await fallbackWebview.close();
             closedOld = true;
@@ -142,7 +142,8 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
         if (!active || !containerRef.current) return;
 
         // Generate a unique label to prevent duplicate label conflict in Tauri backend
-        const uniqueLabel = 'inline-browser-webview-' + tab.id + '-' + Math.random().toString(36).substring(2, 9);
+        // Prefixed with 'browser-' to match the 'browser-*' glob in capabilities/default.json
+        const uniqueLabel = 'browser-webview-' + tab.id + '-' + Math.random().toString(36).substring(2, 9);
         sessionStorage.setItem(sessionStorageKey, uniqueLabel);
 
         webviewInstance = new Webview(currentWindow, uniqueLabel, {
@@ -708,10 +709,11 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
 
 
         {/* DevTools Drawer (Obsidian Theme style) */}
-        <div 
-          style={{ height: isDevtoolsCollapsed ? '38px' : `${devtoolsHeight}px` }}
-          className={`border-t border-[var(--border-color)] bg-[var(--bg-card)] flex flex-col shrink-0 relative ${isResizing ? '' : 'transition-[height] duration-200'}`}
-        >
+        {!useTauriWebview && (
+          <div 
+            style={{ height: isDevtoolsCollapsed ? '38px' : `${devtoolsHeight}px` }}
+            className={`border-t border-[var(--border-color)] bg-[var(--bg-card)] flex flex-col shrink-0 relative ${isResizing ? '' : 'transition-[height] duration-200'}`}
+          >
           {/* Resize Handle */}
           {!isDevtoolsCollapsed && (
             <div 
@@ -940,7 +942,8 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
 
             </div>
           )}
-        </div>
+          </div>
+        )}
 
       </div>
     </div>

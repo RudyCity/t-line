@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.367] - 2026-07-08
+
+### Added / Fixed
+- **Tauri Native Webview in Browser Tab**:
+  - Activated the native child Webview overlay for the Tauri platform by default (`useTauriWebview = isTauri`), replacing the iframe preview proxy for better performance, cookies, and login session support.
+  - Changed the dynamic webview window label prefix from `inline-browser-webview-` to `browser-webview-` to align with the permitted glob pattern `browser-*` in `capabilities/default.json`. This resolves permission restrictions on bounds resizing and DevTools invocation in Tauri v2.
+  - Cleaned up the user interface by hiding the custom React-based DevTools drawer when the native Webview is active, since users have access to native Developer Tools via the "Open DevTools" button.
+
 ## [1.3.366] - 2026-07-08
 
 ### Removed
