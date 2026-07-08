@@ -27,6 +27,27 @@ async function main() {
 
   const processes = [];
 
+  // Clean up previous processes on ports 5773 and 5779
+  console.log('[t-line] Cleaning up previous processes on ports 5773 and 5779...');
+  try {
+    const { execSync } = require('child_process');
+    if (process.platform === 'win32') {
+      if (runBackend) {
+        execSync('powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 5779 -State Listen -ErrorAction SilentlyContinue | Foreach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }"');
+      }
+      if (runFrontend) {
+        execSync('powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 5773 -State Listen -ErrorAction SilentlyContinue | Foreach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }"');
+      }
+    } else {
+      if (runBackend) execSync('lsof -t -i:5779 | xargs kill -9 2>/dev/null || true');
+      if (runFrontend) execSync('lsof -t -i:5773 | xargs kill -9 2>/dev/null || true');
+    }
+    // Brief pause to allow OS to free ports
+    await new Promise(resolve => setTimeout(resolve, 800));
+  } catch (e) {
+    // Ignore errors
+  }
+
   if (runBackend) {
     const active = await checkPort(5779);
     if (active) {

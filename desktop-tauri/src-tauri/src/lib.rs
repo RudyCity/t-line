@@ -453,10 +453,24 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
     thread::spawn(move || {
         let mut bypass_token = get_bypass_token();
 
+        let mut backend_verified = false;
         if is_port_active(port) {
-            println!("[tauri] Backend is already running on port {}. Connecting directly...", port);
+            if let Some(ref token) = bypass_token {
+                if http_get(port, "/api/workspaces", Some(token)).is_ok() {
+                    backend_verified = true;
+                }
+            }
+        }
+
+        if backend_verified {
+            println!("[tauri] Backend is already running and authenticated on port {}. Connecting directly...", port);
         } else {
-            println!("[tauri] Backend not running. Spawning backend process...");
+            if is_port_active(port) {
+                println!("[tauri] Port {} is active but backend is unauthenticated or unresponsive. Killing existing process...", port);
+                kill_port_process(port);
+                thread::sleep(Duration::from_millis(500));
+            }
+            println!("[tauri] Spawning backend process...");
             
             let log_file_path = if let Ok(app_data) = app_handle_clone.path().app_data_dir() {
                 std::fs::create_dir_all(&app_data).ok();

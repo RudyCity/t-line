@@ -467,6 +467,10 @@ if (fs.existsSync(frontendDistPath)) {
 // Authentication Endpoints
 // ----------------------------------------------------
 
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 app.get('/api/auth/setup-status', (req, res) => {
   res.json({ setupRequired: isSetupRequired() });
 });
