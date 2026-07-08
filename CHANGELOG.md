@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.353] - 2026-07-08
+
+### Added
+- **Navigasi Otomatis Halaman Error**:
+  - Mengekstraksi pembuatan dan pemuatan halaman error webview ke fungsi helper terpusat `show_error_page(&app_handle)`.
+  - Mengintegrasikan `show_error_page` ke dalam `stop_backend_async` dan loop `poll_backend` (ketika status terdeteksi berubah menjadi `"stopped"`), sehingga t-line langsung memuat halaman error secara real-time saat backend dimatikan oleh user atau mendadak crash.
+
 ## [1.3.352] - 2026-07-08
 
 ### Fixed

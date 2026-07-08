@@ -315,6 +315,122 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
     Ok(menu)
 }
 
+fn show_error_page(app_handle: &tauri::AppHandle) {
+    if let Some(main_window) = app_handle.get_webview_window("main") {
+        let error_html = r#"
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>t-line Connection Error</title>
+                <style>
+                    body {
+                        background-color: #05070c;
+                        color: #f8fafc;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        height: 100vh;
+                        margin: 0;
+                    }
+                    .card {
+                        background: rgba(17, 24, 39, 0.45);
+                        border: 1px solid rgba(255, 255, 255, 0.06);
+                        border-radius: 16px;
+                        padding: 40px;
+                        text-align: center;
+                        max-width: 500px;
+                    }
+                    h1 { color: #f59e0b; margin-bottom: 16px; }
+                    p { color: #94a3b8; line-height: 1.6; margin-bottom: 24px; }
+                    .btn-group {
+                        display: flex;
+                        gap: 12px;
+                        justify-content: center;
+                    }
+                    button {
+                        padding: 10px 20px;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        border: none;
+                        transition: all 0.2s;
+                    }
+                    .btn-primary {
+                        background: #6366f1;
+                        color: white;
+                    }
+                    .btn-primary:hover:not(:disabled) { background: #818cf8; }
+                    .btn-secondary {
+                        background: rgba(255, 255, 255, 0.08);
+                        color: #e2e8f0;
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                    }
+                    .btn-secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.15); }
+                    .btn-danger {
+                        background: #ef4444;
+                        color: white;
+                    }
+                    .btn-danger:hover:not(:disabled) { background: #f87171; }
+                    button:disabled {
+                        opacity: 0.5;
+                        cursor: not-allowed;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <h1>Backend Offline</h1>
+                    <p id="status-text">Timeout waiting for the backend server to start on port 5779. Please make sure no other process is using this port, and try starting the backend or closing the app.</p>
+                    <div class="btn-group">
+                        <button id="btn-start" class="btn-primary" onclick="startBackend()">Start Backend</button>
+                        <button class="btn-secondary" onclick="window.location.reload()">Retry Connection</button>
+                        <button class="btn-danger" onclick="quitApp()">Close App</button>
+                    </div>
+                </div>
+                <script>
+                    function startBackend() {
+                        document.getElementById('status-text').innerText = 'Starting backend, please wait...';
+                        document.getElementById('btn-start').disabled = true;
+                        document.getElementById('btn-start').innerText = 'Starting...';
+                        window.__TAURI__.core.invoke('start_backend_command');
+                        
+                        let attempts = 0;
+                        let interval = setInterval(() => {
+                            attempts++;
+                            if (attempts > 5) {
+                                clearInterval(interval);
+                                window.location.reload();
+                            } else {
+                                fetch('http://127.0.0.1:5779/api/health')
+                                    .then(res => {
+                                        if (res.ok) {
+                                            clearInterval(interval);
+                                            window.location.reload();
+                                        }
+                                    })
+                                    .catch(() => {});
+                            }
+                        }, 1000);
+                    }
+
+                    function quitApp() {
+                        window.__TAURI__.core.invoke('quit_app');
+                    }
+                </script>
+            </body>
+            </html>
+        "#;
+        
+        let data_url = format!("data:text/html;charset=utf-8,{}", percent_encode_html(error_html));
+        if let Ok(parsed_url) = tauri::Url::parse(&data_url) {
+            main_window.navigate(parsed_url).ok();
+        }
+        main_window.show().ok();
+    }
+}
+
 fn spawn_backend(app_handle: tauri::AppHandle) {
     let port = 5779;
     let is_dev = cfg!(debug_assertions);
@@ -513,119 +629,7 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
                 }
             }
 
-            if let Some(main_window) = app_handle_clone.get_webview_window("main") {
-                let error_html = r#"
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>t-line Connection Error</title>
-                        <style>
-                            body {
-                                background-color: #05070c;
-                                color: #f8fafc;
-                                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                                display: flex;
-                                flex-direction: column;
-                                align-items: center;
-                                justify-content: center;
-                                height: 100vh;
-                                margin: 0;
-                            }
-                            .card {
-                                background: rgba(17, 24, 39, 0.45);
-                                border: 1px solid rgba(255, 255, 255, 0.06);
-                                border-radius: 16px;
-                                padding: 40px;
-                                text-align: center;
-                                max-width: 500px;
-                            }
-                            h1 { color: #f59e0b; margin-bottom: 16px; }
-                            p { color: #94a3b8; line-height: 1.6; margin-bottom: 24px; }
-                            .btn-group {
-                                display: flex;
-                                gap: 12px;
-                                justify-content: center;
-                            }
-                            button {
-                                padding: 10px 20px;
-                                border-radius: 8px;
-                                font-weight: 600;
-                                cursor: pointer;
-                                border: none;
-                                transition: all 0.2s;
-                            }
-                            .btn-primary {
-                                background: #6366f1;
-                                color: white;
-                            }
-                            .btn-primary:hover:not(:disabled) { background: #818cf8; }
-                            .btn-secondary {
-                                background: rgba(255, 255, 255, 0.08);
-                                color: #e2e8f0;
-                                border: 1px solid rgba(255, 255, 255, 0.1);
-                            }
-                            .btn-secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.15); }
-                            .btn-danger {
-                                background: #ef4444;
-                                color: white;
-                            }
-                            .btn-danger:hover:not(:disabled) { background: #f87171; }
-                            button:disabled {
-                                opacity: 0.5;
-                                cursor: not-allowed;
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="card">
-                            <h1>Backend Offline</h1>
-                            <p id="status-text">Timeout waiting for the backend server to start on port 5779. Please make sure no other process is using this port, and try starting the backend or closing the app.</p>
-                            <div class="btn-group">
-                                <button id="btn-start" class="btn-primary" onclick="startBackend()">Start Backend</button>
-                                <button class="btn-secondary" onclick="window.location.reload()">Retry Connection</button>
-                                <button class="btn-danger" onclick="quitApp()">Close App</button>
-                            </div>
-                        </div>
-                        <script>
-                            function startBackend() {
-                                document.getElementById('status-text').innerText = 'Starting backend, please wait...';
-                                document.getElementById('btn-start').disabled = true;
-                                document.getElementById('btn-start').innerText = 'Starting...';
-                                window.__TAURI__.core.invoke('start_backend_command');
-                                
-                                let attempts = 0;
-                                let interval = setInterval(() => {
-                                    attempts++;
-                                    if (attempts > 5) {
-                                        clearInterval(interval);
-                                        window.location.reload();
-                                    } else {
-                                        fetch('http://127.0.0.1:5779/api/health')
-                                            .then(res => {
-                                                if (res.ok) {
-                                                    clearInterval(interval);
-                                                    window.location.reload();
-                                                }
-                                            })
-                                            .catch(() => {});
-                                    }
-                                }, 1000);
-                            }
-
-                            function quitApp() {
-                                window.__TAURI__.core.invoke('quit_app');
-                            }
-                        </script>
-                    </body>
-                    </html>
-                "#;
-                
-                let data_url = format!("data:text/html;charset=utf-8,{}", percent_encode_html(error_html));
-                if let Ok(parsed_url) = tauri::Url::parse(&data_url) {
-                    main_window.navigate(parsed_url).ok();
-                }
-                main_window.show().ok();
-            }
+            show_error_page(&app_handle_clone);
         }
     });
 }
@@ -693,6 +697,7 @@ fn stop_backend_async(app_handle: tauri::AppHandle) {
                 let _ = tray.set_menu(Some(menu));
             }
         }
+        show_error_page(&app_handle_clone);
     });
 }
 
@@ -768,6 +773,10 @@ fn poll_backend(app_handle: tauri::AppHandle) {
                 let mut status_guard = state.status.lock().unwrap();
                 *status_guard = status_to_apply.clone();
                 status_changed = true;
+                
+                if status_to_apply == "stopped" {
+                    show_error_page(&app_handle);
+                }
             }
 
             if status_to_apply == "running" {
