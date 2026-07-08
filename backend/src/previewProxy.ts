@@ -63,24 +63,35 @@ export const previewProxy = createProxyMiddleware({
   router: (req) => {
     const urlParams = new URL(req.url || '', `http://${req.headers.host}`);
     let target = urlParams.searchParams.get('target');
-    if (!target) {
+    
+    const acceptHeader = (req.headers.accept || '').toLowerCase();
+    const isDocRequest = acceptHeader.includes('text/html');
+
+    if (!target || !isDocRequest) {
       const cookies = req.headers.cookie || '';
       const match = cookies.match(/tline_proxy_target=([^;]+)/);
       if (match) {
-        target = decodeURIComponent(match[1]);
+        const cookieTarget = decodeURIComponent(match[1]);
+        if (target) {
+          return target.replace(/\/$/, '');
+        }
+        return cookieTarget;
       }
     }
-    if (target) {
+
+    if (target && isDocRequest) {
       currentProxyTarget = target.replace(/\/$/, '');
     }
-    return currentProxyTarget || 'http://localhost';
+    return currentProxyTarget || target || 'http://localhost';
   },
   selfHandleResponse: true,
   on: {
     proxyReq: (proxyReq, req, res) => {
+      const acceptHeader = (req.headers.accept || '').toLowerCase();
+      const isDocRequest = acceptHeader.includes('text/html');
       const urlParams = new URL(req.url || '', `http://${req.headers.host}`);
       const target = urlParams.searchParams.get('target');
-      if (target) {
+      if (target && isDocRequest) {
         res.setHeader('Set-Cookie', `tline_proxy_target=${encodeURIComponent(target)}; Path=/; SameSite=Lax`);
       }
       // Strip the 'target' param before forwarding to avoid confusing the target server

@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.363] - 2026-07-08
+
+### Fixed
+- **Preview Proxy Target Hijacking**:
+  - Restructured routing logic in `backend/src/previewProxy.ts` so that subresource requests (fetch/XHR, images, scripts) specifying a target parameter do not overwrite the global `currentProxyTarget` or the main session cookie `tline_proxy_target`. This ensures cross-origin APIs loaded by the previewed site do not break main site asset loading.
+- **Host-Relative 404 Routing Fallback**:
+  - Added a fallback Express middleware in `backend/src/server.ts` to capture unmatched host-relative requests (like `/gen_204`) from the preview frame and rewrite/redirect them through the preview proxy.
+
 ## [1.3.362] - 2026-07-08
 
 ### Fixed

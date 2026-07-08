@@ -602,6 +602,20 @@ app.post('/api/sync/state', authMiddleware, (req, res) => {
   }
 });
 
+// Fallback handler for unmatched host-relative requests from the preview proxy
+app.use((req, res, next) => {
+  const referer = req.headers.referer || '';
+  const cookies = req.headers.cookie || '';
+  const hasProxyCookie = cookies.includes('tline_proxy_target=');
+  const isFromPreviewProxy = referer.includes('/api/preview-proxy') || hasProxyCookie;
+
+  if (isFromPreviewProxy && !req.path.startsWith('/api') && req.path !== '/tline-helper.js') {
+    req.url = `/api/preview-proxy${req.url}`;
+    return previewProxy(req, res, next);
+  }
+  next();
+});
+
 // Serve frontend routing fallback in production
 if (fs.existsSync(frontendDistPath)) {
   app.get('*', (req, res) => {
