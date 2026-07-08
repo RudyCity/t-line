@@ -409,8 +409,12 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
         
         if (eventType === 'tline-ready') {
           setHelperReady(true);
-          if (isInspecting && tauriWebviewRef.current) {
-            tauriWebviewRef.current.eval(`window.postMessage({ type: "tline-start-inspect" }, "*")`).catch(() => {});
+          if (isInspecting && (window as any).__TAURI__?.core?.invoke) {
+            const activeLabel = tauriWebviewRef.current?.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
+            if (activeLabel) {
+              const jsCode = `window.postMessage({ type: "tline-start-inspect" }, "*")`;
+              (window as any).__TAURI__.core.invoke('eval_webview_js', { label: activeLabel, js: jsCode }).catch(() => {});
+            }
           }
         }
 
@@ -507,12 +511,16 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
   const toggleInspect = () => {
     const nextState = !isInspecting;
     setIsInspecting(nextState);
-    if (useTauriWebview && tauriWebviewRef.current) {
+    if (useTauriWebview && (window as any).__TAURI__?.core?.invoke) {
       try {
-        const cmd = nextState ? 'tline-start-inspect' : 'tline-stop-inspect';
-        tauriWebviewRef.current.eval(`window.postMessage({ type: "${cmd}" }, "*")`).catch((e: any) => {
-          console.warn('[BrowserTab] Failed to eval inspect command in Webview:', e);
-        });
+        const activeLabel = tauriWebviewRef.current?.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
+        if (activeLabel) {
+          const cmd = nextState ? 'tline-start-inspect' : 'tline-stop-inspect';
+          const jsCode = `window.postMessage({ type: "${cmd}" }, "*")`;
+          (window as any).__TAURI__.core.invoke('eval_webview_js', { label: activeLabel, js: jsCode }).catch((e: any) => {
+            console.warn('[BrowserTab] Failed to eval inspect command in Webview:', e);
+          });
+        }
       } catch (e) {
         console.warn('[BrowserTab] Webview eval error:', e);
       }

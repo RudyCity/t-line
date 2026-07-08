@@ -1346,6 +1346,19 @@ fn open_webview_devtools(app: tauri::AppHandle, label: String) -> Result<(), Str
 }
 
 #[tauri::command]
+fn eval_webview_js(app: tauri::AppHandle, label: String, js: String) -> Result<(), String> {
+    if let Some(webview) = app.get_webview(&label) {
+        webview.eval(&js).map_err(|e| e.to_string())?;
+        Ok(())
+    } else if let Some(webview_window) = app.get_webview_window(&label) {
+        webview_window.eval(&js).map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        Err(format!("Webview with label {} not found", label))
+    }
+}
+
+#[tauri::command]
 fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json::Value, String> {
     use sysinfo::{Pid, System};
     
@@ -1408,6 +1421,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_memory_usage,
             open_webview_devtools,
+            eval_webview_js,
             quit_app,
             start_backend_command,
             get_app_url

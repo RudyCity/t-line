@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.371] - 2026-07-08
+
+### Fixed
+- **Tauri Webview Inspect Element Mode**:
+  - Replaced the direct (and unsupported in JS API) `webview.eval()` call with a custom backend Tauri command `eval_webview_js` to evaluate JavaScript commands inside target child webviews. This fixes the issue where the kursor inspect state was not toggling inside Tauri native Webview instances.
+
 ## [1.3.370] - 2026-07-08
 
 ### Fixed
