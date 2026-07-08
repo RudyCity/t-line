@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.362] - 2026-07-08
+
+### Fixed
+- **Terminal WebSocket Upgrade Conflict**:
+  - Resolved `failed: Invalid frame header` error on terminal WebSocket connections by adding a `pathFilter` to `http-proxy-middleware`'s config inside `backend/src/previewProxy.ts`. This prevents the proxy from intercepting and corrupting websocket upgrades intended for the terminal WebSocket at `/`.
+
+### Changed
+- **Backend Refactoring & Code Length Compliance**:
+  - Extracted the web preview proxy logic, sanitize headers function, and temporary state variables from `backend/src/server.ts` into a new modular file `backend/src/previewProxy.ts`. This reduces the size of `server.ts` from 1,174 lines to ~950 lines, satisfying the strict 1,000-line code file limit rule.
+
 ## [1.3.361] - 2026-07-08
 
 ### Fixed
