@@ -378,9 +378,18 @@ export function TerminalInstance({
         const originalSyncScrollArea = core.viewport.syncScrollArea;
         if (typeof originalSyncScrollArea === 'function') {
           core.viewport.syncScrollArea = function (...args: any[]) {
+            // Avoid calling syncScrollArea if the renderService or its renderer is not yet initialized
+            const renderService = core._renderService;
+            if (!renderService || !renderService._renderer) {
+              return;
+            }
             try {
               return originalSyncScrollArea.apply(this, args);
             } catch (err) {
+              // Silence expected TypeError when dimensions are accessed on an uninitialized/disposed renderer
+              if (err instanceof TypeError && err.message.includes('dimensions')) {
+                return;
+              }
               console.warn('xterm.js syncScrollArea error (caught and ignored):', err);
             }
           };

@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.360] - 2026-07-08
+
+### Fixed
+- **xterm.js Viewport Initialization Warning**:
+  - Silenced the expected uncaught TypeError `Cannot read properties of undefined (reading 'dimensions')` during xterm.js syncScrollArea initialization.
+  - Added a check for renderer readiness (`core._renderService._renderer`) before delegating to `originalSyncScrollArea` inside `TerminalInstance.tsx`.
+
 ## [1.3.359] - 2026-07-08
 
 ### Changed
