@@ -1102,8 +1102,9 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
             if let Some(main_window) = app_handle_clone.get_webview_window("main") {
                 main_window.navigate(tauri::Url::parse(&url).unwrap()).ok();
                 thread::sleep(Duration::from_millis(300));
-                main_window.maximize().ok();
                 main_window.show().ok();
+                main_window.maximize().ok();
+                main_window.set_focus().ok();
             }
         } else {
             eprintln!("[tauri] Timeout waiting for backend server to start.");

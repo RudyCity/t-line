@@ -2,12 +2,6 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
-## [1.3.374] - 2026-07-08
-
-### Fixed
-- **Tauri Native Webview Tab Switch Re-mount**:
-  - Removed the aggressive exit-after-10-failures safeguard in the Webview positioning loop. This ensures that when the browser tab is hidden (e.g. switching to Dashboard) for more than 160ms, the position/size update loop is not terminated and correctly resumes bounds syncing when returning to the tab.
-
 ## [1.3.373] - 2026-07-08
 
 ### Fixed
