@@ -2,6 +2,20 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.350] - 2026-07-08
+
+### Added
+- **Otomatisasi Backend dengan Tauri Dev**:
+  - Mengubah script `tauri` dan `dev:tauri` di root `package.json` untuk menjalankan `node dev.js tauri`.
+  - Memperbarui `dev.js` agar secara otomatis menjalankan dev server backend (port 5779) dan dev server frontend (port 5773) saat `tauri dev` dijalankan, serta mematikan semuanya secara bersih saat Tauri ditutup.
+
+### Fixed
+- **Masalah Restart/Start Backend di System Tray**:
+  - Memperbaiki race condition di mana `restart_backend` mencoba memulai ulang backend sebelum port 5779 benar-benar dilepas oleh proses lama.
+  - Memodifikasi `stop_backend` di Rust (`lib.rs`) agar menunggu terminasi pohon proses (menggunakan `taskkill /f /t` di Windows) dan mem-poll port hingga bersih (maksimal 2 detik).
+  - Menambahkan fallback `kill_port_process` menggunakan PowerShell di Windows untuk memaksa mengakhiri proses apa pun di port 5779 jika backend_child bernilai `None`.
+  - Menambahkan deteksi root workspace di `lib.rs` untuk menjalankan dev server backend via `npm run dev:backend` jika backend dist belum dikompilasi saat pengembangan.
+
 ## [1.3.349] - 2026-07-08
 
 ### Fixed

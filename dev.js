@@ -1,52 +1,98 @@
 const { spawn } = require('child_process');
+const net = require('net');
 
 const isBun = process.versions.bun !== undefined;
 const runner = isBun ? 'bun' : 'npm';
 
-const target = process.argv[2]; // 'backend', 'frontend', or undefined (both)
+const target = process.argv[2]; // 'backend', 'frontend', 'tauri', or undefined (both)
 
 console.log(`[t-line] Starting dev servers using ${runner}...`);
 
-const runBackend = !target || target === 'backend';
-const runFrontend = !target || target === 'frontend';
-
-const processes = [];
-
-if (runBackend) {
-  const backendArgs = isBun 
-    ? ['run', '--cwd', 'backend', 'dev'] 
-    : ['run', 'dev', '--workspace=backend'];
-  const backend = spawn(runner, backendArgs, { stdio: 'inherit', shell: true });
-  processes.push(backend);
-  backend.on('exit', (code) => {
-    console.log(`[t-line] Backend process exited with code ${code}`);
-    handleExit(code);
+function checkPort(port) {
+  return new Promise((resolve) => {
+    const client = net.connect({ port, host: '127.0.0.1' }, () => {
+      client.end();
+      resolve(true);
+    });
+    client.on('error', () => {
+      resolve(false);
+    });
   });
 }
 
-if (runFrontend) {
-  const frontendArgs = isBun 
-    ? ['run', '--cwd', 'frontend', 'dev'] 
-    : ['run', 'dev', '--workspace=frontend'];
-  const frontend = spawn(runner, frontendArgs, { stdio: 'inherit', shell: true });
-  processes.push(frontend);
-  frontend.on('exit', (code) => {
-    console.log(`[t-line] Frontend process exited with code ${code}`);
-    handleExit(code);
-  });
-}
+async function main() {
+  const runBackend = !target || target === 'backend' || target === 'tauri';
+  const runFrontend = !target || target === 'frontend' || target === 'tauri';
+  const runTauri = target === 'tauri';
 
-let exiting = false;
-function handleExit(code) {
-  if (exiting) return;
-  exiting = true;
-  for (const proc of processes) {
-    try {
-      proc.kill();
-    } catch (e) {}
+  const processes = [];
+
+  if (runBackend) {
+    const active = await checkPort(5779);
+    if (active) {
+      console.log('[t-line] Backend dev server is already running on port 5779.');
+    } else {
+      console.log('[t-line] Starting backend dev server...');
+      const backendArgs = isBun 
+        ? ['run', '--cwd', 'backend', 'dev'] 
+        : ['run', 'dev', '--workspace=backend'];
+      const backend = spawn(runner, backendArgs, { stdio: 'inherit', shell: true });
+      processes.push(backend);
+      backend.on('exit', (code) => {
+        console.log(`[t-line] Backend process exited with code ${code}`);
+        handleExit(code);
+      });
+    }
   }
-  process.exit(code || 0);
+
+  if (runFrontend) {
+    const active = await checkPort(5773);
+    if (active) {
+      console.log('[t-line] Frontend dev server is already running on port 5773.');
+    } else {
+      console.log('[t-line] Starting frontend dev server...');
+      const frontendArgs = isBun 
+        ? ['run', '--cwd', 'frontend', 'dev'] 
+        : ['run', 'dev', '--workspace=frontend'];
+      const frontend = spawn(runner, frontendArgs, { stdio: 'inherit', shell: true });
+      processes.push(frontend);
+      frontend.on('exit', (code) => {
+        console.log(`[t-line] Frontend process exited with code ${code}`);
+        handleExit(code);
+      });
+    }
+  }
+
+  if (runTauri) {
+    console.log('[t-line] Starting Tauri dev...');
+    const tauriArgs = isBun
+      ? ['run', '--cwd', 'desktop-tauri', 'tauri', 'dev']
+      : ['run', 'tauri', 'dev', '--workspace=desktop-tauri'];
+    const tauri = spawn(runner, tauriArgs, { stdio: 'inherit', shell: true });
+    processes.push(tauri);
+    tauri.on('exit', (code) => {
+      console.log(`[t-line] Tauri process exited with code ${code}`);
+      handleExit(code);
+    });
+  }
+
+  let exiting = false;
+  function handleExit(code) {
+    if (exiting) return;
+    exiting = true;
+    for (const proc of processes) {
+      try {
+        proc.kill();
+      } catch (e) {}
+    }
+    process.exit(code || 0);
+  }
+
+  process.on('SIGINT', () => handleExit(0));
+  process.on('SIGTERM', () => handleExit(0));
 }
 
-process.on('SIGINT', () => handleExit(0));
-process.on('SIGTERM', () => handleExit(0));
+main().catch(err => {
+  console.error('[t-line] Error starting servers:', err);
+  process.exit(1);
+});

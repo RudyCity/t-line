@@ -21,6 +21,43 @@ fn is_port_active(port: u16) -> bool {
     TcpStream::connect(format!("127.0.0.1:{}", port)).is_ok()
 }
 
+fn find_workspace_root() -> Option<PathBuf> {
+    let exe_path = std::env::current_exe().ok()?;
+    let mut path = exe_path.as_path();
+    while let Some(parent) = path.parent() {
+        if parent.join("package.json").exists() && parent.join("backend").exists() {
+            return Some(parent.to_path_buf());
+        }
+        path = parent;
+    }
+    None
+}
+
+fn kill_port_process(port: u16) {
+    #[cfg(windows)]
+    {
+        let cmd = format!(
+            "Get-NetTCPConnection -LocalPort {} -State Listen -ErrorAction SilentlyContinue | Foreach-Object {{ Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }}"
+        , port);
+        Command::new("powershell")
+            .args(&["-NoProfile", "-Command", &cmd])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .ok();
+    }
+    #[cfg(not(windows))]
+    {
+        let cmd = format!("lsof -t -i:{} | xargs kill -9", port);
+        Command::new("sh")
+            .args(&["-c", &cmd])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .ok();
+    }
+}
+
 fn get_bypass_token() -> Option<String> {
     let home = std::env::var("USERPROFILE")
         .or_else(|_| std::env::var("HOME"))
@@ -304,76 +341,106 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
         } else {
             println!("[tauri] Backend not running. Spawning backend process...");
             
-            let resource_path = app_handle_clone
-                .path()
-                .resolve("backend/dist/server.js", tauri::path::BaseDirectory::Resource);
-            
-            match resource_path {
-                Ok(script_path) => {
-                    if script_path.exists() {
-                        println!("[tauri] Spawning node with script: {:?}", script_path);
-                        
-                        let log_file_path = if let Ok(app_data) = app_handle_clone.path().app_data_dir() {
-                            std::fs::create_dir_all(&app_data).ok();
-                            app_data.join("backend_run.log")
-                        } else {
-                            PathBuf::from("backend_run.log")
-                        };
+            let log_file_path = if let Ok(app_data) = app_handle_clone.path().app_data_dir() {
+                std::fs::create_dir_all(&app_data).ok();
+                app_data.join("backend_run.log")
+            } else {
+                PathBuf::from("backend_run.log")
+            };
 
-                        let child = Command::new("node")
-                            .arg("--max-old-space-size=64")
-                            .arg("--expose-gc")
-                            .arg(&script_path)
-                            .env("PORT", port.to_string())
+            let mut child = None;
+
+            if is_dev {
+                if let Some(ws_root) = find_workspace_root() {
+                    println!("[tauri] Dev mode: Spawning dev backend from workspace root: {:?}", ws_root);
+                    #[cfg(windows)]
+                    {
+                        child = Command::new("cmd")
+                            .args(&["/c", "npm run dev:backend"])
+                            .current_dir(&ws_root)
                             .stdout(Stdio::piped())
                             .stderr(Stdio::piped())
-                            .spawn();
-                        
-                        match child {
-                            Ok(mut spawned_child) => {
-                                let stdout = spawned_child.stdout.take().expect("failed to get stdout");
-                                let stderr = spawned_child.stderr.take().expect("failed to get stderr");
-                                
-                                {
-                                    let mut guard = backend_child_thread.lock().unwrap();
-                                    *guard = Some(spawned_child);
-                                }
-
-                                let log_file_clone = log_file_path.clone();
-                                thread::spawn(move || {
-                                    if let Ok(mut log_file) = File::create(&log_file_clone) {
-                                        let reader = BufReader::new(stdout);
-                                        for line in reader.lines() {
-                                            if let Ok(l) = line {
-                                                writeln!(log_file, "[stdout] {}", l).ok();
-                                                log_file.flush().ok();
-                                            }
-                                        }
-                                    }
-                                });
-
-                                thread::spawn(move || {
-                                    if let Ok(mut log_file) = File::options().append(true).open(&log_file_path) {
-                                        let reader = BufReader::new(stderr);
-                                        for line in reader.lines() {
-                                            if let Ok(l) = line {
-                                                writeln!(log_file, "[stderr] {}", l).ok();
-                                                log_file.flush().ok();
-                                            }
-                                        }
-                                    }
-                                });
-                            }
-                            Err(e) => {
-                                eprintln!("[tauri] Failed to spawn node backend process: {}", e);
-                            }
-                        }
-                    } else {
-                        eprintln!("[tauri] Backend script not found at path: {:?}", script_path);
+                            .spawn()
+                            .ok();
+                    }
+                    #[cfg(not(windows))]
+                    {
+                        child = Command::new("npm")
+                            .args(&["run", "dev:backend"])
+                            .current_dir(&ws_root)
+                            .stdout(Stdio::piped())
+                            .stderr(Stdio::piped())
+                            .spawn()
+                            .ok();
                     }
                 }
-                Err(e) => {
-                    eprintln!("[tauri] Failed to resolve resource path: {}", e);
+            }
+
+            if child.is_none() {
+                let resource_path = app_handle_clone
+                    .path()
+                    .resolve("backend/dist/server.js", tauri::path::BaseDirectory::Resource);
+                
+                match resource_path {
+                    Ok(script_path) => {
+                        if script_path.exists() {
+                            println!("[tauri] Spawning node with script: {:?}", script_path);
+                            child = Command::new("node")
+                                .arg("--max-old-space-size=64")
+                                .arg("--expose-gc")
+                                .arg(&script_path)
+                                .env("PORT", port.to_string())
+                                .stdout(Stdio::piped())
+                                .stderr(Stdio::piped())
+                                .spawn()
+                                .ok();
+                        } else {
+                            eprintln!("[tauri] Backend script not found at path: {:?}", script_path);
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("[tauri] Failed to resolve resource path: {}", e);
+                    }
+                }
+            }
+
+            match child {
+                Some(mut spawned_child) => {
+                    let stdout = spawned_child.stdout.take().expect("failed to get stdout");
+                    let stderr = spawned_child.stderr.take().expect("failed to get stderr");
+                    
+                    {
+                        let mut guard = backend_child_thread.lock().unwrap();
+                        *guard = Some(spawned_child);
+                    }
+
+                    let log_file_clone = log_file_path.clone();
+                    thread::spawn(move || {
+                        if let Ok(mut log_file) = File::create(&log_file_clone) {
+                            let reader = BufReader::new(stdout);
+                            for line in reader.lines() {
+                                if let Ok(l) = line {
+                                    writeln!(log_file, "[stdout] {}", l).ok();
+                                    log_file.flush().ok();
+                                }
+                            }
+                        }
+                    });
+
+                    thread::spawn(move || {
+                        if let Ok(mut log_file) = File::options().append(true).open(&log_file_path) {
+                            let reader = BufReader::new(stderr);
+                            for line in reader.lines() {
+                                if let Ok(l) = line {
+                                    writeln!(log_file, "[stderr] {}", l).ok();
+                                    log_file.flush().ok();
+                                }
+                            }
+                        }
+                    });
+                }
+                None => {
+                    eprintln!("[tauri] Failed to spawn backend process.");
                 }
             }
         }
@@ -496,20 +563,38 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
 fn stop_backend(state: &DesktopState) {
     let mut guard = state.backend_child.lock().unwrap();
     if let Some(child) = guard.take() {
-        println!("[tauri] Terminating backend process...");
+        println!("[tauri] Terminating backend process tree...");
         #[cfg(windows)]
         {
             let pid = child.id();
-            Command::new("taskkill")
+            if let Ok(mut cmd) = Command::new("taskkill")
                 .args(&["/pid", &pid.to_string(), "/f", "/t"])
                 .spawn()
-                .ok();
+            {
+                let _ = cmd.wait();
+            }
         }
         #[cfg(not(windows))]
         {
             let mut c = child;
-            c.kill().ok();
+            let _ = c.kill();
+            let _ = c.wait();
         }
+    }
+
+    // Fallback: make sure the port is actually free
+    if is_port_active(5779) {
+        println!("[tauri] Port 5779 is still active. Killing any process on port 5779...");
+        kill_port_process(5779);
+    }
+
+    // Wait up to 2 seconds for port 5779 to be freed
+    let start = Instant::now();
+    while start.elapsed() < Duration::from_secs(2) {
+        if !is_port_active(5779) {
+            break;
+        }
+        thread::sleep(Duration::from_millis(100));
     }
     
     {

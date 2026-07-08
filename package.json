@@ -1,6 +1,6 @@
 {
   "name": "t-line-root",
-  "version": "1.3.349",
+  "version": "1.3.350",
 
   "private": true,
   "workspaces": [
@@ -15,8 +15,8 @@
     "build:backend": "npm run build --workspace=backend",
     "build:frontend": "npm run build --workspace=frontend",
     "build:exe": "npm run build:tauri",
-    "tauri": "npm run tauri dev --workspace=desktop-tauri",
-    "dev:tauri": "npm run tauri dev --workspace=desktop-tauri",
+    "tauri": "node dev.js tauri",
+    "dev:tauri": "node dev.js tauri",
     "build:tauri": "npm run build:frontend && npm run build:backend && npm run copy-assets --workspace=desktop-tauri && npm run tauri build --workspace=desktop-tauri",
     "test:frontend": "npm run test --workspace=frontend",
     "test": "npm run test:frontend"
