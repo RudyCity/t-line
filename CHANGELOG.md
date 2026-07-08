@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.365] - 2026-07-08
+
+### Fixed
+- **Tauri CI/CD Build Failures**:
+  - Restructured the Tauri bundling resource configuration to exclude the root `node_modules` directory, preventing compilation failures caused by symbolic links (symlinks) inside devDependencies (like `@tauri-apps/cli`) on headless GitHub Actions runners.
+  - Updated `copy-assets.js` to run `npm install --omit=dev` directly inside `desktop-tauri/backend/` during the assets copy phase, and cleaned up any symlink directories (`.bin`) before bundling. This minimizes final installer size (saving ~50MB+) and ensures all backend dependencies are cleanly packaged.
+  - Corrected the `swatinem/rust-cache` cache workspaces target paths inside `.github/workflows/release.yml`.
+
 ## [1.3.364] - 2026-07-08
 
 ### Fixed

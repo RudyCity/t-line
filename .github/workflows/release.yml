@@ -50,7 +50,7 @@ jobs:
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: './desktop-tauri/src-tauri -> target'
+          workspaces: 'desktop-tauri/src-tauri -> desktop-tauri/src-tauri/target'
 
       - name: Copy Assets for Tauri
         run: npm run copy-assets --workspace=desktop-tauri

@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 function copyDirSync(src, dest) {
   fs.mkdirSync(dest, { recursive: true });
@@ -25,6 +26,18 @@ try {
   }
   copyDirSync(path.join(__dirname, '..', 'backend', 'dist'), path.join(__dirname, 'backend', 'dist'));
   fs.copyFileSync(path.join(__dirname, '..', 'backend', 'package.json'), path.join(__dirname, 'backend', 'package.json'));
+
+  console.log('Installing production dependencies for backend...');
+  execSync('npm install --omit=dev', {
+    cwd: path.join(__dirname, 'backend'),
+    stdio: 'inherit'
+  });
+
+  // Remove .bin folder to completely avoid symlinks
+  const binPath = path.join(__dirname, 'backend', 'node_modules', '.bin');
+  if (fs.existsSync(binPath)) {
+    fs.rmSync(binPath, { recursive: true, force: true });
+  }
 
   console.log('Copying frontend assets for Tauri...');
   if (fs.existsSync(path.join(__dirname, 'frontend'))) {
