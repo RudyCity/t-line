@@ -939,29 +939,42 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
             }
 
             if child.is_none() {
-                let resource_path = app_handle_clone
-                    .path()
-                    .resolve("backend/dist/server.js", tauri::path::BaseDirectory::Resource);
+                let mut script_path = None;
                 
-                match resource_path {
-                    Ok(script_path) => {
-                        if script_path.exists() {
-                            println!("[tauri] Spawning node with script: {:?}", script_path);
-                            child = Command::new("node")
-                                .arg("--max-old-space-size=64")
-                                .arg("--expose-gc")
-                                .arg(&script_path)
-                                .env("PORT", port.to_string())
-                                .stdout(Stdio::piped())
-                                .stderr(Stdio::piped())
-                                .spawn()
-                                .ok();
-                        } else {
-                            eprintln!("[tauri] Backend script not found at path: {:?}", script_path);
+                // Try resolving via "_up_" prefix first (since tauri bundles resources relative to src-tauri,
+                // and "../backend" gets bundled as "_up_/backend")
+                if let Ok(path) = app_handle_clone.path().resolve("_up_/backend/dist/server.js", tauri::path::BaseDirectory::Resource) {
+                    if path.exists() {
+                        script_path = Some(path);
+                    }
+                }
+                
+                // Fallback to direct resolution
+                if script_path.is_none() {
+                    if let Ok(path) = app_handle_clone.path().resolve("backend/dist/server.js", tauri::path::BaseDirectory::Resource) {
+                        if path.exists() {
+                            script_path = Some(path);
                         }
                     }
-                    Err(e) => {
-                        eprintln!("[tauri] Failed to resolve resource path: {}", e);
+                }
+
+                match script_path {
+                    Some(path) => {
+                        let path_str = path.to_string_lossy();
+                        let clean_path = path_str.strip_prefix(r"\\?\").unwrap_or(&path_str);
+                        println!("[tauri] Spawning node with script: {}", clean_path);
+                        child = Command::new("node")
+                            .arg("--max-old-space-size=64")
+                            .arg("--expose-gc")
+                            .arg(clean_path)
+                            .env("PORT", port.to_string())
+                            .stdout(Stdio::piped())
+                            .stderr(Stdio::piped())
+                            .spawn()
+                            .ok();
+                    }
+                    None => {
+                        eprintln!("[tauri] Backend script not found in resource paths.");
                     }
                 }
             }

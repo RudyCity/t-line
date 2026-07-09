@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.374] - 2026-07-09
+
+### Fixed
+- **Tauri Installed Backend Startup**:
+  - Updated resource path resolution inside `desktop-tauri/src-tauri/src/lib.rs` to lookup the backend script at both `_up_/backend/dist/server.js` and `backend/dist/server.js`. This resolves issues where Tauri bundles resources with an `_up_` prefix relative to the `src-tauri` folder.
+  - Stripped the Windows UNC long-path namespace prefix (`\\?\\`) from the script path before passing it to `node`. This prevents the Node.js module loader from crashing with `EISDIR` path resolution errors at startup.
+
 ## [1.3.373] - 2026-07-08
 
 ### Fixed
