@@ -93,6 +93,24 @@ fn current_app_url() -> String {
     app_url_with_token(get_bypass_token())
 }
 
+fn show_dashboard_window<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>) {
+    if let Some(window) = app_handle.get_webview_window("main") {
+        let state = app_handle.state::<DesktopState>();
+        let status = state.status.lock().unwrap().clone();
+
+        if status == "running" {
+            if let Ok(url) = tauri::Url::parse(&current_app_url()) {
+                let _ = window.navigate(url);
+            }
+        }
+
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.maximize();
+        let _ = window.set_focus();
+    }
+}
+
 fn is_node_installed() -> bool {
     Command::new("node")
         .arg("--version")
@@ -1481,11 +1499,7 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             println!("Another instance was opened with args: {:?} and cwd: {:?}", argv, cwd);
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.show();
-                let _ = window.set_focus();
-                let _ = window.unminimize();
-            }
+            show_dashboard_window(app);
         }))
         .manage(state)
         .invoke_handler(tauri::generate_handler![
@@ -1524,11 +1538,7 @@ pub fn run() {
                         stop_backend(&state);
                         app_handle.exit(0);
                     } else if id_str == "show" {
-                        if let Some(window) = app_handle.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                            let _ = window.unminimize();
-                        }
+                        show_dashboard_window(app_handle);
                     } else if id_str == "start_backend" {
                         spawn_backend(app_handle.clone());
                     } else if id_str == "stop_backend" {
@@ -1540,22 +1550,14 @@ pub fn run() {
                         stop_backend(&state);
                         restart_desktop_app();
                     } else if id_str.starts_with("pid_") {
-                        if let Some(window) = app_handle.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                            let _ = window.unminimize();
-                        }
+                        show_dashboard_window(app_handle);
                     }
                 })
                 .show_menu_on_left_click(false)
                 .on_tray_icon_event(|tray: &tauri::tray::TrayIcon, event: tauri::tray::TrayIconEvent| {
                     if let TrayIconEvent::Click { button, button_state, .. } = event {
                         if button == MouseButton::Left && button_state == MouseButtonState::Up {
-                            if let Some(window) = tray.app_handle().get_webview_window("main") {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                                let _ = window.unminimize();
-                            }
+                            show_dashboard_window(tray.app_handle());
                         }
                     }
                 });

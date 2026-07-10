@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.381] - 2026-07-10
+
+### Fixed
+- **Tray Show Dashboard Restore**:
+  - Reworked Show Dashboard, tray click, and single-instance restore to use one shared main-window restore path.
+  - Reloads the dashboard URL when the backend is running, then shows, unminimizes, maximizes, and focuses the main app window.
+
 ## [1.3.380] - 2026-07-10
 
 ### Fixed
