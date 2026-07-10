@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.388] - 2026-07-10
+
+### Changed
+- **Detached Window Styling**:
+  - Disabled native OS decorations (`decorations(false)`) on detached Tauri windows in the Rust backend to prevent duplicate title bars, relying entirely on the custom React-rendered header and window controls.
+
 ## [1.3.387] - 2026-07-10
 
 ### Fixed

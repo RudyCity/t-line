@@ -1417,7 +1417,7 @@ async fn create_detached_window(app: tauri::AppHandle, label: String, query: Str
     .title("t-line - Detached Tab")
     .inner_size(900.0, 600.0)
     .resizable(true)
-    .decorations(true)
+    .decorations(false)
     .initialization_script(&initialization_script);
 
     let window = win_builder.build().map_err(|e| e.to_string())?;
