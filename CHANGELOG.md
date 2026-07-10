@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.382] - 2026-07-10
+
+### Fixed
+- **Detached Browser Tab Blank Window**:
+  - Stopped the main window from keeping detached browser tabs mounted as hidden native Tauri webviews, preventing duplicate child webviews from fighting over the same preview tab.
+  - Encoded detached-window query parameters with `URLSearchParams` so auth tokens and tab IDs are passed safely to new windows.
 ## [1.3.381] - 2026-07-10
 
 ### Fixed

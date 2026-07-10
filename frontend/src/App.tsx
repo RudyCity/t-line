@@ -69,6 +69,16 @@ export default function App() {
     return urlParams.get('detachedTabId');
   }, []);
 
+  const buildDetachedTabQuery = (tabId: string) => {
+    const params = new URLSearchParams();
+    const token = localStorage.getItem('token') || '';
+    if (token) {
+      params.set('token', token);
+    }
+    params.set('detachedTabId', tabId);
+    return params.toString();
+  };
+
   const {
     theme,
     setTheme,
@@ -1658,8 +1668,7 @@ export default function App() {
                             onClick={() => {
                               if (t.isDetached) {
                                 if ((window as any).__TAURI__?.core?.invoke) {
-                                  const token = localStorage.getItem('token') || '';
-                                  const query = `token=${token}&detachedTabId=${t.id}`;
+                                  const query = buildDetachedTabQuery(t.id);
                                   (window as any).__TAURI__.core.invoke('create_detached_window', { 
                                     label: `browser-detached-${t.id}`, 
                                     query 
@@ -1845,7 +1854,7 @@ export default function App() {
 
 
               {/* Persistent Browser Tabs (kept in DOM to avoid reloading on tab switch) */}
-              {tabs.filter(t => t.type === 'browser').map(tab => (
+              {tabs.filter(t => t.type === 'browser' && !t.isDetached).map(tab => (
                 <BrowserTab
                   key={tab.id}
                   tab={tab}
@@ -2162,8 +2171,7 @@ export default function App() {
           localStorage.setItem('tline-tabs-v2', JSON.stringify(updated));
 
           if ((window as any).__TAURI__?.core?.invoke) {
-            const token = localStorage.getItem('token') || '';
-            const query = `token=${token}&detachedTabId=${tabId}`;
+            const query = buildDetachedTabQuery(tabId);
             (window as any).__TAURI__.core.invoke('create_detached_window', { 
               label: `browser-detached-${tabId}`, 
               query 
