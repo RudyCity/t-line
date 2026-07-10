@@ -20,7 +20,7 @@ import {
   Zap,
   X,
   Globe,
-  ExternalLink
+  Lock
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { FileViewerTab } from './components/FileViewerTab';
@@ -1676,17 +1676,7 @@ export default function App() {
                             onDragEnd={handleTabDragEnd}
                             onDrop={(e) => handleTabDrop(e, t.id)}
                             onClick={() => {
-                              if (t.isDetached) {
-                                if ((window as any).__TAURI__?.core?.invoke) {
-                                  const query = buildDetachedTabQuery(t.id);
-                                  (window as any).__TAURI__.core.invoke('create_detached_window', { 
-                                    label: `browser-detached-${t.id}`, 
-                                    query 
-                                  }).catch((err: any) => console.error(err));
-                                }
-                              } else {
-                                handleTabClick(t);
-                              }
+                              handleTabClick(t);
                             }}
                             onMouseEnter={(e) => handleTabMouseEnter(e, t)}
                             onMouseLeave={handleTabMouseLeave}
@@ -1709,7 +1699,9 @@ export default function App() {
                                 <span className="tab-shell-type">({shellType === 'powershell' ? 'ps' : shellType})</span>
                               )}
                               {t.isDetached && (
-                                <ExternalLink size={10} className="tab-detached-icon ml-1 inline text-purple-400 opacity-80" />
+                                <span className="flex items-center justify-center w-3.5 h-3.5 rounded bg-purple-500/20 border border-purple-500/35 text-purple-300 ml-1.5 shrink-0 select-none animate-pulse" title="Tab is Detached & Locked">
+                                  <Lock size={8} className="shrink-0" />
+                                </span>
                               )}
                             </span>
                             <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)}>×</span>
@@ -1878,35 +1870,16 @@ export default function App() {
               {(() => {
                 const activeTab = tabs.find(t => t.id === activeTabId);
                 if (!activeTab) return null;
-                if (activeTab.isDetached) {
-                  return (
+                let tabElement = null;
+                if (activeTab.type === 'browser') {
+                  tabElement = (
                     <div className="flex h-full w-full flex-col items-center justify-center text-slate-400 p-8 text-center" style={{ background: 'var(--bg-main)' }}>
-                      <Zap size={32} className="text-purple-400 mb-3 animate-pulse" />
-                      <p className="font-semibold text-sm">Tab Detached</p>
-                      <p className="text-xs text-slate-500 mt-1">This tab is currently open in a separate window.</p>
-                      <button 
-                        onClick={() => {
-                          const updated = tabs.map(t => t.id === activeTab.id ? { ...t, isDetached: false } : t);
-                          setTabs(updated);
-                          localStorage.setItem('tline-tabs-v2', JSON.stringify(updated));
-                          if ((window as any).__TAURI__?.core?.invoke) {
-                            (window as any).__TAURI__.core.invoke('close_detached_window', { 
-                              label: `browser-detached-${activeTab.id}` 
-                            }).catch((e: any) => console.error(e));
-                          }
-                        }}
-                        className="mt-4 px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 text-xs rounded border border-purple-500/20 transition-all cursor-pointer"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                      >
-                        <Zap size={12} />
-                        <span>Re-attach Tab</span>
-                      </button>
+                      <Globe size={40} className="text-slate-500 mb-3 opacity-40" />
+                      <p className="font-semibold text-sm">Browser Tab</p>
                     </div>
                   );
-                }
-                if (activeTab.type === 'browser') return null;
-                if (activeTab.type === 'file') {
-                  return (
+                } else if (activeTab.type === 'file') {
+                  tabElement = (
                     <FileViewerTab
                       filePath={activeTab.filePath || ''}
                       token={localStorage.getItem('token') || ''}
@@ -1919,9 +1892,8 @@ export default function App() {
                       themeBackground={THEMES[theme]?.bgMain}
                     />
                   );
-                }
-                if (activeTab.type === 'diff') {
-                  return (
+                } else if (activeTab.type === 'diff') {
+                  tabElement = (
                     <DiffViewerTab
                       commitHash={activeTab.commitHash || ''}
                       filePath={activeTab.filePath || ''}
@@ -1931,9 +1903,8 @@ export default function App() {
                       compareWithWorktree={activeTab.compareWithWorktree}
                     />
                   );
-                }
-                if (activeTab.type === 'grid') {
-                  return (
+                } else if (activeTab.type === 'grid') {
+                  tabElement = (
                     <TerminalGridTab
                       tab={activeTab}
                       tabs={tabs}
@@ -1961,9 +1932,8 @@ export default function App() {
                       onRefreshTerminal={refreshTerminal}
                     />
                   );
-                }
-                if (activeTab.type === 'terminal' && activeTab.layout) {
-                  return (
+                } else if (activeTab.type === 'terminal' && activeTab.layout) {
+                  tabElement = (
                     <SplitLayoutRenderer
                       node={activeTab.layout}
                       activeTabId={activeTabId}
@@ -1992,7 +1962,48 @@ export default function App() {
                     />
                   );
                 }
-                return null;
+
+                if (!tabElement) return null;
+
+                if (activeTab.isDetached) {
+                  return (
+                    <div className="relative w-full h-full overflow-hidden select-none pointer-events-none">
+                      {/* Blurred terminal/editor beneath the overlay */}
+                      <div className="w-full h-full filter blur-[1.5px] opacity-30">
+                        {tabElement}
+                      </div>
+
+                      {/* Frosted Glass Locked Overlay */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 p-8 text-center bg-black/40 backdrop-blur-[3px] pointer-events-auto z-[90]">
+                        <div className="p-4 rounded-full bg-purple-500/10 border border-purple-500/25 mb-4 animate-pulse shadow-[0_0_15px_rgba(168,85,247,0.1)]">
+                          <Lock size={28} className="text-purple-400" />
+                        </div>
+                        <p className="font-bold text-base text-purple-200 tracking-wide uppercase">Workspace Locked</p>
+                        <p className="text-xs text-slate-400 mt-2 max-w-[280px]">
+                          This workspace is currently open in a detached window.
+                        </p>
+                        <button 
+                          onClick={() => {
+                            const updated = tabs.map(t => t.id === activeTab.id ? { ...t, isDetached: false } : t);
+                            setTabs(updated);
+                            localStorage.setItem('tline-tabs-v2', JSON.stringify(updated));
+                            if ((window as any).__TAURI__?.core?.invoke) {
+                              (window as any).__TAURI__.core.invoke('close_detached_window', { 
+                                label: `browser-detached-${activeTab.id}` 
+                              }).catch((e: any) => console.error(e));
+                            }
+                          }}
+                          className="mt-5 px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 hover:text-purple-200 text-xs font-semibold rounded-full border border-purple-500/30 hover:border-purple-500/50 shadow-md transition-all duration-200 cursor-pointer flex items-center gap-2 hover:-translate-y-0.5 active:translate-y-0"
+                        >
+                          <Zap size={12} className="animate-bounce" />
+                          <span>Re-attach Workspace</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return tabElement;
               })()}
             </div>
 
@@ -2183,19 +2194,7 @@ export default function App() {
             }).catch((err: any) => console.error(err));
           }
           
-          if (activeTabId === tabId) {
-            const remaining = updated.filter(t => t.workspaceId === panelWorkspace?.id && !t.isDetached);
-            if (remaining.length > 0) {
-              setActiveTabId(remaining[0].id);
-            } else {
-              const anyRemaining = updated.filter(t => !t.isDetached);
-              if (anyRemaining.length > 0) {
-                setActiveTabId(anyRemaining[0].id);
-              } else {
-                setActiveTabId('');
-              }
-            }
-          }
+          // Do not switch active tab upon detach, showing the locked overlay immediately.
         }}
         onReattachTab={(tabId) => {
           setTabContextMenu(null);

@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.385] - 2026-07-10
+
+### Added
+- **Detached Tab Lock Overlay and Tab Indicators**:
+  - Replaced the blank `Tab Detached` placeholder screen with a frozen/blurred view of the actual tab contents under a frosted-glass overlay with a pulsing lock icon.
+  - Replaced the generic `ExternalLink` icon on detached tab buttons with a custom lock icon badge (`Lock` icon inside a small rounded capsule) to clearly indicate a detached/locked tab.
+  - Added a "Re-attach Workspace" button inside the lock overlay to easily merge it back into the main window.
+
 ## [1.3.384] - 2026-07-10
 
 ### Changed
