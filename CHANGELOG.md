@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.383] - 2026-07-10
+
+### Fixed
+- **Detached Dual Screen Window Crash**:
+  - Changed `create_detached_window` and `close_detached_window` Tauri commands to be asynchronous (`async fn`) in the Rust backend.
+  - This prevents blocking/deadlocking the main GUI thread during WebView2 creation and monitor configuration queries, resolving crashes/freezes on Windows setups with dual displays.
+- **Show Dashboard Tray Restore**:
+  - Removed the destructive and crash-prone navigation/reload logic from `show_dashboard_window` in the Rust backend.
+  - This ensures that restoring or showing the main window from the tray does not reload the frontend, preserving the active user workspace (terminal sessions, scrollbacks, and file edits) and avoiding WebView2 deadlocks on Windows.
+
 ## [1.3.382] - 2026-07-10
 
 ### Fixed

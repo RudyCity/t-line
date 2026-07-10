@@ -95,15 +95,6 @@ fn current_app_url() -> String {
 
 fn show_dashboard_window<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>) {
     if let Some(window) = app_handle.get_webview_window("main") {
-        let state = app_handle.state::<DesktopState>();
-        let status = state.status.lock().unwrap().clone();
-
-        if status == "running" {
-            if let Ok(url) = tauri::Url::parse(&current_app_url()) {
-                let _ = window.navigate(url);
-            }
-        }
-
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.maximize();
@@ -1396,7 +1387,7 @@ fn detached_window_url(query: &str) -> String {
 }
 
 #[tauri::command]
-fn create_detached_window(app: tauri::AppHandle, label: String, query: String) -> Result<(), String> {
+async fn create_detached_window(app: tauri::AppHandle, label: String, query: String) -> Result<(), String> {
     if let Some(win) = app.get_webview_window(&label) {
         let _ = win.show();
         let _ = win.unminimize();
@@ -1439,7 +1430,7 @@ fn create_detached_window(app: tauri::AppHandle, label: String, query: String) -
 }
 
 #[tauri::command]
-fn close_detached_window(app: tauri::AppHandle, label: String) -> Result<(), String> {
+async fn close_detached_window(app: tauri::AppHandle, label: String) -> Result<(), String> {
     if let Some(win) = app.get_webview_window(&label) {
         let _ = win.close();
     }
