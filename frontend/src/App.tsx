@@ -20,6 +20,7 @@ import {
   Zap,
   X,
   Globe,
+  ExternalLink,
   Lock
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
@@ -1675,9 +1676,18 @@ export default function App() {
                             onDragOver={handleTabDragOver}
                             onDragEnd={handleTabDragEnd}
                             onDrop={(e) => handleTabDrop(e, t.id)}
-                            onClick={() => {
-                              handleTabClick(t);
-                            }}
+                             onClick={() => {
+                               handleTabClick(t);
+                               if (t.isDetached) {
+                                 if ((window as any).__TAURI__?.core?.invoke) {
+                                   const query = buildDetachedTabQuery(t.id);
+                                   (window as any).__TAURI__.core.invoke('create_detached_window', { 
+                                     label: `browser-detached-${t.id}`, 
+                                     query 
+                                   }).catch((err: any) => console.error(err));
+                                 }
+                               }
+                             }}
                             onMouseEnter={(e) => handleTabMouseEnter(e, t)}
                             onMouseLeave={handleTabMouseLeave}
                             onContextMenu={(e) => handleTabContextMenu(e, t.id)}
@@ -1699,9 +1709,7 @@ export default function App() {
                                 <span className="tab-shell-type">({shellType === 'powershell' ? 'ps' : shellType})</span>
                               )}
                               {t.isDetached && (
-                                <span className="flex items-center justify-center w-3.5 h-3.5 rounded bg-purple-500/20 border border-purple-500/35 text-purple-300 ml-1.5 shrink-0 select-none animate-pulse" title="Tab is Detached & Locked">
-                                  <Lock size={8} className="shrink-0" />
-                                </span>
+                                <ExternalLink size={10} className="tab-detached-icon ml-1 inline text-purple-400 opacity-80" />
                               )}
                             </span>
                             <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)}>×</span>
@@ -2194,7 +2202,7 @@ export default function App() {
             }).catch((err: any) => console.error(err));
           }
           
-          // Do not switch active tab upon detach, showing the locked overlay immediately.
+
         }}
         onReattachTab={(tabId) => {
           setTabContextMenu(null);

@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.386] - 2026-07-10
+
+### Fixed
+- **Detached Tab Selectability and Instant Lock transition**:
+  - Disabled automatic switching of active tabs when a tab is detached, so the current tab remains selected and instantly transitions into the premium lock overlay.
+  - Allowed users to click on detached tab buttons in the tab bar/sidebar to select them in the main window (viewing the locked screen) while simultaneously focusing/restoring the detached window.
+
 ## [1.3.385] - 2026-07-10
 
 ### Added
