@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.393] - 2026-07-11
+
+### Fixed
+- **Tauri RAM Detection & Custom Command Permissions**:
+  - Restored the `custom-commands-permission` block in `capabilities/default.json` to allow the frontend to invoke kustom commands (`get_memory_usage`, `open_webview_devtools`, `eval_webview_js`, `create_detached_window`, `close_detached_window`, `get_app_url`, `start_backend_command`, `quit_app`) without throwing permission denied errors.
+  - Refactored `get_memory_usage` in `lib.rs` to recursively walk the process tree and aggregate RAM usage of all descendant processes (including WebView2 utility, renderer, and GPU grandchild processes).
+  - Ensured backend Node.js process and its descendants are recursively excluded from the total desktop RAM calculation to avoid double-counting.
+
 ## [1.3.392] - 2026-07-11
 
 ### Fixed

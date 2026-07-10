@@ -1432,6 +1432,21 @@ async fn close_detached_window(app: tauri::AppHandle, label: String) -> Result<(
     Ok(())
 }
 
+fn is_descendant_of(sys: &sysinfo::System, child_pid: sysinfo::Pid, parent_pid: sysinfo::Pid) -> bool {
+    let mut current = child_pid;
+    while let Some(proc) = sys.process(current) {
+        if let Some(p) = proc.parent() {
+            if p == parent_pid {
+                return true;
+            }
+            current = p;
+        } else {
+            break;
+        }
+    }
+    false
+}
+
 #[tauri::command]
 fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json::Value, String> {
     use sysinfo::{Pid, System};
@@ -1453,8 +1468,15 @@ fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json:
         if *pid == current_pid {
             main_memory = process.memory();
             total_memory += process.memory();
-        } else if process.parent() == Some(current_pid) {
-            if Some(*pid) != backend_pid_val {
+        } else if is_descendant_of(&sys, *pid, current_pid) {
+            // Exclude backend process and all its subprocesses/descendants
+            let is_backend_or_descendant = if let Some(backend_pid) = backend_pid_val {
+                *pid == backend_pid || is_descendant_of(&sys, *pid, backend_pid)
+            } else {
+                false
+            };
+
+            if !is_backend_or_descendant {
                 total_memory += process.memory();
             }
         }
