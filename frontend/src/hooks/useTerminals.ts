@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { wsManager } from '../services/websocket';
 
 export interface WorktreeInfo {
@@ -239,11 +239,22 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     });
   }, []);
 
+  const isSyncingTabsRef = useRef(false);
+  const isSyncingInstancesRef = useRef(false);
+
   useEffect(() => {
+    if (isSyncingTabsRef.current) {
+      isSyncingTabsRef.current = false;
+      return;
+    }
     localStorage.setItem('tline-tabs-v2', JSON.stringify(tabs));
   }, [tabs]);
 
   useEffect(() => {
+    if (isSyncingInstancesRef.current) {
+      isSyncingInstancesRef.current = false;
+      return;
+    }
     localStorage.setItem('tline-terminal-instances-v2', JSON.stringify(terminalInstances));
   }, [terminalInstances]);
 
@@ -264,6 +275,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
           const parsed = JSON.parse(e.newValue);
           setTabs(prev => {
             if (JSON.stringify(prev) !== JSON.stringify(parsed)) {
+              isSyncingTabsRef.current = true;
               return parsed;
             }
             return prev;
@@ -277,6 +289,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
           const parsed = JSON.parse(e.newValue);
           setTerminalInstances(prev => {
             if (JSON.stringify(prev) !== JSON.stringify(parsed)) {
+              isSyncingInstancesRef.current = true;
               return parsed;
             }
             return prev;
