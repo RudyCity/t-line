@@ -1204,6 +1204,11 @@ export default function App() {
               fontWeight={fontMonoWeight}
               refreshTriggers={refreshTriggers}
               clearInitialCommand={clearInitialCommand}
+              defaultShell={defaultShell}
+              setDefaultShell={setDefaultShell}
+              handleZoomIn={handleZoomIn}
+              handleZoomOut={handleZoomOut}
+              onRefreshTerminal={refreshTerminal}
             />
           )}
           {detachedTab.type === 'terminal' && detachedTab.layout && (
@@ -1227,6 +1232,11 @@ export default function App() {
               themeBackground={THEMES[theme]?.bgMain}
               themeForeground={THEMES[theme]?.textMain}
               clearInitialCommand={clearInitialCommand}
+              defaultShell={defaultShell}
+              setDefaultShell={setDefaultShell}
+              handleZoomIn={handleZoomIn}
+              handleZoomOut={handleZoomOut}
+              onRefreshTerminal={refreshTerminal}
             />
           )}
         </div>
