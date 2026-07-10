@@ -1657,7 +1657,7 @@ export default function App() {
                               if (t.isDetached) {
                                 if ((window as any).__TAURI__?.core?.invoke) {
                                   const token = localStorage.getItem('token') || '';
-                                  const url = `/?token=${token}&detachedTabId=${t.id}`;
+                                  const url = `${window.location.origin}/?token=${token}&detachedTabId=${t.id}`;
                                   (window as any).__TAURI__.core.invoke('create_detached_window', { 
                                     label: `browser-detached-${t.id}`, 
                                     url 
@@ -2161,7 +2161,7 @@ export default function App() {
 
           if ((window as any).__TAURI__?.core?.invoke) {
             const token = localStorage.getItem('token') || '';
-            const url = `/?token=${token}&detachedTabId=${tabId}`;
+            const url = `${window.location.origin}/?token=${token}&detachedTabId=${tabId}`;
             (window as any).__TAURI__.core.invoke('create_detached_window', { 
               label: `browser-detached-${tabId}`, 
               url 
