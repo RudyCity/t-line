@@ -31,6 +31,7 @@ Modern software engineering requires juggling multiple branches, repositories, a
 * **Dynamic Process Polling**: Automatically polls background process names to update tab titles dynamically, solving native WinPTY title resolution limits on Windows.
 * **Recursive Process Tree Cleanup**: Kills all descendant/child processes (like running AI agents) recursively on terminal close (`taskkill /F /T` on Windows) to prevent background process leaks.
 * **Global WS Process & Title Sync**: Automatically synchronizes active process statuses and tab title indicators globally in React state, even when terminal tabs are unmounted from the DOM.
+* **Independent Terminal Status Bars**: Relocated all terminal controls (zoom, font size indicators, shell selector, reload, and scroll-to-bottom) from the global app footer to individual terminal status bars/footers, featuring premium styling.
 * **Interactive Tooling & Images**: Support for `@xterm/addon-image` allows terminal previews and inline image rendering via sixel/iTerm2.
 * **Developer Safety Filters**: Smart paste warnings prevent accidental multi-line executions in active shells.
 * **Focus Ring Highlight**: Visually track active panes with a soft glowing purple focus ring.
@@ -66,6 +67,10 @@ Modern software engineering requires juggling multiple branches, repositories, a
 
 ### 🪟 Desktop Integration (Tauri v2)
 * **Lightweight Tauri v2 Desktop Wrapper**: Dramatically optimizes system resources, reducing total idle RAM footprint (combined frontend and backend processes) to **under 100MB**.
+* **Premium Detached Tabs & Windows**: Detach terminal/browser workspace tabs into separate windows for multi-monitor workflows. Shows a blurred freeze-frame preview of the tab in the main window under a glassmorphic lock screen with a pulsing lock icon, custom capsule badges in the tab bar, and single-click re-attachment.
+* **Asynchronous Multi-Display Stability**: Backend window lifecycle operations are fully asynchronous, preventing main GUI thread deadlocks and resolving crashes on multi-monitor configurations.
+* **Clean Window Decorations**: Disables native OS window decorations on detached Tauri windows to prevent duplicate title bars, utilizing custom React-rendered headers and window control mechanisms.
+* **Tray State Preservation**: Reworked restore-from-tray logic to avoid app/dashboard reloads, preserving active terminal session processes, scrollback buffers, and unsaved file edits.
 * **Dynamic System Tray Menu**: Native system tray icon offering dashboard toggles, backend controls (Start, Stop, Restart), and active terminal session listings grouped by workspace.
 * **Close-to-Tray**: Runs background AI processes and terminal sessions continuously by hiding the main window on close.
 * **Single Instance Lock**: Powered by `tauri-plugin-single-instance` to prevent port binding and database conflicts.

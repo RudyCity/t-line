@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.390] - 2026-07-10
+
+### Changed
+- **Documentation & Release**:
+  - Updated `README.md` to document new features (detached tabs with blurred lock screens, async multi-display stability fixes, custom window decorations, terminal footer controls, and non-destructive tray restore).
+  - Bumped version to `1.3.390` across all packages, Cargo configuration, and Tauri settings.
+
 ## [1.3.389] - 2026-07-10
 
 ### Fixed
