@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.391] - 2026-07-10
+
+### Fixed
+- **Tauri Window Controls**:
+  - Added missing permissions (`core:window:allow-is-maximized`, `core:window:allow-maximize`, and `core:window:allow-unmaximize`) to `capabilities/default.json` to resolve permission denied crashes when verifying window maximization state in production built installers.
+  - Refactored `App.tsx` window control actions to safely invoke the global `window.__TAURI__.window` object directly when available (which is populated synchronously when `withGlobalTauri` is enabled), completely bypassing dynamic ESM import and chunk loading issues in built release installations.
+  - Explicitly added `@tauri-apps/api` to `frontend/package.json` dependencies to ensure correct compilation and bundling.
+
 ## [1.3.390] - 2026-07-10
 
 ### Changed

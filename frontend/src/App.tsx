@@ -336,9 +336,14 @@ export default function App() {
       const tabExists = tabs.some(t => t.id === detachedTabId);
       if (tabs.length > 0 && !tabExists) {
         if ((window as any).__TAURI__) {
-          import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+          const getCurrentWindow = (window as any).__TAURI__?.window?.getCurrentWindow;
+          if (getCurrentWindow) {
             getCurrentWindow().close();
-          }).catch(err => console.error(err));
+          } else {
+            import('@tauri-apps/api/window').then(({ getCurrentWindow: getWin }) => {
+              getWin().close();
+            }).catch(err => console.error(err));
+          }
         }
       }
     }
@@ -640,8 +645,13 @@ export default function App() {
       (window as any).electron.minimize();
     } else if ((window as any).__TAURI__) {
       try {
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-        await getCurrentWindow().minimize();
+        const getCurrentWindow = (window as any).__TAURI__?.window?.getCurrentWindow;
+        if (getCurrentWindow) {
+          await getCurrentWindow().minimize();
+        } else {
+          const { getCurrentWindow: getWin } = await import('@tauri-apps/api/window');
+          await getWin().minimize();
+        }
       } catch (err) {
         console.error("Failed to minimize window:", err);
       }
@@ -653,8 +663,13 @@ export default function App() {
       (window as any).electron.maximize();
     } else if ((window as any).__TAURI__) {
       try {
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-        await getCurrentWindow().toggleMaximize();
+        const getCurrentWindow = (window as any).__TAURI__?.window?.getCurrentWindow;
+        if (getCurrentWindow) {
+          await getCurrentWindow().toggleMaximize();
+        } else {
+          const { getCurrentWindow: getWin } = await import('@tauri-apps/api/window');
+          await getWin().toggleMaximize();
+        }
       } catch (err) {
         console.error("Failed to toggle maximize window:", err);
       }
@@ -666,8 +681,13 @@ export default function App() {
       (window as any).electron.close();
     } else if ((window as any).__TAURI__) {
       try {
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-        await getCurrentWindow().close();
+        const getCurrentWindow = (window as any).__TAURI__?.window?.getCurrentWindow;
+        if (getCurrentWindow) {
+          await getCurrentWindow().close();
+        } else {
+          const { getCurrentWindow: getWin } = await import('@tauri-apps/api/window');
+          await getWin().close();
+        }
       } catch (err) {
         console.error("Failed to close window:", err);
       }
@@ -692,8 +712,14 @@ export default function App() {
 
       const initTauriWindow = async () => {
         try {
-          const { getCurrentWindow } = await import('@tauri-apps/api/window');
-          const appWindow = getCurrentWindow();
+          const getCurrentWindow = (window as any).__TAURI__?.window?.getCurrentWindow;
+          let appWindow;
+          if (getCurrentWindow) {
+            appWindow = getCurrentWindow();
+          } else {
+            const { getCurrentWindow: getWin } = await import('@tauri-apps/api/window');
+            appWindow = getWin();
+          }
           
           if (!active) return;
           const maximized = await appWindow.isMaximized();
@@ -1091,9 +1117,14 @@ export default function App() {
             className="mt-4 px-4 py-2 bg-purple-600 rounded text-sm text-white hover:bg-purple-500"
             onClick={() => {
               if ((window as any).__TAURI__) {
-                import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+                const getCurrentWindow = (window as any).__TAURI__?.window?.getCurrentWindow;
+                if (getCurrentWindow) {
                   getCurrentWindow().close();
-                });
+                } else {
+                  import('@tauri-apps/api/window').then(({ getCurrentWindow: getWin }) => {
+                    getWin().close();
+                  });
+                }
               }
             }}
           >
@@ -1139,9 +1170,14 @@ export default function App() {
                 setTabs(updated);
                 localStorage.setItem('tline-tabs-v2', JSON.stringify(updated));
                 if ((window as any).__TAURI__) {
-                  import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+                  const getCurrentWindow = (window as any).__TAURI__?.window?.getCurrentWindow;
+                  if (getCurrentWindow) {
                     getCurrentWindow().close();
-                  });
+                  } else {
+                    import('@tauri-apps/api/window').then(({ getCurrentWindow: getWin }) => {
+                      getWin().close();
+                    });
+                  }
                 }
               }}
               style={{ padding: '4px', display: 'inline-flex', alignItems: 'center', cursor: 'pointer', background: 'transparent', border: 'none' }}
