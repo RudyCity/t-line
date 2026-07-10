@@ -19,7 +19,8 @@ import {
   LayoutGrid,
   Zap,
   X,
-  Globe
+  Globe,
+  ExternalLink
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { FileViewerTab } from './components/FileViewerTab';
@@ -62,6 +63,11 @@ import { TPlusLogo } from './components/TPlusLogo';
 import { TabTooltip, TabContextMenu } from './components/TabUiComponents';
 
 export default function App() {
+  const detachedTabId = useMemo(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('detachedTabId');
+  }, []);
+
   const {
     theme,
     setTheme,
@@ -311,6 +317,60 @@ export default function App() {
     refreshTriggers,
     clearInitialCommand
   } = useTerminals(workspaces, () => setSidebarOpen(false));
+
+  // --- Detached Tab Effects ---
+  useEffect(() => {
+    if (detachedTabId) {
+      const tabExists = tabs.some(t => t.id === detachedTabId);
+      if (tabs.length > 0 && !tabExists) {
+        if ((window as any).__TAURI__) {
+          import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+            getCurrentWindow().close();
+          }).catch(err => console.error(err));
+        }
+      }
+    }
+  }, [tabs, detachedTabId]);
+
+  useEffect(() => {
+    if (!detachedTabId) return;
+
+    const handleBeforeUnload = () => {
+      try {
+        const savedTabs = localStorage.getItem('tline-tabs-v2');
+        if (savedTabs) {
+          const parsed = JSON.parse(savedTabs);
+          const updated = parsed.map((t: any) => 
+            t.id === detachedTabId ? { ...t, isDetached: false } : t
+          );
+          localStorage.setItem('tline-tabs-v2', JSON.stringify(updated));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [detachedTabId]);
+
+  useEffect(() => {
+    if (!detachedTabId) {
+      try {
+        const savedTabs = localStorage.getItem('tline-tabs-v2');
+        if (savedTabs) {
+          const parsed = JSON.parse(savedTabs);
+          const cleaned = parsed.map((t: any) => ({ ...t, isDetached: false }));
+          setTabs(cleaned);
+          localStorage.setItem('tline-tabs-v2', JSON.stringify(cleaned));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  }, [detachedTabId, setTabs]);
 
   const filteredTabs = useMemo(() => {
     if (!panelWorkspace) {
@@ -990,6 +1050,178 @@ export default function App() {
     );
   }
 
+  // --- Detached Tab Rendering for Dual Screen ---
+  if (detachedTabId) {
+    const detachedTab = tabs.find(t => t.id === detachedTabId);
+
+    if (!detachedTab) {
+      return (
+        <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-900 text-slate-300">
+          <p className="text-lg font-semibold">Tab not found or closed.</p>
+          <button 
+            className="mt-4 px-4 py-2 bg-purple-600 rounded text-sm text-white hover:bg-purple-500"
+            onClick={() => {
+              if ((window as any).__TAURI__) {
+                import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+                  getCurrentWindow().close();
+                });
+              }
+            }}
+          >
+            Close Window
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className={`app-container theme-${theme} h-screen w-screen flex flex-col overflow-hidden`}>
+        {/* Custom Header for Detached Window */}
+        <div 
+          className="top-bar flex items-center justify-between shrink-0 select-none" 
+          data-tauri-drag-region 
+          style={{ height: '36px', minHeight: '36px', borderBottom: '1px solid var(--border-color)', padding: '0 12px', background: 'var(--bg-sidebar)' }}
+        >
+          <div className="flex items-center gap-2">
+            {detachedTab.type === 'file' ? (
+              <FileCode size={14} className="text-purple-400" />
+            ) : detachedTab.type === 'diff' ? (
+              <GitCompare size={14} className="text-indigo-400" />
+            ) : detachedTab.type === 'grid' ? (
+              <LayoutGrid size={14} className="text-emerald-400" />
+            ) : detachedTab.type === 'browser' ? (
+              <Globe size={14} className="text-blue-400" />
+            ) : (
+              <TerminalIcon size={14} className="text-purple-400" />
+            )}
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-main)' }}>
+              {detachedTab.type === 'terminal' && detachedTab.focusedTerminalId ? (terminalInstances[detachedTab.focusedTerminalId]?.name || detachedTab.name) : detachedTab.name}
+            </span>
+            <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400">Detached</span>
+          </div>
+          
+          <div className="flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag' } as any}>
+            <button 
+              type="button" 
+              className="action-btn text-slate-400 hover:text-purple-400"
+              title="Re-attach tab to main window"
+              onClick={() => {
+                const updated = tabs.map(t => t.id === detachedTabId ? { ...t, isDetached: false } : t);
+                setTabs(updated);
+                localStorage.setItem('tline-tabs-v2', JSON.stringify(updated));
+                if ((window as any).__TAURI__) {
+                  import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+                    getCurrentWindow().close();
+                  });
+                }
+              }}
+              style={{ padding: '4px', display: 'inline-flex', alignItems: 'center', cursor: 'pointer', background: 'transparent', border: 'none' }}
+            >
+              <Zap size={13} className="mr-1" />
+              <span className="text-[11px] font-medium mr-1">Re-attach</span>
+            </button>
+
+            {((window as any).electron || (window as any).__TAURI__) && (
+              <div className="window-controls flex items-center gap-0.5" style={{ marginLeft: '8px' }}>
+                <button type="button" className="window-control-btn" onClick={handleMinimize} title="Minimize">
+                  <span style={{ fontSize: '10px' }}>—</span>
+                </button>
+                <button type="button" className="window-control-btn" onClick={handleToggleMaximize} title={isMaximized ? "Restore" : "Maximize"}>
+                  <span style={{ fontSize: '10px' }}>{isMaximized ? "❐" : "▢"}</span>
+                </button>
+                <button type="button" className="window-control-btn window-control-btn-close" onClick={handleClose} title="Close">
+                  <span style={{ fontSize: '10px' }}>✕</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="flex-1 overflow-hidden relative" style={{ background: 'var(--bg-main)' }}>
+          {detachedTab.type === 'browser' && (
+            <BrowserTab
+              tab={detachedTab}
+              isActive={true}
+              onUpdateTabName={(newName) => {
+                setTabs(prev => prev.map(t => t.id === detachedTab.id ? { ...t, name: newName } : t));
+              }}
+            />
+          )}
+          {detachedTab.type === 'file' && (
+            <FileViewerTab
+              filePath={detachedTab.filePath || ''}
+              token={localStorage.getItem('token') || ''}
+              onSave={() => {
+                fetchGitStatus(false);
+                fetchWorkspaces();
+                setFsChangeTrigger(prev => prev + 1);
+              }}
+              theme={theme}
+              themeBackground={THEMES[theme]?.bgMain}
+            />
+          )}
+          {detachedTab.type === 'diff' && (
+            <DiffViewerTab
+              commitHash={detachedTab.commitHash || ''}
+              filePath={detachedTab.filePath || ''}
+              token={localStorage.getItem('token') || ''}
+              workspaceId={detachedTab.workspaceId || ''}
+              worktreePath={detachedTab.worktreePath}
+              compareWithWorktree={detachedTab.compareWithWorktree}
+            />
+          )}
+          {detachedTab.type === 'grid' && (
+            <TerminalGridTab
+              tab={detachedTab}
+              tabs={tabs}
+              setTabs={setTabs}
+              workspaces={workspaces}
+              terminalInstances={terminalInstances}
+              wsConnected={wsConnected}
+              terminalFontSize={terminalFontSize}
+              handleTitleChange={handleTitleChange}
+              handleActiveProcessesChange={handleActiveProcessesChange}
+              focusTerminal={focusTerminal}
+              closePane={closePane}
+              setActiveTabId={setActiveTabId}
+              themeBackground={THEMES[theme]?.bgMain}
+              themeForeground={THEMES[theme]?.textMain}
+              accentColor={accentColor}
+              fontFamily={MONO_FONTS[fontMono as keyof typeof MONO_FONTS]}
+              fontWeight={fontMonoWeight}
+              refreshTriggers={refreshTriggers}
+              clearInitialCommand={clearInitialCommand}
+            />
+          )}
+          {detachedTab.type === 'terminal' && detachedTab.layout && (
+            <SplitLayoutRenderer
+              node={detachedTab.layout}
+              activeTabId={detachedTabId}
+              focusedTerminalId={detachedTab.focusedTerminalId}
+              wsConnected={wsConnected}
+              terminalFontSize={terminalFontSize}
+              terminalInstances={terminalInstances}
+              handleTitleChange={handleTitleChange}
+              handleActiveProcessesChange={handleActiveProcessesChange}
+              focusTerminal={focusTerminal}
+              closePane={closePane}
+              splitFocusedTerminal={splitFocusedTerminal}
+              hasMultiplePanes={detachedTab.layout.type === 'split'}
+              refreshTriggers={refreshTriggers}
+              fontFamily={MONO_FONTS[fontMono as keyof typeof MONO_FONTS]}
+              fontWeight={fontMonoWeight}
+              accentColor={accentColor}
+              themeBackground={THEMES[theme]?.bgMain}
+              themeForeground={THEMES[theme]?.textMain}
+              clearInitialCommand={clearInitialCommand}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+
   const getActiveTabPath = (): string => {
     const activeTab = tabs.find(t => t.id === activeTabId);
     if (!activeTab) return '';
@@ -1415,13 +1647,26 @@ export default function App() {
                             </div>
                           )}
                           <div 
-                            className={`tab ${activeTabId === t.id ? 'tab-active' : ''} ${draggingTabId === t.id ? 'dragging' : ''}`}
+                            className={`tab ${activeTabId === t.id ? 'tab-active' : ''} ${draggingTabId === t.id ? 'dragging' : ''} ${t.isDetached ? 'tab-detached' : ''}`}
                             draggable={true}
                             onDragStart={(e) => handleTabDragStart(e, t.id)}
                             onDragOver={handleTabDragOver}
                             onDragEnd={handleTabDragEnd}
                             onDrop={(e) => handleTabDrop(e, t.id)}
-                            onClick={() => handleTabClick(t)}
+                            onClick={() => {
+                              if (t.isDetached) {
+                                if ((window as any).__TAURI__?.core?.invoke) {
+                                  const token = localStorage.getItem('token') || '';
+                                  const url = `/?token=${token}&detachedTabId=${t.id}`;
+                                  (window as any).__TAURI__.core.invoke('create_detached_window', { 
+                                    label: `browser-detached-${t.id}`, 
+                                    url 
+                                  }).catch((err: any) => console.error(err));
+                                }
+                              } else {
+                                handleTabClick(t);
+                              }
+                            }}
                             onMouseEnter={(e) => handleTabMouseEnter(e, t)}
                             onMouseLeave={handleTabMouseLeave}
                             onContextMenu={(e) => handleTabContextMenu(e, t.id)}
@@ -1441,6 +1686,9 @@ export default function App() {
                               <span className="tab-title">{displayName}</span>
                               {shellType && (
                                 <span className="tab-shell-type">({shellType === 'powershell' ? 'ps' : shellType})</span>
+                              )}
+                              {t.isDetached && (
+                                <ExternalLink size={10} className="tab-detached-icon ml-1 inline text-purple-400 opacity-80" />
                               )}
                             </span>
                             <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)}>×</span>
@@ -1609,6 +1857,32 @@ export default function App() {
               {(() => {
                 const activeTab = tabs.find(t => t.id === activeTabId);
                 if (!activeTab) return null;
+                if (activeTab.isDetached) {
+                  return (
+                    <div className="flex h-full w-full flex-col items-center justify-center text-slate-400 p-8 text-center" style={{ background: 'var(--bg-main)' }}>
+                      <Zap size={32} className="text-purple-400 mb-3 animate-pulse" />
+                      <p className="font-semibold text-sm">Tab Detached</p>
+                      <p className="text-xs text-slate-500 mt-1">This tab is currently open in a separate window.</p>
+                      <button 
+                        onClick={() => {
+                          const updated = tabs.map(t => t.id === activeTab.id ? { ...t, isDetached: false } : t);
+                          setTabs(updated);
+                          localStorage.setItem('tline-tabs-v2', JSON.stringify(updated));
+                          if ((window as any).__TAURI__?.core?.invoke) {
+                            (window as any).__TAURI__.core.invoke('close_detached_window', { 
+                              label: `browser-detached-${activeTab.id}` 
+                            }).catch((e: any) => console.error(e));
+                          }
+                        }}
+                        className="mt-4 px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 text-xs rounded border border-purple-500/20 transition-all cursor-pointer"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <Zap size={12} />
+                        <span>Re-attach Tab</span>
+                      </button>
+                    </div>
+                  );
+                }
                 if (activeTab.type === 'browser') return null;
                 if (activeTab.type === 'file') {
                   return (
@@ -1878,6 +2152,48 @@ export default function App() {
               setShowSavePromptModal(true);
             }
           }
+        }}
+        onDetachTab={(tabId) => {
+          setTabContextMenu(null);
+          const updated = tabs.map(t => t.id === tabId ? { ...t, isDetached: true } : t);
+          setTabs(updated);
+          localStorage.setItem('tline-tabs-v2', JSON.stringify(updated));
+
+          if ((window as any).__TAURI__?.core?.invoke) {
+            const token = localStorage.getItem('token') || '';
+            const url = `/?token=${token}&detachedTabId=${tabId}`;
+            (window as any).__TAURI__.core.invoke('create_detached_window', { 
+              label: `browser-detached-${tabId}`, 
+              url 
+            }).catch((err: any) => console.error(err));
+          }
+          
+          if (activeTabId === tabId) {
+            const remaining = updated.filter(t => t.workspaceId === panelWorkspace?.id && !t.isDetached);
+            if (remaining.length > 0) {
+              setActiveTabId(remaining[0].id);
+            } else {
+              const anyRemaining = updated.filter(t => !t.isDetached);
+              if (anyRemaining.length > 0) {
+                setActiveTabId(anyRemaining[0].id);
+              } else {
+                setActiveTabId('');
+              }
+            }
+          }
+        }}
+        onReattachTab={(tabId) => {
+          setTabContextMenu(null);
+          const updated = tabs.map(t => t.id === tabId ? { ...t, isDetached: false } : t);
+          setTabs(updated);
+          localStorage.setItem('tline-tabs-v2', JSON.stringify(updated));
+
+          if ((window as any).__TAURI__?.core?.invoke) {
+            (window as any).__TAURI__.core.invoke('close_detached_window', { 
+              label: `browser-detached-${tabId}`
+            }).catch((err: any) => console.error(err));
+          }
+          setActiveTabId(tabId);
         }}
       />
     </div>

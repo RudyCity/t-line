@@ -54,6 +54,8 @@ interface TabContextMenuProps {
   setActiveTabId: (tabId: string) => void;
   splitFocusedTerminal: (direction: 'vertical' | 'horizontal') => void;
   onSavePromptShortcut?: (tabId: string) => void;
+  onDetachTab?: (tabId: string) => void;
+  onReattachTab?: (tabId: string) => void;
 }
 
 export const TabContextMenu: React.FC<TabContextMenuProps> = ({
@@ -66,7 +68,9 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
   handleCloseAllTabs,
   setActiveTabId,
   splitFocusedTerminal,
-  onSavePromptShortcut
+  onSavePromptShortcut,
+  onDetachTab,
+  onReattachTab
 }) => {
   if (!tabContextMenu) return null;
 
@@ -103,6 +107,27 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
       >
         <span className="terminal-ctx-label">Close All Tabs</span>
       </button>
+
+      {((window as any).__TAURI__) && (
+        <>
+          <div className="terminal-ctx-separator" />
+          {targetTab?.isDetached ? (
+            <button
+              onClick={() => onReattachTab?.(tabContextMenu.tabId)}
+              className="terminal-ctx-item"
+            >
+              <span className="terminal-ctx-label" style={{ color: 'var(--color-primary, #6366f1)' }}>Re-attach Tab</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => onDetachTab?.(tabContextMenu.tabId)}
+              className="terminal-ctx-item"
+            >
+              <span className="terminal-ctx-label" style={{ color: 'var(--color-primary, #6366f1)' }}>Detach Tab (Dual Screen)</span>
+            </button>
+          )}
+        </>
+      )}
 
       {(canMoveLeft || canMoveRight) && (
         <>

@@ -1373,6 +1373,38 @@ fn eval_webview_js(app: tauri::AppHandle, label: String, js: String) -> Result<(
 }
 
 #[tauri::command]
+fn create_detached_window(app: tauri::AppHandle, label: String, url: String) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window(&label) {
+        let _ = win.show();
+        let _ = win.unminimize();
+        let _ = win.set_focus();
+        return Ok(());
+    }
+
+    let target_url = tauri::Url::parse(&url).map_err(|e| e.to_string())?;
+    let win_builder = tauri::WebviewWindowBuilder::new(
+        &app,
+        &label,
+        tauri::WebviewUrl::External(target_url)
+    )
+    .title("t-line - Detached Tab")
+    .inner_size(900.0, 600.0)
+    .resizable(true)
+    .decorations(true);
+
+    let _window = win_builder.build().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn close_detached_window(app: tauri::AppHandle, label: String) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window(&label) {
+        let _ = win.close();
+    }
+    Ok(())
+}
+
+#[tauri::command]
 fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json::Value, String> {
     use sysinfo::{Pid, System};
     
@@ -1438,7 +1470,9 @@ pub fn run() {
             eval_webview_js,
             quit_app,
             start_backend_command,
-            get_app_url
+            get_app_url,
+            create_detached_window,
+            close_detached_window
         ])
         .setup(move |app| {
             if cfg!(debug_assertions) {
@@ -1515,8 +1549,10 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.hide();
+                if window.label() == "main" {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
             }
         })
         .build(tauri::generate_context!())

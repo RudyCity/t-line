@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.376] - 2026-07-10
+
+### Added
+- **Dual Screen / Detached Tab Support**:
+  - Implemented the ability to detach any tab or grid into a separate Tauri WebviewWindow.
+  - Added new Tauri commands `create_detached_window` and `close_detached_window` in Rust backend.
+  - Integrated `storage` event synchronization in the frontend to keep tab lists and terminal instances in real-time sync across windows.
+  - Added visual indicators for detached tabs in the tab bar and a placeholder view for detached tabs in the main window.
+
 ## [1.3.375] - 2026-07-10
 
 ### Fixed

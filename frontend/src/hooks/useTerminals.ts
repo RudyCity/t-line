@@ -71,6 +71,7 @@ export interface TabData {
   gridTerminalIds?: string[];
   gridCardHeight?: number;
   gridCardWidth?: number;
+  isDetached?: boolean;
 }
 
 /** Maps workspaceId → last active tabId for that workspace */
@@ -255,6 +256,39 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     const storageKey = isMobileOrTablet ? 'tline-mobile-font-size' : 'tline-terminal-font-size-v2';
     localStorage.setItem(storageKey, terminalFontSize.toString());
   }, [terminalFontSize]);
+
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'tline-tabs-v2' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setTabs(prev => {
+            if (JSON.stringify(prev) !== JSON.stringify(parsed)) {
+              return parsed;
+            }
+            return prev;
+          });
+        } catch (err) {
+          console.error(err);
+        }
+      }
+      if (e.key === 'tline-terminal-instances-v2' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setTerminalInstances(prev => {
+            if (JSON.stringify(prev) !== JSON.stringify(parsed)) {
+              return parsed;
+            }
+            return prev;
+          });
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const handleZoomIn = useCallback(() => {
     setTerminalFontSize(prev => Math.min(prev + 1, 24));
