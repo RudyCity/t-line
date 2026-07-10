@@ -1,9 +1,8 @@
 import React from 'react';
-import { GitBranch, ZoomIn, ZoomOut, ExternalLink, Copy, Check, Info, Terminal, Folder, Globe, RefreshCw, Cpu, ChevronDown } from 'lucide-react';
+import { GitBranch, ExternalLink, Copy, Check, Info, Folder, Globe, Cpu } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { Toast } from './Toast';
 import { SystemStats } from '../hooks/useSystemStats';
-import { Select } from './Form';
 
 // Helper function to format bytes into readable units
 function formatBytes(bytes: number, decimals: number = 1): string {
@@ -25,16 +24,9 @@ export interface FooterProps {
     error: string | null;
   };
   tunnelLoading: boolean;
-  terminalFontSize: number;
-  defaultShell: string;
-  setDefaultShell: (val: string) => void;
-  handleZoomIn: () => void;
-  handleZoomOut: () => void;
   handleStartTunnel: (type: 'quick' | 'token') => void;
   handleStopTunnel: () => void;
   activeTabType?: 'terminal' | 'file' | 'diff' | 'grid' | 'browser' | null;
-  onRefreshTerminal?: () => void;
-  onScrollToBottomTerminal?: () => void;
   activeTabPath?: string;
   appVersion?: string;
   updateAvailable?: boolean;
@@ -47,17 +39,10 @@ export function Footer({
   panelWorkspace,
   panelWorktreePath,
   tunnelStatus,
-  terminalFontSize,
-  defaultShell,
-  setDefaultShell,
-  handleZoomIn,
-  handleZoomOut,
   handleStartTunnel,
   handleStopTunnel,
   tunnelLoading,
   activeTabType,
-  onRefreshTerminal,
-  onScrollToBottomTerminal,
   activeTabPath,
   appVersion,
   updateAvailable,
@@ -348,104 +333,6 @@ export function Footer({
         </div>
       )}
 
-      {/* Zoom & Shell Controls (Dashboard Pill) — hidden on mobile & tablet */}
-      <div 
-        className="hidden lg:flex items-center gap-3 px-3 py-1 rounded-full transition-all duration-200 shadow-inner"
-        style={{
-          backgroundColor: 'color-mix(in srgb, var(--bg-main) 30%, transparent)',
-          borderColor: 'var(--border-color)',
-          borderWidth: '1px'
-        }}
-      >
-        {/* Zoom controls */}
-        <div className="flex items-center gap-2">
-          <button 
-            className="hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none" 
-            style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
-            onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
-            onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-            onClick={handleZoomOut} 
-            title="Zoom Out Terminal font"
-          >
-            <ZoomOut size={12} />
-          </button>
-          <span 
-            className="text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold min-w-[28px] text-center border"
-            style={{
-              backgroundColor: 'color-mix(in srgb, var(--bg-main) 60%, transparent)',
-              borderColor: 'var(--border-color)',
-              color: 'var(--color-primary)'
-            }}
-          >
-            {terminalFontSize}px
-          </span>
-          <button 
-            className="hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none" 
-            style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
-            onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
-            onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-            onClick={handleZoomIn} 
-            title="Zoom In Terminal font"
-          >
-            <ZoomIn size={12} />
-          </button>
-        </div>
-
-        <div className="w-px h-3.5 bg-[var(--border-color)]" />
-
-        {/* Shell Selector */}
-        <div className="flex items-center gap-1.5">
-          <Terminal size={11} style={{ color: 'var(--text-muted)' }} />
-          <Select 
-             value={defaultShell} 
-             onChange={(val) => setDefaultShell(val)}
-             align="top"
-             variant="minimal"
-             className="w-20"
-             options={[
-               { value: 'powershell', label: 'powershell' },
-               { value: 'cmd', label: 'cmd' },
-               { value: 'gitbash', label: 'gitbash' },
-               { value: 'wsl', label: 'wsl' }
-             ]}
-          />
-        </div>
-
-        {(activeTabType === 'terminal' || activeTabType === 'grid') && (
-          <>
-            {onRefreshTerminal && (
-              <>
-                <div className="w-px h-3.5 bg-[var(--border-color)]" />
-                <button
-                  onClick={onRefreshTerminal}
-                  className="hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none"
-                  style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
-                  onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
-                  onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                  title="Restart current terminal process"
-                >
-                  <RefreshCw size={11} className="hover:rotate-45 transition-transform duration-200" />
-                </button>
-              </>
-            )}
-            {onScrollToBottomTerminal && (
-              <>
-                <div className="w-px h-3.5 bg-[var(--border-color)]" />
-                <button
-                  onClick={onScrollToBottomTerminal}
-                  className="hover:scale-110 active:scale-95 transition-all cursor-pointer p-0.5 rounded flex items-center justify-center animate-none"
-                  style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
-                  onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
-                  onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                  title="Scroll terminal to bottom"
-                >
-                  <ChevronDown size={12} className="hover:translate-y-0.5 transition-transform duration-200" />
-                </button>
-              </>
-            )}
-          </>
-        )}
-      </div>
 
       {/* Right Section: Cloudflare Tunnel & Status — hidden on mobile & tablet */}
       <div className="hidden lg:flex items-center gap-2.5">

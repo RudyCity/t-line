@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.384] - 2026-07-10
+
+### Changed
+- **Relocated Terminal Controls to Footer Terminal (Status Bar)**:
+  - Moved Zoom Out, Font Size Indicator, Zoom In, Shell Selector, Refresh/Restart, and Scroll to Bottom controls from the global app footer (`Footer.tsx`) to each individual terminal's status bar/footer (`TerminalStatusBar` in `TerminalSubComponents.tsx`).
+  - Added new clean, premium styling (`.terminal-status-center`) for the controls inside the 22px-high status bar.
+  - Extended prop propagation through `App.tsx`, `SplitLayoutRenderer.tsx`, and `TerminalGridTab.tsx` to pass the necessary state and handlers directly down to `TerminalInstance.tsx` and `TerminalStatusBar`.
+  - Cleaned up unused props in `Footer.tsx` and `App.tsx`.
+
 ## [1.3.383] - 2026-07-10
 
 ### Fixed

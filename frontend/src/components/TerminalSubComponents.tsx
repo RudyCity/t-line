@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { SearchAddon } from '@xterm/addon-search';
+import { ZoomIn, ZoomOut, Terminal as TerminalIcon, RefreshCw, ChevronDown } from 'lucide-react';
+import { Select } from './Form';
 
 // ── Search Bar Sub-Component ──────────────────────────────────
 interface SearchBarProps {
@@ -142,11 +144,20 @@ interface StatusBarProps {
   onClear: () => void;
   onSearch: () => void;
   pid?: number;
+  fontSize: number;
+  defaultShell?: string;
+  setDefaultShell?: (val: string) => void;
+  handleZoomIn?: () => void;
+  handleZoomOut?: () => void;
+  onRefresh?: () => void;
+  onScrollToBottom?: () => void;
 }
 
 export function TerminalStatusBar({
   shellType, wsConnected, cursorCol, cursorRow,
-  onClear, onSearch, pid
+  onClear, onSearch, pid,
+  fontSize, defaultShell, setDefaultShell,
+  handleZoomIn, handleZoomOut, onRefresh, onScrollToBottom
 }: StatusBarProps) {
   const shellLabel: Record<string, string> = {
     powershell: 'PS',
@@ -165,6 +176,74 @@ export function TerminalStatusBar({
           <span className="terminal-status-pid" title="Process ID">PID {pid}</span>
         )}
       </div>
+
+      {defaultShell && setDefaultShell && handleZoomIn && handleZoomOut && (
+        <div className="terminal-status-center">
+          {/* Zoom controls */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={handleZoomOut}
+              className="terminal-status-btn-small"
+              title="Zoom Out Terminal Font"
+            >
+              <ZoomOut size={10} />
+            </button>
+            <span className="terminal-status-font-size">{fontSize}px</span>
+            <button
+              onClick={handleZoomIn}
+              className="terminal-status-btn-small"
+              title="Zoom In Terminal Font"
+            >
+              <ZoomIn size={10} />
+            </button>
+          </div>
+
+          <div className="terminal-status-divider-small" />
+
+          {/* Shell Selector */}
+          <div className="flex items-center gap-1">
+            <TerminalIcon size={10} className="text-[var(--text-muted)]" />
+            <Select
+              value={defaultShell}
+              onChange={setDefaultShell}
+              align="top"
+              variant="minimal"
+              className="w-16 text-[9.5px]"
+              options={[
+                { value: 'powershell', label: 'powershell' },
+                { value: 'cmd', label: 'cmd' },
+                { value: 'gitbash', label: 'gitbash' },
+                { value: 'wsl', label: 'wsl' }
+              ]}
+            />
+          </div>
+
+          {(onRefresh || onScrollToBottom) && (
+            <>
+              <div className="terminal-status-divider-small" />
+              {onRefresh && (
+                <button
+                  onClick={onRefresh}
+                  className="terminal-status-btn-small"
+                  title="Restart terminal process"
+                >
+                  <RefreshCw size={10} className="hover:rotate-45 transition-transform duration-200" />
+                </button>
+              )}
+              {onScrollToBottom && (
+                <button
+                  onClick={onScrollToBottom}
+                  className="terminal-status-btn-small"
+                  title="Scroll terminal to bottom"
+                >
+                  <ChevronDown size={11} className="hover:translate-y-0.5 transition-transform duration-200" />
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       <div className="terminal-status-right">
         <span className="terminal-status-cursor" title="Cursor position">
           {cursorCol}:{cursorRow}

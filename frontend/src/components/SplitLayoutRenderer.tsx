@@ -44,6 +44,11 @@ export interface SplitLayoutRendererProps {
   themeBackground?: string;
   themeForeground?: string;
   clearInitialCommand?: (id: string) => void;
+  defaultShell?: string;
+  setDefaultShell?: (val: string) => void;
+  handleZoomIn?: () => void;
+  handleZoomOut?: () => void;
+  onRefreshTerminal?: (id: string) => void;
 }
 
 // ─── LeafPane ─────────────────────────────────────────────────────────────────
@@ -69,6 +74,11 @@ interface LeafPaneProps {
   themeBackground?: string;
   themeForeground?: string;
   clearInitialCommand?: (id: string) => void;
+  defaultShell?: string;
+  setDefaultShell?: (val: string) => void;
+  handleZoomIn?: () => void;
+  handleZoomOut?: () => void;
+  onRefreshTerminal?: (id: string) => void;
 }
 
 function LeafPane({
@@ -92,6 +102,11 @@ function LeafPane({
   themeBackground,
   themeForeground,
   clearInitialCommand,
+  defaultShell,
+  setDefaultShell,
+  handleZoomIn,
+  handleZoomOut,
+  onRefreshTerminal,
 }: LeafPaneProps): React.JSX.Element {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isLight = isLightColor(themeBackground);
@@ -133,6 +148,11 @@ function LeafPane({
         themeBackground={themeBackground}
         themeForeground={themeForeground}
         onClearInitialCommand={clearInitialCommand}
+        defaultShell={defaultShell}
+        setDefaultShell={setDefaultShell}
+        handleZoomIn={handleZoomIn}
+        handleZoomOut={handleZoomOut}
+        onRefreshTerminal={onRefreshTerminal}
       />
 
       {/* ── Desktop: hover action bar (top-right, hidden until hover) ── */}
@@ -305,7 +325,12 @@ export function SplitLayoutRenderer({
   accentColor,
   themeBackground,
   themeForeground,
-  clearInitialCommand
+  clearInitialCommand,
+  defaultShell,
+  setDefaultShell,
+  handleZoomIn,
+  handleZoomOut,
+  onRefreshTerminal
 }: SplitLayoutRendererProps): React.JSX.Element | null {
   if (node.type === 'leaf') {
     const term = terminalInstances[node.terminalId];
@@ -334,6 +359,11 @@ export function SplitLayoutRenderer({
         themeForeground={themeForeground}
         clearInitialCommand={clearInitialCommand}
         terminalId={node.terminalId}
+        defaultShell={defaultShell}
+        setDefaultShell={setDefaultShell}
+        handleZoomIn={handleZoomIn}
+        handleZoomOut={handleZoomOut}
+        onRefreshTerminal={onRefreshTerminal}
       />
     );
   }
@@ -362,6 +392,11 @@ export function SplitLayoutRenderer({
           themeBackground={themeBackground}
           themeForeground={themeForeground}
           clearInitialCommand={clearInitialCommand}
+          defaultShell={defaultShell}
+          setDefaultShell={setDefaultShell}
+          handleZoomIn={handleZoomIn}
+          handleZoomOut={handleZoomOut}
+          onRefreshTerminal={onRefreshTerminal}
         />
       </Panel>
       <PanelResizeHandle
@@ -398,6 +433,11 @@ export function SplitLayoutRenderer({
           themeBackground={themeBackground}
           themeForeground={themeForeground}
           clearInitialCommand={clearInitialCommand}
+          defaultShell={defaultShell}
+          setDefaultShell={setDefaultShell}
+          handleZoomIn={handleZoomIn}
+          handleZoomOut={handleZoomOut}
+          onRefreshTerminal={onRefreshTerminal}
         />
       </Panel>
     </PanelGroup>

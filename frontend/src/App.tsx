@@ -1944,6 +1944,11 @@ export default function App() {
                       fontWeight={fontMonoWeight}
                       refreshTriggers={refreshTriggers}
                       clearInitialCommand={clearInitialCommand}
+                      defaultShell={defaultShell}
+                      setDefaultShell={setDefaultShell}
+                      handleZoomIn={handleZoomIn}
+                      handleZoomOut={handleZoomOut}
+                      onRefreshTerminal={refreshTerminal}
                     />
                   );
                 }
@@ -1969,6 +1974,11 @@ export default function App() {
                       themeBackground={THEMES[theme]?.bgMain}
                       themeForeground={THEMES[theme]?.textMain}
                       clearInitialCommand={clearInitialCommand}
+                      defaultShell={defaultShell}
+                      setDefaultShell={setDefaultShell}
+                      handleZoomIn={handleZoomIn}
+                      handleZoomOut={handleZoomOut}
+                      onRefreshTerminal={refreshTerminal}
                     />
                   );
                 }
@@ -2113,24 +2123,9 @@ export default function App() {
         panelWorktreePath={panelWorktreePath}
         tunnelStatus={tunnelStatus}
         tunnelLoading={tunnelLoading}
-        terminalFontSize={terminalFontSize}
-        defaultShell={defaultShell}
-        setDefaultShell={setDefaultShell}
-        handleZoomIn={handleZoomIn}
-        handleZoomOut={handleZoomOut}
         handleStartTunnel={handleStartTunnel}
         handleStopTunnel={handleStopTunnel}
         activeTabType={tabs.find(t => t.id === activeTabId)?.type || null}
-        onRefreshTerminal={() => refreshTerminal(tabs.find(t => t.id === activeTabId)?.focusedTerminalId || '')}
-        onScrollToBottomTerminal={() => {
-          const activeTab = tabs.find(t => t.id === activeTabId);
-          const termId = activeTab?.focusedTerminalId;
-          if (termId) {
-            window.dispatchEvent(new CustomEvent('tline-scroll-to-bottom', { detail: { terminalId: termId } }));
-          } else if (activeTab?.type === 'terminal' && activeTab.layout?.type === 'leaf') {
-            window.dispatchEvent(new CustomEvent('tline-scroll-to-bottom', { detail: { terminalId: activeTab.layout.terminalId } }));
-          }
-        }}
         activeTabPath={getActiveTabPath()}
         appVersion={appVersion}
         updateAvailable={updateAvailable}

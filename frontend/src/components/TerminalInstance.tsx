@@ -31,7 +31,8 @@ export function TerminalInstance({
   onTitleChange, onActiveProcessesChange, onFocus, refreshTrigger,
   isFocusedPane = false, pid,
   fontFamily, fontWeight, accentColor, themeBackground, themeForeground,
-  disableAutoFocus = false, onClearInitialCommand
+  disableAutoFocus = false, onClearInitialCommand,
+  defaultShell, setDefaultShell, handleZoomIn, handleZoomOut, onRefreshTerminal
 }: TerminalInstanceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -949,6 +950,13 @@ export function TerminalInstance({
         onClear={handleClear}
         onSearch={handleSearchOpen}
         pid={localPid}
+        fontSize={fontSize}
+        defaultShell={defaultShell}
+        setDefaultShell={setDefaultShell}
+        handleZoomIn={handleZoomIn}
+        handleZoomOut={handleZoomOut}
+        onRefresh={onRefreshTerminal ? () => onRefreshTerminal(tab.id) : undefined}
+        onScrollToBottom={() => terminalRef.current?.scrollToBottom()}
       />
 
       {contextMenu && (

@@ -2760,3 +2760,53 @@
   --bm-cancel-hover-bg: rgba(0, 0, 0, 0.1);
 }
 
+/* ── Terminal Status Bar Center Controls ── */
+.terminal-status-center {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: color-mix(in srgb, var(--bg-main) 40%, transparent);
+  border: 1px solid var(--border-color);
+  padding: 0.5px 8px;
+  border-radius: 9999px;
+  height: 18px;
+}
+
+.terminal-status-btn-small {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 1px;
+  border-radius: 3px;
+  transition: color 0.15s, scale 0.15s;
+}
+
+.terminal-status-btn-small:hover {
+  color: var(--text-main);
+  scale: 1.08;
+}
+
+.terminal-status-btn-small:active {
+  scale: 0.95;
+}
+
+.terminal-status-font-size {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-primary);
+  min-width: 22px;
+  text-align: center;
+}
+
+.terminal-status-divider-small {
+  width: 1px;
+  height: 8px;
+  background-color: var(--border-color);
+}
+
+

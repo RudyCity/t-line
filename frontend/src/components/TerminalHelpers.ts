@@ -27,6 +27,11 @@ export interface TerminalInstanceProps {
   themeForeground?: string;
   disableAutoFocus?: boolean;
   onClearInitialCommand?: (terminalId: string) => void;
+  defaultShell?: string;
+  setDefaultShell?: (val: string) => void;
+  handleZoomIn?: () => void;
+  handleZoomOut?: () => void;
+  onRefreshTerminal?: (id: string) => void;
 }
 
 // Helper to detect if a background color is light/bright

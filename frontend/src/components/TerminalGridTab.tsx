@@ -26,6 +26,11 @@ interface TerminalGridTabProps {
   fontWeight?: string;
   refreshTriggers?: Record<string, number>;
   clearInitialCommand?: (id: string) => void;
+  defaultShell?: string;
+  setDefaultShell?: (val: string) => void;
+  handleZoomIn?: () => void;
+  handleZoomOut?: () => void;
+  onRefreshTerminal?: (id: string) => void;
 }
 
 export function TerminalGridTab({
@@ -47,7 +52,12 @@ export function TerminalGridTab({
   fontFamily,
   fontWeight,
   refreshTriggers,
-  clearInitialCommand
+  clearInitialCommand,
+  defaultShell,
+  setDefaultShell,
+  handleZoomIn,
+  handleZoomOut,
+  onRefreshTerminal
 }: TerminalGridTabProps) {
   const [showConfig, setShowConfig] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1081,6 +1091,11 @@ export function TerminalGridTab({
                       themeBackground={themeBackground}
                       themeForeground={themeForeground}
                       onClearInitialCommand={clearInitialCommand}
+                      defaultShell={defaultShell}
+                      setDefaultShell={setDefaultShell}
+                      handleZoomIn={handleZoomIn}
+                      handleZoomOut={handleZoomOut}
+                      onRefreshTerminal={onRefreshTerminal}
                     />
                   </div>
 
