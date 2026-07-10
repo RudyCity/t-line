@@ -1392,7 +1392,12 @@ fn create_detached_window(app: tauri::AppHandle, label: String, url: String) -> 
     .resizable(true)
     .decorations(true);
 
-    let _window = win_builder.build().map_err(|e| e.to_string())?;
+    let window = win_builder.build().map_err(|e| e.to_string())?;
+    
+    #[cfg(debug_assertions)]
+    {
+        let _ = window.open_devtools();
+    }
     Ok(())
 }
 
