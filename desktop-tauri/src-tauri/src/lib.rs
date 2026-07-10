@@ -10,6 +10,9 @@ use tauri::Manager;
 use tauri::menu::{Menu, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState};
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
 struct DesktopState {
     backend_child: Arc<Mutex<Option<Child>>>,
     status: Arc<Mutex<String>>, // "stopped" | "starting" | "running"
@@ -44,6 +47,7 @@ fn kill_port_process(port: u16) {
             .args(&["-NoProfile", "-Command", &cmd])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
+            .creation_flags(0x08000000)
             .status()
             .ok();
     }
@@ -103,11 +107,15 @@ fn show_dashboard_window<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>) {
 }
 
 fn is_node_installed() -> bool {
-    Command::new("node")
-        .arg("--version")
+    let mut cmd = Command::new("node");
+    cmd.arg("--version")
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    {
+        cmd.creation_flags(0x08000000);
+    }
+    cmd.status()
         .map(|s| s.success())
         .unwrap_or(false)
 }
@@ -120,6 +128,7 @@ fn show_missing_node_dialog() {
                 "-Command",
                 "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show('Node.js is not installed. Please install Node.js (LTS version) to run t-line.', 'Node.js Required', 'OK', 'Error')"
             ])
+            .creation_flags(0x08000000)
             .status()
             .ok();
     }
@@ -931,6 +940,7 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
                             .current_dir(&ws_root)
                             .stdout(Stdio::piped())
                             .stderr(Stdio::piped())
+                            .creation_flags(0x08000000)
                             .spawn()
                             .ok();
                     }
@@ -972,15 +982,18 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
                         let path_str = path.to_string_lossy();
                         let clean_path = path_str.strip_prefix(r"\\?\").unwrap_or(&path_str);
                         println!("[tauri] Spawning node with script: {}", clean_path);
-                        child = Command::new("node")
-                            .arg("--max-old-space-size=64")
+                        let mut cmd = Command::new("node");
+                        cmd.arg("--max-old-space-size=64")
                             .arg("--expose-gc")
                             .arg(clean_path)
                             .env("PORT", port.to_string())
                             .stdout(Stdio::piped())
-                            .stderr(Stdio::piped())
-                            .spawn()
-                            .ok();
+                            .stderr(Stdio::piped());
+                        #[cfg(windows)]
+                        {
+                            cmd.creation_flags(0x08000000);
+                        }
+                        child = cmd.spawn().ok();
                     }
                     None => {
                         eprintln!("[tauri] Backend script not found in resource paths.");
@@ -1054,6 +1067,7 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
                             .current_dir(&ws_root)
                             .stdout(Stdio::null())
                             .stderr(Stdio::null())
+                            .creation_flags(0x08000000)
                             .spawn();
                     }
                     #[cfg(not(windows))]
@@ -1157,6 +1171,7 @@ fn stop_backend(state: &DesktopState) {
             let pid = child.id();
             if let Ok(mut cmd) = Command::new("taskkill")
                 .args(&["/pid", &pid.to_string(), "/f", "/t"])
+                .creation_flags(0x08000000)
                 .spawn()
             {
                 let _ = cmd.wait();

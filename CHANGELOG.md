@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.394] - 2026-07-11
+
+### Fixed
+- **Headless & Background Backend Execution on Windows**:
+  - Configured Tauri subprocess spawner on Windows to spawn all child command prompt, powershell, node, npm, and taskkill processes headlessly with `creation_flags(0x08000000)` (`CREATE_NO_WINDOW`) to prevent console windows from popping up or remaining visible in the foreground.
+  - Declared app custom commands in `build.rs` via `AppManifest::commands` so that Tauri v2 autogenerates permission identifiers at compile time, and updated `capabilities/default.json` to allow them individually.
+
 ## [1.3.393] - 2026-07-11
 
 ### Fixed
