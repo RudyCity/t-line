@@ -742,7 +742,15 @@ export default function App() {
 
           // Update React states
           if (state.tabs && Array.isArray(state.tabs)) {
-            setTabs(state.tabs);
+            setTabs(prev => {
+              return state.tabs.map((newTab: any) => {
+                const existing = prev.find(t => t.id === newTab.id);
+                return {
+                  ...newTab,
+                  isDetached: existing ? !!existing.isDetached : false
+                };
+              });
+            });
           }
           if (state.terminalInstances && typeof state.terminalInstances === 'object') {
             setTerminalInstances(state.terminalInstances);
@@ -903,7 +911,15 @@ export default function App() {
         const data = await res.json();
         // Update states only if they are not empty or exist
         if (data.tabs && Array.isArray(data.tabs)) {
-          setTabs(data.tabs);
+          setTabs(prev => {
+            return data.tabs.map((newTab: any) => {
+              const existing = prev.find(t => t.id === newTab.id);
+              return {
+                ...newTab,
+                isDetached: existing ? !!existing.isDetached : false
+              };
+            });
+          });
         }
         if (data.terminalInstances && typeof data.terminalInstances === 'object') {
           setTerminalInstances(data.terminalInstances);

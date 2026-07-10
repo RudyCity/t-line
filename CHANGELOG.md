@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.387] - 2026-07-10
+
+### Fixed
+- **Detached tab state client-side preservation**:
+  - Merged local `isDetached` state flag when updating client states from WebSocket `sync_state` updates and HTTP `fetchSyncState` responses, preventing backend synchronizations from wiping out client-side lock state.
+
 ## [1.3.386] - 2026-07-10
 
 ### Fixed
