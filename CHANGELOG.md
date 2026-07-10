@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.379] - 2026-07-10
+
+### Fixed
+- **Detached Tab Blank Window**:
+  - Restored Tauri's bundled application protocol for detached windows in production, preventing a blank page when the backend is not serving frontend assets.
+  - Kept Vite as the development source and normalized detached-window URLs to include the SPA root path.
+
 ## [1.3.378] - 2026-07-10
 
 ### Fixed

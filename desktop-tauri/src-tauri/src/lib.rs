@@ -1372,6 +1372,11 @@ fn eval_webview_js(app: tauri::AppHandle, label: String, js: String) -> Result<(
     }
 }
 
+fn detached_window_url(query: &str) -> String {
+    let base_url = app_base_url();
+    format!("{}/?{}", base_url, query.trim_start_matches('?'))
+}
+
 #[tauri::command]
 fn create_detached_window(app: tauri::AppHandle, label: String, query: String) -> Result<(), String> {
     if let Some(win) = app.get_webview_window(&label) {
@@ -1381,18 +1386,20 @@ fn create_detached_window(app: tauri::AppHandle, label: String, query: String) -
         return Ok(());
     }
 
-    // Use the bundled App protocol so the detached window loads in both dev and
-    // production. `window.location.origin` is `tauri://localhost` in production,
-    // which is not a real network address and breaks `WebviewUrl::External`.
-    let path = if query.starts_with('?') {
-        format!("/{}", query)
+    // Development uses Vite so it can hot-reload. Production must use the bundled
+    // application protocol: the backend server is not a frontend asset host.
+    let webview_url = if cfg!(debug_assertions) {
+        let url = detached_window_url(&query);
+        let parsed_url = tauri::Url::parse(&url).map_err(|e| e.to_string())?;
+        tauri::WebviewUrl::External(parsed_url)
     } else {
-        format!("/?{}", query)
+        let path = format!("/?{}", query.trim_start_matches('?'));
+        tauri::WebviewUrl::App(PathBuf::from(path))
     };
     let win_builder = tauri::WebviewWindowBuilder::new(
         &app,
         &label,
-        tauri::WebviewUrl::App(std::path::PathBuf::from(path))
+        webview_url
     )
     .title("t-line - Detached Tab")
     .inner_size(900.0, 600.0)
@@ -1580,7 +1587,7 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::build_error_page_html;
+    use super::{build_error_page_html, detached_window_url};
 
     #[test]
     fn error_page_start_backend_uses_invoke() {
@@ -1606,6 +1613,28 @@ mod tests {
 
         assert!(html.contains("__TAURI__.core.invoke('get_app_url')"));
         assert!(html.contains("window.location.href = appUrl || APP_URL"));
+    }
+
+    #[test]
+    fn detached_window_url_preserves_query_params() {
+        let url = detached_window_url("token=abc&detachedTabId=tab-1");
+        let expected_base = if cfg!(debug_assertions) {
+            "http://localhost:5773"
+        } else {
+            "http://localhost:5779"
+        };
+        assert_eq!(url, format!("{}/?token=abc&detachedTabId=tab-1", expected_base));
+    }
+
+    #[test]
+    fn detached_window_url_accepts_leading_question_mark() {
+        let url = detached_window_url("?token=abc&detachedTabId=tab-1");
+        let expected_base = if cfg!(debug_assertions) {
+            "http://localhost:5773"
+        } else {
+            "http://localhost:5779"
+        };
+        assert_eq!(url, format!("{}/?token=abc&detachedTabId=tab-1", expected_base));
     }
 
 }
