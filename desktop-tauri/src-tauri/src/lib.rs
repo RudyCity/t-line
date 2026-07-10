@@ -1420,12 +1420,7 @@ async fn create_detached_window(app: tauri::AppHandle, label: String, query: Str
     .decorations(false)
     .initialization_script(&initialization_script);
 
-    let window = win_builder.build().map_err(|e| e.to_string())?;
-    
-    #[cfg(debug_assertions)]
-    {
-        let _ = window.open_devtools();
-    }
+    let _window = win_builder.build().map_err(|e| e.to_string())?;
     Ok(())
 }
 

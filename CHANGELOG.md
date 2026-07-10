@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.389] - 2026-07-10
+
+### Fixed
+- **Detached Window DevTools**:
+  - Removed the automatic devtools popup (`open_devtools`) when creating detached WebviewWindows in the Rust backend for debug builds, preventing intrusive debug panels.
+
 ## [1.3.388] - 2026-07-10
 
 ### Changed
