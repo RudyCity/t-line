@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.378] - 2026-07-10
+
+### Fixed
+- **Tauri Native Webview Initialization**:
+  - Prevented native child webview creation before its React container is mounted and a preview URL is available.
+  - Guarded all container bounds reads during initialization and visibility synchronization, eliminating repeated `getBoundingClientRect()` calls on a null ref.
+
 ## [1.3.377] - 2026-07-10
 
 ### Fixed

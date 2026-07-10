@@ -102,7 +102,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
 
   // Tauri Child Webview Overlay Management
   useEffect(() => {
-    if (!useTauriWebview || isElectron) return;
+    if (!useTauriWebview || isElectron || !activeUrl) return;
 
     let active = true;
     let webviewInstance: any = null;
@@ -111,7 +111,8 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     const initWebview = async () => {
       // Small delay to let the container div mount and render in DOM
       await new Promise(resolve => setTimeout(resolve, 100));
-      if (!active || !containerRef.current) return;
+      const initialContainer = containerRef.current;
+      if (!active || !initialContainer) return;
 
       try {
         const { Webview } = await import('@tauri-apps/api/webview');
@@ -119,7 +120,6 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
         const { LogicalPosition, LogicalSize } = await import('@tauri-apps/api/dpi');
 
         const currentWindow = getCurrentWindow();
-        const rect = containerRef.current.getBoundingClientRect();
 
         // 1. Retrieve the last active unique label from sessionStorage (handling F5 reload)
         const lastLabel = sessionStorage.getItem(sessionStorageKey);
@@ -150,7 +150,10 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
           await new Promise(resolve => setTimeout(resolve, 250));
         }
 
-        if (!active || !containerRef.current) return;
+        const container = containerRef.current;
+        if (!active || !container) return;
+
+        const rect = container.getBoundingClientRect();
 
         // Generate a unique label to prevent duplicate label conflict in Tauri backend
         // Prefixed with 'browser-' to match the 'browser-*' glob in capabilities/default.json
@@ -208,7 +211,10 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
             return;
           }
 
-          const r = containerRef.current.getBoundingClientRect();
+          const container = containerRef.current;
+          if (!container) return;
+
+          const r = container.getBoundingClientRect();
 
           // Only call Tauri APIs if bounds actually changed
           if (
@@ -262,14 +268,15 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
 
   // Handle Webview visibility on isActive change
   useEffect(() => {
-    if (tauriWebviewRef.current && useTauriWebview) {
+    if (tauriWebviewRef.current && useTauriWebview && activeUrl) {
       if (isActive) {
         tauriWebviewRef.current.show()
           .then(async () => {
             const { LogicalPosition, LogicalSize } = await import('@tauri-apps/api/dpi');
             await new Promise(resolve => setTimeout(resolve, 50));
-            if (containerRef.current && tauriWebviewRef.current) {
-              const r = containerRef.current.getBoundingClientRect();
+            const container = containerRef.current;
+            if (container && tauriWebviewRef.current) {
+              const r = container.getBoundingClientRect();
               await tauriWebviewRef.current.setPosition(new LogicalPosition(r.left, r.top)).catch(() => {});
               await tauriWebviewRef.current.setSize(new LogicalSize(r.width, r.height)).catch(() => {});
             }
@@ -279,7 +286,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
         tauriWebviewRef.current.hide().catch((err: any) => console.warn('[BrowserTab] Failed to hide webview:', err));
       }
     }
-  }, [isActive, useTauriWebview]);
+  }, [isActive, useTauriWebview, activeUrl]);
 
   // Listen to console messages if in Electron and using webview
   useEffect(() => {
