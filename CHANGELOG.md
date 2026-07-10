@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.375] - 2026-07-10
+
+### Fixed
+- **Tauri Custom Window Controls**:
+  - Replaced the global `window.__TAURI__.window` reference with explicit dynamic import of `@tauri-apps/api/window` to resolve issues where minimize and maximize controls were not functioning in the Tauri desktop wrapper.
+  - Implemented robust, race-condition-free event subscription for window resize state tracking in `App.tsx`.
+
 ## [1.3.374] - 2026-07-09
 
 ### Fixed

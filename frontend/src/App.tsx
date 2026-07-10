@@ -563,8 +563,44 @@ export default function App() {
     onSplitVertical: () => splitFocusedTerminal('vertical'),
     onZoomIn: handleZoomIn,
     onZoomOut: handleZoomOut,
-  });
+  });  const handleMinimize = async () => {
+    if ((window as any).electron) {
+      (window as any).electron.minimize();
+    } else if ((window as any).__TAURI__) {
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        await getCurrentWindow().minimize();
+      } catch (err) {
+        console.error("Failed to minimize window:", err);
+      }
+    }
+  };
 
+  const handleToggleMaximize = async () => {
+    if ((window as any).electron) {
+      (window as any).electron.maximize();
+    } else if ((window as any).__TAURI__) {
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        await getCurrentWindow().toggleMaximize();
+      } catch (err) {
+        console.error("Failed to toggle maximize window:", err);
+      }
+    }
+  };
+
+  const handleClose = async () => {
+    if ((window as any).electron) {
+      (window as any).electron.close();
+    } else if ((window as any).__TAURI__) {
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        await getCurrentWindow().close();
+      } catch (err) {
+        console.error("Failed to close window:", err);
+      }
+    }
+  };
 
   // Lifecycle
   useEffect(() => {
@@ -579,18 +615,38 @@ export default function App() {
         if (unsubscribe) unsubscribe();
       };
     } else if ((window as any).__TAURI__) {
-      const { getCurrentWindow } = (window as any).__TAURI__.window;
-      const appWindow = getCurrentWindow();
-      appWindow.isMaximized().then(setIsMaximized);
-      
+      let active = true;
       let unlisten: (() => void) | undefined;
-      appWindow.onResized(() => {
-        appWindow.isMaximized().then(setIsMaximized);
-      }).then((unsub: () => void) => {
-        unlisten = unsub;
-      });
+
+      const initTauriWindow = async () => {
+        try {
+          const { getCurrentWindow } = await import('@tauri-apps/api/window');
+          const appWindow = getCurrentWindow();
+          
+          if (!active) return;
+          const maximized = await appWindow.isMaximized();
+          if (!active) return;
+          setIsMaximized(maximized);
+
+          const unsub = await appWindow.onResized(async () => {
+            const currentMax = await appWindow.isMaximized();
+            if (active) setIsMaximized(currentMax);
+          });
+
+          if (!active) {
+            unsub();
+          } else {
+            unlisten = unsub;
+          }
+        } catch (err) {
+          console.error("Failed to initialize Tauri window:", err);
+        }
+      };
+
+      initTauriWindow();
 
       return () => {
+        active = false;
         if (unlisten) unlisten();
       };
     }
@@ -870,14 +926,7 @@ export default function App() {
               <button 
                 type="button" 
                 className="window-control-btn" 
-                onClick={async () => {
-                  if ((window as any).electron) {
-                    (window as any).electron.minimize();
-                  } else if ((window as any).__TAURI__) {
-                    const { getCurrentWindow } = (window as any).__TAURI__.window;
-                    await getCurrentWindow().minimize();
-                  }
-                }} 
+                onClick={handleMinimize} 
                 title="Minimize"
               >
                 <span style={{ fontSize: '10px' }}>—</span>
@@ -885,14 +934,7 @@ export default function App() {
               <button 
                 type="button" 
                 className="window-control-btn" 
-                onClick={async () => {
-                  if ((window as any).electron) {
-                    (window as any).electron.maximize();
-                  } else if ((window as any).__TAURI__) {
-                    const { getCurrentWindow } = (window as any).__TAURI__.window;
-                    await getCurrentWindow().toggleMaximize();
-                  }
-                }} 
+                onClick={handleToggleMaximize} 
                 title={isMaximized ? "Restore" : "Maximize"}
               >
                 <span style={{ fontSize: '10px' }}>{isMaximized ? "❐" : "▢"}</span>
@@ -900,14 +942,7 @@ export default function App() {
               <button 
                 type="button" 
                 className="window-control-btn window-control-btn-close" 
-                onClick={async () => {
-                  if ((window as any).electron) {
-                    (window as any).electron.close();
-                  } else if ((window as any).__TAURI__) {
-                    const { getCurrentWindow } = (window as any).__TAURI__.window;
-                    await getCurrentWindow().close();
-                  }
-                }} 
+                onClick={handleClose} 
                 title="Close"
               >
                 <span style={{ fontSize: '10px' }}>✕</span>
@@ -1312,14 +1347,7 @@ export default function App() {
                 <button 
                   type="button" 
                   className="window-control-btn" 
-                  onClick={async () => {
-                    if ((window as any).electron) {
-                      (window as any).electron.minimize();
-                    } else if ((window as any).__TAURI__) {
-                      const { getCurrentWindow } = (window as any).__TAURI__.window;
-                      await getCurrentWindow().minimize();
-                    }
-                  }} 
+                  onClick={handleMinimize} 
                   title="Minimize"
                 >
                   <span style={{ fontSize: '10px' }}>—</span>
@@ -1327,14 +1355,7 @@ export default function App() {
                 <button 
                   type="button" 
                   className="window-control-btn" 
-                  onClick={async () => {
-                    if ((window as any).electron) {
-                      (window as any).electron.maximize();
-                    } else if ((window as any).__TAURI__) {
-                      const { getCurrentWindow } = (window as any).__TAURI__.window;
-                      await getCurrentWindow().toggleMaximize();
-                    }
-                  }} 
+                  onClick={handleToggleMaximize} 
                   title={isMaximized ? "Restore" : "Maximize"}
                 >
                   <span style={{ fontSize: '10px' }}>{isMaximized ? "❐" : "▢"}</span>
@@ -1342,14 +1363,7 @@ export default function App() {
                 <button 
                   type="button" 
                   className="window-control-btn window-control-btn-close" 
-                  onClick={async () => {
-                    if ((window as any).electron) {
-                      (window as any).electron.close();
-                    } else if ((window as any).__TAURI__) {
-                      const { getCurrentWindow } = (window as any).__TAURI__.window;
-                      await getCurrentWindow().close();
-                    }
-                  }} 
+                  onClick={handleClose} 
                   title="Close"
                 >
                   <span style={{ fontSize: '10px' }}>✕</span>
