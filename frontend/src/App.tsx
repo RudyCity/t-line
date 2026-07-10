@@ -918,6 +918,7 @@ export default function App() {
 
   // Synchronize state changes to backend (Option A)
   useEffect(() => {
+    if (detachedTabId) return; // Detached windows are read-only and do not sync back to server
     if (!isAuthenticated || !hasFetchedSyncState.current) return;
     const token = localStorage.getItem('token');
     if (!token) return;
