@@ -1791,6 +1791,11 @@
   cursor: default;
 }
 
+/* Hide terminal cursor when superagent is running to avoid double caret */
+.hide-xterm-cursor .xterm-cursor {
+  visibility: hidden !important;
+}
+
 /* ─── Update Notification ──────────────────────────────────────────────────── */
 
 .update-notification {

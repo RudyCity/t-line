@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.392] - 2026-07-11
+
+### Fixed
+- **Terminal Double Cursor Caret with Superagent**:
+  - Automatically detect when the Superagent AI coding agent CLI (`isSuperagent`) is running in a terminal instance.
+  - Dynamically hide the xterm.js cursor by setting the theme's `cursor` and `cursorAccent` to `'transparent'` whenever Superagent is active, ensuring it does not collide/render double with Superagent's own custom cursor.
+  - Added a `.hide-xterm-cursor` class style with `visibility: hidden !important` applied to `.xterm-cursor` as a CSS fallback mechanism.
+
 ## [1.3.391] - 2026-07-10
 
 ### Fixed
