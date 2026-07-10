@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.377] - 2026-07-10
+
+### Fixed
+- **Dual Screen / Detached Tab (production blank window)**:
+  - Root cause: detached window used `tauri::WebviewUrl::External` with a URL built from `window.location.origin`. In production builds `window.location.origin` resolves to `tauri://localhost` (Tauri's virtual asset protocol, not a real network address), so the external webview failed to load and opened blank.
+  - Fix: `create_detached_window` now accepts a `query` string and opens the bundled app via `tauri::WebviewUrl::App(PathBuf)` (works in both dev and production). Frontend invoke calls pass `query = token=...&detachedTabId=...` instead of a full origin-based URL.
+
 ## [1.3.376] - 2026-07-10
 
 ### Added

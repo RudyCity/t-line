@@ -1373,7 +1373,7 @@ fn eval_webview_js(app: tauri::AppHandle, label: String, js: String) -> Result<(
 }
 
 #[tauri::command]
-fn create_detached_window(app: tauri::AppHandle, label: String, url: String) -> Result<(), String> {
+fn create_detached_window(app: tauri::AppHandle, label: String, query: String) -> Result<(), String> {
     if let Some(win) = app.get_webview_window(&label) {
         let _ = win.show();
         let _ = win.unminimize();
@@ -1381,11 +1381,18 @@ fn create_detached_window(app: tauri::AppHandle, label: String, url: String) -> 
         return Ok(());
     }
 
-    let target_url = tauri::Url::parse(&url).map_err(|e| e.to_string())?;
+    // Use the bundled App protocol so the detached window loads in both dev and
+    // production. `window.location.origin` is `tauri://localhost` in production,
+    // which is not a real network address and breaks `WebviewUrl::External`.
+    let path = if query.starts_with('?') {
+        format!("/{}", query)
+    } else {
+        format!("/?{}", query)
+    };
     let win_builder = tauri::WebviewWindowBuilder::new(
         &app,
         &label,
-        tauri::WebviewUrl::External(target_url)
+        tauri::WebviewUrl::App(std::path::PathBuf::from(path))
     )
     .title("t-line - Detached Tab")
     .inner_size(900.0, 600.0)
