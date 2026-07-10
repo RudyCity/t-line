@@ -61,10 +61,11 @@ import { useConfirmDialog } from './hooks/useConfirmDialog';
 import { useWorkspaceHandlers, getTabWorktreePath } from './hooks/useWorkspaceHandlers';
 import { TPlusLogo } from './components/TPlusLogo';
 import { TabTooltip, TabContextMenu } from './components/TabUiComponents';
+import { getRuntimeSearchParams } from './utils/runtimeQuery';
 
 export default function App() {
   const detachedTabId = useMemo(() => {
-    const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = getRuntimeSearchParams();
     return urlParams.get('detachedTabId');
   }, []);
 

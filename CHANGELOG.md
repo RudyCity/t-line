@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.380] - 2026-07-10
+
+### Fixed
+- **Detached Tab White Window and Close Control**:
+  - Passed detached-tab context through Tauri's initialization script instead of an unsupported query string on `WebviewUrl::App` asset paths.
+  - Restored the detached tab ID and auth token before React initializes, so the bundled production app can render the intended tab.
+  - Force-destroy detached windows on a native close request, ensuring stuck blank windows can always be closed.
+
 ## [1.3.379] - 2026-07-10
 
 ### Fixed

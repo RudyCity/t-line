@@ -1,3 +1,5 @@
+import { getRuntimeSearchParams } from '../utils/runtimeQuery';
+
 class TerminalWebSocketManager {
   private ws: WebSocket | null = null;
   private listeners = new Map<string, (data: any) => void>();
@@ -19,7 +21,7 @@ class TerminalWebSocketManager {
   constructor() {
     this.token = localStorage.getItem('token') || '';
     // Check if token in query string (Electron bypass setup)
-    const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = getRuntimeSearchParams();
     const urlToken = urlParams.get('token');
     if (urlToken) {
       this.token = urlToken;

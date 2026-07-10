@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { wsManager } from '../services/websocket';
+import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 
 export function useAuth() {
   const [setupRequired, setSetupRequired] = useState<boolean | null>(null);
@@ -10,7 +11,7 @@ export function useAuth() {
 
   const checkAuth = useCallback(async () => {
     try {
-      const urlParams = new URLSearchParams(window.location.search);
+      const urlParams = getRuntimeSearchParams();
       const urlToken = urlParams.get('token');
       if (urlToken) {
         localStorage.setItem('token', urlToken);

@@ -1386,16 +1386,20 @@ fn create_detached_window(app: tauri::AppHandle, label: String, query: String) -
         return Ok(());
     }
 
-    // Development uses Vite so it can hot-reload. Production must use the bundled
-    // application protocol: the backend server is not a frontend asset host.
+    // Development uses Vite so it can hot-reload. Production loads the exact bundled
+    // asset and passes the detached context through an initialization script because
+    // WebviewUrl::App accepts a resource path, not a URL query string.
     let webview_url = if cfg!(debug_assertions) {
         let url = detached_window_url(&query);
         let parsed_url = tauri::Url::parse(&url).map_err(|e| e.to_string())?;
         tauri::WebviewUrl::External(parsed_url)
     } else {
-        let path = format!("/?{}", query.trim_start_matches('?'));
-        tauri::WebviewUrl::App(PathBuf::from(path))
+        tauri::WebviewUrl::App(PathBuf::from("index.html"))
     };
+    let initialization_script = format!(
+        "window.__TLINE_DETACHED_QUERY__ = {};",
+        serde_json::to_string(query.trim_start_matches('?')).map_err(|e| e.to_string())?
+    );
     let win_builder = tauri::WebviewWindowBuilder::new(
         &app,
         &label,
@@ -1404,7 +1408,8 @@ fn create_detached_window(app: tauri::AppHandle, label: String, query: String) -
     .title("t-line - Detached Tab")
     .inner_size(900.0, 600.0)
     .resizable(true)
-    .decorations(true);
+    .decorations(true)
+    .initialization_script(&initialization_script);
 
     let window = win_builder.build().map_err(|e| e.to_string())?;
     
@@ -1571,6 +1576,9 @@ pub fn run() {
                 if window.label() == "main" {
                     api.prevent_close();
                     let _ = window.hide();
+                } else if window.label().starts_with("browser-detached-") {
+                    api.prevent_close();
+                    let _ = window.destroy();
                 }
             }
         })
