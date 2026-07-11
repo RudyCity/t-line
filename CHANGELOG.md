@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.396] - 2026-07-11
+
+### Fixed
+- **Tauri Webview ACL Permissions**:
+  - Added `"webviews"` glob pattern array to the default capability definition in `desktop-tauri/src-tauri/capabilities/default.json` matching `"main"` and `"browser-*"` to correctly allow dynamically created programmatic child webviews to invoke custom commands (such as `get_memory_usage`).
+  - Added `"core:webview:allow-internal-toggle-devtools"` permission to resolve `plugin:webview|internal_toggle_devtools` ACL rejection crashes when programmatically opening devtools in Tauri preview tabs.
+
 ## [1.3.395] - 2026-07-11
 
 ### Fixed

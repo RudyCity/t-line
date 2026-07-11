@@ -6,6 +6,10 @@
     "main",
     "browser-*"
   ],
+  "webviews": [
+    "main",
+    "browser-*"
+  ],
   "permissions": [
     "core:default",
     "core:window:default",
@@ -24,6 +28,7 @@
     "core:webview:allow-set-webview-size",
     "core:webview:allow-webview-hide",
     "core:webview:allow-webview-show",
+    "core:webview:allow-internal-toggle-devtools",
     "allow-quit-app",
     "allow-start-backend-command",
     "allow-get-app-url",
