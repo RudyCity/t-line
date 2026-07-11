@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.397] - 2026-07-11
+
+### Added
+- **System Tray Terminal Navigation**:
+  - Implemented the ability to click any active PTY session in the system tray menu to instantly switch the active workspace (project) and tab in the main interface.
+  - Added a new `focus_window` Tauri command to focus detached windows when switching to a terminal in a detached tab (dual-display mode).
+  - Used React refs (`tabsRef`, `terminalInstancesRef`) in `App.tsx` for optimal, stable event listening.
+
 ## [1.3.396] - 2026-07-11
 
 ### Fixed

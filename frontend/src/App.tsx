@@ -46,7 +46,7 @@ import { useUpdateChecker } from './hooks/useUpdateChecker';
 import { useThemeAndFonts } from './hooks/useThemeAndFonts';
 import { useTabUiHandlers } from './hooks/useTabUiHandlers';
 import { useAuth } from './hooks/useAuth';
-import { useTerminals, WorkspaceInfo, TabData } from './hooks/useTerminals';
+import { useTerminals, WorkspaceInfo, TabData, getTerminalIds } from './hooks/useTerminals';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { SplitLayoutRenderer } from './components/SplitLayoutRenderer';
 import { Footer } from './components/Footer';
@@ -329,6 +329,84 @@ export default function App() {
     refreshTriggers,
     clearInitialCommand
   } = useTerminals(workspaces, () => setSidebarOpen(false));
+
+  const tabsRef = useRef(tabs);
+  const terminalInstancesRef = useRef(terminalInstances);
+
+  useEffect(() => {
+    tabsRef.current = tabs;
+  }, [tabs]);
+
+  useEffect(() => {
+    terminalInstancesRef.current = terminalInstances;
+  }, [terminalInstances]);
+
+  // Listen for terminal selection event from system tray
+  useEffect(() => {
+    if ((window as any).__TAURI__?.event?.listen) {
+      let unlisten: (() => void) | null = null;
+
+      const setupListener = async () => {
+        try {
+          const unsub = await (window as any).__TAURI__.event.listen(
+            'select-terminal',
+            async (event: any) => {
+              const { pid, terminalId } = event.payload;
+              
+              let targetTermId = terminalId;
+              if (!targetTermId) {
+                const inst = Object.values(terminalInstancesRef.current).find((t: any) => t.pid === pid);
+                if (inst) {
+                  targetTermId = inst.id;
+                }
+              }
+
+              if (!targetTermId) return;
+
+              const foundTab = tabsRef.current.find((t) => {
+                if (t.type === 'terminal' && t.layout) {
+                  try {
+                    return getTerminalIds(t.layout).includes(targetTermId!);
+                  } catch (_) {}
+                }
+                if (t.type === 'grid' && t.gridTerminalIds) {
+                  return t.gridTerminalIds.includes(targetTermId!);
+                }
+                return false;
+              });
+
+              if (foundTab) {
+                setActiveTabId(foundTab.id);
+
+                if (foundTab.type === 'terminal') {
+                  setTabs((prev) =>
+                    prev.map((t) =>
+                      t.id === foundTab.id ? { ...t, focusedTerminalId: targetTermId } : t
+                    )
+                  );
+                }
+
+                if (foundTab.isDetached) {
+                  (window as any).__TAURI__.core.invoke('focus_window', {
+                    label: `browser-detached-${foundTab.id}`,
+                  }).catch(() => {});
+                }
+              }
+            }
+          );
+          unlisten = unsub;
+        } catch (err) {
+          console.error('Failed to setup select-terminal listener:', err);
+        }
+      };
+
+      setupListener();
+
+      return () => {
+        if (unlisten) unlisten();
+      };
+    }
+  }, []);
 
   // --- Detached Tab Effects ---
   useEffect(() => {

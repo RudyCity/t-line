@@ -11,7 +11,8 @@ fn main() {
             "eval_webview_js",
             "create_detached_window",
             "close_detached_window",
-            "get_memory_usage"
+            "get_memory_usage",
+            "focus_window"
           ])
       )
   )

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { version } from '../../package.json';
 
-const DEFAULT_VERSION = version || '1.3.396';
+const DEFAULT_VERSION = version || '1.3.397';
 
 export function useUpdateChecker() {
   const [appVersion, setAppVersion] = useState<string>(DEFAULT_VERSION);

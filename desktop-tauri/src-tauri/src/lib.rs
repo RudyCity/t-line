@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 use tauri::Manager;
+use tauri::Emitter;
 use tauri::menu::{Menu, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState};
 
@@ -1447,6 +1448,17 @@ async fn close_detached_window(app: tauri::AppHandle, label: String) -> Result<(
     Ok(())
 }
 
+#[tauri::command]
+fn focus_window(app: tauri::AppHandle, label: String) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window(&label) {
+        let _ = win.show();
+        let _ = win.unminimize();
+        let _ = win.set_focus();
+    }
+    Ok(())
+}
+
+
 fn is_descendant_of(sys: &sysinfo::System, child_pid: sysinfo::Pid, parent_pid: sysinfo::Pid) -> bool {
     let mut current = child_pid;
     while let Some(proc) = sys.process(current) {
@@ -1533,7 +1545,8 @@ pub fn run() {
             start_backend_command,
             get_app_url,
             create_detached_window,
-            close_detached_window
+            close_detached_window,
+            focus_window
         ])
         .setup(move |app| {
             if cfg!(debug_assertions) {
@@ -1573,6 +1586,28 @@ pub fn run() {
                         stop_backend(&state);
                         restart_desktop_app();
                     } else if id_str.starts_with("pid_") {
+                        if let Some(pid_str) = id_str.strip_prefix("pid_") {
+                            if let Ok(pid) = pid_str.parse::<u64>() {
+                                let state = app_handle.state::<DesktopState>();
+                                let sessions = state.active_sessions.lock().unwrap().clone();
+                                let mut terminal_id = None;
+                                if let Some(sessions_arr) = sessions.as_array() {
+                                    for s in sessions_arr {
+                                        if s.get("pid").and_then(|v| v.as_u64()) == Some(pid) {
+                                            terminal_id = s.get("id").and_then(|v| v.as_str()).map(|s| s.to_string());
+                                            break;
+                                        }
+                                    }
+                                }
+                                #[derive(Clone, serde::Serialize)]
+                                struct SelectTerminalPayload {
+                                    pid: u64,
+                                    #[serde(rename = "terminalId")]
+                                    terminal_id: Option<String>,
+                                }
+                                app_handle.emit("select-terminal", SelectTerminalPayload { pid, terminal_id }).ok();
+                            }
+                        }
                         show_dashboard_window(app_handle);
                     }
                 })

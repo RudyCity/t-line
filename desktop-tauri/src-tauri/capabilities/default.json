@@ -36,6 +36,7 @@
     "allow-eval-webview-js",
     "allow-create-detached-window",
     "allow-close-detached-window",
-    "allow-get-memory-usage"
+    "allow-get-memory-usage",
+    "allow-focus-window"
   ]
 }
