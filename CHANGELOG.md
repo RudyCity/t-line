@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.395] - 2026-07-11
+
+### Fixed
+- **Production Updater Version Detection**:
+  - Bundled `backend/package.json` into the Tauri installer resources under the `_up_/backend/` layout so that the Node.js backend can successfully read and return the correct production version from disk.
+  - Added support for reading version from `process.env.APP_VERSION` when running inside the Tauri shell environment.
+  - Aligned fallbacks and package version declarations to `1.3.395` to ensure the update notifications and badges work accurately without displaying incorrect outdated statuses in production.
+
 ## [1.3.394] - 2026-07-11
 
 ### Fixed
