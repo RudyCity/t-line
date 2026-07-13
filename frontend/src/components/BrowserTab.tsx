@@ -388,6 +388,10 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
       if (type === 'tline-ready') {
         setHelperReady(true);
         console.log('[BrowserTab] Connection established with preview helper script.');
+        // Acknowledge to helper script to stop periodic ping
+        if (iframeRef.current?.contentWindow) {
+          iframeRef.current.contentWindow.postMessage({ type: 'tline-ack-ready' }, '*');
+        }
         // If we are currently in inspect mode, tell the new load to start inspect
         if (isInspecting && iframeRef.current?.contentWindow) {
           iframeRef.current.contentWindow.postMessage({ type: 'tline-start-inspect' }, '*');
@@ -442,6 +446,16 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
         
         if (eventType === 'tline-ready') {
           setHelperReady(true);
+          
+          // Acknowledge to helper script via Tauri webview eval to stop periodic ping
+          if ((window as any).__TAURI__?.core?.invoke) {
+            const activeLabel = tauriWebviewRef.current?.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
+            if (activeLabel) {
+              const ackJs = `window.postMessage({ type: "tline-ack-ready" }, "*")`;
+              (window as any).__TAURI__.core.invoke('eval_webview_js', { label: activeLabel, js: ackJs }).catch(() => {});
+            }
+          }
+
           if (isInspecting && (window as any).__TAURI__?.core?.invoke) {
             const activeLabel = tauriWebviewRef.current?.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
             if (activeLabel) {

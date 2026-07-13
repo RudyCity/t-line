@@ -475,6 +475,33 @@ export const TLINE_HELPER_CODE = `(function() {
   // Send an initial handshake/ready message to the parent frame
   sendPreviewEvent('tline-ready', null);
 
+  // Periodically send tline-ready until acknowledged to avoid race conditions during initial load
+  var readyInterval = setInterval(function() {
+    sendPreviewEvent('tline-ready', null);
+  }, 1000);
+
+  function stopReadyInterval() {
+    if (readyInterval) {
+      clearInterval(readyInterval);
+      readyInterval = null;
+    }
+  }
+
+  // Stop the interval when we receive acknowledgement or start/stop inspect commands
+  window.addEventListener('message', function(e) {
+    if (e.data && (e.data.type === 'tline-start-inspect' || e.data.type === 'tline-stop-inspect' || e.data.type === 'tline-ack-ready')) {
+      stopReadyInterval();
+    }
+  });
+
+  // Also send tline-ready if parent pings us
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'tline-ping') {
+      sendPreviewEvent('tline-ready', null);
+      stopReadyInterval();
+    }
+  });
+
   // Notify parent of the current real URL (so URL bar stays in sync after navigation)
   function notifyUrlChanged() {
     var proxyTarget = getProxyTarget();

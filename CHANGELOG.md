@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.408] - 2026-07-13
+
+### Fixed
+- **Web Preview Handshake Reliability**:
+  - Implemented a periodic retry interval for sending the `tline-ready` event from the client helper script (`tline-helper-code.ts`) until it is acknowledged by the parent window.
+  - Added parent-to-child `tline-ack-ready` message acknowledgements in `BrowserTab.tsx` for both iframe (postMessage) and Tauri native webview (eval_webview_js) flows, resolving cases where the status indicator could get stuck on "Connecting Helper..." due to early/missed handshake events.
+
 ## [1.3.407] - 2026-07-13
 
 ### Fixed
