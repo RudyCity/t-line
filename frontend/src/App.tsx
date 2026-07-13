@@ -2010,12 +2010,12 @@ export default function App() {
                 if (!activeTab) return null;
                 let tabElement = null;
                 if (activeTab.type === 'browser') {
-                  tabElement = (
+                  tabElement = activeTab.isDetached ? (
                     <div className="flex h-full w-full flex-col items-center justify-center text-slate-400 p-8 text-center" style={{ background: 'var(--bg-main)' }}>
                       <Globe size={40} className="text-slate-500 mb-3 opacity-40" />
                       <p className="font-semibold text-sm">Browser Tab</p>
                     </div>
-                  );
+                  ) : null;
                 } else if (activeTab.type === 'file') {
                   tabElement = (
                     <FileViewerTab

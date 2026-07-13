@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.399] - 2026-07-13
+
+### Fixed
+- **Browser Tab Side-by-Side Duplicate Rendering**:
+  - Only render the BrowserTab placeholder block in the main workspace DOM when the tab is detached. This prevents the placeholder (globe icon and "Browser Tab" text) from rendering side-by-side with the persistent live `<BrowserTab>` when a browser preview is active.
+
 ## [1.3.398] - 2026-07-13
 
 ### Added
