@@ -102,9 +102,8 @@ fn current_app_url() -> String {
 
 fn show_dashboard_window<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>) {
     if let Some(window) = app_handle.get_webview_window("main") {
-        let _ = window.show();
         let _ = window.unminimize();
-        let _ = window.maximize();
+        let _ = window.show();
         let _ = window.set_focus();
     }
 }
@@ -1618,10 +1617,18 @@ pub fn run() {
                 })
                 .show_menu_on_left_click(false)
                 .on_tray_icon_event(|tray: &tauri::tray::TrayIcon, event: tauri::tray::TrayIconEvent| {
-                    if let TrayIconEvent::Click { button, button_state, .. } = event {
-                        if button == MouseButton::Left && button_state == MouseButtonState::Up {
-                            show_dashboard_window(tray.app_handle());
+                    match event {
+                        TrayIconEvent::Click { button, button_state, .. } => {
+                            if button == MouseButton::Left && button_state == MouseButtonState::Up {
+                                show_dashboard_window(tray.app_handle());
+                            }
                         }
+                        TrayIconEvent::DoubleClick { button, .. } => {
+                            if button == MouseButton::Left {
+                                show_dashboard_window(tray.app_handle());
+                            }
+                        }
+                        _ => {}
                     }
                 });
 

@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.409] - 2026-07-13
+
+### Fixed
+- **Show Dashboard Tray Restore**:
+  - Restructured the Tauri tray click handler (`on_tray_icon_event`) to listen to both single `Click` and `DoubleClick` events.
+  - Corrected the method execution order in `show_dashboard_window` to call `unminimize()` before `show()` and `set_focus()`.
+  - Removed the forced maximize behavior to respect user preferences and prevent WebView2 window focus/rendering blocks on Windows.
+
 ## [1.3.408] - 2026-07-13
 
 ### Fixed
