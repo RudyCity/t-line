@@ -15,7 +15,7 @@ const rewriteSetCookie = (cookieStr: string): string => {
   return parts.join('; ');
 };
 
-const sanitizeHeaders = (proxyHeaders: any) => {
+const sanitizeHeaders = (proxyHeaders: any, req?: any) => {
   const headers = { ...proxyHeaders };
   
   // Case-insensitive deletion of security headers
@@ -48,7 +48,14 @@ const sanitizeHeaders = (proxyHeaders: any) => {
       const parsedRedirect = new URL(redirectUrl);
       const targetOrigin = parsedRedirect.origin;
       const targetPath = parsedRedirect.pathname + parsedRedirect.search + parsedRedirect.hash;
-      headers[locationKey] = `/api/preview-proxy${targetPath}${targetPath.includes('?') ? '&' : '?'}target=${encodeURIComponent(targetOrigin)}`;
+      let redirectWithParams = `/api/preview-proxy${targetPath}${targetPath.includes('?') ? '&' : '?'}target=${encodeURIComponent(targetOrigin)}`;
+      
+      // Preserve tabId across redirects if present in current request
+      if (req && req.tlineTabId) {
+        redirectWithParams += `&tabId=${req.tlineTabId}`;
+      }
+      
+      headers[locationKey] = redirectWithParams;
     } catch (e) {
       // If it's already a relative path, let the browser handle it relative to <base> tag
     }
@@ -197,14 +204,14 @@ export const previewProxy = createProxyMiddleware({
             }
           }
           
-          const headers = sanitizeHeaders(proxyRes.headers);
+          const headers = sanitizeHeaders(proxyRes.headers, req);
           delete headers['content-length'];
           delete headers['content-encoding'];
           res.writeHead(proxyRes.statusCode || 200, headers);
           res.end(html);
         });
       } else {
-        const headers = sanitizeHeaders(proxyRes.headers);
+        const headers = sanitizeHeaders(proxyRes.headers, req);
         res.writeHead(proxyRes.statusCode || 200, headers);
         proxyRes.pipe(res);
       }

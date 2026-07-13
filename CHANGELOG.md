@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.405] - 2026-07-13
+
+### Fixed
+- **HTTP Redirects tabId Preservation in Proxy**:
+  - Updated the `sanitizeHeaders` function in the backend `previewProxy.ts` to accept the request object and append `tabId` as a query parameter when rewriting HTTP `Location` redirect headers. This ensures `tabId` is not lost on target website redirects (like `google.com` to `google.co.id` or trailing slash redirects) before the helper script can run and persist it in client-side storage.
+
 ## [1.3.404] - 2026-07-13
 
 ### Added
