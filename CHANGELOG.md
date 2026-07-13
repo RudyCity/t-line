@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.406] - 2026-07-13
+
+### Fixed
+- **Cookie-Based tabId Session Persistence**:
+  - Implemented cookie-based persistence for `tabId` (`tline_tab_id`) in `previewProxy.ts`. By setting a tecredited `Set-Cookie` header on the first request and parsing the cookies header on subsequent requests, the `tabId` is safely retained for every page request and sub-resource load under the proxy origin, preventing the `tabId` from resolving as `null` after complex redirection paths or navigations.
+
 ## [1.3.405] - 2026-07-13
 
 ### Fixed

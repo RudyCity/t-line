@@ -127,15 +127,30 @@ export const previewProxy = createProxyMiddleware({
       const origUrl = (req as any).originalUrl || req.url || '';
       try {
         const urlParams = new URL(origUrl, `http://${req.headers.host || 'localhost'}`);
-        const target = urlParams.searchParams.get('target');
-        if (target && isDocRequest) {
-          res.setHeader('Set-Cookie', `tline_proxy_target=${encodeURIComponent(target)}; Path=/; SameSite=Lax`);
-        }
+        
+        // Parse tline_tab_id from cookies
+        const cookieHeader = req.headers.cookie || '';
+        const tabIdCookieMatch = cookieHeader.match(/tline_tab_id=([^;]+)/);
+        const cookieTabId = tabIdCookieMatch ? decodeURIComponent(tabIdCookieMatch[1]) : '';
         
         // Capture tabId and attach to req for HTML injection in proxyRes
-        const tabId = urlParams.searchParams.get('tabId');
+        const tabId = urlParams.searchParams.get('tabId') || cookieTabId;
         if (tabId) {
           (req as any).tlineTabId = tabId;
+        }
+
+        const target = urlParams.searchParams.get('target');
+        if (isDocRequest && (target || urlParams.searchParams.get('tabId'))) {
+          const cookies: string[] = [];
+          if (target) {
+            cookies.push(`tline_proxy_target=${encodeURIComponent(target)}; Path=/; SameSite=Lax`);
+          }
+          if (tabId) {
+            cookies.push(`tline_tab_id=${encodeURIComponent(tabId)}; Path=/; SameSite=Lax`);
+          }
+          if (cookies.length > 0) {
+            res.setHeader('Set-Cookie', cookies);
+          }
         }
       } catch (e) {}
 
