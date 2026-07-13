@@ -12,7 +12,9 @@ fn main() {
             "create_detached_window",
             "close_detached_window",
             "get_memory_usage",
-            "focus_window"
+            "focus_window",
+            "check_tauri_update",
+            "install_tauri_update"
           ])
       )
   )

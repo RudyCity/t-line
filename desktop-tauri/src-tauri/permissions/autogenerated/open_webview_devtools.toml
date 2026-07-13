@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-open-webview-devtools"
+description = "Enables the open_webview_devtools command without any pre-configured scope."
+commands.allow = ["open_webview_devtools"]
+
+[[permission]]
+identifier = "deny-open-webview-devtools"
+description = "Denies the open_webview_devtools command without any pre-configured scope."
+commands.deny = ["open_webview_devtools"]

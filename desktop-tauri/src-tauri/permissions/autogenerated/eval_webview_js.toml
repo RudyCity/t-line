@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-eval-webview-js"
+description = "Enables the eval_webview_js command without any pre-configured scope."
+commands.allow = ["eval_webview_js"]
+
+[[permission]]
+identifier = "deny-eval-webview-js"
+description = "Denies the eval_webview_js command without any pre-configured scope."
+commands.deny = ["eval_webview_js"]
