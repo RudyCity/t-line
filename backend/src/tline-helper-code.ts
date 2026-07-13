@@ -39,6 +39,9 @@ export const TLINE_HELPER_CODE = `(function() {
       if (urlStr.indexOf('/api/preview-proxy') >= 0) {
         return url;
       }
+      if (urlStr.indexOf('ipc.localhost') >= 0 || urlStr.indexOf('tauri.localhost') >= 0 || /^tauri:/i.test(urlStr)) {
+        return url;
+      }
       if (/^(wss?:|data:|blob:)/i.test(urlStr)) {
         return url;
       }

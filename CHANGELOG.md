@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.400] - 2026-07-13
+
+### Fixed
+- **Bypass Proxy for Tauri Internal IPC & Protocols**:
+  - Added a check in `tline-helper.js` to prevent intercepting and proxying Tauri internal hostnames and protocols (like `ipc.localhost`, `tauri.localhost`, and `tauri://`). This resolves 404/502/403 errors when Tauri's injected scripts trigger native IPC actions (such as `plugin:webview|internal_toggle_devtools`) within a proxied Web Preview window.
+
 ## [1.3.399] - 2026-07-13
 
 ### Fixed
