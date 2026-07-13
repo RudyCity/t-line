@@ -229,6 +229,14 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
               lastRect = { left: r.left, top: r.top, width: r.width, height: r.height };
               consecutiveErrorCount = 0; // reset on success
             } catch (err) {
+              if (!active || tauriWebviewRef.current !== webviewInstance) return;
+
+              const errMsg = String(err);
+              if (errMsg.includes('webview not found')) {
+                // Suppress temporary 'webview not found' errors during creation/destruction transitions
+                return;
+              }
+
               consecutiveErrorCount++;
               if (consecutiveErrorCount <= 5) {
                 console.warn('[BrowserTab] Failed to sync webview bounds:', err);
@@ -281,9 +289,19 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
               await tauriWebviewRef.current.setSize(new LogicalSize(r.width, r.height)).catch(() => {});
             }
           })
-          .catch((err: any) => console.warn('[BrowserTab] Failed to show webview:', err));
+          .catch((err: any) => {
+            const errMsg = String(err);
+            if (!errMsg.includes('webview not found')) {
+              console.warn('[BrowserTab] Failed to show webview:', err);
+            }
+          });
       } else {
-        tauriWebviewRef.current.hide().catch((err: any) => console.warn('[BrowserTab] Failed to hide webview:', err));
+        tauriWebviewRef.current.hide().catch((err: any) => {
+          const errMsg = String(err);
+          if (!errMsg.includes('webview not found')) {
+            console.warn('[BrowserTab] Failed to hide webview:', err);
+          }
+        });
       }
     }
   }, [isActive, useTauriWebview, activeUrl]);

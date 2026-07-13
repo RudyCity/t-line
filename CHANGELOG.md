@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.402] - 2026-07-13
+
+### Fixed
+- **Tauri Webview Bounds Sync "Webview Not Found" Warnings**:
+  - Suppressed the console warnings and failed state triggers for temporary `webview not found` errors inside the updateLoop bounds syncing logic and show/hide transition catch handlers. These transitions occur normally during asynchronous creation/destruction/unmounting phases when switching tabs or reloading.
+
 ## [1.3.401] - 2026-07-13
 
 ### Fixed
