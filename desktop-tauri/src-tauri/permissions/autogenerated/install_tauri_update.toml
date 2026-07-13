@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-install-tauri-update"
+description = "Enables the install_tauri_update command without any pre-configured scope."
+commands.allow = ["install_tauri_update"]
+
+[[permission]]
+identifier = "deny-install-tauri-update"
+description = "Denies the install_tauri_update command without any pre-configured scope."
+commands.deny = ["install_tauri_update"]

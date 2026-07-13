@@ -7,8 +7,8 @@ pub async fn check_tauri_update(app: tauri::AppHandle) -> Result<Option<serde_js
     if let Some(update) = update {
         Ok(Some(serde_json::json!({
             "version": update.version,
-            "body": update.body.unwrap_or_default(),
-            "date": update.date.unwrap_or_default(),
+            "body": update.body,
+            "date": update.date.map(|d| d.to_string()),
         })))
     } else {
         Ok(None)
