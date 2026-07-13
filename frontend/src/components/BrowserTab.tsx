@@ -594,6 +594,38 @@ ${el.outerHTML}
 Please inspect this element and recommend layout fixes, cleaner tailwind classes, or code refactorings to improve its layout or styling.`;
   };
 
+  const getHelperStatusText = () => {
+    if (useElectronWebview) {
+      return 'Chromium Native Webview Active';
+    }
+    if (!activeUrl) {
+      return 'Waiting for preview URL...';
+    }
+    if (useTauriWebview && bypassProxy) {
+      return 'Direct Mode Active';
+    }
+    if (helperReady) {
+      return 'Proxy Helper Active';
+    }
+    return 'Connecting Helper...';
+  };
+
+  const getHelperStatusColorClass = () => {
+    if (useElectronWebview) {
+      return 'bg-green-500';
+    }
+    if (!activeUrl) {
+      return 'bg-slate-500';
+    }
+    if (useTauriWebview && bypassProxy) {
+      return 'bg-green-500';
+    }
+    if (helperReady) {
+      return 'bg-green-500';
+    }
+    return 'bg-amber-500 animate-pulse';
+  };
+
   // Point the iframe to our dynamic proxy served by t-line's backend
   const proxyUrl = `/api/preview-proxy?target=${encodeURIComponent(activeUrl)}&tabId=${tab.id}`;
 
@@ -886,8 +918,8 @@ Please inspect this element and recommend layout fixes, cleaner tailwind classes
             {/* Helper status indicator & Collapse toggle */}
             <div className="flex items-center gap-3 text-[10px] font-medium text-[var(--text-muted)]">
               <div className="flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${useElectronWebview ? 'bg-green-500' : (helperReady ? 'bg-green-500' : 'bg-amber-500 animate-pulse')}`} />
-                <span>{useElectronWebview ? 'Chromium Native Webview Active' : (helperReady ? 'Proxy Helper Active' : 'Connecting Helper...')}</span>
+                <div className={`w-1.5 h-1.5 rounded-full ${getHelperStatusColorClass()}`} />
+                <span>{getHelperStatusText()}</span>
               </div>
 
               <button

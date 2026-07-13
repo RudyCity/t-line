@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.401] - 2026-07-13
+
+### Fixed
+- **Stuck Connecting Helper Status Text**:
+  - Implemented dynamic status text and dot color functions (`getHelperStatusText`, `getHelperStatusColorClass`) for the Web Preview DevTools status indicator.
+  - Corrected the state display to show "Waiting for preview URL..." (gray dot) when no URL is entered, and "Direct Mode Active" (green dot) when running in Tauri Direct Mode (where the proxy helper is bypassed), resolving confusing/incorrect "Connecting Helper..." prompts.
+
 ## [1.3.400] - 2026-07-13
 
 ### Fixed
