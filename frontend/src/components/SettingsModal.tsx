@@ -1,5 +1,5 @@
 import React from 'react';
-import { Info, Shield, Eye, EyeOff, RefreshCw, Download, CheckCircle, XCircle, Loader2, ArrowUpCircle, Palette } from 'lucide-react';
+import { Info, Shield, Eye, EyeOff, RefreshCw, Download, CheckCircle, XCircle, Loader2, ArrowUpCircle, Palette, ExternalLink } from 'lucide-react';
 import { FormField, Input, Button, Select } from './Form';
 import { THEMES, UI_FONTS, MONO_FONTS } from '../hooks/useThemeAndFonts';
 
@@ -80,6 +80,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [updateCheckVersion, setUpdateCheckVersion] = React.useState<string | null>(null);
   const [updateCheckPercent, setUpdateCheckPercent] = React.useState<number>(0);
   const [updateCheckError, setUpdateCheckError] = React.useState<string | null>(null);
+  const [isTauriFallback, setIsTauriFallback] = React.useState<boolean>(false);
 
   const isElectron = typeof window !== 'undefined' && !!(window as any).electron;
 
@@ -100,17 +101,103 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   }, [isElectron]);
 
   const handleCheckForUpdates = React.useCallback(async () => {
-    if (!isElectron) return;
+    const isTauri = typeof (window as any).__TAURI__ !== 'undefined';
     setUpdateCheckStatus('checking');
     setUpdateCheckError(null);
     setUpdateCheckVersion(null);
-    const result = await (window as any).electron.checkForUpdates();
-    if (result?.status === 'dev') setUpdateCheckStatus('dev');
-  }, [isElectron]);
+    setIsTauriFallback(false);
 
-  const handleInstallUpdate = React.useCallback(() => {
-    if (!isElectron) return;
-    (window as any).electron.installUpdate();
+    const checkGitHubFallback = async () => {
+      try {
+        const res = await fetch('https://api.github.com/repos/RudyCity/t-line/releases/latest');
+        if (!res.ok) {
+          setUpdateCheckStatus('error');
+          setUpdateCheckError('Failed to fetch from GitHub');
+          return;
+        }
+        const data = await res.json();
+        const latest = data.tag_name;
+        if (!latest) {
+          setUpdateCheckStatus('error');
+          setUpdateCheckError('Invalid response from GitHub');
+          return;
+        }
+        const cleanLatest = latest.startsWith('v') ? latest.slice(1) : latest;
+        const currentVer = appVersion || '1.3.397';
+        const cleanCurrent = currentVer.startsWith('v') ? currentVer.slice(1) : currentVer;
+
+        const isGreater = (latestV: string, currentV: string): boolean => {
+          const lParts = latestV.split('.').map(Number);
+          const cParts = currentV.split('.').map(Number);
+          for (let i = 0; i < Math.max(lParts.length, cParts.length); i++) {
+            const l = lParts[i] || 0;
+            const c = cParts[i] || 0;
+            if (l > c) return true;
+            if (l < c) return false;
+          }
+          return false;
+        };
+
+        if (isGreater(cleanLatest, cleanCurrent)) {
+          setUpdateCheckStatus('available');
+          setUpdateCheckVersion(cleanLatest);
+        } else {
+          setUpdateCheckStatus('up-to-date');
+        }
+      } catch (err: any) {
+        console.error('Failed to check for updates manually (GitHub):', err);
+        setUpdateCheckStatus('error');
+        setUpdateCheckError(err.message || 'Unknown error');
+      }
+    };
+
+    if (isElectron) {
+      const result = await (window as any).electron.checkForUpdates();
+      if (result?.status === 'dev') setUpdateCheckStatus('dev');
+    } else if (isTauri) {
+      try {
+        if ((window as any).__TAURI__?.core?.invoke) {
+          const update = await (window as any).__TAURI__.core.invoke('check_tauri_update');
+          if (update) {
+            setUpdateCheckStatus('available');
+            setUpdateCheckVersion(update.version);
+          } else {
+            setUpdateCheckStatus('up-to-date');
+          }
+        } else {
+          setIsTauriFallback(true);
+          await checkGitHubFallback();
+        }
+      } catch (err) {
+        console.warn('Tauri native updater check failed, falling back to GitHub API check:', err);
+        setIsTauriFallback(true);
+        await checkGitHubFallback();
+      }
+    } else {
+      await checkGitHubFallback();
+    }
+  }, [isElectron, appVersion]);
+
+  const handleInstallUpdate = React.useCallback(async () => {
+    const isTauri = typeof (window as any).__TAURI__ !== 'undefined';
+    if (isElectron) {
+      (window as any).electron.installUpdate();
+    } else if (isTauri) {
+      setUpdateCheckStatus('downloading');
+      setUpdateCheckPercent(0);
+      try {
+        if ((window as any).__TAURI__?.core?.invoke) {
+          setUpdateCheckPercent(50);
+          await (window as any).__TAURI__.core.invoke('install_tauri_update');
+          setUpdateCheckPercent(100);
+          setUpdateCheckStatus('ready');
+        }
+      } catch (err: any) {
+        console.error('Tauri native updater install failed:', err);
+        setUpdateCheckStatus('error');
+        setUpdateCheckError(err.message || 'Failed to install update');
+      }
+    }
   }, [isElectron]);
 
   // Access Control State
@@ -297,84 +384,120 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
               {/* Software Update Row */}
-              {isElectron && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '8px' }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Software Update</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {/* Status badge */}
-                    {updateCheckStatus === 'checking' && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#94a3b8' }}>
-                        <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
-                        Checking…
-                      </span>
-                    )}
-                    {updateCheckStatus === 'up-to-date' && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#34d399' }}>
-                        <CheckCircle size={12} />
-                        Up to date
-                      </span>
-                    )}
-                    {updateCheckStatus === 'available' && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '8px' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Software Update</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {/* Status badge */}
+                  {updateCheckStatus === 'checking' && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#94a3b8' }}>
+                      <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                      Checking…
+                    </span>
+                  )}
+                  {updateCheckStatus === 'up-to-date' && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#34d399' }}>
+                      <CheckCircle size={12} />
+                      Up to date
+                    </span>
+                  )}
+                  {updateCheckStatus === 'available' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#6366f1' }}>
                         <ArrowUpCircle size={12} />
                         {updateCheckVersion ? `v${updateCheckVersion} available` : 'Available'}
                       </span>
-                    )}
-                    {updateCheckStatus === 'downloading' && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#60a5fa' }}>
-                        <Download size={12} />
-                        Downloading… {updateCheckPercent}%
-                      </span>
-                    )}
-                    {updateCheckStatus === 'ready' && (
-                      <button
-                        id="settings-install-update-btn"
-                        type="button"
-                        onClick={handleInstallUpdate}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '4px',
-                          fontSize: '0.75rem', fontWeight: 600,
-                          padding: '3px 10px', borderRadius: '6px',
-                          background: 'rgba(99, 102, 241, 0.2)',
-                          border: '1px solid rgba(99, 102, 241, 0.4)',
-                          color: '#818cf8', cursor: 'pointer'
-                        }}
-                      >
-                        <RefreshCw size={11} />
-                        Restart &amp; Install{updateCheckVersion ? ` v${updateCheckVersion}` : ''}
-                      </button>
-                    )}
-                    {updateCheckStatus === 'error' && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#f87171' }} title={updateCheckError ?? ''}>
-                        <XCircle size={12} />
-                        Failed
-                      </span>
-                    )}
-                    {updateCheckStatus === 'dev' && (
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Dev mode</span>
-                    )}
-                    {/* Check button — shown except while checking or downloading */}
-                    {updateCheckStatus !== 'checking' && updateCheckStatus !== 'downloading' && updateCheckStatus !== 'ready' && (
-                      <button
-                        id="settings-check-update-btn"
-                        type="button"
-                        onClick={handleCheckForUpdates}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '4px',
-                          fontSize: '0.75rem', fontWeight: 500,
-                          padding: '3px 10px', borderRadius: '6px',
-                          background: 'rgba(255,255,255,0.05)',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          color: '#94a3b8', cursor: 'pointer'
-                        }}
-                      >
-                        <RefreshCw size={11} />
-                        Check
-                      </button>
-                    )}
-                  </div>
+                      {isElectron ? (
+                        null
+                      ) : typeof (window as any).__TAURI__ !== 'undefined' && !isTauriFallback ? (
+                        <button
+                          type="button"
+                          onClick={handleInstallUpdate}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            fontSize: '0.75rem', fontWeight: 600,
+                            padding: '3px 10px', borderRadius: '6px',
+                            background: 'rgba(99, 102, 241, 0.2)',
+                            border: '1px solid rgba(99, 102, 241, 0.4)',
+                            color: '#818cf8', cursor: 'pointer'
+                          }}
+                        >
+                          <Download size={11} />
+                          Download &amp; Install
+                        </button>
+                      ) : (
+                        <a
+                          href="https://github.com/RudyCity/t-line/releases"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            fontSize: '0.75rem', fontWeight: 600,
+                            padding: '3px 10px', borderRadius: '6px',
+                            background: 'rgba(245, 158, 11, 0.2)',
+                            border: '1px solid rgba(245, 158, 11, 0.4)',
+                            color: '#fbbf24', textDecoration: 'none', cursor: 'pointer'
+                          }}
+                        >
+                          <ExternalLink size={11} />
+                          Download
+                        </a>
+                      )}
+                    </div>
+                  )}
+                  {updateCheckStatus === 'downloading' && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#60a5fa' }}>
+                      <Download size={12} />
+                      Downloading… {updateCheckPercent}%
+                    </span>
+                  )}
+                  {updateCheckStatus === 'ready' && (
+                    <button
+                      id="settings-install-update-btn"
+                      type="button"
+                      onClick={handleInstallUpdate}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '4px',
+                        fontSize: '0.75rem', fontWeight: 600,
+                        padding: '3px 10px', borderRadius: '6px',
+                        background: 'rgba(99, 102, 241, 0.2)',
+                        border: '1px solid rgba(99, 102, 241, 0.4)',
+                        color: '#818cf8', cursor: 'pointer'
+                      }}
+                    >
+                      <RefreshCw size={11} />
+                      Restart &amp; Install{updateCheckVersion ? ` v${updateCheckVersion}` : ''}
+                    </button>
+                  )}
+                  {updateCheckStatus === 'error' && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#f87171' }} title={updateCheckError ?? ''}>
+                      <XCircle size={12} />
+                      Failed
+                    </span>
+                  )}
+                  {updateCheckStatus === 'dev' && (
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Dev mode</span>
+                  )}
+                  {/* Check button — shown except while checking, downloading, ready or available */}
+                  {updateCheckStatus !== 'checking' && updateCheckStatus !== 'downloading' && updateCheckStatus !== 'ready' && updateCheckStatus !== 'available' && (
+                    <button
+                      id="settings-check-update-btn"
+                      type="button"
+                      onClick={handleCheckForUpdates}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '4px',
+                        fontSize: '0.75rem', fontWeight: 500,
+                        padding: '3px 10px', borderRadius: '6px',
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        color: '#94a3b8', cursor: 'pointer'
+                      }}
+                    >
+                      <RefreshCw size={11} />
+                      Check
+                    </button>
+                  )}
                 </div>
-              )}
+              </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '8px' }}>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Client OS Platform</span>

@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.398] - 2026-07-13
+
+### Added
+- **Multi-Platform Update Checker**:
+  - Re-enabled the manual "Check" update button in the Settings modal for all platforms (Tauri desktop and Web browsers).
+  - Integrated the native Tauri auto-updater (`tauri-plugin-updater` v2) in `src-tauri` and exposed `check_tauri_update` and `install_tauri_update` custom Rust commands.
+  - Implemented a graceful fallback to checking the GitHub Releases API directly if running in a Web browser or if the Tauri native updater is not fully configured (e.g. missing signature keys).
+  - Added a "Download" button in the Settings UI linking directly to the repository's GitHub release page when an update is found in Web/Fallback mode.
+
 ## [1.3.397] - 2026-07-11
 
 ### Added

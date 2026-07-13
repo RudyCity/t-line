@@ -14,6 +14,8 @@ use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState}
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
+mod updater;
+
 struct DesktopState {
     backend_child: Arc<Mutex<Option<Child>>>,
     status: Arc<Mutex<String>>, // "stopped" | "starting" | "running"
@@ -1536,6 +1538,7 @@ pub fn run() {
             println!("Another instance was opened with args: {:?} and cwd: {:?}", argv, cwd);
             show_dashboard_window(app);
         }))
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(state)
         .invoke_handler(tauri::generate_handler![
             get_memory_usage,
@@ -1546,7 +1549,9 @@ pub fn run() {
             get_app_url,
             create_detached_window,
             close_detached_window,
-            focus_window
+            focus_window,
+            updater::check_tauri_update,
+            updater::install_tauri_update
         ])
         .setup(move |app| {
             if cfg!(debug_assertions) {

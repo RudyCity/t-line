@@ -37,6 +37,8 @@
     "allow-create-detached-window",
     "allow-close-detached-window",
     "allow-get-memory-usage",
-    "allow-focus-window"
+    "allow-focus-window",
+    "allow-check-tauri-update",
+    "allow-install-tauri-update"
   ]
 }
