@@ -3,6 +3,13 @@ export const TLINE_HELPER_CODE = `(function() {
   var isProxied = window.location.pathname.indexOf('/api/preview-proxy') === 0;
   if (window.self === window.top && !isProxied) return;
 
+  // Persist tabId in sessionStorage to survive page reloads and redirects
+  if (window.__TLINE_TAB_ID__) {
+    try {
+      sessionStorage.setItem('tline_tab_id', window.__TLINE_TAB_ID__);
+    } catch(e) {}
+  }
+
   console.log('[t-line-helper] Initialized and listening for commands...');
 
   // ----------------------------------------------------
@@ -179,11 +186,16 @@ export const TLINE_HELPER_CODE = `(function() {
     // 2. Send via HTTP POST to Express backend if we are running in the proxy
     if (isProxied) {
       try {
-        var tabId = window.__TLINE_TAB_ID__ || null;
+        var tabId = window.__TLINE_TAB_ID__;
+        if (!tabId) {
+          try {
+            tabId = sessionStorage.getItem('tline_tab_id');
+          } catch(e) {}
+        }
         var xhr = new XMLHttpRequest();
         xhr.open('POST', '/api/preview-proxy/event', true);
         xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.send(JSON.stringify({ type: type, payload: payload, tabId: tabId }));
+        xhr.send(JSON.stringify({ type: type, payload: payload, tabId: tabId || null }));
       } catch (e) {}
     }
   }

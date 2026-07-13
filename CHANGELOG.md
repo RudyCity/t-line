@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.403] - 2026-07-13
+
+### Fixed
+- **Element Inspector Loss of Tab ID on Navigation**:
+  - Persisted the workspace `tabId` using client-side `sessionStorage` (`tline_tab_id`) inside the `tline-helper.js` script. This prevents the `tabId` from being lost during full-page reloads, redirects, or navigation (which strips query parameters), ensuring that element inspection and error events continue to be correctly routed via WebSocket to the appropriate parent tab in the main interface.
+
 ## [1.3.402] - 2026-07-13
 
 ### Fixed
