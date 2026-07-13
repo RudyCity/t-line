@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.404] - 2026-07-13
+
+### Added
+- **Proxy Port and Frontend Dev Port to Tauri Remote Capability Scope**:
+  - Added authorization rules in `default.json` for remote URL patterns `http://localhost:5779/**` (backend proxy) and `http://localhost:5773/**` (frontend dev). This resolves permission rejections (`webview.internal_toggle_devtools not allowed...`) when WebViews serving proxied web pages try to trigger native Tauri commands.
+- **WebSocket & Proxy Event Logging**:
+  - Added backend console logs in the `/api/preview-proxy/event` route and frontend console logs in the WebSocket message listener of `BrowserTab.tsx` to simplify debugging of inspector and error events.
+
 ## [1.3.403] - 2026-07-13
 
 ### Fixed

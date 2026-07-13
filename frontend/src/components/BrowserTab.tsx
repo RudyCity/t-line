@@ -434,6 +434,9 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     if (!useTauriWebview) return;
 
     const handleWsMessage = (payload: any) => {
+      if (payload.type === 'tline-preview-event') {
+        console.log(`[BrowserTab WS] Received event: ${payload.eventType}, payload tabId: ${payload.tabId}, local tabId: ${tab.id}`);
+      }
       if (payload.type === 'tline-preview-event' && payload.tabId === tab.id) {
         const { eventType, payload: eventPayload } = payload;
         

@@ -10,6 +10,14 @@
     "main",
     "browser-*"
   ],
+  "remote": {
+    "urls": [
+      "http://localhost:5779/**",
+      "http://localhost:5773/**",
+      "http://127.0.0.1:5779/**",
+      "http://127.0.0.1:5773/**"
+    ]
+  },
   "permissions": [
     "core:default",
     "core:window:default",

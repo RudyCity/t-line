@@ -454,8 +454,11 @@ app.get('/api/preview-proxy/tline-helper.js', (req, res) => {
 
 app.post('/api/preview-proxy/event', (req, res) => {
   const { type, payload, tabId } = req.body;
+  console.log(`[Proxy Event] Received event: ${type}, tabId: ${tabId}, payload keys: ${payload ? Object.keys(payload) : 'none'}`);
+  let wsCount = 0;
   for (const ws of activeWebSockets) {
     if (ws.readyState === WebSocket.OPEN) {
+      wsCount++;
       ws.send(JSON.stringify({
         type: 'tline-preview-event',
         tabId,
@@ -464,6 +467,7 @@ app.post('/api/preview-proxy/event', (req, res) => {
       }));
     }
   }
+  console.log(`[Proxy Event] Broadcasted to ${wsCount} active WebSockets`);
   res.json({ ok: true });
 });
 
