@@ -2,6 +2,18 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.407] - 2026-07-13
+
+### Fixed
+- **Web Preview Proxy & Redirects**:
+  - Refactored `sanitizeHeaders` in `previewProxy.ts` to merge custom cookies (`tline_tab_id` and `tline_proxy_target`) into the outgoing response headers, preventing them from being overwritten by cookies returned by the target application server.
+  - Implemented relative redirect path resolution against the target application server's origin to prevent relative redirects (e.g. `/dashboard`) from breaking out of the proxy and causing 404 errors.
+  - Added suffix-based Vite dev port detection (`endsWith(':5773')`) in `BrowserTab.tsx` and `websocket.ts` to support all loopback interfaces (like `[::1]`) and local IP address bindings.
+- **Client-Side Injected Helper Improvements**:
+  - Modified click and submit event listeners in `tline-helper-code.ts` to resolve links and actions relative to the target application's base URL instead of `window.location.href`, preventing loops back into the proxy.
+  - Added robust validation in both backend and frontend to discard `"null"` and `"undefined"` string literals for tab ID and target URL parameters.
+  - Replaced property-based ID calls with `getAttribute('id')` to avoid browser DOM property pollution (where elements like `<input name="id">` contaminate the parent form ID object).
+
 ## [1.3.406] - 2026-07-13
 
 ### Fixed

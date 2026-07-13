@@ -45,8 +45,8 @@ class TerminalWebSocketManager {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     // Use window.location.host, but if in dev mode (port 5773), fallback to port 5779
     let host = window.location.host;
-    if (host.includes('localhost:5773') || host.includes('127.0.0.1:5773')) {
-      host = 'localhost:5779';
+    if (host.endsWith(':5773')) {
+      host = host.slice(0, -5) + ':5779';
     }
 
     const wsUrl = `${protocol}//${host}/?token=${encodeURIComponent(this.token)}`;

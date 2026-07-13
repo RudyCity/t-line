@@ -82,8 +82,8 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
   const getBackendProxyUrl = (url: string) => {
     const proxyPath = `/api/preview-proxy?target=${encodeURIComponent(url)}&tabId=${tab.id}`;
     let backendOrigin = window.location.origin;
-    if (backendOrigin.includes('localhost:5773') || backendOrigin.includes('127.0.0.1:5773')) {
-      backendOrigin = backendOrigin.replace('5773', '5779');
+    if (backendOrigin.endsWith(':5773')) {
+      backendOrigin = backendOrigin.slice(0, -5) + ':5779';
     }
     return `${backendOrigin}${proxyPath}`;
   };

@@ -4,7 +4,7 @@ export const TLINE_HELPER_CODE = `(function() {
   if (window.self === window.top && !isProxied) return;
 
   // Persist tabId in sessionStorage to survive page reloads and redirects
-  if (window.__TLINE_TAB_ID__) {
+  if (window.__TLINE_TAB_ID__ && window.__TLINE_TAB_ID__ !== 'null' && window.__TLINE_TAB_ID__ !== 'undefined') {
     try {
       sessionStorage.setItem('tline_tab_id', window.__TLINE_TAB_ID__);
     } catch(e) {}
@@ -20,8 +20,11 @@ export const TLINE_HELPER_CODE = `(function() {
     if (window.__TLINE_PROXY_TARGET__) return window.__TLINE_PROXY_TARGET__;
     // Fallback: read from cookie set by proxy backend
     try {
-      var match = document.cookie.match(/tline_proxy_target=([^;]+)/);
-      if (match) return decodeURIComponent(match[1]);
+      var match = document.cookie.match(/(?:^|;\s*)tline_proxy_target=([^;]+)/);
+      if (match) {
+        var val = decodeURIComponent(match[1]);
+        if (val && val !== 'null' && val !== 'undefined') return val;
+      }
     } catch(e) {}
     return null;
   }
@@ -59,7 +62,12 @@ export const TLINE_HELPER_CODE = `(function() {
         var targetOrigin = parsedUrl.origin;
         var targetPath = parsedUrl.pathname + parsedUrl.search + parsedUrl.hash;
         var sep = targetPath.indexOf('?') >= 0 ? '&' : '?';
-        return '/api/preview-proxy' + targetPath + sep + 'target=' + encodeURIComponent(targetOrigin);
+        var newUrl = '/api/preview-proxy' + targetPath + sep + 'target=' + encodeURIComponent(targetOrigin);
+        var tabId = window.__TLINE_TAB_ID__ || sessionStorage.getItem('tline_tab_id');
+        if (tabId && tabId !== 'null' && tabId !== 'undefined') {
+          newUrl += '&tabId=' + encodeURIComponent(tabId);
+        }
+        return newUrl;
       }
     } catch(e) {}
     return null;
@@ -187,7 +195,7 @@ export const TLINE_HELPER_CODE = `(function() {
     if (isProxied) {
       try {
         var tabId = window.__TLINE_TAB_ID__;
-        if (!tabId) {
+        if (!tabId || tabId === 'null' || tabId === 'undefined') {
           try {
             tabId = sessionStorage.getItem('tline_tab_id');
           } catch(e) {}
@@ -195,7 +203,7 @@ export const TLINE_HELPER_CODE = `(function() {
         var xhr = new XMLHttpRequest();
         xhr.open('POST', '/api/preview-proxy/event', true);
         xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.send(JSON.stringify({ type: type, payload: payload, tabId: tabId || null }));
+        xhr.send(JSON.stringify({ type: type, payload: payload, tabId: (tabId && tabId !== 'null' && tabId !== 'undefined') ? tabId : null }));
       } catch (e) {}
     }
   }
@@ -281,8 +289,9 @@ export const TLINE_HELPER_CODE = `(function() {
     const path = [];
     while (el && el.nodeType === Node.ELEMENT_NODE) {
       let selector = el.nodeName.toLowerCase();
-      if (el.id) {
-        selector += '#' + el.id;
+      const id = el.getAttribute('id');
+      if (id) {
+        selector += '#' + id;
         path.unshift(selector);
         break; // Unique path reached
       } else {
@@ -322,7 +331,7 @@ export const TLINE_HELPER_CODE = `(function() {
     e.stopPropagation();
     const target = e.target;
     if (!(target instanceof Element)) return;
-    if (target.id === 'tline-inspect-highlight') return;
+    if (target.getAttribute('id') === 'tline-inspect-highlight') return;
 
     const rect = target.getBoundingClientRect();
     const highlight = createHighlightEl();
@@ -340,7 +349,7 @@ export const TLINE_HELPER_CODE = `(function() {
     const target = e.target;
     const payload = {
       tagName: target.tagName ? target.tagName.toLowerCase() : '',
-      id: target.id || '',
+      id: target.getAttribute('id') || '',
       classes: target.classList ? Array.from(target.classList) : [],
       outerHTML: target.outerHTML ? target.outerHTML.substring(0, 3000) : '', // Safety limit
       computedStyles: target instanceof Element ? getImportantStyles(target) : {},
@@ -384,7 +393,8 @@ export const TLINE_HELPER_CODE = `(function() {
       if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
         let absoluteUrl;
         try {
-          absoluteUrl = new URL(href, window.location.href).href;
+          var realBase = getRealCurrentUrl();
+          absoluteUrl = new URL(href, realBase).href;
         } catch (err) {
           return;
         }
@@ -397,6 +407,10 @@ export const TLINE_HELPER_CODE = `(function() {
             const targetPath = parsedUrl.pathname + parsedUrl.search + parsedUrl.hash;
             var sep = targetPath.indexOf('?') >= 0 ? '&' : '?';
             var newUrl = '/api/preview-proxy' + targetPath + sep + 'target=' + encodeURIComponent(targetOrigin);
+            var tabId = window.__TLINE_TAB_ID__ || sessionStorage.getItem('tline_tab_id');
+            if (tabId && tabId !== 'null' && tabId !== 'undefined') {
+              newUrl += '&tabId=' + encodeURIComponent(tabId);
+            }
             window.location.href = newUrl;
           } catch (err) {
             console.error('[t-line-helper] Failed to navigate via proxy:', err);
@@ -413,7 +427,8 @@ export const TLINE_HELPER_CODE = `(function() {
     if (action) {
       let absoluteUrl;
       try {
-        absoluteUrl = new URL(action, window.location.href).href;
+        var realBase = getRealCurrentUrl();
+        absoluteUrl = new URL(action, realBase).href;
       } catch (err) {
         return;
       }
@@ -425,7 +440,15 @@ export const TLINE_HELPER_CODE = `(function() {
           const targetOrigin = parsedUrl.origin;
           const targetPath = parsedUrl.pathname + parsedUrl.search + parsedUrl.hash;
           document.cookie = 'tline_proxy_target=' + encodeURIComponent(targetOrigin) + '; path=/; SameSite=Lax';
-          form.setAttribute('action', '/api/preview-proxy' + targetPath);
+          
+          var tabId = window.__TLINE_TAB_ID__ || sessionStorage.getItem('tline_tab_id');
+          var targetPathWithTabId = targetPath;
+          if (tabId && tabId !== 'null' && tabId !== 'undefined') {
+            var sep = targetPath.indexOf('?') >= 0 ? '&' : '?';
+            targetPathWithTabId += sep + 'tabId=' + encodeURIComponent(tabId);
+          }
+          
+          form.setAttribute('action', '/api/preview-proxy' + targetPathWithTabId);
           form.submit();
         } catch (err) {
           console.error('[t-line-helper] Failed to submit form via proxy:', err);

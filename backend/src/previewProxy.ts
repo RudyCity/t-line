@@ -15,6 +15,14 @@ const rewriteSetCookie = (cookieStr: string): string => {
   return parts.join('; ');
 };
 
+const isValidTabId = (id: any): boolean => {
+  return typeof id === 'string' && id.length > 0 && id !== 'null' && id !== 'undefined';
+};
+
+const isValidTarget = (target: any): boolean => {
+  return typeof target === 'string' && target.length > 0 && target !== 'null' && target !== 'undefined' && target.startsWith('http');
+};
+
 const sanitizeHeaders = (proxyHeaders: any, req?: any) => {
   const headers = { ...proxyHeaders };
   
@@ -44,8 +52,16 @@ const sanitizeHeaders = (proxyHeaders: any, req?: any) => {
   
   if (redirectUrl) {
     try {
-      // Check if it's an absolute URL
-      const parsedRedirect = new URL(redirectUrl);
+      let absoluteRedirectUrl = redirectUrl;
+      // If it's a relative URL, resolve it against the target origin
+      if (!/^https?:\/\//i.test(redirectUrl)) {
+        const targetOrigin = (req && req.tlineTarget) || currentProxyTarget || 'http://localhost';
+        const base = targetOrigin.replace(/\/$/, '');
+        const rel = redirectUrl.startsWith('/') ? redirectUrl : '/' + redirectUrl;
+        absoluteRedirectUrl = base + rel;
+      }
+
+      const parsedRedirect = new URL(absoluteRedirectUrl);
       const targetOrigin = parsedRedirect.origin;
       const targetPath = parsedRedirect.pathname + parsedRedirect.search + parsedRedirect.hash;
       let redirectWithParams = `/api/preview-proxy${targetPath}${targetPath.includes('?') ? '&' : '?'}target=${encodeURIComponent(targetOrigin)}`;
@@ -57,26 +73,61 @@ const sanitizeHeaders = (proxyHeaders: any, req?: any) => {
       
       headers[locationKey] = redirectWithParams;
     } catch (e) {
-      // If it's already a relative path, let the browser handle it relative to <base> tag
+      // If parsing fails, leave as is
     }
   }
 
   // Rewrite Set-Cookie headers so they work on HTTP localhost
-  let setCookieKey = '';
+  let setCookieKey = 'set-cookie';
+  let existingCookies: string[] = [];
   for (const key of Object.keys(headers)) {
     if (key.toLowerCase() === 'set-cookie') {
       setCookieKey = key;
+      const val = headers[key];
+      if (Array.isArray(val)) {
+        existingCookies = val.map(cookie => rewriteSetCookie(cookie));
+      } else if (typeof val === 'string') {
+        existingCookies = [rewriteSetCookie(val)];
+      }
       break;
     }
   }
-  
-  if (setCookieKey && headers[setCookieKey]) {
-    const cookies = headers[setCookieKey];
-    if (Array.isArray(cookies)) {
-      headers[setCookieKey] = cookies.map(cookie => rewriteSetCookie(cookie));
-    } else if (typeof cookies === 'string') {
-      headers[setCookieKey] = rewriteSetCookie(cookies);
+
+  // Inject tline_tab_id and tline_proxy_target cookies
+  const customCookies: string[] = [];
+  if (req) {
+    const isDocRequest = (req.headers.accept || '').toLowerCase().includes('text/html');
+    const origUrl = (req as any).originalUrl || req.url || '';
+    let targetParam = '';
+    let tabIdParam = '';
+    try {
+      const urlParams = new URL(origUrl, `http://${req.headers.host || 'localhost'}`);
+      targetParam = urlParams.searchParams.get('target') || '';
+      tabIdParam = urlParams.searchParams.get('tabId') || '';
+    } catch (e) {}
+
+    if (isDocRequest || targetParam || tabIdParam) {
+      const targetVal = req.tlineTarget || targetParam;
+      const tabIdVal = req.tlineTabId || tabIdParam;
+      if (isValidTarget(targetVal)) {
+        customCookies.push(`tline_proxy_target=${encodeURIComponent(targetVal)}; Path=/; SameSite=Lax`);
+      }
+      if (isValidTabId(tabIdVal)) {
+        customCookies.push(`tline_tab_id=${encodeURIComponent(tabIdVal)}; Path=/; SameSite=Lax`);
+      }
     }
+  }
+
+  const combinedCookies = [...existingCookies];
+  for (const cc of customCookies) {
+    const name = cc.split('=')[0];
+    if (!existingCookies.some(c => c.startsWith(name + '='))) {
+      combinedCookies.push(cc);
+    }
+  }
+
+  if (combinedCookies.length > 0) {
+    headers[setCookieKey] = combinedCookies;
   }
 
   return headers;
@@ -96,61 +147,68 @@ export const previewProxy = createProxyMiddleware({
     '^/api/preview-proxy': '',
   },
   router: (req) => {
-    const urlParams = new URL(req.url || '', `http://${req.headers.host}`);
+    try {
+      const urlParams = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
+      
+      const cookieHeader = req.headers.cookie || '';
+      const tabIdCookieMatch = cookieHeader.match(/(?:^|;\s*)tline_tab_id=([^;]+)/);
+      const cookieTabId = tabIdCookieMatch ? decodeURIComponent(tabIdCookieMatch[1]) : '';
+      
+      const tabId = urlParams.searchParams.get('tabId') || cookieTabId;
+      if (isValidTabId(tabId)) {
+        (req as any).tlineTabId = tabId;
+      }
+      
+      const target = urlParams.searchParams.get('target');
+      if (isValidTarget(target)) {
+        (req as any).tlineTarget = target;
+      }
+    } catch (e) {}
+
+    const urlParams = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
     let target = urlParams.searchParams.get('target');
     
     const acceptHeader = (req.headers.accept || '').toLowerCase();
     const isDocRequest = acceptHeader.includes('text/html');
 
-    if (!target || !isDocRequest) {
+    if (!isValidTarget(target) || !isDocRequest) {
       const cookies = req.headers.cookie || '';
-      const match = cookies.match(/tline_proxy_target=([^;]+)/);
+      const match = cookies.match(/(?:^|;\s*)tline_proxy_target=([^;]+)/);
       if (match) {
         const cookieTarget = decodeURIComponent(match[1]);
-        if (target) {
-          return target.replace(/\/$/, '');
+        if (isValidTarget(target)) {
+          return (target as string).replace(/\/$/, '');
         }
-        return cookieTarget;
+        if (isValidTarget(cookieTarget)) {
+          return cookieTarget.replace(/\/$/, '');
+        }
       }
     }
 
-    if (target && isDocRequest) {
-      currentProxyTarget = target.replace(/\/$/, '');
+    if (isValidTarget(target) && isDocRequest) {
+      currentProxyTarget = (target as string).replace(/\/$/, '');
     }
-    return currentProxyTarget || target || 'http://localhost';
+    return currentProxyTarget || (isValidTarget(target) ? (target as string).replace(/\/$/, '') : 'http://localhost');
   },
   selfHandleResponse: true,
   on: {
     proxyReq: (proxyReq, req, res) => {
-      const acceptHeader = (req.headers.accept || '').toLowerCase();
-      const isDocRequest = acceptHeader.includes('text/html');
       const origUrl = (req as any).originalUrl || req.url || '';
       try {
         const urlParams = new URL(origUrl, `http://${req.headers.host || 'localhost'}`);
         
-        // Parse tline_tab_id from cookies
         const cookieHeader = req.headers.cookie || '';
-        const tabIdCookieMatch = cookieHeader.match(/tline_tab_id=([^;]+)/);
+        const tabIdCookieMatch = cookieHeader.match(/(?:^|;\s*)tline_tab_id=([^;]+)/);
         const cookieTabId = tabIdCookieMatch ? decodeURIComponent(tabIdCookieMatch[1]) : '';
         
-        // Capture tabId and attach to req for HTML injection in proxyRes
         const tabId = urlParams.searchParams.get('tabId') || cookieTabId;
-        if (tabId) {
+        if (isValidTabId(tabId)) {
           (req as any).tlineTabId = tabId;
         }
 
         const target = urlParams.searchParams.get('target');
-        if (isDocRequest && (target || urlParams.searchParams.get('tabId'))) {
-          const cookies: string[] = [];
-          if (target) {
-            cookies.push(`tline_proxy_target=${encodeURIComponent(target)}; Path=/; SameSite=Lax`);
-          }
-          if (tabId) {
-            cookies.push(`tline_tab_id=${encodeURIComponent(tabId)}; Path=/; SameSite=Lax`);
-          }
-          if (cookies.length > 0) {
-            res.setHeader('Set-Cookie', cookies);
-          }
+        if (isValidTarget(target)) {
+          (req as any).tlineTarget = target;
         }
       } catch (e) {}
 
