@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.418] - 2026-07-14
+
+### Fixed
+- **Tauri IPC Message Queue Saturation Loop**:
+  - Root cause: If a Tauri/WebView2 IPC call encountered a postMessage failure (such as "PostMessage failed ; is the messages queue full? Error code 0x80070718"), it logged an error to `console.error`. The helper code's `console.error` hook intercepted this log and tried to send it back to the parent window via another Tauri IPC call. Since the IPC queue was already full, this second call failed, logging another `console.error`, creating an infinite recursive loop of error logs and IPC calls that crashed or froze the application.
+  - Added a reentrancy guard (`isSendingError`) to `sendErrorToParent` to prevent nested/recursive error captures.
+  - Implemented a Tauri IPC/WebView2 failure keyword filter (`isTauriIPCError`) to completely ignore system-level message queue failures from being forwarded.
+  - Added rate limiting and deduplication (`shouldThrottleError`) to drop duplicate error messages within 2 seconds and limit error logs to a maximum of 15 messages per 5 seconds.
+
 ## [1.3.417] - 2026-07-14
 
 ### Added

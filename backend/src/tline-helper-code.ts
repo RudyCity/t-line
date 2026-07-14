@@ -247,8 +247,76 @@ export const TLINE_HELPER_CODE = `(function() {
     }
   }
 
+  var isSendingError = false;
+  var recentErrors = {};
+  var errorTimestamps = [];
+  var MAX_ERRORS_PER_WINDOW = 15;
+  var RATE_LIMIT_WINDOW_MS = 5000;
+
+  function isTauriIPCError(message) {
+    if (!message || typeof message !== 'string') return false;
+    var msgLower = message.toLowerCase();
+    return (
+      msgLower.indexOf('postmessage failed') !== -1 ||
+      msgLower.indexOf('messages queue full') !== -1 ||
+      msgLower.indexOf('0x80070718') !== -1 ||
+      msgLower.indexOf('0x80070578') !== -1 ||
+      msgLower.indexOf('webview2') !== -1 ||
+      msgLower.indexOf('tauri-webview-event') !== -1 ||
+      msgLower.indexOf('__tauri__') !== -1
+    );
+  }
+
+  function shouldThrottleError(message) {
+    if (isTauriIPCError(message)) {
+      return true;
+    }
+
+    var now = Date.now();
+    
+    // Deduplication within 2 seconds
+    if (recentErrors[message] && (now - recentErrors[message] < 2000)) {
+      return true;
+    }
+    recentErrors[message] = now;
+
+    // Prune recentErrors if it grows too large
+    for (var k in recentErrors) {
+      if (recentErrors.hasOwnProperty(k)) {
+        if (now - recentErrors[k] > 5000) {
+          delete recentErrors[k];
+        }
+      }
+    }
+
+    // Rate limiting: clean old timestamps
+    while (errorTimestamps.length > 0 && (now - errorTimestamps[0] > RATE_LIMIT_WINDOW_MS)) {
+      errorTimestamps.shift();
+    }
+
+    if (errorTimestamps.length >= MAX_ERRORS_PER_WINDOW) {
+      return true;
+    }
+
+    errorTimestamps.push(now);
+    return false;
+  }
+
   function sendErrorToParent(errorData) {
-    sendPreviewEvent('tline-error', errorData);
+    if (isSendingError) return;
+    isSendingError = true;
+    try {
+      var msg = errorData.message || '';
+      if (!shouldThrottleError(msg)) {
+        sendPreviewEvent('tline-error', errorData);
+      }
+    } catch (e) {
+      if (typeof originalConsoleError === 'function') {
+        originalConsoleError.call(console, '[t-line-helper] Failed to send error to parent:', e);
+      }
+    } finally {
+      isSendingError = false;
+    }
   }
 
   // Hook global uncaught errors
@@ -277,7 +345,9 @@ export const TLINE_HELPER_CODE = `(function() {
   // Intercept console.error calls
   const originalConsoleError = console.error;
   console.error = function() {
-    originalConsoleError.apply(console, arguments);
+    if (typeof originalConsoleError === 'function') {
+      originalConsoleError.apply(console, arguments);
+    }
     const argsArray = Array.prototype.slice.call(arguments);
     const message = argsArray.map(function(arg) {
       if (arg instanceof Error) return arg.stack || arg.message;
