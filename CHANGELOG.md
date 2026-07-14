@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.432] - 2026-07-14
+
+### Added
+- **Browser Loading Progress Bar**: Added a Chrome-style animated linear loading progress bar at the top of the browser viewport. The loading bar animates when a navigation event starts or a page is reloaded, and transitions smoothly to completion when the page has finished loading (or after an optimized delay in native shell environments).
+- **Reload Spin Animation**: Added a spin animation to the reload icon button during active page loading.
+
 ## [1.3.431] - 2026-07-14
 
 ### Fixed
