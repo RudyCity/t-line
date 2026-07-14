@@ -102,6 +102,9 @@ export function useTabUiHandlers({
   const handleTabContextMenu = useCallback((e: React.MouseEvent, tabId: string) => {
     e.preventDefault();
     e.stopPropagation();
+    if (e.nativeEvent) {
+      e.nativeEvent.stopImmediatePropagation();
+    }
     setActiveTooltip(null);
     setTabContextMenu({
       x: e.clientX,
@@ -113,9 +116,14 @@ export function useTabUiHandlers({
   useEffect(() => {
     if (!tabContextMenu) return;
     const closeMenu = () => setTabContextMenu(null);
-    window.addEventListener('click', closeMenu);
-    window.addEventListener('contextmenu', closeMenu);
+    
+    const timer = setTimeout(() => {
+      window.addEventListener('click', closeMenu);
+      window.addEventListener('contextmenu', closeMenu);
+    }, 0);
+
     return () => {
+      clearTimeout(timer);
       window.removeEventListener('click', closeMenu);
       window.removeEventListener('contextmenu', closeMenu);
     };

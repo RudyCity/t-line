@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.430] - 2026-07-14
+
+### Fixed
+- **Tab Context Menu Auto-Closing**: Fixed a race condition where right-clicking a tab header (especially noticeable in Tauri environments on browser tabs) caused the context menu to close immediately. Added `stopImmediatePropagation()` to the initiating contextmenu event and deferred registering the window-level close event listeners to the next macro-task queue using `setTimeout`.
+
 ## [1.3.429] - 2026-07-14
 
 ### Changed
