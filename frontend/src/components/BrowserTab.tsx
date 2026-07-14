@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Globe, RotateCw, ExternalLink, MousePointer } from 'lucide-react';
+import { Globe, RotateCw, ExternalLink, MousePointer, ArrowLeft, ArrowRight } from 'lucide-react';
 import { TabData } from '../hooks/useTerminals';
 import { wsManager } from '../services/websocket';
 import BrowserDevTools, { ConsoleErrorLog, InspectedElement } from './BrowserDevTools';
@@ -525,6 +525,40 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     });
   };
 
+  const handleBack = () => {
+    if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
+      const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
+      if (activeLabel) {
+        (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js: 'window.history.back()' }).catch(() => {});
+      }
+    } else if (useElectronWebview && webviewEl && renderMode === 'electron-webview') {
+      try {
+        webviewEl.goBack();
+      } catch (_) {}
+    } else if (renderMode === 'iframe-local' && iframeRef.current?.contentWindow) {
+      try {
+        iframeRef.current.contentWindow.history.back();
+      } catch (_) {}
+    }
+  };
+
+  const handleForward = () => {
+    if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
+      const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
+      if (activeLabel) {
+        (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js: 'window.history.forward()' }).catch(() => {});
+      }
+    } else if (useElectronWebview && webviewEl && renderMode === 'electron-webview') {
+      try {
+        webviewEl.goForward();
+      } catch (_) {}
+    } else if (renderMode === 'iframe-local' && iframeRef.current?.contentWindow) {
+      try {
+        iframeRef.current.contentWindow.history.forward();
+      } catch (_) {}
+    }
+  };
+
   const handleReload = () => {
     setLogs([]);
     setInspectedElement(null);
@@ -635,6 +669,22 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     >
       {/* Top Navbar */}
       <div className="flex items-center gap-2 p-2 bg-[var(--bg-card)] border-b border-[var(--border-color)]">
+        <button 
+          onClick={handleBack}
+          className="p-1.5 rounded hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
+          title="Go back"
+        >
+          <ArrowLeft size={15} />
+        </button>
+
+        <button 
+          onClick={handleForward}
+          className="p-1.5 rounded hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
+          title="Go forward"
+        >
+          <ArrowRight size={15} />
+        </button>
+
         <button 
           onClick={handleReload}
           className="p-1.5 rounded hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer"

@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.419] - 2026-07-14
+
+### Added
+- **Browser Navigation Controls (Back & Forward)**:
+  - Added "Go Back" (`ArrowLeft` icon) and "Go Forward" (`ArrowRight` icon) buttons to the top navbar in the `BrowserTab` component.
+  - Implemented navigation history actions for all rendering modes (`tauri-native`, `electron-webview`, and `iframe-local`), invoking history navigation methods or evaluating history state commands respectively.
+
 ## [1.3.418] - 2026-07-14
 
 ### Fixed
