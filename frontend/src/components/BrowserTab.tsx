@@ -40,6 +40,9 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
   const [isDevtoolsCollapsed, setIsDevtoolsCollapsed] = useState(true);
   const [isResizing, setIsResizing] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadProgress, setLoadProgress] = useState(0);
+  const loadProgressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // webviewActive: true when the tab is currently the active tab AND should have a live WebView2.
   // When the tab goes inactive, we destroy the WebView2 overlay to free RAM.
@@ -668,15 +671,45 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     };
   }, [useTauriWebview, renderMode, webviewActive, tab.id]);
 
+  const startLoadingBar = () => {
+    setIsLoading(true);
+    setLoadProgress(0);
+    if (loadProgressTimerRef.current) clearInterval(loadProgressTimerRef.current);
+    // Animate progress: fast at first, then slow down approaching 90%
+    loadProgressTimerRef.current = setInterval(() => {
+      setLoadProgress(prev => {
+        if (prev >= 90) {
+          if (loadProgressTimerRef.current) clearInterval(loadProgressTimerRef.current);
+          return 90;
+        }
+        // Gradually decelerate: faster increments at low progress, slower near 90
+        const increment = Math.max(0.5, (90 - prev) * 0.08);
+        return Math.min(90, prev + increment);
+      });
+    }, 80);
+  };
+
+  const finishLoadingBar = () => {
+    if (loadProgressTimerRef.current) clearInterval(loadProgressTimerRef.current);
+    setLoadProgress(100);
+    setTimeout(() => {
+      setIsLoading(false);
+      setLoadProgress(0);
+    }, 350);
+  };
+
   const handleReload = () => {
     setLogs([]);
     setInspectedElement(null);
     setIframeKey(prev => prev + 1);
+    startLoadingBar();
     if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
       const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
       if (activeLabel) {
         (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js: 'window.location.reload()' }).catch(() => {});
       }
+      // Tauri native: auto-finish after a delay since we can't listen to load events
+      setTimeout(finishLoadingBar, 1500);
     } else if (useElectronWebview && webviewEl && renderMode === 'electron-webview') {
       try {
         webviewEl.reload();
@@ -693,6 +726,11 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     }
     setUrlInput(target);
     setActiveUrl(target);
+    startLoadingBar();
+    // For tauri-native we can't listen to load events, so auto-finish
+    if (renderMode === 'tauri-native') {
+      setTimeout(finishLoadingBar, 1800);
+    }
   };
 
   const openInSystemBrowser = (url: string) => {
@@ -827,7 +865,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
           className="p-1.5 rounded hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
           title="Reload page"
         >
-          <RotateCw size={15} />
+          <RotateCw size={15} className={isLoading ? 'animate-spin' : ''} />
         </button>
 
         <form onSubmit={handleNavigate} className="flex-1 flex gap-2">
@@ -873,10 +911,34 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
 
       {/* Main Browser Viewport Area — min-h-0 so DevTools can claim space */}
       <div className="flex-1 bg-[var(--bg-main)] relative min-h-0 overflow-hidden">
+        {/* Loading progress bar */}
+        {isLoading && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: `${loadProgress}%`,
+              height: '2px',
+              background: 'linear-gradient(90deg, #a855f7, #818cf8)',
+              boxShadow: '0 0 8px rgba(168,85,247,0.7)',
+              transition: loadProgress === 100 ? 'width 0.25s ease-out' : 'width 0.1s linear',
+              zIndex: 50,
+              borderRadius: '0 2px 2px 0',
+            }}
+          />
+        )}
+
         {renderMode === 'electron-webview' ? (
           <webview 
             key={iframeKey}
-            ref={setWebviewEl}
+            ref={(el: any) => {
+              setWebviewEl(el);
+              if (el) {
+                el.addEventListener('did-start-loading', startLoadingBar);
+                el.addEventListener('did-stop-loading', finishLoadingBar);
+              }
+            }}
             src={activeUrl}
             className={`absolute inset-0 w-full h-full border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
             style={{ width: '100%', height: '100%', border: 'none' }}
@@ -894,6 +956,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
             src={activeUrl} 
             className={`absolute inset-0 w-full h-full border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
             title="App Preview"
+            onLoad={finishLoadingBar}
           />
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 p-8 text-center">
