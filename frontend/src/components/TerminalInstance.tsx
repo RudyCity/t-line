@@ -358,7 +358,7 @@ export function TerminalInstance({
     addonListRef.current.push(unicode11Addon);
 
     const webLinksAddon = new WebLinksAddon((_, uri) => {
-      window.open(uri, '_blank', 'noopener,noreferrer');
+      window.dispatchEvent(new CustomEvent('tline-open-browser-tab', { detail: { url: uri } }));
     });
     term.loadAddon(webLinksAddon);
     addonListRef.current.push(webLinksAddon);

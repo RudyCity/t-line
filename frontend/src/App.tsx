@@ -369,6 +369,21 @@ export default function App() {
     terminalInstancesRef.current = terminalInstances;
   }, [terminalInstances]);
 
+  // Listen for terminal link click event to open inside t-line browser tab
+  useEffect(() => {
+    const handleOpenBrowserTab = (e: Event) => {
+      const customEvent = e as CustomEvent<{ url: string }>;
+      const { url } = customEvent.detail;
+      if (url) {
+        openBrowserTab(url, 'Preview', panelWorkspace?.id);
+      }
+    };
+    window.addEventListener('tline-open-browser-tab', handleOpenBrowserTab);
+    return () => {
+      window.removeEventListener('tline-open-browser-tab', handleOpenBrowserTab);
+    };
+  }, [openBrowserTab, panelWorkspace?.id]);
+
   // Listen for terminal selection event from system tray
   useEffect(() => {
     if ((window as any).__TAURI__?.event?.listen) {

@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.428] - 2026-07-14
+
+### Changed
+- **Terminal Web Link Handling**: Configured the link click handler in xterm.js (`TerminalInstance.tsx` / `WebLinksAddon`) to dispatch a `tline-open-browser-tab` event. This is handled by a listener in `App.tsx` which opens the clicked link inside a new `t-line` browser tab instead of spawning an external system browser window.
+
 ## [1.3.427] - 2026-07-14
 
 ### Fixed
