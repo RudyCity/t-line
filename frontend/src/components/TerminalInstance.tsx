@@ -5,10 +5,10 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import { SearchAddon } from '@xterm/addon-search';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { CanvasAddon } from '@xterm/addon-canvas';
-import { WebglAddon } from '@xterm/addon-webgl';
 import { ImageAddon } from '@xterm/addon-image';
 import { wsManager } from '../services/websocket';
 import { useTerminalTouchMapping } from '../hooks/useTerminalTouchMapping';
+import { useTerminalInitialCommand } from '../hooks/useTerminalInitialCommand';
 import {
   TerminalSearchBar,
   SmartPasteConfirm,
@@ -19,7 +19,6 @@ import {
   TerminalInstanceProps,
   isMobileDevice,
   isRemoteConnection,
-  isPromptReady,
   getActualFontSize,
   getTerminalTheme,
   copyToClipboard
@@ -41,7 +40,6 @@ export function TerminalInstance({
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
-  const webglAddonRef = useRef<WebglAddon | null>(null);
   // Tracks every addon loaded into the terminal so we can dispose them
   // individually before term.dispose(), preventing xterm's AddonManager
   // from iterating addons with undefined internal state (_isDisposed error).
@@ -446,53 +444,13 @@ export function TerminalInstance({
       console.warn('Failed to monkey-patch xterm.js syncScrollArea:', e);
     }
 
-    // ── GPU renderers (load after open with progressive fallback) ──
-    let isWebglLoaded = false;
-    if (!isMobileDevice) {
-      try {
-        const webglAddon = new WebglAddon();
-        webglAddonRef.current = webglAddon;
-        addonListRef.current.push(webglAddon);
-        webglAddon.onContextLoss(() => {
-          // Guard against double-dispose. The 'dispose' call in the addon may throw
-          // due to a version mismatch in xterm internals (_core._store undefined).
-          // After dispose, fall back to the Canvas renderer.
-          try {
-            if (webglAddonRef.current) {
-              webglAddonRef.current = null;
-              // Remove from addonList so cleanup doesn't try to dispose it again
-              addonListRef.current = addonListRef.current.filter(a => a !== webglAddon);
-              webglAddon.dispose();
-            }
-          } catch (err) {
-            console.warn('WebGL context loss dispose failed (safe to ignore):', err);
-            webglAddonRef.current = null;
-          }
-          // Fallback to CanvasAddon after WebGL context loss
-          try {
-            const fallbackCanvas = new CanvasAddon();
-            term.loadAddon(fallbackCanvas);
-            addonListRef.current.push(fallbackCanvas);
-          } catch (canvasErr) {
-            console.warn('Canvas fallback after WebGL context loss also failed:', canvasErr);
-          }
-        });
-        term.loadAddon(webglAddon);
-        isWebglLoaded = true;
-      } catch (e) {
-        console.warn('WebGL renderer not available, trying Canvas renderer:', e);
-        webglAddonRef.current = null;
-      }
-    }
-
-    if (!isWebglLoaded) {
-      try {
-        const canvasAddon = new CanvasAddon();
-        term.loadAddon(canvasAddon);
-        addonListRef.current.push(canvasAddon);
-      } catch (e) {
-        console.warn('Canvas renderer not available, using default DOM renderer:', e);
-      }
+    // ── GPU renderer (Canvas renderer by default, falls back to DOM renderer) ──
+    try {
+      const canvasAddon = new CanvasAddon();
+      term.loadAddon(canvasAddon);
+      addonListRef.current.push(canvasAddon);
+    } catch (e) {
+      console.warn('Canvas renderer not available, using default DOM renderer:', e);
     }
 
     const handlePasteEvent = (e: ClipboardEvent) => {
@@ -538,22 +496,37 @@ export function TerminalInstance({
     });
 
     // ── Cursor position tracking ───────────────────────────
-    // Coalesce cursor-move events into one rAF and skip no-op updates to
-    // avoid a React re-render storm on every cell write (major CPU sink).
-    let cursorRaf: number | null = null;
+    // Coalesce cursor-move events and throttle them using a timer
+    // to avoid a React re-render storm on every cell write (major CPU sink).
+    let lastCursorUpdate = 0;
+    let cursorTimeout: NodeJS.Timeout | null = null;
     let lastCursor = { col: -1, row: -1 };
+
     term.onCursorMove(() => {
-      if (cursorRaf !== null) return;
-      cursorRaf = requestAnimationFrame(() => {
-        cursorRaf = null;
-        const buf = term.buffer.active;
-        const col = buf.cursorX + 1;
-        const row = buf.cursorY + 1;
-        if (col !== lastCursor.col || row !== lastCursor.row) {
-          lastCursor = { col, row };
-          setCursorPos({ col, row });
+      const buf = term.buffer.active;
+      const col = buf.cursorX + 1;
+      const row = buf.cursorY + 1;
+
+      // Skip no-op updates
+      if (col === lastCursor.col && row === lastCursor.row) return;
+      lastCursor = { col, row };
+
+      const now = Date.now();
+      // Throttle: update at most once every 250ms
+      if (now - lastCursorUpdate > 250) {
+        lastCursorUpdate = now;
+        setCursorPos({ col, row });
+        if (cursorTimeout) {
+          clearTimeout(cursorTimeout);
+          cursorTimeout = null;
         }
-      });
+      } else {
+        // Debounce trailing edge: make sure the final position is captured when movement stops
+        if (cursorTimeout) clearTimeout(cursorTimeout);
+        cursorTimeout = setTimeout(() => {
+          setCursorPos({ col, row });
+        }, 250);
+      }
     });
 
     wsManager.subscribe(tab.id, (payload) => {
@@ -693,7 +666,9 @@ export function TerminalInstance({
         // xterm internal API may vary — safe to ignore if unavailable
       }
 
-      webglAddonRef.current = null;
+      if (cursorTimeout) {
+        clearTimeout(cursorTimeout);
+      }
       terminalRef.current = null;
       fitAddonRef.current = null;
       searchAddonRef.current = null;
@@ -719,70 +694,15 @@ export function TerminalInstance({
   }, [active, wsConnected, tab.id, tab.cwd, tab.shellType]);
 
   // ── Auto-execute saved prompt shortcut once (silence-detection) ───────────
-  const FALLBACK_MS = 6000;
-  const initialCommandSent = useRef(false);
-  useEffect(() => {
-    if (!wsConnected || !isInitialized || !tab.initialCommand || initialCommandSent.current) return;
-
-    let scheduledTimer: ReturnType<typeof setTimeout> | null = null;
-    let checkTimeout: ReturnType<typeof setTimeout> | null = null;
-
-    const sendCommand = () => {
-      if (initialCommandSent.current) return;
-      initialCommandSent.current = true;
-      onPtyDataRef.current = null;
-      if (scheduledTimer) clearTimeout(scheduledTimer);
-      if (fallbackTimer) clearTimeout(fallbackTimer);
-      if (checkTimeout) clearTimeout(checkTimeout);
-
-      const cmdStr = tab.initialCommand?.endsWith('\r') || tab.initialCommand?.endsWith('\n')
-        ? tab.initialCommand
-        : tab.initialCommand + '\r';
-
-      wsManager.send(JSON.stringify({
-        type: 'data',
-        id: tab.id,
-        data: cmdStr
-      }));
-      onClearInitialCommand?.(tab.id);
-    };
-
-    // Fallback: fire unconditionally after FALLBACK_MS
-    const fallbackTimer = setTimeout(sendCommand, FALLBACK_MS);
-
-    // Initial check timer
-    scheduledTimer = setTimeout(sendCommand, 1500);
-
-    onPtyDataRef.current = () => {
-      if (initialCommandSent.current) return;
-
-      if (checkTimeout) clearTimeout(checkTimeout);
-      checkTimeout = setTimeout(() => {
-        checkTimeout = null;
-        if (initialCommandSent.current) return;
-
-        const term = terminalRef.current;
-        const promptReady = term ? isPromptReady(term) : false;
-
-        if (promptReady) {
-          // Prompt is ready! Schedule sendCommand with 150ms delay
-          if (scheduledTimer) clearTimeout(scheduledTimer);
-          scheduledTimer = setTimeout(sendCommand, 150);
-        } else {
-          // Prompt not ready yet; reschedule fallback silence timer for 1200ms
-          if (scheduledTimer) clearTimeout(scheduledTimer);
-          scheduledTimer = setTimeout(sendCommand, 1200);
-        }
-      }, 50);
-    };
-
-    return () => {
-      onPtyDataRef.current = null;
-      if (scheduledTimer) clearTimeout(scheduledTimer);
-      if (fallbackTimer) clearTimeout(fallbackTimer);
-      if (checkTimeout) clearTimeout(checkTimeout);
-    };
-  }, [wsConnected, isInitialized, tab.initialCommand, tab.id, onClearInitialCommand]);
+  useTerminalInitialCommand({
+    wsConnected,
+    isInitialized,
+    initialCommand: tab.initialCommand,
+    tabId: tab.id,
+    onClearInitialCommand,
+    terminalRef,
+    onPtyDataRef
+  });
 
   // ── Manual refresh trigger ─────────────────────────────────
   useEffect(() => {

@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.435] - 2026-07-14
+
+### Fixed
+- **Terminal Typing Lag & Unresponsiveness (Superagent / TUI)**:
+  - Switched the default GPU-accelerated terminal renderer to `@xterm/addon-canvas`, avoiding `@xterm/addon-webgl`'s glyph texture cache memory leaks, WebGL context limits, and sudden context-loss crashes when running active CLI AI agents for a long time.
+  - Throttled terminal cursor position updates in the status bar to at most once every `250ms` (using throttle + debounce). This prevents the React component from re-rendering 60 times per second during rapid output, keeping the main thread free for keystrokes.
+  - Extracted the initial command execution logic into a dedicated custom hook (`useTerminalInitialCommand.ts`), which modularizes the codebase and reduces `TerminalInstance.tsx` below the repository's 1000-line limit.
+
 ## [1.3.434] - 2026-07-14
 
 ### Fixed
