@@ -33,8 +33,8 @@ async function main() {
 
   const processes = [];
 
-  // Clean up previous processes on ports 5773 and 5779
-  console.log('[t-line] Cleaning up previous processes on ports 5773 and 5779...');
+  // Clean up previous processes on ports 5773, 5779 and any running desktop instances
+  console.log('[t-line] Cleaning up previous processes...');
   try {
     const { execSync } = require('child_process');
     if (process.platform === 'win32') {
@@ -44,9 +44,13 @@ async function main() {
       if (runFrontend) {
         execSync('powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 5773 -State Listen -ErrorAction SilentlyContinue | Foreach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }"');
       }
+      // Kill any running t-line desktop app instances
+      execSync('powershell -NoProfile -Command "Get-Process -Name \'t-line*\' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue"');
     } else {
       if (runBackend) execSync('lsof -t -i:5779 | xargs kill -9 2>/dev/null || true');
       if (runFrontend) execSync('lsof -t -i:5773 | xargs kill -9 2>/dev/null || true');
+      // Kill any running t-line desktop app instances
+      execSync('pkill -9 t-line 2>/dev/null || true');
     }
     // Brief pause to allow OS to free ports
     await new Promise(resolve => setTimeout(resolve, 800));

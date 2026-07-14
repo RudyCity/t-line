@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.423] - 2026-07-14
+
+### Changed
+- **Automated Desktop Process Cleanup on Restart**:
+  - Modified the development manager script `dev.js` to automatically clean up and terminate any existing, running desktop application instances (`t-line` / `t-line-dev`) before launching the dev servers.
+  - This eliminates the need to manually restart the desktop app from the system tray when starting a new development build, avoiding single-instance lock deadlocks.
+
 ## [1.3.422] - 2026-07-14
 
 ### Fixed
