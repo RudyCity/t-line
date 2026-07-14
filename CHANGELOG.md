@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.433] - 2026-07-14
+
+### Fixed
+- **Windows Active Process Detection with Commas in CommandLine**: Fixed a major bug in the `wmic` CSV parsing function (`parseWmicCsv` in terminalManager.ts) where processes with command line arguments containing commas were completely ignored due to column parsing shifts. Implemented a robust cell-rebuilding logic that slices fixed fields from the left and right, joining everything in between to correctly reconstruct the `CommandLine` field.
+
 ## [1.3.432] - 2026-07-14
 
 ### Added

@@ -561,10 +561,23 @@ function parseWmicCsv(csvContent: string): any[] {
 
     if (cells.length < headers.length) continue;
 
-    const pid = parseInt(cells[pidIdx], 10);
-    const ppid = parseInt(cells[ppidIdx], 10);
-    const name = cells[nameIdx] ? cells[nameIdx].replace(/^"|"$/g, '').trim() : '';
-    const commandLine = cmdIdx !== -1 && cells[cmdIdx] ? cells[cmdIdx].replace(/^"|"$/g, '').trim() : '';
+    let rebuiltCells = cells;
+    if (cells.length > headers.length && cmdIdx !== -1) {
+      const leftCount = cmdIdx;
+      const rightCount = headers.length - 1 - cmdIdx;
+      
+      const leftCells = cells.slice(0, leftCount);
+      const rightCells = cells.slice(cells.length - rightCount);
+      const middleCells = cells.slice(leftCount, cells.length - rightCount);
+      
+      const commandLineCell = middleCells.join(',');
+      rebuiltCells = [...leftCells, commandLineCell, ...rightCells];
+    }
+
+    const pid = parseInt(rebuiltCells[pidIdx], 10);
+    const ppid = parseInt(rebuiltCells[ppidIdx], 10);
+    const name = rebuiltCells[nameIdx] ? rebuiltCells[nameIdx].replace(/^"|"$/g, '').trim() : '';
+    const commandLine = cmdIdx !== -1 && rebuiltCells[cmdIdx] ? rebuiltCells[cmdIdx].replace(/^"|"$/g, '').trim() : '';
 
     if (!isNaN(pid) && !isNaN(ppid)) {
       processes.push({ pid, ppid, name, commandLine });
