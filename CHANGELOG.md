@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.415] - 2026-07-14
+
+### Fixed
+- **Uncaught Tauri Event Unlisten Promise Rejection**:
+  - Root cause: React StrictMode or component unmounting before the async `listen` promise resolves causes `unlistenTauriEvent` to remain `null` or uncalled, leaking listeners. Calling `unlisten` in rapid sequence or on stale event state causes Tauri internal `_unlisten` to throw `Cannot read properties of undefined (reading 'handlerId')`.
+  - Added an `isMounted` flag inside `BrowserTab` to guard and ignore state updates if the tab unmounts before events resolve.
+  - Wrapped `unlistenTauriEvent()` call in a safety try-catch block and caught any unhandled promise rejections on the returned unlisten Promise, filtering out irrelevant `handlerId` error traces.
+- **Webview Close Warning on Cleanup**:
+  - Root cause: Webview instances being closed multiple times or in race conditions with already-destroyed webviews triggered `Failed to close webview on cleanup: webview not found` warnings.
+  - Filtered out `webview not found` errors in the close cleanup catch block to keep the dev console clean.
+
 ## [1.3.414] - 2026-07-14
 
 ### Fixed

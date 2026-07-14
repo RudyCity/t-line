@@ -255,7 +255,10 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
       sessionStorage.removeItem(sessionStorageKey);
       if (webviewInstance) {
         webviewInstance.close().catch((err: any) => {
-          console.warn('[BrowserTab] Failed to close webview on cleanup:', err);
+          const errMsg = String(err);
+          if (!errMsg.includes('webview not found')) {
+            console.warn('[BrowserTab] Failed to close webview on cleanup:', err);
+          }
         });
       }
     };
@@ -409,9 +412,12 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
   useEffect(() => {
     if (!useTauriWebview || !(window as any).__TAURI__?.event) return;
 
+    let isMounted = true;
     let unlistenTauriEvent: (() => void) | null = null;
     import('@tauri-apps/api/event').then(({ listen }) => {
+      if (!isMounted) return;
       listen<{ type: string; payload: any; tabId: string | null }>('tline-webview-event', (event) => {
+        if (!isMounted) return;
         const { type: eventType, payload: eventPayload, tabId: eventTabId } = event.payload;
         if (eventTabId !== tab.id) return;
         if (eventType === 'tline-element-selected') {
@@ -452,11 +458,40 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
             }
           }
         }
-      }).then(unlisten => { unlistenTauriEvent = unlisten; }).catch(() => {});
+      }).then(unlisten => {
+        if (!isMounted) {
+          try {
+            const res = unlisten();
+            if ((res as any) instanceof Promise) {
+              (res as any).catch(() => {});
+            }
+          } catch (_) {}
+          return;
+        }
+        unlistenTauriEvent = unlisten;
+      }).catch(() => {});
     }).catch(() => {});
 
     return () => {
-      if (unlistenTauriEvent) unlistenTauriEvent();
+      isMounted = false;
+      if (unlistenTauriEvent) {
+        try {
+          const res = unlistenTauriEvent();
+          if ((res as any) instanceof Promise) {
+            (res as any).catch((err: any) => {
+              const errMsg = String(err);
+              if (!errMsg.includes('handlerId')) {
+                console.warn('[BrowserTab] Error in unlisten promise:', err);
+              }
+            });
+          }
+        } catch (e) {
+          const errMsg = String(e);
+          if (!errMsg.includes('handlerId')) {
+            console.warn('[BrowserTab] Error calling unlisten:', e);
+          }
+        }
+      }
     };
   }, [useTauriWebview, tab.id, onUpdateTabName]);
 
