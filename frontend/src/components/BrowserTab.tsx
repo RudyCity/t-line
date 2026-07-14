@@ -316,9 +316,19 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
       }
     };
 
+    const handleElectronNavigate = (e: any) => {
+      if (e.url) {
+        setUrlInput(e.url);
+      }
+    };
+
     webview.addEventListener('console-message', handleConsoleMessage);
+    webview.addEventListener('did-navigate', handleElectronNavigate);
+    webview.addEventListener('did-navigate-in-page', handleElectronNavigate);
     return () => {
       webview.removeEventListener('console-message', handleConsoleMessage);
+      webview.removeEventListener('did-navigate', handleElectronNavigate);
+      webview.removeEventListener('did-navigate-in-page', handleElectronNavigate);
     };
   }, [useElectronWebview, iframeKey, webviewEl, renderMode]);
 
@@ -558,6 +568,46 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
       } catch (_) {}
     }
   };
+
+  // Poll webview URL in Tauri to keep input URL bar synchronized
+  useEffect(() => {
+    if (!useTauriWebview || renderMode !== 'tauri-native' || !isActive) return;
+
+    let timer: ReturnType<typeof setInterval> | null = null;
+    let isSubscribed = true;
+
+    const pollUrl = () => {
+      if (!isSubscribed) return;
+      const webview = tauriWebviewRef.current;
+      if (!webview) return;
+      
+      const activeLabel = webview.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
+      if (activeLabel && (window as any).__TAURI__?.core?.invoke) {
+        const jsCode = `
+          try {
+            if (window.__last_checked_url !== window.location.href) {
+              window.__last_checked_url = window.location.href;
+              if (window.__TAURI__ && window.__TAURI__.event && typeof window.__TAURI__.event.emit === 'function') {
+                window.__TAURI__.event.emit('tline-webview-event', {
+                  type: 'tline-url-changed',
+                  payload: { url: window.location.href },
+                  tabId: "${tab.id}"
+                });
+              }
+            }
+          } catch (e) {}
+        `;
+        (window as any).__TAURI__.core.invoke('eval_webview_js', { label: activeLabel, js: jsCode }).catch(() => {});
+      }
+    };
+
+    timer = setInterval(pollUrl, 500);
+
+    return () => {
+      isSubscribed = false;
+      if (timer) clearInterval(timer);
+    };
+  }, [useTauriWebview, renderMode, isActive, tab.id]);
 
   const handleReload = () => {
     setLogs([]);

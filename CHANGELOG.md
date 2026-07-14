@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.420] - 2026-07-14
+
+### Fixed
+- **Browser URL Input Syncing**:
+  - Implemented popstate and hashchange event listeners in `tline-helper-code.ts` to notify the parent browser tab when client-side history navigation occurs (e.g. going back/forward or hash changes in SPAs).
+  - Added Electron webview `did-navigate` and `did-navigate-in-page` event listeners in `BrowserTab.tsx` to automatically update the URL bar input on navigation.
+  - Added a periodic poller `useEffect` (runs every 500ms) for native Tauri webview (`tauri-native` mode) in `BrowserTab.tsx` that evaluates the location URL inside the webview and emits a `tline-webview-event` to update the parent tab's URL input when the page changes.
+
 ## [1.3.419] - 2026-07-14
 
 ### Added

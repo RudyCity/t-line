@@ -193,6 +193,11 @@ export const TLINE_HELPER_CODE = `(function() {
       notifyUrlChanged();
       return result;
     };
+
+    try {
+      window.addEventListener('popstate', notifyUrlChanged);
+      window.addEventListener('hashchange', notifyUrlChanged);
+    } catch (err) {}
   } catch(e) {
     console.warn('[t-line-helper] Could not override history methods:', e);
   }
