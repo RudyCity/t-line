@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.429] - 2026-07-14
+
+### Changed
+- **Terminal Local File Path Click Handling**: Added a custom `LinkProvider` in `TerminalInstance.tsx` that detects local file paths and line numbers in terminal output (e.g. `src/App.tsx:234`). When clicked, it dispatches a `tline-open-file-path` event, which is handled in `App.tsx` by resolving the relative path against the active terminal's current working directory and opening the file as a file tab inside the `t-line` editor, scroll-focusing Monaco editor to the exact line number.
+
 ## [1.3.428] - 2026-07-14
 
 ### Changed

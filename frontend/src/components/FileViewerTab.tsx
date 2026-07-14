@@ -264,7 +264,12 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
     setSaveError(null);
   };
 
-  const handleEditorDidMount = (_editor: any, monaco: any) => {
+  const editorRef = useRef<any>(null);
+
+  const cleanPath = (p: string) => p.toLowerCase().replace(/\\/g, '/');
+
+  const handleEditorDidMount = (editor: any, monaco: any) => {
+    editorRef.current = editor;
     monaco.editor.defineTheme('t-line-theme', {
       base: theme === 'light' ? 'vs' : 'vs-dark',
       inherit: true,
@@ -274,7 +279,35 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
       }
     });
     monaco.editor.setTheme('t-line-theme');
+
+    // Handle deferred line focusing on mount
+    const pending = (window as any).__PENDING_LINE_FOCUS__;
+    if (pending && cleanPath(pending.filePath) === cleanPath(filePath)) {
+      const line = pending.line;
+      setTimeout(() => {
+        editor.revealLineInCenter(line);
+        editor.setPosition({ lineNumber: line, column: 1 });
+        editor.focus();
+      }, 100);
+      (window as any).__PENDING_LINE_FOCUS__ = null;
+    }
   };
+
+  useEffect(() => {
+    const handleFocusLine = (e: Event) => {
+      const customEvent = e as CustomEvent<{ filePath: string; line: number }>;
+      if (cleanPath(customEvent.detail.filePath) === cleanPath(filePath) && editorRef.current) {
+        const line = customEvent.detail.line;
+        editorRef.current.revealLineInCenter(line);
+        editorRef.current.setPosition({ lineNumber: line, column: 1 });
+        editorRef.current.focus();
+      }
+    };
+    window.addEventListener('tline-focus-editor-line', handleFocusLine);
+    return () => {
+      window.removeEventListener('tline-focus-editor-line', handleFocusLine);
+    };
+  }, [filePath]);
 
   const isDirty = content !== null && content !== editedContent;
 

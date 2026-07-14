@@ -384,6 +384,64 @@ export default function App() {
     };
   }, [openBrowserTab, panelWorkspace?.id]);
 
+  // Listen for terminal file path click event to open as a file tab
+  useEffect(() => {
+    const handleOpenFileLink = async (e: Event) => {
+      const customEvent = e as CustomEvent<{ path: string; terminalId: string; cwd: string }>;
+      let { path: filePath, cwd } = customEvent.detail;
+      if (!filePath) return;
+
+      // Extract line number if present, e.g. "src/App.tsx:123" or "src/App.tsx:123:45"
+      let lineNum: number | undefined;
+      const colonIndex = filePath.indexOf(':');
+      if (colonIndex !== -1) {
+        const parts = filePath.split(':');
+        filePath = parts[0];
+        const num = parseInt(parts[1], 10);
+        if (!isNaN(num)) {
+          lineNum = num;
+        }
+      }
+
+      // If the path is relative, resolve it relative to terminal's reported cwd or initial tab cwd
+      let absolutePath = filePath;
+      const isAbsolute = /^(?:\/|[a-zA-Z]:)/.test(filePath);
+      if (!isAbsolute) {
+        const inst = terminalInstancesRef.current[customEvent.detail.terminalId];
+        const baseCwd = inst?.cwd || cwd || panelWorkspace?.path || '';
+        if (baseCwd) {
+          const separator = baseCwd.includes('\\') ? '\\' : '/';
+          let cleanRel = filePath;
+          if (cleanRel.startsWith('./')) {
+            cleanRel = cleanRel.substring(2);
+          }
+          let baseParts = baseCwd.split(/[/\\]/);
+          while (cleanRel.startsWith('../')) {
+            cleanRel = cleanRel.substring(3);
+            baseParts.pop();
+          }
+          absolutePath = baseParts.join(separator) + separator + cleanRel;
+        }
+      }
+
+      // Set pending line focus before opening file tab
+      if (lineNum !== undefined) {
+        (window as any).__PENDING_LINE_FOCUS__ = { filePath: absolutePath, line: lineNum };
+        // Also dispatch custom event immediately in case the file is already open
+        window.dispatchEvent(new CustomEvent('tline-focus-editor-line', {
+          detail: { filePath: absolutePath, line: lineNum }
+        }));
+      }
+
+      const name = absolutePath.split(/[/\\]/).pop() || absolutePath;
+      openFileTab(absolutePath, name);
+    };
+    window.addEventListener('tline-open-file-path', handleOpenFileLink);
+    return () => {
+      window.removeEventListener('tline-open-file-path', handleOpenFileLink);
+    };
+  }, [openFileTab, panelWorkspace]);
+
   // Listen for terminal selection event from system tray
   useEffect(() => {
     if ((window as any).__TAURI__?.event?.listen) {

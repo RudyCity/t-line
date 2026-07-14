@@ -363,6 +363,49 @@ export function TerminalInstance({
     term.loadAddon(webLinksAddon);
     addonListRef.current.push(webLinksAddon);
 
+    const fileLinkProvider = term.registerLinkProvider({
+      provideLinks(y: number, callback: (links: any[] | undefined) => void) {
+        const line = term.buffer.active.getLine(y);
+        if (!line) {
+          callback(undefined);
+          return;
+        }
+        const text = line.translateToString(true);
+        const links: any[] = [];
+        
+        const regex = /(?:(?:[a-zA-Z]:\\|\/|\.\.\/|\.\/)?(?:[a-zA-Z0-9._+-]+[/\\])+[a-zA-Z0-9._+-]+\.[a-zA-Z0-9._+-]+|[a-zA-Z0-9._+-]+\.(?:tsx?|jsx?|json|html|css|rs|go|py|md|sh|ya?ml|toml|txt|log|conf))(?::\d+)?(?::\d+)?/g;
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+          const matchText = match[0];
+          if (/^https?:\/\//i.test(matchText) || /^file:\/\//i.test(matchText)) {
+            continue;
+          }
+          
+          const startX = match.index + 1;
+          const endX = startX + matchText.length - 1;
+          
+          links.push({
+            range: {
+              start: { x: startX, y },
+              end: { x: endX, y }
+            },
+            text: matchText,
+            activate(_event: MouseEvent, textValue: string) {
+              window.dispatchEvent(new CustomEvent('tline-open-file-path', {
+                detail: {
+                  path: textValue,
+                  terminalId: tab.id,
+                  cwd: tab.cwd
+                }
+              }));
+            }
+          });
+        }
+        callback(links.length > 0 ? links : undefined);
+      }
+    });
+    addonListRef.current.push(fileLinkProvider);
+
     const searchAddon = new SearchAddon();
     term.loadAddon(searchAddon);
     searchAddonRef.current = searchAddon;
