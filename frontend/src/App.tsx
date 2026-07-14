@@ -213,6 +213,32 @@ export default function App() {
   // System statistics hook
   const systemStats = useSystemStats(isAuthenticated);
 
+  // Lazy-mount tracking: only add a BrowserTab to the DOM the first time it becomes active.
+  // This prevents native WebView2 instances from being created for every browser tab upfront.
+  const [mountedBrowserTabIds, setMountedBrowserTabIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!activeTabId) return;
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    if (activeTab?.type === 'browser' && !activeTab.isDetached) {
+      setMountedBrowserTabIds(prev => {
+        if (prev.has(activeTabId)) return prev;
+        const next = new Set(prev);
+        next.add(activeTabId);
+        return next;
+      });
+    }
+  }, [activeTabId, tabs]);
+
+  // Prune mountedBrowserTabIds when a browser tab is closed
+  useEffect(() => {
+    setMountedBrowserTabIds(prev => {
+      const browserTabIds = new Set(tabs.filter(t => t.type === 'browser').map(t => t.id));
+      const pruned = new Set([...prev].filter(id => browserTabIds.has(id)));
+      return pruned.size !== prev.size ? pruned : prev;
+    });
+  }, [tabs]);
+
   // Active panel state: 'workspaces' | 'explorer' | 'changes' | 'checkpoints'
   const [activePanel, setActivePanel] = useState<'workspaces' | 'explorer' | 'changes' | 'checkpoints' | 'tabs'>('workspaces');
   const [panelWorkspace, setPanelWorkspace] = useState<WorkspaceInfo | null>(null);
@@ -1993,8 +2019,11 @@ export default function App() {
             <div className="terminal-container">
 
 
-              {/* Persistent Browser Tabs (kept in DOM to avoid reloading on tab switch) */}
-              {tabs.filter(t => t.type === 'browser' && !t.isDetached).map(tab => (
+              {/* Persistent Browser Tabs — lazy-mounted on first activation to avoid
+                  creating multiple live native WebView2 instances simultaneously.
+                  Once mounted, the tab stays in the DOM but BrowserTab internally
+                  destroys/recreates the WebView2 overlay on isActive transitions. */}
+              {tabs.filter(t => t.type === 'browser' && !t.isDetached && mountedBrowserTabIds.has(t.id)).map(tab => (
                 <BrowserTab
                   key={tab.id}
                   tab={tab}

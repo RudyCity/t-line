@@ -2,7 +2,23 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.425] - 2026-07-14
+
+### Fixed
+- **WebView2 High RAM Usage (BrowserTab)**:
+  - **Root Cause Analysis**:
+    1. In Tauri, `determineRenderMode` always returns `'tauri-native'` regardless of URL, so every browser tab spawns a full OS-level native WebView2 overlay (Chromium GPU/renderer/network processes) — not a simple iframe.
+    2. All browser tabs were mounted in the DOM simultaneously; inactive ones were only `hide()`-d but still alive in memory.
+    3. A `requestAnimationFrame` loop ran continuously per-tab syncing WebView2 bounds, even when invisible.
+  - **Fix — Lazy+Cache Hybrid Strategy**:
+    - `App.tsx`: Added `mountedBrowserTabIds` Set state. A `BrowserTab` is **only added to the React DOM the first time its tab becomes active** (lazy mount), preventing unused WebView2 instances from being created upfront. The Set is pruned when tabs are closed.
+    - `BrowserTab.tsx`: Added `webviewActive` state. When `isActive` transitions to `false`, the native WebView2 overlay is **destroyed** (`.close()`) immediately to release RAM. When `isActive` becomes `true` again, the WebView2 is **recreated** from the preserved `activeUrl` state.
+    - Replaced the previous `show()`/`hide()` visibility approach with this destroy/recreate lifecycle.
+    - URL polling (500ms interval) and the ResizeObserver are now gated on `webviewActive` so they stop when the WebView2 is suspended.
+  - **Expected Result**: Only 1 active WebView2 process group in memory at a time. Switching tabs will briefly reload the preview, but RAM usage drops from ~3+ GB to near the single-tab baseline.
+
 ## [1.3.424] - 2026-07-14
+
 
 ### Fixed
 - **RAM Usage Inflated to 3.9 GB in System Resources Widget**:

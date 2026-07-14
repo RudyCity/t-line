@@ -41,10 +41,35 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
   const [isResizing, setIsResizing] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
 
+  // webviewActive: true when the tab is currently the active tab AND should have a live WebView2.
+  // When the tab goes inactive, we destroy the WebView2 overlay to free RAM.
+  // When it becomes active again, the WebView2 is recreated from the saved URL.
+  const [webviewActive, setWebviewActive] = useState(isActive);
+
   const isActiveRef = useRef(isActive);
   useEffect(() => {
     isActiveRef.current = isActive;
-  }, [isActive]);
+    if (isActive) {
+      // Bring WebView2 back to life when this tab gains focus
+      setWebviewActive(true);
+    } else {
+      // Suspend WebView2 when tab loses focus: destroy it to release RAM.
+      // The URL is already stored in activeUrl so it will be restored on next activation.
+      const webview = tauriWebviewRef.current;
+      if (webview) {
+        tauriWebviewRef.current = null;
+        const sessionStorageKey = 'tline-active-webview-label-' + tab.id;
+        sessionStorage.removeItem(sessionStorageKey);
+        webview.close().catch((err: any) => {
+          const errMsg = String(err);
+          if (!errMsg.includes('webview not found')) {
+            console.warn('[BrowserTab] Failed to close webview on suspend:', err);
+          }
+        });
+      }
+      setWebviewActive(false);
+    }
+  }, [isActive, tab.id]);
 
   const getCleanUrl = (url: string): string => {
     try {
@@ -86,9 +111,10 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     } catch (_) {}
   };
 
-  // Window resize + ResizeObserver: keep native webview glued to container
+  // Window resize + ResizeObserver: keep native webview glued to container.
+  // Only active while webviewActive is true (WebView2 overlay is alive).
   useEffect(() => {
-    if (!useTauriWebview || renderMode !== 'tauri-native') return;
+    if (!useTauriWebview || renderMode !== 'tauri-native' || !webviewActive) return;
 
     const handleWindowResize = () => { void syncWebviewBounds(); };
     window.addEventListener('resize', handleWindowResize);
@@ -118,7 +144,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
       if (retryTimer) clearTimeout(retryTimer);
       if (ro) ro.disconnect();
     };
-  }, [useTauriWebview, activeUrl, renderMode, isActive]);
+  }, [useTauriWebview, activeUrl, renderMode, webviewActive]);
 
   // Force bounds resync when DevTools height/collapse changes
   // Native webview is OS overlay — covers DevTools unless bounds shrink
@@ -136,9 +162,11 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     };
   }, [devtoolsHeight, isDevtoolsCollapsed, useTauriWebview, renderMode]);
 
-  // Lifecycle of native Webview overlay in Tauri environment
+  // Lifecycle of native Webview overlay in Tauri environment.
+  // Re-runs whenever webviewActive toggles: creates on true, cleans up on false/unmount.
   useEffect(() => {
     if (!useTauriWebview || !activeUrl || renderMode !== 'tauri-native') return;
+    if (!webviewActive) return; // Tab is suspended — do not spawn a new webview
 
     let active = true;
     let webviewInstance: any = null;
@@ -280,39 +308,10 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
         });
       }
     };
-  }, [useTauriWebview, tab.id, activeUrl, renderMode]);
+  }, [useTauriWebview, tab.id, activeUrl, renderMode, webviewActive]);
 
-  // Handle Webview visibility on isActive change
-  useEffect(() => {
-    if (tauriWebviewRef.current && useTauriWebview && activeUrl && renderMode === 'tauri-native') {
-      if (isActive) {
-        tauriWebviewRef.current.show()
-          .then(async () => {
-            const { LogicalPosition, LogicalSize } = await import('@tauri-apps/api/dpi');
-            await new Promise(resolve => setTimeout(resolve, 50));
-            const container = containerRef.current;
-            if (container && tauriWebviewRef.current) {
-              const r = container.getBoundingClientRect();
-              await tauriWebviewRef.current.setPosition(new LogicalPosition(r.left, r.top)).catch(() => {});
-              await tauriWebviewRef.current.setSize(new LogicalSize(r.width, r.height)).catch(() => {});
-            }
-          })
-          .catch((err: any) => {
-            const errMsg = String(err);
-            if (!errMsg.includes('webview not found')) {
-              console.warn('[BrowserTab] Failed to show webview:', err);
-            }
-          });
-      } else {
-        tauriWebviewRef.current.hide().catch((err: any) => {
-          const errMsg = String(err);
-          if (!errMsg.includes('webview not found')) {
-            console.warn('[BrowserTab] Failed to hide webview:', err);
-          }
-        });
-      }
-    }
-  }, [isActive, useTauriWebview, activeUrl, renderMode]);
+  // NOTE: show/hide is no longer used — we destroy/recreate WebView2 on isActive changes
+  // to free RAM when the tab is not visible. This block is intentionally left empty.
 
   // Listen to console messages if in Electron and using webview
   useEffect(() => {
@@ -587,9 +586,10 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     }
   };
 
-  // Poll webview URL in Tauri to keep input URL bar synchronized
+  // Poll webview URL in Tauri to keep input URL bar synchronized.
+  // Only runs when webviewActive is true (WebView2 is alive).
   useEffect(() => {
-    if (!useTauriWebview || renderMode !== 'tauri-native' || !isActive) return;
+    if (!useTauriWebview || renderMode !== 'tauri-native' || !webviewActive) return;
 
     let timer: ReturnType<typeof setInterval> | null = null;
     let isSubscribed = true;
@@ -642,7 +642,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
       isSubscribed = false;
       if (timer) clearInterval(timer);
     };
-  }, [useTauriWebview, renderMode, isActive, tab.id]);
+  }, [useTauriWebview, renderMode, webviewActive, tab.id]);
 
   const handleReload = () => {
     setLogs([]);
