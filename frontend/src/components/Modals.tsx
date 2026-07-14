@@ -1,5 +1,5 @@
 import React from 'react';
-import { Folder, Loader2 } from 'lucide-react';
+import { Folder, Loader2, ArrowLeft } from 'lucide-react';
 import { FormField, Input, Select, TextArea, Button } from './Form';
 import { WorkspaceInfo } from '../hooks/useWorkspaces';
 
@@ -146,9 +146,11 @@ export const WorkspaceAddModal: React.FC<WorkspaceAddModalProps> = ({
                       type="button" 
                       className="action-btn" 
                       onClick={() => fetchDirectoryList(explorerParent)}
-                      style={{ fontSize: '0.7rem', padding: '2px 4px' }}
+                      style={{ fontSize: '0.75rem', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      title="Go back to parent folder"
                     >
-                      Up
+                      <ArrowLeft size={12} />
+                      Back
                     </button>
                   )}
                   <button 

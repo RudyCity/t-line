@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.426] - 2026-07-14
+
+### Changed
+- **Folder Explorer (Browse Project)**: Renamed the "Up" navigation button to **"Back"** with an `ArrowLeft` icon for clearer UX when browsing directories inside the "Track New Workspace" modal.
+
 ## [1.3.425] - 2026-07-14
 
 ### Fixed
