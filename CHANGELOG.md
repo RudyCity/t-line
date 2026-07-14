@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.421] - 2026-07-14
+
+### Fixed
+- **Clean Browser-Like URL Syncing on Link Clicks**:
+  - Implemented `getCleanUrl` in `BrowserTab.tsx` to automatically strip internal `/api/preview-proxy` path structures, target, and tabId query params from URL updates (updating all handlers: initial load, websocket events, Tauri events, and Electron events).
+  - Updated `notifyUrlChanged()` in `tline-helper-code.ts` to call `getRealCurrentUrl()` directly, resolving to the clean target application URL instead of the raw proxy path.
+  - Updated the Tauri webview URL polling code in `BrowserTab.tsx` to resolve the clean target URL using proxy target parameters before emitting events.
+
 ## [1.3.420] - 2026-07-14
 
 ### Fixed

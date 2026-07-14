@@ -687,13 +687,10 @@ export const TLINE_HELPER_CODE = `(function() {
 
   // Notify parent of the current real URL (so URL bar stays in sync after navigation)
   function notifyUrlChanged() {
-    var proxyTarget = getProxyTarget();
-    if (proxyTarget) {
-      try {
-        var realUrl = new URL(window.location.pathname + window.location.search + window.location.hash, proxyTarget + '/').href;
-        sendPreviewEvent('tline-url-changed', { url: realUrl });
-      } catch(e) {}
-    }
+    try {
+      var realUrl = getRealCurrentUrl();
+      sendPreviewEvent('tline-url-changed', { url: realUrl });
+    } catch(e) {}
   }
   notifyUrlChanged();
 })();

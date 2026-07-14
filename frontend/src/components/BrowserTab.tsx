@@ -46,10 +46,28 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     isActiveRef.current = isActive;
   }, [isActive]);
 
+  const getCleanUrl = (url: string): string => {
+    try {
+      const parsed = new URL(url);
+      if (parsed.pathname.startsWith('/api/preview-proxy')) {
+        const target = parsed.searchParams.get('target');
+        if (target) {
+          const cleanPath = parsed.pathname.substring('/api/preview-proxy'.length) || '/';
+          const newParams = new URLSearchParams(parsed.searchParams);
+          newParams.delete('target');
+          newParams.delete('tabId');
+          const searchStr = newParams.toString() ? '?' + newParams.toString() : '';
+          return new URL(cleanPath + searchStr + parsed.hash, target).href;
+        }
+      }
+    } catch (_) {}
+    return url;
+  };
+
   // Synchronize dynamic name changes for tab component
   useEffect(() => {
     if (tab.url) {
-      setUrlInput(tab.url);
+      setUrlInput(getCleanUrl(tab.url));
       setActiveUrl(tab.url);
     }
   }, [tab.url]);
@@ -318,7 +336,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
 
     const handleElectronNavigate = (e: any) => {
       if (e.url) {
-        setUrlInput(e.url);
+        setUrlInput(getCleanUrl(e.url));
       }
     };
 
@@ -384,7 +402,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
           }
         }
         if (eventType === 'tline-url-changed' && eventPayload?.url) {
-          setUrlInput(eventPayload.url);
+          setUrlInput(getCleanUrl(eventPayload.url));
           if (onUpdateTabName) {
             try {
               const hostname = new URL(eventPayload.url).hostname;
@@ -448,7 +466,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
           setLogs(prev => [newLog, ...prev].slice(0, 100));
         }
         if (eventType === 'tline-url-changed' && eventPayload?.url) {
-          setUrlInput(eventPayload.url);
+          setUrlInput(getCleanUrl(eventPayload.url));
           if (onUpdateTabName) {
             try {
               const hostname = new URL(eventPayload.url).hostname;
@@ -585,12 +603,29 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
       if (activeLabel && (window as any).__TAURI__?.core?.invoke) {
         const jsCode = `
           try {
-            if (window.__last_checked_url !== window.location.href) {
-              window.__last_checked_url = window.location.href;
+            var currentUrl = window.location.href;
+            var proxyTarget = "";
+            try {
+              if (window.__TLINE_PROXY_TARGET__) {
+                proxyTarget = window.__TLINE_PROXY_TARGET__;
+              } else {
+                var match = document.cookie.match(/(?:^|;\\s*)tline_proxy_target=([^;]+)/);
+                if (match) proxyTarget = decodeURIComponent(match[1]);
+              }
+            } catch (e) {}
+
+            var realUrl = currentUrl;
+            if (proxyTarget && window.location.pathname.indexOf('/api/preview-proxy') === 0) {
+              var path = window.location.pathname.substring('/api/preview-proxy'.length) || '/';
+              realUrl = new URL(path + window.location.search + window.location.hash, proxyTarget + '/').href;
+            }
+
+            if (window.__last_checked_url !== realUrl) {
+              window.__last_checked_url = realUrl;
               if (window.__TAURI__ && window.__TAURI__.event && typeof window.__TAURI__.event.emit === 'function') {
                 window.__TAURI__.event.emit('tline-webview-event', {
                   type: 'tline-url-changed',
-                  payload: { url: window.location.href },
+                  payload: { url: realUrl },
                   tabId: "${tab.id}"
                 });
               }
