@@ -64,6 +64,59 @@ import { TPlusLogo } from './components/TPlusLogo';
 import { TabTooltip, TabContextMenu } from './components/TabUiComponents';
 import { getRuntimeSearchParams } from './utils/runtimeQuery';
 
+function toCanonicalString(state: any): string {
+  if (!state) return '';
+  
+  // Normalize tabs
+  const tabs = (state.tabs || []).map((t: any) => ({
+    id: t.id,
+    name: t.name || '',
+    type: t.type || '',
+    filePath: t.filePath || '',
+    url: t.url || '',
+    commitHash: t.commitHash || '',
+    worktreePath: t.worktreePath || '',
+    compareWithWorktree: !!t.compareWithWorktree,
+    layout: t.layout || null,
+    focusedTerminalId: t.focusedTerminalId || '',
+    workspaceId: t.workspaceId || '',
+    gridTerminalIds: Array.isArray(t.gridTerminalIds) ? [...t.gridTerminalIds].sort() : [],
+    gridCardHeight: t.gridCardHeight || 0,
+    gridCardWidth: t.gridCardWidth || 0,
+    isDetached: !!t.isDetached
+  }));
+
+  // Normalize terminalInstances (sort keys to be order-independent)
+  const terminalInstances: Record<string, any> = {};
+  const instKeys = Object.keys(state.terminalInstances || {}).sort();
+  for (const k of instKeys) {
+    const inst = state.terminalInstances[k];
+    terminalInstances[k] = {
+      id: inst.id,
+      name: inst.name || '',
+      initialName: inst.initialName || '',
+      cwd: inst.cwd || '',
+      shellType: inst.shellType || '',
+      initialCommand: inst.initialCommand || ''
+    };
+  }
+
+  // Normalize savedPrompts
+  const savedPrompts = (state.savedPrompts || []).map((p: any) => ({
+    id: p.id,
+    name: p.name || '',
+    command: p.command || '',
+    cwd: p.cwd || '',
+    shellType: p.shellType || ''
+  }));
+
+  return JSON.stringify({
+    tabs,
+    terminalInstances,
+    savedPrompts
+  });
+}
+
 export default function App() {
   const detachedTabId = useMemo(() => {
     const urlParams = getRuntimeSearchParams();
@@ -969,10 +1022,10 @@ export default function App() {
       wsManager.subscribe('sync_state', (payload) => {
         if (payload.type === 'sync_update') {
           const { state } = payload;
-          const stateStr = JSON.stringify(state);
+          const canonicalIncoming = toCanonicalString(state);
 
           // If the received state is identical to our last sync state, do nothing (avoid loops)
-          if (stateStr === lastSyncState.current) {
+          if (canonicalIncoming === lastSyncState.current) {
             return;
           }
 
@@ -996,8 +1049,8 @@ export default function App() {
             localStorage.setItem('tline-saved-prompts', JSON.stringify(state.savedPrompts));
           }
 
-          // Save the last synced state
-          lastSyncState.current = stateStr;
+          // Save the last synced state using canonical format
+          lastSyncState.current = canonicalIncoming;
           console.log('[Sync] Received real-time state update from server.');
         }
       });
@@ -1165,13 +1218,13 @@ export default function App() {
           localStorage.setItem('tline-saved-prompts', JSON.stringify(data.savedPrompts));
         }
         
-        // Also update the last sync state reference to prevent re-upload loop
-        const stateStr = JSON.stringify({
+        // Also update the last sync state reference using canonical representation to prevent re-upload loop
+        const stateObj = {
           tabs: data.tabs || [],
           terminalInstances: data.terminalInstances || {},
           savedPrompts: data.savedPrompts || []
-        });
-        lastSyncState.current = stateStr;
+        };
+        lastSyncState.current = toCanonicalString(stateObj);
       }
     } catch (e) {
       console.error('Failed to fetch sync state:', e);
@@ -1179,26 +1232,26 @@ export default function App() {
       hasFetchedSyncState.current = true;
     }
   };
-
+ 
   // Synchronize state changes to backend (Option A)
   useEffect(() => {
     if (detachedTabId) return; // Detached windows are read-only and do not sync back to server
     if (!isAuthenticated || !hasFetchedSyncState.current) return;
     const token = localStorage.getItem('token');
     if (!token) return;
-
+ 
     const currentState = {
       tabs,
       terminalInstances,
       savedPrompts
     };
-    const currentStateStr = JSON.stringify(currentState);
-
+    const canonicalCurrent = toCanonicalString(currentState);
+ 
     // If the state hasn't changed from the last fetched/saved one, don't re-upload
-    if (currentStateStr === lastSyncState.current) {
+    if (canonicalCurrent === lastSyncState.current) {
       return;
     }
-
+ 
     // Debounce the save request by 1.5 seconds
     const timer = setTimeout(async () => {
       try {
@@ -1208,17 +1261,17 @@ export default function App() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`
           },
-          body: currentStateStr
+          body: JSON.stringify(currentState)
         });
         if (res.ok) {
-          lastSyncState.current = currentStateStr;
+          lastSyncState.current = canonicalCurrent;
           console.log('[Sync] State synchronized to server successfully.');
         }
       } catch (err) {
         console.error('[Sync] Failed to upload state to server:', err);
       }
     }, 1500);
-
+ 
     return () => clearTimeout(timer);
   }, [tabs, terminalInstances, savedPrompts, isAuthenticated]);
 

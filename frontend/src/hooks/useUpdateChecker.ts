@@ -22,6 +22,9 @@ export function useUpdateChecker() {
 
   const checkUpdates = useCallback(async (currentVer: string) => {
     try {
+      if (typeof window !== 'undefined' && navigator && !navigator.onLine) {
+        return; // Skip checking if browser is offline
+      }
       const res = await fetch('https://api.github.com/repos/RudyCity/t-line/releases/latest');
       if (!res.ok) return;
       const data = await res.json();
@@ -44,7 +47,7 @@ export function useUpdateChecker() {
         setUpdateAvailable(false);
       }
     } catch (err) {
-      console.error('Failed to check for updates:', err);
+      console.warn('Failed to check for updates (network might be offline/changing):', err);
     }
   }, []);
 

@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.434] - 2026-07-14
+
+### Fixed
+- **State Synchronization Infinite Loop**: Resolved an infinite loop where `[Sync] Received real-time state update from server` logged repeatedly. Added a `toCanonicalString` serialization function that normalizes client-only flags (like `isDetached`) and alphabetically sorts keys of the `terminalInstances` object. This ensures state comparison is order-independent and structurally stable across WebSocket pushes and HTTP fetches.
+- **Graceful Update Checker Network Handling**: Checks `navigator.onLine` before executing update checks, and catches fetch failures during network status changes (`TypeError: Failed to fetch`) cleanly as warnings instead of console errors.
+
 ## [1.3.433] - 2026-07-14
 
 ### Fixed
