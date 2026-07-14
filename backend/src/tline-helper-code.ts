@@ -414,25 +414,38 @@ export const TLINE_HELPER_CODE = `(function() {
     e.preventDefault();
     e.stopPropagation();
 
+    console.log('[t-line-helper] Click detected in inspect mode. Raw event target:', e.target);
+
     try {
       let target = e.target;
-      if (!target) return;
+      if (!target) {
+        console.warn('[t-line-helper] Click event target is null or undefined.');
+        return;
+      }
 
       // Handle clicking the highlight overlay itself (if pointer-events: none is ignored/overridden)
       if (target.id === 'tline-inspect-highlight' || (typeof target.getAttribute === 'function' && target.getAttribute('id') === 'tline-inspect-highlight')) {
+        console.log('[t-line-helper] Clicked inspect highlight overlay. Finding underlying element...');
         if (highlightEl) {
           highlightEl.style.display = 'none';
           target = document.elementFromPoint(e.clientX, e.clientY);
           highlightEl.style.display = '';
+          console.log('[t-line-helper] Found underlying target under overlay:', target);
         }
       }
 
       // Traverse up to find the nearest element node (nodeType 1)
+      const originalTarget = target;
       while (target && target.nodeType !== 1) {
         target = target.parentNode;
       }
 
+      if (originalTarget !== target) {
+        console.log('[t-line-helper] Traversed up from non-element node to nearest Element:', target);
+      }
+
       if (!target || !(target instanceof Element)) {
+        console.warn('[t-line-helper] No valid Element found to inspect.');
         disableInspectMode();
         return;
       }
@@ -445,6 +458,8 @@ export const TLINE_HELPER_CODE = `(function() {
         computedStyles: getImportantStyles(target),
         selectorPath: getCssSelector(target)
       };
+
+      console.log('[t-line-helper] Element selected. Dispatching payload:', payload);
 
       sendPreviewEvent('tline-element-selected', payload);
     } catch (err) {

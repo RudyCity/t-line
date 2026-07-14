@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.417] - 2026-07-14
+
+### Added
+- **Detailed Click Logs in Element Inspector**:
+  - Added comprehensive `console.log` statements in the helper script's `onClick` handler to output the raw target, resolution details, element traversal, and final dispatched payload in the browser console when an element is clicked.
+
 ## [1.3.416] - 2026-07-14
 
 ### Fixed
