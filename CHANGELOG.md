@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.422] - 2026-07-14
+
+### Fixed
+- **Tauri ACL Permission Error for Local Preview Webviews**:
+  - Modified `desktop-tauri/src-tauri/capabilities/default.json` to allow all localhost and 127.0.0.1 origins on wildcard ports (`http://localhost:*/**`, `https://localhost:*/**`, `http://127.0.0.1:*/**`, `https://127.0.0.1:*/**`) in the permitted remote URLs.
+  - Resolves Uncaught (in promise) security rejections for `event.emit` and `webview.internal_toggle_devtools` commands when loaded web applications run on dynamic or custom local development server ports (e.g. 6992).
+
 ## [1.3.421] - 2026-07-14
 
 ### Fixed
