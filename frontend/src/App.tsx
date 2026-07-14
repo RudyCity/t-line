@@ -781,6 +781,37 @@ export default function App() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [showQuickLaunchDropdown]);
 
+  useEffect(() => {
+    const isAnyOverlayActive = !!(
+      showWorkspaceModal ||
+      showWorktreeModal ||
+      showTunnelModal ||
+      showSettingsModal ||
+      showBranchModal ||
+      showEditWorkspaceModal ||
+      showSavePromptModal ||
+      showShortcutModal ||
+      showQuickLaunchDropdown ||
+      showTabsDropdown ||
+      tabContextMenu ||
+      rightMenuOpen
+    );
+    window.dispatchEvent(new CustomEvent('tline-hide-native-webview', { detail: { hide: isAnyOverlayActive } }));
+  }, [
+    showWorkspaceModal,
+    showWorktreeModal,
+    showTunnelModal,
+    showSettingsModal,
+    showBranchModal,
+    showEditWorkspaceModal,
+    showSavePromptModal,
+    showShortcutModal,
+    showQuickLaunchDropdown,
+    showTabsDropdown,
+    tabContextMenu,
+    rightMenuOpen
+  ]);
+
   // Keyboard Shortcuts
   const hasModals = showWorkspaceModal || showWorktreeModal || showTunnelModal || showSettingsModal || showBranchModal;
   useKeyboardShortcuts({

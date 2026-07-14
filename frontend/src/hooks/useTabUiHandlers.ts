@@ -114,6 +114,14 @@ export function useTabUiHandlers({
   }, []);
 
   useEffect(() => {
+    if (tabContextMenu) {
+      window.dispatchEvent(new CustomEvent('tline-hide-native-webview', { detail: { hide: true } }));
+    } else {
+      window.dispatchEvent(new CustomEvent('tline-hide-native-webview', { detail: { hide: false } }));
+    }
+  }, [tabContextMenu]);
+
+  useEffect(() => {
     if (!tabContextMenu) return;
     const closeMenu = () => setTabContextMenu(null);
     

@@ -47,6 +47,30 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
   const [webviewActive, setWebviewActive] = useState(isActive);
 
   const isActiveRef = useRef(isActive);
+  const [forceHideWebview, setForceHideWebview] = useState(false);
+
+  useEffect(() => {
+    const handleHideEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ hide: boolean }>;
+      setForceHideWebview(customEvent.detail.hide);
+    };
+    window.addEventListener('tline-hide-native-webview', handleHideEvent);
+    return () => {
+      window.removeEventListener('tline-hide-native-webview', handleHideEvent);
+    };
+  }, []);
+
+  useEffect(() => {
+    const webview = tauriWebviewRef.current;
+    if (useTauriWebview && webview && renderMode === 'tauri-native') {
+      if (isActive && !forceHideWebview) {
+        webview.show().catch(() => {});
+      } else {
+        webview.hide().catch(() => {});
+      }
+    }
+  }, [isActive, forceHideWebview, useTauriWebview, renderMode]);
+
   useEffect(() => {
     isActiveRef.current = isActive;
     if (isActive) {

@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.431] - 2026-07-14
+
+### Fixed
+- **Tauri Native Webview Overlay Covering HTML Dropdowns/Modals**: Fixed the issue where the native child WebView2 overlay covers/cuts off React-rendered context menus, dropdowns, and dialog modals. Added an overlay monitoring `useEffect` in `App.tsx` that dispatches a `tline-hide-native-webview` event when any overlay, dropdown, or modal is active, and updated `BrowserTab.tsx` to listen to this event and toggle the native WebView2 overlay's visibility.
+
 ## [1.3.430] - 2026-07-14
 
 ### Fixed
