@@ -414,19 +414,44 @@ export const TLINE_HELPER_CODE = `(function() {
     e.preventDefault();
     e.stopPropagation();
 
-    const target = e.target;
-    const payload = {
-      tagName: target.tagName ? target.tagName.toLowerCase() : '',
-      id: target.getAttribute('id') || '',
-      classes: target.classList ? Array.from(target.classList) : [],
-      outerHTML: target.outerHTML ? target.outerHTML.substring(0, 3000) : '', // Safety limit
-      computedStyles: target instanceof Element ? getImportantStyles(target) : {},
-      selectorPath: target instanceof Element ? getCssSelector(target) : ''
-    };
+    try {
+      let target = e.target;
+      if (!target) return;
 
-    sendPreviewEvent('tline-element-selected', payload);
+      // Handle clicking the highlight overlay itself (if pointer-events: none is ignored/overridden)
+      if (target.id === 'tline-inspect-highlight' || (typeof target.getAttribute === 'function' && target.getAttribute('id') === 'tline-inspect-highlight')) {
+        if (highlightEl) {
+          highlightEl.style.display = 'none';
+          target = document.elementFromPoint(e.clientX, e.clientY);
+          highlightEl.style.display = '';
+        }
+      }
 
-    disableInspectMode();
+      // Traverse up to find the nearest element node (nodeType 1)
+      while (target && target.nodeType !== 1) {
+        target = target.parentNode;
+      }
+
+      if (!target || !(target instanceof Element)) {
+        disableInspectMode();
+        return;
+      }
+
+      const payload = {
+        tagName: target.tagName ? target.tagName.toLowerCase() : '',
+        id: (typeof target.getAttribute === 'function' ? target.getAttribute('id') : '') || '',
+        classes: target.classList ? Array.from(target.classList) : [],
+        outerHTML: target.outerHTML ? target.outerHTML.substring(0, 3000) : '', // Safety limit
+        computedStyles: getImportantStyles(target),
+        selectorPath: getCssSelector(target)
+      };
+
+      sendPreviewEvent('tline-element-selected', payload);
+    } catch (err) {
+      console.error('[t-line-helper] Error in onClick inspect handler:', err);
+    } finally {
+      disableInspectMode();
+    }
   }
 
   function enableInspectMode() {

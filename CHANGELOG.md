@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.416] - 2026-07-14
+
+### Fixed
+- **Element Inspector Click Handling & Data Extraction**:
+  - Root cause: Clicking on `Text` nodes (button text, paragraph contents) or the purple inspect overlay itself (`tline-inspect-highlight`) caused an uncaught `TypeError` because `Text` nodes do not have `getAttribute` or `classList`. This aborted the dispatch of the selected element payload, preventing data from appearing in the DevTools Inspector panel.
+  - Traverse up from `e.target` to find the nearest `Element` node (nodeType 1) before extracting attributes and classes.
+  - Temporarily hide the highlight overlay and use `document.elementFromPoint` to locate the true underlying element if the highlight overlay itself intercepts the click event.
+  - Wrapped the entire inspect-click flow in a `try...catch...finally` block so that inspect mode is always gracefully cleaned up.
+
 ## [1.3.415] - 2026-07-14
 
 ### Fixed
