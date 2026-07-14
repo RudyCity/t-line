@@ -13,6 +13,7 @@ export interface SystemStats {
   };
   desktop?: {
     desktopRss: number;
+    webviewTotal: number;
     desktopTotal: number;
   };
 }

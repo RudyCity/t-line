@@ -1478,26 +1478,26 @@ fn is_descendant_of(sys: &sysinfo::System, child_pid: sysinfo::Pid, parent_pid: 
 #[tauri::command]
 fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json::Value, String> {
     use sysinfo::{Pid, System};
-    
+
     let mut sys = System::new();
     sys.refresh_processes();
 
     let current_pid = Pid::from(std::process::id() as usize);
-    
+
     let mut backend_pid_val = None;
     if let Some(child) = &*state.backend_child.lock().unwrap() {
         backend_pid_val = Some(Pid::from(child.id() as usize));
     }
 
-    let mut total_memory = 0u64;
-    let mut main_memory = 0u64;
+    let mut main_memory: u64 = 0;
+    let mut webview_memory: u64 = 0;
 
     for (pid, process) in sys.processes() {
         if *pid == current_pid {
+            // The Tauri main process itself
             main_memory = process.memory();
-            total_memory += process.memory();
         } else if is_descendant_of(&sys, *pid, current_pid) {
-            // Exclude backend process and all its subprocesses/descendants
+            // Exclude backend node process and all its descendants
             let is_backend_or_descendant = if let Some(backend_pid) = backend_pid_val {
                 *pid == backend_pid || is_descendant_of(&sys, *pid, backend_pid)
             } else {
@@ -1505,14 +1505,19 @@ fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json:
             };
 
             if !is_backend_or_descendant {
-                total_memory += process.memory();
+                // Accumulate WebView2 / renderer child process memory separately
+                webview_memory += process.memory();
             }
         }
     }
 
     Ok(serde_json::json!({
+        // RSS of the Tauri host process only
         "desktopRss": main_memory,
-        "desktopTotal": total_memory
+        // Aggregate RSS of all WebView2/renderer child processes (excluding backend)
+        "webviewTotal": webview_memory,
+        // Combined total for backward-compat — kept but no longer shown as single figure
+        "desktopTotal": main_memory + webview_memory
     }))
 }
 

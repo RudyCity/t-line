@@ -199,7 +199,9 @@ export function Footer({
             {systemStats.desktop && (
               <>
                 <span className="font-sans text-[10px] font-normal" style={{ color: 'var(--border-color)' }}>|</span>
-                <span className="font-mono text-[10px] font-semibold text-emerald-300">D: {formatBytes(systemStats.desktop.desktopTotal)}</span>
+                <span className="font-mono text-[10px] font-semibold text-emerald-300" title={`Main: ${formatBytes(systemStats.desktop.desktopRss)} · WebView2: ${formatBytes(systemStats.desktop.webviewTotal)}`}>
+                  D: {formatBytes(systemStats.desktop.desktopRss)}+{formatBytes(systemStats.desktop.webviewTotal)}
+                </span>
               </>
             )}
 
@@ -244,12 +246,16 @@ export function Footer({
                   <div>
                     <p className="font-semibold text-emerald-300">Desktop Application</p>
                     <div className="flex justify-between pl-1">
-                      <span className="text-slate-500">App Total:</span>
-                      <span className="font-mono text-slate-300">{formatBytes(systemStats.desktop.desktopTotal)}</span>
-                    </div>
-                    <div className="flex justify-between pl-1">
                       <span className="text-slate-500">Main RSS:</span>
                       <span className="font-mono text-slate-300">{formatBytes(systemStats.desktop.desktopRss)}</span>
+                    </div>
+                    <div className="flex justify-between pl-1">
+                      <span className="text-slate-500">WebView2:</span>
+                      <span className="font-mono text-slate-300">{formatBytes(systemStats.desktop.webviewTotal)}</span>
+                    </div>
+                    <div className="flex justify-between pl-1 pt-0.5 border-t border-white/5 mt-0.5">
+                      <span className="text-slate-400 font-medium">Total:</span>
+                      <span className="font-mono text-slate-200 font-medium">{formatBytes(systemStats.desktop.desktopTotal)}</span>
                     </div>
                   </div>
                 )}

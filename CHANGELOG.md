@@ -2,7 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.424] - 2026-07-14
+
+### Fixed
+- **RAM Usage Inflated to 3.9 GB in System Resources Widget**:
+  - Root cause: `get_memory_usage` Tauri command was aggregating RSS of **all** WebView2/Chromium child processes (renderer, GPU, network, utility) into a single `desktopTotal` figure, producing a misleadingly large number (3-4 GB).
+  - Refactored `get_memory_usage` in `lib.rs` to now separately track `desktopRss` (main Tauri host process only) and `webviewTotal` (aggregate RSS of all WebView2 child processes excluding the backend node process).
+  - Updated `SystemStats` TypeScript interface in `useSystemStats.ts` to expose the new `webviewTotal` field.
+  - Updated `Footer.tsx` tooltip to display **Main RSS** and **WebView2** on separate rows with a clear subtotal row, instead of a single inflated "App Total". The mini footer badge now shows `D: <main>+<wv>` format.
+
 ## [1.3.423] - 2026-07-14
+
 
 ### Changed
 - **Automated Desktop Process Cleanup on Restart**:
