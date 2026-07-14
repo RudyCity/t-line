@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.413] - 2026-07-14
+
+### Fixed
+- **DevTools Drawer Responsiveness & Viewport Shrinking**:
+  - Removed `min-h-[250px]` from Main Browser Viewport Area, replaced with `min-h-0` so the flexbox container correctly shrinks when the DevTools drawer is expanded.
+  - Added `height: '100%'` to the `tauri-native` container div so the `updateLoop` correctly reads shrunken bounds and syncs the native webview size.
+  - Proactively fetch and inject `TLINE_HELPER_CODE` from `/api/preview-proxy/tline-helper.js` into the native Tauri webview when the Inspect button is pressed, with `__TLINE_TAB_ID__` and `__TLINE_NATIVE__ = true` flags prepended.
+  - Split Tauri `tline-webview-event` listener into its own dedicated `useEffect` with minimal deps so it is registered at component mount rather than after the async WS handler, preventing missed element-selection events.
+
 ## [1.3.412] - 2026-07-13
 
 ### Fixed
