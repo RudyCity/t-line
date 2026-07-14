@@ -672,13 +672,41 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
   };
 
   const openInSystemBrowser = (url: string) => {
-    if (isTauri && (window as any).__TAURI__?.core?.invoke) {
-      (window as any).__TAURI__.core.invoke('open_in_browser', { url }).catch((e: any) => {
-        console.error('[BrowserTab] Failed to open url in system browser:', e);
-      });
-    } else {
-      window.open(url, '_blank');
+    if (!url) return;
+
+    let absoluteUrl = url;
+    try {
+      absoluteUrl = new URL(url, window.location.href).href;
+    } catch (e) {
+      console.warn('[BrowserTab] Failed to resolve URL for system browser:', e);
     }
+
+    const token = localStorage.getItem('token') || '';
+    fetch('/api/browser/open', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ url: absoluteUrl })
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || `Status ${res.status}`);
+        }
+      })
+      .catch((e) => {
+        console.error('[BrowserTab] Failed to open url via backend API, falling back:', e);
+        if (isTauri && (window as any).__TAURI__?.core?.invoke) {
+          (window as any).__TAURI__.core.invoke('open_in_browser', { url: absoluteUrl }).catch((e2: any) => {
+            console.error('[BrowserTab] Failed to open url in system browser via Tauri:', e2);
+            window.open(absoluteUrl, '_blank');
+          });
+        } else {
+          window.open(absoluteUrl, '_blank');
+        }
+      });
   };
 
   const getHelperStatusColorClass = () => {

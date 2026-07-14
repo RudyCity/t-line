@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.427] - 2026-07-14
+
+### Fixed
+- **Open Browser Button**: Updated the `openInSystemBrowser` function in `BrowserTab.tsx` to request the Node backend's browser open endpoint (`/api/browser/open`) first. This resolves the issue where the Tauri native command `open_in_browser` did not exist, causing the "Open Browser" button to fail in Tauri environments.
+
 ## [1.3.426] - 2026-07-14
 
 ### Changed
