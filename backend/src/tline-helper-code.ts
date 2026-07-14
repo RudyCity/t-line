@@ -1,7 +1,8 @@
 export const TLINE_HELPER_CODE = `(function() {
-  // Only run if we are inside an iframe OR if running under the preview proxy path
+  // Only run if we are inside an iframe OR if running under the preview proxy path OR inside Tauri native shell
   var isProxied = window.location.pathname.indexOf('/api/preview-proxy') === 0;
-  if (window.self === window.top && !isProxied) return;
+  var isTauri = !!(window && (window.__TLINE_NATIVE__ || window.__tauri__ || window.__TAURI__));
+  if (window.self === window.top && !isProxied && !isTauri) return;
 
   // Persist tabId in sessionStorage to survive page reloads and redirects
   if (window.__TLINE_TAB_ID__ && window.__TLINE_TAB_ID__ !== 'null' && window.__TLINE_TAB_ID__ !== 'undefined') {
@@ -163,20 +164,34 @@ export const TLINE_HELPER_CODE = `(function() {
   try {
     var _origPushState = history.pushState;
     history.pushState = function(state, title, url) {
+      var result;
       if (url) {
         var proxied = proxyNavigateUrl(String(url));
-        if (proxied) return _origPushState.call(this, state, title, proxied);
+        if (proxied) {
+          result = _origPushState.call(this, state, title, proxied);
+          notifyUrlChanged();
+          return result;
+        }
       }
-      return _origPushState.apply(this, arguments);
+      result = _origPushState.apply(this, arguments);
+      notifyUrlChanged();
+      return result;
     };
 
     var _origReplaceState = history.replaceState;
     history.replaceState = function(state, title, url) {
+      var result;
       if (url) {
         var proxied = proxyNavigateUrl(String(url));
-        if (proxied) return _origReplaceState.call(this, state, title, proxied);
+        if (proxied) {
+          result = _origReplaceState.call(this, state, title, proxied);
+          notifyUrlChanged();
+          return result;
+        }
       }
-      return _origReplaceState.apply(this, arguments);
+      result = _origReplaceState.apply(this, arguments);
+      notifyUrlChanged();
+      return result;
     };
   } catch(e) {
     console.warn('[t-line-helper] Could not override history methods:', e);
@@ -191,13 +206,37 @@ export const TLINE_HELPER_CODE = `(function() {
       window.parent.postMessage({ type: type, payload: payload }, '*');
     } catch (e) {}
 
-    // 2. Send via HTTP POST to Express backend if we are running in the proxy
+    // 2. Send via Tauri event bus if running inside a Tauri native webview
+    if (isTauri) {
+      try {
+        var tauriTabId = window.__TLINE_TAB_ID__;
+        if (!tauriTabId || tauriTabId === 'null' || tauriTabId === 'undefined') {
+          try { tauriTabId = sessionStorage.getItem('tline_tab_id'); } catch(e) {}
+        }
+        if (window.__TAURI__ && window.__TAURI__.event && typeof window.__TAURI__.event.emit === 'function') {
+          window.__TAURI__.event.emit('tline-webview-event', { type: type, payload: payload, tabId: tauriTabId || null });
+        }
+      } catch (e) {}
+    }
+
+    // 3. Send via HTTP POST to Express backend if we are running in the proxy
     if (isProxied) {
       try {
         var tabId = window.__TLINE_TAB_ID__;
         if (!tabId || tabId === 'null' || tabId === 'undefined') {
           try {
+            var match = document.cookie.match(/(?:^|;\s*)tline_tab_id=([^;]+)/);
+            if (match) tabId = decodeURIComponent(match[1]);
+          } catch(e) {}
+        }
+        if (!tabId || tabId === 'null' || tabId === 'undefined') {
+          try {
             tabId = sessionStorage.getItem('tline_tab_id');
+          } catch(e) {}
+        }
+        if (tabId && tabId !== 'null' && tabId !== 'undefined') {
+          try {
+            sessionStorage.setItem('tline_tab_id', tabId);
           } catch(e) {}
         }
         var xhr = new XMLHttpRequest();
@@ -269,10 +308,11 @@ export const TLINE_HELPER_CODE = `(function() {
     highlightEl.id = 'tline-inspect-highlight';
     highlightEl.style.position = 'fixed';
     highlightEl.style.border = '2px solid #a855f7'; // Purple focus border
-    highlightEl.style.backgroundColor = 'rgba(168, 85, 247, 0.15)';
+    highlightEl.style.backgroundColor = 'rgba(168, 85, 247, 0.25)';
     highlightEl.style.pointerEvents = 'none';
     highlightEl.style.zIndex = '99999999';
-    highlightEl.style.transition = 'all 0.1s ease-out';
+    highlightEl.style.transition = 'width 0.05s ease-out, height 0.05s ease-out, top 0.05s ease-out, left 0.05s ease-out';
+    highlightEl.style.boxShadow = '0 0 8px rgba(168, 85, 247, 0.5)';
     document.body.appendChild(highlightEl);
     return highlightEl;
   }
@@ -286,30 +326,58 @@ export const TLINE_HELPER_CODE = `(function() {
 
   function getCssSelector(el) {
     if (!(el instanceof Element)) return '';
-    const path = [];
-    while (el && el.nodeType === Node.ELEMENT_NODE) {
-      let selector = el.nodeName.toLowerCase();
-      const id = el.getAttribute('id');
-      if (id) {
-        selector += '#' + id;
-        path.unshift(selector);
-        break; // Unique path reached
-      } else {
-        let sibling = el;
+    
+    // Try using @medv/finder equivalent logic or a fast fallback
+    try {
+      const path = [];
+      let current = el;
+      while (current && current.nodeType === Node.ELEMENT_NODE) {
+        let selector = current.nodeName.toLowerCase();
+        const id = current.getAttribute('id');
+        if (id && !id.match(/^[0-9]/) && !id.includes(':')) {
+          selector += '#' + id;
+          path.unshift(selector);
+          break;
+        }
+        
+        let className = current.getAttribute('class');
+        if (className) {
+          const cleanClasses = className.trim().split(/\s+/)
+            .filter(c => c && !c.includes(':') && !c.includes('[') && !c.includes('/') && !c.match(/^[0-9]/));
+          if (cleanClasses.length > 0) {
+            selector += '.' + cleanClasses.join('.');
+          }
+        }
+
+        let sibling = current;
         let nth = 1;
         while (sibling = sibling.previousElementSibling) {
-          if (sibling.nodeName.toLowerCase() === el.nodeName.toLowerCase()) {
+          if (sibling.nodeName.toLowerCase() === current.nodeName.toLowerCase()) {
             nth++;
           }
         }
-        if (nth > 1) {
+        
+        let hasNextSibling = false;
+        let next = current;
+        while (next = next.nextElementSibling) {
+          if (next.nodeName.toLowerCase() === current.nodeName.toLowerCase()) {
+            hasNextSibling = true;
+            break;
+          }
+        }
+
+        if (nth > 1 || hasNextSibling) {
           selector += ':nth-of-type(' + nth + ')';
         }
+        
+        path.unshift(selector);
+        current = current.parentNode;
       }
-      path.unshift(selector);
-      el = el.parentNode;
+      return path.join(' > ');
+    } catch (e) {
+      // Graceful fallback selector
+      return el.tagName ? el.tagName.toLowerCase() : 'element';
     }
-    return path.join(' > ');
   }
 
   function getImportantStyles(el) {
@@ -383,79 +451,72 @@ export const TLINE_HELPER_CODE = `(function() {
   window.addEventListener('click', function(e) {
     if (isInspectMode) return;
 
-    let target = e.target;
+    var target = e.target;
     while (target && target.tagName !== 'A') {
       target = target.parentNode;
     }
 
     if (target && target.tagName === 'A') {
-      const href = target.getAttribute('href');
+      var href = target.getAttribute('href');
       if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
-        let absoluteUrl;
-        try {
-          var realBase = getRealCurrentUrl();
-          absoluteUrl = new URL(href, realBase).href;
-        } catch (err) {
-          return;
-        }
-
-        if (/^https?:\\/\\//i.test(absoluteUrl)) {
-          e.preventDefault();
+        var proxyTarget = getProxyTarget();
+        if (proxyTarget) {
           try {
-            const parsedUrl = new URL(absoluteUrl);
-            const targetOrigin = parsedUrl.origin;
-            const targetPath = parsedUrl.pathname + parsedUrl.search + parsedUrl.hash;
-            var sep = targetPath.indexOf('?') >= 0 ? '&' : '?';
-            var newUrl = '/api/preview-proxy' + targetPath + sep + 'target=' + encodeURIComponent(targetOrigin);
-            var tabId = window.__TLINE_TAB_ID__ || sessionStorage.getItem('tline_tab_id');
-            if (tabId && tabId !== 'null' && tabId !== 'undefined') {
-              newUrl += '&tabId=' + encodeURIComponent(tabId);
+            var isAbsolute = /^(https?:)?\\/\\//i.test(href);
+            if (isAbsolute) {
+              var absoluteUrl = new URL(href, window.location.origin).href;
+              var parsedTarget = new URL(proxyTarget);
+              var parsedUrl = new URL(absoluteUrl);
+              
+              if (parsedUrl.origin === parsedTarget.origin) {
+                var targetPath = parsedUrl.pathname + parsedUrl.search + parsedUrl.hash;
+                var sep = targetPath.indexOf('?') >= 0 ? '&' : '?';
+                var proxyNavigateUrl = '/api/preview-proxy' + targetPath + sep + 'target=' + encodeURIComponent(parsedTarget.origin);
+                var tabId = window.__TLINE_TAB_ID__ || sessionStorage.getItem('tline_tab_id');
+                if (tabId && tabId !== 'null' && tabId !== 'undefined') {
+                  proxyNavigateUrl += '&tabId=' + encodeURIComponent(tabId);
+                }
+                
+                target.setAttribute('href', proxyNavigateUrl);
+                sendPreviewEvent('tline-url-changed', { url: absoluteUrl });
+              }
             }
-            window.location.href = newUrl;
-          } catch (err) {
-            console.error('[t-line-helper] Failed to navigate via proxy:', err);
-          }
+          } catch (err) {}
         }
       }
     }
   }, true);
 
   window.addEventListener('submit', function(e) {
-    const form = e.target;
+    var form = e.target;
     if (!form) return;
-    const action = form.getAttribute('action');
+    var action = form.getAttribute('action');
     if (action) {
-      let absoluteUrl;
-      try {
-        var realBase = getRealCurrentUrl();
-        absoluteUrl = new URL(action, realBase).href;
-      } catch (err) {
-        return;
-      }
-
-      if (/^https?:\\/\\//i.test(absoluteUrl)) {
-        e.preventDefault();
+      var proxyTarget = getProxyTarget();
+      if (proxyTarget) {
         try {
-          const parsedUrl = new URL(absoluteUrl);
-          const targetOrigin = parsedUrl.origin;
-          const targetPath = parsedUrl.pathname + parsedUrl.search + parsedUrl.hash;
-          document.cookie = 'tline_proxy_target=' + encodeURIComponent(targetOrigin) + '; path=/; SameSite=Lax';
-          
-          var tabId = window.__TLINE_TAB_ID__ || sessionStorage.getItem('tline_tab_id');
-          var targetPathWithTabId = targetPath;
-          if (tabId && tabId !== 'null' && tabId !== 'undefined') {
-            var sep = targetPath.indexOf('?') >= 0 ? '&' : '?';
-            targetPathWithTabId += sep + 'tabId=' + encodeURIComponent(tabId);
+          var isAbsolute = /^(https?:)?\\/\\//i.test(action);
+          if (isAbsolute) {
+            var absoluteUrl = new URL(action, window.location.origin).href;
+            var parsedTarget = new URL(proxyTarget);
+            var parsedUrl = new URL(absoluteUrl);
+            
+            if (parsedUrl.origin === parsedTarget.origin) {
+              var targetPath = parsedUrl.pathname + parsedUrl.search + parsedUrl.hash;
+              var sep = targetPath.indexOf('?') >= 0 ? '&' : '?';
+              var proxyNavigateUrl = '/api/preview-proxy' + targetPath + sep + 'target=' + encodeURIComponent(parsedTarget.origin);
+              var tabId = window.__TLINE_TAB_ID__ || sessionStorage.getItem('tline_tab_id');
+              if (tabId && tabId !== 'null' && tabId !== 'undefined') {
+                proxyNavigateUrl += '&tabId=' + encodeURIComponent(tabId);
+              }
+              form.setAttribute('action', proxyNavigateUrl);
+              document.cookie = 'tline_proxy_target=' + encodeURIComponent(parsedTarget.origin) + '; path=/; SameSite=Lax';
+            }
           }
-          
-          form.setAttribute('action', '/api/preview-proxy' + targetPathWithTabId);
-          form.submit();
-        } catch (err) {
-          console.error('[t-line-helper] Failed to submit form via proxy:', err);
-        }
+        } catch (err) {}
       }
     }
-  }, true);
+  }, true);;
 
   // ----------------------------------------------------
   // 3. Parent Message Listener
@@ -475,8 +536,15 @@ export const TLINE_HELPER_CODE = `(function() {
   // Send an initial handshake/ready message to the parent frame
   sendPreviewEvent('tline-ready', null);
 
-  // Periodically send tline-ready until acknowledged to avoid race conditions during initial load
+  // Periodically send tline-ready until acknowledged to avoid race conditions during initial load (max 10 attempts)
+  var isReadyAcked = false;
+  var readyAttempts = 0;
   var readyInterval = setInterval(function() {
+    readyAttempts++;
+    if (isReadyAcked || readyAttempts > 10) {
+      clearInterval(readyInterval);
+      return;
+    }
     sendPreviewEvent('tline-ready', null);
   }, 1000);
 

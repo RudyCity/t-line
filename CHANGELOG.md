@@ -2,6 +2,35 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.412] - 2026-07-13
+
+### Fixed
+- **Browser Tab Tauri-Native Inspect (Element Picker)**:
+  - Fixed root bug: `tline-element-selected` events from Tauri native webview never reached the React app because `window.parent.postMessage()` is a no-op in native webviews (`window.parent === window`) and the HTTP POST fallback only activates when `isProxied` is true.
+  - Added Tauri event bus path in `sendPreviewEvent` (`tline-helper-code.ts`): when `isTauri` is true, emits `tline-webview-event` via `window.__TAURI__.event.emit()` directly to the Tauri event system.
+  - Added `listen('tline-webview-event')` in `BrowserTab.tsx` WebSocket useEffect: native webview events (element-selected, error, url-changed, ready) now route through Tauri event bus instead of the broken postMessage/HTTP path.
+  - Fixed stale closure bug: removed `isInspecting` from `handleMessage` useEffect dep array — listener no longer tears down mid-event, preventing dropped `tline-element-selected` messages in iframe mode.
+  - Added `renderMode === 'iframe-local'` guard on `toggleInspect` iframe postMessage path to prevent sending inspect commands to wrong targets in cross-origin or proxy iframe modes.
+
+## [1.3.411] - 2026-07-13
+
+### Changed
+- **Browser Shell Rewrite without Proxy Dependency**:
+  - Rewrote the app preview engine to bypass the proxy connection layer entirely.
+  - Embedded native Webviews (`tauri-native` / `electron-webview`) directly in desktop runtime layouts.
+  - Added fallback routing for browser/web context to safely present external links natively or external-site actions.
+  - Removed `forceProxy` and `bypassProxy` configuration modes, reducing component size and complexity.
+  - Split `BrowserTab.tsx` by extracting drawer markup into a modular child component (`BrowserDevTools.tsx`), bringing files well under the 1000 lines threshold.
+
+## [1.3.410] - 2026-07-13
+
+### Fixed
+- **Browser Preview Inspection & Interactivity**:
+  - Corrected syntax errors in the client-side helper script (`tline-helper-code.ts`) caused by invalid double backslash escapes (`\\\\/\\\\//` instead of `\\/\\//` in the TS template literal backticks).
+  - Resolved event propagation blocks and page navigation freeze when clicking links or submitting forms under the preview proxy by modifying `href`/`action` attributes dynamically for matching targets without calling `preventDefault`/`stopPropagation`.
+  - Added support for reading and parsing the `tline_tab_id` cookie to resolve context losses for tab states on external/system browsers.
+  - Capped the client-side `tline-ready` handshake retry to 10 attempts to avoid spamming backend WebSocket endpoints in system browsers.
+
 ## [1.3.409] - 2026-07-13
 
 ### Fixed

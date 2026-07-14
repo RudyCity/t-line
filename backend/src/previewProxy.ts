@@ -4,7 +4,9 @@ import path from 'path';
 import fs from 'fs';
 import { TLINE_HELPER_CODE } from './tline-helper-code';
 
-let currentProxyTarget = '';
+// Map tabId -> targetUrl
+const tabProxyTargets = new Map<string, string>();
+let currentProxyTarget = 'http://localhost';
 
 const rewriteSetCookie = (cookieStr: string): string => {
   let parts = cookieStr.split(';').map(p => p.trim());
@@ -33,9 +35,16 @@ const sanitizeHeaders = (proxyHeaders: any, req?: any) => {
       lowerKey === 'content-security-policy' ||
       lowerKey === 'content-security-policy-report-only' ||
       lowerKey === 'x-frame-options' ||
-      lowerKey === 'frame-options'
+      lowerKey === 'frame-options' ||
+      lowerKey === 'cross-origin-opener-policy' ||
+      lowerKey === 'cross-origin-embedder-policy' ||
+      lowerKey === 'cross-origin-resource-policy'
     ) {
       delete headers[key];
+    }
+    // Overwrite/sanitize Referrer-Policy to ensure full URL referrer is sent
+    if (lowerKey === 'referrer-policy') {
+      headers[key] = 'no-referrer-when-downgrade';
     }
   }
 
@@ -55,7 +64,8 @@ const sanitizeHeaders = (proxyHeaders: any, req?: any) => {
       let absoluteRedirectUrl = redirectUrl;
       // If it's a relative URL, resolve it against the target origin
       if (!/^https?:\/\//i.test(redirectUrl)) {
-        const targetOrigin = (req && req.tlineTarget) || currentProxyTarget || 'http://localhost';
+        const tabIdVal = (req && req.tlineTabId) || '';
+        const targetOrigin = (req && req.tlineTarget) || tabProxyTargets.get(tabIdVal) || currentProxyTarget || 'http://localhost';
         const base = targetOrigin.replace(/\/$/, '');
         const rel = redirectUrl.startsWith('/') ? redirectUrl : '/' + redirectUrl;
         absoluteRedirectUrl = base + rel;
@@ -165,6 +175,26 @@ export const previewProxy = createProxyMiddleware({
       }
     } catch (e) {}
 
+    // Fallback: Recover tabId and target from Referer header if cookies/query parameters are blocked
+    try {
+      const referer = req.headers.referer || '';
+      if (referer) {
+        const refererUrl = new URL(referer);
+        if (!(req as any).tlineTabId) {
+          const refererTabId = refererUrl.searchParams.get('tabId') || '';
+          if (isValidTabId(refererTabId)) {
+            (req as any).tlineTabId = refererTabId;
+          }
+        }
+        if (!(req as any).tlineTarget) {
+          const refererTarget = refererUrl.searchParams.get('target') || '';
+          if (isValidTarget(refererTarget)) {
+            (req as any).tlineTarget = refererTarget;
+          }
+        }
+      }
+    } catch (e) {}
+
     const urlParams = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
     let target = urlParams.searchParams.get('target');
     
@@ -185,10 +215,16 @@ export const previewProxy = createProxyMiddleware({
       }
     }
 
+    const tabId = (req as any).tlineTabId || '';
     if (isValidTarget(target) && isDocRequest) {
-      currentProxyTarget = (target as string).replace(/\/$/, '');
+      const cleanTarget = (target as string).replace(/\/$/, '');
+      currentProxyTarget = cleanTarget;
+      if (isValidTabId(tabId)) {
+        tabProxyTargets.set(tabId, cleanTarget);
+      }
     }
-    return currentProxyTarget || (isValidTarget(target) ? (target as string).replace(/\/$/, '') : 'http://localhost');
+    const activeTarget = (isValidTabId(tabId) ? tabProxyTargets.get(tabId) : null) || currentProxyTarget || (isValidTarget(target) ? (target as string).replace(/\/$/, '') : 'http://localhost');
+    return activeTarget;
   },
   selfHandleResponse: true,
   on: {
@@ -201,12 +237,36 @@ export const previewProxy = createProxyMiddleware({
         const tabIdCookieMatch = cookieHeader.match(/(?:^|;\s*)tline_tab_id=([^;]+)/);
         const cookieTabId = tabIdCookieMatch ? decodeURIComponent(tabIdCookieMatch[1]) : '';
         
-        const tabId = urlParams.searchParams.get('tabId') || cookieTabId;
+        let tabId = urlParams.searchParams.get('tabId') || cookieTabId;
+        if (!tabId) {
+          const referer = req.headers.referer || '';
+          if (referer) {
+            try {
+              const refererUrl = new URL(referer);
+              const refererTabId = refererUrl.searchParams.get('tabId');
+              if (isValidTabId(refererTabId)) {
+                tabId = refererTabId || '';
+              }
+            } catch (e) {}
+          }
+        }
         if (isValidTabId(tabId)) {
           (req as any).tlineTabId = tabId;
         }
 
-        const target = urlParams.searchParams.get('target');
+        let target = urlParams.searchParams.get('target');
+        if (!target) {
+          const referer = req.headers.referer || '';
+          if (referer) {
+            try {
+              const refererUrl = new URL(referer);
+              const refererTarget = refererUrl.searchParams.get('target');
+              if (isValidTarget(refererTarget)) {
+                target = refererTarget;
+              }
+            } catch (e) {}
+          }
+        }
         if (isValidTarget(target)) {
           (req as any).tlineTarget = target;
         }
@@ -249,11 +309,18 @@ export const previewProxy = createProxyMiddleware({
           // Strip http-equiv="content-security-policy" meta tags case-insensitively
           html = html.replace(/<meta\s+[^>]*http-equiv=["']content-security-policy["'][^>]*>/gi, '');
 
+          const activeTabId = (req as any).tlineTabId || '';
+          const activeTarget = (isValidTabId(activeTabId) ? tabProxyTargets.get(activeTabId) : null) || currentProxyTarget;
+          
+          // Escape strings safely to prevent XSS injection into script block
+          const safeTabId = JSON.stringify(activeTabId);
+          const safeTarget = JSON.stringify(activeTarget);
+
           const baseTag = `<base href="/api/preview-proxy/">`;
           // Inject the current proxy target as a global variable so the helper script
           // can correctly resolve relative URLs against the real target origin
-          const tabIdVar = `window.__TLINE_TAB_ID__="${(req as any).tlineTabId || ''}";`;
-          const targetVar = `<script>window.__TLINE_PROXY_TARGET__="${currentProxyTarget}"; ${tabIdVar}</script>`;
+          const tabIdVar = `window.__TLINE_TAB_ID__=${safeTabId};`;
+          const targetVar = `<script>window.__TLINE_PROXY_TARGET__=${safeTarget}; ${tabIdVar}</script>`;
           const helperScript = `<script src="/api/preview-proxy/tline-helper.js"></script>`;
           
           // Robust case-insensitive head, html, or doctype tag injection
