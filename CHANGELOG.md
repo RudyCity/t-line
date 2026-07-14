@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.437] - 2026-07-14
+
+### Added
+- **GitHub Pages Promotional Landing Page**:
+  - Created a modern, premium landing page in the `/docs` directory including `index.html`, `style.css`, and `app.js` with responsive glassmorphism, animations, custom icons, and visual layout specs.
+  - Added an interactive CLI/terminal simulator playground in HTML/JS that models `t-line` terminal sessions, git worktree dirty-sorting, and Cloudflare share tunnels with ACL loggers.
+  - Added quick-start commands and tabs with copy-to-clipboard utilities.
+
 ## [1.3.436] - 2026-07-14
 
 ### Fixed

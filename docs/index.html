@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="t-line: A high-performance, developer-first workspace dashboard and Git Worktree orchestrator with multi-shell GPU terminal, remote share tunnel, and built-in editor.">
+  <meta name="keywords" content="t-line, git worktree, tauri, rust, terminal, developer dashboard, pty, cloudflare tunnel, workspaces, monaco editor">
+  <meta name="author" content="Rudy H.">
+  <title>t-line — Premium Workspace Manager & Git Worktree Orchestrator</title>
+  
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Background Glowing Gradients -->
+  <div class="bg-gradient-glow"></div>
+  <div class="bg-gradient-glow-2"></div>
+  <div class="bg-gradient-glow-3"></div>
+
+  <!-- Header / Navigation -->
+  <header>
+    <div class="container nav-container">
+      <a href="#" class="logo-link">
+        <div class="logo-dot"></div>
+        <span>t-line</span>
+      </a>
+      
+      <ul class="nav-menu">
+        <li><a href="#features" class="nav-link">Features</a></li>
+        <li><a href="#simulator" class="nav-link">Interactive Demo</a></li>
+        <li><a href="#tech" class="nav-link">Tech Stack</a></li>
+        <li><a href="#installation" class="nav-link">Installation</a></li>
+      </ul>
+      
+      <div>
+        <a href="https://github.com/RudyCity/t-line" class="btn btn-secondary" target="_blank" rel="noopener">
+          <svg class="btn-icon" viewBox="0 0 16 16" version="1.1" aria-hidden="true">
+            <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+          </svg>
+          GitHub
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero-tagline">
+          <span style="display:inline-block; width:6px; height:6px; background:#10b981; border-radius:50%"></span>
+          Tauri v2 Desktop App Built for Modern Workflows
+        </div>
+        
+        <h1>
+          The Developer's <span class="gradient-text">Context-Switching</span> Dashboard
+        </h1>
+        
+        <p class="hero-description">
+          Run GPU-accelerated multi-shell PTY terminals, orchestrate Git Worktrees with real-time dirty indices, browse code, and share workspaces via Cloudflare Tunnel. Built on Tauri v2 with under 100MB RAM footprint.
+        </p>
+        
+        <div class="hero-ctas">
+          <a href="#installation" class="btn btn-primary">Get Started</a>
+          <a href="https://github.com/RudyCity/t-line" class="btn btn-secondary" target="_blank" rel="noopener">Explore Codebase</a>
+        </div>
+        
+        <div class="hero-preview-container">
+          <div class="hero-preview-glow"></div>
+          <img src="preview.png" alt="t-line Desktop Interface Preview" class="hero-preview" loading="lazy">
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Grid Section -->
+    <section id="features">
+      <div class="container">
+        <div class="section-header">
+          <h2>Streamlined Code Orchestration</h2>
+          <p>Everything you need to eliminate cognitive load and build features faster in isolated workspaces.</p>
+        </div>
+        
+        <div class="features-grid">
+          
+          <!-- PTY Terminals -->
+          <div class="glass-panel feature-card">
+            <div class="feature-icon-wrapper">
+              <!-- Terminal Icon -->
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="4 17 10 11 4 5"></polyline>
+                <line x1="12" y1="19" x2="20" y2="19"></line>
+              </svg>
+            </div>
+            <h3>GPU Multi-Shell Terminals</h3>
+            <p>Spawn concurrent terminal processes for PowerShell, CMD, Git Bash, or WSL. Features GPU canvas rendering for zero latency and smart paste warnings.</p>
+            <ul class="feature-bullets">
+              <li><div class="feature-bullet-dot"></div> GPU @xterm/addon-canvas rendering</li>
+              <li><div class="feature-bullet-dot"></div> Windows WinPTY title resolution polling</li>
+              <li><div class="feature-bullet-dot"></div> Recursive process tree teardown</li>
+            </ul>
+          </div>
+
+          <!-- Git Worktrees -->
+          <div class="glass-panel feature-card">
+            <div class="feature-icon-wrapper amber">
+              <!-- Git Branch Icon -->
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="6" y1="3" x2="6" y2="15"></line>
+                <circle cx="18" cy="6" r="3"></circle>
+                <circle cx="6" cy="18" r="3"></circle>
+                <path d="M18 9a9 9 0 0 1-9 9"></path>
+              </svg>
+            </div>
+            <h3>Visual Git Worktrees</h3>
+            <p>Adopt isolated branch directories without the CLI friction. Instantly flag modified or untracked changes with amber indicators.</p>
+            <ul class="feature-bullets">
+              <li><div class="feature-bullet-dot"></div> Real-time dirty branch indexing</li>
+              <li><div class="feature-bullet-dot"></div> Dirty-first auto-sorting in sidebar</li>
+              <li><div class="feature-bullet-dot"></div> Interactive branch sync layouts</li>
+            </ul>
+          </div>
+
+          <!-- Cloudflare Tunneling -->
+          <div class="glass-panel feature-card">
+            <div class="feature-icon-wrapper green">
+              <!-- Shield / Share Icon -->
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+            </div>
+            <h3>Cloudflare Share Tunnel</h3>
+            <p>Expose your local development dashboard securely. Built-in Access Control Loggers (ACL) allow you to block specific IPs and control connections.</p>
+            <ul class="feature-bullets">
+              <li><div class="feature-bullet-dot"></div> One-click workspace URL creation</li>
+              <li><div class="feature-bullet-dot"></div> Secure WebSocket authorization gates</li>
+              <li><div class="feature-bullet-dot"></div> Real-time incoming request loggers</li>
+            </ul>
+          </div>
+
+          <!-- Tauri Native Desktop Wrapper -->
+          <div class="glass-panel feature-card">
+            <div class="feature-icon-wrapper">
+              <!-- Window / Box Icon -->
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="9" y1="21" x2="9" y2="9"></line>
+              </svg>
+            </div>
+            <h3>Tauri v2 Native Wrappers</h3>
+            <p>Lightweight Rust wrapper optimizing resources. Experience native system tray controls, close-to-tray states, and async multi-display stability.</p>
+            <ul class="feature-bullets">
+              <li><div class="feature-bullet-dot"></div> RAM footprint under 100MB</li>
+              <li><div class="feature-bullet-dot"></div> Glassmorphic detached window tabs</li>
+              <li><div class="feature-bullet-dot"></div> Single Instance lock & diagnostics</li>
+            </ul>
+          </div>
+
+          <!-- Checkpoints -->
+          <div class="glass-panel feature-card">
+            <div class="feature-icon-wrapper amber">
+              <!-- Camera/Snapshot Icon -->
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+            </div>
+            <h3>Zero-Stash Checkpoints</h3>
+            <p>Take instant snapshots of changes and untracked files under Git-isolated refs (`refs/tline/checkpoints/*`) without polluting your git stash.</p>
+            <ul class="feature-bullets">
+              <li><div class="feature-bullet-dot"></div> Snapshot stage comparisons</li>
+              <li><div class="feature-bullet-dot"></div> Monaco side-by-side diff viewers</li>
+              <li><div class="feature-bullet-dot"></div> Safe local-first working states</li>
+            </ul>
+          </div>
+
+          <!-- SSH Mounts -->
+          <div class="glass-panel feature-card">
+            <div class="feature-icon-wrapper green">
+              <!-- Server / Globe Icon -->
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                <line x1="6" y1="18" x2="6.01" y2="18"></line>
+              </svg>
+            </div>
+            <h3>SFTP Remote Mounts</h3>
+            <p>Work on remote servers using standard openSSH engines. Sync checkpoints, list files, and spawn remote terminals automatically inside the panel.</p>
+            <ul class="feature-bullets">
+              <li><div class="feature-bullet-dot"></div> Standard ssh:// protocol mount links</li>
+              <li><div class="feature-bullet-dot"></div> Integrated remote ssh -t terminal shells</li>
+              <li><div class="feature-bullet-dot"></div> Remote git checkpoint integrations</li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Simulator Section -->
+    <section id="simulator" class="interactive-section">
+      <div class="container">
+        <div class="section-header">
+          <h2>Interactive Console Simulator</h2>
+          <p>Click on the dashboard categories below to simulate how t-line manages your environments in real-time.</p>
+        </div>
+        
+        <div class="interactive-layout">
+          <div class="simulator-controls">
+            
+            <button class="control-btn active" data-category="terminals">
+              <span class="control-btn-num">01</span>
+              <div>
+                <div class="control-btn-title">GPU Terminal Shells</div>
+                <div class="control-btn-desc">Initialize multi-shell processes, hook PTYs, and poll active processes (e.g. vite).</div>
+              </div>
+            </button>
+
+            <button class="control-btn" data-category="worktrees">
+              <span class="control-btn-num">02</span>
+              <div>
+                <div class="control-btn-title">Git Worktree Syncing</div>
+                <div class="control-btn-desc">List workspaces, run dirty index monitoring, and view sorting weights.</div>
+              </div>
+            </button>
+
+            <button class="control-btn" data-category="tunnels">
+              <span class="control-btn-num">03</span>
+              <div>
+                <div class="control-btn-title">Cloudflare Share Tunnel</div>
+                <div class="control-btn-desc">Spawn tunnels instantly and view the dynamic IP Access Control List (ACL).</div>
+              </div>
+            </button>
+
+            <button class="control-btn" data-category="tauri">
+              <span class="control-btn-num">04</span>
+              <div>
+                <div class="control-btn-title">Tauri v2 Desktop Wrap</div>
+                <div class="control-btn-desc">Perform boot diagnostics, single-instance checks, and monitor RAM usage.</div>
+              </div>
+            </button>
+
+          </div>
+          
+          <div>
+            <!-- Mock Console Dashboard -->
+            <div class="mock-app">
+              <div class="mock-titlebar">
+                <div class="mock-window-buttons">
+                  <div class="mock-btn-dot red"></div>
+                  <div class="mock-btn-dot yellow"></div>
+                  <div class="mock-btn-dot green"></div>
+                </div>
+                <div class="mock-window-title">
+                  <span class="logo-dot" style="width:6px; height:6px;"></span>
+                  t-line console monitor (v2.0.0)
+                </div>
+                <div style="width: 40px"></div>
+              </div>
+              
+              <div class="mock-tabs">
+                <div class="mock-tab active">
+                  <span>>_</span> terminal_pty
+                </div>
+                <div class="mock-tab">
+                  <span>🌿</span> worktree_manager
+                </div>
+                <div class="mock-tab">
+                  <span>🛡️</span> acl_tunnels
+                </div>
+              </div>
+              
+              <div class="mock-content" id="simulator-content">
+                <!-- Content gets injected by app.js -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Technology Stack Specifications -->
+    <section id="tech" class="tech-section">
+      <div class="container">
+        <div class="section-header">
+          <h2>Technical Architecture Specs</h2>
+          <p>Built using ultra-fast, robust, and modern developer technologies.</p>
+        </div>
+        
+        <div class="tech-grid">
+          
+          <div class="glass-panel tech-card">
+            <div class="tech-card-title">Frontend Shell</div>
+            <div class="tech-tags">
+              <span class="tech-tag">React (TS)</span>
+              <span class="tech-tag">Vite</span>
+              <span class="tech-tag">Tailwind CSS v4</span>
+              <span class="tech-tag">Monaco Editor</span>
+              <span class="tech-tag">xterm.js</span>
+            </div>
+          </div>
+
+          <div class="glass-panel tech-card">
+            <div class="tech-card-title">Backend Server</div>
+            <div class="tech-tags">
+              <span class="tech-tag">Node.js</span>
+              <span class="tech-tag">Express</span>
+              <span class="tech-tag">WebSocket (ws)</span>
+              <span class="tech-tag">node-pty</span>
+              <span class="tech-tag">OpenSSH CLI</span>
+            </div>
+          </div>
+
+          <div class="glass-panel tech-card">
+            <div class="tech-card-title">Desktop Wrapper</div>
+            <div class="tech-tags">
+              <span class="tech-tag">Tauri v2</span>
+              <span class="tech-tag">Rust</span>
+              <span class="tech-tag">Tokio Async</span>
+              <span class="tech-tag">Single Instance</span>
+              <span class="tech-tag">Tray Plugin</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Installation & Quick Start -->
+    <section id="installation" class="install-section">
+      <div class="container">
+        <div class="section-header">
+          <h2>Get Started with t-line</h2>
+          <p>Follow these quick commands to spin up the developer dashboard on your local machine.</p>
+        </div>
+        
+        <div class="install-tabs-nav">
+          <button class="install-tab-btn active" data-target="panel-run">1. Local Dev Run</button>
+          <button class="install-tab-btn" data-target="panel-tauri">2. Desktop Tauri Run</button>
+          <button class="install-tab-btn" data-target="panel-build">3. Build Installer</button>
+        </div>
+        
+        <!-- Tab 1: Local Run -->
+        <div class="install-content-panel active" id="panel-run">
+          <div class="code-container">
+            <button class="code-copy-btn">Copy</button>
+            <pre><code># Install dependencies
+npm install
+
+# Run backend & frontend concurrently in dev mode
+npm run dev</code></pre>
+          </div>
+          <div class="install-steps">
+            <div class="install-step">
+              <div class="install-step-num">1</div>
+              <div>Installs the workspace dependencies, setting up both Node packages and terminal configurations.</div>
+            </div>
+            <div class="install-step">
+              <div class="install-step-num">2</div>
+              <div>Spawns the Express backend (Port 3999) and Vite server with hot module replacement, running concurrently.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Tauri Desktop Run -->
+        <div class="install-content-panel" id="panel-tauri">
+          <div class="code-container">
+            <button class="code-copy-btn">Copy</button>
+            <pre><code># Launch Tauri native client
+npm run tauri</code></pre>
+          </div>
+          <div class="install-steps">
+            <div class="install-step">
+              <div class="install-step-num">1</div>
+              <div>Compiles and loads the Rust native Tauri wrapper desktop application wrapper.</div>
+            </div>
+            <div class="install-step">
+              <div class="install-step-num">2</div>
+              <div>Locks system port 5779, registers tray menus, and connects Tauri's Webview container to the express PTY backend.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Build Tauri exe -->
+        <div class="install-content-panel" id="panel-build">
+          <div class="code-container">
+            <button class="code-copy-btn">Copy</button>
+            <pre><code># Package Tauri standalone client
+npm run build:tauri</code></pre>
+          </div>
+          <div class="install-steps">
+            <div class="install-step">
+              <div class="install-step-num">1</div>
+              <div>Builds production assets for the React UI client and optimizes CSS bundles.</div>
+            </div>
+            <div class="install-step">
+              <div class="install-step-num">2</div>
+              <div>Bundles all binaries, PTY dependencies, and icons into a single-file desktop executable installer.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container footer-layout">
+      <div>
+        <p>&copy; 2026 t-line. Built for developers by <a href="mailto:hrudy715@gmail.com" class="footer-link">Rudy H.</a></p>
+      </div>
+      <ul class="footer-links">
+        <li><a href="https://github.com/RudyCity/t-line" class="footer-link" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://github.com/RudyCity/t-line/blob/main/LICENSE" class="footer-link" target="_blank" rel="noopener">MIT License</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <!-- JS Code -->
+  <script src="app.js"></script>
+</body>
+</html>
