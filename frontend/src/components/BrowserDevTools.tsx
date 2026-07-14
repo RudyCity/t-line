@@ -74,7 +74,7 @@ export default function BrowserDevTools({
   return (
     <div 
       style={{ height: isDevtoolsCollapsed ? '38px' : `${devtoolsHeight}px` }}
-      className={`border-t border-[var(--border-color)] bg-[var(--bg-card)] flex flex-col shrink-0 relative ${isResizing ? '' : 'transition-[height] duration-200'}`}
+      className={`border-t border-[var(--border-color)] bg-[var(--bg-card)] flex flex-col shrink-0 relative z-10 ${isResizing ? '' : 'transition-[height] duration-200'}`}
     >
       {/* Resize Handle */}
       {!isDevtoolsCollapsed && (

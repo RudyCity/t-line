@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.414] - 2026-07-14
+
+### Fixed
+- **Native Webview Covers DevTools on Expand**:
+  - Root cause: Tauri native webview is an OS-level overlay. When DevTools expands, DOM layout shrinks but native webview bounds stay full-height, covering Console/Inspector.
+  - Added `syncWebviewBounds()` + `ResizeObserver` (with mount-retry) so container size changes force `setPosition`/`setSize` on the native webview.
+  - Force bounds resync on `devtoolsHeight` / `isDevtoolsCollapsed` change (double-rAF + 220ms timeout after CSS transition).
+  - Viewport area uses `min-h-0 overflow-hidden`; webview/iframe containers use `absolute inset-0` so they always match the flex-shrunk parent rect.
+  - DevTools drawer gets `z-10` so DOM panel stacks above the placeholder region.
+
 ## [1.3.413] - 2026-07-14
 
 ### Fixed

@@ -54,26 +54,69 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     }
   }, [tab.url]);
 
-  // Listen for window resize to adjust Tauri Webview bounding client rect
+  // Sync native Tauri webview bounds to containerRef rect
+  const syncWebviewBounds = async () => {
+    const container = containerRef.current;
+    const webview = tauriWebviewRef.current;
+    if (!container || !webview || !isActiveRef.current) return;
+    try {
+      const { LogicalPosition, LogicalSize } = await import('@tauri-apps/api/dpi');
+      const r = container.getBoundingClientRect();
+      if (r.width < 1 || r.height < 1) return;
+      await webview.setPosition(new LogicalPosition(r.left, r.top)).catch(() => {});
+      await webview.setSize(new LogicalSize(r.width, r.height)).catch(() => {});
+    } catch (_) {}
+  };
+
+  // Window resize + ResizeObserver: keep native webview glued to container
   useEffect(() => {
-    if (!useTauriWebview) return;
+    if (!useTauriWebview || renderMode !== 'tauri-native') return;
 
-    const handleWindowResize = async () => {
-      const container = containerRef.current;
-      const webview = tauriWebviewRef.current;
-      if (container && webview && isActiveRef.current) {
-        try {
-          const { LogicalPosition, LogicalSize } = await import('@tauri-apps/api/dpi');
-          const r = container.getBoundingClientRect();
-          await webview.setPosition(new LogicalPosition(r.left, r.top)).catch(() => {});
-          await webview.setSize(new LogicalSize(r.width, r.height)).catch(() => {});
-        } catch (_) {}
-      }
-    };
-
+    const handleWindowResize = () => { void syncWebviewBounds(); };
     window.addEventListener('resize', handleWindowResize);
-    return () => window.removeEventListener('resize', handleWindowResize);
-  }, [useTauriWebview, activeUrl]);
+
+    let ro: ResizeObserver | null = null;
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const attachObserver = () => {
+      if (cancelled || typeof ResizeObserver === 'undefined') return;
+      const container = containerRef.current;
+      if (!container) {
+        // Container not mounted yet — retry shortly
+        retryTimer = setTimeout(attachObserver, 50);
+        return;
+      }
+      if (ro) ro.disconnect();
+      ro = new ResizeObserver(() => { void syncWebviewBounds(); });
+      ro.observe(container);
+      void syncWebviewBounds();
+    };
+    attachObserver();
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('resize', handleWindowResize);
+      if (retryTimer) clearTimeout(retryTimer);
+      if (ro) ro.disconnect();
+    };
+  }, [useTauriWebview, activeUrl, renderMode, isActive]);
+
+  // Force bounds resync when DevTools height/collapse changes
+  // Native webview is OS overlay — covers DevTools unless bounds shrink
+  useEffect(() => {
+    if (!useTauriWebview || renderMode !== 'tauri-native') return;
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => { void syncWebviewBounds(); });
+    });
+    const t = setTimeout(() => { void syncWebviewBounds(); }, 220);
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      clearTimeout(t);
+    };
+  }, [devtoolsHeight, isDevtoolsCollapsed, useTauriWebview, renderMode]);
 
   // Lifecycle of native Webview overlay in Tauri environment
   useEffect(() => {
@@ -606,33 +649,32 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
         )}
       </div>
 
-      {/* Main Browser Viewport Area */}
-      <div className="flex-1 bg-[var(--bg-main)] relative min-h-0 flex flex-col">
+      {/* Main Browser Viewport Area — min-h-0 so DevTools can claim space */}
+      <div className="flex-1 bg-[var(--bg-main)] relative min-h-0 overflow-hidden">
         {renderMode === 'electron-webview' ? (
           <webview 
             key={iframeKey}
             ref={setWebviewEl}
             src={activeUrl}
-            className={`w-full flex-1 border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
+            className={`absolute inset-0 w-full h-full border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
             style={{ width: '100%', height: '100%', border: 'none' }}
             allowpopups={true}
           />
         ) : renderMode === 'tauri-native' ? (
           <div 
             ref={containerRef} 
-            className={`w-full flex-1 bg-white ${isResizing ? 'pointer-events-none' : ''}`}
-            style={{ width: '100%', height: '100%' }}
+            className={`absolute inset-0 w-full h-full bg-white ${isResizing ? 'pointer-events-none' : ''}`}
           />
         ) : renderMode === 'iframe-local' ? (
           <iframe 
             key={iframeKey}
             ref={iframeRef}
             src={activeUrl} 
-            className={`w-full flex-1 border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
+            className={`absolute inset-0 w-full h-full border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
             title="App Preview"
           />
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8 text-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 p-8 text-center">
             <div className="flex flex-col items-center gap-3">
               <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
                 <Globe size={28} className="text-purple-400" />
