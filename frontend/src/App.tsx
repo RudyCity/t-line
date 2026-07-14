@@ -1474,6 +1474,9 @@ export default function App() {
               onUpdateTabName={(newName) => {
                 setTabs(prev => prev.map(t => t.id === detachedTab.id ? { ...t, name: newName } : t));
               }}
+              onUpdateTabUrl={(newUrl) => {
+                setTabs(prev => prev.map(t => t.id === detachedTab.id ? { ...t, url: newUrl } : t));
+              }}
             />
           )}
           {detachedTab.type === 'file' && (
@@ -2189,6 +2192,9 @@ export default function App() {
                   isActive={tab.id === activeTabId}
                   onUpdateTabName={(newName) => {
                     setTabs(prev => prev.map(t => t.id === tab.id ? { ...t, name: newName } : t));
+                  }}
+                  onUpdateTabUrl={(newUrl) => {
+                    setTabs(prev => prev.map(t => t.id === tab.id ? { ...t, url: newUrl } : t));
                   }}
                 />
               ))}

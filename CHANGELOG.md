@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.436] - 2026-07-14
+
+### Fixed
+- **Browser Tab URL Persistence**:
+  - Implemented the `onUpdateTabUrl` callback on the `<BrowserTab>` component and propagated URL changes from WebSocket (`tline-url-changed`), Tauri, and Electron navigation events back to the parent tabs list.
+  - Ensured `activeUrl` in `BrowserTab.tsx`'s local state is kept in sync with in-page navigation so it can be restored on tab reactivation.
+  - Refactored `BrowserTab.tsx` by moving `getCleanUrl` and `openInSystemBrowser` helper functions to `browserUrlUtils.ts`, keeping `BrowserTab.tsx` under the strict 1000-line repository limit.
+
 ## [1.3.435] - 2026-07-14
 
 ### Fixed

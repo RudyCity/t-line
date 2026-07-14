@@ -3,15 +3,16 @@ import { Globe, RotateCw, ExternalLink, MousePointer, ArrowLeft, ArrowRight } fr
 import { TabData } from '../hooks/useTerminals';
 import { wsManager } from '../services/websocket';
 import BrowserDevTools, { ConsoleErrorLog, InspectedElement } from './BrowserDevTools';
-import { determineRenderMode } from './browserUrlUtils';
+import { determineRenderMode, getCleanUrl, openInSystemBrowser } from './browserUrlUtils';
 
 interface BrowserTabProps {
   tab: TabData;
   isActive: boolean;
   onUpdateTabName?: (newName: string) => void;
+  onUpdateTabUrl?: (newUrl: string) => void;
 }
 
-export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTabProps) {
+export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTabUrl }: BrowserTabProps) {
   const [urlInput, setUrlInput] = useState(tab.url || '');
   const [activeUrl, setActiveUrl] = useState(tab.url || '');
   const [activeSubTab, setActiveSubTab] = useState<'console' | 'inspector'>('console');
@@ -97,24 +98,6 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
       setWebviewActive(false);
     }
   }, [isActive, tab.id]);
-
-  const getCleanUrl = (url: string): string => {
-    try {
-      const parsed = new URL(url);
-      if (parsed.pathname.startsWith('/api/preview-proxy')) {
-        const target = parsed.searchParams.get('target');
-        if (target) {
-          const cleanPath = parsed.pathname.substring('/api/preview-proxy'.length) || '/';
-          const newParams = new URLSearchParams(parsed.searchParams);
-          newParams.delete('target');
-          newParams.delete('tabId');
-          const searchStr = newParams.toString() ? '?' + newParams.toString() : '';
-          return new URL(cleanPath + searchStr + parsed.hash, target).href;
-        }
-      }
-    } catch (_) {}
-    return url;
-  };
 
   // Synchronize dynamic name changes for tab component
   useEffect(() => {
@@ -362,7 +345,10 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
 
     const handleElectronNavigate = (e: any) => {
       if (e.url) {
-        setUrlInput(getCleanUrl(e.url));
+        const cleanUrl = getCleanUrl(e.url);
+        setUrlInput(cleanUrl);
+        setActiveUrl(cleanUrl);
+        onUpdateTabUrl?.(cleanUrl);
       }
     };
 
@@ -428,7 +414,10 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
           }
         }
         if (eventType === 'tline-url-changed' && eventPayload?.url) {
-          setUrlInput(getCleanUrl(eventPayload.url));
+          const cleanUrl = getCleanUrl(eventPayload.url);
+          setUrlInput(cleanUrl);
+          setActiveUrl(cleanUrl);
+          onUpdateTabUrl?.(cleanUrl);
           if (onUpdateTabName) {
             try {
               const hostname = new URL(eventPayload.url).hostname;
@@ -492,7 +481,10 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
           setLogs(prev => [newLog, ...prev].slice(0, 100));
         }
         if (eventType === 'tline-url-changed' && eventPayload?.url) {
-          setUrlInput(getCleanUrl(eventPayload.url));
+          const cleanUrl = getCleanUrl(eventPayload.url);
+          setUrlInput(cleanUrl);
+          setActiveUrl(cleanUrl);
+          onUpdateTabUrl?.(cleanUrl);
           if (onUpdateTabName) {
             try {
               const hostname = new URL(eventPayload.url).hostname;
@@ -726,6 +718,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     }
     setUrlInput(target);
     setActiveUrl(target);
+    onUpdateTabUrl?.(target);
     startLoadingBar();
     // For tauri-native we can't listen to load events, so auto-finish
     if (renderMode === 'tauri-native') {
@@ -733,43 +726,6 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName }: BrowserTa
     }
   };
 
-  const openInSystemBrowser = (url: string) => {
-    if (!url) return;
-
-    let absoluteUrl = url;
-    try {
-      absoluteUrl = new URL(url, window.location.href).href;
-    } catch (e) {
-      console.warn('[BrowserTab] Failed to resolve URL for system browser:', e);
-    }
-
-    const token = localStorage.getItem('token') || '';
-    fetch('/api/browser/open', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ url: absoluteUrl })
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(errText || `Status ${res.status}`);
-        }
-      })
-      .catch((e) => {
-        console.error('[BrowserTab] Failed to open url via backend API, falling back:', e);
-        if (isTauri && (window as any).__TAURI__?.core?.invoke) {
-          (window as any).__TAURI__.core.invoke('open_in_browser', { url: absoluteUrl }).catch((e2: any) => {
-            console.error('[BrowserTab] Failed to open url in system browser via Tauri:', e2);
-            window.open(absoluteUrl, '_blank');
-          });
-        } else {
-          window.open(absoluteUrl, '_blank');
-        }
-      });
-  };
 
   const getHelperStatusColorClass = () => {
     if (renderMode === 'tauri-native' || renderMode === 'electron-webview') {
