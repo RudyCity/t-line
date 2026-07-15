@@ -2036,7 +2036,7 @@ export default function App() {
           {filteredTabs.length > 0 && (
             <>
               <div className="content-tabs-bar flex items-center justify-between desktop-only">
-                <div className="chrome-tabs-container mx-3" style={{ WebkitAppRegion: 'no-drag' } as any}>
+                <div className="chrome-tabs-container mx-3" style={{ WebkitAppRegion: 'no-drag' } as any} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}>
                   {panelWorktreePath !== null && (() => {
                     const activeWt = panelWorkspace?.worktrees?.find(wt => wt.path === panelWorktreePath);
                     const branchName = activeWt?.branch || 'worktree';
