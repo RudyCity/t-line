@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Globe, RotateCw, ExternalLink, MousePointer, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Globe, RotateCw, ExternalLink, MousePointer, ArrowLeft, ArrowRight, Monitor, Tablet, Smartphone } from 'lucide-react';
 import { TabData } from '../hooks/useTerminals';
-import { wsManager } from '../services/websocket';
 import BrowserDevTools, { ConsoleErrorLog, InspectedElement } from './BrowserDevTools';
 import { determineRenderMode, getCleanUrl, openInSystemBrowser } from './browserUrlUtils';
+import { useBrowserListeners } from '../hooks/useBrowserListeners';
 
 interface BrowserTabProps {
   tab: TabData;
@@ -23,6 +23,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isInspecting, setIsInspecting] = useState(false);
   const [helperReady, setHelperReady] = useState(false);
+  const [deviceMode, setDeviceMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
 
   const isElectron = typeof window !== 'undefined' && window.process?.versions?.electron !== undefined;
   const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__ !== undefined;
@@ -170,7 +171,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       cancelAnimationFrame(raf2);
       clearTimeout(t);
     };
-  }, [devtoolsHeight, isDevtoolsCollapsed, useTauriWebview, renderMode]);
+  }, [devtoolsHeight, isDevtoolsCollapsed, useTauriWebview, renderMode, deviceMode]);
 
   // Lifecycle of native Webview overlay in Tauri environment.
   // Re-runs whenever webviewActive toggles: creates on true, cleans up on false/unmount.
@@ -362,184 +363,22 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     };
   }, [useElectronWebview, iframeKey, webviewEl, renderMode]);
 
-  // Listen to postMessage from the iframe (local mode fallback)
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (!event.data || typeof event.data !== 'object') return;
-      const { type, payload } = event.data;
-      if (type === 'tline-ready') {
-        setHelperReady(true);
-        if (iframeRef.current?.contentWindow) {
-          iframeRef.current.contentWindow.postMessage({ type: 'tline-ack-ready' }, '*');
-        }
-      }
-      if (type === 'tline-error') {
-        const newLog: ConsoleErrorLog = {
-          id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          timestamp: new Date().toLocaleTimeString(),
-          message: payload.message,
-          filename: payload.filename || 'unknown',
-          lineno: payload.lineno || 0,
-          colno: payload.colno || 0,
-          stack: payload.stack || null
-        };
-        setLogs(prev => [newLog, ...prev].slice(0, 100));
-      }
-      if (type === 'tline-element-selected') {
-        setInspectedElement(payload);
-        setIsInspecting(false);
-        setActiveSubTab('inspector');
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
-
-  // Listen to WebSocket preview events from native Webview
-  useEffect(() => {
-    const handleWsMessage = (payload: any) => {
-      if (payload.type === 'tline-preview-event' && payload.tabId === tab.id) {
-        const { eventType, payload: eventPayload } = payload;
-        if (eventType === 'tline-ready') {
-          setHelperReady(true);
-          if (useTauriWebview && tauriWebviewRef.current && (window as any).__TAURI__?.core?.invoke) {
-            const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
-            if (activeLabel) {
-              (window as any).__TAURI__.core.invoke('eval_webview_js', {
-                label: activeLabel,
-                js: 'window.postMessage({ type: "tline-ack-ready" }, "*")'
-              }).catch(() => {});
-            }
-          }
-        }
-        if (eventType === 'tline-url-changed' && eventPayload?.url) {
-          const cleanUrl = getCleanUrl(eventPayload.url);
-          setUrlInput(cleanUrl);
-          setActiveUrl(cleanUrl);
-          onUpdateTabUrl?.(cleanUrl);
-          if (onUpdateTabName) {
-            try {
-              const hostname = new URL(eventPayload.url).hostname;
-              onUpdateTabName(`Preview: ${hostname}`);
-            } catch (_) {}
-          }
-        }
-        if (eventType === 'tline-error') {
-          const newLog: ConsoleErrorLog = {
-            id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-            timestamp: new Date().toLocaleTimeString(),
-            message: eventPayload.message,
-            filename: eventPayload.filename || 'unknown',
-            lineno: eventPayload.lineno || 0,
-            colno: eventPayload.colno || 0,
-            stack: eventPayload.stack || null
-          };
-          setLogs(prev => [newLog, ...prev].slice(0, 100));
-        }
-        if (eventType === 'tline-element-selected') {
-          setInspectedElement(eventPayload);
-          setIsInspecting(false);
-          setActiveSubTab('inspector');
-        }
-      }
-    };
-
-    wsManager.addGlobalMessageListener(handleWsMessage);
-    return () => {
-      wsManager.removeGlobalMessageListener(handleWsMessage);
-    };
-  }, [useTauriWebview, tab.id, onUpdateTabName]);
-
-  // Listen to Tauri event bus for events emitted directly from native webview
-  useEffect(() => {
-    if (!useTauriWebview || !(window as any).__TAURI__?.event) return;
-
-    let isMounted = true;
-    let unlistenTauriEvent: (() => void) | null = null;
-    import('@tauri-apps/api/event').then(({ listen }) => {
-      if (!isMounted) return;
-      listen<{ type: string; payload: any; tabId: string | null }>('tline-webview-event', (event) => {
-        if (!isMounted) return;
-        const { type: eventType, payload: eventPayload, tabId: eventTabId } = event.payload;
-        if (eventTabId !== tab.id) return;
-        if (eventType === 'tline-element-selected') {
-          setInspectedElement(eventPayload);
-          setIsInspecting(false);
-          setActiveSubTab('inspector');
-        }
-        if (eventType === 'tline-error') {
-          const newLog: ConsoleErrorLog = {
-            id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-            timestamp: new Date().toLocaleTimeString(),
-            message: eventPayload.message,
-            filename: eventPayload.filename || 'unknown',
-            lineno: eventPayload.lineno || 0,
-            colno: eventPayload.colno || 0,
-            stack: eventPayload.stack || null
-          };
-          setLogs(prev => [newLog, ...prev].slice(0, 100));
-        }
-        if (eventType === 'tline-url-changed' && eventPayload?.url) {
-          const cleanUrl = getCleanUrl(eventPayload.url);
-          setUrlInput(cleanUrl);
-          setActiveUrl(cleanUrl);
-          onUpdateTabUrl?.(cleanUrl);
-          if (onUpdateTabName) {
-            try {
-              const hostname = new URL(eventPayload.url).hostname;
-              onUpdateTabName(`Preview: ${hostname}`);
-            } catch (_) {}
-          }
-        }
-        if (eventType === 'tline-ready') {
-          setHelperReady(true);
-          if (tauriWebviewRef.current && (window as any).__TAURI__?.core?.invoke) {
-            const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
-            if (activeLabel) {
-              (window as any).__TAURI__.core.invoke('eval_webview_js', {
-                label: activeLabel,
-                js: 'window.postMessage({ type: "tline-ack-ready" }, "*")'
-              }).catch(() => {});
-            }
-          }
-        }
-      }).then(unlisten => {
-        if (!isMounted) {
-          try {
-            const res = unlisten();
-            if ((res as any) instanceof Promise) {
-              (res as any).catch(() => {});
-            }
-          } catch (_) {}
-          return;
-        }
-        unlistenTauriEvent = unlisten;
-      }).catch(() => {});
-    }).catch(() => {});
-
-    return () => {
-      isMounted = false;
-      if (unlistenTauriEvent) {
-        try {
-          const res = unlistenTauriEvent();
-          if ((res as any) instanceof Promise) {
-            (res as any).catch((err: any) => {
-              const errMsg = String(err);
-              if (!errMsg.includes('handlerId')) {
-                console.warn('[BrowserTab] Error in unlisten promise:', err);
-              }
-            });
-          }
-        } catch (e) {
-          const errMsg = String(e);
-          if (!errMsg.includes('handlerId')) {
-            console.warn('[BrowserTab] Error calling unlisten:', e);
-          }
-        }
-      }
-    };
-  }, [useTauriWebview, tab.id, onUpdateTabName]);
+  // Listen to iframe, WebSocket preview events, and Tauri event bus
+  useBrowserListeners({
+    tab,
+    useTauriWebview,
+    tauriWebviewRef,
+    iframeRef,
+    setHelperReady,
+    setUrlInput,
+    setActiveUrl,
+    onUpdateTabUrl,
+    onUpdateTabName,
+    setLogs,
+    setInspectedElement,
+    setIsInspecting,
+    setActiveSubTab,
+  });
 
   // Drag handler to resize DevTools drawer
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -824,6 +663,49 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
           <RotateCw size={15} className={isLoading ? 'animate-spin' : ''} />
         </button>
 
+        <div className="h-4 w-px bg-[var(--border-color)] mx-1" />
+
+        <div className="flex items-center bg-[var(--bg-main)] border border-[var(--border-color)] rounded-lg p-0.5">
+          <button
+            type="button"
+            onClick={() => setDeviceMode('desktop')}
+            className={`p-1 rounded transition-all cursor-pointer ${
+              deviceMode === 'desktop'
+                ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-main)] border border-transparent hover:bg-[var(--bg-card-hover)]'
+            }`}
+            title="Desktop View"
+          >
+            <Monitor size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setDeviceMode('tablet')}
+            className={`p-1 rounded transition-all cursor-pointer ${
+              deviceMode === 'tablet'
+                ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-main)] border border-transparent hover:bg-[var(--bg-card-hover)]'
+            }`}
+            title="Tablet View"
+          >
+            <Tablet size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setDeviceMode('mobile')}
+            className={`p-1 rounded transition-all cursor-pointer ${
+              deviceMode === 'mobile'
+                ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-main)] border border-transparent hover:bg-[var(--bg-card-hover)]'
+            }`}
+            title="Mobile View"
+          >
+            <Smartphone size={14} />
+          </button>
+        </div>
+
+        <div className="h-4 w-px bg-[var(--border-color)] mx-1" />
+
         <form onSubmit={handleNavigate} className="flex-1 flex gap-2">
           <input 
             type="text"
@@ -866,81 +748,111 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       </div>
 
       {/* Main Browser Viewport Area — min-h-0 so DevTools can claim space */}
-      <div className="flex-1 bg-[var(--bg-main)] relative min-h-0 overflow-hidden">
-        {/* Loading progress bar */}
-        {isLoading && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: `${loadProgress}%`,
-              height: '2px',
-              background: 'linear-gradient(90deg, #a855f7, #818cf8)',
-              boxShadow: '0 0 8px rgba(168,85,247,0.7)',
-              transition: loadProgress === 100 ? 'width 0.25s ease-out' : 'width 0.1s linear',
-              zIndex: 50,
-              borderRadius: '0 2px 2px 0',
-            }}
-          />
-        )}
-
-        {renderMode === 'electron-webview' ? (
-          <webview 
-            key={iframeKey}
-            ref={(el: any) => {
-              setWebviewEl(el);
-              if (el) {
-                el.addEventListener('did-start-loading', startLoadingBar);
-                el.addEventListener('did-stop-loading', finishLoadingBar);
-              }
-            }}
-            src={activeUrl}
-            className={`absolute inset-0 w-full h-full border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
-            style={{ width: '100%', height: '100%', border: 'none' }}
-            allowpopups={true}
-          />
-        ) : renderMode === 'tauri-native' ? (
-          <div 
-            ref={containerRef} 
-            className={`absolute inset-0 w-full h-full bg-white ${isResizing ? 'pointer-events-none' : ''}`}
-          />
-        ) : renderMode === 'iframe-local' ? (
-          <iframe 
-            key={iframeKey}
-            ref={iframeRef}
-            src={activeUrl} 
-            className={`absolute inset-0 w-full h-full border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
-            title="App Preview"
-            onLoad={finishLoadingBar}
-          />
-        ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 p-8 text-center">
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-                <Globe size={28} className="text-purple-400" />
-              </div>
-              <h2 className="text-[var(--text-main)] font-semibold text-lg">External Website</h2>
-              <p className="text-[var(--text-muted)] text-sm max-w-sm leading-relaxed">
-                External websites require a native environment shell to be displayed inline.
-                <br /><br />
-                To display this page, launch the desktop app or open it in your system browser.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3 w-full max-w-sm">
-              <button
-                onClick={() => openInSystemBrowser(activeUrl)}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-md cursor-pointer"
-              >
-                <ExternalLink size={15} />
-                Open in System Browser
-              </button>
-            </div>
-            <div className="text-[10px] text-[var(--text-muted)] font-mono bg-[var(--bg-card)] border border-[var(--border-color)] px-3 py-2 rounded-md max-w-sm break-all">
-              {activeUrl}
-            </div>
+      <div className="flex-1 bg-[var(--bg-main)] relative min-h-0 overflow-hidden flex flex-col">
+        {/* Device Mode Resolution Label overlay */}
+        {deviceMode !== 'desktop' && (
+          <div className="flex items-center justify-between px-4 py-1.5 bg-[var(--bg-card)] border-b border-[var(--border-color)] text-xs text-[var(--text-muted)] select-none shrink-0">
+            <span className="font-semibold capitalize text-purple-400">
+              {deviceMode} View
+            </span>
+            <span className="font-mono bg-[var(--bg-main)] px-2 py-0.5 rounded border border-[var(--border-color)]">
+              {deviceMode === 'mobile' ? '375 x 812' : '768 x 1024'} px
+            </span>
           </div>
         )}
+
+        <div className={`flex-1 min-h-0 overflow-auto ${deviceMode !== 'desktop' ? 'flex justify-center items-start p-6 bg-[var(--bg-main)]' : 'relative'}`}>
+          <div
+            className={
+              deviceMode === 'desktop'
+                ? 'absolute inset-0 w-full h-full border-none bg-white'
+                : deviceMode === 'tablet'
+                ? 'relative w-[768px] h-[1024px] max-w-full max-h-full border-[12px] border-[#1e1e24] rounded-[24px] shadow-2xl bg-white flex flex-col transition-all duration-300'
+                : 'relative w-[375px] h-[812px] max-w-full max-h-full border-[12px] border-[#1e1e24] rounded-[36px] shadow-2xl bg-white flex flex-col transition-all duration-300'
+            }
+            style={deviceMode !== 'desktop' ? { 
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+            } : undefined}
+          >
+            {/* Actual Inner Viewport Area */}
+            <div className="w-full h-full relative overflow-hidden bg-white rounded-[inherit]">
+              {/* Loading progress bar */}
+              {isLoading && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: `${loadProgress}%`,
+                    height: '2px',
+                    background: 'linear-gradient(90deg, #a855f7, #818cf8)',
+                    boxShadow: '0 0 8px rgba(168,85,247,0.7)',
+                    transition: loadProgress === 100 ? 'width 0.25s ease-out' : 'width 0.1s linear',
+                    zIndex: 50,
+                    borderRadius: '0 2px 2px 0',
+                  }}
+                />
+              )}
+
+              {renderMode === 'electron-webview' ? (
+                <webview 
+                  key={iframeKey}
+                  ref={(el: any) => {
+                    setWebviewEl(el);
+                    if (el) {
+                      el.addEventListener('did-start-loading', startLoadingBar);
+                      el.addEventListener('did-stop-loading', finishLoadingBar);
+                    }
+                  }}
+                  src={activeUrl}
+                  className={`absolute inset-0 w-full h-full border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                  allowpopups={true}
+                />
+              ) : renderMode === 'tauri-native' ? (
+                <div 
+                  ref={containerRef} 
+                  className={`absolute inset-0 w-full h-full bg-white ${isResizing ? 'pointer-events-none' : ''}`}
+                />
+              ) : renderMode === 'iframe-local' ? (
+                <iframe 
+                  key={iframeKey}
+                  ref={iframeRef}
+                  src={activeUrl} 
+                  className={`absolute inset-0 w-full h-full border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
+                  title="App Preview"
+                  onLoad={finishLoadingBar}
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 p-8 text-center bg-[var(--bg-main)]">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                      <Globe size={28} className="text-purple-400" />
+                    </div>
+                    <h2 className="text-[var(--text-main)] font-semibold text-lg">External Website</h2>
+                    <p className="text-[var(--text-muted)] text-sm max-w-sm leading-relaxed">
+                      External websites require a native environment shell to be displayed inline.
+                      <br /><br />
+                      To display this page, launch the desktop app or open it in your system browser.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-3 w-full max-w-sm">
+                    <button
+                      onClick={() => openInSystemBrowser(activeUrl)}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-md cursor-pointer"
+                    >
+                      <ExternalLink size={15} />
+                      Open in System Browser
+                    </button>
+                  </div>
+                  <div className="text-[10px] text-[var(--text-muted)] font-mono bg-[var(--bg-card)] border border-[var(--border-color)] px-3 py-2 rounded-md max-w-sm break-all">
+                    {activeUrl}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* DevTools Drawer (Obsidian Theme style) */}

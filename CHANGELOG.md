@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.452] - 2026-07-15
+
+### Added
+- **Browser Preview: Device Switcher (Mobile, Tablet, Desktop Views)**:
+  - Added new toolbar button controls (`Monitor`, `Tablet`, `Smartphone`) to switch between Desktop, Tablet, and Mobile preview dimensions.
+  - Sized and rendered a premium device frame bezel layout overlay with shadows, centering, and size/resolution info labels when mobile or tablet view mode is selected.
+  - Refactored `BrowserTab.tsx` by extracting raw event listeners to `useBrowserListeners` hook to stay below the strict 1000-line limit per file.
+
 ## [1.3.451] - 2026-07-15
 
 ### Added
