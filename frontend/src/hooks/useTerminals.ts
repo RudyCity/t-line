@@ -375,7 +375,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     }
   }, [workspaces, tabs, terminalInstances, findWorkspaceIdForPath]);
 
-  const openTerminal = useCallback((name: string, cwd: string, shellType?: string, initialCommand?: string) => {
+  const openTerminal = useCallback((name: string, cwd: string, shellType?: string, initialCommand?: string, forceGrid = false) => {
     const tabId = `tab-${Date.now()}`;
     const termId = `term-${Date.now()}`;
     const activeShell = shellType || defaultShell;
@@ -397,7 +397,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
       initialCommand
     };
 
-    // If currently active tab is a grid, append the terminal directly into it
+    // If currently active tab is a grid, append the terminal directly into it (applicable to both)
     const activeTab = tabs.find(t => t.id === activeTabId);
     if (activeTab && activeTab.type === 'grid') {
       setTerminalInstances(prev => ({ ...prev, [termId]: newInstance }));
@@ -414,26 +414,44 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
 
     const wsId = findWorkspaceIdForPath(cwd);
 
-    let gridName = 'Terminal Grid';
-    if (cwd) {
-      const matchedWorkspace = workspaces.find(w => w.path === cwd);
-      if (matchedWorkspace) {
-        gridName = `Grid (${matchedWorkspace.name})`;
+    if (forceGrid) {
+      // Force grid tab creation (default behavior for Quick Launch trigger)
+      let gridName = 'Terminal Grid';
+      if (cwd) {
+        const matchedWorkspace = workspaces.find(w => w.path === cwd);
+        if (matchedWorkspace) {
+          gridName = `Grid (${matchedWorkspace.name})`;
+        }
       }
+
+      const newTab: TabData = {
+        id: tabId,
+        name: gridName,
+        type: 'grid',
+        gridTerminalIds: [termId],
+        workspaceId: wsId
+      };
+
+      setTerminalInstances(prev => ({ ...prev, [termId]: newInstance }));
+      setTabs(prev => [...prev, newTab]);
+      setActiveTabId(tabId);
+      onTerminalOpen?.();
+    } else {
+      // Default: Create a normal fullscreen terminal tab
+      const newTab: TabData = {
+        id: tabId,
+        name: tabName,
+        type: 'terminal',
+        layout: { type: 'leaf', terminalId: termId },
+        focusedTerminalId: termId,
+        workspaceId: wsId
+      };
+
+      setTerminalInstances(prev => ({ ...prev, [termId]: newInstance }));
+      setTabs(prev => [...prev, newTab]);
+      setActiveTabId(tabId);
+      onTerminalOpen?.();
     }
-
-    const newTab: TabData = {
-      id: tabId,
-      name: gridName,
-      type: 'grid',
-      gridTerminalIds: [termId],
-      workspaceId: wsId
-    };
-
-    setTerminalInstances(prev => ({ ...prev, [termId]: newInstance }));
-    setTabs(prev => [...prev, newTab]);
-    setActiveTabId(tabId);
-    onTerminalOpen?.();
   }, [defaultShell, workspaces, onTerminalOpen, findWorkspaceIdForPath, tabs, activeTabId]);
 
   const openFileTab = useCallback((filePath: string, name: string) => {

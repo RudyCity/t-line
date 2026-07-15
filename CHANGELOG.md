@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.450] - 2026-07-15
+
+### Changed
+- **Quick Launch Default Grid vs Regular Terminal Tab**:
+  - Mengubah perilaku default: hanya pembukaan terminal via **Quick Launch** yang akan langsung diarahkan masuk ke tab Grid (`forceGrid = true`). 
+  - Pembukaan terminal baru biasa (seperti tombol `+` di tab bar) akan tetap membuka terminal tunggal fullscreen (`type: 'terminal'`) secara default (kecuali jika saat itu tab aktifnya memang sudah berupa tab grid).
+
 ## [1.3.449] - 2026-07-15
 
 ### Added
