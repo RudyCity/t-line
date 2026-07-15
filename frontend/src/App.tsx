@@ -64,6 +64,24 @@ import { TPlusLogo } from './components/TPlusLogo';
 import { TabTooltip, TabContextMenu } from './components/TabUiComponents';
 import { getRuntimeSearchParams } from './utils/runtimeQuery';
 
+function normalizeLayout(node: any): any {
+  if (!node) return null;
+  if (node.type === 'leaf') {
+    return {
+      type: 'leaf',
+      terminalId: node.terminalId || ''
+    };
+  }
+  return {
+    type: 'split',
+    direction: node.direction || 'horizontal',
+    first: normalizeLayout(node.first),
+    second: normalizeLayout(node.second),
+    firstSize: typeof node.firstSize === 'number' ? Math.round(node.firstSize * 100) / 100 : undefined,
+    secondSize: typeof node.secondSize === 'number' ? Math.round(node.secondSize * 100) / 100 : undefined
+  };
+}
+
 function toCanonicalString(state: any): string {
   if (!state) return '';
   
@@ -77,7 +95,7 @@ function toCanonicalString(state: any): string {
     commitHash: t.commitHash || '',
     worktreePath: t.worktreePath || '',
     compareWithWorktree: !!t.compareWithWorktree,
-    layout: t.layout || null,
+    layout: normalizeLayout(t.layout),
     focusedTerminalId: t.focusedTerminalId || '',
     workspaceId: t.workspaceId || '',
     gridTerminalIds: Array.isArray(t.gridTerminalIds) ? [...t.gridTerminalIds].sort() : [],
@@ -384,7 +402,8 @@ export default function App() {
     importActiveSessions,
     refreshTerminal,
     refreshTriggers,
-    clearInitialCommand
+    clearInitialCommand,
+    updateTabLayout
   } = useTerminals(workspaces, () => setSidebarOpen(false));
 
   // NOTE: These effects depend on activeTabId and tabs from useTerminals above,
@@ -1556,6 +1575,7 @@ export default function App() {
               handleZoomIn={handleZoomIn}
               handleZoomOut={handleZoomOut}
               onRefreshTerminal={refreshTerminal}
+              onLayoutChange={(newLayout) => updateTabLayout(detachedTab.id, newLayout)}
             />
           )}
         </div>
@@ -2291,6 +2311,7 @@ export default function App() {
                       handleZoomIn={handleZoomIn}
                       handleZoomOut={handleZoomOut}
                       onRefreshTerminal={refreshTerminal}
+                      onLayoutChange={(newLayout) => updateTabLayout(activeTab.id, newLayout)}
                     />
                   );
                 }

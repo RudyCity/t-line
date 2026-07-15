@@ -49,6 +49,7 @@ export interface SplitLayoutRendererProps {
   handleZoomIn?: () => void;
   handleZoomOut?: () => void;
   onRefreshTerminal?: (id: string) => void;
+  onLayoutChange?: (newNode: SplitLayoutNode) => void;
 }
 
 // ─── LeafPane ─────────────────────────────────────────────────────────────────
@@ -330,7 +331,8 @@ export function SplitLayoutRenderer({
   setDefaultShell,
   handleZoomIn,
   handleZoomOut,
-  onRefreshTerminal
+  onRefreshTerminal,
+  onLayoutChange
 }: SplitLayoutRendererProps): React.JSX.Element | null {
   if (node.type === 'leaf') {
     const term = terminalInstances[node.terminalId];
@@ -368,9 +370,19 @@ export function SplitLayoutRenderer({
     );
   }
 
+  const handleLayoutChange = (sizes: number[]) => {
+    if (sizes.length === 2 && onLayoutChange) {
+      onLayoutChange({
+        ...node,
+        firstSize: sizes[0],
+        secondSize: sizes[1]
+      } as SplitLayoutNode);
+    }
+  };
+
   return (
-    <PanelGroup direction={node.direction}>
-      <Panel defaultSize={50}>
+    <PanelGroup direction={node.direction} onLayout={handleLayoutChange}>
+      <Panel defaultSize={node.firstSize ?? 50}>
         <SplitLayoutRenderer
           node={node.first}
           activeTabId={activeTabId}
@@ -397,6 +409,14 @@ export function SplitLayoutRenderer({
           handleZoomIn={handleZoomIn}
           handleZoomOut={handleZoomOut}
           onRefreshTerminal={onRefreshTerminal}
+          onLayoutChange={(newFirst) => {
+            if (onLayoutChange) {
+              onLayoutChange({
+                ...node,
+                first: newFirst
+              });
+            }
+          }}
         />
       </Panel>
       <PanelResizeHandle
@@ -411,7 +431,7 @@ export function SplitLayoutRenderer({
           cursor: node.direction === 'horizontal' ? 'col-resize' : 'row-resize',
         }}
       />
-      <Panel defaultSize={50}>
+      <Panel defaultSize={node.secondSize ?? 50}>
         <SplitLayoutRenderer
           node={node.second}
           activeTabId={activeTabId}
@@ -438,6 +458,14 @@ export function SplitLayoutRenderer({
           handleZoomIn={handleZoomIn}
           handleZoomOut={handleZoomOut}
           onRefreshTerminal={onRefreshTerminal}
+          onLayoutChange={(newSecond) => {
+            if (onLayoutChange) {
+              onLayoutChange({
+                ...node,
+                second: newSecond
+              });
+            }
+          }}
         />
       </Panel>
     </PanelGroup>

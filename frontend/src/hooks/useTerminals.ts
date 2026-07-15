@@ -53,6 +53,8 @@ export type SplitLayoutNode =
       direction: 'horizontal' | 'vertical';
       first: SplitLayoutNode;
       second: SplitLayoutNode;
+      firstSize?: number;
+      secondSize?: number;
     };
 
 export interface TabData {
@@ -96,7 +98,9 @@ export function splitLeaf(
         type: 'split',
         direction,
         first: { type: 'leaf', terminalId: targetId },
-        second: { type: 'leaf', terminalId: newId }
+        second: { type: 'leaf', terminalId: newId },
+        firstSize: 50,
+        secondSize: 50
       };
     }
     return node;
@@ -803,6 +807,10 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     });
   }, []);
 
+  const updateTabLayout = useCallback((tabId: string, newLayout: SplitLayoutNode) => {
+    setTabs(prev => prev.map(t => t.id === tabId ? { ...t, layout: newLayout } : t));
+  }, []);
+
   const openGridTab = useCallback(() => {
     const tabId = `grid-${Date.now()}`;
     const newTab: TabData = {
@@ -845,6 +853,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     importActiveSessions,
     refreshTerminal,
     refreshTriggers,
-    clearInitialCommand
+    clearInitialCommand,
+    updateTabLayout
   };
 }

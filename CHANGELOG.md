@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.438] - 2026-07-15
+
+### Fixed
+- **Terminal Split Resize Persistence**:
+  - Added `firstSize` and `secondSize` optional properties to the `SplitLayoutNode` tree definition.
+  - Passed recursive `onLayoutChange` handler down from `App.tsx` through `SplitLayoutRenderer` to capture layout resize adjustments.
+  - Used `Math.round(val * 100) / 100` rounding in `normalizeLayout` to keep floating point layout sizes canonical and prevent state-synchronization infinite loops.
+  - Restored stored sizes on mount via `<Panel defaultSize={...}>`.
+
 ## [1.3.437] - 2026-07-14
 
 ### Added
