@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.449] - 2026-07-15
+
+### Added
+- **Default Grid Tab Creation**:
+  - Mengubah perilaku default saat membuka terminal baru (baik dari pintasan Quick Launch maupun tombol `+` di tab bar).
+  - Terminal baru sekarang secara default akan dibuat di dalam Tab Grid (`type: 'grid'`) dengan nama format `Grid (WorkspaceName)` alih-alih sebagai terminal tunggal fullscreen. Ini memudahkan pengelompokan terminal baru langsung ke dalam grid sejak awal.
+
 ## [1.3.448] - 2026-07-15
 
 ### Added

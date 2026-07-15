@@ -414,12 +414,19 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
 
     const wsId = findWorkspaceIdForPath(cwd);
 
+    let gridName = 'Terminal Grid';
+    if (cwd) {
+      const matchedWorkspace = workspaces.find(w => w.path === cwd);
+      if (matchedWorkspace) {
+        gridName = `Grid (${matchedWorkspace.name})`;
+      }
+    }
+
     const newTab: TabData = {
       id: tabId,
-      name: tabName,
-      type: 'terminal',
-      layout: { type: 'leaf', terminalId: termId },
-      focusedTerminalId: termId,
+      name: gridName,
+      type: 'grid',
+      gridTerminalIds: [termId],
       workspaceId: wsId
     };
 
