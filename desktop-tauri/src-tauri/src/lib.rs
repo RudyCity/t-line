@@ -1461,44 +1461,6 @@ fn focus_window(app: tauri::AppHandle, label: String) -> Result<(), String> {
 }
 
 
-fn get_descendant_status(
-    sys: &sysinfo::System,
-    child_pid: sysinfo::Pid,
-    current_pid: sysinfo::Pid,
-    backend_pid: Option<sysinfo::Pid>,
-) -> (bool, bool) {
-    let mut current = child_pid;
-    let mut visited = std::collections::HashSet::new();
-    visited.insert(current);
-
-    let mut is_current_descendant = false;
-    let mut is_backend_descendant = false;
-
-    while let Some(proc) = sys.process(current) {
-        if let Some(p) = proc.parent() {
-            if p == current_pid {
-                is_current_descendant = true;
-                if backend_pid.is_none() || is_backend_descendant {
-                    break;
-                }
-            }
-            if let Some(bp) = backend_pid {
-                if p == bp {
-                    is_backend_descendant = true;
-                    is_current_descendant = true;
-                }
-            }
-            if p == sysinfo::Pid::from(0) || !visited.insert(p) {
-                break;
-            }
-            current = p;
-        } else {
-            break;
-        }
-    }
-    (is_current_descendant, is_backend_descendant)
-}
-
 #[tauri::command]
 fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json::Value, String> {
     use sysinfo::Pid;
@@ -1513,19 +1475,49 @@ fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json:
         backend_pid_val = Some(Pid::from(child.id() as usize));
     }
 
+    // Build parent-to-children map for O(1) child lookups
+    let mut parent_to_children: std::collections::HashMap<Pid, Vec<Pid>> = std::collections::HashMap::new();
+    for (pid, process) in sys.processes() {
+        if let Some(parent) = process.parent() {
+            parent_to_children.entry(parent).or_default().push(*pid);
+        }
+    }
+
+    // Find all descendants of current_pid excluding backend_pid subtree using DFS
+    let mut webview_pids = std::collections::HashSet::new();
+    let mut stack = Vec::new();
+    let mut visited = std::collections::HashSet::new();
+
+    stack.push(current_pid);
+    visited.insert(current_pid);
+
+    while let Some(current) = stack.pop() {
+        if let Some(children) = parent_to_children.get(&current) {
+            for &child in children {
+                // Prune/skip the backend process subtree
+                if let Some(backend_pid) = backend_pid_val {
+                    if child == backend_pid {
+                        continue;
+                    }
+                }
+                if visited.insert(child) {
+                    webview_pids.insert(child);
+                    stack.push(child);
+                }
+            }
+        }
+    }
+
     let mut main_memory: u64 = 0;
     let mut webview_memory: u64 = 0;
 
-    for (pid, process) in sys.processes() {
-        if *pid == current_pid {
-            // The Tauri main process itself
-            main_memory = process.memory();
-        } else {
-            let (is_curr, is_back) = get_descendant_status(&sys, *pid, current_pid, backend_pid_val);
-            if is_curr && !is_back {
-                // Accumulate WebView2 / renderer child process memory separately
-                webview_memory += process.memory();
-            }
+    if let Some(process) = sys.process(current_pid) {
+        main_memory = process.memory();
+    }
+
+    for pid in &webview_pids {
+        if let Some(process) = sys.process(*pid) {
+            webview_memory += process.memory();
         }
     }
 

@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.471] - 2026-07-15
+
+### Improved
+- **Process Memory Stats Algorithm Optimization**: Redesigned the process tree query algorithm in the Tauri memory command. Instead of doing independent upward parent-chain traversals for all 300+ system processes, the algorithm now builds a single-pass parent-to-children tree and performs a Depth-First Search (DFS) starting from the main application PID, pruning at the backend PID. This reduces time complexity from $O(N \cdot H)$ to $O(M)$ where $M$ is the number of application descendants ($M \ll N$).
+
 ## [1.3.470] - 2026-07-15
 
 ### Improved
