@@ -58,6 +58,32 @@ export function TerminalInstance({
   useTerminalTouchMapping({ containerRef, terminalRef, onFocusRef });
 
   const [showSearch, setShowSearch] = useState(false);
+  const [dragOverlay, setDragOverlay] = useState<'left' | 'right' | 'top' | 'bottom' | null>(null);
+
+  // Listen to global pane drag-over events to show split visual indicators
+  useEffect(() => {
+    const onDragOverEvent = (e: Event) => {
+      const detail = (e as CustomEvent<{ terminalId: string; side: 'left' | 'right' | 'top' | 'bottom' | null }>).detail;
+      if (detail && detail.terminalId === tab.id) {
+        setDragOverlay(detail.side);
+      } else {
+        setDragOverlay(null);
+      }
+    };
+    const onDragLeaveEvent = () => {
+      setDragOverlay(null);
+    };
+
+    window.addEventListener('tline-pane-drag-over', onDragOverEvent);
+    window.addEventListener('tline-pane-drag-leave', onDragLeaveEvent);
+    window.addEventListener('tline-pane-drag-end', onDragLeaveEvent);
+
+    return () => {
+      window.removeEventListener('tline-pane-drag-over', onDragOverEvent);
+      window.removeEventListener('tline-pane-drag-leave', onDragLeaveEvent);
+      window.removeEventListener('tline-pane-drag-end', onDragLeaveEvent);
+    };
+  }, [tab.id]);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [hasSelection, setHasSelection] = useState(false);
   const [cursorPos, setCursorPos] = useState({ col: 1, row: 1 });
@@ -855,12 +881,30 @@ export function TerminalInstance({
 
   return (
     <div
+      data-terminal-pane-id={tab.id}
       className={`terminal-pane-root${isFocusedPane ? ' terminal-pane-focused' : ''}`}
       style={{ backgroundColor: themeBackground || '#0b0f19' }}
       onMouseDown={handleTerminalFocus}
       onTouchEnd={handleTerminalFocus}
       onContextMenu={handleContextMenu}
     >
+      {dragOverlay && (
+        <div 
+          className={`terminal-pane-drag-overlay drag-overlay-${dragOverlay}`} 
+          style={{
+            position: 'absolute',
+            backgroundColor: 'rgba(168, 85, 247, 0.22)',
+            border: '2px dashed var(--color-primary, #a855f7)',
+            zIndex: 1000,
+            pointerEvents: 'none',
+            transition: 'all 0.15s ease-in-out',
+            left: dragOverlay === 'right' ? '50%' : 0,
+            right: dragOverlay === 'left' ? '50%' : 0,
+            top: dragOverlay === 'bottom' ? '50%' : 0,
+            bottom: dragOverlay === 'top' ? '50%' : 0,
+          }}
+        />
+      )}
       {isSuspended && (
         <div 
           className="terminal-suspended-overlay"

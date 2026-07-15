@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.463] - 2026-07-15
+
+### Added
+- **Tab Drag → Terminal Viewport Splits (IDE-style)**: You can now drag a terminal tab header directly onto any terminal screen viewport (the main workspace window). Depending on which quadrant the cursor is dropped on (left/right/top/bottom), the target terminal pane will split horizontally or vertically.
+- **Visual Split Overlays**: Terminal panes now render a semi-transparent dashed purple overlay to preview where the dragged terminal will split.
+
 ## [1.3.462] - 2026-07-15
 
 ### Fixed

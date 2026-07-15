@@ -58,6 +58,10 @@ export function useTabUiHandlers({
   const filteredTabsRef = useRef<TabData[]>(filteredTabs);
   filteredTabsRef.current = filteredTabs;   // always current without adding to dep arrays
 
+  // For dragging onto a terminal viewport pane to split it
+  const dragOverPaneIdRef = useRef<string | null>(null);
+  const dragOverPaneSideRef = useRef<'left' | 'right' | 'top' | 'bottom' | null>(null);
+
   const getTabGitBranch = useCallback((t: any): string | null => {
     const isFile = t.type === 'file';
     const focusedInst = !isFile && t.focusedTerminalId ? terminalInstances[t.focusedTerminalId] : null;
@@ -329,16 +333,78 @@ export function useTabUiHandlers({
 
       const hit = findTabUnder(e.clientX, e.clientY, mouseStartRef.current.tabId);
       if (hit) {
-        console.log('[TabDrag-mouse] over →', hit.tabId, hit.side);
+        console.log('[TabDrag-mouse] over tab →', hit.tabId, hit.side);
         dragOverTabIdRef.current = hit.tabId;
         dragOverSideRef.current  = hit.side;
         setDragOverTabId(hit.tabId);
         setDragOverSide(hit.side);
+
+        // Turn off pane overlay since we are over a tab header
+        if (dragOverPaneIdRef.current) {
+          window.dispatchEvent(new CustomEvent('tline-pane-drag-leave'));
+          dragOverPaneIdRef.current = null;
+          dragOverPaneSideRef.current = null;
+        }
       } else {
         dragOverTabIdRef.current = null;
         dragOverSideRef.current  = null;
         setDragOverTabId(null);
         setDragOverSide(null);
+
+        // Check if hovering over a terminal workspace viewport pane to trigger layout split
+        const draggedTab = filteredTabsRef.current.find(t => t.id === mouseStartRef.current!.tabId);
+        const isDraggedTerminal = draggedTab?.type === 'terminal';
+
+        let paneHit: { termId: string; side: 'left' | 'right' | 'top' | 'bottom' } | null = null;
+        if (isDraggedTerminal) {
+          for (const el of document.elementsFromPoint(e.clientX, e.clientY)) {
+            const htmlEl = el as HTMLElement;
+            const paneEl = htmlEl.closest('.terminal-pane-root') as HTMLElement | null;
+            if (paneEl) {
+              const termId = paneEl.getAttribute('data-terminal-pane-id');
+              // Do not allow splitting with a terminal pane that is part of the dragged tab itself
+              const isSelf = draggedTab.layout ? getTerminalIds(draggedTab.layout).includes(termId || '') : false;
+
+              if (termId && !isSelf) {
+                const rect = paneEl.getBoundingClientRect();
+                const ratioX = (e.clientX - rect.left) / rect.width;
+                const ratioY = (e.clientY - rect.top) / rect.height;
+
+                // Determine closest quadrant
+                const distLeft = ratioX;
+                const distRight = 1 - ratioX;
+                const distTop = ratioY;
+                const distBottom = 1 - ratioY;
+                const minDist = Math.min(distLeft, distRight, distTop, distBottom);
+
+                let side: 'left' | 'right' | 'top' | 'bottom';
+                if (minDist === distLeft) side = 'left';
+                else if (minDist === distRight) side = 'right';
+                else if (minDist === distTop) side = 'top';
+                else side = 'bottom';
+
+                paneHit = { termId, side };
+                break;
+              }
+            }
+          }
+        }
+
+        if (paneHit) {
+          if (dragOverPaneIdRef.current !== paneHit.termId || dragOverPaneSideRef.current !== paneHit.side) {
+            dragOverPaneIdRef.current = paneHit.termId;
+            dragOverPaneSideRef.current = paneHit.side;
+            window.dispatchEvent(new CustomEvent('tline-pane-drag-over', { 
+              detail: { terminalId: paneHit.termId, side: paneHit.side } 
+            }));
+          }
+        } else {
+          if (dragOverPaneIdRef.current) {
+            window.dispatchEvent(new CustomEvent('tline-pane-drag-leave'));
+            dragOverPaneIdRef.current = null;
+            dragOverPaneSideRef.current = null;
+          }
+        }
       }
     };
 
@@ -351,6 +417,13 @@ export function useTabUiHandlers({
       setDraggingTabId(null);
       setDragOverTabId(null);
       setDragOverSide(null);
+
+      if (dragOverPaneIdRef.current) {
+        window.dispatchEvent(new CustomEvent('tline-pane-drag-end'));
+        dragOverPaneIdRef.current = null;
+        dragOverPaneSideRef.current = null;
+      }
+
       document.body.style.cursor     = '';
       document.body.style.userSelect = '';
     };
@@ -363,9 +436,66 @@ export function useTabUiHandlers({
         const draggedId  = mouseStartRef.current.tabId;
         const targetId   = dragOverTabIdRef.current;
         const side       = dragOverSideRef.current || 'right';
-        console.log('[TabDrag-mouse] drop → dragged:', draggedId, 'target:', targetId, 'side:', side);
+        const targetPaneId = dragOverPaneIdRef.current;
+        const paneSide     = dragOverPaneSideRef.current;
 
-        if (targetId && draggedId !== targetId) {
+        console.log('[TabDrag-mouse] drop → dragged:', draggedId, 'targetTab:', targetId, 'targetPane:', targetPaneId, 'paneSide:', paneSide);
+
+        if (targetPaneId && paneSide) {
+          // ── Mode 4: terminal → terminal screen pane (viewport split) ──────────
+          console.log('[TabDrag-mouse] splitting terminal pane in viewport');
+          const tabs = filteredTabsRef.current;
+          const draggedTab = tabs.find(t => t.id === draggedId);
+          // Find target tab which houses the targeted terminal id in its layout
+          const targetTab  = tabs.find(t => t.layout && getTerminalIds(t.layout).includes(targetPaneId));
+
+          if (draggedTab && targetTab && draggedTab.id !== targetTab.id) {
+            setTabs(prevTabs => {
+              const dragFull = prevTabs.find(t => t.id === draggedTab.id);
+              const targetFull = prevTabs.find(t => t.id === targetTab.id);
+              if (!dragFull?.layout || !targetFull?.layout) return prevTabs;
+
+              // Recursive layout replacer
+              const replaceLeafInLayout = (
+                node: SplitLayoutNode,
+                tid: string,
+                replacement: SplitLayoutNode
+              ): SplitLayoutNode => {
+                if (node.type === 'leaf') {
+                  if (node.terminalId === tid) return replacement;
+                  return node;
+                }
+                return {
+                  ...node,
+                  first: replaceLeafInLayout(node.first, tid, replacement),
+                  second: replaceLeafInLayout(node.second, tid, replacement)
+                };
+              };
+
+              const targetLeafLayout: SplitLayoutNode = { type: 'leaf', terminalId: targetPaneId };
+              const mergedLayout: SplitLayoutNode = {
+                type: 'split',
+                direction: (paneSide === 'left' || paneSide === 'right') ? 'horizontal' : 'vertical',
+                first:  (paneSide === 'left'  || paneSide === 'top')    ? dragFull.layout  : targetLeafLayout,
+                second: (paneSide === 'left'  || paneSide === 'top')    ? targetLeafLayout : dragFull.layout,
+                firstSize: 50,
+                secondSize: 50
+              };
+
+              const newLayout = replaceLeafInLayout(targetFull.layout, targetPaneId, mergedLayout);
+
+              return prevTabs
+                .filter(t => t.id !== draggedTab.id)
+                .map(t => t.id !== targetTab.id ? t : {
+                  ...t,
+                  layout: newLayout,
+                  focusedTerminalId: dragFull.focusedTerminalId || t.focusedTerminalId
+                });
+            });
+            setActiveTabId(targetTab.id);
+          }
+          window.dispatchEvent(new CustomEvent('tline-pane-drag-end'));
+        } else if (targetId && draggedId !== targetId) {
           const tabs = filteredTabsRef.current;
           const draggedIdx = tabs.findIndex(t => t.id === draggedId);
           const targetIdx  = tabs.findIndex(t => t.id === targetId);
