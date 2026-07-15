@@ -26,13 +26,21 @@ export function useTerminalInitialCommand({
   const initialCommandSent = useRef(false);
 
   useEffect(() => {
-    if (!wsConnected || !isInitialized || !initialCommand || initialCommandSent.current) return;
+    console.log(`[useTerminalInitialCommand] Hook triggered for tab ${tabId}. States: wsConnected=${wsConnected}, isInitialized=${isInitialized}, initialCommand="${initialCommand || ''}", initialCommandSent=${initialCommandSent.current}`);
+
+    if (!wsConnected || !isInitialized || !initialCommand || initialCommandSent.current) {
+      console.log(`[useTerminalInitialCommand] Skipping command execution for tab ${tabId} because conditions are not met.`);
+      return;
+    }
 
     let scheduledTimer: ReturnType<typeof setTimeout> | null = null;
     let checkTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const sendCommand = () => {
-      if (initialCommandSent.current) return;
+      if (initialCommandSent.current) {
+        console.log(`[useTerminalInitialCommand] sendCommand aborting for tab ${tabId}: already sent.`);
+        return;
+      }
       initialCommandSent.current = true;
       onPtyDataRef.current = null;
       if (scheduledTimer) clearTimeout(scheduledTimer);
@@ -43,6 +51,7 @@ export function useTerminalInitialCommand({
         ? initialCommand
         : initialCommand + '\r';
 
+      console.log(`[useTerminalInitialCommand] Executing sendCommand for tab ${tabId}. Sending command length: ${cmdStr.length}, command: "${cmdStr.trim()}"`);
       wsManager.send(JSON.stringify({
         type: 'data',
         id: tabId,
@@ -52,10 +61,18 @@ export function useTerminalInitialCommand({
     };
 
     // Fallback: fire unconditionally after FALLBACK_MS
-    const fallbackTimer = setTimeout(sendCommand, FALLBACK_MS);
+    console.log(`[useTerminalInitialCommand] Setting fallback timer for ${FALLBACK_MS}ms for tab ${tabId}`);
+    const fallbackTimer = setTimeout(() => {
+      console.log(`[useTerminalInitialCommand] Fallback timer fired for tab ${tabId}`);
+      sendCommand();
+    }, FALLBACK_MS);
 
-    // Initial check timer
-    scheduledTimer = setTimeout(sendCommand, 1500);
+    // Initial check timer (fires after 1.5s as a safety)
+    console.log(`[useTerminalInitialCommand] Setting safety check timer for 1500ms for tab ${tabId}`);
+    scheduledTimer = setTimeout(() => {
+      console.log(`[useTerminalInitialCommand] Safety check timer fired for tab ${tabId}`);
+      sendCommand();
+    }, 1500);
 
     onPtyDataRef.current = () => {
       if (initialCommandSent.current) return;
@@ -67,20 +84,28 @@ export function useTerminalInitialCommand({
 
         const term = terminalRef.current;
         const promptReady = term ? isPromptReady(term) : false;
+        console.log(`[useTerminalInitialCommand] PTY data received. Checking prompt readiness for tab ${tabId}: promptReady=${promptReady}`);
 
         if (promptReady) {
-          // Prompt is ready! Schedule sendCommand with 150ms delay
+          console.log(`[useTerminalInitialCommand] Prompt is ready for tab ${tabId}! Scheduling execution in 150ms.`);
           if (scheduledTimer) clearTimeout(scheduledTimer);
-          scheduledTimer = setTimeout(sendCommand, 150);
+          scheduledTimer = setTimeout(() => {
+            console.log(`[useTerminalInitialCommand] Executing scheduled sendCommand after prompt detection for tab ${tabId}`);
+            sendCommand();
+          }, 150);
         } else {
-          // Prompt not ready yet; reschedule fallback silence timer for 1200ms
+          console.log(`[useTerminalInitialCommand] Prompt is NOT ready for tab ${tabId}. Rescheduling silence timer for 1200ms.`);
           if (scheduledTimer) clearTimeout(scheduledTimer);
-          scheduledTimer = setTimeout(sendCommand, 1200);
+          scheduledTimer = setTimeout(() => {
+            console.log(`[useTerminalInitialCommand] Silence timer fired for tab ${tabId}`);
+            sendCommand();
+          }, 1200);
         }
       }, 50);
     };
 
     return () => {
+      console.log(`[useTerminalInitialCommand] Cleanup hook called for tab ${tabId}`);
       onPtyDataRef.current = null;
       if (scheduledTimer) clearTimeout(scheduledTimer);
       if (fallbackTimer) clearTimeout(fallbackTimer);
@@ -88,3 +113,4 @@ export function useTerminalInitialCommand({
     };
   }, [wsConnected, isInitialized, initialCommand, tabId, onClearInitialCommand, terminalRef, onPtyDataRef]);
 }
+

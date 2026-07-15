@@ -844,6 +844,7 @@ export default function App() {
   };
 
   const handleRunSavedPrompt = (prompt: SavedPrompt) => {
+    console.log(`[QuickLaunch] Clicked shortcut: name="${prompt.name}", command="${prompt.command}", cwd="${prompt.cwd}", shellType="${prompt.shellType}"`);
     openTerminal(prompt.name, prompt.cwd, prompt.shellType, prompt.command);
   };
 

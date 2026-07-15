@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.446] - 2026-07-15
+
+### Added
+- **Quick Launch: Detailed Logging**:
+  - Menambahkan log konsol terperinci saat pengguna mengklik item Quick Launch (`handleRunSavedPrompt`) dan di dalam hook inisialisasi perintah terminal (`useTerminalInitialCommand`).
+  - Log ini mencatat status koneksi WebSocket (`wsConnected`), inisialisasi terminal (`isInitialized`), kesiapan prompt shell (`promptReady`), serta transisi timer keselamatan/fallback guna mendeteksi penyebab kegagalan auto-run command secara presisi di lingkungan pengguna.
+
 ## [1.3.445] - 2026-07-15
 
 ### Fixed
