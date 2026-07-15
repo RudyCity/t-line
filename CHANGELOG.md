@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.448] - 2026-07-15
+
+### Added
+- **Quick Launch: Launch directly into Active Grid**:
+  - Mengubah fungsi `openTerminal` agar mendeteksi jika tab aktif saat ini bertipe `'grid'`.
+  - Jika ya, terminal baru yang dibuat akan langsung dimasukkan ke dalam daftar `gridTerminalIds` pada tab grid aktif tersebut daripada membuka tab terminal fullscreen baru. Ini memungkinkan eksekusi pintasan Quick Launch atau pembukaan terminal baru langsung mengisi grid yang sedang dilihat.
+
 ## [1.3.447] - 2026-07-15
 
 ### Added

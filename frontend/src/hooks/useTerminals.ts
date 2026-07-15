@@ -397,6 +397,21 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
       initialCommand
     };
 
+    // If currently active tab is a grid, append the terminal directly into it
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    if (activeTab && activeTab.type === 'grid') {
+      setTerminalInstances(prev => ({ ...prev, [termId]: newInstance }));
+      setTabs(prev => prev.map(t => {
+        if (t.id === activeTab.id) {
+          const currentIds = t.gridTerminalIds || [];
+          return { ...t, gridTerminalIds: [...currentIds, termId] };
+        }
+        return t;
+      }));
+      onTerminalOpen?.();
+      return;
+    }
+
     const wsId = findWorkspaceIdForPath(cwd);
 
     const newTab: TabData = {
@@ -412,7 +427,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     setTabs(prev => [...prev, newTab]);
     setActiveTabId(tabId);
     onTerminalOpen?.();
-  }, [defaultShell, workspaces, onTerminalOpen, findWorkspaceIdForPath]);
+  }, [defaultShell, workspaces, onTerminalOpen, findWorkspaceIdForPath, tabs, activeTabId]);
 
   const openFileTab = useCallback((filePath: string, name: string) => {
     const existing = tabs.find(t => t.type === 'file' && t.filePath === filePath);
