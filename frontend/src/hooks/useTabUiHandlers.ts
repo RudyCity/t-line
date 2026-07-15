@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { TabData, WorkspaceInfo, getTerminalIds, SplitLayoutNode } from './useTerminals';
+import { TabData, WorkspaceInfo, getTerminalIds } from './useTerminals';
 import { wsManager } from '../services/websocket';
 
 export interface TooltipData {
@@ -246,6 +246,8 @@ export function useTabUiHandlers({
       }
       return nextTabs;
     });
+  }, [filteredTabs, setTabs]);
+
   // ---------------------------------------------------------------------------
   // Mouse-based tab drag (replaces broken HTML5 DnD in WebView2/Tauri Windows)
   // ---------------------------------------------------------------------------
