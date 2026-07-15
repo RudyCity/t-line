@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.464] - 2026-07-15
+
+### Improved
+- **Split Pane Close Icon Replacement**: Replaced the default cross (X) close icon on split panes with the `Trash2` trash bin icon (for both desktop action bar and mobile viewport action popover) as requested for clearer semantic deletion feedback.
+
 ## [1.3.463] - 2026-07-15
 
 ### Added

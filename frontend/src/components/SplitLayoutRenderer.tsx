@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { SplitLayoutNode, TerminalInstanceData, ActiveProcessSummary } from '../hooks/useTerminals';
 import { TerminalInstance } from './TerminalInstance';
+import { Trash2 } from 'lucide-react';
 
 // Helper to detect if a background color is light/bright
 function isLightColor(color: string | undefined): boolean {
@@ -205,9 +206,7 @@ function LeafPane({
                 : 'text-slate-400 hover:text-red-400 hover:bg-white/5'
             }`}
           >
-            <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 3l10 10M13 3L3 13" />
-            </svg>
+            <Trash2 size={12} strokeWidth={2.2} />
           </button>
         )}
       </div>
@@ -266,9 +265,7 @@ function LeafPane({
                     : 'text-slate-400 hover:text-red-400 hover:bg-white/5'
                 }`}
               >
-                <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 3l10 10M13 3L3 13" />
-                </svg>
+                <Trash2 size={14} strokeWidth={2.2} />
               </button>
             )}
           </div>
