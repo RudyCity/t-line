@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.454] - 2026-07-15
+
+### Fixed
+- **Cursor/Caret Visibility with CLI AI Agents**:
+  - Replaced the narrow check for `isSuperagentRunning` with a broader `isAiAgentRunning` check, which covers all CLI AI agents (`isClaude`, `isGemini`, `isSuperagent`, `isAgy`, `isOpenCode`).
+  - Hides the terminal emulator's cursor when any of these agents are running to prevent duplicate carets (one at the input line, and another block cursor in the status line at the bottom right).
+
 ## [1.3.453] - 2026-07-15
 
 ### Fixed

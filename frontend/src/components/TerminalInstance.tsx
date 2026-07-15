@@ -37,7 +37,7 @@ export function TerminalInstance({
   defaultShell, setDefaultShell, handleZoomIn, handleZoomOut, onRefreshTerminal
 }: TerminalInstanceProps) {
   const activeProcesses = (tab as any).activeProcesses as any[] | undefined;
-  const isSuperagentRunning = activeProcesses?.some(p => p.isSuperagent) || false;
+  const isAiAgentRunning = activeProcesses?.some(p => p.isClaude || p.isGemini || p.isSuperagent || p.isAgy || p.isOpenCode) || false;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -787,7 +787,7 @@ export function TerminalInstance({
     if (terminalRef.current) {
       try {
         const theme = getTerminalTheme(themeBackground, themeForeground, accentColor);
-        if (isSuperagentRunning) {
+        if (isAiAgentRunning) {
           theme.cursor = 'transparent';
           theme.cursorAccent = 'transparent';
         }
@@ -796,7 +796,7 @@ export function TerminalInstance({
         console.error('Error updating terminal theme:', e);
       }
     }
-  }, [accentColor, themeBackground, themeForeground, isSuperagentRunning]);
+  }, [accentColor, themeBackground, themeForeground, isAiAgentRunning]);
 
   // ── Search toggle keyboard (Ctrl+Shift+F) ─────────────────
   useEffect(() => {
@@ -918,7 +918,7 @@ export function TerminalInstance({
         <TerminalSearchBar searchAddon={searchAddonRef.current} onClose={closeSearch} />
       )}
 
-      <div className={`terminal-element-wrapper ${isSuperagentRunning ? 'hide-xterm-cursor' : ''}`} style={{ backgroundColor: themeBackground || '#0b0f19' }}>
+      <div className={`terminal-element-wrapper ${isAiAgentRunning ? 'hide-xterm-cursor' : ''}`} style={{ backgroundColor: themeBackground || '#0b0f19' }}>
         <div 
           ref={containerRef} 
           className="terminal-element" 
