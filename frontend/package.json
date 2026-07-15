@@ -1,11 +1,12 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "1.3.438",
+  "version": "1.3.439",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
+    "copy-monaco": "node copy-monaco.cjs",
+    "dev": "npm run copy-monaco && vite",
+    "build": "npm run copy-monaco && tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -13,6 +14,7 @@
   "dependencies": {
     "@medv/finder": "^4.0.2",
     "@monaco-editor/react": "^4.7.0",
+    "monaco-editor": "^0.55.1",
     "@tauri-apps/api": "^2.0.0",
     "@visx/shape": "^4.0.0",
     "@xterm/addon-canvas": "^0.7.0",

@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { FileCode, RotateCcw, Check, ZoomIn, ZoomOut, Maximize, Image as ImageIcon, FileText, File } from 'lucide-react';
 import Editor, { loader } from '@monaco-editor/react';
 
+// Configure Monaco to load from local public/vs path
+loader.config({ paths: { vs: '/vs' } });
+
 interface FileViewerTabProps {
   filePath: string;
   token: string;

@@ -33,3 +33,6 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Local Monaco Editor assets
+frontend/public/vs/

@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.439] - 2026-07-15
+
+### Fixed
+- **Local Monaco Editor Hosting**:
+  - Added `copy-monaco.cjs` script to automate copying Monaco Editor minified assets from `node_modules` (including hoisted workspaces) to `frontend/public/vs/`.
+  - Configured `@monaco-editor/react` to load Monaco assets from local `/vs` path rather than external jsDelivr CDN.
+  - Ignored the local Monaco assets folder in the root `.gitignore`.
+  - Resolved browser tracking prevention blocks of Monaco storage access and enabled offline code-editing.
+
 ## [1.3.438] - 2026-07-15
 
 ### Fixed
