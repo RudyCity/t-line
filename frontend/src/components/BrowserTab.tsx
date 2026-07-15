@@ -522,13 +522,19 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       target = 'http://' + target;
     }
     setUrlInput(target);
-    setActiveUrl(target);
-    onUpdateTabUrl?.(target);
-    navigateWebview(target);
-    startLoadingBar();
-    // For tauri-native we can't listen to load events, so auto-finish
-    if (renderMode === 'tauri-native') {
-      setTimeout(finishLoadingBar, 1800);
+    
+    const isSameUrl = target === activeUrl;
+    if (isSameUrl) {
+      handleReload();
+    } else {
+      setActiveUrl(target);
+      onUpdateTabUrl?.(target);
+      navigateWebview(target);
+      startLoadingBar();
+      // For tauri-native we can't listen to load events, so auto-finish
+      if (renderMode === 'tauri-native') {
+        setTimeout(finishLoadingBar, 1800);
+      }
     }
   };
 
@@ -589,14 +595,19 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
 
   const handleNavigateToBookmark = (url: string) => {
     setUrlInput(url);
-    setActiveUrl(url);
-    onUpdateTabUrl?.(url);
-    setShowBookmarksDropdown(false);
-    navigateWebview(url);
-    startLoadingBar();
-    if (renderMode === 'tauri-native') {
-      setTimeout(finishLoadingBar, 1800);
+    const isSameUrl = url === activeUrl;
+    if (isSameUrl) {
+      handleReload();
+    } else {
+      setActiveUrl(url);
+      onUpdateTabUrl?.(url);
+      navigateWebview(url);
+      startLoadingBar();
+      if (renderMode === 'tauri-native') {
+        setTimeout(finishLoadingBar, 1800);
+      }
     }
+    setShowBookmarksDropdown(false);
   };
 
   const removeBookmark = (id: string) => {

@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.468] - 2026-07-15
+
+### Improved
+- **Browser Address Bar Retrigger/Reload**: Updated URL navigation and bookmark handlers in [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) to detect when navigating to the currently active URL. If it matches, the tab now automatically triggers a reload (`handleReload`), allowing users to refresh the page by pressing Enter in the address bar.
+
 ## [1.3.467] - 2026-07-15
 
 ### Improved
