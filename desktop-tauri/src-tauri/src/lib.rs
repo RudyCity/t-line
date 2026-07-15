@@ -21,6 +21,7 @@ struct DesktopState {
     status: Arc<Mutex<String>>, // "stopped" | "starting" | "running"
     active_sessions: Arc<Mutex<serde_json::Value>>,
     workspaces: Arc<Mutex<serde_json::Value>>,
+    sys: Mutex<sysinfo::System>,
 }
 
 fn is_port_active(port: u16) -> bool {
@@ -1460,15 +1461,32 @@ fn focus_window(app: tauri::AppHandle, label: String) -> Result<(), String> {
 }
 
 
-fn is_descendant_of(sys: &sysinfo::System, child_pid: sysinfo::Pid, parent_pid: sysinfo::Pid) -> bool {
+fn get_descendant_status(
+    sys: &sysinfo::System,
+    child_pid: sysinfo::Pid,
+    current_pid: sysinfo::Pid,
+    backend_pid: Option<sysinfo::Pid>,
+) -> (bool, bool) {
     let mut current = child_pid;
     let mut visited = std::collections::HashSet::new();
     visited.insert(current);
 
+    let mut is_current_descendant = false;
+    let mut is_backend_descendant = false;
+
     while let Some(proc) = sys.process(current) {
         if let Some(p) = proc.parent() {
-            if p == parent_pid {
-                return true;
+            if p == current_pid {
+                is_current_descendant = true;
+                if backend_pid.is_none() || is_backend_descendant {
+                    break;
+                }
+            }
+            if let Some(bp) = backend_pid {
+                if p == bp {
+                    is_backend_descendant = true;
+                    is_current_descendant = true;
+                }
             }
             if p == sysinfo::Pid::from(0) || !visited.insert(p) {
                 break;
@@ -1478,14 +1496,14 @@ fn is_descendant_of(sys: &sysinfo::System, child_pid: sysinfo::Pid, parent_pid: 
             break;
         }
     }
-    false
+    (is_current_descendant, is_backend_descendant)
 }
 
 #[tauri::command]
 fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json::Value, String> {
-    use sysinfo::{Pid, System};
+    use sysinfo::Pid;
 
-    let mut sys = System::new();
+    let mut sys = state.sys.lock().unwrap();
     sys.refresh_processes();
 
     let current_pid = Pid::from(std::process::id() as usize);
@@ -1502,15 +1520,9 @@ fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json:
         if *pid == current_pid {
             // The Tauri main process itself
             main_memory = process.memory();
-        } else if is_descendant_of(&sys, *pid, current_pid) {
-            // Exclude backend node process and all its descendants
-            let is_backend_or_descendant = if let Some(backend_pid) = backend_pid_val {
-                *pid == backend_pid || is_descendant_of(&sys, *pid, backend_pid)
-            } else {
-                false
-            };
-
-            if !is_backend_or_descendant {
+        } else {
+            let (is_curr, is_back) = get_descendant_status(&sys, *pid, current_pid, backend_pid_val);
+            if is_curr && !is_back {
                 // Accumulate WebView2 / renderer child process memory separately
                 webview_memory += process.memory();
             }
@@ -1541,6 +1553,7 @@ pub fn run() {
         status: Arc::new(Mutex::new("stopped".to_string())),
         active_sessions: Arc::new(Mutex::new(serde_json::json!([]))),
         workspaces: Arc::new(Mutex::new(serde_json::json!([]))),
+        sys: Mutex::new(sysinfo::System::new()),
     };
 
     let app = tauri::Builder::default()

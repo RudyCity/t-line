@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.470] - 2026-07-15
+
+### Improved
+- **Process Memory Stats Query Optimization**: Optimized memory usage stats polling in the Tauri application. Cached the `sysinfo::System` instance in `DesktopState` to avoid expensive system re-allocations on every poll (every 5 seconds) and enable sysinfo's native Windows process delta updates. Consolidated parent-child traversal logic into a single combined check (`get_descendant_status`), halving the required process tree traversals for every system process.
+
 ## [1.3.469] - 2026-07-15
 
 ### Fixed
