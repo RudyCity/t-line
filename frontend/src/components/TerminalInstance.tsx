@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { SearchAddon } from '@xterm/addon-search';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
+import { WebglAddon } from '@xterm/addon-webgl';
 import { CanvasAddon } from '@xterm/addon-canvas';
 import { ImageAddon } from '@xterm/addon-image';
 import { wsManager } from '../services/websocket';
@@ -461,13 +462,29 @@ export function TerminalInstance({
       console.warn('Failed to monkey-patch xterm.js syncScrollArea:', e);
     }
 
-    // ── GPU renderer (Canvas renderer by default, falls back to DOM renderer) ──
+    // ── GPU renderer (WebGL → Canvas → DOM fallback chain) ──
+    let gpuRendererLoaded = false;
     try {
-      const canvasAddon = new CanvasAddon();
-      term.loadAddon(canvasAddon);
-      addonListRef.current.push(canvasAddon);
+      const webglAddon = new WebglAddon();
+      // WebglAddon emits a 'onContextLoss' event; dispose gracefully on context loss
+      webglAddon.onContextLoss(() => {
+        console.warn('[Terminal] WebGL context lost — disposing WebGL renderer.');
+        try { webglAddon.dispose(); } catch (_) {}
+      });
+      term.loadAddon(webglAddon);
+      addonListRef.current.push(webglAddon);
+      gpuRendererLoaded = true;
     } catch (e) {
-      console.warn('Canvas renderer not available, using default DOM renderer:', e);
+      console.warn('WebGL renderer not available, trying Canvas renderer:', e);
+    }
+    if (!gpuRendererLoaded) {
+      try {
+        const canvasAddon = new CanvasAddon();
+        term.loadAddon(canvasAddon);
+        addonListRef.current.push(canvasAddon);
+      } catch (e) {
+        console.warn('Canvas renderer not available, using default DOM renderer:', e);
+      }
     }
 
     const handlePasteEvent = (e: ClipboardEvent) => {

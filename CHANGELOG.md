@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.445] - 2026-07-15
+
+### Fixed
+- **xterm Canvas Renderer: `Cannot read properties of undefined (reading 'loadCell')` uncaught TypeError**:
+  - Diperbaiki crash rendering yang terjadi secara intermittent pada `@xterm/addon-canvas` akibat race condition di mana `_charAtlas` (character atlas texture) belum terinisialisasi saat render frame dipanggil oleh `RenderDebouncer`.
+  - Error ini bersifat **uncaught** karena terjadi di dalam animation frame callback internal xterm, melewati semua try-catch yang ada di level aplikasi.
+  - **Solusi**: Beralih ke `@xterm/addon-webgl` sebagai renderer utama (sudah terdaftar di `package.json` namun sebelumnya tidak digunakan). WebGL lebih stabil dan tidak memiliki masalah uninitialized atlas. Jika WebGL tidak tersedia (mis. headless browser, GPU lama), fallback ke Canvas, kemudian DOM renderer.
+  - Ditambahkan `onContextLoss` handler pada `WebglAddon` untuk dispose gracefully saat GPU context hilang (terjadi di beberapa browser saat tab terlalu lama di-background).
+
 ## [1.3.444] - 2026-07-15
 
 ### Fixed
