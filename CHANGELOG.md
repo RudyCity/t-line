@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.461] - 2026-07-15
+
+### Added
+- **Tab Drag → Terminal Split Pane**: Dragging a terminal tab onto the edge (left/right/top/bottom quarter) of another terminal tab now merges both into a split-pane layout (SplitLayoutNode) instead of reordering. Dropping in the center still reorders.
+- **Tab Drag → Grid Tab**: Dragging a terminal tab onto a grid tab now adds all terminal IDs from the dragged tab into the target grid's `gridTerminalIds`, then switches focus to the grid. The dragged tab is removed.
+
+### Improved
+- **5-Zone Drop Detection for Terminals**: When dragging a terminal over another terminal, the cursor position is divided into 5 zones (left 25% / right 25% / top 35% / bottom 35% / center). Each zone triggers a distinct visual indicator and drop action.
+- **CSS indicators `drag-over-top` / `drag-over-bottom` / `drag-over-center`** now also fire during mouse-based drag (previously only used in HTML5 DnD path).
+
 ## [1.3.460] - 2026-07-15
 
 ### Fixed

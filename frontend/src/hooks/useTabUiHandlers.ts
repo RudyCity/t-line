@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { TabData, WorkspaceInfo, getTerminalIds } from './useTerminals';
+import { TabData, WorkspaceInfo, getTerminalIds, SplitLayoutNode } from './useTerminals';
 import { wsManager } from '../services/websocket';
 
 export interface TooltipData {
@@ -44,7 +44,7 @@ export function useTabUiHandlers({
   const [tabContextMenu, setTabContextMenu] = useState<TabContextMenuData | null>(null);
   const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
   const [dragOverTabId, setDragOverTabId] = useState<string | null>(null);
-  const [dragOverSide, setDragOverSide] = useState<'left' | 'right' | null>(null);
+  const [dragOverSide, setDragOverSide] = useState<'left' | 'right' | 'top' | 'bottom' | 'center' | null>(null);
 
   // Mouse-based drag refs (HTML5 DnD API is broken in WebView2/Tauri on Windows—
   // dragstart fires but dragover/drop never fire because Windows intercepts the native
@@ -54,7 +54,7 @@ export function useTabUiHandlers({
   const isDraggingRef = useRef(false);
   const wasDragRef = useRef(false);          // suppress click after a completed drag
   const dragOverTabIdRef = useRef<string | null>(null);
-  const dragOverSideRef = useRef<'left' | 'right' | null>(null);
+  const dragOverSideRef = useRef<'left' | 'right' | 'top' | 'bottom' | 'center' | null>(null);
   const filteredTabsRef = useRef<TabData[]>(filteredTabs);
   filteredTabsRef.current = filteredTabs;   // always current without adding to dep arrays
 
@@ -264,16 +264,46 @@ export function useTabUiHandlers({
   useEffect(() => {
     const DRAG_THRESHOLD = 5; // px before drag is recognised
 
-    /** Walk elements under the cursor and return the first .tab that isn’t the dragged one */
+    /**
+     * Walk elements under cursor and return the first .tab that isn't the dragged one.
+     * Returns side based on both tab types:
+     *  - terminal dragged over terminal: left/right/top/bottom/center (for split/reorder)
+     *  - terminal dragged over grid: 'center' (add to grid)
+     *  - anything else: left/right (for reorder)
+     */
     const findTabUnder = (x: number, y: number, excludeId: string) => {
+      const allTabs = filteredTabsRef.current;
+      const draggedTab = allTabs.find(t => t.id === excludeId);
+      const isDraggedTerminal = draggedTab?.type === 'terminal';
+
       for (const el of document.elementsFromPoint(x, y)) {
         const htmlEl = el as HTMLElement;
         if (htmlEl.classList?.contains('tab')) {
           const tabId = htmlEl.getAttribute('data-tab-id');
           if (tabId && tabId !== excludeId) {
+            const targetTab = allTabs.find(t => t.id === tabId);
             const rect = htmlEl.getBoundingClientRect();
-            const side: 'left' | 'right' = (x - rect.left) / rect.width <= 0.5 ? 'left' : 'right';
-            return { tabId, side };
+            const ratioX = (x - rect.left) / rect.width;
+            const ratioY = (y - rect.top)  / rect.height;
+
+            let side: 'left' | 'right' | 'top' | 'bottom' | 'center';
+
+            if (isDraggedTerminal && targetTab?.type === 'terminal') {
+              // Rich 5-zone detection for terminal→terminal (split or reorder)
+              if      (ratioX < 0.25)  side = 'left';
+              else if (ratioX > 0.75)  side = 'right';
+              else if (ratioY < 0.35)  side = 'top';
+              else if (ratioY > 0.65)  side = 'bottom';
+              else                     side = 'center';
+            } else if (isDraggedTerminal && targetTab?.type === 'grid') {
+              // Terminal dragged onto a grid tab → add to that grid
+              side = 'center';
+            } else {
+              // Default: insertion left or right
+              side = ratioX <= 0.5 ? 'left' : 'right';
+            }
+
+            return { tabId, side, targetType: targetTab?.type };
           }
         }
       }
@@ -338,19 +368,73 @@ export function useTabUiHandlers({
           const tabs = filteredTabsRef.current;
           const draggedIdx = tabs.findIndex(t => t.id === draggedId);
           const targetIdx  = tabs.findIndex(t => t.id === targetId);
-          console.log('[TabDrag-mouse] indexes → dragged:', draggedIdx, 'target:', targetIdx);
+          console.log('[TabDrag-mouse] indexes → dragged:', draggedIdx, 'target:', targetIdx, 'side:', side);
 
           if (draggedIdx !== -1 && targetIdx !== -1) {
             const draggedTab = tabs[draggedIdx];
-            setTabs(prevTabs => {
-              const full = prevTabs.find(t => t.id === draggedTab.id);
-              if (!full) return prevTabs;
-              const without = prevTabs.filter(t => t.id !== draggedTab.id);
-              const tIdx    = without.findIndex(t => t.id === targetId);
-              if (tIdx === -1) return prevTabs;
-              without.splice(side === 'left' ? tIdx : tIdx + 1, 0, full);
-              return without;
-            });
+            const targetTab  = tabs[targetIdx];
+            const isDraggedTerminal = draggedTab.type === 'terminal';
+            const isTargetTerminal  = targetTab.type  === 'terminal';
+            const isTargetGrid      = targetTab.type  === 'grid';
+
+            if (isDraggedTerminal && isTargetTerminal &&
+                (side === 'left' || side === 'right' || side === 'top' || side === 'bottom')) {
+              // ── Mode 1: terminal → terminal edge → create split pane ──────────
+              console.log('[TabDrag-mouse] creating split pane');
+              setTabs(prevTabs => {
+                const dragFull   = prevTabs.find(t => t.id === draggedTab.id);
+                const targetFull = prevTabs.find(t => t.id === targetTab.id);
+                if (!dragFull?.layout || !targetFull?.layout) return prevTabs;
+
+                const mergedLayout: SplitLayoutNode = {
+                  type: 'split',
+                  direction: (side === 'left' || side === 'right') ? 'horizontal' : 'vertical',
+                  first:  (side === 'left'  || side === 'top')    ? dragFull.layout  : targetFull.layout,
+                  second: (side === 'left'  || side === 'top')    ? targetFull.layout : dragFull.layout,
+                  firstSize: 50,
+                  secondSize: 50
+                };
+
+                return prevTabs
+                  .filter(t => t.id !== draggedTab.id)
+                  .map(t => t.id !== targetTab.id ? t : {
+                    ...t,
+                    layout: mergedLayout,
+                    focusedTerminalId: dragFull.focusedTerminalId || t.focusedTerminalId
+                  });
+              });
+              setActiveTabId(targetId);
+
+            } else if (isDraggedTerminal && isTargetGrid) {
+              // ── Mode 2: terminal → grid tab → add terminal IDs to grid ───────
+              console.log('[TabDrag-mouse] adding terminal to grid tab');
+              setTabs(prevTabs => {
+                const dragFull = prevTabs.find(t => t.id === draggedTab.id);
+                if (!dragFull?.layout) return prevTabs;
+                // Collect all terminal leaf IDs from the dragged tab
+                const termIds = getTerminalIds(dragFull.layout);
+                return prevTabs
+                  .filter(t => t.id !== draggedTab.id)
+                  .map(t => t.id !== targetTab.id ? t : {
+                    ...t,
+                    gridTerminalIds: [...(t.gridTerminalIds || []), ...termIds]
+                  });
+              });
+              setActiveTabId(targetId);
+
+            } else {
+              // ── Mode 3: insert-before/after reorder ───────────────────────────
+              console.log('[TabDrag-mouse] reordering tab');
+              setTabs(prevTabs => {
+                const full    = prevTabs.find(t => t.id === draggedTab.id);
+                if (!full) return prevTabs;
+                const without = prevTabs.filter(t => t.id !== draggedTab.id);
+                const tIdx    = without.findIndex(t => t.id === targetId);
+                if (tIdx === -1) return prevTabs;
+                without.splice(side === 'left' || side === 'top' ? tIdx : tIdx + 1, 0, full);
+                return without;
+              });
+            }
           }
         }
       }
