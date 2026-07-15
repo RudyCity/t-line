@@ -2,6 +2,19 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.460] - 2026-07-15
+
+### Fixed
+- **Tab Drag & Drop Stale Closure Bug**: `draggingTabId` was captured via stale closure in `handleTabDragOver` — the first `dragover` event fired before React state updated, causing early bail-out. Fixed by adding a `useRef` alongside the state so handlers always read the latest value synchronously.
+- **Tab Drag-End Cleanup**: `handleTabDragEnd` no longer relies on `e.currentTarget` to remove the `dragging` class (DOM manipulation was redundant since React controls the class via state). Cleaned up to only reset state/ref.
+
+### Improved
+- **Tab Reorder Logic — Swap → Insert**: Dropping a tab onto another now uses insert-before/after semantics instead of position-swap. This gives correct ordering when dragging across multiple positions (e.g. dragging tab A past tabs B and C now places A correctly, not just swapping A with C).
+- **Tab Drag Insertion Indicator**: Non-terminal tab drag-over now shows a glowing left/right edge line (instead of a generic center-highlight) to clearly show where the tab will be inserted.
+- **Cursor Feedback**: Tabs now show `cursor: grab` on hover and `cursor: grabbing` while being dragged, making the drag affordance immediately discoverable.
+- **Dragging Visual**: The tab being dragged now slightly shrinks (`scale(0.96)`) with a purple dashed border and glow shadow for a polished "lifted" feel.
+- **Insertion Line Animation**: The drop-target indicator line pulses with a subtle keyframe animation for better visibility.
+
 ## [1.3.459] - 2026-07-15
 
 ### Added

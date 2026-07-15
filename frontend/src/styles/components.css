@@ -579,13 +579,17 @@
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-muted);
-  cursor: pointer;
+  cursor: grab;
   min-width: 36px;
   max-width: 160px;
   flex: 1 1 140px;
   overflow: hidden;
   position: relative;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.15s ease,
+              transform 0.12s ease;
   -webkit-app-region: no-drag;
   container-type: inline-size;
 }
@@ -611,37 +615,47 @@
   border-color: var(--color-primary) !important;
 }
 
-/* Drag-to-split visual indicators */
+/* Drag-to-reorder & drag-to-split visual indicators */
+
+/* Left insertion line — drop will insert BEFORE this tab */
 .tab.drag-over-left {
   position: relative;
 }
 .tab.drag-over-left::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 3px;
+  top: 4px;
+  left: -2px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 2px;
   background: var(--color-primary, #a855f7);
-  box-shadow: 0 0 8px var(--color-primary, #a855f7);
+  box-shadow: 0 0 6px var(--color-primary, #a855f7),
+              0 0 12px var(--color-primary, #a855f7);
   z-index: 10;
+  animation: drag-indicator-pulse 0.8s ease-in-out infinite alternate;
 }
 
+/* Right insertion line — drop will insert AFTER this tab */
 .tab.drag-over-right {
   position: relative;
 }
 .tab.drag-over-right::after {
   content: '';
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 3px;
+  top: 4px;
+  right: -2px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 2px;
   background: var(--color-primary, #a855f7);
-  box-shadow: 0 0 8px var(--color-primary, #a855f7);
+  box-shadow: 0 0 6px var(--color-primary, #a855f7),
+              0 0 12px var(--color-primary, #a855f7);
   z-index: 10;
+  animation: drag-indicator-pulse 0.8s ease-in-out infinite alternate;
 }
 
+/* Terminal split: top indicator */
 .tab.drag-over-top {
   position: relative;
 }
@@ -652,11 +666,13 @@
   left: 0;
   right: 0;
   height: 3px;
+  border-radius: 2px;
   background: var(--color-primary, #a855f7);
   box-shadow: 0 0 8px var(--color-primary, #a855f7);
   z-index: 10;
 }
 
+/* Terminal split: bottom indicator */
 .tab.drag-over-bottom {
   position: relative;
 }
@@ -667,14 +683,21 @@
   left: 0;
   right: 0;
   height: 3px;
+  border-radius: 2px;
   background: var(--color-primary, #a855f7);
   box-shadow: 0 0 8px var(--color-primary, #a855f7);
   z-index: 10;
 }
 
+/* Terminal merge (center) indicator */
 .tab.drag-over-center {
   background: rgba(168, 85, 247, 0.15) !important;
   border-color: var(--color-primary, #a855f7) !important;
+}
+
+@keyframes drag-indicator-pulse {
+  from { opacity: 0.7; transform: scaleY(0.85); }
+  to   { opacity: 1;   transform: scaleY(1.1); }
 }
 
 .tab-detached-icon {
@@ -2294,9 +2317,12 @@
 
 /* Drag and Drop support for Chrome-like Tabs */
 .tab.dragging {
-  opacity: 0.4;
-  border: 1px dashed var(--accent-color) !important;
+  opacity: 0.35;
+  cursor: grabbing !important;
+  transform: scale(0.96);
+  border: 1px dashed var(--color-primary, #a855f7) !important;
   background: var(--surface-overlay) !important;
+  box-shadow: 0 2px 12px rgba(168, 85, 247, 0.2);
 }
 
 /* Dropdown actions style */

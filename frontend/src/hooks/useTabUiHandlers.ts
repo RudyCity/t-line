@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { TabData, WorkspaceInfo, getTerminalIds, SplitLayoutNode } from './useTerminals';
 import { wsManager } from '../services/websocket';
 
@@ -43,6 +43,7 @@ export function useTabUiHandlers({
   const [activeTooltip, setActiveTooltip] = useState<TooltipData | null>(null);
   const [tabContextMenu, setTabContextMenu] = useState<TabContextMenuData | null>(null);
   const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
+  const draggingTabIdRef = useRef<string | null>(null); // ref to avoid stale closure in drag events
   const [dragOverTabId, setDragOverTabId] = useState<string | null>(null);
   const [dragOverSide, setDragOverSide] = useState<'left' | 'right' | 'top' | 'bottom' | 'center' | null>(null);
 
@@ -232,16 +233,20 @@ export function useTabUiHandlers({
   }, [filteredTabs, setTabs]);
 
   const handleTabDragStart = useCallback((e: React.DragEvent, tabId: string) => {
+    e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', tabId);
+    // Set both ref (instant) and state (triggers re-render for visual)
+    draggingTabIdRef.current = tabId;
     setDraggingTabId(tabId);
-    if (e.currentTarget) {
-      (e.currentTarget as HTMLElement).classList.add('dragging');
-    }
   }, []);
 
   const handleTabDragOver = useCallback((e: React.DragEvent, targetTab: TabData) => {
     e.preventDefault();
-    if (!draggingTabId || draggingTabId === targetTab.id) return;
+    e.dataTransfer.dropEffect = 'move';
+    // Use ref instead of state to avoid stale closure — state update is async
+    // so the first dragover event fires before draggingTabId state is updated
+    const currentDraggingId = draggingTabIdRef.current;
+    if (!currentDraggingId || currentDraggingId === targetTab.id) return;
 
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -249,11 +254,12 @@ export function useTabUiHandlers({
     const ratioX = x / rect.width;
     const ratioY = y / rect.height;
 
-    const draggedTab = filteredTabs.find(t => t.id === draggingTabId);
+    const draggedTab = filteredTabs.find(t => t.id === currentDraggingId);
     const isDraggedTerminal = draggedTab?.type === 'terminal';
     const isTargetTerminal = targetTab.type === 'terminal';
 
     if (isDraggedTerminal && isTargetTerminal) {
+      // Terminal-to-terminal: support split or reorder
       if (ratioX < 0.25) {
         setDragOverSide('left');
       } else if (ratioX > 0.75) {
@@ -266,29 +272,30 @@ export function useTabUiHandlers({
         setDragOverSide('center');
       }
     } else {
-      setDragOverSide('center');
+      // Non-terminal: show insertion indicator (left = insert before, right = insert after)
+      setDragOverSide(ratioX <= 0.5 ? 'left' : 'right');
     }
     setDragOverTabId(targetTab.id);
-  }, [draggingTabId, filteredTabs]);
+  }, [filteredTabs]);
 
   const handleTabDragLeave = useCallback(() => {
     setDragOverTabId(null);
     setDragOverSide(null);
   }, []);
 
-  const handleTabDragEnd = useCallback((e: React.DragEvent) => {
+  const handleTabDragEnd = useCallback(() => {
+    draggingTabIdRef.current = null;
     setDraggingTabId(null);
     setDragOverTabId(null);
     setDragOverSide(null);
-    if (e.currentTarget) {
-      (e.currentTarget as HTMLElement).classList.remove('dragging');
-    }
   }, []);
 
   const handleTabDrop = useCallback((e: React.DragEvent, targetTabId: string) => {
     e.preventDefault();
-    const draggedId = e.dataTransfer.getData('text/plain') || draggingTabId;
+    const draggedId = e.dataTransfer.getData('text/plain') || draggingTabIdRef.current;
     if (!draggedId || draggedId === targetTabId) {
+      draggingTabIdRef.current = null;
+      setDraggingTabId(null);
       setDragOverTabId(null);
       setDragOverSide(null);
       return;
@@ -297,6 +304,8 @@ export function useTabUiHandlers({
     const draggedIndex = filteredTabs.findIndex(t => t.id === draggedId);
     const targetIndex = filteredTabs.findIndex(t => t.id === targetTabId);
     if (draggedIndex === -1 || targetIndex === -1) {
+      draggingTabIdRef.current = null;
+      setDraggingTabId(null);
       setDragOverTabId(null);
       setDragOverSide(null);
       return;
@@ -322,11 +331,12 @@ export function useTabUiHandlers({
         else if (ratioY > 0.65) side = 'bottom';
         else side = 'center';
       } else {
-        side = 'center';
+        side = ratioX <= 0.5 ? 'left' : 'right';
       }
     }
 
     if (isDraggedTerminal && isTargetTerminal && (side === 'left' || side === 'right' || side === 'top' || side === 'bottom')) {
+      // Merge two terminal tabs into a split pane
       setTabs(prevTabs => {
         const nextTabs = [...prevTabs];
         const dragTabFull = nextTabs.find(t => t.id === draggedId);
@@ -357,22 +367,28 @@ export function useTabUiHandlers({
       });
       setActiveTabId(targetTabId);
     } else {
+      // Insert-style reorder: remove dragged tab, then insert before/after target
+      // This is more correct than swap — handles non-adjacent moves properly
       setTabs(prevTabs => {
-        const nextTabs = [...prevTabs];
-        const gIndexDrag = nextTabs.findIndex(t => t.id === draggedTab.id);
-        const gIndexTarget = nextTabs.findIndex(t => t.id === targetTab.id);
-        if (gIndexDrag !== -1 && gIndexTarget !== -1) {
-          nextTabs[gIndexDrag] = targetTab;
-          nextTabs[gIndexTarget] = draggedTab;
-        }
-        return nextTabs;
+        const draggedFull = prevTabs.find(t => t.id === draggedTab.id);
+        if (!draggedFull) return prevTabs;
+        // Remove dragged from its original position
+        const withoutDragged = prevTabs.filter(t => t.id !== draggedTab.id);
+        // Find target in the updated array
+        const targetIdx = withoutDragged.findIndex(t => t.id === targetTab.id);
+        if (targetIdx === -1) return prevTabs;
+        // Insert before target when drop on left/top half, after when on right/bottom half
+        const insertIdx = (side === 'left' || side === 'top') ? targetIdx : targetIdx + 1;
+        withoutDragged.splice(insertIdx, 0, draggedFull);
+        return withoutDragged;
       });
     }
 
+    draggingTabIdRef.current = null;
     setDraggingTabId(null);
     setDragOverTabId(null);
     setDragOverSide(null);
-  }, [filteredTabs, draggingTabId, dragOverSide, setTabs, setActiveTabId]);
+  }, [filteredTabs, dragOverSide, setTabs, setActiveTabId]);
 
   return {
     activeTooltip,
