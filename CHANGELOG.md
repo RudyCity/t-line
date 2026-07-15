@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.442] - 2026-07-15
+
+### Optimized
+- **PTY Replay Buffer Memory Optimization**:
+  - Implemented automatic merging of output buffer chunks on the backend when the buffer array grows beyond 100 entries. This flattens the rolling buffer array, preventing array size explosion and optimizing array shift performance under high-throughput terminal streams.
+
 ## [1.3.441] - 2026-07-15
 
 ### Optimized
