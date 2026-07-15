@@ -39,7 +39,7 @@ export default function BookmarksDropdown({
       {showBookmarksDropdown && (
         <div
           className="absolute right-0 mt-2 w-64 border border-[var(--border-color)] rounded-xl shadow-2xl z-[9999] p-2 flex flex-col"
-          style={{ backgroundColor: 'var(--bg-card)' }}
+          style={{ backgroundColor: 'rgb(17, 24, 39)' }}
         >
           <div className="text-xs font-semibold text-[var(--text-muted)] border-b border-[var(--border-color)] pb-2 mb-2 px-2 flex justify-between items-center select-none">
             <span>Saved URLs & Domains</span>
