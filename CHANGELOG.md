@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.465] - 2026-07-15
+
+### Added
+- **Automatic 401 Unauthorized Session Recovery**: Introduced a global fetch interceptor in `useAuth` to catch 401 Unauthorized HTTP errors. If running inside Tauri, the client retrieves the new bypass token, updates local storage, resets the WebSocket manager, and transparently retries the failed API request.
+- **WebSocket Lifecycle Management**: Added `disconnect` and `reconnect` methods to `TerminalWebSocketManager` to handle token changes gracefully and avoid infinite connection attempt loops.
+
 ## [1.3.464] - 2026-07-15
 
 ### Improved

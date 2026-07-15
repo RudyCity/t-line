@@ -118,6 +118,77 @@ export function useAuth() {
     checkAuth();
   }, [checkAuth]);
 
+  // Global fetch interceptor to handle 401 (Unauthorized) errors dynamically.
+  // When running in Tauri, it attempts to recover the new local bypass token
+  // from the main app URL. If recovery succeeds, the failed request is retried
+  // transparently. Otherwise, the user is logged out.
+  useEffect(() => {
+    const originalFetch = window.fetch;
+    window.fetch = async (input, init) => {
+      const requestInit: RequestInit = init || {};
+      const response = await originalFetch(input, requestInit);
+
+      if (response.status === 401) {
+        const urlStr = typeof input === 'string' ? input : (input as Request).url;
+        const isAuthEndpoint = urlStr.includes('/api/auth/login') || 
+                               urlStr.includes('/api/auth/setup') || 
+                               urlStr.includes('/api/auth/verify') ||
+                               urlStr.includes('/api/auth/setup-status');
+        
+        if (!isAuthEndpoint) {
+          const oldToken = localStorage.getItem('token');
+          let tokenUpdated = false;
+          let newToken = '';
+
+          // 1. Try to recover token if running in Tauri
+          if ((window as any).__TAURI__?.core?.invoke) {
+            try {
+              const appUrl: string = await (window as any).__TAURI__.core.invoke('get_app_url');
+              if (appUrl) {
+                const urlObj = appUrl.startsWith('http://') || appUrl.startsWith('https://')
+                  ? new URL(appUrl)
+                  : new URL(appUrl, window.location.origin);
+                const tokenParam = urlObj.searchParams.get('token');
+                if (tokenParam && tokenParam !== oldToken) {
+                  newToken = tokenParam;
+                  localStorage.setItem('token', newToken);
+                  wsManager.setToken(newToken);
+                  wsManager.reconnect();
+                  tokenUpdated = true;
+                }
+              }
+            } catch (e) {
+              console.error('Failed to auto-recover bypass token from Tauri:', e);
+            }
+          }
+
+          if (tokenUpdated && newToken) {
+            // 2. Retry the request with the new token
+            const headers = new Headers(requestInit.headers || {});
+            headers.set('Authorization', `Bearer ${newToken}`);
+            const retryInit = {
+              ...requestInit,
+              headers
+            };
+            console.log(`Retrying request to ${urlStr} with recovered token.`);
+            return originalFetch(input, retryInit);
+          } else {
+            // 3. Fallback to logout
+            console.warn(`Unauthorized request to ${urlStr}. Logging out.`);
+            localStorage.removeItem('token');
+            wsManager.disconnect();
+            setIsAuthenticated(false);
+          }
+        }
+      }
+      return response;
+    };
+
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, [setIsAuthenticated]);
+
   return {
     setupRequired,
     setSetupRequired,

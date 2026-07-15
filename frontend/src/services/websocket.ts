@@ -111,6 +111,27 @@ class TerminalWebSocketManager {
     }
   }
 
+  disconnect() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.reconnectAttempts = 0;
+    if (this.ws) {
+      this.ws.onclose = null;
+      try {
+        this.ws.close();
+      } catch (e) {}
+      this.ws = null;
+    }
+    this.onConnectionChange(false);
+  }
+
+  reconnect() {
+    this.disconnect();
+    this.connect();
+  }
+
   subscribe(id: string, callback: (data: any) => void) {
     this.listeners.set(id, callback);
   }

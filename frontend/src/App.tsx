@@ -1172,6 +1172,7 @@ export default function App() {
       return () => {
         wsManager.unsubscribe('sync_state');
         wsManager.removeGlobalMessageListener(handleGlobalMessage);
+        wsManager.disconnect();
       };
     }
   }, [isAuthenticated, fetchLocalVersion]);
