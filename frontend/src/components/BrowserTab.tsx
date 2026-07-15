@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Globe, RotateCw, ExternalLink, MousePointer, ArrowLeft, ArrowRight, Monitor, Tablet, Smartphone, Minus, Plus, Star, Bookmark, Trash } from 'lucide-react';
+import { Globe, RotateCw, ExternalLink, MousePointer, ArrowLeft, ArrowRight, Monitor, Tablet, Smartphone, Minus, Plus, Star } from 'lucide-react';
 import { TabData } from '../hooks/useTerminals';
 import BrowserDevTools, { ConsoleErrorLog, InspectedElement } from './BrowserDevTools';
 import { determineRenderMode, getCleanUrl, openInSystemBrowser, BookmarkItem, getFriendlyName, getHelperStatusColorClass as getHelperStatusColorClassUtil, getHelperStatusText as getHelperStatusTextUtil } from './browserUrlUtils';
 import { useBrowserListeners } from '../hooks/useBrowserListeners';
+import BookmarksDropdown from './BookmarksDropdown';
 
 interface BrowserTabProps {
   tab: TabData;
@@ -133,56 +134,24 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     } catch (_) {}
   };
 
-  // Window resize + ResizeObserver: keep native webview glued to container.
-  // Only active while webviewActive is true (WebView2 overlay is alive).
+  // Window resize + ResizeObserver + DevTools height listener: keep native webview bounds synchronized.
   useEffect(() => {
     if (!useTauriWebview || renderMode !== 'tauri-native' || !webviewActive) return;
-
-    const handleWindowResize = () => { void syncWebviewBounds(); };
-    window.addEventListener('resize', handleWindowResize);
-
-    let ro: ResizeObserver | null = null;
-    let cancelled = false;
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const attachObserver = () => {
-      if (cancelled || typeof ResizeObserver === 'undefined') return;
-      const container = containerRef.current;
-      if (!container) {
-        // Container not mounted yet — retry shortly
-        retryTimer = setTimeout(attachObserver, 50);
-        return;
-      }
-      if (ro) ro.disconnect();
-      ro = new ResizeObserver(() => { void syncWebviewBounds(); });
-      ro.observe(container);
-      void syncWebviewBounds();
-    };
-    attachObserver();
-
+    const handleResize = () => { void syncWebviewBounds(); };
+    window.addEventListener('resize', handleResize);
+    const ro = containerRef.current && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(handleResize) : null;
+    if (ro && containerRef.current) ro.observe(containerRef.current);
+    void syncWebviewBounds();
+    // Force delayed resyncs for transitions
+    const t1 = setTimeout(handleResize, 100);
+    const t2 = setTimeout(handleResize, 250);
     return () => {
-      cancelled = true;
-      window.removeEventListener('resize', handleWindowResize);
-      if (retryTimer) clearTimeout(retryTimer);
+      window.removeEventListener('resize', handleResize);
       if (ro) ro.disconnect();
+      clearTimeout(t1);
+      clearTimeout(t2);
     };
-  }, [useTauriWebview, activeUrl, renderMode, webviewActive]);
-
-  // Force bounds resync when DevTools height/collapse changes
-  // Native webview is OS overlay — covers DevTools unless bounds shrink
-  useEffect(() => {
-    if (!useTauriWebview || renderMode !== 'tauri-native') return;
-    let raf2 = 0;
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => { void syncWebviewBounds(); });
-    });
-    const t = setTimeout(() => { void syncWebviewBounds(); }, 220);
-    return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-      clearTimeout(t);
-    };
-  }, [devtoolsHeight, isDevtoolsCollapsed, useTauriWebview, renderMode, deviceMode]);
+  }, [useTauriWebview, renderMode, webviewActive, devtoolsHeight, isDevtoolsCollapsed, deviceMode]);
 
   // Lifecycle of native Webview overlay in Tauri environment.
   // Re-runs whenever webviewActive toggles: creates on true, cleans up on false/unmount.
@@ -601,32 +570,21 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     };
   }, []);
 
-  // Synchronize zoom to Tauri native webview when zoomFactor changes
+  // Synchronize zoom factor to Tauri or Electron webviews
   useEffect(() => {
     if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
       const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
       if (activeLabel) {
-        const jsCode = `
-          try {
-            if (document.documentElement) document.documentElement.style.zoom = "${zoomFactor}";
-            if (document.body) document.body.style.zoom = "${zoomFactor}";
-          } catch (e) {}
-        `;
+        const jsCode = `try {
+          if (document.documentElement) document.documentElement.style.zoom = "${zoomFactor}";
+          if (document.body) document.body.style.zoom = "${zoomFactor}";
+        } catch(e) {}`;
         (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js: jsCode }).catch(() => {});
       }
+    } else if (useElectronWebview && webviewEl && renderMode === 'electron-webview') {
+      try { webviewEl.setZoomFactor(zoomFactor); } catch (_) {}
     }
-  }, [zoomFactor, activeUrl, renderMode, useTauriWebview, webviewActive, tab.id]);
-
-  // Synchronize zoom to Electron webview when zoomFactor changes
-  useEffect(() => {
-    if (useElectronWebview && webviewEl && renderMode === 'electron-webview') {
-      try {
-        webviewEl.setZoomFactor(zoomFactor);
-      } catch (err) {
-        console.warn('Failed to set Electron webview zoom factor:', err);
-      }
-    }
-  }, [zoomFactor, webviewEl, useElectronWebview, renderMode]);
+  }, [zoomFactor, activeUrl, renderMode, useTauriWebview, webviewActive, tab.id, useElectronWebview, webviewEl]);
 
   const handleZoomIn = () => setZoomFactor(prev => Math.min(3.0, prev + 0.1));
   const handleZoomOut = () => setZoomFactor(prev => Math.max(0.5, prev - 0.1));
@@ -677,43 +635,22 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   const toggleInspect = async () => {
     const nextState = !isInspecting;
     setIsInspecting(nextState);
-
     if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
+      const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
+      if (!activeLabel) return;
       try {
-        const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
-        if (activeLabel) {
-          // Proactively fetch and inject the helper code if needed
-          try {
-            const host = window.location.host.endsWith(':5773') 
-              ? window.location.host.replace(':5773', ':5779') 
-              : window.location.host;
-            const res = await fetch(`http://${host}/api/preview-proxy/tline-helper.js`);
-            if (res.ok) {
-              const helperCode = await res.text();
-              // Inject tabId and native flag
-              const setupCode = `
-                window.__TLINE_TAB_ID__ = "${tab.id}";
-                window.__TLINE_NATIVE__ = true;
-                ${helperCode}
-              `;
-              await (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js: setupCode }).catch(() => {});
-            }
-          } catch (fetchErr) {
-            console.warn('[BrowserTab] Failed to fetch/inject helper code during inspect toggle:', fetchErr);
-          }
-
-          const cmd = nextState ? 'tline-start-inspect' : 'tline-stop-inspect';
-          const jsCode = `window.postMessage({ type: "${cmd}" }, "*")`;
-          (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js: jsCode }).catch((e: any) => {
-            console.warn('[BrowserTab] Failed to eval inspect command in Webview:', e);
-          });
+        const host = window.location.host.endsWith(':5773') ? window.location.host.replace(':5773', ':5779') : window.location.host;
+        const res = await fetch(`http://${host}/api/preview-proxy/tline-helper.js`);
+        if (res.ok) {
+          const helperCode = await res.text();
+          const setupCode = `window.__TLINE_TAB_ID__ = "${tab.id}"; window.__TLINE_NATIVE__ = true; ${helperCode}`;
+          await (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js: setupCode }).catch(() => {});
         }
-      } catch (e) {
-        console.warn('[BrowserTab] Webview eval error:', e);
-      }
-    } else if (renderMode === 'iframe-local' && iframeRef.current?.contentWindow) {
+      } catch (_) {}
       const cmd = nextState ? 'tline-start-inspect' : 'tline-stop-inspect';
-      iframeRef.current.contentWindow.postMessage({ type: cmd }, '*');
+      (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js: `window.postMessage({ type: "${cmd}" }, "*")` }).catch(() => {});
+    } else if (renderMode === 'iframe-local' && iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage({ type: nextState ? 'tline-start-inspect' : 'tline-stop-inspect' }, '*');
     }
   };
 
@@ -723,224 +660,181 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       style={{ display: isActive ? 'flex' : 'none' }}
     >
       {/* Top Navbar */}
-      <div className="flex items-center gap-2 p-2 bg-[var(--bg-card)] border-b border-[var(--border-color)]">
-        <button 
-          onClick={handleBack}
-          className="p-1.5 rounded hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
-          title="Go back"
-        >
-          <ArrowLeft size={15} />
-        </button>
+      <div className="flex items-center justify-between gap-4 px-4 py-2 bg-[var(--bg-card)]/80 backdrop-blur-md border-b border-[var(--border-color)] select-none">
+        
+        {/* Left Section: Navigation Controls */}
+        <div className="flex items-center gap-1">
+          <div className="flex items-center bg-[var(--bg-main)]/50 border border-[var(--border-color)] rounded-lg p-0.5">
+            <button 
+              onClick={handleBack}
+              className="p-1.5 rounded-md hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer"
+              title="Go back"
+            >
+              <ArrowLeft size={14} />
+            </button>
 
-        <button 
-          onClick={handleForward}
-          className="p-1.5 rounded hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
-          title="Go forward"
-        >
-          <ArrowRight size={15} />
-        </button>
+            <button 
+              onClick={handleForward}
+              className="p-1.5 rounded-md hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer"
+              title="Go forward"
+            >
+              <ArrowRight size={14} />
+            </button>
 
-        <button 
-          onClick={handleReload}
-          className="p-1.5 rounded hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
-          title="Reload page"
-        >
-          <RotateCw size={15} className={isLoading ? 'animate-spin' : ''} />
-        </button>
-
-        <div className="h-4 w-px bg-[var(--border-color)] mx-1" />
-
-        <div className="flex items-center bg-[var(--bg-main)] border border-[var(--border-color)] rounded-lg p-0.5">
-          <button
-            type="button"
-            onClick={() => setDeviceMode('desktop')}
-            className={`p-1 rounded transition-all cursor-pointer ${
-              deviceMode === 'desktop'
-                ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-main)] border border-transparent hover:bg-[var(--bg-card-hover)]'
-            }`}
-            title="Desktop View"
-          >
-            <Monitor size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setDeviceMode('tablet')}
-            className={`p-1 rounded transition-all cursor-pointer ${
-              deviceMode === 'tablet'
-                ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-main)] border border-transparent hover:bg-[var(--bg-card-hover)]'
-            }`}
-            title="Tablet View"
-          >
-            <Tablet size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setDeviceMode('mobile')}
-            className={`p-1 rounded transition-all cursor-pointer ${
-              deviceMode === 'mobile'
-                ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-main)] border border-transparent hover:bg-[var(--bg-card-hover)]'
-            }`}
-            title="Mobile View"
-          >
-            <Smartphone size={14} />
-          </button>
+            <button 
+              onClick={handleReload}
+              className="p-1.5 rounded-md hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer"
+              title="Reload page"
+            >
+              <RotateCw size={14} className={isLoading ? 'animate-spin' : ''} />
+            </button>
+          </div>
         </div>
 
-        <div className="h-4 w-px bg-[var(--border-color)] mx-1" />
+        {/* Center Section: Beautiful URL Bar */}
+        <div className="flex-1 max-w-2xl">
+          <form onSubmit={handleNavigate} className="w-full flex items-center">
+            <div className="flex-1 relative flex items-center bg-[var(--bg-main)]/60 hover:bg-[var(--bg-main)]/90 focus-within:bg-[var(--bg-main)] focus-within:ring-2 focus-within:ring-purple-500/20 transition-all border border-[var(--border-color)] focus-within:border-purple-500/50 rounded-full px-3 py-1">
+              
+              {/* Leading Icon */}
+              <Globe size={14} className="text-purple-400/80 shrink-0" />
+              
+              {/* Input field */}
+              <input 
+                type="text"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="Enter application URL (e.g., localhost:3000)"
+                className="w-full bg-transparent text-xs py-1 px-1 focus:outline-none text-[var(--text-main)] placeholder-[var(--text-muted)] border-none"
+              />
 
-        <div className="flex items-center bg-[var(--bg-main)] border border-[var(--border-color)] rounded-lg p-0.5 select-none">
-          <button
-            type="button"
-            onClick={handleZoomOut}
-            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] cursor-pointer"
-            title="Zoom Out"
-          >
-            <Minus size={14} />
-          </button>
-          <span 
-            onClick={handleZoomReset}
-            className="text-[10px] font-mono px-1.5 min-w-[36px] text-center text-[var(--text-muted)] cursor-pointer hover:text-[var(--text-main)] transition-colors"
-            title="Reset zoom to 100% (Click to reset)"
-          >
-            {Math.round(zoomFactor * 100)}%
-          </span>
-          <button
-            type="button"
-            onClick={handleZoomIn}
-            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] cursor-pointer"
-            title="Zoom In"
-          >
-            <Plus size={14} />
-          </button>
+              {/* Trailing Icons inside URL Bar */}
+              <div className="flex items-center gap-1 shrink-0">
+                {activeUrl && (
+                  <button
+                    type="button"
+                    onClick={toggleBookmarkCurrent}
+                    className={`p-1 rounded-full transition-colors cursor-pointer hover:bg-[var(--bg-card-hover)] ${
+                      isCurrentBookmarked ? 'text-amber-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                    }`}
+                    title={isCurrentBookmarked ? "Remove bookmark" : "Bookmark this page"}
+                  >
+                    <Star size={13} fill={isCurrentBookmarked ? "currentColor" : "none"} />
+                  </button>
+                )}
+
+                {/* Bookmarks Dropdown Component */}
+                <BookmarksDropdown
+                  showBookmarksDropdown={showBookmarksDropdown}
+                  setShowBookmarksDropdown={setShowBookmarksDropdown}
+                  bookmarksDropdownRef={bookmarksDropdownRef}
+                  bookmarks={bookmarks}
+                  clearAllBookmarks={clearAllBookmarks}
+                  handleNavigateToBookmark={handleNavigateToBookmark}
+                  removeBookmark={removeBookmark}
+                />
+              </div>
+
+            </div>
+          </form>
         </div>
 
-        <div className="h-4 w-px bg-[var(--border-color)] mx-1" />
+        {/* Right Section: View, Zoom, & Dev Actions */}
+        <div className="flex items-center gap-3">
+          
+          {/* Device Toggles */}
+          <div className="flex items-center bg-[var(--bg-main)]/50 border border-[var(--border-color)] rounded-lg p-0.5">
+            <button
+              type="button"
+              onClick={() => setDeviceMode('desktop')}
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                deviceMode === 'desktop'
+                  ? 'bg-purple-500/20 text-purple-400 font-semibold animate-none'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
+              }`}
+              title="Desktop View"
+            >
+              <Monitor size={13} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeviceMode('tablet')}
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                deviceMode === 'tablet'
+                  ? 'bg-purple-500/20 text-purple-400 font-semibold animate-none'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
+              }`}
+              title="Tablet View"
+            >
+              <Tablet size={13} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeviceMode('mobile')}
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                deviceMode === 'mobile'
+                  ? 'bg-purple-500/20 text-purple-400 font-semibold animate-none'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
+              }`}
+              title="Mobile View"
+            >
+              <Smartphone size={13} />
+            </button>
+          </div>
 
-        <form onSubmit={handleNavigate} className="flex-1 flex gap-2">
-          <div className="flex-grow relative flex items-center">
-            <input 
-              type="text"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="Enter application URL (e.g., localhost:3000)"
-              className="w-full pl-3 pr-8 py-1.5 bg-[var(--bg-main)] text-sm rounded-lg border border-[var(--border-color)] focus:outline-none focus:border-purple-500 text-[var(--text-main)] placeholder-[var(--text-muted)]"
-            />
-            {activeUrl && (
-              <button
-                type="button"
-                onClick={toggleBookmarkCurrent}
-                className={`absolute right-2 p-1 rounded transition-colors cursor-pointer hover:bg-[var(--bg-card-hover)] ${
-                  isCurrentBookmarked ? 'text-amber-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                }`}
-                title={isCurrentBookmarked ? "Remove bookmark" : "Bookmark this page"}
+          {/* Zoom controls */}
+          <div className="flex items-center bg-[var(--bg-main)]/50 border border-[var(--border-color)] rounded-lg p-0.5">
+            <button
+              type="button"
+              onClick={handleZoomOut}
+              className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] cursor-pointer"
+              title="Zoom Out"
+            >
+              <Minus size={13} />
+            </button>
+            <span 
+              onClick={handleZoomReset}
+              className="text-[10px] font-mono px-2 min-w-[36px] text-center text-[var(--text-muted)] cursor-pointer hover:text-[var(--text-main)] transition-colors select-none"
+              title="Reset zoom to 100% (Click to reset)"
+            >
+              {Math.round(zoomFactor * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={handleZoomIn}
+              className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] cursor-pointer"
+              title="Zoom In"
+            >
+              <Plus size={13} />
+            </button>
+          </div>
+
+          {/* Developer Actions (Pills/Icons) */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={toggleInspect}
+              className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                isInspecting 
+                  ? 'bg-purple-500/20 border-purple-500 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.2)]'
+                  : 'bg-[var(--bg-main)]/50 border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
+              }`}
+              title="Inspect Element (Click and select items to inspect)"
+            >
+              <MousePointer size={14} className={isInspecting ? 'animate-pulse' : ''} />
+            </button>
+
+            {isTauri && (
+              <button 
+                onClick={() => openInSystemBrowser(activeUrl)}
+                className="p-1.5 rounded-lg bg-[var(--bg-main)]/50 border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer"
+                title="Open in default system browser"
               >
-                <Star size={14} fill={isCurrentBookmarked ? "currentColor" : "none"} />
+                <ExternalLink size={14} />
               </button>
             )}
           </div>
-          <button 
-            type="submit"
-            className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm cursor-pointer"
-          >
-            Go
-          </button>
-        </form>
 
-        <div className="relative" ref={bookmarksDropdownRef}>
-          <button
-            type="button"
-            onClick={() => setShowBookmarksDropdown(!showBookmarksDropdown)}
-            className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
-              showBookmarksDropdown
-                ? 'bg-purple-600/20 border-purple-500 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.25)]'
-                : 'bg-[var(--bg-main)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
-            }`}
-            title="Saved URLs / Bookmarks"
-          >
-            <Bookmark size={15} />
-          </button>
-
-          {showBookmarksDropdown && (
-            <div className="absolute right-0 mt-1.5 w-64 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg shadow-xl z-[100] backdrop-blur-md p-2 flex flex-col">
-              <div className="text-xs font-semibold text-[var(--text-muted)] border-b border-[var(--border-color)] pb-1.5 mb-1.5 px-2 flex justify-between items-center select-none">
-                <span>Saved URLs & Domains</span>
-                {bookmarks.length > 0 && (
-                  <button 
-                    type="button"
-                    onClick={clearAllBookmarks}
-                    className="text-[10px] text-red-400 hover:text-red-300 font-semibold cursor-pointer"
-                  >
-                    Clear All
-                  </button>
-                )}
-              </div>
-              <div className="max-h-60 overflow-y-auto flex flex-col gap-1">
-                {bookmarks.length === 0 ? (
-                  <div className="text-xs text-[var(--text-muted)] text-center py-4 select-none">
-                    No saved URLs. Click the star in the URL bar to save.
-                  </div>
-                ) : (
-                  bookmarks.map((bookmark) => (
-                    <div 
-                      key={bookmark.id}
-                      className="flex items-center justify-between gap-1 p-1.5 rounded hover:bg-[var(--bg-card-hover)] group transition-all"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => handleNavigateToBookmark(bookmark.url)}
-                        className="flex-1 text-left min-w-0 cursor-pointer"
-                      >
-                        <div className="text-xs font-medium text-[var(--text-main)] truncate">
-                          {bookmark.name}
-                        </div>
-                        <div className="text-[10px] text-[var(--text-muted)] truncate">
-                          {bookmark.url}
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeBookmark(bookmark.id)}
-                        className="p-1 rounded hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                        title="Delete bookmark"
-                      >
-                        <Trash size={12} />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
         </div>
-
-        <div className="h-4 w-px bg-[var(--border-color)] mx-1" />
-
-        <button
-          onClick={toggleInspect}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
-            isInspecting 
-              ? 'bg-purple-600/20 border-purple-500 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.25)]'
-              : 'bg-[var(--bg-main)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
-          }`}
-          title="Inspect Element (Click and select an item in the preview)"
-        >
-          <MousePointer size={13} className={isInspecting ? 'animate-pulse' : ''} />
-          <span>Inspect</span>
-        </button>
-
-        {isTauri && (
-          <button 
-            onClick={() => openInSystemBrowser(activeUrl)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[var(--bg-main)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer"
-            title="Open in default browser"
-          >
-            <ExternalLink size={13} />
-            <span>Open Browser</span>
-          </button>
-        )}
       </div>
 
       {/* Main Browser Viewport Area — min-h-0 so DevTools can claim space */}

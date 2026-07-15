@@ -1,6 +1,20 @@
 # Changelog
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
+
+## [1.3.456] - 2026-07-15
+
+### Changed
+- **Browser Preview UI Relayout**:
+  - Re-organized the browser preview top toolbar into a highly polished, clean 3-section layout.
+  - Grouped navigation buttons (Back, Forward, Reload) into a unified glassmorphic container on the left.
+  - Elongated the URL input bar in the center with a purple Globe icon and rounded-full borders.
+  - Integrated the Bookmark Star toggle and Bookmarks folder trigger directly inside the right of the URL bar container.
+  - Simplified Zoom controls and Device View mode selectors into compact, pill-shaped groups on the right.
+  - Replaced text buttons like "Inspect" and "Open Browser" with clean, space-saving icon buttons.
+  - Extracted the Bookmarks list dropdown logic into a separate `BookmarksDropdown` component.
+  - Refactored `BrowserTab.tsx` to combine duplicate useEffect hooks, bringing its total line count strictly below the 1000 lines limit.
+
 ## [1.3.455] - 2026-07-15
 
 ### Added
