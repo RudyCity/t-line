@@ -891,10 +891,31 @@ wss.on('connection', (ws: WebSocket) => {
           if (ws.readyState === WebSocket.OPEN) {
             // Send PID immediately
             ws.send(JSON.stringify({ type: 'pid', id, pid: existingTerm.getPid() }));
-            // First replay any buffered output immediately
+            
             if (buffer) {
-              ws.send(JSON.stringify({ type: 'replay', id, data: buffer }));
+              // Viewport-Only Replay: split buffer at nearest newline near last 4KB to prevent ANSI seq cutting
+              let splitIdx = Math.max(0, buffer.length - 4000);
+              const nextNewline = buffer.indexOf('\n', splitIdx);
+              if (nextNewline !== -1 && nextNewline < buffer.length - 100) {
+                splitIdx = nextNewline + 1;
+              }
+
+              const scrollback = buffer.slice(0, splitIdx);
+              const viewport = buffer.slice(splitIdx);
+
+              // Send viewport first for instant screen render
+              ws.send(JSON.stringify({ type: 'replay', id, data: viewport, isViewport: true }));
+
+              // Lazy-load the remaining scrollback history
+              if (scrollback) {
+                setTimeout(() => {
+                  if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'replay', id, data: scrollback, isScrollback: true }));
+                  }
+                }, 60);
+              }
             }
+            
             // Then show re-attach indicator immediately
             ws.send(JSON.stringify({
               type: 're-attached',
@@ -959,6 +980,15 @@ wss.on('connection', (ws: WebSocket) => {
       } else if (type === 'suspend') {
         console.log(`[WS] Received suspend command for terminal: id=${id}`);
         terminalManager.setSender(id, ws, null);
+      } else if (type === 'prewarm') {
+        const term = terminalManager.getTerminal(id);
+        if (term) {
+          const pid = term.getPid();
+          if (pid) {
+            getActiveProcessesForPid(pid).catch(() => {});
+            try { term.getProcessName(); } catch (e) {}
+          }
+        }
       }
     } catch (e) {
       console.error('WS Message parsing error:', e);

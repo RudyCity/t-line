@@ -88,6 +88,11 @@ export function useTabUiHandlers({
       branch: branch || undefined,
       path
     });
+
+    // Predictive Pre-warming: trigger process query on hover for terminal tabs
+    if (t.type === 'terminal' && t.focusedTerminalId) {
+      wsManager.send(JSON.stringify({ type: 'prewarm', id: t.focusedTerminalId }));
+    }
   }, [tabContextMenu, terminalInstances, getTabGitBranch]);
 
   const handleTabMouseLeave = useCallback(() => {

@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.443] - 2026-07-15
+
+### Optimized
+- **Advanced Terminal Performance Improvements**:
+  - **Regex Instantiation Optimization**: Moved the file link regex to the global scope in `TerminalInstance.tsx` to prevent redundant object creations and decrease garbage collection pressure on terminal scroll/hover.
+  - **Predictive Session Pre-warming**: Configured frontend tab-header hover states to proactively send `prewarm` signals, preloading and caching active process listings (`wmic`/`ps`) and process names on the backend before the user clicks the tab.
+  - **Viewport-Only Replay & Lazy-Loading**: Split backend replay streams at safe newline boundaries near the 4KB limit. The client renders the active viewport instantly, and lazy-loads the scrollback history 60ms later, rebuilding the buffer seamlessly.
+
 ## [1.3.442] - 2026-07-15
 
 ### Optimized

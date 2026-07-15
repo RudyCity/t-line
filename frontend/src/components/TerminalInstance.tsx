@@ -24,6 +24,8 @@ import {
   copyToClipboard
 } from './TerminalHelpers';
 
+const FILE_PATH_REGEX = /(?:(?:[a-zA-Z]:\\|\/|\.\.\/|\.\/)?(?:[a-zA-Z0-9._+-]+[/\\])+[a-zA-Z0-9._+-]+\.[a-zA-Z0-9._+-]+|[a-zA-Z0-9._+-]+\.(?:tsx?|jsx?|json|html|css|rs|go|py|md|sh|ya?ml|toml|txt|log|conf))(?::\d+)?(?::\d+)?/g;
+
 // ── Main Terminal Instance ─────────────────────────────────────
 export function TerminalInstance({
   tab, active, wsConnected, fontSize,
@@ -40,6 +42,7 @@ export function TerminalInstance({
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
+  const lastViewportRef = useRef<string>('');
   // Tracks every addon loaded into the terminal so we can dispose them
   // individually before term.dispose(), preventing xterm's AddonManager
   // from iterating addons with undefined internal state (_isDisposed error).
@@ -115,7 +118,18 @@ export function TerminalInstance({
         resetIdleTimer();
         onPtyDataRef.current?.();
       } else if (payload.type === 'replay') {
-        scheduleWrite(payload.data);
+        if (payload.isViewport) {
+          lastViewportRef.current = payload.data;
+          scheduleWrite(payload.data);
+        } else if (payload.isScrollback) {
+          try {
+            term.reset();
+          } catch (e) {}
+          scheduleWrite(payload.data);
+          scheduleWrite(lastViewportRef.current);
+        } else {
+          scheduleWrite(payload.data);
+        }
         resetIdleTimer();
       } else if (payload.type === 'resize_broadcast') {
         try {
@@ -374,9 +388,9 @@ export function TerminalInstance({
         const text = line.translateToString(true);
         const links: any[] = [];
         
-        const regex = /(?:(?:[a-zA-Z]:\\|\/|\.\.\/|\.\/)?(?:[a-zA-Z0-9._+-]+[/\\])+[a-zA-Z0-9._+-]+\.[a-zA-Z0-9._+-]+|[a-zA-Z0-9._+-]+\.(?:tsx?|jsx?|json|html|css|rs|go|py|md|sh|ya?ml|toml|txt|log|conf))(?::\d+)?(?::\d+)?/g;
+        FILE_PATH_REGEX.lastIndex = 0;
         let match;
-        while ((match = regex.exec(text)) !== null) {
+        while ((match = FILE_PATH_REGEX.exec(text)) !== null) {
           const matchText = match[0];
           if (/^https?:\/\//i.test(matchText) || /^file:\/\//i.test(matchText)) {
             continue;
