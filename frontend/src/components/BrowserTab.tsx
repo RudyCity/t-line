@@ -16,6 +16,10 @@ interface BrowserTabProps {
 export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTabUrl }: BrowserTabProps) {
   const [urlInput, setUrlInput] = useState(tab.url || '');
   const [activeUrl, setActiveUrl] = useState(tab.url || '');
+  const activeUrlRef = useRef(activeUrl);
+  useEffect(() => {
+    activeUrlRef.current = activeUrl;
+  }, [activeUrl]);
   const [activeSubTab, setActiveSubTab] = useState<'console' | 'inspector'>('console');
   
   const [logs, setLogs] = useState<ConsoleErrorLog[]>([]);
@@ -156,7 +160,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   // Lifecycle of native Webview overlay in Tauri environment.
   // Re-runs whenever webviewActive toggles: creates on true, cleans up on false/unmount.
   useEffect(() => {
-    if (!useTauriWebview || !activeUrl || renderMode !== 'tauri-native') return;
+    if (!useTauriWebview || !activeUrlRef.current || renderMode !== 'tauri-native') return;
     if (!webviewActive) return; // Tab is suspended — do not spawn a new webview
 
     let active = true;
@@ -205,7 +209,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
         sessionStorage.setItem(sessionStorageKey, uniqueLabel);
 
         webviewInstance = new Webview(currentWindow, uniqueLabel, {
-          url: activeUrl,
+          url: activeUrlRef.current,
           x: rect.left,
           y: rect.top,
           width: rect.width,
@@ -299,7 +303,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
         });
       }
     };
-  }, [useTauriWebview, tab.id, activeUrl, renderMode, webviewActive]);
+  }, [useTauriWebview, tab.id, renderMode, webviewActive]);
 
   // NOTE: show/hide is no longer used — we destroy/recreate WebView2 on isActive changes
   // to free RAM when the tab is not visible. This block is intentionally left empty.
@@ -498,6 +502,18 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     }
   };
 
+  const navigateWebview = (targetUrl: string) => {
+    if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
+      const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
+      if (activeLabel) {
+        (window as any).__TAURI__?.core?.invoke('eval_webview_js', {
+          label: activeLabel,
+          js: `window.location.href = "${targetUrl}"`
+        }).catch(() => {});
+      }
+    }
+  };
+
   const handleNavigate = (e: React.FormEvent) => {
     e.preventDefault();
     let target = urlInput.trim();
@@ -508,6 +524,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     setUrlInput(target);
     setActiveUrl(target);
     onUpdateTabUrl?.(target);
+    navigateWebview(target);
     startLoadingBar();
     // For tauri-native we can't listen to load events, so auto-finish
     if (renderMode === 'tauri-native') {
@@ -575,6 +592,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     setActiveUrl(url);
     onUpdateTabUrl?.(url);
     setShowBookmarksDropdown(false);
+    navigateWebview(url);
     startLoadingBar();
     if (renderMode === 'tauri-native') {
       setTimeout(finishLoadingBar, 1800);
@@ -817,17 +835,17 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
           <div
             className={
               deviceMode === 'desktop'
-                ? 'absolute inset-0 w-full h-full border-none bg-white'
+                ? 'absolute inset-0 w-full h-full border-none bg-[var(--bg-main)]'
                 : deviceMode === 'tablet'
-                ? 'relative w-[768px] h-[1024px] max-w-full max-h-full border-[12px] border-[#1e1e24] rounded-[24px] shadow-2xl bg-white flex flex-col transition-all duration-300'
-                : 'relative w-[375px] h-[812px] max-w-full max-h-full border-[12px] border-[#1e1e24] rounded-[36px] shadow-2xl bg-white flex flex-col transition-all duration-300'
+                ? 'relative w-[768px] h-[1024px] max-w-full max-h-full border-[12px] border-[#1e1e24] rounded-[24px] shadow-2xl bg-[var(--bg-main)] flex flex-col transition-all duration-300'
+                : 'relative w-[375px] h-[812px] max-w-full max-h-full border-[12px] border-[#1e1e24] rounded-[36px] shadow-2xl bg-[var(--bg-main)] flex flex-col transition-all duration-300'
             }
             style={deviceMode !== 'desktop' ? { 
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)',
             } : undefined}
           >
             {/* Actual Inner Viewport Area */}
-            <div className="w-full h-full relative overflow-hidden bg-white rounded-[inherit]">
+            <div className="w-full h-full relative overflow-hidden bg-[var(--bg-main)] rounded-[inherit]">
               {/* Loading progress bar */}
               {isLoading && (
                 <div
@@ -868,21 +886,21 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
                     }
                   }}
                   src={activeUrl}
-                  className={`absolute inset-0 w-full h-full border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
+                  className={`absolute inset-0 w-full h-full border-none bg-[var(--bg-main)] ${isResizing ? 'pointer-events-none' : ''}`}
                   style={{ width: '100%', height: '100%', border: 'none' }}
                   allowpopups={true}
                 />
               ) : renderMode === 'tauri-native' ? (
                 <div 
                   ref={containerRef} 
-                  className={`absolute inset-0 w-full h-full bg-white ${isResizing ? 'pointer-events-none' : ''}`}
+                  className={`absolute inset-0 w-full h-full bg-[var(--bg-main)] ${isResizing ? 'pointer-events-none' : ''}`}
                 />
               ) : renderMode === 'iframe-local' ? (
                 <iframe 
                   key={iframeKey}
                   ref={iframeRef}
                   src={activeUrl} 
-                  className={`absolute border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
+                  className={`absolute border-none bg-[var(--bg-main)] ${isResizing ? 'pointer-events-none' : ''}`}
                   style={{
                     width: `${100 / zoomFactor}%`,
                     height: `${100 / zoomFactor}%`,

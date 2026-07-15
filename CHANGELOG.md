@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.467] - 2026-07-15
+
+### Improved
+- **Smooth Browser Navigation**: Refactored the native webview lifecycle in [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) to prevent destroying and recreating the Tauri native Webview overlay when navigating or changing URLs. Instead, the existing Webview is navigated programmatically, which completely eliminates white loading flashes.
+- **Flashing Mitigation via Dark Theme Background**: Replaced hardcoded `bg-white` classes with `bg-[var(--bg-main)]` on all webview and iframe viewport wrappers to ensure a smooth background transition matching the active workspace theme.
+
 ## [1.3.466] - 2026-07-15
 
 ### Added
