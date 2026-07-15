@@ -279,6 +279,20 @@ export const previewProxy = createProxyMiddleware({
         parsedPath.searchParams.delete('tabId');
         proxyReq.path = parsedPath.pathname + (parsedPath.search || '');
       } catch (e) {}
+
+      // Strip non-HTTP Origin headers (e.g. 'null', 'tauri://localhost') before forwarding.
+      // Target dev-servers (Vite, webpack-dev-server, etc.) run their own `cors` middleware
+      // which throws "Origin header is not a valid URL" on these values, crashing the request
+      // and returning a 500 through the proxy.
+      const forwardedOrigin = proxyReq.getHeader('origin') as string | undefined;
+      if (forwardedOrigin !== undefined) {
+        try {
+          new URL(forwardedOrigin); // valid http/https origin — keep it
+        } catch {
+          proxyReq.removeHeader('origin');
+        }
+      }
+
       // Force target to send uncompressed content so we can modify the HTML safely
       proxyReq.setHeader('accept-encoding', 'identity');
     },

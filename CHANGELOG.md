@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.472] - 2026-07-15
+
+### Fixed
+- **Preview Proxy: `Origin header is not a valid URL` / 500 errors**: Fixed a bug where invalid `Origin` headers sent by the Tauri WebView (e.g. `null`, `tauri://localhost`) were being forwarded verbatim to the target dev server via the preview proxy. Target dev-servers (Vite, webpack-dev-server, etc.) run their own `cors` middleware which throws `"Origin header is not a valid URL"` on non-HTTP origins, crashing the proxied request and returning a 500 back to the browser. The fix strips any non-HTTP/HTTPS `Origin` header in the `proxyReq` event handler in [previewProxy.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/previewProxy.ts) before the outbound request is forwarded.
+
 ## [1.3.471] - 2026-07-15
 
 ### Improved
