@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.469] - 2026-07-15
+
+### Fixed
+- **Tauri Main Thread Hang (Application Not Responding)**: Fixed a critical app hang bug (reported as Event ID 1002, "Top level window is idle" in Event Viewer) that caused `t-line.exe` to lock up when polling memory stats. Refactored `is_descendant_of` in [lib.rs](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/src/lib.rs) to use loop-cycle detection with a `HashSet` and filter out PID 0 (System Idle Process), preventing infinite traversal loops when checking system process trees.
+
 ## [1.3.468] - 2026-07-15
 
 ### Improved

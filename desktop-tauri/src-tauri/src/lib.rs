@@ -1462,10 +1462,16 @@ fn focus_window(app: tauri::AppHandle, label: String) -> Result<(), String> {
 
 fn is_descendant_of(sys: &sysinfo::System, child_pid: sysinfo::Pid, parent_pid: sysinfo::Pid) -> bool {
     let mut current = child_pid;
+    let mut visited = std::collections::HashSet::new();
+    visited.insert(current);
+
     while let Some(proc) = sys.process(current) {
         if let Some(p) = proc.parent() {
             if p == parent_pid {
                 return true;
+            }
+            if p == sysinfo::Pid::from(0) || !visited.insert(p) {
+                break;
             }
             current = p;
         } else {
