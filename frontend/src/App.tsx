@@ -29,7 +29,7 @@ import { DiffViewerTab } from './components/DiffViewerTab';
 import { TerminalGridTab } from './components/TerminalGridTab';
 import BrowserTab from './components/BrowserTab';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
-import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal, ConfirmModal, WorkspaceEditModal, SavePromptModal } from './components/Modals';
+import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal, ConfirmModal, WorkspaceEditModal, SavePromptModal, SelectGridModal } from './components/Modals';
 
 interface SavedPrompt {
   id: string;
@@ -213,6 +213,8 @@ export default function App() {
   });
 
   const [showSavePromptModal, setShowSavePromptModal] = useState<boolean>(false);
+  const [showSelectGridModal, setShowSelectGridModal] = useState<boolean>(false);
+  const [pendingSavedPrompt, setPendingSavedPrompt] = useState<SavedPrompt | null>(null);
   const [showQuickLaunchDropdown, setShowQuickLaunchDropdown] = useState<boolean>(false);
   const [savePromptDefaultCwd, setSavePromptDefaultCwd] = useState<string>('');
   const [savePromptDefaultShell, setSavePromptDefaultShell] = useState<string>('powershell');
@@ -846,9 +848,41 @@ export default function App() {
     localStorage.setItem('tline-saved-prompts', JSON.stringify(next));
   };
 
+  const activeGridTabs = useMemo(() => {
+    return tabs
+      .filter(t => t.type === 'grid')
+      .map(t => ({
+        id: t.id,
+        name: t.name,
+        activeTerminalCount: t.gridTerminalIds?.length || 0
+      }));
+  }, [tabs]);
+
+  const handleSelectGridSubmit = (targetGridId: string | 'new') => {
+    if (!pendingSavedPrompt) return;
+    console.log(`[QuickLaunch] Redirecting shortcut to grid option "${targetGridId}": name="${pendingSavedPrompt.name}", command="${pendingSavedPrompt.command}"`);
+    openTerminal(
+      pendingSavedPrompt.name, 
+      pendingSavedPrompt.cwd, 
+      pendingSavedPrompt.shellType, 
+      pendingSavedPrompt.command, 
+      targetGridId === 'new' ? 'new' : targetGridId
+    );
+    setShowSelectGridModal(false);
+    setPendingSavedPrompt(null);
+  };
+
   const handleRunSavedPrompt = (prompt: SavedPrompt) => {
     console.log(`[QuickLaunch] Clicked shortcut: name="${prompt.name}", command="${prompt.command}", cwd="${prompt.cwd}", shellType="${prompt.shellType}"`);
-    openTerminal(prompt.name, prompt.cwd, prompt.shellType, prompt.command, true);
+    const gridTabs = tabs.filter(t => t.type === 'grid');
+    if (gridTabs.length > 1) {
+      console.log(`[QuickLaunch] Multiple grid tabs found (${gridTabs.length}). Showing grid selection modal.`);
+      setPendingSavedPrompt(prompt);
+      setShowSelectGridModal(true);
+    } else {
+      // 0 or 1 grid tabs: auto-insert or auto-create grid tab
+      openTerminal(prompt.name, prompt.cwd, prompt.shellType, prompt.command, true);
+    }
   };
 
   useEffect(() => {
@@ -867,6 +901,7 @@ export default function App() {
       showBranchModal ||
       showEditWorkspaceModal ||
       showSavePromptModal ||
+      showSelectGridModal ||
       showShortcutModal ||
       showQuickLaunchDropdown ||
       showTabsDropdown ||
@@ -882,6 +917,7 @@ export default function App() {
     showBranchModal,
     showEditWorkspaceModal,
     showSavePromptModal,
+    showSelectGridModal,
     showShortcutModal,
     showQuickLaunchDropdown,
     showTabsDropdown,
@@ -2518,6 +2554,16 @@ export default function App() {
         defaultCwd={savePromptDefaultCwd}
         defaultShellType={savePromptDefaultShell}
         initialName={savePromptInitialName}
+      />
+
+      <SelectGridModal
+        show={showSelectGridModal}
+        onClose={() => {
+          setShowSelectGridModal(false);
+          setPendingSavedPrompt(null);
+        }}
+        gridTabs={activeGridTabs}
+        onSelect={handleSelectGridSubmit}
       />
 
       <Footer

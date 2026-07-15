@@ -375,7 +375,13 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     }
   }, [workspaces, tabs, terminalInstances, findWorkspaceIdForPath]);
 
-  const openTerminal = useCallback((name: string, cwd: string, shellType?: string, initialCommand?: string, forceGrid = false) => {
+  const openTerminal = useCallback((
+    name: string, 
+    cwd: string, 
+    shellType?: string, 
+    initialCommand?: string, 
+    gridOption: 'new' | string | boolean = false
+  ) => {
     const tabId = `tab-${Date.now()}`;
     const termId = `term-${Date.now()}`;
     const activeShell = shellType || defaultShell;
@@ -397,25 +403,36 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
       initialCommand
     };
 
-    // If currently active tab is a grid, append the terminal directly into it (applicable to both)
+    // Determine target grid tab if applicable
+    let targetGridTab: TabData | undefined = undefined;
     const activeTab = tabs.find(t => t.id === activeTabId);
-    if (activeTab && activeTab.type === 'grid') {
+
+    if (typeof gridOption === 'string' && gridOption !== 'new') {
+      // User targeted a specific grid tab ID
+      targetGridTab = tabs.find(t => t.id === gridOption && t.type === 'grid');
+    } else if (gridOption === true && activeTab && activeTab.type === 'grid') {
+      // Auto-append: use currently active tab if it's a grid
+      targetGridTab = activeTab;
+    }
+
+    if (targetGridTab) {
       setTerminalInstances(prev => ({ ...prev, [termId]: newInstance }));
       setTabs(prev => prev.map(t => {
-        if (t.id === activeTab.id) {
+        if (t.id === targetGridTab!.id) {
           const currentIds = t.gridTerminalIds || [];
           return { ...t, gridTerminalIds: [...currentIds, termId] };
         }
         return t;
       }));
+      setActiveTabId(targetGridTab.id);
       onTerminalOpen?.();
       return;
     }
 
     const wsId = findWorkspaceIdForPath(cwd);
 
-    if (forceGrid) {
-      // Force grid tab creation (default behavior for Quick Launch trigger)
+    if (gridOption === 'new' || gridOption === true) {
+      // Force grid tab creation
       let gridName = 'Terminal Grid';
       if (cwd) {
         const matchedWorkspace = workspaces.find(w => w.path === cwd);

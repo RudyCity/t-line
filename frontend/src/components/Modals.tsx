@@ -899,3 +899,83 @@ export const SavePromptModal: React.FC<SavePromptModalProps> = ({
     </div>
   );
 };
+
+interface SelectGridModalProps {
+  show: boolean;
+  onClose: () => void;
+  gridTabs: Array<{ id: string; name: string; activeTerminalCount: number }>;
+  onSelect: (gridTabId: string | 'new') => void;
+}
+
+export const SelectGridModal: React.FC<SelectGridModalProps> = ({
+  show,
+  onClose,
+  gridTabs,
+  onSelect
+}) => {
+  if (!show) return null;
+
+  return (
+    <div className="modal-overlay" style={{ zIndex: 9999 }}>
+      <div className="modal-content glass-panel" style={{ maxWidth: '440px' }}>
+        <div className="modal-header">
+          <h3 className="modal-title">Select Terminal Grid</h3>
+          <button 
+            type="button" 
+            className="action-btn" 
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </div>
+        
+        <div style={{ marginBottom: '16px', fontSize: '13px', color: 'var(--text-muted)' }}>
+          Choose an existing grid tab to add the new terminal to, or create a brand new grid tab.
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto', marginBottom: '20px', paddingRight: '4px' }}>
+          {gridTabs.map(grid => (
+            <button
+              key={grid.id}
+              onClick={() => onSelect(grid.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-card)',
+                color: 'var(--text-main)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 0.15s ease'
+              }}
+              className="hover:border-[var(--color-primary)] hover:bg-[var(--bg-card-hover)]"
+            >
+              <span style={{ fontWeight: 600, fontSize: '13px' }}>{grid.name}</span>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                {grid.activeTerminalCount} terminal{grid.activeTerminalCount !== 1 ? 's' : ''}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+          <Button 
+            type="button" 
+            variant="secondary" 
+            onClick={() => onSelect('new')}
+            style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            Create New Grid
+          </Button>
+          <Button type="button" variant="primary" onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+

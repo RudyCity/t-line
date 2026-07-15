@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.451] - 2026-07-15
+
+### Added
+- **Quick Launch: Select Grid Modal (Multi-Grid Support)**:
+  - Ditambahkan komponen `SelectGridModal` baru untuk menangani kasus ketika pengguna mengklik item Quick Launch dan terdapat lebih dari satu tab Grid yang sedang aktif.
+  - Modal akan menampilkan daftar semua tab Grid yang aktif beserta jumlah terminal di dalamnya, dan memberikan opsi pilihan untuk memasukkan terminal baru ke dalam salah satu grid tersebut, atau membuat tab grid baru.
+  - Jika jumlah tab grid aktif adalah 0 atau 1, terminal akan langsung dibuat/ditambahkan secara otomatis tanpa memunculkan modal konfirmasi.
+
 ## [1.3.450] - 2026-07-15
 
 ### Changed
