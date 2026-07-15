@@ -712,14 +712,10 @@ export default function App() {
     handleTabMouseLeave,
     handleTabClick,
     handleTabContextMenu,
+    handleTabMouseDown,
     handleCloseOtherTabs,
     handleCloseAllTabs,
     moveTab,
-    handleTabDragStart,
-    handleTabDragOver,
-    handleTabDragLeave,
-    handleTabDragEnd,
-    handleTabDrop,
     draggingTabId,
     dragOverTabId,
     dragOverSide
@@ -2036,7 +2032,7 @@ export default function App() {
           {filteredTabs.length > 0 && (
             <>
               <div className="content-tabs-bar flex items-center justify-between desktop-only">
-                <div className="chrome-tabs-container mx-3" style={{ WebkitAppRegion: 'no-drag' } as any} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}>
+                <div className="chrome-tabs-container mx-3" style={{ WebkitAppRegion: 'no-drag' } as any}>
                   {panelWorktreePath !== null && (() => {
                     const activeWt = panelWorkspace?.worktrees?.find(wt => wt.path === panelWorktreePath);
                     const branchName = activeWt?.branch || 'worktree';
@@ -2071,13 +2067,9 @@ export default function App() {
                             </div>
                           )}
                           <div 
+                            data-tab-id={t.id}
                             className={`tab ${activeTabId === t.id ? 'tab-active' : ''} ${draggingTabId === t.id ? 'dragging' : ''} ${t.isDetached ? 'tab-detached' : ''} ${dragOverTabId === t.id && dragOverSide ? `drag-over-${dragOverSide}` : ''}`}
-                            draggable={true}
-                            onDragStart={(e) => handleTabDragStart(e, t.id)}
-                            onDragOver={(e) => handleTabDragOver(e, t)}
-                            onDragLeave={handleTabDragLeave}
-                            onDragEnd={handleTabDragEnd}
-                            onDrop={(e) => handleTabDrop(e, t.id)}
+                            onMouseDown={(e) => handleTabMouseDown(e, t.id)}
                              onClick={() => {
                                handleTabClick(t);
                                if (t.isDetached) {

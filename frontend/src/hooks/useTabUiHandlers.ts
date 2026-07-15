@@ -43,9 +43,20 @@ export function useTabUiHandlers({
   const [activeTooltip, setActiveTooltip] = useState<TooltipData | null>(null);
   const [tabContextMenu, setTabContextMenu] = useState<TabContextMenuData | null>(null);
   const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
-  const draggingTabIdRef = useRef<string | null>(null); // ref to avoid stale closure in drag events
   const [dragOverTabId, setDragOverTabId] = useState<string | null>(null);
-  const [dragOverSide, setDragOverSide] = useState<'left' | 'right' | 'top' | 'bottom' | 'center' | null>(null);
+  const [dragOverSide, setDragOverSide] = useState<'left' | 'right' | null>(null);
+
+  // Mouse-based drag refs (HTML5 DnD API is broken in WebView2/Tauri on Windows—
+  // dragstart fires but dragover/drop never fire because Windows intercepts the native
+  // drag gesture. We bypass it entirely with mouse events + elementsFromPoint).
+  const draggingTabIdRef = useRef<string | null>(null);
+  const mouseStartRef = useRef<{ tabId: string; x: number; y: number } | null>(null);
+  const isDraggingRef = useRef(false);
+  const wasDragRef = useRef(false);          // suppress click after a completed drag
+  const dragOverTabIdRef = useRef<string | null>(null);
+  const dragOverSideRef = useRef<'left' | 'right' | null>(null);
+  const filteredTabsRef = useRef<TabData[]>(filteredTabs);
+  filteredTabsRef.current = filteredTabs;   // always current without adding to dep arrays
 
   const getTabGitBranch = useCallback((t: any): string | null => {
     const isFile = t.type === 'file';
@@ -103,6 +114,11 @@ export function useTabUiHandlers({
   }, []);
 
   const handleTabClick = useCallback((t: TabData) => {
+    // Suppress click that fires right after a drag completes
+    if (wasDragRef.current) {
+      wasDragRef.current = false;
+      return;
+    }
     setActiveTabId(t.id);
     setActiveTooltip(null);
   }, [setActiveTabId]);
@@ -230,178 +246,137 @@ export function useTabUiHandlers({
       }
       return nextTabs;
     });
-  }, [filteredTabs, setTabs]);
+  // ---------------------------------------------------------------------------
+  // Mouse-based tab drag (replaces broken HTML5 DnD in WebView2/Tauri Windows)
+  // ---------------------------------------------------------------------------
 
-  const handleTabDragStart = useCallback((e: React.DragEvent, tabId: string) => {
-    console.log('[TabDrag] dragStart → tabId:', tabId);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', tabId);
-    // Set both ref (instant) and state (triggers re-render for visual)
-    draggingTabIdRef.current = tabId;
-    setDraggingTabId(tabId);
-    console.log('[TabDrag] dragStart done — ref:', draggingTabIdRef.current);
+  const handleTabMouseDown = useCallback((e: React.MouseEvent, tabId: string) => {
+    if (e.button !== 0) return;
+    // Don't initiate drag from the close × button
+    if ((e.target as HTMLElement).closest('.tab-close')) return;
+    mouseStartRef.current  = { tabId, x: e.clientX, y: e.clientY };
+    isDraggingRef.current  = false;
+    wasDragRef.current     = false;
   }, []);
 
-  const handleTabDragOver = useCallback((e: React.DragEvent, targetTab: TabData) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    // Use ref instead of state to avoid stale closure — state update is async
-    // so the first dragover event fires before draggingTabId state is updated
-    const currentDraggingId = draggingTabIdRef.current;
-    console.log('[TabDrag] dragOver → target:', targetTab.id, '| draggingRef:', currentDraggingId);
-    if (!currentDraggingId || currentDraggingId === targetTab.id) {
-      console.log('[TabDrag] dragOver SKIPPED — ref null or same tab');
-      return;
-    }
+  useEffect(() => {
+    const DRAG_THRESHOLD = 5; // px before drag is recognised
 
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const ratioX = x / rect.width;
-    const ratioY = y / rect.height;
-
-    const draggedTab = filteredTabs.find(t => t.id === currentDraggingId);
-    const isDraggedTerminal = draggedTab?.type === 'terminal';
-    const isTargetTerminal = targetTab.type === 'terminal';
-
-    if (isDraggedTerminal && isTargetTerminal) {
-      // Terminal-to-terminal: support split or reorder
-      if (ratioX < 0.25) {
-        setDragOverSide('left');
-      } else if (ratioX > 0.75) {
-        setDragOverSide('right');
-      } else if (ratioY < 0.35) {
-        setDragOverSide('top');
-      } else if (ratioY > 0.65) {
-        setDragOverSide('bottom');
-      } else {
-        setDragOverSide('center');
-      }
-    } else {
-      // Non-terminal: show insertion indicator (left = insert before, right = insert after)
-      setDragOverSide(ratioX <= 0.5 ? 'left' : 'right');
-    }
-    setDragOverTabId(targetTab.id);
-  }, [filteredTabs]);
-
-  const handleTabDragLeave = useCallback(() => {
-    console.log('[TabDrag] dragLeave');
-    setDragOverTabId(null);
-    setDragOverSide(null);
-  }, []);
-
-  const handleTabDragEnd = useCallback(() => {
-    console.log('[TabDrag] dragEnd');
-    draggingTabIdRef.current = null;
-    setDraggingTabId(null);
-    setDragOverTabId(null);
-    setDragOverSide(null);
-  }, []);
-
-  const handleTabDrop = useCallback((e: React.DragEvent, targetTabId: string) => {
-    e.preventDefault();
-    const dataFromTransfer = e.dataTransfer.getData('text/plain');
-    const draggedId = dataFromTransfer || draggingTabIdRef.current;
-    console.log('[TabDrag] drop → target:', targetTabId, '| dataTransfer:', dataFromTransfer, '| ref:', draggingTabIdRef.current, '| resolved:', draggedId);
-    if (!draggedId || draggedId === targetTabId) {
-      console.log('[TabDrag] drop SKIPPED — no draggedId or same tab');
-      draggingTabIdRef.current = null;
-      setDraggingTabId(null);
-      setDragOverTabId(null);
-      setDragOverSide(null);
-      return;
-    }
-
-    const draggedIndex = filteredTabs.findIndex(t => t.id === draggedId);
-    const targetIndex = filteredTabs.findIndex(t => t.id === targetTabId);
-    console.log('[TabDrag] drop indexes → dragged:', draggedIndex, '| target:', targetIndex, '| filteredTabs count:', filteredTabs.length);
-    if (draggedIndex === -1 || targetIndex === -1) {
-      console.log('[TabDrag] drop SKIPPED — tab not found in filteredTabs');
-      draggingTabIdRef.current = null;
-      setDraggingTabId(null);
-      setDragOverTabId(null);
-      setDragOverSide(null);
-      return;
-    }
-
-    const draggedTab = filteredTabs[draggedIndex];
-    const targetTab = filteredTabs[targetIndex];
-
-    const isDraggedTerminal = draggedTab.type === 'terminal';
-    const isTargetTerminal = targetTab.type === 'terminal';
-
-    let side = dragOverSide;
-    if (!side) {
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const ratioX = x / rect.width;
-      const ratioY = y / rect.height;
-      if (isDraggedTerminal && isTargetTerminal) {
-        if (ratioX < 0.25) side = 'left';
-        else if (ratioX > 0.75) side = 'right';
-        else if (ratioY < 0.35) side = 'top';
-        else if (ratioY > 0.65) side = 'bottom';
-        else side = 'center';
-      } else {
-        side = ratioX <= 0.5 ? 'left' : 'right';
-      }
-    }
-
-    if (isDraggedTerminal && isTargetTerminal && (side === 'left' || side === 'right' || side === 'top' || side === 'bottom')) {
-      // Merge two terminal tabs into a split pane
-      setTabs(prevTabs => {
-        const nextTabs = [...prevTabs];
-        const dragTabFull = nextTabs.find(t => t.id === draggedId);
-        const targetTabFull = nextTabs.find(t => t.id === targetTabId);
-
-        if (!dragTabFull || !targetTabFull || !dragTabFull.layout || !targetTabFull.layout) return prevTabs;
-
-        const mergedLayout: SplitLayoutNode = {
-          type: 'split',
-          direction: (side === 'left' || side === 'right') ? 'horizontal' : 'vertical',
-          first: (side === 'left' || side === 'top') ? dragTabFull.layout : targetTabFull.layout,
-          second: (side === 'left' || side === 'top') ? targetTabFull.layout : dragTabFull.layout,
-          firstSize: 50,
-          secondSize: 50
-        };
-
-        const filtered = nextTabs.filter(t => t.id !== draggedId);
-        return filtered.map(t => {
-          if (t.id === targetTabId) {
-            return {
-              ...t,
-              layout: mergedLayout,
-              focusedTerminalId: dragTabFull.focusedTerminalId || t.focusedTerminalId
-            };
+    /** Walk elements under the cursor and return the first .tab that isn’t the dragged one */
+    const findTabUnder = (x: number, y: number, excludeId: string) => {
+      for (const el of document.elementsFromPoint(x, y)) {
+        const htmlEl = el as HTMLElement;
+        if (htmlEl.classList?.contains('tab')) {
+          const tabId = htmlEl.getAttribute('data-tab-id');
+          if (tabId && tabId !== excludeId) {
+            const rect = htmlEl.getBoundingClientRect();
+            const side: 'left' | 'right' = (x - rect.left) / rect.width <= 0.5 ? 'left' : 'right';
+            return { tabId, side };
           }
-          return t;
-        });
-      });
-      setActiveTabId(targetTabId);
-    } else {
-      // Insert-style reorder: remove dragged tab, then insert before/after target
-      // This is more correct than swap — handles non-adjacent moves properly
-      setTabs(prevTabs => {
-        const draggedFull = prevTabs.find(t => t.id === draggedTab.id);
-        if (!draggedFull) return prevTabs;
-        // Remove dragged from its original position
-        const withoutDragged = prevTabs.filter(t => t.id !== draggedTab.id);
-        // Find target in the updated array
-        const targetIdx = withoutDragged.findIndex(t => t.id === targetTab.id);
-        if (targetIdx === -1) return prevTabs;
-        // Insert before target when drop on left/top half, after when on right/bottom half
-        const insertIdx = (side === 'left' || side === 'top') ? targetIdx : targetIdx + 1;
-        withoutDragged.splice(insertIdx, 0, draggedFull);
-        return withoutDragged;
-      });
-    }
+        }
+      }
+      return null;
+    };
 
-    draggingTabIdRef.current = null;
-    setDraggingTabId(null);
-    setDragOverTabId(null);
-    setDragOverSide(null);
-  }, [filteredTabs, dragOverSide, setTabs, setActiveTabId]);
+    const onMouseMove = (e: MouseEvent) => {
+      if (!mouseStartRef.current) return;
+      const dx = Math.abs(e.clientX - mouseStartRef.current.x);
+      const dy = Math.abs(e.clientY - mouseStartRef.current.y);
+
+      if (!isDraggingRef.current) {
+        if (dx <= DRAG_THRESHOLD && dy <= DRAG_THRESHOLD) return;
+        // Threshold exceeded — kick off drag
+        isDraggingRef.current       = true;
+        draggingTabIdRef.current    = mouseStartRef.current.tabId;
+        setDraggingTabId(mouseStartRef.current.tabId);
+        document.body.style.cursor     = 'grabbing';
+        document.body.style.userSelect = 'none';
+        console.log('[TabDrag-mouse] drag started →', mouseStartRef.current.tabId);
+      }
+
+      const hit = findTabUnder(e.clientX, e.clientY, mouseStartRef.current.tabId);
+      if (hit) {
+        console.log('[TabDrag-mouse] over →', hit.tabId, hit.side);
+        dragOverTabIdRef.current = hit.tabId;
+        dragOverSideRef.current  = hit.side;
+        setDragOverTabId(hit.tabId);
+        setDragOverSide(hit.side);
+      } else {
+        dragOverTabIdRef.current = null;
+        dragOverSideRef.current  = null;
+        setDragOverTabId(null);
+        setDragOverSide(null);
+      }
+    };
+
+    const cleanup = () => {
+      draggingTabIdRef.current = null;
+      dragOverTabIdRef.current = null;
+      dragOverSideRef.current  = null;
+      mouseStartRef.current    = null;
+      isDraggingRef.current    = false;
+      setDraggingTabId(null);
+      setDragOverTabId(null);
+      setDragOverSide(null);
+      document.body.style.cursor     = '';
+      document.body.style.userSelect = '';
+    };
+
+    const onMouseUp = () => {
+      if (!mouseStartRef.current) return;
+
+      if (isDraggingRef.current) {
+        wasDragRef.current = true; // suppress the upcoming onClick
+        const draggedId  = mouseStartRef.current.tabId;
+        const targetId   = dragOverTabIdRef.current;
+        const side       = dragOverSideRef.current || 'right';
+        console.log('[TabDrag-mouse] drop → dragged:', draggedId, 'target:', targetId, 'side:', side);
+
+        if (targetId && draggedId !== targetId) {
+          const tabs = filteredTabsRef.current;
+          const draggedIdx = tabs.findIndex(t => t.id === draggedId);
+          const targetIdx  = tabs.findIndex(t => t.id === targetId);
+          console.log('[TabDrag-mouse] indexes → dragged:', draggedIdx, 'target:', targetIdx);
+
+          if (draggedIdx !== -1 && targetIdx !== -1) {
+            const draggedTab = tabs[draggedIdx];
+            setTabs(prevTabs => {
+              const full = prevTabs.find(t => t.id === draggedTab.id);
+              if (!full) return prevTabs;
+              const without = prevTabs.filter(t => t.id !== draggedTab.id);
+              const tIdx    = without.findIndex(t => t.id === targetId);
+              if (tIdx === -1) return prevTabs;
+              without.splice(side === 'left' ? tIdx : tIdx + 1, 0, full);
+              return without;
+            });
+          }
+        }
+      }
+
+      cleanup();
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isDraggingRef.current) {
+        console.log('[TabDrag-mouse] drag cancelled (Escape)');
+        wasDragRef.current = false;
+        cleanup();
+      }
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup',   onMouseUp);
+    document.addEventListener('keydown',   onKeyDown);
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup',   onMouseUp);
+      document.removeEventListener('keydown',   onKeyDown);
+    };
+  }, [setTabs]); // setTabs is stable; filteredTabs read via ref
+
+  // ---------------------------------------------------------------------------
+  // Keep legacy moveTab for context-menu "Move Tab Left/Right" actions
+  // ---------------------------------------------------------------------------
 
   return {
     activeTooltip,
@@ -413,14 +388,10 @@ export function useTabUiHandlers({
     handleTabMouseLeave,
     handleTabClick,
     handleTabContextMenu,
+    handleTabMouseDown,
     handleCloseOtherTabs,
     handleCloseAllTabs,
     moveTab,
-    handleTabDragStart,
-    handleTabDragOver,
-    handleTabDragLeave,
-    handleTabDragEnd,
-    handleTabDrop,
     draggingTabId,
     dragOverTabId,
     dragOverSide
