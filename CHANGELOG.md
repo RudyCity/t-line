@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.457] - 2026-07-15
+
+### Fixed
+- **Tauri Native Webview Overlap on Bookmarks Dropdown**:
+  - Automatically hide the OS-level Tauri native webview overlay when the Bookmarks dropdown is open (`showBookmarksDropdown = true`).
+  - This prevents the native webview overlay from drawing over the HTML dropdown list.
+  - Hiding the native webview also restores click event registration on the main page wrapper, ensuring that clicking outside the dropdown correctly triggers the `handleClickOutside` listener to dismiss it.
+
 ## [1.3.456] - 2026-07-15
 
 ### Changed

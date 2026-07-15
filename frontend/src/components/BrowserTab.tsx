@@ -80,13 +80,13 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   useEffect(() => {
     const webview = tauriWebviewRef.current;
     if (useTauriWebview && webview && renderMode === 'tauri-native') {
-      if (isActive && !forceHideWebview) {
+      if (isActive && !forceHideWebview && !showBookmarksDropdown) {
         webview.show().catch(() => {});
       } else {
         webview.hide().catch(() => {});
       }
     }
-  }, [isActive, forceHideWebview, useTauriWebview, renderMode]);
+  }, [isActive, forceHideWebview, showBookmarksDropdown, useTauriWebview, renderMode]);
 
   useEffect(() => {
     isActiveRef.current = isActive;
