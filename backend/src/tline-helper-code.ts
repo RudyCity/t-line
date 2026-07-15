@@ -561,6 +561,28 @@ export const TLINE_HELPER_CODE = `(function() {
   }
 
   // ----------------------------------------------------
+  // 2.3. Override window.open to intercept programmatically opened links
+  // ----------------------------------------------------
+  try {
+    var _origOpen = window.open;
+    window.open = function(url, target, features) {
+      if (url && (target === '_blank' || !target)) {
+        try {
+          var realBase = getRealCurrentUrl();
+          var absoluteUrl = new URL(String(url), realBase).href;
+          sendPreviewEvent('tline-open-new-tab', { url: absoluteUrl });
+          return null;
+        } catch (e) {
+          console.warn('[t-line-helper] Failed to intercept window.open:', e);
+        }
+      }
+      return _origOpen.call(window, url, target, features);
+    };
+  } catch (e) {
+    console.warn('[t-line-helper] Could not override window.open:', e);
+  }
+
+  // ----------------------------------------------------
   // 2.5. Link and Form Submission Interceptor (to keep browsing in proxy)
   // ----------------------------------------------------
   window.addEventListener('click', function(e) {
@@ -573,6 +595,20 @@ export const TLINE_HELPER_CODE = `(function() {
 
     if (target && target.tagName === 'A') {
       var href = target.getAttribute('href');
+      var targetAttr = target.getAttribute('target');
+
+      if (targetAttr === '_blank' && href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+        e.preventDefault();
+        try {
+          var realBase = getRealCurrentUrl();
+          var absoluteUrl = new URL(href, realBase).href;
+          sendPreviewEvent('tline-open-new-tab', { url: absoluteUrl });
+        } catch (err) {
+          console.warn('[t-line-helper] Failed to resolve target _blank URL:', err);
+        }
+        return;
+      }
+
       if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
         var proxyTarget = getProxyTarget();
         if (proxyTarget) {

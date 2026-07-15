@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.466] - 2026-07-15
+
+### Added
+- **Browser Blank Link Interception**: Clicking on `target="_blank"` anchors or calling `window.open` within the embedded browser will now automatically open a new browser tab inside the **t-line** workspace manager instead of launching them in the default system browser or failing to navigate. Works across Tauri, Electron, and standard web browser (proxied iframe) environments.
+
+### Refactored
+- **Browser Tab Code Optimization**: Moved the inline native webview polling Javascript generator from [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) to [browserUrlUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/browserUrlUtils.ts). This keeps [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) strictly under the 1000-line repository limit (reduced to 948 lines).
+
 ## [1.3.465] - 2026-07-15
 
 ### Added

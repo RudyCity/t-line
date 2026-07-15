@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Globe, RotateCw, ExternalLink, MousePointer, ArrowLeft, ArrowRight, Monitor, Tablet, Smartphone, Minus, Plus, Star } from 'lucide-react';
 import { TabData } from '../hooks/useTerminals';
 import BrowserDevTools, { ConsoleErrorLog, InspectedElement } from './BrowserDevTools';
-import { determineRenderMode, getCleanUrl, openInSystemBrowser, BookmarkItem, getFriendlyName, getHelperStatusColorClass as getHelperStatusColorClassUtil, getHelperStatusText as getHelperStatusTextUtil } from './browserUrlUtils';
+import { determineRenderMode, getCleanUrl, openInSystemBrowser, BookmarkItem, getFriendlyName, getHelperStatusColorClass as getHelperStatusColorClassUtil, getHelperStatusText as getHelperStatusTextUtil, getPollWebviewJs } from './browserUrlUtils';
 import { useBrowserListeners } from '../hooks/useBrowserListeners';
 import BookmarksDropdown from './BookmarksDropdown';
 
@@ -439,45 +439,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       
       const activeLabel = webview.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
       if (activeLabel && (window as any).__TAURI__?.core?.invoke) {
-        const jsCode = `
-          try {
-            var currentUrl = window.location.href;
-            var proxyTarget = "";
-            try {
-              if (window.__TLINE_PROXY_TARGET__) {
-                proxyTarget = window.__TLINE_PROXY_TARGET__;
-              } else {
-                var match = document.cookie.match(/(?:^|;\\s*)tline_proxy_target=([^;]+)/);
-                if (match) proxyTarget = decodeURIComponent(match[1]);
-              }
-            } catch (e) {}
-
-            var realUrl = currentUrl;
-            if (proxyTarget && window.location.pathname.indexOf('/api/preview-proxy') === 0) {
-              var path = window.location.pathname.substring('/api/preview-proxy'.length) || '/';
-              realUrl = new URL(path + window.location.search + window.location.hash, proxyTarget + '/').href;
-            }
-
-            if (window.__last_checked_url !== realUrl) {
-              window.__last_checked_url = realUrl;
-              if (window.__TAURI__ && window.__TAURI__.event && typeof window.__TAURI__.event.emit === 'function') {
-                window.__TAURI__.event.emit('tline-webview-event', {
-                  type: 'tline-url-changed',
-                  payload: { url: realUrl },
-                  tabId: "${tab.id}"
-                });
-              }
-            }
-
-            // Enforce zoom factor inside native webview
-            if (document.documentElement && document.documentElement.style.zoom !== "${zoomFactor}") {
-              document.documentElement.style.zoom = "${zoomFactor}";
-            }
-            if (document.body && document.body.style.zoom !== "${zoomFactor}") {
-              document.body.style.zoom = "${zoomFactor}";
-            }
-          } catch (e) {}
-        `;
+        const jsCode = getPollWebviewJs(tab.id, zoomFactor);
         (window as any).__TAURI__.core.invoke('eval_webview_js', { label: activeLabel, js: jsCode }).catch(() => {});
       }
     };
@@ -896,6 +858,12 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
                         try {
                           el.setZoomFactor(zoomFactor);
                         } catch (_) {}
+                      });
+                      el.addEventListener('new-window', (e: any) => {
+                        e.preventDefault();
+                        if (e.url) {
+                          window.dispatchEvent(new CustomEvent('tline-open-browser-tab', { detail: { url: e.url } }));
+                        }
                       });
                     }
                   }}

@@ -63,6 +63,9 @@ export function useBrowserListeners({
         setIsInspecting(false);
         setActiveSubTab('inspector');
       }
+      if (type === 'tline-open-new-tab' && payload?.url) {
+        window.dispatchEvent(new CustomEvent('tline-open-browser-tab', { detail: { url: payload.url } }));
+      }
     };
 
     window.addEventListener('message', handleMessage);
@@ -115,6 +118,9 @@ export function useBrowserListeners({
           setIsInspecting(false);
           setActiveSubTab('inspector');
         }
+        if (eventType === 'tline-open-new-tab' && eventPayload?.url) {
+          window.dispatchEvent(new CustomEvent('tline-open-browser-tab', { detail: { url: eventPayload.url } }));
+        }
       }
     };
 
@@ -140,6 +146,9 @@ export function useBrowserListeners({
           setInspectedElement(eventPayload);
           setIsInspecting(false);
           setActiveSubTab('inspector');
+        }
+        if (eventType === 'tline-open-new-tab' && eventPayload?.url) {
+          window.dispatchEvent(new CustomEvent('tline-open-browser-tab', { detail: { url: eventPayload.url } }));
         }
         if (eventType === 'tline-error') {
           const newLog: ConsoleErrorLog = {
