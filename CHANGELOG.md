@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.462] - 2026-07-15
+
+### Fixed
+- **Grid Tab Leak Across Workspaces**: Grid tabs (type === 'grid') were previously displayed in all workspace views regardless of which workspace context they belonged to. Now, they are filtered dynamically and only rendered in the workspace/project context where their corresponding terminal instances belong (or if their explicit `workspaceId` matches).
+
 ## [1.3.461] - 2026-07-15
 
 ### Added

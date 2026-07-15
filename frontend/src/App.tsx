@@ -644,14 +644,48 @@ export default function App() {
   }, [detachedTabId, setTabs]);
 
   const filteredTabs = useMemo(() => {
+    const getPathWorkspaceId = (path: string) => {
+      if (!path) return undefined;
+      const normPath = path.toLowerCase().replace(/\\/g, '/');
+      const match = workspaces.find(w => {
+        const normWs = w.path.toLowerCase().replace(/\\/g, '/');
+        return normPath === normWs || normPath.startsWith(normWs + '/');
+      });
+      return match?.id;
+    };
+
+    const isGridMatching = (t: TabData, wsId?: string) => {
+      if (t.type !== 'grid') return false;
+      if (t.workspaceId) {
+        return wsId ? t.workspaceId === wsId : false;
+      }
+      const termIds = t.gridTerminalIds || [];
+      if (termIds.length === 0) {
+        return !wsId;
+      }
+      return termIds.some(tid => {
+        const inst = terminalInstances[tid];
+        if (!inst || !inst.cwd) return false;
+        const termWsId = getPathWorkspaceId(inst.cwd);
+        return wsId ? termWsId === wsId : !termWsId;
+      });
+    };
+
     if (!panelWorkspace) {
-      // When no workspace is selected, show tabs without a workspace or grid tabs.
+      // When no workspace is selected, show tabs without a workspace or grid tabs matching no-workspace.
       // Also include the currently active tab (even if it has a workspaceId) to
       // prevent it from disappearing right after openTerminal sets activeTabId
       // before the panelWorkspace useEffect has a chance to fire.
-      return tabs.filter(t => !t.workspaceId || t.type === 'grid' || t.id === activeTabId);
+      return tabs.filter(t => 
+        (!t.workspaceId && t.type !== 'grid') || 
+        (t.type === 'grid' && isGridMatching(t)) || 
+        t.id === activeTabId
+      );
     }
-    const wsTabs = tabs.filter(t => t.workspaceId === panelWorkspace.id || t.type === 'grid');
+    const wsTabs = tabs.filter(t => 
+      t.workspaceId === panelWorkspace.id || 
+      (t.type === 'grid' && isGridMatching(t, panelWorkspace.id))
+    );
 
     if (panelWorktreePath) {
       // In worktree mode, filter tabs to show only those belonging to that specific worktree.
