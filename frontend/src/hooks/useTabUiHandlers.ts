@@ -278,11 +278,12 @@ export function useTabUiHandlers({
 
       for (const el of document.elementsFromPoint(x, y)) {
         const htmlEl = el as HTMLElement;
-        if (htmlEl.classList?.contains('tab')) {
-          const tabId = htmlEl.getAttribute('data-tab-id');
+        const tabEl = htmlEl.closest('.tab') as HTMLElement | null;
+        if (tabEl) {
+          const tabId = tabEl.getAttribute('data-tab-id');
           if (tabId && tabId !== excludeId) {
             const targetTab = allTabs.find(t => t.id === tabId);
-            const rect = htmlEl.getBoundingClientRect();
+            const rect = tabEl.getBoundingClientRect();
             const ratioX = (x - rect.left) / rect.width;
             const ratioY = (y - rect.top)  / rect.height;
 
