@@ -79,71 +79,6 @@ export function TerminalInstance({
     }, 300000);
   }, [tab.id, isSuspended]);
 
-  const handleResume = useCallback(() => {
-    setIsSuspended(false);
-    
-    const term = terminalRef.current;
-    if (term && containerRef.current) {
-      try {
-        fitAddonRef.current?.fit();
-      } catch (e) {}
-
-      const actualCols = term.cols || 80;
-      const actualRows = term.rows || 24;
-
-      wsManager.subscribe(tab.id, (payload) => {
-        if (payload.type === 'data') {
-          term.write(payload.data);
-          resetIdleTimer();
-          onPtyDataRef.current?.();
-        } else if (payload.type === 'replay') {
-          term.write(payload.data);
-          resetIdleTimer();
-        } else if (payload.type === 'resize_broadcast') {
-          try {
-            term.resize(payload.cols, payload.rows);
-          } catch (e) {}
-        } else if (payload.type === 'title') {
-          onTitleChangeRef.current?.(payload.title);
-        } else if (payload.type === 'activeProcesses') {
-          onActiveProcessesChangeRef.current?.(payload.processes);
-        } else if (payload.type === 'pid') {
-          setLocalPid(payload.pid);
-        } else if (payload.type === 'exit') {
-          term.write('\r\n\r\n[Process Exited]\r\n');
-        } else if (payload.type === 're-attached') {
-          window.dispatchEvent(new CustomEvent('tline-toast', {
-            detail: { message: `Session Re-attached (${tab.id})` }
-          }));
-        }
-      });
-
-      wsManager.send(JSON.stringify({
-        type: 'init',
-        id: tab.id,
-        cwd: tab.cwd,
-        cols: actualCols,
-        rows: actualRows,
-        shellType: tab.shellType
-      }));
-
-      term.focus();
-    }
-  }, [tab, resetIdleTimer]);
-
-  useEffect(() => {
-    return () => {
-      if (idleTimeoutRef.current) {
-        clearTimeout(idleTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    setLocalPid(pid);
-  }, [pid]);
-
-
   // ── RAF write-batch queue ──────────────────────────────────
   const writeQueueRef = useRef<string[]>([]);
   const rafHandleRef = useRef<number | null>(null);
@@ -172,6 +107,74 @@ export function TerminalInstance({
       });
     }
   }, []);
+
+  const subscribeToSocket = useCallback((term: Terminal) => {
+    wsManager.subscribe(tab.id, (payload) => {
+      if (payload.type === 'data') {
+        scheduleWrite(payload.data);
+        resetIdleTimer();
+        onPtyDataRef.current?.();
+      } else if (payload.type === 'replay') {
+        scheduleWrite(payload.data);
+        resetIdleTimer();
+      } else if (payload.type === 'resize_broadcast') {
+        try {
+          term.resize(payload.cols, payload.rows);
+        } catch (e) {}
+      } else if (payload.type === 'title') {
+        onTitleChangeRef.current?.(payload.title);
+      } else if (payload.type === 'activeProcesses') {
+        onActiveProcessesChangeRef.current?.(payload.processes);
+      } else if (payload.type === 'pid') {
+        setLocalPid(payload.pid);
+      } else if (payload.type === 'exit') {
+        term.write('\r\n\r\n[Process Exited]\r\n');
+      } else if (payload.type === 're-attached') {
+        window.dispatchEvent(new CustomEvent('tline-toast', {
+          detail: { message: `Session Re-attached (${tab.id})` }
+        }));
+      }
+    });
+  }, [tab.id, resetIdleTimer, scheduleWrite]);
+
+  const handleResume = useCallback(() => {
+    setIsSuspended(false);
+    
+    const term = terminalRef.current;
+    if (term && containerRef.current) {
+      try {
+        fitAddonRef.current?.fit();
+      } catch (e) {}
+
+      const actualCols = term.cols || 80;
+      const actualRows = term.rows || 24;
+
+      subscribeToSocket(term);
+
+      wsManager.send(JSON.stringify({
+        type: 'init',
+        id: tab.id,
+        cwd: tab.cwd,
+        cols: actualCols,
+        rows: actualRows,
+        shellType: tab.shellType
+      }));
+
+      term.focus();
+    }
+  }, [tab.id, tab.cwd, tab.shellType, subscribeToSocket]);
+
+  useEffect(() => {
+    return () => {
+      if (idleTimeoutRef.current) {
+        clearTimeout(idleTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    setLocalPid(pid);
+  }, [pid]);
 
   useEffect(() => {
     if (!active) return;
@@ -529,33 +532,7 @@ export function TerminalInstance({
       }
     });
 
-    wsManager.subscribe(tab.id, (payload) => {
-      if (payload.type === 'data') {
-        scheduleWrite(payload.data);
-        resetIdleTimer();
-        // Notify silence-detection hook whenever PTY sends output.
-        onPtyDataRef.current?.();
-      } else if (payload.type === 'replay') {
-        scheduleWrite(payload.data);
-        resetIdleTimer();
-      } else if (payload.type === 'resize_broadcast') {
-        try {
-          term.resize(payload.cols, payload.rows);
-        } catch (e) {}
-      } else if (payload.type === 'title') {
-        onTitleChangeRef.current?.(payload.title);
-      } else if (payload.type === 'activeProcesses') {
-        onActiveProcessesChangeRef.current?.(payload.processes);
-      } else if (payload.type === 'pid') {
-        setLocalPid(payload.pid);
-      } else if (payload.type === 'exit') {
-        term.write('\r\n\r\n[Process Exited]\r\n');
-      } else if (payload.type === 're-attached') {
-        window.dispatchEvent(new CustomEvent('tline-toast', {
-          detail: { message: `Session Re-attached (${tab.id})` }
-        }));
-      }
-    });
+    subscribeToSocket(term);
 
     term.onTitleChange((title) => {
       onTitleChangeRef.current?.(title);
@@ -679,7 +656,7 @@ export function TerminalInstance({
         console.warn('Terminal dispose error (safe to ignore):', err);
       }
     };
-  }, [tab.id, debouncedFit, scheduleWrite]);
+  }, [tab.id, debouncedFit, subscribeToSocket]);
 
   // ── WS reconnect / activate → init ────────────────────────
   useEffect(() => {

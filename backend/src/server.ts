@@ -882,21 +882,19 @@ wss.on('connection', (ws: WebSocket) => {
           // Replay output buffer so client sees what was missed while detached
           const buffer = terminalManager.getOutputBuffer(id);
 
-          setTimeout(() => {
-            if (ws.readyState === WebSocket.OPEN) {
-              // Send PID
-              ws.send(JSON.stringify({ type: 'pid', id, pid: existingTerm.getPid() }));
-              // First replay any buffered output
-              if (buffer) {
-                ws.send(JSON.stringify({ type: 'replay', id, data: buffer }));
-              }
-              // Then show re-attach indicator
-              ws.send(JSON.stringify({
-                type: 're-attached',
-                id
-              }));
+          if (ws.readyState === WebSocket.OPEN) {
+            // Send PID immediately
+            ws.send(JSON.stringify({ type: 'pid', id, pid: existingTerm.getPid() }));
+            // First replay any buffered output immediately
+            if (buffer) {
+              ws.send(JSON.stringify({ type: 'replay', id, data: buffer }));
             }
-          }, 100);
+            // Then show re-attach indicator immediately
+            ws.send(JSON.stringify({
+              type: 're-attached',
+              id
+            }));
+          }
         } else {
           console.log(`[WS] Creating new PTY session: id=${id}, cwd=${cwd}, shellType=${shellType}, size=${cols}x${rows}`);
           const term = terminalManager.createTerminal(id, cwd, cols, rows, shellType);
@@ -921,11 +919,9 @@ wss.on('connection', (ws: WebSocket) => {
           );
 
           // Send PID immediately
-          setTimeout(() => {
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ type: 'pid', id, pid: term.getPid() }));
-            }
-          }, 50);
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'pid', id, pid: term.getPid() }));
+          }
         }
 
       } else if (type === 'data') {

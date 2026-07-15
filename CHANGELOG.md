@@ -2,6 +2,19 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.440] - 2026-07-15
+
+### Optimized
+- **Terminal Session Reattachment Latency**:
+  - Removed artificial timeouts (`setTimeout` of 100ms and 50ms) on the backend when reattaching existing terminal sessions and spawning new ones. Re-attaching metadata (PID, replay buffer, and status) is now sent immediately in sequence, reducing reattach latency to 0ms.
+- **Resource Leak Prevention**:
+  - Restored process persistence for suspended tabs while the application is active, preventing background processes (such as `npm run dev`) from being terminated during active tab switching.
+  - Schedulers for the 10-minute terminal cleanup timer are only triggered when the entire client WebSocket connection is completely disconnected or closed, preventing orphaned background processes when the user exits the app.
+- **Frontend WebSocket Subscription Consolidation**:
+  - De-duplicated WebSocket subscription handling by introducing a single `subscribeToSocket` helper in `TerminalInstance.tsx`.
+  - Restored high-performance RAF-batched writes (`scheduleWrite`) for resumed terminal sessions, preventing UI lag/freezes and rendering storms.
+  - Reduced overall lines of code in `TerminalInstance.tsx`, keeping the file cleanly below the repository's strict 1000-line limit.
+
 ## [1.3.439] - 2026-07-15
 
 ### Fixed
