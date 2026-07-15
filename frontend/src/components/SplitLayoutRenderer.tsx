@@ -130,6 +130,7 @@ function LeafPane({
       className="group/pane"
     >
       <TerminalInstance
+        key={term.id}
         tab={term as any}
         active={!!activeTabId}
         wsConnected={wsConnected}

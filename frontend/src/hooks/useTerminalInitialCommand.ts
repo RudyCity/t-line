@@ -24,6 +24,13 @@ export function useTerminalInitialCommand({
 }: UseTerminalInitialCommandProps) {
   const FALLBACK_MS = 6000;
   const initialCommandSent = useRef(false);
+  const lastTabId = useRef(tabId);
+
+  if (lastTabId.current !== tabId) {
+    console.log(`[useTerminalInitialCommand] tabId changed from ${lastTabId.current} to ${tabId}. Resetting initialCommandSent to false.`);
+    initialCommandSent.current = false;
+    lastTabId.current = tabId;
+  }
 
   useEffect(() => {
     console.log(`[useTerminalInitialCommand] Hook triggered for tab ${tabId}. States: wsConnected=${wsConnected}, isInitialized=${isInitialized}, initialCommand="${initialCommand || ''}", initialCommandSent=${initialCommandSent.current}`);

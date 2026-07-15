@@ -1075,6 +1075,7 @@ export function TerminalGridTab({
                   {/* Card Body (Interactive Terminal) */}
                   <div className="grid-card-body">
                     <TerminalInstance
+                      key={term.id}
                       tab={term as any}
                       active={wsConnected}
                       disableAutoFocus={!isFocused}

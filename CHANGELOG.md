@@ -4,10 +4,14 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ## [1.3.446] - 2026-07-15
 
-### Added
-- **Quick Launch: Detailed Logging**:
-  - Menambahkan log konsol terperinci saat pengguna mengklik item Quick Launch (`handleRunSavedPrompt`) dan di dalam hook inisialisasi perintah terminal (`useTerminalInitialCommand`).
-  - Log ini mencatat status koneksi WebSocket (`wsConnected`), inisialisasi terminal (`isInitialized`), kesiapan prompt shell (`promptReady`), serta transisi timer keselamatan/fallback guna mendeteksi penyebab kegagalan auto-run command secara presisi di lingkungan pengguna.
+### Fixed
+- **Quick Launch: Gagal Auto-Run Akibat Component Reuse**:
+  - Ditemukan dan diperbaiki bug di mana ketika mengklik item Quick Launch baru, command tidak otomatis jalan karena React me-reuse komponen `<TerminalInstance>` dan hook `useTerminalInitialCommand` (karena posisi render yang sama tanpa prop `key` yang unik).
+  - Akibat dari component/hook reuse ini, referensi status `initialCommandSent.current` tetap bernilai `true` dari sesi terminal sebelumnya, sehingga memblokir eksekusi perintah baru.
+  - **Solusi**: 
+    1. Ditambahkan pendeteksi perubahan `tabId` di dalam hook `useTerminalInitialCommand.ts` untuk me-reset status `initialCommandSent` kembali ke `false`.
+    2. Ditambahkan prop `key={term.id}` pada inisialisasi `<TerminalInstance>` di dalam `SplitLayoutRenderer.tsx` dan `TerminalGridTab.tsx` untuk memastikan React menghancurkan (unmount) dan membuat ulang (remount) komponen terminal baru secara bersih.
+  - Menambahkan log konsol terperinci untuk melacak inisialisasi terminal dan status eksekusi command.
 
 ## [1.3.445] - 2026-07-15
 
