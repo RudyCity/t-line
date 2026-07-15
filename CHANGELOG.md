@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.444] - 2026-07-15
+
+### Fixed
+- **Quick Launch: Multiple Items Running, hanya satu yang tereksekusi**:
+  - Ditemukan dan diperbaiki bug kritis di mana semua terminal yang dibuka via Quick Launch hanya menjalankan command dari terminal **terakhir** yang dibuka, sementara terminal lainnya terbuka namun command-nya tidak dieksekusi.
+  - **Root cause**: `initialCommand` (perintah yang akan dijalankan otomatis saat terminal pertama kali dibuat) ikut disimpan ke dalam *sync state* server (`/api/sync/state`) dan di dalam `toCanonicalString`. Saat sesi di-restore atau di-reconnect, `terminalInstances` dari server di-apply langsung ke React state **termasuk `initialCommand`** — menyebabkan `useTerminalInitialCommand` terpicu ulang di setiap terminal yang sudah berjalan.
+  - **Perbaikan** di `frontend/src/App.tsx`:
+    1. **`toCanonicalString`**: `initialCommand` dihapus dari representasi canonical sehingga tidak pernah tersimpan ke server. Field ini bersifat ephemeral dan hanya valid pada saat terminal pertama kali dibuat secara lokal.
+    2. **`sync_update` WebSocket listener**: Saat menerima `terminalInstances` dari remote sync, `initialCommand` di-strip dari semua instance sebelum di-set ke React state.
+    3. **`fetchSyncState`**: Saat me-restore session dari server pada startup/login, `initialCommand` di-strip dari semua instance untuk mencegah re-eksekusi command.
+
 ## [1.3.443] - 2026-07-15
 
 ### Optimized

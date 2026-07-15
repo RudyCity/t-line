@@ -114,8 +114,9 @@ function toCanonicalString(state: any): string {
       name: inst.name || '',
       initialName: inst.initialName || '',
       cwd: inst.cwd || '',
-      shellType: inst.shellType || '',
-      initialCommand: inst.initialCommand || ''
+      shellType: inst.shellType || ''
+      // Note: initialCommand is intentionally excluded from sync state.
+      // It is ephemeral and only valid during the initial local terminal creation.
     };
   }
 
@@ -1061,7 +1062,18 @@ export default function App() {
             });
           }
           if (state.terminalInstances && typeof state.terminalInstances === 'object') {
-            setTerminalInstances(state.terminalInstances);
+            // Strip initialCommand from all instances coming from remote sync.
+            // initialCommand is ephemeral (one-shot) and must never be re-applied
+            // to a terminal that is being reattached/synced — doing so would cause
+            // the shell command to re-execute every time the session reconnects.
+            const sanitizedInstances = Object.fromEntries(
+              Object.entries(state.terminalInstances).map(([id, inst]: [string, any]) => {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { initialCommand: _dropped, ...rest } = inst;
+                return [id, rest];
+              })
+            );
+            setTerminalInstances(sanitizedInstances);
           }
           if (state.savedPrompts && Array.isArray(state.savedPrompts)) {
             setSavedPrompts(state.savedPrompts);
@@ -1230,7 +1242,18 @@ export default function App() {
           });
         }
         if (data.terminalInstances && typeof data.terminalInstances === 'object') {
-          setTerminalInstances(data.terminalInstances);
+          // Strip initialCommand from all instances restored from the server.
+          // initialCommand is ephemeral (one-shot, used only at terminal creation time).
+          // Re-applying it after a session restore/reconnect would cause the shell
+          // command to fire again in every terminal that was opened via Quick Launch.
+          const sanitizedInstances = Object.fromEntries(
+            Object.entries(data.terminalInstances).map(([id, inst]: [string, any]) => {
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              const { initialCommand: _dropped, ...rest } = inst;
+              return [id, rest];
+            })
+          );
+          setTerminalInstances(sanitizedInstances);
         }
         if (data.savedPrompts && Array.isArray(data.savedPrompts)) {
           setSavedPrompts(data.savedPrompts);
