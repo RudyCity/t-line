@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.441] - 2026-07-15
+
+### Optimized
+- **Smart Active Process & Title Polling**:
+  - Configured active process (`wmic`/`ps`) and process title polling to skip execution for suspended or detached terminal tabs. This keeps idle CPU and disk usage at zero and prevents background child process thrashing when terminal tabs are inactive or hidden.
+
 ## [1.3.440] - 2026-07-15
 
 ### Optimized

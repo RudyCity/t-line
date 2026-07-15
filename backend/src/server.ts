@@ -788,6 +788,9 @@ wss.on('connection', (ws: WebSocket) => {
         clearInterval(titleInterval);
         return;
       }
+      if (terminalManager.isSessionPersisted(termId)) {
+        return;
+      }
       try {
         let currentName = terminal.getProcessName();
         if (currentName) {
@@ -808,6 +811,9 @@ wss.on('connection', (ws: WebSocket) => {
     const processInterval = setInterval(async () => {
       if (ws.readyState !== WebSocket.OPEN) {
         clearInterval(processInterval);
+        return;
+      }
+      if (terminalManager.isSessionPersisted(termId)) {
         return;
       }
       try {
