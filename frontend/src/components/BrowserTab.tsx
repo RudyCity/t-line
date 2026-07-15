@@ -660,7 +660,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       style={{ display: isActive ? 'flex' : 'none' }}
     >
       {/* Top Navbar */}
-      <div className="flex items-center justify-between gap-4 px-4 py-2 bg-[var(--bg-card)]/80 backdrop-blur-md border-b border-[var(--border-color)] select-none">
+      <div className="relative z-50 flex items-center justify-between gap-4 px-4 py-2 bg-[var(--bg-card)]/80 backdrop-blur-md border-b border-[var(--border-color)] select-none">
         
         {/* Left Section: Navigation Controls */}
         <div className="flex items-center gap-1">

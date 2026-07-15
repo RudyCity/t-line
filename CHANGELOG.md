@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.458] - 2026-07-15
+
+### Fixed
+- **Bookmarks Dropdown Stacking Context & Background Color Fix**:
+  - Added `relative z-50` to the Top Navbar container in `BrowserTab.tsx` to establish a stacking context. This ensures that absolute-positioned dropdowns float on top of the sibling relative viewport container instead of rendering behind/underneath it.
+  - Replaced the opacity modifier `bg-[var(--bg-card)]/95` in `BookmarksDropdown.tsx` with standard `bg-[var(--bg-card)]`. Since opacity modifiers do not resolve correctly with CSS variables containing hex color values, this fix restores the opaque background to the dropdown and prevents it from rendering transparently.
+
 ## [1.3.457] - 2026-07-15
 
 ### Fixed
