@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.453] - 2026-07-15
+
+### Fixed
+- **Smart Paste Confirm Dialog Event Interception & Key Handling**:
+  - Stopped event propagation of `mousedown`, `mouseup`, `click`, and touch events inside the smart paste confirmation modal to prevent the terminal's focus handler from intercepting the clicks and stealing focus.
+  - Added native keyboard event listener inside the smart paste modal for confirming with `Enter` and cancelling with `Escape`.
+  - Blocked terminal keydown processing in xterm when the smart paste confirmation modal is open to avoid typing behind the modal.
+
 ## [1.3.452] - 2026-07-15
 
 ### Added

@@ -116,8 +116,33 @@ export function SmartPasteConfirm({ text, onConfirm, onCancel }: SmartPasteProps
   const lines = text.split('\n');
   const preview = lines.slice(0, 3).join('\n') + (lines.length > 3 ? `\n… (+${lines.length - 3} more lines)` : '');
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        onConfirm();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        onCancel();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [onConfirm, onCancel]);
+
   return (
-    <div className="smart-paste-overlay">
+    <div
+      className="smart-paste-overlay"
+      onMouseDown={(e) => e.stopPropagation()}
+      onMouseUp={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+    >
       <div className="smart-paste-box">
         <div className="smart-paste-header">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
@@ -127,8 +152,24 @@ export function SmartPasteConfirm({ text, onConfirm, onCancel }: SmartPasteProps
         </div>
         <pre className="smart-paste-preview">{preview}</pre>
         <div className="smart-paste-actions">
-          <button onClick={onCancel} className="smart-paste-btn-cancel">Cancel</button>
-          <button onClick={onConfirm} className="smart-paste-btn-confirm">Paste</button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCancel();
+            }}
+            className="smart-paste-btn-cancel"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onConfirm();
+            }}
+            className="smart-paste-btn-confirm"
+          >
+            Paste
+          </button>
         </div>
       </div>
     </div>

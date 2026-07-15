@@ -62,6 +62,8 @@ export function TerminalInstance({
   const [hasSelection, setHasSelection] = useState(false);
   const [cursorPos, setCursorPos] = useState({ col: 1, row: 1 });
   const [smartPasteText, setSmartPasteText] = useState<string | null>(null);
+  const isSmartPasteOpenRef = useRef(false);
+  isSmartPasteOpenRef.current = !!smartPasteText;
   const [localPid, setLocalPid] = useState<number | undefined>(pid);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSuspended, setIsSuspended] = useState(false);
@@ -506,6 +508,9 @@ export function TerminalInstance({
     fitAddonRef.current = fitAddon;
 
     term.attachCustomKeyEventHandler((e) => {
+      if (isSmartPasteOpenRef.current) {
+        return false;
+      }
       if (e.type === 'keydown') {
         const key = e.key.toLowerCase();
         // Ctrl+C or Cmd+C (Copy) when there is selected text
