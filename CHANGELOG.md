@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.459] - 2026-07-15
+
+### Added
+- **Confirm Modal for Bookmark Deletion**: Clicking the trash icon on a bookmark now shows an inline confirm dialog with the bookmark name before deleting.
+- **Confirm Modal for Clear All**: Clicking "Clear All" now shows an inline confirm dialog showing how many bookmarks will be removed before proceeding.
+
 ## [1.3.458] - 2026-07-15
 
 ### Fixed
