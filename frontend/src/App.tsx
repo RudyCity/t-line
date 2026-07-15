@@ -715,9 +715,12 @@ export default function App() {
     moveTab,
     handleTabDragStart,
     handleTabDragOver,
+    handleTabDragLeave,
     handleTabDragEnd,
     handleTabDrop,
-    draggingTabId
+    draggingTabId,
+    dragOverTabId,
+    dragOverSide
   } = useTabUiHandlers({
     tabs,
     setTabs,
@@ -2032,10 +2035,11 @@ export default function App() {
                             </div>
                           )}
                           <div 
-                            className={`tab ${activeTabId === t.id ? 'tab-active' : ''} ${draggingTabId === t.id ? 'dragging' : ''} ${t.isDetached ? 'tab-detached' : ''}`}
+                            className={`tab ${activeTabId === t.id ? 'tab-active' : ''} ${draggingTabId === t.id ? 'dragging' : ''} ${t.isDetached ? 'tab-detached' : ''} ${dragOverTabId === t.id && dragOverSide ? `drag-over-${dragOverSide}` : ''}`}
                             draggable={true}
                             onDragStart={(e) => handleTabDragStart(e, t.id)}
-                            onDragOver={handleTabDragOver}
+                            onDragOver={(e) => handleTabDragOver(e, t)}
+                            onDragLeave={handleTabDragLeave}
                             onDragEnd={handleTabDragEnd}
                             onDrop={(e) => handleTabDrop(e, t.id)}
                              onClick={() => {

@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.447] - 2026-07-15
+
+### Added
+- **Drag-to-Split Tab**:
+  - Ditambahkan fitur penarikan (*drag*) tab terminal dan menjatuhkannya (*drop*) di atas tab terminal lain untuk menggabungkan panel-panel terminal tersebut ke dalam *split layout*.
+  - Mendukung pembagian panel secara **horizontal** (bila tab ditarik ke area 25% sisi kiri/kanan tab tujuan) dan **vertikal** (bila ditarik ke area 35% sisi atas/bawah tab tujuan).
+  - Ditambahkan indikator visual interaktif saat melayang (*drag over*) berupa garis ungu menyala di batas panel (kiri, kanan, atas, bawah) atau highlight di tengah tab jika ingin melakukan pengurutan ulang (*swap/reorder*).
+
 ## [1.3.446] - 2026-07-15
 
 ### Fixed

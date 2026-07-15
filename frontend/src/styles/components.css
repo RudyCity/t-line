@@ -611,6 +611,72 @@
   border-color: var(--color-primary) !important;
 }
 
+/* Drag-to-split visual indicators */
+.tab.drag-over-left {
+  position: relative;
+}
+.tab.drag-over-left::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--color-primary, #a855f7);
+  box-shadow: 0 0 8px var(--color-primary, #a855f7);
+  z-index: 10;
+}
+
+.tab.drag-over-right {
+  position: relative;
+}
+.tab.drag-over-right::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--color-primary, #a855f7);
+  box-shadow: 0 0 8px var(--color-primary, #a855f7);
+  z-index: 10;
+}
+
+.tab.drag-over-top {
+  position: relative;
+}
+.tab.drag-over-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--color-primary, #a855f7);
+  box-shadow: 0 0 8px var(--color-primary, #a855f7);
+  z-index: 10;
+}
+
+.tab.drag-over-bottom {
+  position: relative;
+}
+.tab.drag-over-bottom::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--color-primary, #a855f7);
+  box-shadow: 0 0 8px var(--color-primary, #a855f7);
+  z-index: 10;
+}
+
+.tab.drag-over-center {
+  background: rgba(168, 85, 247, 0.15) !important;
+  border-color: var(--color-primary, #a855f7) !important;
+}
+
 .tab-detached-icon {
   animation: pulse 2s infinite ease-in-out;
 }

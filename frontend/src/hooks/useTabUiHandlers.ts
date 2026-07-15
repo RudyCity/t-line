@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { TabData, WorkspaceInfo, getTerminalIds } from './useTerminals';
+import { TabData, WorkspaceInfo, getTerminalIds, SplitLayoutNode } from './useTerminals';
 import { wsManager } from '../services/websocket';
 
 export interface TooltipData {
@@ -43,6 +43,8 @@ export function useTabUiHandlers({
   const [activeTooltip, setActiveTooltip] = useState<TooltipData | null>(null);
   const [tabContextMenu, setTabContextMenu] = useState<TabContextMenuData | null>(null);
   const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
+  const [dragOverTabId, setDragOverTabId] = useState<string | null>(null);
+  const [dragOverSide, setDragOverSide] = useState<'left' | 'right' | 'top' | 'bottom' | 'center' | null>(null);
 
   const getTabGitBranch = useCallback((t: any): string | null => {
     const isFile = t.type === 'file';
@@ -237,12 +239,47 @@ export function useTabUiHandlers({
     }
   }, []);
 
-  const handleTabDragOver = useCallback((e: React.DragEvent) => {
+  const handleTabDragOver = useCallback((e: React.DragEvent, targetTab: TabData) => {
     e.preventDefault();
+    if (!draggingTabId || draggingTabId === targetTab.id) return;
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const ratioX = x / rect.width;
+    const ratioY = y / rect.height;
+
+    const draggedTab = filteredTabs.find(t => t.id === draggingTabId);
+    const isDraggedTerminal = draggedTab?.type === 'terminal';
+    const isTargetTerminal = targetTab.type === 'terminal';
+
+    if (isDraggedTerminal && isTargetTerminal) {
+      if (ratioX < 0.25) {
+        setDragOverSide('left');
+      } else if (ratioX > 0.75) {
+        setDragOverSide('right');
+      } else if (ratioY < 0.35) {
+        setDragOverSide('top');
+      } else if (ratioY > 0.65) {
+        setDragOverSide('bottom');
+      } else {
+        setDragOverSide('center');
+      }
+    } else {
+      setDragOverSide('center');
+    }
+    setDragOverTabId(targetTab.id);
+  }, [draggingTabId, filteredTabs]);
+
+  const handleTabDragLeave = useCallback(() => {
+    setDragOverTabId(null);
+    setDragOverSide(null);
   }, []);
 
   const handleTabDragEnd = useCallback((e: React.DragEvent) => {
     setDraggingTabId(null);
+    setDragOverTabId(null);
+    setDragOverSide(null);
     if (e.currentTarget) {
       (e.currentTarget as HTMLElement).classList.remove('dragging');
     }
@@ -251,27 +288,91 @@ export function useTabUiHandlers({
   const handleTabDrop = useCallback((e: React.DragEvent, targetTabId: string) => {
     e.preventDefault();
     const draggedId = e.dataTransfer.getData('text/plain') || draggingTabId;
-    if (!draggedId || draggedId === targetTabId) return;
+    if (!draggedId || draggedId === targetTabId) {
+      setDragOverTabId(null);
+      setDragOverSide(null);
+      return;
+    }
 
     const draggedIndex = filteredTabs.findIndex(t => t.id === draggedId);
     const targetIndex = filteredTabs.findIndex(t => t.id === targetTabId);
-    if (draggedIndex === -1 || targetIndex === -1) return;
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDragOverTabId(null);
+      setDragOverSide(null);
+      return;
+    }
 
     const draggedTab = filteredTabs[draggedIndex];
     const targetTab = filteredTabs[targetIndex];
 
-    setTabs(prevTabs => {
-      const nextTabs = [...prevTabs];
-      const gIndexDrag = nextTabs.findIndex(t => t.id === draggedTab.id);
-      const gIndexTarget = nextTabs.findIndex(t => t.id === targetTab.id);
-      if (gIndexDrag !== -1 && gIndexTarget !== -1) {
-        nextTabs[gIndexDrag] = targetTab;
-        nextTabs[gIndexTarget] = draggedTab;
+    const isDraggedTerminal = draggedTab.type === 'terminal';
+    const isTargetTerminal = targetTab.type === 'terminal';
+
+    let side = dragOverSide;
+    if (!side) {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const ratioX = x / rect.width;
+      const ratioY = y / rect.height;
+      if (isDraggedTerminal && isTargetTerminal) {
+        if (ratioX < 0.25) side = 'left';
+        else if (ratioX > 0.75) side = 'right';
+        else if (ratioY < 0.35) side = 'top';
+        else if (ratioY > 0.65) side = 'bottom';
+        else side = 'center';
+      } else {
+        side = 'center';
       }
-      return nextTabs;
-    });
+    }
+
+    if (isDraggedTerminal && isTargetTerminal && (side === 'left' || side === 'right' || side === 'top' || side === 'bottom')) {
+      setTabs(prevTabs => {
+        const nextTabs = [...prevTabs];
+        const dragTabFull = nextTabs.find(t => t.id === draggedId);
+        const targetTabFull = nextTabs.find(t => t.id === targetTabId);
+
+        if (!dragTabFull || !targetTabFull || !dragTabFull.layout || !targetTabFull.layout) return prevTabs;
+
+        const mergedLayout: SplitLayoutNode = {
+          type: 'split',
+          direction: (side === 'left' || side === 'right') ? 'horizontal' : 'vertical',
+          first: (side === 'left' || side === 'top') ? dragTabFull.layout : targetTabFull.layout,
+          second: (side === 'left' || side === 'top') ? targetTabFull.layout : dragTabFull.layout,
+          firstSize: 50,
+          secondSize: 50
+        };
+
+        const filtered = nextTabs.filter(t => t.id !== draggedId);
+        return filtered.map(t => {
+          if (t.id === targetTabId) {
+            return {
+              ...t,
+              layout: mergedLayout,
+              focusedTerminalId: dragTabFull.focusedTerminalId || t.focusedTerminalId
+            };
+          }
+          return t;
+        });
+      });
+      setActiveTabId(targetTabId);
+    } else {
+      setTabs(prevTabs => {
+        const nextTabs = [...prevTabs];
+        const gIndexDrag = nextTabs.findIndex(t => t.id === draggedTab.id);
+        const gIndexTarget = nextTabs.findIndex(t => t.id === targetTab.id);
+        if (gIndexDrag !== -1 && gIndexTarget !== -1) {
+          nextTabs[gIndexDrag] = targetTab;
+          nextTabs[gIndexTarget] = draggedTab;
+        }
+        return nextTabs;
+      });
+    }
+
     setDraggingTabId(null);
-  }, [filteredTabs, draggingTabId, setTabs]);
+    setDragOverTabId(null);
+    setDragOverSide(null);
+  }, [filteredTabs, draggingTabId, dragOverSide, setTabs, setActiveTabId]);
 
   return {
     activeTooltip,
@@ -288,8 +389,11 @@ export function useTabUiHandlers({
     moveTab,
     handleTabDragStart,
     handleTabDragOver,
+    handleTabDragLeave,
     handleTabDragEnd,
     handleTabDrop,
-    draggingTabId
+    draggingTabId,
+    dragOverTabId,
+    dragOverSide
   };
 }
