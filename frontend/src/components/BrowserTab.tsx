@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Globe, RotateCw, ExternalLink, MousePointer, ArrowLeft, ArrowRight, Monitor, Tablet, Smartphone } from 'lucide-react';
+import { Globe, RotateCw, ExternalLink, MousePointer, ArrowLeft, ArrowRight, Monitor, Tablet, Smartphone, Minus, Plus, Star, Bookmark, Trash } from 'lucide-react';
 import { TabData } from '../hooks/useTerminals';
 import BrowserDevTools, { ConsoleErrorLog, InspectedElement } from './BrowserDevTools';
-import { determineRenderMode, getCleanUrl, openInSystemBrowser } from './browserUrlUtils';
+import { determineRenderMode, getCleanUrl, openInSystemBrowser, BookmarkItem, getFriendlyName, getHelperStatusColorClass as getHelperStatusColorClassUtil, getHelperStatusText as getHelperStatusTextUtil } from './browserUrlUtils';
 import { useBrowserListeners } from '../hooks/useBrowserListeners';
 
 interface BrowserTabProps {
@@ -24,6 +24,17 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   const [isInspecting, setIsInspecting] = useState(false);
   const [helperReady, setHelperReady] = useState(false);
   const [deviceMode, setDeviceMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [zoomFactor, setZoomFactor] = useState(1.0);
+  const [bookmarks, setBookmarks] = useState<BookmarkItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('tline-saved-bookmarks');
+      return saved ? JSON.parse(saved) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+  const [showBookmarksDropdown, setShowBookmarksDropdown] = useState(false);
+  const bookmarksDropdownRef = useRef<HTMLDivElement>(null);
 
   const isElectron = typeof window !== 'undefined' && window.process?.versions?.electron !== undefined;
   const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__ !== undefined;
@@ -488,6 +499,14 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
                 });
               }
             }
+
+            // Enforce zoom factor inside native webview
+            if (document.documentElement && document.documentElement.style.zoom !== "${zoomFactor}") {
+              document.documentElement.style.zoom = "${zoomFactor}";
+            }
+            if (document.body && document.body.style.zoom !== "${zoomFactor}") {
+              document.body.style.zoom = "${zoomFactor}";
+            }
           } catch (e) {}
         `;
         (window as any).__TAURI__.core.invoke('eval_webview_js', { label: activeLabel, js: jsCode }).catch(() => {});
@@ -500,7 +519,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       isSubscribed = false;
       if (timer) clearInterval(timer);
     };
-  }, [useTauriWebview, renderMode, webviewActive, tab.id]);
+  }, [useTauriWebview, renderMode, webviewActive, tab.id, zoomFactor]);
 
   const startLoadingBar = () => {
     setIsLoading(true);
@@ -566,28 +585,94 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   };
 
 
-  const getHelperStatusColorClass = () => {
-    if (renderMode === 'tauri-native' || renderMode === 'electron-webview') {
-      return 'bg-green-500';
+  useEffect(() => {
+    localStorage.setItem('tline-saved-bookmarks', JSON.stringify(bookmarks));
+  }, [bookmarks]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (bookmarksDropdownRef.current && !bookmarksDropdownRef.current.contains(event.target as Node)) {
+        setShowBookmarksDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Synchronize zoom to Tauri native webview when zoomFactor changes
+  useEffect(() => {
+    if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
+      const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
+      if (activeLabel) {
+        const jsCode = `
+          try {
+            if (document.documentElement) document.documentElement.style.zoom = "${zoomFactor}";
+            if (document.body) document.body.style.zoom = "${zoomFactor}";
+          } catch (e) {}
+        `;
+        (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js: jsCode }).catch(() => {});
+      }
     }
-    if (renderMode === 'iframe-local') {
-      return 'bg-green-500';
+  }, [zoomFactor, activeUrl, renderMode, useTauriWebview, webviewActive, tab.id]);
+
+  // Synchronize zoom to Electron webview when zoomFactor changes
+  useEffect(() => {
+    if (useElectronWebview && webviewEl && renderMode === 'electron-webview') {
+      try {
+        webviewEl.setZoomFactor(zoomFactor);
+      } catch (err) {
+        console.warn('Failed to set Electron webview zoom factor:', err);
+      }
     }
-    return 'bg-amber-500 animate-pulse';
+  }, [zoomFactor, webviewEl, useElectronWebview, renderMode]);
+
+  const handleZoomIn = () => setZoomFactor(prev => Math.min(3.0, prev + 0.1));
+  const handleZoomOut = () => setZoomFactor(prev => Math.max(0.5, prev - 0.1));
+  const handleZoomReset = () => setZoomFactor(1.0);
+
+  const isCurrentBookmarked = bookmarks.some(b => b.url === activeUrl);
+
+  const toggleBookmarkCurrent = () => {
+    if (isCurrentBookmarked) {
+      setBookmarks(prev => prev.filter(b => b.url !== activeUrl));
+    } else {
+      if (!activeUrl) return;
+      setBookmarks(prev => [
+        ...prev,
+        {
+          id: `bookmark-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          name: getFriendlyName(activeUrl),
+          url: activeUrl
+        }
+      ]);
+    }
   };
 
-  const getHelperStatusText = () => {
+  const handleNavigateToBookmark = (url: string) => {
+    setUrlInput(url);
+    setActiveUrl(url);
+    onUpdateTabUrl?.(url);
+    setShowBookmarksDropdown(false);
+    startLoadingBar();
     if (renderMode === 'tauri-native') {
-      return 'Tauri Native Shell Active';
+      setTimeout(finishLoadingBar, 1800);
     }
-    if (renderMode === 'electron-webview') {
-      return 'Electron Webview Shell Active';
-    }
-    if (renderMode === 'iframe-local') {
-      return helperReady ? 'Local Iframe (Connected)' : 'Local Iframe (Connecting...)';
-    }
-    return 'Fallback Static Mode';
   };
+
+  const removeBookmark = (id: string) => {
+    setBookmarks(prev => prev.filter(b => b.id !== id));
+  };
+
+  const clearAllBookmarks = () => {
+    if (window.confirm('Are you sure you want to clear all bookmarks?')) {
+      setBookmarks([]);
+    }
+  };
+
+  const getHelperStatusColorClass = () => getHelperStatusColorClassUtil(renderMode);
+  const getHelperStatusText = () => getHelperStatusTextUtil(renderMode, helperReady);
 
   const toggleInspect = async () => {
     const nextState = !isInspecting;
@@ -706,14 +791,56 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
 
         <div className="h-4 w-px bg-[var(--border-color)] mx-1" />
 
+        <div className="flex items-center bg-[var(--bg-main)] border border-[var(--border-color)] rounded-lg p-0.5 select-none">
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] cursor-pointer"
+            title="Zoom Out"
+          >
+            <Minus size={14} />
+          </button>
+          <span 
+            onClick={handleZoomReset}
+            className="text-[10px] font-mono px-1.5 min-w-[36px] text-center text-[var(--text-muted)] cursor-pointer hover:text-[var(--text-main)] transition-colors"
+            title="Reset zoom to 100% (Click to reset)"
+          >
+            {Math.round(zoomFactor * 100)}%
+          </span>
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] cursor-pointer"
+            title="Zoom In"
+          >
+            <Plus size={14} />
+          </button>
+        </div>
+
+        <div className="h-4 w-px bg-[var(--border-color)] mx-1" />
+
         <form onSubmit={handleNavigate} className="flex-1 flex gap-2">
-          <input 
-            type="text"
-            value={urlInput}
-            onChange={(e) => setUrlInput(e.target.value)}
-            placeholder="Enter application URL (e.g., localhost:3000)"
-            className="flex-1 px-3 py-1.5 bg-[var(--bg-main)] text-sm rounded-lg border border-[var(--border-color)] focus:outline-none focus:border-purple-500 text-[var(--text-main)] placeholder-[var(--text-muted)]"
-          />
+          <div className="flex-grow relative flex items-center">
+            <input 
+              type="text"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              placeholder="Enter application URL (e.g., localhost:3000)"
+              className="w-full pl-3 pr-8 py-1.5 bg-[var(--bg-main)] text-sm rounded-lg border border-[var(--border-color)] focus:outline-none focus:border-purple-500 text-[var(--text-main)] placeholder-[var(--text-muted)]"
+            />
+            {activeUrl && (
+              <button
+                type="button"
+                onClick={toggleBookmarkCurrent}
+                className={`absolute right-2 p-1 rounded transition-colors cursor-pointer hover:bg-[var(--bg-card-hover)] ${
+                  isCurrentBookmarked ? 'text-amber-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                }`}
+                title={isCurrentBookmarked ? "Remove bookmark" : "Bookmark this page"}
+              >
+                <Star size={14} fill={isCurrentBookmarked ? "currentColor" : "none"} />
+              </button>
+            )}
+          </div>
           <button 
             type="submit"
             className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm cursor-pointer"
@@ -721,6 +848,75 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
             Go
           </button>
         </form>
+
+        <div className="relative" ref={bookmarksDropdownRef}>
+          <button
+            type="button"
+            onClick={() => setShowBookmarksDropdown(!showBookmarksDropdown)}
+            className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+              showBookmarksDropdown
+                ? 'bg-purple-600/20 border-purple-500 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.25)]'
+                : 'bg-[var(--bg-main)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
+            }`}
+            title="Saved URLs / Bookmarks"
+          >
+            <Bookmark size={15} />
+          </button>
+
+          {showBookmarksDropdown && (
+            <div className="absolute right-0 mt-1.5 w-64 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg shadow-xl z-[100] backdrop-blur-md p-2 flex flex-col">
+              <div className="text-xs font-semibold text-[var(--text-muted)] border-b border-[var(--border-color)] pb-1.5 mb-1.5 px-2 flex justify-between items-center select-none">
+                <span>Saved URLs & Domains</span>
+                {bookmarks.length > 0 && (
+                  <button 
+                    type="button"
+                    onClick={clearAllBookmarks}
+                    className="text-[10px] text-red-400 hover:text-red-300 font-semibold cursor-pointer"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+              <div className="max-h-60 overflow-y-auto flex flex-col gap-1">
+                {bookmarks.length === 0 ? (
+                  <div className="text-xs text-[var(--text-muted)] text-center py-4 select-none">
+                    No saved URLs. Click the star in the URL bar to save.
+                  </div>
+                ) : (
+                  bookmarks.map((bookmark) => (
+                    <div 
+                      key={bookmark.id}
+                      className="flex items-center justify-between gap-1 p-1.5 rounded hover:bg-[var(--bg-card-hover)] group transition-all"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleNavigateToBookmark(bookmark.url)}
+                        className="flex-1 text-left min-w-0 cursor-pointer"
+                      >
+                        <div className="text-xs font-medium text-[var(--text-main)] truncate">
+                          {bookmark.name}
+                        </div>
+                        <div className="text-[10px] text-[var(--text-muted)] truncate">
+                          {bookmark.url}
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeBookmark(bookmark.id)}
+                        className="p-1 rounded hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        title="Delete bookmark"
+                      >
+                        <Trash size={12} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="h-4 w-px bg-[var(--border-color)] mx-1" />
 
         <button
           onClick={toggleInspect}
@@ -802,6 +998,11 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
                     if (el) {
                       el.addEventListener('did-start-loading', startLoadingBar);
                       el.addEventListener('did-stop-loading', finishLoadingBar);
+                      el.addEventListener('did-finish-load', () => {
+                        try {
+                          el.setZoomFactor(zoomFactor);
+                        } catch (_) {}
+                      });
                     }
                   }}
                   src={activeUrl}
@@ -819,7 +1020,13 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
                   key={iframeKey}
                   ref={iframeRef}
                   src={activeUrl} 
-                  className={`absolute inset-0 w-full h-full border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
+                  className={`absolute border-none bg-white ${isResizing ? 'pointer-events-none' : ''}`}
+                  style={{
+                    width: `${100 / zoomFactor}%`,
+                    height: `${100 / zoomFactor}%`,
+                    transform: `scale(${zoomFactor})`,
+                    transformOrigin: 'top left',
+                  }}
                   title="App Preview"
                   onLoad={finishLoadingBar}
                 />

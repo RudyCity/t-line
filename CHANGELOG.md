@@ -1,6 +1,13 @@
 # Changelog
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
+## [1.3.455] - 2026-07-15
+
+### Added
+- **Browser Preview: Zoom Controls & URL Bookmarking**:
+  - Added new zoom in, zoom out, and zoom reset controls (Minus/Plus buttons) to the browser toolbar.
+  - Implemented native/CSS zoom for iframe, Electron webview, and Tauri native webview.
+  - Added a bookmark Star icon in the URL bar to bookmark pages, and a folder dropdown menu to manage and visit saved URLs/domains.
 
 ## [1.3.454] - 2026-07-15
 

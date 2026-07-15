@@ -92,3 +92,45 @@ export const openInSystemBrowser = (url: string) => {
     });
 };
 
+export interface BookmarkItem {
+  id: string;
+  name: string;
+  url: string;
+}
+
+export const getFriendlyName = (urlStr: string): string => {
+  try {
+    const url = new URL(urlStr);
+    let name = url.hostname;
+    if (url.port) {
+      name += `:${url.port}`;
+    }
+    if (url.pathname && url.pathname !== '/') {
+      name += url.pathname;
+    }
+    return name;
+  } catch (_) {
+    return urlStr;
+  }
+};
+
+export const getHelperStatusColorClass = (renderMode: RenderMode): string => {
+  if (renderMode === 'tauri-native' || renderMode === 'electron-webview' || renderMode === 'iframe-local') {
+    return 'bg-green-500';
+  }
+  return 'bg-amber-500 animate-pulse';
+};
+
+export const getHelperStatusText = (renderMode: RenderMode, helperReady: boolean): string => {
+  if (renderMode === 'tauri-native') {
+    return 'Tauri Native Shell Active';
+  }
+  if (renderMode === 'electron-webview') {
+    return 'Electron Webview Shell Active';
+  }
+  if (renderMode === 'iframe-local') {
+    return helperReady ? 'Local Iframe (Connected)' : 'Local Iframe (Connecting...)';
+  }
+  return 'Fallback Static Mode';
+};
+
