@@ -233,11 +233,13 @@ export function useTabUiHandlers({
   }, [filteredTabs, setTabs]);
 
   const handleTabDragStart = useCallback((e: React.DragEvent, tabId: string) => {
+    console.log('[TabDrag] dragStart → tabId:', tabId);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', tabId);
     // Set both ref (instant) and state (triggers re-render for visual)
     draggingTabIdRef.current = tabId;
     setDraggingTabId(tabId);
+    console.log('[TabDrag] dragStart done — ref:', draggingTabIdRef.current);
   }, []);
 
   const handleTabDragOver = useCallback((e: React.DragEvent, targetTab: TabData) => {
@@ -246,7 +248,11 @@ export function useTabUiHandlers({
     // Use ref instead of state to avoid stale closure — state update is async
     // so the first dragover event fires before draggingTabId state is updated
     const currentDraggingId = draggingTabIdRef.current;
-    if (!currentDraggingId || currentDraggingId === targetTab.id) return;
+    console.log('[TabDrag] dragOver → target:', targetTab.id, '| draggingRef:', currentDraggingId);
+    if (!currentDraggingId || currentDraggingId === targetTab.id) {
+      console.log('[TabDrag] dragOver SKIPPED — ref null or same tab');
+      return;
+    }
 
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -279,11 +285,13 @@ export function useTabUiHandlers({
   }, [filteredTabs]);
 
   const handleTabDragLeave = useCallback(() => {
+    console.log('[TabDrag] dragLeave');
     setDragOverTabId(null);
     setDragOverSide(null);
   }, []);
 
   const handleTabDragEnd = useCallback(() => {
+    console.log('[TabDrag] dragEnd');
     draggingTabIdRef.current = null;
     setDraggingTabId(null);
     setDragOverTabId(null);
@@ -292,8 +300,11 @@ export function useTabUiHandlers({
 
   const handleTabDrop = useCallback((e: React.DragEvent, targetTabId: string) => {
     e.preventDefault();
-    const draggedId = e.dataTransfer.getData('text/plain') || draggingTabIdRef.current;
+    const dataFromTransfer = e.dataTransfer.getData('text/plain');
+    const draggedId = dataFromTransfer || draggingTabIdRef.current;
+    console.log('[TabDrag] drop → target:', targetTabId, '| dataTransfer:', dataFromTransfer, '| ref:', draggingTabIdRef.current, '| resolved:', draggedId);
     if (!draggedId || draggedId === targetTabId) {
+      console.log('[TabDrag] drop SKIPPED — no draggedId or same tab');
       draggingTabIdRef.current = null;
       setDraggingTabId(null);
       setDragOverTabId(null);
@@ -303,7 +314,9 @@ export function useTabUiHandlers({
 
     const draggedIndex = filteredTabs.findIndex(t => t.id === draggedId);
     const targetIndex = filteredTabs.findIndex(t => t.id === targetTabId);
+    console.log('[TabDrag] drop indexes → dragged:', draggedIndex, '| target:', targetIndex, '| filteredTabs count:', filteredTabs.length);
     if (draggedIndex === -1 || targetIndex === -1) {
+      console.log('[TabDrag] drop SKIPPED — tab not found in filteredTabs');
       draggingTabIdRef.current = null;
       setDraggingTabId(null);
       setDragOverTabId(null);
