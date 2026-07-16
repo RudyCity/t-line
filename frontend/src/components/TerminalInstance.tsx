@@ -22,10 +22,9 @@ import {
   isRemoteConnection,
   getActualFontSize,
   getTerminalTheme,
-  copyToClipboard
+  copyToClipboard,
+  registerFileLinkProvider
 } from './TerminalHelpers';
-
-const FILE_PATH_REGEX = /(?:(?:[a-zA-Z]:\\|\/|\.\.\/|\.\/)?(?:[a-zA-Z0-9._+-]+[/\\])+[a-zA-Z0-9._+-]+\.[a-zA-Z0-9._+-]+|[a-zA-Z0-9._+-]+\.(?:tsx?|jsx?|json|html|css|rs|go|py|md|sh|ya?ml|toml|txt|log|conf))(?::\d+)?(?::\d+)?/g;
 
 // ── Main Terminal Instance ─────────────────────────────────────
 export function TerminalInstance({
@@ -407,47 +406,7 @@ export function TerminalInstance({
     term.loadAddon(webLinksAddon);
     addonListRef.current.push(webLinksAddon);
 
-    const fileLinkProvider = term.registerLinkProvider({
-      provideLinks(y: number, callback: (links: any[] | undefined) => void) {
-        const line = term.buffer.active.getLine(y);
-        if (!line) {
-          callback(undefined);
-          return;
-        }
-        const text = line.translateToString(true);
-        const links: any[] = [];
-        
-        FILE_PATH_REGEX.lastIndex = 0;
-        let match;
-        while ((match = FILE_PATH_REGEX.exec(text)) !== null) {
-          const matchText = match[0];
-          if (/^https?:\/\//i.test(matchText) || /^file:\/\//i.test(matchText)) {
-            continue;
-          }
-          
-          const startX = match.index + 1;
-          const endX = startX + matchText.length - 1;
-          
-          links.push({
-            range: {
-              start: { x: startX, y },
-              end: { x: endX, y }
-            },
-            text: matchText,
-            activate(_event: MouseEvent, textValue: string) {
-              window.dispatchEvent(new CustomEvent('tline-open-file-path', {
-                detail: {
-                  path: textValue,
-                  terminalId: tab.id,
-                  cwd: tab.cwd
-                }
-              }));
-            }
-          });
-        }
-        callback(links.length > 0 ? links : undefined);
-      }
-    });
+    const fileLinkProvider = registerFileLinkProvider(term, tab.id, tab.cwd);
     addonListRef.current.push(fileLinkProvider);
 
     const searchAddon = new SearchAddon();
@@ -500,6 +459,29 @@ export function TerminalInstance({
         try { webglAddon.dispose(); } catch (_) {}
       });
       term.loadAddon(webglAddon);
+      
+      // Patch WebglRenderer to avoid crash when buffer lines are temporarily undefined (e.g. during reset)
+      try {
+        const renderer = (webglAddon as any)._renderer;
+        if (renderer && typeof renderer._updateModel === 'function') {
+          const originalUpdateModel = renderer._updateModel;
+          renderer._updateModel = function (start: number, end: number) {
+            const terminal = this._core;
+            if (terminal && terminal.buffer && terminal.buffer.lines) {
+              for (let y = start; y <= end; y++) {
+                const row = y + terminal.buffer.ydisp;
+                if (!terminal.buffer.lines.get(row)) {
+                  return;
+                }
+              }
+            }
+            return originalUpdateModel.call(this, start, end);
+          };
+        }
+      } catch (err) {
+        console.warn('Failed to monkey-patch WebglRenderer._updateModel:', err);
+      }
+
       addonListRef.current.push(webglAddon);
       gpuRendererLoaded = true;
     } catch (e) {

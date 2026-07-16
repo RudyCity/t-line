@@ -2,7 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.473] - 2026-07-16
+
+### Fixed
+- **xterm WebGL Addon Undefined 'loadCell' Crash**: Fixed a crash (`TypeError: Cannot read properties of undefined (reading 'loadCell')`) in `WebglRenderer._updateModel` when the terminal buffer is temporarily reset (e.g. during a scrollback history replay). Monkey-patched `WebglRenderer._updateModel` in [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx) to check if the requested row buffer lines are populated before updating the rendering model, returning early if they are not yet available.
+
+### Refactored
+- **TerminalInstance Code Length Optimization**: Moved `FILE_PATH_REGEX` and `registerFileLinkProvider` into [TerminalHelpers.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalHelpers.ts) to reduce the size of [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx) below the strict 1000-line project limit (bringing it down to 995 lines).
+
 ## [1.3.472] - 2026-07-15
+
 
 ### Fixed
 - **Preview Proxy: `Origin header is not a valid URL` / 500 errors**: Fixed a bug where invalid `Origin` headers sent by the Tauri WebView (e.g. `null`, `tauri://localhost`) were being forwarded verbatim to the target dev server via the preview proxy. Target dev-servers (Vite, webpack-dev-server, etc.) run their own `cors` middleware which throws `"Origin header is not a valid URL"` on non-HTTP origins, crashing the proxied request and returning a 500 back to the browser. The fix strips any non-HTTP/HTTPS `Origin` header in the `proxyReq` event handler in [previewProxy.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/previewProxy.ts) before the outbound request is forwarded.

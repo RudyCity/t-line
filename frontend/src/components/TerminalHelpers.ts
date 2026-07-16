@@ -168,3 +168,50 @@ function fallbackCopyText(text: string): boolean {
     return false;
   }
 }
+
+export const FILE_PATH_REGEX = /(?:(?:[a-zA-Z]:\\|\/|\.\.\/|\.\/)?(?:[a-zA-Z0-9._+-]+[/\\])+[a-zA-Z0-9._+-]+\.[a-zA-Z0-9._+-]+|[a-zA-Z0-9._+-]+\.(?:tsx?|jsx?|json|html|css|rs|go|py|md|sh|ya?ml|toml|txt|log|conf))(?::\d+)?(?::\d+)?/g;
+
+export function registerFileLinkProvider(term: Terminal, tabId: string, tabCwd: string) {
+  return term.registerLinkProvider({
+    provideLinks(y: number, callback: (links: any[] | undefined) => void) {
+      const line = term.buffer.active.getLine(y);
+      if (!line) {
+        callback(undefined);
+        return;
+      }
+      const text = line.translateToString(true);
+      const links: any[] = [];
+      
+      FILE_PATH_REGEX.lastIndex = 0;
+      let match;
+      while ((match = FILE_PATH_REGEX.exec(text)) !== null) {
+        const matchText = match[0];
+        if (/^https?:\/\//i.test(matchText) || /^file:\/\//i.test(matchText)) {
+          continue;
+        }
+        
+        const startX = match.index + 1;
+        const endX = startX + matchText.length - 1;
+        
+        links.push({
+          range: {
+            start: { x: startX, y },
+            end: { x: endX, y }
+          },
+          text: matchText,
+          activate(_event: MouseEvent, textValue: string) {
+            window.dispatchEvent(new CustomEvent('tline-open-file-path', {
+              detail: {
+                path: textValue,
+                terminalId: tabId,
+                cwd: tabCwd
+              }
+            }));
+          }
+        });
+      }
+      callback(links.length > 0 ? links : undefined);
+    }
+  });
+}
+
