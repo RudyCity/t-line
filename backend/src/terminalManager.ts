@@ -193,7 +193,7 @@ class SpawnTerminal implements ITerminal {
 
 // ── Session wrapper ────────────────────────────────────────
 const OUTPUT_BUFFER_MAX_LINES = 200;
-const OUTPUT_BUFFER_MAX_BYTES = 32 * 1024; // 32 KB (reduced to lower RAM per terminal session)
+const OUTPUT_BUFFER_MAX_BYTES = 256 * 1024; // 256 KB
 
 /**
  * FLUSH_INTERVAL_MS: How often to batch-flush PTY output to the WebSocket sender.

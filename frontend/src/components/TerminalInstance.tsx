@@ -110,32 +110,11 @@ export function TerminalInstance({
     }, 300000);
   }, [tab.id, isSuspended]);
 
-  // ── RAF write-batch queue ──────────────────────────────────
-  const writeQueueRef = useRef<string[]>([]);
-  const rafHandleRef = useRef<number | null>(null);
-
+  // Write directly to the terminal instance (xterm.js has internal batching)
   const scheduleWrite = useCallback((data: string) => {
-    // If the queue is empty, no RAF is scheduled, and data is small (keystroke echo),
-    // write immediately to xterm to eliminate typing delay/latency.
     const term = terminalRef.current;
-    if (term && writeQueueRef.current.length === 0 && rafHandleRef.current === null && data.length <= 5) {
+    if (term) {
       term.write(data);
-      return;
-    }
-
-    writeQueueRef.current.push(data);
-    if (rafHandleRef.current === null) {
-      rafHandleRef.current = requestAnimationFrame(() => {
-        rafHandleRef.current = null;
-        const term = terminalRef.current;
-        if (!term || writeQueueRef.current.length === 0) {
-          writeQueueRef.current = [];
-          return;
-        }
-        const combined = writeQueueRef.current.join('');
-        writeQueueRef.current = [];
-        term.write(combined);
-      });
     }
   }, []);
 
@@ -376,7 +355,7 @@ export function TerminalInstance({
       fontWeightBold: 'bold',
       lineHeight: 1.2,
       letterSpacing: 0,
-      scrollback: 1000,
+      scrollback: 10000,
       scrollOnUserInput: true,
       fastScrollModifier: 'shift',
       fastScrollSensitivity: 5,
@@ -449,14 +428,29 @@ export function TerminalInstance({
       console.warn('Failed to monkey-patch xterm.js syncScrollArea:', e);
     }
 
+    const loadCanvasRenderer = () => {
+      try {
+        const canvasAddon = new CanvasAddon();
+        term.loadAddon(canvasAddon);
+        addonListRef.current.push(canvasAddon);
+        console.log('[Terminal] Successfully loaded Canvas fallback renderer.');
+      } catch (e) {
+        console.warn('Canvas renderer not available, using default DOM renderer:', e);
+      }
+    };
+
     // ── GPU renderer (WebGL → Canvas → DOM fallback chain) ──
     let gpuRendererLoaded = false;
     try {
       const webglAddon = new WebglAddon();
       // WebglAddon emits a 'onContextLoss' event; dispose gracefully on context loss
       webglAddon.onContextLoss(() => {
-        console.warn('[Terminal] WebGL context lost — disposing WebGL renderer.');
-        try { webglAddon.dispose(); } catch (_) {}
+        console.warn('[Terminal] WebGL context lost — disposing WebGL renderer and falling back to Canvas.');
+        try {
+          webglAddon.dispose();
+          addonListRef.current = addonListRef.current.filter(a => a !== webglAddon);
+        } catch (_) {}
+        loadCanvasRenderer();
       });
       term.loadAddon(webglAddon);
       
@@ -488,13 +482,7 @@ export function TerminalInstance({
       console.warn('WebGL renderer not available, trying Canvas renderer:', e);
     }
     if (!gpuRendererLoaded) {
-      try {
-        const canvasAddon = new CanvasAddon();
-        term.loadAddon(canvasAddon);
-        addonListRef.current.push(canvasAddon);
-      } catch (e) {
-        console.warn('Canvas renderer not available, using default DOM renderer:', e);
-      }
+      loadCanvasRenderer();
     }
 
     const handlePasteEvent = (e: ClipboardEvent) => {
@@ -647,11 +635,7 @@ export function TerminalInstance({
       if (container) {
         container.removeEventListener('mousedown', handleFocusTrigger, true);
       }
-      if (rafHandleRef.current !== null) {
-        cancelAnimationFrame(rafHandleRef.current);
-        rafHandleRef.current = null;
-        writeQueueRef.current = [];
-      }
+
       if (term.textarea) {
         term.textarea.removeEventListener('paste', handlePasteEvent, true);
       }

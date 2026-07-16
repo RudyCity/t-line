@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.478] - 2026-07-16
+
+### Fixed
+- **Terminal Output Lag and Disappearing Content**: Fixed a major bug where terminal output would lag, freeze, or display corrupted/duplicated content. 
+  - Removed the `requestAnimationFrame` (RAF) write-batching queue on the frontend ([TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx)) to write PTY data directly to `xterm.js`. This prevents extreme memory-accumulation lag when browser tabs are in the background and resolves out-of-order viewport/scrollback redraws when refocusing/reconnecting.
+  - Increased xterm.js scrollback buffer configuration from `1000` to `10000` lines so that older logs are not prematurely deleted from the scrollback history buffer.
+  - Added an automatic fallback to `CanvasAddon` when the `WebglAddon` triggers a context loss event (`onContextLoss`), preventing blank or frozen terminal screens.
+- **Backend Replay Buffer Limit**: Increased the maximum rolling output replay buffer size (`OUTPUT_BUFFER_MAX_BYTES`) in [terminalManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/terminalManager.ts) from `32KB` to `256KB` to support longer scrollback recovery on session re-attach / tab refresh.
+
 ## [1.3.477] - 2026-07-16
 
 ### Fixed
