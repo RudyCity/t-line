@@ -33,9 +33,13 @@ export function useTerminalInitialCommand({
   }
 
   useEffect(() => {
-    console.log(`[useTerminalInitialCommand] Hook triggered for tab ${tabId}. States: wsConnected=${wsConnected}, isInitialized=${isInitialized}, initialCommand="${initialCommand || ''}", initialCommandSent=${initialCommandSent.current}`);
+    if (!initialCommand) {
+      return;
+    }
 
-    if (!wsConnected || !isInitialized || !initialCommand || initialCommandSent.current) {
+    console.log(`[useTerminalInitialCommand] Hook triggered for tab ${tabId}. States: wsConnected=${wsConnected}, isInitialized=${isInitialized}, initialCommand="${initialCommand}", initialCommandSent=${initialCommandSent.current}`);
+
+    if (!wsConnected || !isInitialized || initialCommandSent.current) {
       console.log(`[useTerminalInitialCommand] Skipping command execution for tab ${tabId} because conditions are not met.`);
       return;
     }

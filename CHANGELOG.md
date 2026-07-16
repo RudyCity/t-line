@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.477] - 2026-07-16
+
+### Fixed
+- **Terminal Initial Command Log Spam**: Stopped console log spam during terminal instance initialization when no `initialCommand` is provided (which is the case for most normal terminals). The `useTerminalInitialCommand` hook ([useTerminalInitialCommand.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useTerminalInitialCommand.ts)) now returns early immediately if `initialCommand` is empty or undefined, avoiding unnecessary "Hook triggered" and "Skipping command execution" log spams.
+
 ## [1.3.476] - 2026-07-16
 
 ### Added
