@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { logFetchError } from '../utils/network';
 
 export interface TunnelStatus {
   active: boolean;
@@ -29,7 +30,7 @@ export function useTunnel(
       const data = await res.json();
       setTunnelStatus(data);
     } catch (e) {
-      console.error('Failed to fetch tunnel status:', e);
+      logFetchError('Failed to fetch tunnel status', e);
     }
   };
 
@@ -111,7 +112,7 @@ export function useTunnel(
         await fetchTunnelStatus();
       }
     } catch (e) {
-      console.error('Failed to stop tunnel:', e);
+      logFetchError('Failed to stop tunnel', e);
     } finally {
       setTunnelLoading(false);
     }

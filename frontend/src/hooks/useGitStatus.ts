@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GitFileStatus } from '../components/FilePanel';
 import { WorkspaceInfo } from './useTerminals';
+import { logFetchError } from '../utils/network';
 
 function areStatusListsEqual(a: GitFileStatus[], b: GitFileStatus[]): boolean {
   if (a.length !== b.length) return false;
@@ -43,7 +44,7 @@ export function useGitStatus(panelWorkspace: WorkspaceInfo | null, panelWorktree
         });
       }
     } catch (e) {
-      console.error('Error fetching git status:', e);
+      logFetchError('Error fetching git status', e);
     } finally {
       if (showLoading) setGitStatusLoading(false);
     }

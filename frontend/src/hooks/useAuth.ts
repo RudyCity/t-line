@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { wsManager } from '../services/websocket';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
+import { logFetchError } from '../utils/network';
 
 export function useAuth() {
   const [setupRequired, setSetupRequired] = useState<boolean | null>(null);
@@ -43,7 +44,7 @@ export function useAuth() {
         }
       }
     } catch (e) {
-      console.error('Auth check failed:', e);
+      logFetchError('Auth check failed', e);
     } finally {
       setLoading(false);
     }

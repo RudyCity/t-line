@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { version } from '../../package.json';
+import { logFetchError } from '../utils/network';
 
 const DEFAULT_VERSION = version || '1.3.397';
 
@@ -47,7 +48,7 @@ export function useUpdateChecker() {
         setUpdateAvailable(false);
       }
     } catch (err) {
-      console.warn('Failed to check for updates (network might be offline/changing):', err);
+      logFetchError('Failed to check for updates', err);
     }
   }, []);
 
@@ -60,7 +61,7 @@ export function useUpdateChecker() {
         checkUpdates(data.version);
       }
     } catch (e) {
-      console.error('Failed to fetch local version:', e);
+      logFetchError('Failed to fetch local version', e);
       checkUpdates(DEFAULT_VERSION);
     }
   }, [checkUpdates]);

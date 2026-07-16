@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.474] - 2026-07-16
+
+### Improved
+- **Graceful Network Offline & Change Handling**: Centralized fetch/network error handling to prevent console log spam with red `net::ERR_NETWORK_CHANGED` or offline `TypeError: Failed to fetch` stack traces during connection switches or drops. Added [network.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/utils/network.ts) utility to identify offline/network-change failures and log them as soft warnings instead of red error stack traces in all background polling hooks (`useTunnel`, `useSystemStats`, `useGitStatus`, `useWorkspaces`, `useUpdateChecker`, and `useAuth`).
+
 ## [1.3.473] - 2026-07-16
 
 ### Fixed

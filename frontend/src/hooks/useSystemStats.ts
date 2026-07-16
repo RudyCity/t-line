@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { logFetchError } from '../utils/network';
 
 export interface SystemStats {
   backend: {
@@ -62,7 +63,7 @@ export function useSystemStats(isAuthenticated: boolean) {
           desktop
         });
       } catch (e) {
-        console.error('Error fetching system stats:', e);
+        logFetchError('Error fetching system stats', e);
       }
     };
 

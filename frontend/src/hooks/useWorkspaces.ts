@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { logFetchError } from '../utils/network';
 
 export interface WorktreeInfo {
   path: string;
@@ -55,7 +56,7 @@ export function useWorkspaces(
         setWorkspaces(data);
       }
     } catch (e) {
-      console.error('Failed to fetch workspaces:', e);
+      logFetchError('Failed to fetch workspaces', e);
     }
   }, [token]);
 
@@ -102,7 +103,7 @@ export function useWorkspaces(
         showAlert('Folder Explorer Error', data.error);
       }
     } catch (e) {
-      console.error('Failed to list directories:', e);
+      logFetchError('Failed to list directories', e);
     }
   };
 
@@ -172,7 +173,7 @@ export function useWorkspaces(
         return true;
       }
     } catch (e) {
-      console.error('Error removing workspace:', e);
+      logFetchError('Error removing workspace', e);
     } finally {
       setDeletingWorkspacePaths(prev => prev.filter(p => p !== workspacePath));
     }
@@ -198,7 +199,7 @@ export function useWorkspaces(
       const branches = await res.json();
       setRepoBranches(branches);
     } catch (e) {
-      console.error('Failed to get repo branches:', e);
+      logFetchError('Failed to get repo branches', e);
     } finally {
       setGitLoading(false);
     }
@@ -260,7 +261,7 @@ export function useWorkspaces(
         showAlert('Worktree Error', data.output || 'Failed to remove worktree.');
       }
     } catch (e) {
-      console.error('Error removing worktree:', e);
+      logFetchError('Error removing worktree', e);
     } finally {
       setGitLoading(false);
       setDeletingWorktreePaths(prev => prev.filter(p => p !== worktreePath));
