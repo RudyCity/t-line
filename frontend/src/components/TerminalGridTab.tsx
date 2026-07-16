@@ -1,10 +1,13 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   LayoutGrid, Plus, ExternalLink, ChevronDown, Folder, 
-  Terminal as TerminalIcon, Search, EyeOff, Check, Trash2
+  Terminal as TerminalIcon, Search, EyeOff, Check, Trash2,
+  Copy, Play
 } from 'lucide-react';
 import { TabData, TerminalInstanceData, WorkspaceInfo, ActiveProcessSummary } from '../hooks/useTerminals';
 import { TerminalInstance } from './TerminalInstance';
+import { wsManager } from '../services/websocket';
+import { copyToClipboard } from './TerminalHelpers';
 
 interface TerminalGridTabProps {
   tab: TabData;
@@ -63,6 +66,7 @@ export function TerminalGridTab({
   const [searchQuery, setSearchQuery] = useState('');
   const [focusedTermId, setFocusedTermId] = useState<string | null>(null);
   const [confirmCloseTermId, setConfirmCloseTermId] = useState<string | null>(null);
+  const [copiedTermId, setCopiedTermId] = useState<string | null>(null);
   const configRef = useRef<HTMLDivElement>(null);
 
   const getTerminalDisplayName = (termId: string): string => {
@@ -292,553 +296,6 @@ export function TerminalGridTab({
 
   return (
     <div className="grid-tab-container">
-      <style>{`
-        .grid-tab-container {
-          display: flex;
-          flex-direction: column;
-          width: 100%;
-          height: 100%;
-          overflow: hidden;
-          background: var(--bg-main);
-          position: relative;
-          color: var(--text-main);
-        }
-        .grid-tab-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 10px 16px;
-          border-bottom: 1px solid var(--border-color);
-          background: rgba(0, 0, 0, 0.15);
-          backdrop-filter: blur(8px);
-          position: relative;
-          z-index: 300;
-          flex-shrink: 0;
-        }
-        .grid-header-left {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-        .grid-title-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .grid-title-text {
-          font-size: 0.85rem;
-          font-weight: 700;
-          background: linear-gradient(135deg, var(--color-primary) 30%, #a855f7 90%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-        .grid-count-badge {
-          background: rgba(168, 85, 247, 0.15);
-          color: var(--color-primary);
-          font-size: 0.65rem;
-          font-weight: 600;
-          padding: 1px 6px;
-          border-radius: 4px;
-          border: 1px solid rgba(168, 85, 247, 0.25);
-        }
-        .grid-subtitle {
-          font-size: 0.7rem;
-          color: var(--text-muted);
-        }
-        .grid-header-right {
-          position: relative;
-        }
-        .grid-config-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 0.72rem;
-          font-weight: 600;
-          padding: 6px 12px;
-          border-radius: 6px;
-          border: 1px solid var(--border-color);
-          background: var(--surface-overlay);
-          color: var(--text-main);
-          cursor: pointer;
-          transition: all 0.15s ease;
-        }
-        .grid-config-btn:hover {
-          background: var(--surface-overlay-hover);
-          border-color: var(--color-primary);
-          box-shadow: 0 0 8px rgba(168, 85, 247, 0.15);
-        }
-        .grid-config-dropdown {
-          position: absolute;
-          top: calc(100% + 6px);
-          right: 0;
-          width: 320px;
-          max-height: 400px;
-          background: var(--bg-main);
-          border: 1px solid var(--border-color);
-          border-radius: 8px;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          z-index: 100;
-          animation: slideDownDropdown 0.15s ease-out;
-        }
-        @keyframes slideDownDropdown {
-          from { opacity: 0; transform: translateY(-5px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .dropdown-search-wrapper {
-          padding: 10px;
-          border-bottom: 1px solid var(--border-color);
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          background: rgba(0, 0, 0, 0.1);
-        }
-        .dropdown-search-input {
-          flex: 1;
-          background: transparent;
-          border: none;
-          outline: none;
-          color: var(--text-main);
-          font-size: 0.72rem;
-          padding: 2px 4px;
-        }
-        .dropdown-list {
-          flex: 1;
-          overflow-y: auto;
-          padding: 8px 0;
-        }
-        .dropdown-ws-group {
-          margin-bottom: 10px;
-        }
-        .dropdown-ws-header {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 4px 12px;
-          font-size: 0.65rem;
-          font-weight: 700;
-          color: var(--text-muted);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-        .dropdown-item {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 6px 12px 6px 26px;
-          cursor: pointer;
-          transition: background 0.1s;
-        }
-        .dropdown-item:hover {
-          background: var(--bg-card-hover);
-        }
-        .dropdown-item-left {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          overflow: hidden;
-          flex: 1;
-        }
-        .custom-checkbox {
-          width: 14px;
-          height: 14px;
-          border-radius: 3px;
-          border: 1.5px solid var(--text-dark);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-          transition: all 0.1s;
-        }
-        .custom-checkbox.checked {
-          background: var(--color-primary);
-          border-color: var(--color-primary);
-        }
-        .custom-checkbox-tick {
-          color: #fff;
-        }
-        .dropdown-size-section {
-          padding: 12px;
-          background: rgba(0, 0, 0, 0.08);
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .size-slider-row {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-        .size-label {
-          font-size: 0.65rem;
-          font-weight: 600;
-          color: var(--text-muted);
-        }
-        .size-slider {
-          -webkit-appearance: none;
-          width: 100%;
-          height: 4px;
-          border-radius: 2px;
-          background: var(--border-color);
-          outline: none;
-          transition: background 0.15s;
-        }
-        .size-slider::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 12px;
-          height: 12px;
-          border-radius: 50%;
-          background: var(--color-primary);
-          cursor: pointer;
-          transition: transform 0.1s;
-        }
-        .size-slider::-webkit-slider-thumb:hover {
-          transform: scale(1.2);
-        }
-        .dropdown-term-name {
-          font-size: 0.72rem;
-          font-weight: 500;
-          color: var(--text-main);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .dropdown-term-shell {
-          font-size: 0.6rem;
-          color: var(--text-muted);
-          font-family: monospace;
-          background: rgba(255, 255, 255, 0.05);
-          padding: 1px 4px;
-          border-radius: 3px;
-        }
-        .grid-tab-content {
-          flex: 1;
-          overflow-y: auto;
-          padding: 16px;
-        }
-        .terminal-grid-layout {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-          gap: 16px;
-          align-content: start;
-          width: 100%;
-        }
-        @media (max-width: 600px) {
-          .terminal-grid-layout {
-            grid-template-columns: 1fr;
-          }
-        }
-        .grid-terminal-card {
-          border: 1px solid var(--border-color);
-          border-radius: 8px;
-          background: var(--bg-card);
-          display: flex;
-          flex-direction: column;
-          height: 290px;
-          overflow: hidden;
-          transition: all 0.2s ease;
-          position: relative;
-        }
-        .grid-modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.65);
-          backdrop-filter: blur(4px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-          animation: fadeIn 0.15s ease-out;
-        }
-        .grid-modal-container {
-          background: var(--bg-card);
-          border: 1px solid var(--border-color);
-          border-radius: 12px;
-          padding: 20px;
-          width: 90%;
-          max-width: 400px;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-          animation: slideUp 0.15s ease-out;
-        }
-        .grid-modal-title {
-          font-size: 0.95rem;
-          font-weight: 700;
-          color: var(--text-main);
-          margin-bottom: 10px;
-          margin-top: 0;
-        }
-        .grid-modal-text {
-          font-size: 0.78rem;
-          color: var(--text-muted);
-          line-height: 1.5;
-          margin-bottom: 20px;
-        }
-        .grid-modal-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-        }
-        .grid-modal-btn {
-          font-size: 0.72rem;
-          font-weight: 600;
-          padding: 8px 16px;
-          border-radius: 6px;
-          cursor: pointer;
-          transition: all 0.12s;
-        }
-        .grid-modal-btn-cancel {
-          background: transparent;
-          border: 1px solid var(--border-color);
-          color: var(--text-main);
-        }
-        .grid-modal-btn-cancel:hover {
-          background: rgba(255, 255, 255, 0.05);
-        }
-        .grid-modal-btn-confirm {
-          background: #ef4444;
-          border: 1px solid #ef4444;
-          color: #fff;
-        }
-        .grid-modal-btn-confirm:hover {
-          background: #dc2626;
-          border-color: #dc2626;
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slideUp {
-          from { transform: translateY(10px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        .grid-terminal-card.focused {
-          border-color: var(--color-primary);
-          box-shadow: 0 0 12px rgba(168, 85, 247, 0.18);
-        }
-        .grid-card-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 6px 12px;
-          border-bottom: 1px solid var(--border-color);
-          background: rgba(0, 0, 0, 0.1);
-          flex-shrink: 0;
-          cursor: pointer;
-        }
-        .grid-card-title-area {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          overflow: hidden;
-          flex: 1;
-        }
-        .grid-card-title {
-          font-size: 0.72rem;
-          font-weight: 600;
-          color: var(--text-main);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .grid-badge {
-          font-size: 0.6rem;
-          font-weight: 500;
-          padding: 1px 5px;
-          border-radius: 4px;
-          white-space: nowrap;
-        }
-        .grid-badge-workspace {
-          background: rgba(168, 85, 247, 0.12);
-          color: var(--color-primary);
-          border: 1px solid rgba(168, 85, 247, 0.2);
-        }
-        .grid-badge-shell {
-          background: rgba(255, 255, 255, 0.05);
-          color: var(--text-muted);
-          font-family: monospace;
-        }
-        .grid-card-actions {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          margin-left: 8px;
-          flex-shrink: 0;
-        }
-        .grid-action-btn {
-          background: transparent;
-          border: none;
-          color: var(--text-dark);
-          cursor: pointer;
-          padding: 4px;
-          border-radius: 4px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.12s;
-        }
-        .grid-action-btn:hover {
-          color: var(--text-main);
-          background: rgba(255, 255, 255, 0.08);
-        }
-        .grid-action-btn-danger:hover {
-          color: #ef4444;
-          background: rgba(239, 68, 68, 0.1);
-        }
-        .grid-card-body {
-          flex: 1;
-          position: relative;
-          background: #000;
-          overflow: hidden;
-        }
-        .grid-card-body :global(.terminal-container) {
-          border: none !important;
-        }
-        .grid-card-footer {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 4px 12px;
-          background: rgba(0, 0, 0, 0.18);
-          border-top: 1px solid rgba(255, 255, 255, 0.02);
-          font-size: 0.62rem;
-          color: var(--text-muted);
-          overflow-x: auto;
-          scrollbar-width: none;
-          flex-shrink: 0;
-        }
-        .grid-card-footer::-webkit-scrollbar {
-          display: none;
-        }
-        .process-badge {
-          background: rgba(16, 185, 129, 0.1);
-          color: #10b981;
-          border: 1px solid rgba(16, 185, 129, 0.2);
-          padding: 0 4px;
-          border-radius: 3px;
-          font-size: 0.58rem;
-        }
-        .process-badge-special {
-          background: rgba(168, 85, 247, 0.12);
-          color: var(--color-primary);
-          border: 1px solid rgba(168, 85, 247, 0.2);
-          padding: 0 4px;
-          border-radius: 3px;
-          font-size: 0.58rem;
-        }
-        .grid-empty-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 40px 20px;
-          text-align: center;
-          max-width: 500px;
-          margin: 40px auto 0 auto;
-          background: var(--bg-card);
-          border: 1px solid var(--border-color);
-          border-radius: 12px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        }
-        .grid-empty-icon-glow {
-          position: relative;
-          width: 54px;
-          height: 54px;
-          border-radius: 50%;
-          background: rgba(168, 85, 247, 0.1);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: var(--color-primary);
-          margin-bottom: 16px;
-        }
-        .grid-empty-icon-glow::after {
-          content: '';
-          position: absolute;
-          width: 100%;
-          height: 100%;
-          border-radius: 50%;
-          border: 1.5px dashed var(--color-primary);
-          opacity: 0.4;
-          animation: rotateGlow 15s linear infinite;
-        }
-        @keyframes rotateGlow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .grid-empty-title {
-          font-size: 0.82rem;
-          font-weight: 700;
-          color: var(--text-main);
-          margin-bottom: 6px;
-        }
-        .grid-empty-text {
-          font-size: 0.7rem;
-          color: var(--text-muted);
-          margin-bottom: 20px;
-          line-height: 1.4;
-        }
-        .empty-suggestions {
-          width: 100%;
-          border-top: 1px solid var(--border-color);
-          margin-top: 10px;
-          padding-top: 16px;
-          text-align: left;
-        }
-        .suggestions-title {
-          font-size: 0.65rem;
-          font-weight: 700;
-          color: var(--text-muted);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          margin-bottom: 8px;
-        }
-        .suggestion-item {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 6px 10px;
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid var(--border-color);
-          border-radius: 6px;
-          margin-bottom: 6px;
-          cursor: pointer;
-          transition: all 0.12s;
-        }
-        .suggestion-item:hover {
-          background: rgba(168, 85, 247, 0.05);
-          border-color: var(--color-primary);
-        }
-        .suggestion-details {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          overflow: hidden;
-          flex: 1;
-        }
-        .suggestion-name {
-          font-size: 0.7rem;
-          font-weight: 600;
-          color: var(--text-main);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .suggestion-ws {
-          font-size: 0.62rem;
-          color: var(--text-muted);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-      `}</style>
 
       {/* Header Area */}
       <div className="grid-tab-header">
@@ -1039,6 +496,36 @@ export function TerminalGridTab({
                   <div className="grid-card-header" onClick={() => setFocusedTermId(termId)}>
                     <div className="grid-card-title-area">
                       <span className="grid-card-title" title={displayName}>{displayName}</span>
+                      
+                      <div className="grid-card-inline-actions">
+                        <button 
+                          className="grid-inline-action-btn"
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            copyToClipboard(displayName);
+                            setCopiedTermId(termId);
+                            setTimeout(() => setCopiedTermId(null), 1500);
+                          }}
+                          title="Copy command"
+                        >
+                          {copiedTermId === termId ? (
+                            <Check size={10} style={{ color: '#4ade80' }} />
+                          ) : (
+                            <Copy size={10} />
+                          )}
+                        </button>
+                        <button 
+                          className="grid-inline-action-btn"
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            wsManager.send(JSON.stringify({ type: 'data', id: termId, data: displayName + '\r' }));
+                          }}
+                          title="Run command in terminal"
+                        >
+                          <Play size={10} />
+                        </button>
+                      </div>
+
                       {ws && (
                         <span className="grid-badge grid-badge-workspace" title={ws.path}>
                           {ws.name}

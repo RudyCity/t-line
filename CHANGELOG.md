@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.476] - 2026-07-16
+
+### Added
+- **Terminal Grid Inline Copy & Run Actions**: Added inline action buttons (Copy and Run) to the header of terminal cards in the Grid Monitor tab ([TerminalGridTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalGridTab.tsx)). Hovering over a card reveals two new buttons next to the title:
+  - **Copy**: Copies the terminal name/command (`displayName`) to the clipboard with an interactive visual checkmark micro-animation.
+  - **Run**: Sends the command directly to the terminal shell to execute it.
+
+### Refactored
+- **TerminalGridTab Code Length Optimization**: Extracted all CSS rules (546 lines of CSS) out of [TerminalGridTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalGridTab.tsx) into a new dedicated stylesheet [TerminalGrid.css](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/TerminalGrid.css) imported via [index.css](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/index.css). This reduces the size of `TerminalGridTab.tsx` from 1164 lines down to ~620 lines, fully satisfying the strict 1000-line project length limit.
+
 ## [1.3.475] - 2026-07-16
 
 ### Fixed
