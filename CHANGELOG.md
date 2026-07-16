@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.475] - 2026-07-16
+
+### Fixed
+- **Virtual Touch Keyboard Popup on Desktop**: Fixed a bug where focusing the terminal on touch-screen desktop computers (like ASUS laptops) or small window sizes (width <= 768px) automatically popped up the virtual touch keyboard (`MobileKeyboard`). Refined the `isMobileDevice` detection utility in [TerminalHelpers.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalHelpers.ts) to strictly match mobile operating systems and iPad Safari browsers, excluding desktop platforms.
+
 ## [1.3.474] - 2026-07-16
 
 ### Improved

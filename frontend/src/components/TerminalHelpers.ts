@@ -55,9 +55,8 @@ export function isLightColor(color: string | undefined): boolean {
 }
 
 export const isMobileDevice = typeof window !== 'undefined' && (
-  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-  window.innerWidth <= 768 || 
-  'ontouchstart' in window
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 );
 
 export const isRemoteConnection = () => {
