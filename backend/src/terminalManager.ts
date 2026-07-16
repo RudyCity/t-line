@@ -354,21 +354,22 @@ export class TerminalManager {
       }
 
       if (activeSess.senders.size > 0) {
-        // If there are no pending flush chunks, no flush timer, and data is small,
-        // send it immediately for instant key-press feedback.
-        if (activeSess.pendingFlushChunks.length === 0 && activeSess.flushTimer === null && data.length <= 5) {
+        // If data is very small (typing echo, backspace, arrow keys), bypass batching completely
+        // to deliver sub-millisecond response feedback.
+        if (data.length <= 5) {
           for (const sender of activeSess.senders.values()) {
             try {
               sender(data);
             } catch (e) {
               console.error(`Error sending fast data to sender for terminal ${id}:`, e);
-            }
+            } 
           }
-        } else {
-          // Accumulate chunk into pending flush queue
-          activeSess.pendingFlushChunks.push(data);
-          scheduleFlush();
+          return;
         }
+
+        // For larger outputs (cat, ls, compilation output), use batched flush to avoid UI locking
+        activeSess.pendingFlushChunks.push(data);
+        scheduleFlush();
       }
     });
 

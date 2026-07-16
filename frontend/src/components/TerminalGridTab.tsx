@@ -36,6 +36,208 @@ interface TerminalGridTabProps {
   onRefreshTerminal?: (id: string) => void;
 }
 
+interface TerminalCardProps {
+  termId: string;
+  term: TerminalInstanceData;
+  isFocused: boolean;
+  wsConnected: boolean;
+  cardHeight: number;
+  displayName: string;
+  copiedTermId: string | null;
+  setCopiedTermId: (id: string | null) => void;
+  setFocusedTermId: (id: string) => void;
+  focusTerminal: (id: string) => void;
+  toggleTerminalSelection: (id: string) => void;
+  setConfirmCloseTermId: (id: string) => void;
+  handleFocusFullTab: (id: string) => void;
+  terminalFontSize: number;
+  handleTitleChange: (id: string, title: string) => void;
+  handleActiveProcessesChange?: (id: string, processes: ActiveProcessSummary[]) => void;
+  refreshTriggers?: Record<string, number>;
+  fontFamily?: string;
+  fontWeight?: string;
+  accentColor?: string;
+  themeBackground?: string;
+  themeForeground?: string;
+  clearInitialCommand?: (id: string) => void;
+  defaultShell?: string;
+  setDefaultShell?: (val: string) => void;
+  handleZoomIn?: () => void;
+  handleZoomOut?: () => void;
+  onRefreshTerminal?: (id: string) => void;
+  getWorkspaceForPath: (path: string) => WorkspaceInfo | undefined;
+}
+
+const TerminalCard = React.memo(function TerminalCard({
+  termId,
+  term,
+  isFocused,
+  wsConnected,
+  cardHeight,
+  displayName,
+  copiedTermId,
+  setCopiedTermId,
+  setFocusedTermId,
+  focusTerminal,
+  toggleTerminalSelection,
+  setConfirmCloseTermId,
+  handleFocusFullTab,
+  terminalFontSize,
+  handleTitleChange,
+  handleActiveProcessesChange,
+  refreshTriggers,
+  fontFamily,
+  fontWeight,
+  accentColor,
+  themeBackground,
+  themeForeground,
+  clearInitialCommand,
+  defaultShell,
+  setDefaultShell,
+  handleZoomIn,
+  handleZoomOut,
+  onRefreshTerminal,
+  getWorkspaceForPath
+}: TerminalCardProps) {
+  const ws = getWorkspaceForPath(term.cwd);
+  const pids = term.activeProcesses || [];
+  
+  return (
+    <div 
+      className={`grid-terminal-card ${isFocused ? 'focused' : ''}`}
+      onClick={() => setFocusedTermId(termId)}
+      style={{ height: `${cardHeight}px` }}
+    >
+      {/* Card Header */}
+      <div className="grid-card-header" onClick={() => setFocusedTermId(termId)}>
+        <div className="grid-card-title-area">
+          <span className="grid-card-title" title={displayName}>{displayName}</span>
+          
+          <div className="grid-card-inline-actions">
+            <button 
+              className="grid-inline-action-btn"
+              onClick={(e) => {
+                e.stopPropagation(); 
+                copyToClipboard(displayName);
+                setCopiedTermId(termId);
+                setTimeout(() => setCopiedTermId(null), 1500);
+              }}
+              title="Copy command"
+            >
+              {copiedTermId === termId ? (
+                <Check size={10} style={{ color: '#4ade80' }} />
+              ) : (
+                <Copy size={10} />
+              )}
+            </button>
+            <button 
+              className="grid-inline-action-btn"
+              onClick={(e) => {
+                e.stopPropagation(); 
+                wsManager.send(JSON.stringify({ type: 'data', id: termId, data: displayName + '\r' }));
+              }}
+              title="Run command in terminal"
+            >
+              <Play size={10} />
+            </button>
+          </div>
+
+          {ws && (
+            <span className="grid-badge grid-badge-workspace" title={ws.path}>
+              {ws.name}
+            </span>
+          )}
+          <span className="grid-badge grid-badge-shell">{term.shellType}</span>
+        </div>
+
+        <div className="grid-card-actions">
+          <button 
+            className="grid-action-btn"
+            onClick={(e) => { e.stopPropagation(); handleFocusFullTab(termId); }}
+            title="Go to full terminal tab"
+          >
+            <ExternalLink size={12} />
+          </button>
+          <button 
+            className="grid-action-btn"
+            onClick={(e) => { e.stopPropagation(); toggleTerminalSelection(termId); }}
+            title="Hide from grid"
+          >
+            <EyeOff size={12} />
+          </button>
+          <button 
+            className="grid-action-btn grid-action-btn-danger"
+            onClick={(e) => { e.stopPropagation(); setConfirmCloseTermId(termId); }}
+            title="Close and delete terminal"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+      </div>
+
+      {/* Card Body (Interactive Terminal) */}
+      <div className="grid-card-body">
+        <TerminalInstance
+          key={term.id}
+          tab={term as any}
+          active={wsConnected}
+          disableAutoFocus={!isFocused}
+          wsConnected={wsConnected}
+          fontSize={terminalFontSize - 1} 
+          onTitleChange={(title) => handleTitleChange(term.id, title)}
+          onActiveProcessesChange={(processes) => handleActiveProcessesChange?.(term.id, processes)}
+          onFocus={() => { setFocusedTermId(term.id); focusTerminal(term.id); }}
+          refreshTrigger={refreshTriggers?.[term.id] || 0}
+          isFocusedPane={isFocused}
+          fontFamily={fontFamily}
+          fontWeight={fontWeight}
+          accentColor={accentColor}
+          themeBackground={themeBackground}
+          themeForeground={themeForeground}
+          onClearInitialCommand={clearInitialCommand}
+          defaultShell={defaultShell}
+          setDefaultShell={setDefaultShell}
+          handleZoomIn={handleZoomIn}
+          handleZoomOut={handleZoomOut}
+          onRefreshTerminal={onRefreshTerminal}
+        />
+      </div>
+
+      {/* Card Footer (Running processes summary) */}
+      <div className="grid-card-footer">
+        <span>Processes:</span>
+        {pids.length === 0 ? (
+          <span style={{ fontStyle: 'italic', opacity: 0.6 }}>idle</span>
+        ) : (
+          pids.map(p => {
+            const isAiAgent = p.isClaude || p.isGemini || p.isSuperagent || p.isAgy || p.isOpenCode;
+            return (
+              <span 
+                key={p.pid} 
+                className={`process-badge ${isAiAgent ? 'process-badge-special' : ''}`}
+                title={`${p.name} (PID: ${p.pid}) - ${p.commandLine}`}
+              >
+                {p.name}
+              </span>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.isFocused === nextProps.isFocused &&
+    prevProps.wsConnected === nextProps.wsConnected &&
+    prevProps.cardHeight === nextProps.cardHeight &&
+    prevProps.displayName === nextProps.displayName &&
+    prevProps.copiedTermId === nextProps.copiedTermId &&
+    prevProps.terminalFontSize === nextProps.terminalFontSize &&
+    prevProps.term === nextProps.term &&
+    prevProps.refreshTriggers === nextProps.refreshTriggers
+  );
+});
+
 export function TerminalGridTab({
   tab,
   tabs,
@@ -469,8 +671,6 @@ export function TerminalGridTab({
               if (!term) return null;
 
               const isFocused = focusedTermId === termId;
-              const ws = getWorkspaceForPath(term.cwd);
-              const pids = term.activeProcesses || [];
 
               const parentTab = tabs.find(tabNode => {
                 if (tabNode.type === 'terminal' && tabNode.layout) {
@@ -486,128 +686,38 @@ export function TerminalGridTab({
               const displayName = parentTab ? parentTab.name : term.name;
 
               return (
-                <div 
+                <TerminalCard
                   key={termId}
-                  className={`grid-terminal-card ${isFocused ? 'focused' : ''}`}
-                  onClick={() => setFocusedTermId(termId)}
-                  style={{ height: `${cardHeight}px` }}
-                >
-                  {/* Card Header */}
-                  <div className="grid-card-header" onClick={() => setFocusedTermId(termId)}>
-                    <div className="grid-card-title-area">
-                      <span className="grid-card-title" title={displayName}>{displayName}</span>
-                      
-                      <div className="grid-card-inline-actions">
-                        <button 
-                          className="grid-inline-action-btn"
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                            copyToClipboard(displayName);
-                            setCopiedTermId(termId);
-                            setTimeout(() => setCopiedTermId(null), 1500);
-                          }}
-                          title="Copy command"
-                        >
-                          {copiedTermId === termId ? (
-                            <Check size={10} style={{ color: '#4ade80' }} />
-                          ) : (
-                            <Copy size={10} />
-                          )}
-                        </button>
-                        <button 
-                          className="grid-inline-action-btn"
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                            wsManager.send(JSON.stringify({ type: 'data', id: termId, data: displayName + '\r' }));
-                          }}
-                          title="Run command in terminal"
-                        >
-                          <Play size={10} />
-                        </button>
-                      </div>
-
-                      {ws && (
-                        <span className="grid-badge grid-badge-workspace" title={ws.path}>
-                          {ws.name}
-                        </span>
-                      )}
-                      <span className="grid-badge grid-badge-shell">{term.shellType}</span>
-                    </div>
-
-                    <div className="grid-card-actions">
-                      <button 
-                        className="grid-action-btn"
-                        onClick={(e) => { e.stopPropagation(); handleFocusFullTab(termId); }}
-                        title="Go to full terminal tab"
-                      >
-                        <ExternalLink size={12} />
-                      </button>
-                      <button 
-                        className="grid-action-btn"
-                        onClick={(e) => { e.stopPropagation(); toggleTerminalSelection(termId); }}
-                        title="Hide from grid"
-                      >
-                        <EyeOff size={12} />
-                      </button>
-                      <button 
-                        className="grid-action-btn grid-action-btn-danger"
-                        onClick={(e) => { e.stopPropagation(); setConfirmCloseTermId(termId); }}
-                        title="Close and delete terminal"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Card Body (Interactive Terminal) */}
-                  <div className="grid-card-body">
-                    <TerminalInstance
-                      key={term.id}
-                      tab={term as any}
-                      active={wsConnected}
-                      disableAutoFocus={!isFocused}
-                      wsConnected={wsConnected}
-                      fontSize={terminalFontSize - 1} // slightly smaller font for grid cards
-                      onTitleChange={(title) => handleTitleChange(term.id, title)}
-                      onActiveProcessesChange={(processes) => handleActiveProcessesChange?.(term.id, processes)}
-                      onFocus={() => { setFocusedTermId(term.id); focusTerminal(term.id); }}
-                      refreshTrigger={refreshTriggers?.[term.id] || 0}
-                      isFocusedPane={isFocused}
-                      fontFamily={fontFamily}
-                      fontWeight={fontWeight}
-                      accentColor={accentColor}
-                      themeBackground={themeBackground}
-                      themeForeground={themeForeground}
-                      onClearInitialCommand={clearInitialCommand}
-                      defaultShell={defaultShell}
-                      setDefaultShell={setDefaultShell}
-                      handleZoomIn={handleZoomIn}
-                      handleZoomOut={handleZoomOut}
-                      onRefreshTerminal={onRefreshTerminal}
-                    />
-                  </div>
-
-                  {/* Card Footer (Running processes summary) */}
-                  <div className="grid-card-footer">
-                    <span>Processes:</span>
-                    {pids.length === 0 ? (
-                      <span style={{ fontStyle: 'italic', opacity: 0.6 }}>idle</span>
-                    ) : (
-                      pids.map(p => {
-                        const isAiAgent = p.isClaude || p.isGemini || p.isSuperagent || p.isAgy || p.isOpenCode;
-                        return (
-                          <span 
-                            key={p.pid} 
-                            className={`process-badge ${isAiAgent ? 'process-badge-special' : ''}`}
-                            title={`${p.name} (PID: ${p.pid}) - ${p.commandLine}`}
-                          >
-                            {p.name}
-                          </span>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
+                  termId={termId}
+                  term={term}
+                  isFocused={isFocused}
+                  wsConnected={wsConnected}
+                  cardHeight={cardHeight}
+                  displayName={displayName}
+                  copiedTermId={copiedTermId}
+                  setCopiedTermId={setCopiedTermId}
+                  setFocusedTermId={setFocusedTermId}
+                  focusTerminal={focusTerminal}
+                  toggleTerminalSelection={toggleTerminalSelection}
+                  setConfirmCloseTermId={setConfirmCloseTermId}
+                  handleFocusFullTab={handleFocusFullTab}
+                  terminalFontSize={terminalFontSize}
+                  handleTitleChange={handleTitleChange}
+                  handleActiveProcessesChange={handleActiveProcessesChange}
+                  refreshTriggers={refreshTriggers}
+                  fontFamily={fontFamily}
+                  fontWeight={fontWeight}
+                  accentColor={accentColor}
+                  themeBackground={themeBackground}
+                  themeForeground={themeForeground}
+                  clearInitialCommand={clearInitialCommand}
+                  defaultShell={defaultShell}
+                  setDefaultShell={setDefaultShell}
+                  handleZoomIn={handleZoomIn}
+                  handleZoomOut={handleZoomOut}
+                  onRefreshTerminal={onRefreshTerminal}
+                  getWorkspaceForPath={getWorkspaceForPath}
+                />
               );
             })}
           </div>

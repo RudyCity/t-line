@@ -124,6 +124,9 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     }
   }, [tab.url]);
 
+  // Track last synchronized bounds to avoid redundant IPC calls to Tauri webview
+  const lastBoundsRef = useRef<{ left: number; top: number; width: number; height: number } | null>(null);
+
   // Sync native Tauri webview bounds to containerRef rect
   const syncWebviewBounds = async () => {
     const container = containerRef.current;
@@ -133,8 +136,22 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       const { LogicalPosition, LogicalSize } = await import('@tauri-apps/api/dpi');
       const r = container.getBoundingClientRect();
       if (r.width < 1 || r.height < 1) return;
+      
+      // Check if size or position has actually changed (using tolerance threshold)
+      const last = lastBoundsRef.current;
+      if (
+        last &&
+        Math.abs(last.left - r.left) < 0.5 &&
+        Math.abs(last.top - r.top) < 0.5 &&
+        Math.abs(last.width - r.width) < 0.5 &&
+        Math.abs(last.height - r.height) < 0.5
+      ) {
+        return;
+      }
+      
       await webview.setPosition(new LogicalPosition(r.left, r.top)).catch(() => {});
       await webview.setSize(new LogicalSize(r.width, r.height)).catch(() => {});
+      lastBoundsRef.current = { left: r.left, top: r.top, width: r.width, height: r.height };
     } catch (_) {}
   };
 

@@ -1463,10 +1463,10 @@ fn focus_window(app: tauri::AppHandle, label: String) -> Result<(), String> {
 
 #[tauri::command]
 fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json::Value, String> {
-    use sysinfo::Pid;
+    use sysinfo::{Pid, ProcessRefreshKind};
 
     let mut sys = state.sys.lock().unwrap();
-    sys.refresh_processes();
+    sys.refresh_processes_specifics(ProcessRefreshKind::new().with_memory());
 
     let current_pid = Pid::from(std::process::id() as usize);
 
@@ -1475,18 +1475,19 @@ fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json:
         backend_pid_val = Some(Pid::from(child.id() as usize));
     }
 
-    // Build parent-to-children map for O(1) child lookups
-    let mut parent_to_children: std::collections::HashMap<Pid, Vec<Pid>> = std::collections::HashMap::new();
-    for (pid, process) in sys.processes() {
+    // Pre-allocate map with expected capacity to minimize re-allocations
+    let processes = sys.processes();
+    let mut parent_to_children: std::collections::HashMap<Pid, Vec<Pid>> = std::collections::HashMap::with_capacity(processes.len() / 2);
+    for (&pid, process) in processes {
         if let Some(parent) = process.parent() {
-            parent_to_children.entry(parent).or_default().push(*pid);
+            parent_to_children.entry(parent).or_default().push(pid);
         }
     }
 
-    // Find all descendants of current_pid excluding backend_pid subtree using DFS
-    let mut webview_pids = std::collections::HashSet::new();
-    let mut stack = Vec::new();
-    let mut visited = std::collections::HashSet::new();
+    // Pre-allocate tracking collections to reduce overhead
+    let mut webview_pids = std::collections::HashSet::with_capacity(32);
+    let mut stack = Vec::with_capacity(32);
+    let mut visited = std::collections::HashSet::with_capacity(32);
 
     stack.push(current_pid);
     visited.insert(current_pid);
@@ -1494,7 +1495,6 @@ fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json:
     while let Some(current) = stack.pop() {
         if let Some(children) = parent_to_children.get(&current) {
             for &child in children {
-                // Prune/skip the backend process subtree
                 if let Some(backend_pid) = backend_pid_val {
                     if child == backend_pid {
                         continue;
@@ -1522,11 +1522,8 @@ fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json:
     }
 
     Ok(serde_json::json!({
-        // RSS of the Tauri host process only
         "desktopRss": main_memory,
-        // Aggregate RSS of all WebView2/renderer child processes (excluding backend)
         "webviewTotal": webview_memory,
-        // Combined total for backward-compat — kept but no longer shown as single figure
         "desktopTotal": main_memory + webview_memory
     }))
 }
@@ -1732,5 +1729,6 @@ mod tests {
         };
         assert_eq!(url, format!("{}/?token=abc&detachedTabId=tab-1", expected_base));
     }
+
 
 }

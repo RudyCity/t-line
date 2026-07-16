@@ -110,13 +110,34 @@ export function TerminalInstance({
     }, 300000);
   }, [tab.id, isSuspended]);
 
-  // Write directly to the terminal instance (xterm.js has internal batching)
+  // Write buffer queue to throttle incoming WebSocket data chunks and prevent UI blocking
+  const writeQueueRef = useRef<string[]>([]);
+  const writeIntervalRef = useRef<number | null>(null);
+
+  // Flush data to terminal using requestAnimationFrame-backed processing loop
+  const flushWriteQueue = useCallback(() => {
+    const term = terminalRef.current;
+    if (term && writeQueueRef.current.length > 0) {
+      const batch = writeQueueRef.current.join('');
+      writeQueueRef.current = [];
+      term.write(batch);
+    }
+    writeIntervalRef.current = null;
+  }, []);
+
   const scheduleWrite = useCallback((data: string) => {
     const term = terminalRef.current;
-    if (term) {
+    // If it's a small chunk (typical echo/typing) and queue is empty, write instantly to eliminate latency
+    if (term && writeQueueRef.current.length === 0 && data.length <= 128) {
       term.write(data);
+      return;
     }
-  }, []);
+
+    writeQueueRef.current.push(data);
+    if (writeIntervalRef.current === null) {
+      writeIntervalRef.current = requestAnimationFrame(flushWriteQueue);
+    }
+  }, [flushWriteQueue]);
 
   const subscribeToSocket = useCallback((term: Terminal) => {
     wsManager.subscribe(tab.id, (payload) => {
@@ -189,6 +210,9 @@ export function TerminalInstance({
     return () => {
       if (idleTimeoutRef.current) {
         clearTimeout(idleTimeoutRef.current);
+      }
+      if (writeIntervalRef.current !== null) {
+        cancelAnimationFrame(writeIntervalRef.current);
       }
     };
   }, []);
