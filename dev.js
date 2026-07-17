@@ -1,8 +1,8 @@
 const { spawn } = require('child_process');
 const net = require('net');
 
-const isBun = process.versions.bun !== undefined;
-const runner = isBun ? 'bun' : 'npm';
+const isBun = true;
+const runner = 'bun';
 
 const target = process.argv[2]; // 'backend', 'frontend', 'tauri', or undefined (both)
 

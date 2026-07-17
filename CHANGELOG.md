@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.480] - 2026-10-24
+
+### Changed
+- **Migrated package manager to Bun**: Replaced all `npm` runner tasks and commands with `bun`. Removed lockfiles and generated new `bun.lockb` structure.
+- **Optimized Scripts**: Configured global workspace targets to utilize bun filtering syntax (`bun run --filter`).
+
 ## [1.3.478] - 2026-07-16
 
 ### Fixed
