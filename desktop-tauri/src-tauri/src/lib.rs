@@ -1466,7 +1466,8 @@ fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json:
     use sysinfo::{Pid, ProcessRefreshKind};
 
     let mut sys = state.sys.lock().unwrap();
-    sys.refresh_processes_specifics(ProcessRefreshKind::new().with_memory());
+    // Refresh the process list structure (no memory info) to add/remove processes
+    sys.refresh_processes_specifics(ProcessRefreshKind::new());
 
     let current_pid = Pid::from(std::process::id() as usize);
 
@@ -1508,14 +1509,16 @@ fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json:
         }
     }
 
+    // Refresh memory specifically only for the targeted processes we care about
+    sys.refresh_process_specifics(current_pid, ProcessRefreshKind::new().with_memory());
     let mut main_memory: u64 = 0;
-    let mut webview_memory: u64 = 0;
-
     if let Some(process) = sys.process(current_pid) {
         main_memory = process.memory();
     }
 
+    let mut webview_memory: u64 = 0;
     for pid in &webview_pids {
+        sys.refresh_process_specifics(*pid, ProcessRefreshKind::new().with_memory());
         if let Some(process) = sys.process(*pid) {
             webview_memory += process.memory();
         }
@@ -1730,5 +1733,15 @@ mod tests {
         assert_eq!(url, format!("{}/?token=abc&detachedTabId=tab-1", expected_base));
     }
 
-
+    #[test]
+    fn test_sysinfo_process_removal() {
+        use sysinfo::{System, ProcessRefreshKind};
+        
+        let pid = sysinfo::Pid::from(std::process::id() as usize);
+        let mut sys = System::new();
+        
+        // Verify refresh structures succeed
+        let refreshed = sys.refresh_process_specifics(pid, ProcessRefreshKind::new().with_memory());
+        assert!(refreshed);
+    }
 }
