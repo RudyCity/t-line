@@ -92,7 +92,7 @@ Modern software engineering requires juggling multiple branches, repositories, a
 ## 🏃 Quick Start
 
 ### Prerequisites
-* [Node.js](https://nodejs.org/) (LTS recommended)
+* [Bun](https://bun.sh/) (v1.x recommended)
 * Git configured in your system PATH
 * Windows 10/11 (Primary target OS)
 * Rust & Cargo (Required for Tauri desktop build)
@@ -100,27 +100,27 @@ Modern software engineering requires juggling multiple branches, repositories, a
 ### 1. Install Project Dependencies
 Run from the root directory:
 ```powershell
-npm install
+bun install
 ```
 
 ### 2. Run in Development Mode
 Launches the Express backend and Vite frontend concurrently with hot reloading:
 ```powershell
-npm run dev
+bun run dev
 ```
 
 ### 3. Launch Tauri Desktop Client
 Launches the app using the lightweight Tauri v2 wrapper:
 ```powershell
-npm run tauri
+bun run tauri
 ```
 
 ### 4. Build Standalone Tauri Installer
 Compiles assets and packages the app using Tauri:
 ```powershell
-npm run build:tauri
+bun run build:tauri
 # Or using the alias:
-npm run build:exe
+bun run build:exe
 ```
 
 ---
