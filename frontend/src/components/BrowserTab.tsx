@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Globe, RotateCw, ExternalLink, MousePointer, ArrowLeft, ArrowRight, Monitor, Tablet, Smartphone, Minus, Plus, Star } from 'lucide-react';
+import { Globe, RotateCw, ExternalLink, MousePointer, ArrowLeft, ArrowRight, Monitor, Tablet, Smartphone, Minus, Plus, Star, History, Camera, Moon, Sun } from 'lucide-react';
 import { TabData } from '../hooks/useTerminals';
 import BrowserDevTools, { ConsoleErrorLog, InspectedElement } from './BrowserDevTools';
 import { determineRenderMode, getCleanUrl, openInSystemBrowser, BookmarkItem, getFriendlyName, getHelperStatusColorClass as getHelperStatusColorClassUtil, getHelperStatusText as getHelperStatusTextUtil, getPollWebviewJs } from './browserUrlUtils';
 import { useBrowserListeners } from '../hooks/useBrowserListeners';
 import BookmarksDropdown from './BookmarksDropdown';
+import HistoryDropdown, { HistoryItem } from './HistoryDropdown';
 
 interface BrowserTabProps {
   tab: TabData;
@@ -20,7 +21,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   useEffect(() => {
     activeUrlRef.current = activeUrl;
   }, [activeUrl]);
-  const [activeSubTab, setActiveSubTab] = useState<'console' | 'inspector'>('console');
+  const [activeSubTab, setActiveSubTab] = useState<'console' | 'inspector' | 'storage'>('console');
   
   const [logs, setLogs] = useState<ConsoleErrorLog[]>([]);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
@@ -40,6 +41,27 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   });
   const [showBookmarksDropdown, setShowBookmarksDropdown] = useState(false);
   const bookmarksDropdownRef = useRef<HTMLDivElement>(null);
+
+  const [history, setHistory] = useState<HistoryItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('tline-browser-history');
+      return saved ? JSON.parse(saved) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+  const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
+  const historyDropdownRef = useRef<HTMLDivElement>(null);
+
+  const [forceDarkMode, setForceDarkMode] = useState(false);
+  const [showAddBookmarkPopover, setShowAddBookmarkPopover] = useState(false);
+  const [newBookmarkName, setNewBookmarkName] = useState('');
+  const [newBookmarkFolder, setNewBookmarkFolder] = useState('');
+  const newBookmarkPopoverRef = useRef<HTMLDivElement>(null);
+
+  const updateBookmark = (id: string, name: string, folder?: string) => {
+    setBookmarks(prev => prev.map(b => b.id === id ? { ...b, name, folder } : b));
+  };
 
   const isElectron = typeof window !== 'undefined' && window.process?.versions?.electron !== undefined;
   const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__ !== undefined;
@@ -500,7 +522,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     }, 350);
   };
 
-  const handleReload = () => {
+  const handleReload = (forceBypassCache: boolean = false) => {
     setLogs([]);
     setInspectedElement(null);
     setIframeKey(prev => prev + 1);
@@ -508,13 +530,17 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
       const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
       if (activeLabel) {
-        (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js: 'window.location.reload()' }).catch(() => {});
+        const js = forceBypassCache ? 'window.location.reload(true)' : 'window.location.reload()';
+        (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js }).catch(() => {});
       }
-      // Tauri native: auto-finish after a delay since we can't listen to load events
       setTimeout(finishLoadingBar, 1500);
     } else if (useElectronWebview && webviewEl && renderMode === 'electron-webview') {
       try {
-        webviewEl.reload();
+        if (forceBypassCache) {
+          (webviewEl as any).reloadIgnoringCache();
+        } else {
+          webviewEl.reload();
+        }
       } catch (_) {}
     }
   };
@@ -548,22 +574,80 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       onUpdateTabUrl?.(target);
       navigateWebview(target);
       startLoadingBar();
-      // For tauri-native we can't listen to load events, so auto-finish
       if (renderMode === 'tauri-native') {
         setTimeout(finishLoadingBar, 1800);
       }
     }
   };
 
+  // Add to History when activeUrl changes
+  useEffect(() => {
+    if (!activeUrl) return;
+    setHistory(prev => {
+      if (prev.length > 0 && prev[0].url === activeUrl) return prev;
+      const newItem: HistoryItem = {
+        id: `hist-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        name: getFriendlyName(activeUrl),
+        url: activeUrl,
+        timestamp: Date.now()
+      };
+      return [newItem, ...prev.filter(item => item.url !== activeUrl)].slice(0, 100);
+    });
+  }, [activeUrl]);
 
+  // Sync history to LocalStorage
+  useEffect(() => {
+    localStorage.setItem('tline-browser-history', JSON.stringify(history));
+  }, [history]);
+
+  // Sync bookmarks to LocalStorage
   useEffect(() => {
     localStorage.setItem('tline-saved-bookmarks', JSON.stringify(bookmarks));
   }, [bookmarks]);
 
+  // Force Dark Mode Effect
+  useEffect(() => {
+    const js = `
+      (function() {
+        var id = 'tline-force-dark-style';
+        var el = document.getElementById(id);
+        if (${forceDarkMode}) {
+          if (!el) {
+            el = document.createElement('style');
+            el.id = id;
+            el.innerHTML = "html { filter: invert(1) hue-rotate(180deg) !important; } img, video, canvas, [style*='background-image'] { filter: invert(1) hue-rotate(180deg) !important; }";
+            document.documentElement.appendChild(el);
+          }
+        } else {
+          if (el) el.remove();
+        }
+      })()
+    `;
+
+    if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
+      const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
+      if (activeLabel) {
+        (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js }).catch(() => {});
+      }
+    } else if (useElectronWebview && webviewEl && renderMode === 'electron-webview') {
+      try {
+        webviewEl.executeJavaScript(js).catch(() => {});
+      } catch (_) {}
+    }
+  }, [forceDarkMode, activeUrl, renderMode, useTauriWebview, useElectronWebview, webviewEl]);
+
+  // Handle Click Outside for Dropdowns & Popovers
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (bookmarksDropdownRef.current && !bookmarksDropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (bookmarksDropdownRef.current && !bookmarksDropdownRef.current.contains(target)) {
         setShowBookmarksDropdown(false);
+      }
+      if (historyDropdownRef.current && !historyDropdownRef.current.contains(target)) {
+        setShowHistoryDropdown(false);
+      }
+      if (newBookmarkPopoverRef.current && !newBookmarkPopoverRef.current.contains(target)) {
+        setShowAddBookmarkPopover(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -595,19 +679,38 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   const isCurrentBookmarked = bookmarks.some(b => b.url === activeUrl);
 
   const toggleBookmarkCurrent = () => {
+    if (!activeUrl) return;
     if (isCurrentBookmarked) {
-      setBookmarks(prev => prev.filter(b => b.url !== activeUrl));
+      const found = bookmarks.find(b => b.url === activeUrl);
+      if (found) {
+        setNewBookmarkName(found.name);
+        setNewBookmarkFolder(found.folder || '');
+      }
     } else {
-      if (!activeUrl) return;
+      setNewBookmarkName(getFriendlyName(activeUrl));
+      setNewBookmarkFolder('');
+    }
+    setShowAddBookmarkPopover(!showAddBookmarkPopover);
+  };
+
+  const handleSaveNewBookmark = () => {
+    if (!activeUrl) return;
+    if (isCurrentBookmarked) {
+      // Update existing
+      setBookmarks(prev => prev.map(b => b.url === activeUrl ? { ...b, name: newBookmarkName, folder: newBookmarkFolder.trim() || undefined } : b));
+    } else {
+      // Add new
       setBookmarks(prev => [
         ...prev,
         {
           id: `bookmark-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          name: getFriendlyName(activeUrl),
-          url: activeUrl
+          name: newBookmarkName,
+          url: activeUrl,
+          folder: newBookmarkFolder.trim() || undefined
         }
       ]);
     }
+    setShowAddBookmarkPopover(false);
   };
 
   const handleNavigateToBookmark = (url: string) => {
@@ -636,6 +739,218 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       setBookmarks([]);
     }
   };
+
+  const handleNavigateToHistory = (url: string) => {
+    setUrlInput(url);
+    const isSameUrl = url === activeUrl;
+    if (isSameUrl) {
+      handleReload();
+    } else {
+      setActiveUrl(url);
+      onUpdateTabUrl?.(url);
+      navigateWebview(url);
+      startLoadingBar();
+      if (renderMode === 'tauri-native') {
+        setTimeout(finishLoadingBar, 1800);
+      }
+    }
+  };
+
+  const removeHistoryItem = (id: string) => {
+    setHistory(prev => prev.filter(item => item.id !== id));
+  };
+
+  const clearAllHistory = () => {
+    setHistory([]);
+  };
+
+  const handleCaptureScreenshot = async () => {
+    if (useElectronWebview && webviewEl) {
+      try {
+        const img = await (webviewEl as any).capturePage();
+        const dataUrl = img.toDataURL();
+        const link = document.createElement('a');
+        link.download = `screenshot-${tab.id}-${Date.now()}.png`;
+        link.href = dataUrl;
+        link.click();
+      } catch (err) {
+        console.error('Failed to capture page in Electron:', err);
+      }
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { displaySurface: "browser" },
+          audio: false
+        });
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.play();
+        
+        await new Promise(resolve => video.onloadedmetadata = resolve);
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        stream.getTracks().forEach(track => track.stop());
+        
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `screenshot-${tab.id}-${Date.now()}.png`;
+        link.href = dataUrl;
+        link.click();
+      } catch (err) {
+        alert('Gagal mengambil screenshot: Media devices tidak didukung atau dibatalkan.');
+      }
+    }
+  };
+
+  const [storageData, setStorageData] = useState<{
+    cookies: { name: string; value: string }[];
+    localStorage: { key: string; value: string }[];
+  }>({ cookies: [], localStorage: [] });
+
+  const fetchStorageData = async () => {
+    const js = `
+      (function() {
+        var cookies = [];
+        try {
+          var cookieArr = document.cookie.split(';');
+          for (var i = 0; i < cookieArr.length; i++) {
+            var parts = cookieArr[i].split('=');
+            var name = parts[0] ? parts[0].trim() : '';
+            var val = parts[1] ? parts[1].trim() : '';
+            if (name) {
+              cookies.push({ name: name, value: val });
+            }
+          }
+        } catch(e) {}
+
+        var ls = [];
+        try {
+          for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (k) {
+              ls.push({ key: k, value: localStorage.getItem(k) || '' });
+            }
+          }
+        } catch(e) {}
+
+        return JSON.stringify({ cookies: cookies, localStorage: ls });
+      })()
+    `;
+
+    if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
+      const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
+      if (activeLabel) {
+        try {
+          const res = await (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js });
+          if (res) {
+            const parsed = JSON.parse(res);
+            setStorageData({
+              cookies: parsed.cookies || [],
+              localStorage: parsed.localStorage || []
+            });
+          }
+        } catch (e) {
+          console.warn('[BrowserTab] Failed to fetch storage from Tauri webview:', e);
+        }
+      }
+    } else if (useElectronWebview && webviewEl && renderMode === 'electron-webview') {
+      try {
+        const res = await webviewEl.executeJavaScript(js);
+        if (res) {
+          const parsed = JSON.parse(res);
+          setStorageData({
+            cookies: parsed.cookies || [],
+            localStorage: parsed.localStorage || []
+          });
+        }
+      } catch (e) {
+        console.warn('[BrowserTab] Failed to fetch storage from Electron webview:', e);
+      }
+    } else {
+      try {
+        const iframe = document.getElementById('browser-iframe-' + tab.id) as HTMLIFrameElement;
+        if (iframe && iframe.contentWindow) {
+          const doc = iframe.contentWindow.document;
+          const cookies: { name: string; value: string }[] = [];
+          const cookieArr = doc.cookie.split(';');
+          for (let i = 0; i < cookieArr.length; i++) {
+            const parts = cookieArr[i].split('=');
+            const name = parts[0] ? parts[0].trim() : '';
+            const val = parts[1] ? parts[1].trim() : '';
+            if (name) cookies.push({ name, value: val });
+          }
+
+          const ls: { key: string; value: string }[] = [];
+          const winLs = iframe.contentWindow.localStorage;
+          for (let i = 0; i < winLs.length; i++) {
+            const k = winLs.key(i);
+            if (k) ls.push({ key: k, value: winLs.getItem(k) || '' });
+          }
+
+          setStorageData({ cookies, localStorage: ls });
+        }
+      } catch (_) {}
+    }
+  };
+
+  const deleteCookie = async (name: string) => {
+    const js = `document.cookie = "${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"`;
+    if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
+      const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
+      if (activeLabel) {
+        await (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js }).catch(() => {});
+        fetchStorageData();
+      }
+    } else if (useElectronWebview && webviewEl && renderMode === 'electron-webview') {
+      try {
+        await webviewEl.executeJavaScript(js);
+        fetchStorageData();
+      } catch (_) {}
+    } else {
+      try {
+        const iframe = document.getElementById('browser-iframe-' + tab.id) as HTMLIFrameElement;
+        if (iframe && iframe.contentWindow) {
+          iframe.contentWindow.document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+          fetchStorageData();
+        }
+      } catch (_) {}
+    }
+  };
+
+  const deleteLocalStorage = async (key: string) => {
+    const js = `localStorage.removeItem("${key}")`;
+    if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
+      const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
+      if (activeLabel) {
+        await (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js }).catch(() => {});
+        fetchStorageData();
+      }
+    } else if (useElectronWebview && webviewEl && renderMode === 'electron-webview') {
+      try {
+        await webviewEl.executeJavaScript(js);
+        fetchStorageData();
+      } catch (_) {}
+    } else {
+      try {
+        const iframe = document.getElementById('browser-iframe-' + tab.id) as HTMLIFrameElement;
+        if (iframe && iframe.contentWindow) {
+          iframe.contentWindow.localStorage.removeItem(key);
+          fetchStorageData();
+        }
+      } catch (_) {}
+    }
+  };
+
+  useEffect(() => {
+    if (activeSubTab === 'storage') {
+      fetchStorageData();
+    }
+  }, [activeSubTab, activeUrl]);
 
   const getHelperStatusColorClass = () => getHelperStatusColorClassUtil(renderMode);
   const getHelperStatusText = () => getHelperStatusTextUtil(renderMode, helperReady);
@@ -690,9 +1005,9 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
             </button>
 
             <button 
-              onClick={handleReload}
+              onClick={(e) => handleReload(e.shiftKey)}
               className="p-1.5 rounded-md hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer"
-              title="Reload page"
+              title="Reload page (Shift+Click for Hard Reload)"
             >
               <RotateCw size={14} className={isLoading ? 'animate-spin' : ''} />
             </button>
@@ -717,18 +1032,62 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
               />
 
               {/* Trailing Icons inside URL Bar */}
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0 relative">
                 {activeUrl && (
-                  <button
-                    type="button"
-                    onClick={toggleBookmarkCurrent}
-                    className={`p-1 rounded-full transition-colors cursor-pointer hover:bg-[var(--bg-card-hover)] ${
-                      isCurrentBookmarked ? 'text-amber-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                    }`}
-                    title={isCurrentBookmarked ? "Remove bookmark" : "Bookmark this page"}
-                  >
-                    <Star size={13} fill={isCurrentBookmarked ? "currentColor" : "none"} />
-                  </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={toggleBookmarkCurrent}
+                      className={`p-1.5 rounded-lg border transition-colors cursor-pointer bg-[var(--bg-main)] border-[var(--border-color)] hover:bg-[var(--bg-card-hover)] ${
+                        isCurrentBookmarked ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                      }`}
+                      title={isCurrentBookmarked ? "Manage bookmark" : "Bookmark this page"}
+                    >
+                      <Star size={14} fill={isCurrentBookmarked ? "currentColor" : "none"} />
+                    </button>
+
+                    {showAddBookmarkPopover && (
+                      <div
+                        ref={newBookmarkPopoverRef}
+                        className="absolute right-0 top-full mt-2 w-64 bg-gray-900 border border-[var(--border-color)] rounded-xl shadow-2xl p-3 z-[9999] flex flex-col gap-2"
+                        style={{ backgroundColor: 'rgb(17, 24, 39)' }}
+                      >
+                        <div className="text-[10px] font-semibold text-purple-400">
+                          {isCurrentBookmarked ? 'Edit Bookmark' : 'Tambah Bookmark'}
+                        </div>
+                        <input
+                          type="text"
+                          value={newBookmarkName}
+                          onChange={(e) => setNewBookmarkName(e.target.value)}
+                          placeholder="Nama Bookmark"
+                          className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] text-[10px] rounded px-2 py-1 focus:outline-none text-[var(--text-main)]"
+                        />
+                        <input
+                          type="text"
+                          value={newBookmarkFolder}
+                          onChange={(e) => setNewBookmarkFolder(e.target.value)}
+                          placeholder="Folder (opsional)"
+                          className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] text-[10px] rounded px-2 py-1 focus:outline-none text-[var(--text-main)]"
+                        />
+                        <div className="flex justify-end gap-2 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => setShowAddBookmarkPopover(false)}
+                            className="px-2.5 py-1 text-[9px] rounded border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer"
+                          >
+                            Batal
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleSaveNewBookmark}
+                            className="px-2.5 py-1 text-[9px] bg-purple-600 hover:bg-purple-500 text-white rounded cursor-pointer font-semibold"
+                          >
+                            Simpan
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {/* Bookmarks Dropdown Component */}
@@ -740,7 +1099,34 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
                   clearAllBookmarks={clearAllBookmarks}
                   handleNavigateToBookmark={handleNavigateToBookmark}
                   removeBookmark={removeBookmark}
+                  updateBookmark={updateBookmark}
                 />
+
+                {/* History Dropdown trigger and panel */}
+                <div className="relative" ref={historyDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowHistoryDropdown(!showHistoryDropdown)}
+                    className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                      showHistoryDropdown
+                        ? 'bg-purple-600/20 border-purple-500 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.25)]'
+                        : 'bg-[var(--bg-main)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
+                    }`}
+                    title="Riwayat Browser / History"
+                  >
+                    <History size={15} />
+                  </button>
+                  
+                  <HistoryDropdown
+                    showHistoryDropdown={showHistoryDropdown}
+                    setShowHistoryDropdown={setShowHistoryDropdown}
+                    historyDropdownRef={historyDropdownRef}
+                    history={history}
+                    clearAllHistory={clearAllHistory}
+                    handleNavigateToHistory={handleNavigateToHistory}
+                    removeHistoryItem={removeHistoryItem}
+                  />
+                </div>
               </div>
 
             </div>
@@ -819,6 +1205,26 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
 
           {/* Developer Actions (Pills/Icons) */}
           <div className="flex items-center gap-1.5">
+            <button 
+              onClick={() => setForceDarkMode(prev => !prev)}
+              className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                forceDarkMode 
+                  ? 'bg-purple-500/20 border-purple-500 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.2)]' 
+                  : 'bg-[var(--bg-main)]/50 border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
+              }`}
+              title="Force Dark Mode"
+            >
+              {forceDarkMode ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+
+            <button 
+              onClick={handleCaptureScreenshot}
+              className="p-1.5 rounded-lg bg-[var(--bg-main)]/50 border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer"
+              title="Ambil Screenshot Viewport"
+            >
+              <Camera size={14} />
+            </button>
+
             <button
               onClick={toggleInspect}
               className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
@@ -873,7 +1279,20 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
             } : undefined}
           >
             {/* Actual Inner Viewport Area */}
-            <div className="w-full h-full relative overflow-hidden bg-[var(--bg-main)] rounded-[inherit]">
+            <div className={`w-full h-full relative overflow-hidden bg-[var(--bg-main)] rounded-[inherit] ${forceDarkMode ? 'tline-force-dark' : ''}`}>
+              <style>{`
+                .tline-force-dark {
+                  filter: invert(1) hue-rotate(180deg) !important;
+                }
+                .tline-force-dark img,
+                .tline-force-dark video,
+                .tline-force-dark canvas,
+                .tline-force-dark iframe,
+                .tline-force-dark webview,
+                .tline-force-dark [style*="background-image"] {
+                  filter: invert(1) hue-rotate(180deg) !important;
+                }
+              `}</style>
               {/* Loading progress bar */}
               {isLoading && (
                 <div
@@ -987,6 +1406,10 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
         setExpandedLogId={setExpandedLogId}
         copiedId={copiedId}
         copyToClipboard={copyToClipboard}
+        storageData={storageData}
+        onRefreshStorage={fetchStorageData}
+        onDeleteCookie={deleteCookie}
+        onDeleteLocalStorage={deleteLocalStorage}
       />
     </div>
   );

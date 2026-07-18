@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   Bug, Code2, ChevronUp, ChevronDown, AlertCircle, ShieldAlert, 
-  Layout, Check, Sparkles
+  Layout, Check, Sparkles, Database, RefreshCw, Trash
 } from 'lucide-react';
 
 export interface ConsoleErrorLog {
@@ -26,8 +26,8 @@ export interface InspectedElement {
 interface BrowserDevToolsProps {
   logs: ConsoleErrorLog[];
   inspectedElement: InspectedElement | null;
-  activeSubTab: 'console' | 'inspector';
-  setActiveSubTab: (tab: 'console' | 'inspector') => void;
+  activeSubTab: 'console' | 'inspector' | 'storage';
+  setActiveSubTab: (tab: 'console' | 'inspector' | 'storage') => void;
   isDevtoolsCollapsed: boolean;
   setIsDevtoolsCollapsed: (collapsed: boolean) => void;
   devtoolsHeight: number;
@@ -39,6 +39,13 @@ interface BrowserDevToolsProps {
   setExpandedLogId: (id: string | null) => void;
   copiedId: string | null;
   copyToClipboard: (text: string, id: string) => void;
+  storageData?: {
+    cookies: { name: string; value: string }[];
+    localStorage: { key: string; value: string }[];
+  };
+  onRefreshStorage?: () => void;
+  onDeleteCookie?: (name: string) => void;
+  onDeleteLocalStorage?: (key: string) => void;
 }
 
 export default function BrowserDevTools({
@@ -56,7 +63,11 @@ export default function BrowserDevTools({
   expandedLogId,
   setExpandedLogId,
   copiedId,
-  copyToClipboard
+  copyToClipboard,
+  storageData = { cookies: [], localStorage: [] },
+  onRefreshStorage,
+  onDeleteCookie,
+  onDeleteLocalStorage
 }: BrowserDevToolsProps) {
 
   const generateErrorPrompt = (log: ConsoleErrorLog) => {
@@ -130,6 +141,23 @@ export default function BrowserDevTools({
             {inspectedElement && (
               <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
             )}
+          </button>
+
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDevtoolsCollapsed(false);
+              setActiveSubTab('storage');
+              onRefreshStorage?.();
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded transition-all ${
+              activeSubTab === 'storage' && !isDevtoolsCollapsed
+                ? 'text-purple-400 bg-[var(--bg-card)] border border-[var(--border-color)]'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+            }`}
+          >
+            <Database size={13} />
+            <span>Storage &amp; Cookies</span>
           </button>
         </div>
         
@@ -299,6 +327,128 @@ export default function BrowserDevTools({
                   </span>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* STORAGE & COOKIES TAB */}
+          {activeSubTab === 'storage' && (
+            <div className="h-full flex flex-col min-h-0 text-xs overflow-hidden">
+              {/* Header with Actions */}
+              <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-2 mb-3">
+                <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wider">
+                  Site Storage &amp; Cookies
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onRefreshStorage?.()}
+                  className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded transition-colors cursor-pointer"
+                  title="Refresh Storage"
+                >
+                  <RefreshCw size={11} />
+                  Refresh
+                </button>
+              </div>
+
+              {/* Grid content split: Local Storage & Cookies */}
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0 overflow-y-auto pr-1">
+                {/* Local Storage */}
+                <div className="flex flex-col gap-2 min-h-0">
+                  <h4 className="font-semibold text-purple-400 flex items-center gap-1">
+                    <span>Local Storage</span>
+                    <span className="text-[10px] text-[var(--text-muted)] font-mono">
+                      ({storageData.localStorage.length})
+                    </span>
+                  </h4>
+                  <div className="flex-1 border border-[var(--border-color)] rounded-lg bg-black/10 overflow-auto max-h-60 scrollbar-thin">
+                    {storageData.localStorage.length === 0 ? (
+                      <div className="text-center py-8 text-[var(--text-muted)] select-none">
+                        No localStorage entries found.
+                      </div>
+                    ) : (
+                      <table className="w-full text-[11px] font-mono border-collapse">
+                        <thead>
+                          <tr className="bg-black/20 border-b border-[var(--border-color)] text-left">
+                            <th className="p-2 w-1/3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Key</th>
+                            <th className="p-2 text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Value</th>
+                            <th className="p-2 w-12 text-center"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {storageData.localStorage.map((item, idx) => (
+                            <tr key={idx} className="border-b border-[var(--border-color)]/30 hover:bg-white/5 transition-colors">
+                              <td className="p-2 font-semibold break-all text-[var(--text-main)] select-text align-top">
+                                {item.key}
+                              </td>
+                              <td className="p-2 text-[var(--text-muted)] break-all select-text align-top">
+                                {item.value}
+                              </td>
+                              <td className="p-2 text-center align-top">
+                                <button
+                                  type="button"
+                                  onClick={() => onDeleteLocalStorage?.(item.key)}
+                                  className="p-1 rounded hover:bg-red-500/10 text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+                                  title="Delete key"
+                                >
+                                  <Trash size={11} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+
+                {/* Cookies */}
+                <div className="flex flex-col gap-2 min-h-0">
+                  <h4 className="font-semibold text-purple-400 flex items-center gap-1">
+                    <span>Cookies</span>
+                    <span className="text-[10px] text-[var(--text-muted)] font-mono">
+                      ({storageData.cookies.length})
+                    </span>
+                  </h4>
+                  <div className="flex-1 border border-[var(--border-color)] rounded-lg bg-black/10 overflow-auto max-h-60 scrollbar-thin">
+                    {storageData.cookies.length === 0 ? (
+                      <div className="text-center py-8 text-[var(--text-muted)] select-none">
+                        No cookies found.
+                      </div>
+                    ) : (
+                      <table className="w-full text-[11px] font-mono border-collapse">
+                        <thead>
+                          <tr className="bg-black/20 border-b border-[var(--border-color)] text-left">
+                            <th className="p-2 w-1/3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Name</th>
+                            <th className="p-2 text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Value</th>
+                            <th className="p-2 w-12 text-center"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {storageData.cookies.map((item, idx) => (
+                            <tr key={idx} className="border-b border-[var(--border-color)]/30 hover:bg-white/5 transition-colors">
+                              <td className="p-2 font-semibold break-all text-[var(--text-main)] select-text align-top">
+                                {item.name}
+                              </td>
+                              <td className="p-2 text-[var(--text-muted)] break-all select-text align-top">
+                                {item.value}
+                              </td>
+                              <td className="p-2 text-center align-top">
+                                <button
+                                  type="button"
+                                  onClick={() => onDeleteCookie?.(item.name)}
+                                  className="p-1 rounded hover:bg-red-500/10 text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+                                  title="Delete cookie"
+                                >
+                                  <Trash size={11} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

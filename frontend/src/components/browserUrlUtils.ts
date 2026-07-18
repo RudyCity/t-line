@@ -96,6 +96,7 @@ export interface BookmarkItem {
   id: string;
   name: string;
   url: string;
+  folder?: string;
 }
 
 export const getFriendlyName = (urlStr: string): string => {
