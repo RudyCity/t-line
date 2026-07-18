@@ -26,17 +26,19 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 22
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Install Dependencies
-        run: npm install
+        run: bun install
 
       - name: Build Frontend
-        run: npm run build:frontend
+        run: bun run build:frontend
 
       - name: Build Backend
-        run: npm run build:backend
+        run: bun run build:backend
 
       - name: Install system dependencies (Ubuntu only)
         if: matrix.os == 'ubuntu-latest'
@@ -53,7 +55,7 @@ jobs:
           workspaces: 'desktop-tauri/src-tauri -> desktop-tauri/src-tauri/target'
 
       - name: Copy Assets for Tauri
-        run: npm run copy-assets --workspace=desktop-tauri
+        run: bun run copy-assets --workspace=desktop-tauri
 
       - name: Build Tauri Desktop (Package & Publish)
         uses: tauri-apps/tauri-action@v0
