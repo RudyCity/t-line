@@ -405,7 +405,8 @@ router.get('/workspaces/:id/git/history', authMiddleware, async (req, res) => {
     }
     
     const targetPath = (worktreePath && typeof worktreePath === 'string') ? worktreePath : matched.path;
-    const historyLimit = limit ? parseInt(limit as string, 10) : 50;
+    // Cap history limit to 500 max to prevent memory exhaustion in large repos
+    const historyLimit = Math.min(limit ? parseInt(limit as string, 10) : 50, 500);
     const history = await getGitHistory(targetPath, historyLimit);
     res.json(history);
   } catch (e: any) {

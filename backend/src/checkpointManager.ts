@@ -167,17 +167,15 @@ export async function createCheckpoint(
             }
           }
         } else {
-          for (const f of filesToCheck) {
+          await Promise.all(filesToCheck.map(async (f) => {
             try {
               const fullPath = path.resolve(normalizedRepo, f);
-              if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
-                const size = fs.statSync(fullPath).size;
-                if (size > MAX_SIZE) {
-                  largeFiles.push(`${f} (${(size / (1024 * 1024)).toFixed(1)} MB)`);
-                }
+              const stat = await fs.promises.stat(fullPath);
+              if (stat.isFile() && stat.size > MAX_SIZE) {
+                largeFiles.push(`${f} (${(stat.size / (1024 * 1024)).toFixed(1)} MB)`);
               }
             } catch (e) {}
-          }
+          }));
         }
       }
 

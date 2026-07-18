@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, Fragment, useRef } from 'react';
+import { useState, useEffect, useMemo, Fragment, useRef, Suspense } from 'react';
 import { 
   Folder, 
   Plus, 
@@ -29,7 +29,7 @@ import { DiffViewerTab } from './components/DiffViewerTab';
 import { TerminalGridTab } from './components/TerminalGridTab';
 import BrowserTab from './components/BrowserTab';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
-import { WorkspaceAddModal, WorktreeAddModal, TunnelSetupModal, SettingsModal, ShortcutHelpModal, ConfirmModal, WorkspaceEditModal, SavePromptModal, SelectGridModal } from './components/Modals';
+import { LazyWorkspaceAddModal as WorkspaceAddModal, LazyWorktreeAddModal as WorktreeAddModal, LazyTunnelSetupModal as TunnelSetupModal, LazySettingsModal as SettingsModal, LazyShortcutHelpModal as ShortcutHelpModal, LazyConfirmModal as ConfirmModal, LazyWorkspaceEditModal as WorkspaceEditModal, LazySavePromptModal as SavePromptModal, LazySelectGridModal as SelectGridModal } from './components/LazyModals';
 
 interface SavedPrompt {
   id: string;
@@ -38,7 +38,7 @@ interface SavedPrompt {
   cwd: string;
   shellType: string;
 }
-import { BranchModal } from './components/BranchModal';
+import { LazyBranchModal as BranchModal } from './components/LazyModals';
 import { useTunnel } from './hooks/useTunnel';
 import { useSystemStats } from './hooks/useSystemStats';
 import { useWorkspaces } from './hooks/useWorkspaces';
@@ -2460,138 +2460,140 @@ export default function App() {
       </div>
     </div>
 
-      {/* Workspace Add Dialog Modal */}
-      <WorkspaceAddModal
-        show={showWorkspaceModal}
-        onClose={() => {
-          setShowWorkspaceModal(false);
-          setShowFolderExplorer(false);
-        }}
-        onSubmit={handleAddWorkspace}
-        newWorkspacePath={newWorkspacePath}
-        setNewWorkspacePath={setNewWorkspacePath}
-        newWorkspaceShell={newWorkspaceShell}
-        setNewWorkspaceShell={setNewWorkspaceShell}
-        handleFolderBrowse={handleFolderBrowse}
-        showFolderExplorer={showFolderExplorer}
-        setShowFolderExplorer={setShowFolderExplorer}
-        explorerPath={explorerPath}
-        explorerParent={explorerParent}
-        explorerDirs={explorerDirs}
-        fetchDirectoryList={fetchDirectoryList}
-      />
-
-      {/* Git Worktree Add Dialog Modal */}
-      <WorktreeAddModal
-        show={showWorktreeModal}
-        onClose={() => setShowWorktreeModal(false)}
-        onSubmit={handleAddWorktree}
-        newWorktreePath={newWorktreePath}
-        setNewWorktreePath={setNewWorktreePath}
-        isNewBranch={isNewBranch}
-        setIsNewBranch={setIsNewBranch}
-        newWorktreeBranch={newWorktreeBranch}
-        setNewWorktreeBranch={setNewWorktreeBranch}
-        repoBranches={repoBranches}
-        gitLoading={gitLoading}
-        newLocalBranchName={newLocalBranchName}
-        setNewLocalBranchName={setNewLocalBranchName}
-      />
-
-      <TunnelSetupModal
-        show={showTunnelModal}
-        onClose={() => setShowTunnelModal(false)}
-        onSubmit={handleStartTokenTunnel}
-        tunnelToken={tunnelToken}
-        setTunnelToken={setTunnelToken}
-        loading={tunnelLoading}
-      />
-
-      <SettingsModal
-        show={showSettingsModal}
-        onClose={() => setShowSettingsModal(false)}
-        token={localStorage.getItem('token') || ''}
-        workspacesCount={workspaces.length}
-        showAlert={showAlert}
-        appVersion={appVersion}
-        updateAvailable={updateAvailable}
-        latestVersion={latestVersion}
-        theme={theme}
-        setTheme={setTheme}
-        accentColor={accentColor}
-        setAccentColor={setAccentColor}
-        fontSans={fontSans}
-        setFontSans={setFontSans}
-        fontMono={fontMono}
-        setFontMono={setFontMono}
-        fontSansWeight={fontSansWeight}
-        setFontSansWeight={setFontSansWeight}
-        fontMonoWeight={fontMonoWeight}
-        setFontMonoWeight={setFontMonoWeight}
-        terminalFontSize={terminalFontSize}
-        setTerminalFontSize={setTerminalFontSize}
-      />
-
-      <ShortcutHelpModal
-        show={showShortcutModal}
-        onClose={() => setShowShortcutModal(false)}
-      />
-
-      <WorkspaceEditModal
-        show={showEditWorkspaceModal}
-        onClose={() => {
-          setShowEditWorkspaceModal(false);
-          setEditingWorkspace(null);
-        }}
-        onSubmit={handleUpdateWorkspaceSubmit}
-        workspace={editingWorkspace}
-      />
-
-      {confirmDialog && (
-        <ConfirmModal
-          show={confirmDialog.show}
-          title={confirmDialog.title}
-          message={confirmDialog.message}
-          confirmLabel={confirmDialog.confirmLabel}
-          cancelLabel={confirmDialog.cancelLabel}
-          variant={confirmDialog.variant}
-          isAlert={confirmDialog.isAlert}
-          onConfirm={confirmDialog.onConfirm}
-          onCancel={confirmDialog.onCancel}
+      <Suspense fallback={null}>
+        {/* Workspace Add Dialog Modal */}
+        <WorkspaceAddModal
+          show={showWorkspaceModal}
+          onClose={() => {
+            setShowWorkspaceModal(false);
+            setShowFolderExplorer(false);
+          }}
+          onSubmit={handleAddWorkspace}
+          newWorkspacePath={newWorkspacePath}
+          setNewWorkspacePath={setNewWorkspacePath}
+          newWorkspaceShell={newWorkspaceShell}
+          setNewWorkspaceShell={setNewWorkspaceShell}
+          handleFolderBrowse={handleFolderBrowse}
+          showFolderExplorer={showFolderExplorer}
+          setShowFolderExplorer={setShowFolderExplorer}
+          explorerPath={explorerPath}
+          explorerParent={explorerParent}
+          explorerDirs={explorerDirs}
+          fetchDirectoryList={fetchDirectoryList}
         />
-      )}
 
-      <BranchModal
-        show={showBranchModal}
-        onClose={() => setShowBranchModal(false)}
-        workspace={panelWorkspace}
-        worktreePath={panelWorktreePath}
-        token={localStorage.getItem('token') || ''}
-        onBranchChanged={() => {
-          fetchGitStatus(true);
-          fetchWorkspaces();
-        }}
-      />
+        {/* Git Worktree Add Dialog Modal */}
+        <WorktreeAddModal
+          show={showWorktreeModal}
+          onClose={() => setShowWorktreeModal(false)}
+          onSubmit={handleAddWorktree}
+          newWorktreePath={newWorktreePath}
+          setNewWorktreePath={setNewWorktreePath}
+          isNewBranch={isNewBranch}
+          setIsNewBranch={setIsNewBranch}
+          newWorktreeBranch={newWorktreeBranch}
+          setNewWorktreeBranch={setNewWorktreeBranch}
+          repoBranches={repoBranches}
+          gitLoading={gitLoading}
+          newLocalBranchName={newLocalBranchName}
+          setNewLocalBranchName={setNewLocalBranchName}
+        />
 
-      <SavePromptModal
-        show={showSavePromptModal}
-        onClose={() => setShowSavePromptModal(false)}
-        onSubmit={handleSavePromptSubmit}
-        workspaces={workspaces}
-        defaultCwd={savePromptDefaultCwd}
-        defaultShellType={savePromptDefaultShell}
-        initialName={savePromptInitialName}
-      />
+        <TunnelSetupModal
+          show={showTunnelModal}
+          onClose={() => setShowTunnelModal(false)}
+          onSubmit={handleStartTokenTunnel}
+          tunnelToken={tunnelToken}
+          setTunnelToken={setTunnelToken}
+          loading={tunnelLoading}
+        />
 
-      <SelectGridModal
-        show={showSelectGridModal}
-        onClose={() => {
-          setShowSelectGridModal(false);
-          setPendingSavedPrompt(null);
-        }}
-        gridTabs={activeGridTabs}
-        onSelect={handleSelectGridSubmit}
-      />
+        <SettingsModal
+          show={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
+          token={localStorage.getItem('token') || ''}
+          workspacesCount={workspaces.length}
+          showAlert={showAlert}
+          appVersion={appVersion}
+          updateAvailable={updateAvailable}
+          latestVersion={latestVersion}
+          theme={theme}
+          setTheme={setTheme}
+          accentColor={accentColor}
+          setAccentColor={setAccentColor}
+          fontSans={fontSans}
+          setFontSans={setFontSans}
+          fontMono={fontMono}
+          setFontMono={setFontMono}
+          fontSansWeight={fontSansWeight}
+          setFontSansWeight={setFontSansWeight}
+          fontMonoWeight={fontMonoWeight}
+          setFontMonoWeight={setFontMonoWeight}
+          terminalFontSize={terminalFontSize}
+          setTerminalFontSize={setTerminalFontSize}
+        />
+
+        <ShortcutHelpModal
+          show={showShortcutModal}
+          onClose={() => setShowShortcutModal(false)}
+        />
+
+        <WorkspaceEditModal
+          show={showEditWorkspaceModal}
+          onClose={() => {
+            setShowEditWorkspaceModal(false);
+            setEditingWorkspace(null);
+          }}
+          onSubmit={handleUpdateWorkspaceSubmit}
+          workspace={editingWorkspace}
+        />
+
+        {confirmDialog && (
+          <ConfirmModal
+            show={confirmDialog.show}
+            title={confirmDialog.title}
+            message={confirmDialog.message}
+            confirmLabel={confirmDialog.confirmLabel}
+            cancelLabel={confirmDialog.cancelLabel}
+            variant={confirmDialog.variant}
+            isAlert={confirmDialog.isAlert}
+            onConfirm={confirmDialog.onConfirm}
+            onCancel={confirmDialog.onCancel}
+          />
+        )}
+
+        <BranchModal
+          show={showBranchModal}
+          onClose={() => setShowBranchModal(false)}
+          workspace={panelWorkspace}
+          worktreePath={panelWorktreePath}
+          token={localStorage.getItem('token') || ''}
+          onBranchChanged={() => {
+            fetchGitStatus(true);
+            fetchWorkspaces();
+          }}
+        />
+
+        <SavePromptModal
+          show={showSavePromptModal}
+          onClose={() => setShowSavePromptModal(false)}
+          onSubmit={handleSavePromptSubmit}
+          workspaces={workspaces}
+          defaultCwd={savePromptDefaultCwd}
+          defaultShellType={savePromptDefaultShell}
+          initialName={savePromptInitialName}
+        />
+
+        <SelectGridModal
+          show={showSelectGridModal}
+          onClose={() => {
+            setShowSelectGridModal(false);
+            setPendingSavedPrompt(null);
+          }}
+          gridTabs={activeGridTabs}
+          onSelect={handleSelectGridSubmit}
+        />
+      </Suspense>
 
       <Footer
         panelWorkspace={panelWorkspace}

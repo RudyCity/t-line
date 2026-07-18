@@ -175,10 +175,10 @@ router.get('/read', authMiddleware, async (req, res) => {
     }
 
     // Limit read size to 1MB to prevent large memory overhead
-    const fd = fs.openSync(resolvedPath, 'r');
+    const handle = await fs.promises.open(resolvedPath, 'r');
     const buffer = Buffer.alloc(1024 * 1024);
-    const bytesRead = fs.readSync(fd, buffer, 0, buffer.length, 0);
-    fs.closeSync(fd);
+    const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+    await handle.close();
 
     let encoding: BufferEncoding = 'utf8';
     let startOffset = 0;
@@ -361,7 +361,7 @@ router.delete('/delete', authMiddleware, async (req, res) => {
   }
 });
 
-router.post('/open-explorer', authMiddleware, (req, res) => {
+router.post('/open-explorer', authMiddleware, async (req, res) => {
   const targetPath = req.body.path as string;
   if (!targetPath) {
     return res.status(400).json({ error: 'Path is required.' });
@@ -379,15 +379,14 @@ router.post('/open-explorer', authMiddleware, (req, res) => {
     const platform = os.platform();
     let cmd = '';
 
+    const stat = await fs.promises.stat(resolvedPath);
     if (platform === 'win32') {
-      const stat = fs.statSync(resolvedPath);
       if (stat.isDirectory()) {
         cmd = `explorer.exe "${resolvedPath}"`;
       } else {
         cmd = `explorer.exe /select,"${resolvedPath}"`;
       }
     } else if (platform === 'darwin') {
-      const stat = fs.statSync(resolvedPath);
       if (stat.isDirectory()) {
         cmd = `open "${resolvedPath}"`;
       } else {
@@ -395,7 +394,6 @@ router.post('/open-explorer', authMiddleware, (req, res) => {
       }
     } else {
       // Linux fallback
-      const stat = fs.statSync(resolvedPath);
       if (stat.isDirectory()) {
         cmd = `xdg-open "${resolvedPath}"`;
       } else {

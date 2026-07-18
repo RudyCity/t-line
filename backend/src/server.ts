@@ -268,8 +268,19 @@ app.use((req, res, next) => {
 // Serve static frontend in production if available
 const frontendDistPath = path.join(__dirname, '../../frontend/dist');
 if (fs.existsSync(frontendDistPath)) {
-  app.use(express.static(frontendDistPath));
+  app.use(express.static(frontendDistPath, {
+    maxAge: '1d',
+    setHeaders: (res, path) => {
+      // Monaco assets (/vs) or built JS/CSS files can be cached long-term
+      if (path.includes('/vs/') || path.endsWith('.js') || path.endsWith('.css') || path.endsWith('.woff2')) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+      }
+    }
+  }));
 }
+
 
 // ----------------------------------------------------
 // Authentication Endpoints
@@ -696,17 +707,22 @@ server.on('upgrade', (request, socket, head) => {
 
 const activeWebSockets = new Set<WebSocket>();
 const fsWatchers = new Map<string, fs.FSWatcher>();
-let fileChangeDebounceTimer: NodeJS.Timeout | null = null;
+const fileChangeDebounceTimers = new Map<string, NodeJS.Timeout>();
 
 function handleFileChange(filename: string) {
-  if (fileChangeDebounceTimer) clearTimeout(fileChangeDebounceTimer);
-  fileChangeDebounceTimer = setTimeout(() => {
+  const existingTimer = fileChangeDebounceTimers.get(filename);
+  if (existingTimer) clearTimeout(existingTimer);
+  
+  const timer = setTimeout(() => {
+    fileChangeDebounceTimers.delete(filename);
     clearWorkspaceCache();
     const payload = JSON.stringify({ id: 'global', type: 'fs-change', filename });
     for (const ws of activeWebSockets) {
       if (ws.readyState === WebSocket.OPEN) ws.send(payload);
     }
   }, 300);
+  
+  fileChangeDebounceTimers.set(filename, timer);
 }
 
 async function updateWorkspaceWatchers() {

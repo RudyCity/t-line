@@ -279,16 +279,17 @@ export async function getWorkspaceInfo(workspace: WorkspaceConfig): Promise<Work
         }
       }
 
-      // Check dirty status for each worktree sequentially to prevent resource contention
-      const resolvedWorktrees: WorktreeInfo[] = [];
-      for (const wt of parsedWorktrees) {
-        const { isDirty, dirtyCount } = await isWorktreeDirty(wt.path);
-        resolvedWorktrees.push({
-          ...wt,
-          isDirty,
-          dirtyCount
-        });
-      }
+      // Check dirty status for each worktree in parallel using Promise.all to improve performance
+      const resolvedWorktrees: WorktreeInfo[] = await Promise.all(
+        parsedWorktrees.map(async (wt) => {
+          const { isDirty, dirtyCount } = await isWorktreeDirty(wt.path);
+          return {
+            ...wt,
+            isDirty,
+            dirtyCount
+          };
+        })
+      );
       worktrees = resolvedWorktrees;
     } catch (e) {
       console.error(`Error listing worktrees in ${normalizedPath}:`, e);

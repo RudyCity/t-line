@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.481] - 2026-10-24
+
+### Changed
+- Bumped workspace packages and project version to 1.3.481.
+- Synchronized latest repository modifications and pushed updates.
+
 ## [1.3.480] - 2026-10-24
 
 ### Changed

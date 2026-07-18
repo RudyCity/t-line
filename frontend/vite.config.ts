@@ -15,6 +15,16 @@ export default defineConfig({
       }
     }
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          monaco: ['@monaco-editor/react'],
+          vendor: ['react', 'react-dom', 'lucide-react', '@visx/shape', '@xterm/addon-canvas', '@xterm/addon-fit', '@xterm/addon-webgl', '@xterm/xterm']
+        }
+      }
+    }
+  },
   test: {
     globals: true,
     environment: 'jsdom',
