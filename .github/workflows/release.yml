@@ -55,7 +55,7 @@ jobs:
           workspaces: 'desktop-tauri/src-tauri -> desktop-tauri/src-tauri/target'
 
       - name: Copy Assets for Tauri
-        run: bun run copy-assets --workspace=desktop-tauri
+        run: bun run --filter desktop-tauri copy-assets
 
       - name: Build Tauri Desktop (Package & Publish)
         uses: tauri-apps/tauri-action@v0
