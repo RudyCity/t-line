@@ -715,29 +715,16 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
               />
             )}
 
-            {/* Prominent Thinking & Tool Execution Loading Bar */}
+            {/* Simple Thinking Indicator */}
             {loading && (
-              <div className="p-3.5 rounded-lg border border-indigo-500/60 bg-indigo-950/50 text-indigo-100 text-xs shadow-lg max-w-[90%] mr-auto flex items-center justify-between gap-3 font-sans">
-                <div className="flex items-center gap-3">
-                  <Sparkles className="w-4 h-4 text-indigo-400 animate-spin shrink-0" />
-                  <div>
-                    <div className="font-semibold text-indigo-200 flex items-center gap-2">
-                      <span>SuperAgent is thinking & executing tools</span>
-                      <span className="flex gap-1 items-center">
-                        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                      </span>
-                    </div>
-                    <span className="text-[11px] text-zinc-400 font-mono">Analyzing codebase, performing context operations</span>
-                  </div>
-                </div>
-                <button
-                  onClick={handleAbort}
-                  className="px-2.5 py-1 bg-red-900/80 hover:bg-red-800 border border-red-700 text-red-100 rounded font-semibold text-[11px] flex items-center gap-1 transition shrink-0"
-                >
-                  <Square className="w-3 h-3 fill-current" /> Stop
-                </button>
+              <div className="flex items-center gap-2 text-zinc-500 text-xs font-sans pl-1 py-1">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+                <span>SuperAgent is thinking...</span>
+                <span className="flex gap-0.5 items-center">
+                  <span className="w-1 h-1 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1 h-1 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1 h-1 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </span>
               </div>
             )}
             <div ref={chatEndRef} />
