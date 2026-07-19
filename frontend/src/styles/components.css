@@ -1,3 +1,4 @@
+/* Hallmark · macrostructure: Workbench · tone: technical · genre: modern-minimal · theme: Cobalt */
 /* Glassmorphism Containers */
 .glass-panel {
   background: var(--bg-card);
@@ -2906,4 +2907,104 @@
   background-color: var(--border-color);
 }
 
+/* ─── Hallmark SuperAgent Workbench Layout & Components ────────────────────────── */
 
+.sa-workbench-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--bg-main, #05070c);
+  color: var(--text-main, #f8fafc);
+  font-family: var(--font-sans);
+}
+
+.sa-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #090c14;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: 48px;
+}
+
+.sa-tab-pill {
+  padding: 4px 12px;
+  font-size: 11px;
+  border-radius: 6px;
+  transition: background-color 150ms cubic-bezier(0.16, 1, 0.3, 1), color 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.sa-tab-pill:focus-visible {
+  outline: 2px solid oklch(65% 0.22 260);
+  outline-offset: 1px;
+}
+
+.sa-card-base {
+  background: rgba(15, 20, 32, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.sa-card-base:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.sa-btn-primary {
+  background: oklch(58% 0.22 260);
+  color: #ffffff;
+  font-weight: 500;
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: transform 100ms ease, background-color 150ms ease;
+}
+
+.sa-btn-primary:hover {
+  background: oklch(64% 0.22 260);
+}
+
+.sa-btn-primary:active {
+  transform: translateY(1px);
+}
+
+.sa-btn-primary:focus-visible {
+  outline: 2px solid oklch(75% 0.2 260);
+  outline-offset: 2px;
+}
+
+.sa-input-area {
+  background: rgba(12, 16, 26, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.sa-input-area:focus-within {
+  border-color: oklch(62% 0.22 260);
+  box-shadow: 0 0 0 1px oklch(62% 0.22 260 / 0.4);
+}
+
+.sa-command-popover {
+  background: #090c15;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+.sa-badge-status {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 4px;
+}

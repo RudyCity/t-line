@@ -20,30 +20,30 @@ interface PermissionCardProps {
 
 export function PermissionCard({ pendingPermission, handlePermissionDecision }: PermissionCardProps) {
   return (
-    <div className="p-4 rounded-lg bg-amber-950/40 border-2 border-amber-500/80 text-amber-100 space-y-3 select-none">
-      <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
-        <AlertTriangle className="w-5 h-5" />
+    <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-500/60 text-amber-100 space-y-3 select-none shadow-lg backdrop-filter backdrop-blur-md">
+      <div className="flex items-center gap-2 text-amber-400 font-bold text-xs tracking-wide uppercase font-mono">
+        <AlertTriangle className="w-4 h-4" />
         <span>Tool Approval Required</span>
       </div>
-      <p className="text-xs text-amber-200">
+      <p className="text-xs text-amber-200/90 font-mono bg-amber-950/50 p-2.5 rounded-md border border-amber-500/20 leading-relaxed break-all">
         {pendingPermission.description || `SuperAgent wants to execute: ${JSON.stringify(pendingPermission.toolCall)}`}
       </p>
-      <div className="flex gap-2 pt-1">
+      <div className="flex flex-wrap gap-2 pt-1">
         <button
           onClick={() => handlePermissionDecision(true)}
-          className="bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs px-3 py-1.5 rounded flex items-center gap-1 transition cursor-pointer"
+          className="bg-amber-600 hover:bg-amber-500 active:translate-y-0.5 text-white font-medium text-xs px-3 py-1.5 rounded-md flex items-center gap-1.5 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400"
         >
           <Check className="w-3.5 h-3.5" /> Allow Once
         </button>
         <button
           onClick={() => handlePermissionDecision('session')}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-3 py-1.5 rounded transition cursor-pointer"
+          className="bg-indigo-600 hover:bg-indigo-500 active:translate-y-0.5 text-white font-medium text-xs px-3 py-1.5 rounded-md transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
         >
           Allow for Session
         </button>
         <button
           onClick={() => handlePermissionDecision(false)}
-          className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold text-xs px-3 py-1.5 rounded flex items-center gap-1 transition cursor-pointer"
+          className="bg-zinc-800 hover:bg-zinc-700 active:translate-y-0.5 text-zinc-300 font-medium text-xs px-3 py-1.5 rounded-md flex items-center gap-1.5 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-zinc-400"
         >
           <X className="w-3.5 h-3.5" /> Deny
         </button>
@@ -81,24 +81,24 @@ export function QuestionCard({
   };
 
   return (
-    <div className="p-4 rounded-lg bg-indigo-950/50 border-2 border-indigo-500/80 text-indigo-100 space-y-3">
-      <div className="flex items-center gap-2 text-indigo-300 font-bold text-sm select-none">
-        <HelpCircle className="w-5 h-5 text-indigo-400" />
+    <div className="p-4 rounded-xl bg-indigo-950/30 border border-indigo-500/50 text-indigo-100 space-y-3 shadow-lg backdrop-filter backdrop-blur-md">
+      <div className="flex items-center gap-2 text-indigo-300 font-bold text-xs tracking-wide uppercase font-mono select-none">
+        <HelpCircle className="w-4 h-4 text-indigo-400" />
         <span>Agent Question</span>
       </div>
-      <p className="text-xs text-zinc-200 font-medium select-none">
+      <p className="text-xs text-zinc-200 font-medium leading-relaxed select-none">
         {pendingQuestion.question}
       </p>
 
       {pendingQuestion.options && pendingQuestion.options.length > 0 ? (
-        <div className="space-y-1.5 pt-1">
+        <div className="space-y-2 pt-1">
           {pendingQuestion.options.map(opt => (
             <label
               key={opt}
-              className={`flex items-center gap-2 p-2 rounded border transition cursor-pointer text-xs ${
+              className={`flex items-center gap-2.5 p-2.5 rounded-md border transition cursor-pointer text-xs ${
                 isSelected(opt)
-                  ? 'bg-indigo-900/40 border-indigo-500 text-white'
-                  : 'bg-[#18181f] border-zinc-800 text-zinc-300 hover:bg-zinc-800/40'
+                  ? 'bg-indigo-900/40 border-indigo-500 text-white shadow-sm'
+                  : 'bg-[#121622] border-zinc-800 text-zinc-300 hover:bg-zinc-800/60 hover:border-zinc-700'
               }`}
               onClick={() => handleToggle(opt)}
             >
@@ -106,9 +106,9 @@ export function QuestionCard({
                 type={pendingQuestion.isMultiSelect ? 'checkbox' : 'radio'}
                 checked={isSelected(opt)}
                 readOnly
-                className="accent-indigo-500"
+                className="accent-indigo-500 rounded"
               />
-              <span>{opt}</span>
+              <span className="leading-snug">{opt}</span>
             </label>
           ))}
         </div>
@@ -116,8 +116,8 @@ export function QuestionCard({
         <textarea
           value={customQuestionInput}
           onChange={(e) => setCustomQuestionInput(e.target.value)}
-          placeholder="Type your answer here..."
-          className="w-full bg-[#18181f] border border-zinc-800 rounded p-2 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500 font-sans resize-none h-16"
+          placeholder="Type your response..."
+          className="w-full bg-[#121622] border border-zinc-700/60 rounded-md p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 font-sans resize-none h-20 transition-colors"
         />
       )}
 
@@ -129,7 +129,7 @@ export function QuestionCard({
               ? !customQuestionInput.trim()
               : selectedQuestionAnswers.length === 0
           }
-          className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-semibold text-xs px-4 py-1.5 rounded transition cursor-pointer"
+          className="bg-indigo-600 hover:bg-indigo-500 active:translate-y-0.5 disabled:bg-zinc-800 disabled:text-zinc-600 disabled:translate-y-0 text-white font-medium text-xs px-4 py-1.5 rounded-md transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
         >
           Submit Answer
         </button>
@@ -146,23 +146,23 @@ interface PlanCardProps {
 export function PlanCard({ pendingPlanApproval, handlePlanApproval }: PlanCardProps) {
   if (!pendingPlanApproval) return null;
   return (
-    <div className="p-4 rounded-lg bg-indigo-950/40 border-2 border-indigo-500/80 text-indigo-100 space-y-3 select-none">
-      <div className="flex items-center gap-2 text-indigo-300 font-bold text-sm">
+    <div className="p-4 rounded-xl bg-indigo-950/30 border border-indigo-500/60 text-indigo-100 space-y-3 select-none shadow-lg backdrop-filter backdrop-blur-md">
+      <div className="flex items-center gap-2 text-indigo-300 font-bold text-xs tracking-wide uppercase font-mono">
         <span>⭐ Plan Approval Required</span>
       </div>
-      <p className="text-xs text-zinc-300">
-        The agent has prepared a plan. Please check and review the implementation plan details in the workspace first, then approve or reject to continue.
+      <p className="text-xs text-zinc-300 leading-relaxed">
+        The agent has created an implementation plan. Review the plan details in the workspace, then authorize execution.
       </p>
       <div className="flex gap-2 pt-1">
         <button
           onClick={() => handlePlanApproval('approve')}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-4 py-1.5 rounded flex items-center gap-1 transition cursor-pointer"
+          className="bg-emerald-600 hover:bg-emerald-500 active:translate-y-0.5 text-white font-medium text-xs px-4 py-1.5 rounded-md flex items-center gap-1.5 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-400"
         >
-          <Check className="w-3.5 h-3.5" /> Approve Plan
+          <Check className="w-3.5 h-3.5" /> Approve & Execute Plan
         </button>
         <button
           onClick={() => handlePlanApproval('reject')}
-          className="bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-200 font-semibold text-xs px-4 py-1.5 rounded flex items-center gap-1 transition cursor-pointer"
+          className="bg-zinc-800 hover:bg-zinc-700 active:translate-y-0.5 border border-zinc-700 text-zinc-300 font-medium text-xs px-4 py-1.5 rounded-md flex items-center gap-1.5 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-zinc-400"
         >
           <X className="w-3.5 h-3.5" /> Reject Plan
         </button>

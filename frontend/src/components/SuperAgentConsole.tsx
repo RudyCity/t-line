@@ -703,14 +703,14 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
 
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#1e1e24] text-gray-200 overflow-hidden">
-      <div className="grid grid-cols-3 items-center px-4 py-2.5 bg-[#121214] border-b border-[#2d2d34] min-h-[48px] w-full">
+    <div className="flex flex-col h-full w-full bg-[#05070c] text-gray-200 overflow-hidden font-sans">
+      <div className="grid grid-cols-3 items-center px-4 py-2.5 bg-[#090c14] border-b border-zinc-800/80 min-h-[48px] w-full shadow-sm">
         {/* Left Column */}
         <div className="flex items-center gap-2 min-w-0">
           <TerminalIcon className="w-4 h-4 text-indigo-400 shrink-0" />
           <span className="font-semibold text-xs tracking-wide shrink-0">SuperAgent Panel</span>
           {workspace && (
-            <span className="bg-indigo-950 text-indigo-300 text-[10px] px-1.5 py-0.5 rounded border border-indigo-900/60 font-mono truncate hidden sm:flex items-center gap-1">
+            <span className="bg-indigo-950/70 text-indigo-300 text-[10px] px-2 py-0.5 rounded-md border border-indigo-800/60 font-mono truncate hidden sm:flex items-center gap-1">
               <Folder className="w-2.5 h-2.5 text-indigo-400" />
               {workspace.split(/[/\\]/).pop()}
             </span>
@@ -719,16 +719,16 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
 
         {/* Center Column - Centered Tab Selectors */}
         <div className="flex justify-center">
-          <div className="flex bg-[#161619] rounded-lg p-0.5 border border-zinc-800">
+          <div className="flex bg-[#121622] rounded-lg p-0.5 border border-zinc-800/80">
             <button
               onClick={() => setActiveTab('console')}
-              className={`px-3 py-1 text-[11px] rounded transition ${activeTab === 'console' ? 'bg-indigo-600 text-white font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}`}
+              className={`sa-tab-pill ${activeTab === 'console' ? 'bg-indigo-600 text-white font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}`}
             >
               Console
             </button>
             <button
               onClick={() => setActiveTab('audit')}
-              className={`px-3 py-1 text-[11px] rounded transition flex items-center gap-1.5 ${activeTab === 'audit' ? 'bg-indigo-600 text-white font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}`}
+              className={`sa-tab-pill flex items-center gap-1.5 ${activeTab === 'audit' ? 'bg-indigo-600 text-white font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}`}
             >
               <Shield className="w-3.5 h-3.5" />
               Audit Trails
@@ -740,8 +740,8 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
         <div className="flex justify-end gap-2 items-center">
           <button
             onClick={() => setShowSidebar(!showSidebar)}
-            className={`px-2 py-1 text-[11px] rounded border transition flex items-center gap-1 cursor-pointer ${
-              showSidebar ? 'bg-indigo-950/70 border-indigo-700 text-indigo-300' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+            className={`px-2.5 py-1 text-[11px] rounded-md border transition flex items-center gap-1.5 cursor-pointer font-medium ${
+              showSidebar ? 'bg-indigo-950/80 border-indigo-700/80 text-indigo-300 shadow-sm' : 'bg-[#121622] border-zinc-800 text-zinc-400 hover:text-zinc-200'
             }`}
             title="Toggle Live Monitor Sidebar"
           >
@@ -751,7 +751,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
           {loading && (
             <button
               onClick={handleAbort}
-              className="bg-red-650 hover:bg-red-600 text-white text-[10px] font-semibold px-2 py-1 rounded transition flex items-center gap-1 animate-pulse"
+              className="bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-medium px-2.5 py-1 rounded-md transition flex items-center gap-1 animate-pulse focus:outline-none focus:ring-2 focus:ring-rose-400"
               title="Stop current agent execution"
             >
               <Square className="w-2.5 h-2.5 fill-current" />
@@ -775,37 +775,37 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
       {activeTab === 'console' ? (
         <div className="flex-1 flex overflow-hidden relative w-full">
           <div className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0">
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 font-mono text-sm leading-relaxed w-full">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-xs leading-relaxed w-full">
             {messages.map((msg, index) => (
               <div
                 key={index}
-                className={`p-3 rounded-lg border w-full ${
+                className={`p-3.5 rounded-xl border w-full transition-all shadow-sm ${
                   msg.role === 'user'
-                    ? 'bg-indigo-950/20 border-indigo-900/30 text-indigo-200'
+                    ? 'bg-indigo-950/30 border-indigo-800/40 text-indigo-100'
                     : msg.role === 'system'
-                    ? 'bg-zinc-900/50 border-zinc-800/80 text-zinc-400 text-xs text-center'
+                    ? 'bg-[#0e121d] border-zinc-800/60 text-zinc-400 text-[11px] text-center'
                     : msg.role === 'tool'
-                    ? 'bg-amber-950/15 border-amber-900/30 text-amber-200 font-mono text-xs'
+                    ? 'bg-amber-950/20 border-amber-800/40 text-amber-200 font-mono text-xs'
                     : msg.role === 'thought'
-                    ? 'bg-slate-900/40 border-slate-800/50 text-slate-400 text-xs italic border-l-4 border-l-slate-500 pl-4'
-                    : 'bg-zinc-900/40 border-zinc-800/50 text-gray-300'
+                    ? 'bg-slate-950/50 border-slate-800/50 text-slate-400 text-xs italic border-l-4 border-l-indigo-500 pl-4'
+                    : 'bg-[#0d101a] border-zinc-800/80 text-zinc-200'
                 }`}
               >
                 {msg.role !== 'system' && (
-                  <span className={`block text-[10px] uppercase tracking-wider mb-1 font-bold opacity-60 ${
-                    msg.role === 'tool' ? 'text-amber-400' : msg.role === 'thought' ? 'text-slate-400' : ''
+                  <span className={`block text-[10px] uppercase tracking-wider mb-1.5 font-bold font-mono ${
+                    msg.role === 'tool' ? 'text-amber-400' : msg.role === 'thought' ? 'text-indigo-400' : 'text-zinc-500'
                   }`}>
                     {msg.role} {msg.toolName ? `(${msg.toolName})` : ''}
                   </span>
                 )}
                 {renderMessageContent(msg.text)}
                 {msg.args && (
-                  <pre className="mt-2 p-1.5 bg-black/40 rounded border border-amber-900/20 text-[10px] text-amber-300 overflow-x-auto">
+                  <pre className="mt-2.5 p-2 bg-[#05070c] rounded-md border border-amber-900/30 text-[10px] text-amber-300 overflow-x-auto">
                     {JSON.stringify(msg.args, null, 2)}
                   </pre>
                 )}
                 {msg.result && (
-                  <pre className="mt-2 p-1.5 bg-black/40 rounded border border-amber-900/20 text-[10px] text-zinc-400 overflow-x-auto max-h-40 overflow-y-auto">
+                  <pre className="mt-2.5 p-2 bg-[#05070c] rounded-md border border-amber-900/30 text-[10px] text-zinc-400 overflow-x-auto max-h-48 overflow-y-auto">
                     {typeof msg.result === 'string' ? msg.result : JSON.stringify(msg.result, null, 2)}
                   </pre>
                 )}
