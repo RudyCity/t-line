@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Terminal as TerminalIcon, Send, RefreshCw, Shield, Square, X, Folder, Sparkles, Paperclip } from 'lucide-react';
+import { Terminal as TerminalIcon, Send, RefreshCw, Shield, Square, X, Folder, Sparkles, Paperclip, ChevronUp } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { SuperAgentAuditLogs } from './SuperAgentAuditLogs';
@@ -49,6 +49,8 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
 
   const [presets, setPresets] = useState<{ single: ModelPreset[]; multi: ModelPreset[] }>({ single: [], multi: [] });
   const [activePresetId, setActivePresetId] = useState<{ single: string; multi: string }>({ single: '', multi: '' });
+  const [showPresetMenu, setShowPresetMenu] = useState(false);
+  const presetMenuRef = useRef<HTMLDivElement>(null);
 
   const fetchConfig = async () => {
     try {
@@ -197,11 +199,14 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
     });
   };
 
-  // Close suggestions when clicking outside
+  // Close suggestions and preset menu when clicking outside
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (consoleContainerRef.current && !consoleContainerRef.current.contains(e.target as Node)) {
         setShowSuggestions(false);
+      }
+      if (presetMenuRef.current && !presetMenuRef.current.contains(e.target as Node)) {
+        setShowPresetMenu(false);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
@@ -855,16 +860,52 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
               <div className="flex items-center gap-1.5">
                 <span className="text-zinc-600">Preset:</span>
                 {(presets[agentMode] || []).length > 0 ? (
-                  <select
-                    value={activePresetId[agentMode] || ''}
-                    onChange={(e) => handlePresetChange(e.target.value)}
-                    disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
-                    className="bg-[#18181f] text-zinc-400 border border-zinc-800 rounded px-1.5 py-0.5 outline-none focus:border-indigo-500 text-[10px] font-medium transition cursor-pointer max-w-[150px]"
-                  >
-                    {(presets[agentMode] || []).map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                  <div className="relative inline-block" ref={presetMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowPresetMenu(!showPresetMenu)}
+                      disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
+                      className="flex items-center gap-1 bg-[#18181f] text-zinc-400 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 rounded px-1.5 py-0.5 outline-none text-[10px] font-medium transition cursor-pointer select-none"
+                    >
+                      <span>
+                        {(presets[agentMode] || []).find(p => p.id === activePresetId[agentMode])?.name || activePresetId[agentMode] || 'Select Preset'}
+                      </span>
+                      <ChevronUp className="w-3 h-3 text-zinc-500" />
+                    </button>
+
+                    {showPresetMenu && (
+                      <div className="absolute bottom-full left-0 mb-1 w-44 bg-[#141417] border border-[#2d2d34] rounded-lg shadow-xl py-1 z-50 overflow-hidden">
+                        <div className="px-2.5 py-1 text-[9px] font-semibold text-zinc-500 uppercase tracking-wider border-b border-zinc-800/40 mb-1">
+                          Select Preset
+                        </div>
+                        {(presets[agentMode] || []).map(p => {
+                          const isActive = p.id === activePresetId[agentMode];
+                          return (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => {
+                                handlePresetChange(p.id);
+                                setShowPresetMenu(false);
+                              }}
+                              className={`w-full text-left px-2.5 py-1 text-[11px] transition flex flex-col ${
+                                isActive
+                                  ? 'bg-indigo-600/15 text-indigo-400 font-semibold'
+                                  : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200'
+                              }`}
+                            >
+                              <span>{p.name}</span>
+                              {p.description && p.description !== '/model' && (
+                                <span className="text-[9px] text-zinc-600 font-normal truncate mt-0.5">
+                                  {p.description}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <span className="text-zinc-600 font-mono text-[10px]">None</span>
                 )}
