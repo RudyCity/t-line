@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Terminal as TerminalIcon, Send, RefreshCw, Shield, Trash2, Square, Check, X, AlertTriangle, HelpCircle, Folder } from 'lucide-react';
+import { Terminal as TerminalIcon, Send, RefreshCw, Shield, Trash2, Square, Check, X, AlertTriangle, HelpCircle, Folder, Sparkles } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 
@@ -100,11 +100,11 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
         const payload = JSON.parse(event.data);
         
         if (payload.type === 'chat_response') {
-          setLoading(false);
-          setToolProgressMsg('');
           if (payload.result && payload.result.text) {
             setMessages(prev => [...prev, { role: 'assistant', text: payload.result.text }]);
           } else if (payload.result && payload.result.error) {
+            setLoading(false);
+            setToolProgressMsg('');
             setMessages(prev => [...prev, { role: 'system', text: `Error: ${payload.result.error}` }]);
           } else if (payload.raw) {
             setMessages(prev => [...prev, { role: 'assistant', text: payload.raw }]);
@@ -114,27 +114,37 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
         } else if (payload.type === 'agent_event') {
           const innerEvent = payload.event;
           if (innerEvent.type === 'tool_start') {
+            setLoading(true);
+            const toolName = innerEvent.toolCall?.name || innerEvent.toolCall?.toolName || innerEvent.toolName || innerEvent.name || 'tool';
+            const args = innerEvent.toolCall?.args || innerEvent.args;
             setMessages(prev => [...prev, { 
               role: 'tool', 
-              text: `Invoking tool: ${innerEvent.toolName}`,
-              toolName: innerEvent.toolName,
-              args: innerEvent.args
+              text: `Invoking tool: ${toolName}`,
+              toolName,
+              args
             }]);
           } else if (innerEvent.type === 'tool_end') {
             setToolProgressMsg('');
+            const toolName = innerEvent.toolResult?.name || innerEvent.toolCall?.name || innerEvent.toolName || 'tool';
+            const result = innerEvent.toolResult?.result !== undefined ? innerEvent.toolResult.result : innerEvent.result;
             setMessages(prev => [...prev, { 
               role: 'tool', 
-              text: `Tool ${innerEvent.toolName} completed.`,
-              toolName: innerEvent.toolName,
-              result: innerEvent.result
+              text: `Tool '${toolName}' completed.`,
+              toolName,
+              result
             }]);
           } else if (innerEvent.type === 'thought' || innerEvent.type === 'reasoning') {
+            setLoading(true);
             setMessages(prev => [...prev, { role: 'thought', text: innerEvent.text || innerEvent.content || '' }]);
           } else if (innerEvent.type === 'message' || innerEvent.type === 'text') {
             setMessages(prev => [...prev, { role: 'assistant', text: innerEvent.text || innerEvent.content || '' }]);
-          } else if (innerEvent.type === 'done') {
+          } else if (innerEvent.type === 'done' || innerEvent.type === 'goal_done') {
             setLoading(false);
             setToolProgressMsg('');
+          } else if (innerEvent.type === 'error') {
+            setLoading(false);
+            setToolProgressMsg('');
+            setMessages(prev => [...prev, { role: 'system', text: `Agent Error: ${innerEvent.message || 'Unknown error'}` }]);
           }
         } else if (payload.type === 'permission_required') {
           setPendingPermission({
@@ -155,7 +165,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
           setPendingPlanApproval(payload.planState === 'PLANNING_PENDING');
           setMessages(prev => [...prev, { role: 'system', text: '⭐ Plan approval required! Please review and authorize execution below.' }]);
         } else if (payload.type === 'tool_progress') {
-          setToolProgressMsg(payload.content || '');
+          setToolProgressMsg(payload.content || payload.message || '');
         }
       } catch (e) {
         setMessages(prev => [...prev, { role: 'assistant', text: event.data }]);
@@ -165,6 +175,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
 
     socket.onclose = () => {
       setMessages(prev => [...prev, { role: 'system', text: 'SuperAgent WebSocket connection closed.' }]);
+      setLoading(false);
     };
 
     setWs(socket);
@@ -176,7 +187,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, pendingPermission, pendingQuestion, pendingPlanApproval, toolProgressMsg]);
+  }, [messages, pendingPermission, pendingQuestion, pendingPlanApproval, toolProgressMsg, loading]);
 
   const handleSend = () => {
     if (!input.trim() || !ws || ws.readyState !== WebSocket.OPEN) return;
@@ -304,11 +315,11 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
           {loading && (
             <button
               onClick={handleAbort}
-              className="bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-2.5 py-1 rounded transition flex items-center gap-1"
+              className="bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-2.5 py-1 rounded transition flex items-center gap-1 animate-pulse"
               title="Stop current agent execution"
             >
               <Square className="w-3 h-3 fill-current" />
-              Stop
+              Stop Agent
             </button>
           )}
         </div>
@@ -407,7 +418,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
                   <span className={`block text-[10px] uppercase tracking-wider mb-1 font-bold opacity-60 ${
                     msg.role === 'tool' ? 'text-amber-400' : msg.role === 'thought' ? 'text-slate-400' : ''
                   }`}>
-                    {msg.role}
+                    {msg.role} {msg.toolName ? `(${msg.toolName})` : ''}
                   </span>
                 )}
                 <div className="whitespace-pre-wrap">{msg.text}</div>
@@ -426,8 +437,9 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
 
             {/* Live Progress Tool Message */}
             {toolProgressMsg && (
-              <div className="p-2 rounded bg-amber-950/30 border border-amber-900/50 text-amber-300 font-mono text-xs animate-pulse">
-                ⏳ {toolProgressMsg}
+              <div className="p-2 rounded bg-amber-950/30 border border-amber-900/50 text-amber-300 font-mono text-xs animate-pulse flex items-center gap-2">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                <span>{toolProgressMsg}</span>
               </div>
             )}
 
@@ -551,16 +563,29 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
               </div>
             )}
 
+            {/* Prominent Thinking & Tool Execution Loading Bar */}
             {loading && (
-              <div className="p-3 rounded-lg border max-w-[85%] bg-slate-900/80 border-slate-800/80 mr-auto text-slate-400 text-xs italic border-l-4 border-l-slate-500 pl-4 w-[90%] flex items-center gap-2">
-                <span className="block text-[10px] uppercase tracking-wider font-bold opacity-60 text-slate-400">
-                  thinking
-                </span>
-                <span className="flex gap-1 items-center">
-                  <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </span>
+              <div className="p-3.5 rounded-lg border border-indigo-500/60 bg-indigo-950/50 text-indigo-100 text-xs shadow-lg max-w-[90%] mr-auto flex items-center justify-between gap-3 font-sans">
+                <div className="flex items-center gap-3">
+                  <Sparkles className="w-4 h-4 text-indigo-400 animate-spin shrink-0" />
+                  <div>
+                    <div className="font-semibold text-indigo-200 flex items-center gap-2">
+                      <span>SuperAgent is thinking & executing tools</span>
+                      <span className="flex gap-1 items-center">
+                        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-zinc-400 font-mono">Analyzing codebase, performing context operations</span>
+                  </div>
+                </div>
+                <button
+                  onClick={handleAbort}
+                  className="px-2.5 py-1 bg-red-900/80 hover:bg-red-800 border border-red-700 text-red-100 rounded font-semibold text-[11px] flex items-center gap-1 transition shrink-0"
+                >
+                  <Square className="w-3 h-3 fill-current" /> Stop
+                </button>
               </div>
             )}
             <div ref={chatEndRef} />
