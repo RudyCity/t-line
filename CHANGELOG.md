@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.482] - 2026-07-19
+
+### Fixed & Enhanced
+- **SuperAgent Workspace Auto-Sync**: SuperAgent Console now automatically tracks and syncs with the active workspace selected in t-line (`panelWorkspace`). Added an interactive workspace dropdown selector allowing quick workspace switching.
+- **SuperAgent Auto Session Initialization**: Fixed missing session errors (`Session not initialized`) by auto-calling `/api/init` on the SuperAgent server (`127.0.0.1:7888`) before sending chat prompts or establishing SSE listeners.
+- **Interactive Agent Capabilities**: Added interactive cards in SuperAgent Console for Tool Permission requests (Allow Once / Allow Session / Deny), Agent Question prompts (Choice buttons & custom text input), and Plan Approval requests (Approve & Execute / Reject).
+- **Execution Abort & Stream Progress**: Added a real-time Stop/Abort button to cancel running agent tasks and live stream output indicators for progress events.
+- **Modular Backend Architecture**: Refactored SuperAgent server bridge handling into `backend/src/superAgentBridge.ts`, maintaining clean code modularity and respecting file length limits.
+
 ## [1.3.481] - 2026-10-24
 
 ### Changed

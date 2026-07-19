@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import os from 'os';
-import { exec } from 'child_process';
+import { exec, spawn, execSync } from 'child_process';
 import { 
   isSetupRequired, 
   setupMasterPassword, 
@@ -30,8 +30,11 @@ import gitRouter, { registerWorkspaceChangeCallback } from './gitRoutes';
 import fsRouter, { registerFileChangeCallback } from './fsRoutes';
 import { previewProxy } from './previewProxy';
 import { TLINE_HELPER_CODE } from './tline-helper-code';
+import { handleSuperAgentConnection, getAuditLogs, clearAuditLogs } from './superAgentBridge';
 
 dotenv.config();
+
+const AUDIT_FILE = path.join(process.cwd(), 'superagent-audit.json');
 
 // Override console methods to write logs to a file in os.homedir()
 const BACKEND_LOG_FILE = path.join(os.homedir(), '.tline-backend.log');
@@ -489,6 +492,23 @@ app.get('/tline-helper.js', (req, res) => {
   res.send(TLINE_HELPER_CODE);
 });
 
+app.get('/api/superagent/audit-logs', authMiddleware, (req, res) => {
+  try {
+    res.json(getAuditLogs());
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to read audit logs' });
+  }
+});
+
+app.delete('/api/superagent/audit-logs', authMiddleware, (req, res) => {
+  try {
+    clearAuditLogs();
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to clear audit logs' });
+  }
+});
+
 app.use('/api', gitRouter);
 app.use('/api/fs', fsRouter);
 
@@ -661,6 +681,7 @@ const server = http.createServer(app);
 // WebSocket Server (PTY Multiplexer)
 // ----------------------------------------------------
 const wss = new WebSocketServer({ noServer: true });
+const agentWss = new WebSocketServer({ noServer: true });
 
 server.on('upgrade', (request, socket, head) => {
   const urlParams = new URL(request.url || '', `http://${request.headers.host}`);
@@ -697,6 +718,13 @@ server.on('upgrade', (request, socket, head) => {
   if (!token || !verifySocketToken(token)) {
     socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
     socket.destroy();
+    return;
+  }
+
+  if (pathname === '/api/superagent') {
+    agentWss.handleUpgrade(request, socket, head, (ws) => {
+      agentWss.emit('connection', ws, request);
+    });
     return;
   }
 
@@ -760,7 +788,7 @@ async function updateWorkspaceWatchers() {
             if (filename) {
               const normalizedFilename = filename.replace(/\\/g, '/');
               const parts = normalizedFilename.split('/');
-              if (['node_modules', 'dist', 'dist-exe', '.agents'].some(p => parts.includes(p))) return;
+              if (['node_modules', 'dist', 'dist-exe', '.agents', 'superagent-audit.json'].some(p => parts.includes(p))) return;
               if (parts.includes('.git')) {
                 const isGitTrigger = parts.includes('index') || parts.includes('HEAD') || parts.includes('refs');
                 if (!isGitTrigger) return;
@@ -1022,6 +1050,9 @@ wss.on('connection', (ws: WebSocket) => {
     activeTerminals.clear();
   });
 });
+
+// SuperAgent Agent WebSocket Server handler
+agentWss.on('connection', handleSuperAgentConnection);
 
 // Periodic garbage collection to keep memory usage low (triggered if node --expose-gc is enabled)
 if (typeof global.gc === 'function') {

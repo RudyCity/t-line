@@ -60,7 +60,7 @@ export type SplitLayoutNode =
 export interface TabData {
   id: string;
   name: string;
-  type: 'terminal' | 'file' | 'diff' | 'grid' | 'browser';
+  type: 'terminal' | 'file' | 'diff' | 'grid' | 'browser' | 'agent';
   filePath?: string;
   url?: string;
   // For 'diff' type tabs
@@ -551,6 +551,18 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     setActiveTabId(tabId);
     onTerminalOpen?.();
   }, [tabs, onTerminalOpen]);
+  const openAgentTab = useCallback((workspaceId?: string) => {
+    const tabId = `agent-${Date.now()}`;
+    const newTab: TabData = {
+      id: tabId,
+      name: 'SuperAgent',
+      type: 'agent',
+      workspaceId
+    };
+    setTabs(prev => [...prev, newTab]);
+    setActiveTabId(tabId);
+    onTerminalOpen?.();
+  }, [onTerminalOpen]);
   const closeTerminal = useCallback((tabId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
 
@@ -900,6 +912,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     openFileTab,
     openDiffTab,
     openBrowserTab,
+    openAgentTab,
     openGridTab,
     closeTerminal,
     closePane,

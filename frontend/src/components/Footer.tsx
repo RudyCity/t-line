@@ -26,7 +26,7 @@ export interface FooterProps {
   tunnelLoading: boolean;
   handleStartTunnel: (type: 'quick' | 'token') => void;
   handleStopTunnel: () => void;
-  activeTabType?: 'terminal' | 'file' | 'diff' | 'grid' | 'browser' | null;
+  activeTabType?: 'terminal' | 'file' | 'diff' | 'grid' | 'browser' | 'agent' | null;
   activeTabPath?: string;
   appVersion?: string;
   updateAvailable?: boolean;

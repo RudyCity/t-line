@@ -30,6 +30,7 @@ import { TerminalGridTab } from './components/TerminalGridTab';
 import BrowserTab from './components/BrowserTab';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
 import { LazyWorkspaceAddModal as WorkspaceAddModal, LazyWorktreeAddModal as WorktreeAddModal, LazyTunnelSetupModal as TunnelSetupModal, LazySettingsModal as SettingsModal, LazyShortcutHelpModal as ShortcutHelpModal, LazyConfirmModal as ConfirmModal, LazyWorkspaceEditModal as WorkspaceEditModal, LazySavePromptModal as SavePromptModal, LazySelectGridModal as SelectGridModal } from './components/LazyModals';
+import { SuperAgentConsole } from './components/SuperAgentConsole';
 
 interface SavedPrompt {
   id: string;
@@ -395,6 +396,7 @@ export default function App() {
     openFileTab,
     openDiffTab,
     openBrowserTab,
+    openAgentTab,
     openGridTab,
     closeTerminal,
     closePane,
@@ -2129,6 +2131,8 @@ export default function App() {
                               <LayoutGrid size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                             ) : t.type === 'browser' ? (
                               <Globe size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
+                            ) : t.type === 'agent' ? (
+                              <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: '#818cf8' }} />
                             ) : (
                               <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                             )}
@@ -2164,6 +2168,15 @@ export default function App() {
                     style={{ marginLeft: '6px' }}
                   >
                     <Globe size={14} />
+                  </button>
+                  {/* SuperAgent Panel button */}
+                  <button
+                    className="action-btn shrink-0 animate-pulse hover:animate-none"
+                    onClick={() => openAgentTab(panelWorkspace?.id)}
+                    title="Ask SuperAgent"
+                    style={{ marginLeft: '6px', color: '#818cf8' }}
+                  >
+                    <TerminalIcon size={14} />
                   </button>
 
                 </div>
@@ -2373,6 +2386,13 @@ export default function App() {
                       handleZoomIn={handleZoomIn}
                       handleZoomOut={handleZoomOut}
                       onRefreshTerminal={refreshTerminal}
+                    />
+                  );
+                } else if (activeTab.type === 'agent') {
+                  tabElement = (
+                    <SuperAgentConsole
+                      activeWorkspacePath={panelWorkspace?.path}
+                      workspaces={workspaces}
                     />
                   );
                 } else if (activeTab.type === 'terminal' && activeTab.layout) {
