@@ -590,6 +590,29 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
     setPendingPlanApproval(false);
   };
 
+  const renderMessageContent = (text: string) => {
+    if (!text) return null;
+    const lines = text.split('\n');
+    return (
+      <div className="flex flex-col gap-0.5">
+        {lines.map((line, i) => {
+          if (line.trim().startsWith('[SYS]')) {
+            return (
+              <div key={i} className="text-[10px] text-zinc-550 font-mono tracking-tight leading-normal">
+                {line}
+              </div>
+            );
+          }
+          return (
+            <div key={i} className="whitespace-pre-wrap">
+              {line}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
 
 
   return (
@@ -670,7 +693,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
                     {msg.role} {msg.toolName ? `(${msg.toolName})` : ''}
                   </span>
                 )}
-                <div className="whitespace-pre-wrap">{msg.text}</div>
+                {renderMessageContent(msg.text)}
                 {msg.args && (
                   <pre className="mt-2 p-1.5 bg-black/40 rounded border border-amber-900/20 text-[10px] text-amber-300 overflow-x-auto">
                     {JSON.stringify(msg.args, null, 2)}
