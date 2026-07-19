@@ -6,10 +6,12 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ### Enhanced
 - **Unified File & Image Attachments**: Merged image and document pickers into a single, compact `Paperclip` trigger button next to the console textarea. The file selection automatically detects file types: images render visual thumbnail previews, while text-based files/documents are read as raw text and automatically appended to the backend prompt.
-- **Strict File Limit Modularization**: Split and refactored [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) to remain strictly under the 1000-line constraint (total lines reduced to 935):
+- **Minimalist Preset & Model Changer**: Added a minimalist selector directly below the input console. Users can select and change model presets, view the main model name, and have the bridge automatically restart to apply changes immediately.
+- **Strict File Limit Modularization**: Split and refactored [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) to remain strictly under the 1000-line constraint (total lines reduced to 903):
   - Extracted workspace configuration header to [SuperAgentConsoleHeader.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsoleHeader.tsx).
   - Extracted log list tab to [SuperAgentAuditLogs.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentAuditLogs.tsx).
   - Extracted permission, question, and plan approval cards to [SuperAgentInteractiveCards.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentInteractiveCards.tsx).
+  - Extracted slash commands list generator to [SuperAgentCommands.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentCommands.ts).
 
 ## [1.3.483] - 2026-07-20
 
