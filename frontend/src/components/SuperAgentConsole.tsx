@@ -810,19 +810,17 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
               </div>
             )}
 
-            <div className="flex gap-2 items-end">
+            <div className="flex bg-[#161619] border border-[#2b2b33] focus-within:border-[#4f46e5]/50 rounded-xl p-1.5 items-end gap-1.5 transition-all shadow-inner">
               {/* Attachment Actions */}
-              <div className="flex gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
-                  className="p-2 bg-[#1e1e24] hover:bg-[#25252d] border border-[#2d2d34] hover:border-zinc-700 text-zinc-400 hover:text-zinc-200 rounded-lg transition h-[38px] w-[38px] flex items-center justify-center cursor-pointer disabled:opacity-50"
-                  title="Attach Files"
-                >
-                  <Paperclip className="w-4 h-4" />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
+                className="p-2 text-zinc-400 hover:text-zinc-200 transition rounded-lg hover:bg-zinc-800/40 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                title="Attach Files"
+              >
+                <Paperclip className="w-4 h-4" />
+              </button>
 
               <textarea
                 ref={textareaRef}
@@ -830,28 +828,29 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={ws?.readyState === WebSocket.OPEN ? "Ask SuperAgent to perform tasks or type / to execute commands..." : "Connecting to SuperAgent bridge..."}
-                className="flex-1 bg-[#1e1e24] border border-[#2d2d34] rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 placeholder-zinc-500 font-mono resize-none overflow-y-auto max-h-[240px] leading-relaxed"
+                className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 text-sm placeholder-zinc-500 font-sans py-1.5 px-1 resize-none overflow-y-auto max-h-[240px] leading-relaxed outline-none"
                 rows={1}
                 disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
-                style={{ height: 'auto', minHeight: '38px' }}
+                style={{ height: 'auto', minHeight: '32px' }}
               />
+
               {loading ? (
                 <button
                   onClick={handleAbort}
                   disabled={!ws || ws.readyState !== WebSocket.OPEN}
-                  className="bg-red-600 hover:bg-red-500 disabled:bg-zinc-800 disabled:text-zinc-600 transition px-4 py-2 rounded-lg text-white font-semibold flex items-center justify-center h-[38px] cursor-pointer shrink-0"
+                  className="bg-red-600 hover:bg-red-500 disabled:bg-zinc-850 disabled:text-zinc-600 transition rounded-lg text-white flex items-center justify-center h-8 w-8 cursor-pointer shrink-0"
                   title="Stop Execution"
                 >
-                  <Square className="w-4 h-4 fill-current" />
+                  <Square className="w-3.5 h-3.5 fill-current" />
                 </button>
               ) : (
                 <button
                   onClick={() => handleSend()}
                   disabled={(!input.trim() && attachments.length === 0) || !ws || ws.readyState !== WebSocket.OPEN}
-                  className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-600 transition px-4 py-2 rounded-lg text-white font-semibold flex items-center justify-center h-[38px] cursor-pointer shrink-0"
+                  className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800/60 disabled:text-zinc-600 transition rounded-lg text-white flex items-center justify-center h-8 w-8 cursor-pointer shrink-0"
                   title="Send Message"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
