@@ -22,6 +22,13 @@ interface PendingQuestion {
   isMultiSelect?: boolean;
 }
 
+interface SlashCommand {
+  command: string;
+  description: string;
+  argsHelp?: string;
+  action?: (args?: string) => void;
+}
+
 interface SuperAgentConsoleProps {
   activeWorkspacePath?: string;
   workspaces?: WorkspaceInfo[];
@@ -58,6 +65,21 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
   const [customQuestionInput, setCustomQuestionInput] = useState('');
   const [pendingPlanApproval, setPendingPlanApproval] = useState<boolean>(false);
   const [toolProgressMsg, setToolProgressMsg] = useState<string>('');
+
+  // Enhanced Input States
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<SlashCommand[]>([]);
+  const [suggestionIndex, setSuggestionIndex] = useState(0);
+  const [history, setHistory] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('superagent_prompt_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Automatically update workspace when activeWorkspacePath prop changes
   useEffect(() => {
@@ -206,18 +228,247 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, pendingPermission, pendingQuestion, pendingPlanApproval, toolProgressMsg, loading]);
 
-  const handleSend = () => {
-    if (!input.trim() || !ws || ws.readyState !== WebSocket.OPEN) return;
-    const prompt = input.trim();
+  const handleSend = (customPrompt?: string) => {
+    const prompt = (customPrompt !== undefined ? customPrompt : input).trim();
+    if (!prompt) return;
+
+    // Check if it's a slash command first!
+    if (prompt.startsWith('/')) {
+      const parts = prompt.split(/\s+/);
+      const cmdName = parts[0];
+      const cmdArgs = prompt.slice(cmdName.length).trim();
+      const match = slashCommands.find(c => c.command.toLowerCase() === cmdName.toLowerCase());
+      if (match) {
+        setInput('');
+        if (match.action) {
+          match.action(cmdArgs);
+        }
+        return;
+      }
+    }
+
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
     setInput('');
     setLoading(true);
     setToolProgressMsg('');
     setMessages(prev => [...prev, { role: 'user', text: prompt }]);
 
+    // Save to history
+    if (!history.includes(prompt)) {
+      const newHistory = [prompt, ...history].slice(0, 50);
+      setHistory(newHistory);
+      localStorage.setItem('superagent_prompt_history', JSON.stringify(newHistory));
+    }
+    setHistoryIndex(-1);
+
     ws.send(JSON.stringify({
       type: 'prompt',
       text: prompt
     }));
+  };
+
+  const slashCommands: SlashCommand[] = [
+    {
+      command: '/help',
+      description: 'Show available commands & system instructions',
+      action: () => {
+        setMessages(prev => [
+          ...prev,
+          { role: 'system', text: 'Available commands:\n' +
+            '/help - Show this help message\n' +
+            '/status - Show agent connection & server status\n' +
+            '/abort - Abort active agent execution immediately\n' +
+            '/clear - Clear all console messages\n' +
+            '/mode [single|multi] - Switch agent execution mode\n' +
+            '/workspace [path] - Switch active workspace\n' +
+            '/explain - Ask SuperAgent to explain the codebase structure\n' +
+            '/test - Ask SuperAgent to check and run tests\n' +
+            '/reset - Reset and restart WebSocket connection'
+          }
+        ]);
+      }
+    },
+    {
+      command: '/status',
+      description: 'Check agent server and connection status',
+      action: () => {
+        const statusText = `WebSocket Connection: ${ws?.readyState === WebSocket.OPEN ? 'Connected (OPEN)' : 'Disconnected'}\n` +
+          `Active Workspace: ${workspace || 'None'}\n` +
+          `CLI Mode: ${agentMode === 'multi' ? 'Multi-Agent Master (--multi)' : 'Single Agent Mode'}\n` +
+          `Custom CLI Flags: ${customArgs || 'None'}`;
+        setMessages(prev => [...prev, { role: 'system', text: statusText }]);
+      }
+    },
+    {
+      command: '/abort',
+      description: 'Abort the active running agent task',
+      action: () => {
+        handleAbort();
+      }
+    },
+    {
+      command: '/clear',
+      description: 'Clear the local console chat messages',
+      action: () => {
+        setMessages([{ role: 'system', text: 'Console cleared. Connected to t-line workspace context.' }]);
+      }
+    },
+    {
+      command: '/mode',
+      description: 'Switch CLI mode',
+      argsHelp: '[single|multi]',
+      action: (args?: string) => {
+        const cleanMode = args?.trim().toLowerCase();
+        if (cleanMode === 'single' || cleanMode === 'multi') {
+          setAgentMode(cleanMode as 'single' | 'multi');
+          setMessages(prev => [...prev, { role: 'system', text: `Mode switched to: ${cleanMode}. Restarting bridge...` }]);
+          setConnectTrigger(prev => prev + 1);
+        } else {
+          setMessages(prev => [...prev, { role: 'system', text: 'Usage: /mode [single|multi]' }]);
+        }
+      }
+    },
+    {
+      command: '/workspace',
+      description: 'Switch active workspace path',
+      argsHelp: '[path]',
+      action: (args?: string) => {
+        const targetPath = args?.trim();
+        if (targetPath) {
+          setWorkspace(targetPath);
+          localStorage.setItem('currentWorkspace', targetPath);
+          setMessages(prev => [...prev, { role: 'system', text: `Workspace switched to: ${targetPath}. Restarting bridge...` }]);
+          setConnectTrigger(prev => prev + 1);
+        } else {
+          setMessages(prev => [...prev, { role: 'system', text: 'Usage: /workspace [directory-path]' }]);
+        }
+      }
+    },
+    {
+      command: '/explain',
+      description: 'Ask SuperAgent to analyze and explain the codebase structure',
+      action: () => {
+        handleSend('Please analyze and explain the codebase structure of this workspace.');
+      }
+    },
+    {
+      command: '/test',
+      description: 'Ask SuperAgent to check and run tests',
+      action: () => {
+        handleSend('Please check the test suite and run tests to verify codebase health.');
+      }
+    },
+    {
+      command: '/reset',
+      description: 'Reset and restart the WebSocket bridge',
+      action: () => {
+        setMessages(prev => [...prev, { role: 'system', text: 'Resetting and reconnecting WebSocket bridge...' }]);
+        setConnectTrigger(prev => prev + 1);
+      }
+    }
+  ];
+
+  const quickActions = [
+    { label: 'Clear Chat', command: '/clear' },
+    { label: 'Explain Code', command: '/explain' },
+    { label: 'Run Tests', command: '/test' },
+    { label: 'Show Help', command: '/help' },
+    { label: 'Check Status', command: '/status' },
+  ];
+
+  // Monitor input to show/hide suggestions
+  useEffect(() => {
+    if (input.startsWith('/') && !input.includes(' ')) {
+      const query = input.slice(1).toLowerCase();
+      const filtered = slashCommands.filter(c => c.command.slice(1).toLowerCase().startsWith(query));
+      setSuggestions(filtered);
+      setShowSuggestions(filtered.length > 0);
+      setSuggestionIndex(0);
+    } else {
+      setShowSuggestions(false);
+      setSuggestions([]);
+    }
+  }, [input]);
+
+  const adjustHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 240)}px`;
+    }
+  };
+
+  useEffect(() => {
+    adjustHeight();
+  }, [input]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showSuggestions && suggestions.length > 0) {
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSuggestionIndex(prev => (prev - 1 + suggestions.length) % suggestions.length);
+        return;
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSuggestionIndex(prev => (prev + 1) % suggestions.length);
+        return;
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        handleSelectSuggestion(suggestions[suggestionIndex]);
+        return;
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowSuggestions(false);
+        return;
+      }
+    }
+
+    if (e.key === 'Enter') {
+      if (!e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    } else if (e.key === 'ArrowUp') {
+      const selectionStart = e.currentTarget.selectionStart;
+      if (selectionStart === 0 && history.length > 0) {
+        e.preventDefault();
+        const nextIndex = historyIndex + 1;
+        if (nextIndex < history.length) {
+          setHistoryIndex(nextIndex);
+          setInput(history[nextIndex]);
+        }
+      }
+    } else if (e.key === 'ArrowDown') {
+      const selectionEnd = e.currentTarget.selectionEnd;
+      if (selectionEnd === e.currentTarget.value.length) {
+        e.preventDefault();
+        const nextIndex = historyIndex - 1;
+        if (nextIndex >= 0) {
+          setHistoryIndex(nextIndex);
+          setInput(history[nextIndex]);
+        } else {
+          setHistoryIndex(-1);
+          setInput('');
+        }
+      }
+    } else if (e.key === 'Escape') {
+      setInput('');
+      setHistoryIndex(-1);
+    }
+  };
+
+  const handleSelectSuggestion = (s: SlashCommand) => {
+    if (s.argsHelp) {
+      setInput(s.command + ' ');
+    } else {
+      setInput(s.command);
+      const immediateCommands = ['/help', '/status', '/abort', '/clear', '/reset', '/explain', '/test'];
+      if (immediateCommands.includes(s.command)) {
+        handleSend(s.command);
+      }
+    }
+    setShowSuggestions(false);
   };
 
   const handleAbort = () => {
@@ -608,23 +859,73 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
             <div ref={chatEndRef} />
           </div>
 
-          <div className="p-4 bg-[#121214] border-t border-[#2d2d34] flex gap-2">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder={ws?.readyState === WebSocket.OPEN ? "Ask SuperAgent to perform tasks or type !command for direct CLI execution..." : "Connecting to SuperAgent bridge..."}
-              className="flex-1 bg-[#1e1e24] border border-[#2d2d34] rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 placeholder-zinc-500 font-mono"
-              disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
-            />
-            <button
-              onClick={handleSend}
-              disabled={loading || !input.trim() || !ws || ws.readyState !== WebSocket.OPEN}
-              className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-600 transition px-4 py-2 rounded-lg text-white font-semibold flex items-center justify-center"
-            >
-              <Send className="w-4 h-4" />
-            </button>
+          {/* Quick Actions Chips */}
+          <div className="px-4 py-2 bg-[#121214] border-t border-[#2d2d34] flex flex-wrap gap-2 items-center">
+            <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold select-none">Quick Actions:</span>
+            {quickActions.map(act => (
+              <button
+                key={act.label}
+                onClick={() => handleSend(act.command)}
+                disabled={(loading && act.command !== '/abort') || !ws || ws.readyState !== WebSocket.OPEN}
+                className="bg-[#1e1e24] hover:bg-indigo-950 hover:text-indigo-300 border border-[#2d2d34] hover:border-indigo-800/60 rounded px-2.5 py-1 text-[11px] font-medium text-zinc-300 transition flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed select-none"
+              >
+                {act.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="p-4 bg-[#121214] border-t border-[#2d2d34] flex flex-col gap-1.5 relative">
+            {/* Slash Command Autocomplete Popover */}
+            {showSuggestions && (
+              <div className="absolute bottom-[calc(100%-8px)] left-4 right-4 bg-[#16161a] border-2 border-indigo-500/80 rounded-lg shadow-2xl z-50 max-h-60 overflow-y-auto font-mono text-xs divide-y divide-zinc-800">
+                <div className="px-3 py-2 bg-[#121214] border-b border-zinc-800 text-[10px] text-indigo-400 font-bold uppercase tracking-wider flex items-center justify-between select-none">
+                  <span>SuperAgent Commands</span>
+                  <span className="text-zinc-500 font-normal normal-case font-sans">↑↓ Navigate • Tab/Enter Select • Esc Close</span>
+                </div>
+                {suggestions.map((s, idx) => (
+                  <div
+                    key={s.command}
+                    onClick={() => handleSelectSuggestion(s)}
+                    onMouseEnter={() => setSuggestionIndex(idx)}
+                    className={`px-4 py-2 cursor-pointer transition flex items-center justify-between ${
+                      idx === suggestionIndex ? 'bg-indigo-600/30 text-white border-l-4 border-indigo-500 pl-3' : 'text-zinc-300 hover:bg-zinc-800/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-indigo-300">{s.command}</span>
+                      {s.argsHelp && <span className="text-zinc-500 text-[10px]">{s.argsHelp}</span>}
+                    </div>
+                    <span className="text-zinc-400 text-[11px] truncate max-w-xs">{s.description}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-2 items-end">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={ws?.readyState === WebSocket.OPEN ? "Ask SuperAgent to perform tasks or type / to execute commands..." : "Connecting to SuperAgent bridge..."}
+                className="flex-1 bg-[#1e1e24] border border-[#2d2d34] rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 placeholder-zinc-500 font-mono resize-none overflow-y-auto max-h-[240px] leading-relaxed"
+                rows={1}
+                disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
+                style={{ height: 'auto', minHeight: '38px' }}
+              />
+              <button
+                onClick={() => handleSend()}
+                disabled={loading || !input.trim() || !ws || ws.readyState !== WebSocket.OPEN}
+                className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-600 transition px-4 py-2 rounded-lg text-white font-semibold flex items-center justify-center h-[38px] cursor-pointer"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+            {/* Input Helpers Row */}
+            <div className="flex justify-between items-center px-1 text-[10px] text-zinc-500 select-none font-sans">
+              <span>⏎ to send • Shift+⏎ for newline • type / for commands</span>
+              <span>{input.length} chars</span>
+            </div>
           </div>
         </>
       ) : (

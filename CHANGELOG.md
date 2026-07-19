@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.483] - 2026-07-19
+
+### Enhanced
+- **SuperAgent Console Input Upgrades**: Replaced the single-line input field with a multi-line, auto-growing textarea supporting dynamic height (up to `240px`) and custom key bindings (`Enter` to send, `Shift+Enter` for newlines).
+- **Interactive Slash Commands (`/`)**: Introduced autocomplete popup menu when typing `/` in the input (supporting `/help`, `/status`, `/abort`, `/clear`, `/mode`, `/workspace`, `/explain`, `/test`, `/reset`) with full keyboard navigation support (`ArrowUp`/`ArrowDown`/`Tab`/`Enter`/`Escape`).
+- **Prompt History Navigation**: Enabled cycling through sent prompts inside the textarea using `ArrowUp`/`ArrowDown` navigation.
+- **Quick Action Chips**: Added instant-trigger chips above the input container for common commands (`Clear Chat`, `Explain Code`, `Run Tests`, `Show Help`, `Check Status`).
+- **Input Stats & Helper info**: Displayed character counter and shortcut instruction guide.
+
 ## [1.3.482] - 2026-07-19
 
 ### Fixed & Enhanced
