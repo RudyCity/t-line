@@ -1,26 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { Terminal as TerminalIcon, Send, RefreshCw, Shield, Trash2, Square, Check, X, AlertTriangle, HelpCircle, Folder, Sparkles, Paperclip, Image as ImageIcon } from 'lucide-react';
+import { Terminal as TerminalIcon, Send, RefreshCw, Shield, Square, X, Folder, Sparkles, Paperclip, Image as ImageIcon } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { WorkspaceInfo } from '../hooks/useTerminals';
+import { SuperAgentAuditLogs } from './SuperAgentAuditLogs';
+import { SuperAgentConsoleHeader } from './SuperAgentConsoleHeader';
+import { PermissionCard, QuestionCard, PlanCard, PendingPermission, PendingQuestion } from './SuperAgentInteractiveCards';
 
-interface AuditLog {
-  timestamp: string;
-  type: string;
-  data: any;
-}
 
-interface PendingPermission {
-  permissionId: string;
-  toolCall?: any;
-  description?: string;
-}
 
-interface PendingQuestion {
-  questionId: string;
-  question: any;
-  options?: string[];
-  isMultiSelect?: boolean;
-}
+
 
 interface SlashCommand {
   command: string;
@@ -48,8 +36,6 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
   const [loading, setLoading] = useState(false);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [activeTab, setActiveTab] = useState<'console' | 'audit'>('console');
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [loadingAudit, setLoadingAudit] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Workspace & Config state
@@ -650,43 +636,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
     setPendingPlanApproval(false);
   };
 
-  const fetchAuditLogs = async () => {
-    setLoadingAudit(true);
-    try {
-      const response = await fetch('/api/superagent/audit-logs', {
-        headers: getAuthHeader()
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setAuditLogs(data);
-      }
-    } catch (e) {
-      console.error('Failed to fetch audit logs:', e);
-    } finally {
-      setLoadingAudit(false);
-    }
-  };
 
-  const clearAuditLogs = async () => {
-    if (!confirm('Are you sure you want to clear the audit logs?')) return;
-    try {
-      const response = await fetch('/api/superagent/audit-logs', {
-        method: 'DELETE',
-        headers: getAuthHeader()
-      });
-      if (response.ok) {
-        setAuditLogs([]);
-      }
-    } catch (e) {
-      console.error('Failed to clear audit logs:', e);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'audit') {
-      fetchAuditLogs();
-    }
-  }, [activeTab]);
 
   return (
     <div className="flex flex-col h-full bg-[#1e1e24] text-gray-200">
@@ -730,76 +680,16 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
         </div>
       </div>
 
-      <div className="bg-[#16161a] border-b border-[#2d2d34] px-4 py-2 flex flex-wrap items-center gap-4 text-xs">
-        <div className="flex flex-col gap-1">
-          <label className="text-zinc-400 font-medium flex items-center gap-1">
-            <Folder className="w-3 h-3 text-zinc-500" /> Active Workspace
-          </label>
-          <div className="flex gap-1">
-            {workspaces.length > 0 ? (
-              <select
-                value={workspace}
-                onChange={(e) => {
-                  setWorkspace(e.target.value);
-                  localStorage.setItem('currentWorkspace', e.target.value);
-                }}
-                className="bg-[#212127] border border-[#2d2d34] rounded px-2 py-1 text-zinc-200 outline-none focus:border-indigo-500 w-64 text-xs font-mono"
-              >
-                {workspaces.map(w => (
-                  <option key={w.id} value={w.path}>{w.name} ({w.path})</option>
-                ))}
-                {!workspaces.some(w => w.path === workspace) && workspace && (
-                  <option value={workspace}>Custom ({workspace})</option>
-                )}
-              </select>
-            ) : (
-              <input
-                type="text"
-                value={workspace}
-                onChange={(e) => {
-                  setWorkspace(e.target.value);
-                  localStorage.setItem('currentWorkspace', e.target.value);
-                }}
-                className="bg-[#212127] border border-[#2d2d34] rounded px-2 py-1 text-zinc-200 outline-none focus:border-indigo-500 w-64 text-xs font-mono"
-                placeholder="Workspace directory path"
-              />
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-zinc-400 font-medium">CLI Mode</label>
-          <select
-            value={agentMode}
-            onChange={(e) => setAgentMode(e.target.value as 'single' | 'multi')}
-            className="bg-[#212127] border border-[#2d2d34] rounded px-2 py-1 text-zinc-200 outline-none focus:border-indigo-500 text-xs"
-          >
-            <option value="single">Single Agent Mode</option>
-            <option value="multi">Multi-Agent Master (--multi)</option>
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-zinc-400 font-medium">Custom CLI Flags</label>
-          <input
-            type="text"
-            value={customArgs}
-            onChange={(e) => setCustomArgs(e.target.value)}
-            className="bg-[#212127] border border-[#2d2d34] rounded px-2 py-1 text-zinc-200 outline-none focus:border-indigo-500 w-36 text-xs font-mono"
-            placeholder="e.g. --resume"
-          />
-        </div>
-
-        <div className="flex items-end h-full pt-4">
-          <button
-            onClick={() => setConnectTrigger(prev => prev + 1)}
-            className="bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-medium px-3 py-1 text-xs rounded transition flex items-center gap-1"
-          >
-            <RefreshCw className="w-3 h-3" />
-            Apply & Restart Bridge
-          </button>
-        </div>
-      </div>
+      <SuperAgentConsoleHeader
+        workspaces={workspaces}
+        workspace={workspace}
+        setWorkspace={setWorkspace}
+        agentMode={agentMode}
+        setAgentMode={setAgentMode}
+        customArgs={customArgs}
+        setCustomArgs={setCustomArgs}
+        setConnectTrigger={setConnectTrigger}
+      />
 
       {activeTab === 'console' ? (
         <>
@@ -850,122 +740,30 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
 
             {/* Interactive Permission Request Card */}
             {pendingPermission && (
-              <div className="p-4 rounded-lg bg-amber-950/40 border-2 border-amber-500/80 text-amber-100 space-y-3">
-                <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
-                  <AlertTriangle className="w-5 h-5" />
-                  <span>Tool Approval Required</span>
-                </div>
-                <p className="text-xs text-amber-200">
-                  {pendingPermission.description || `SuperAgent wants to execute: ${JSON.stringify(pendingPermission.toolCall)}`}
-                </p>
-                <div className="flex gap-2 pt-1">
-                  <button
-                    onClick={() => handlePermissionDecision(true)}
-                    className="bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs px-3 py-1.5 rounded flex items-center gap-1 transition"
-                  >
-                    <Check className="w-3.5 h-3.5" /> Allow Once
-                  </button>
-                  <button
-                    onClick={() => handlePermissionDecision('session')}
-                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-3 py-1.5 rounded transition"
-                  >
-                    Allow for Session
-                  </button>
-                  <button
-                    onClick={() => handlePermissionDecision(false)}
-                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold text-xs px-3 py-1.5 rounded flex items-center gap-1 transition"
-                  >
-                    <X className="w-3.5 h-3.5" /> Deny
-                  </button>
-                </div>
-              </div>
+              <PermissionCard
+                pendingPermission={pendingPermission}
+                handlePermissionDecision={handlePermissionDecision}
+              />
             )}
 
             {/* Interactive Question Card */}
             {pendingQuestion && (
-              <div className="p-4 rounded-lg bg-indigo-950/50 border-2 border-indigo-500/80 text-indigo-100 space-y-3">
-                <div className="flex items-center gap-2 text-indigo-300 font-bold text-sm">
-                  <HelpCircle className="w-5 h-5 text-indigo-400" />
-                  <span>Agent Question</span>
-                </div>
-                <p className="text-xs text-zinc-200 font-medium">
-                  {typeof pendingQuestion.question === 'string' ? pendingQuestion.question : JSON.stringify(pendingQuestion.question)}
-                </p>
-
-                {pendingQuestion.options && pendingQuestion.options.length > 0 ? (
-                  <div className="space-y-1.5 pt-1">
-                    {pendingQuestion.options.map((opt, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => {
-                          if (pendingQuestion.isMultiSelect) {
-                            setSelectedQuestionAnswers(prev => 
-                              prev.includes(opt) ? prev.filter(x => x !== opt) : [...prev, opt]
-                            );
-                          } else {
-                            setSelectedQuestionAnswers([opt]);
-                          }
-                        }}
-                        className={`w-full text-left px-3 py-2 text-xs rounded border transition flex items-center gap-2 ${
-                          selectedQuestionAnswers.includes(opt)
-                            ? 'bg-indigo-600 border-indigo-400 text-white font-medium'
-                            : 'bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800'
-                        }`}
-                      >
-                        <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center text-[10px] ${
-                          selectedQuestionAnswers.includes(opt) ? 'border-white bg-indigo-400' : 'border-zinc-500'
-                        }`}>
-                          {selectedQuestionAnswers.includes(opt) && '✓'}
-                        </span>
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <input
-                    type="text"
-                    value={customQuestionInput}
-                    onChange={(e) => setCustomQuestionInput(e.target.value)}
-                    placeholder="Type your answer here..."
-                    className="w-full bg-[#121214] border border-indigo-500/50 rounded px-3 py-1.5 text-xs text-white focus:outline-none"
-                  />
-                )}
-
-                <button
-                  onClick={handleQuestionSubmit}
-                  disabled={selectedQuestionAnswers.length === 0 && !customQuestionInput.trim()}
-                  className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-semibold text-xs px-4 py-1.5 rounded transition"
-                >
-                  Submit Answer
-                </button>
-              </div>
+              <QuestionCard
+                pendingQuestion={pendingQuestion}
+                selectedQuestionAnswers={selectedQuestionAnswers}
+                setSelectedQuestionAnswers={setSelectedQuestionAnswers}
+                customQuestionInput={customQuestionInput}
+                setCustomQuestionInput={setCustomQuestionInput}
+                handleQuestionSubmit={handleQuestionSubmit}
+              />
             )}
 
             {/* Interactive Plan Approval Card */}
             {pendingPlanApproval && (
-              <div className="p-4 rounded-lg bg-emerald-950/40 border-2 border-emerald-500/80 text-emerald-100 space-y-3">
-                <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-                  <Shield className="w-5 h-5" />
-                  <span>Plan Review Required</span>
-                </div>
-                <p className="text-xs text-emerald-200">
-                  SuperAgent has constructed an implementation plan. Authorize execution or cancel.
-                </p>
-                <div className="flex gap-2 pt-1">
-                  <button
-                    onClick={() => handlePlanApproval('approve')}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-4 py-1.5 rounded transition flex items-center gap-1"
-                  >
-                    <Check className="w-3.5 h-3.5" /> Approve & Execute Plan
-                  </button>
-                  <button
-                    onClick={() => handlePlanApproval('reject')}
-                    className="bg-red-950/60 hover:bg-red-900 border border-red-800 text-red-200 font-semibold text-xs px-4 py-1.5 rounded transition flex items-center gap-1"
-                  >
-                    <X className="w-3.5 h-3.5" /> Reject Plan
-                  </button>
-                </div>
-              </div>
+              <PlanCard
+                pendingPlanApproval={pendingPlanApproval}
+                handlePlanApproval={handlePlanApproval}
+              />
             )}
 
             {/* Prominent Thinking & Tool Execution Loading Bar */}
@@ -1129,55 +927,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
           </div>
         </>
       ) : (
-        <div className="flex-1 flex flex-col overflow-hidden bg-[#1a1a20]">
-          <div className="p-3 bg-[#121214] border-b border-[#2d2d34] flex items-center justify-between">
-            <span className="text-xs font-semibold text-zinc-400">Interaction & Decision Logs</span>
-            <div className="flex gap-2">
-              <button
-                onClick={fetchAuditLogs}
-                disabled={loadingAudit}
-                className="flex items-center gap-1.5 px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-xs rounded text-zinc-200 transition font-medium"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingAudit ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
-              <button
-                onClick={clearAuditLogs}
-                className="flex items-center gap-1.5 px-3 py-1 bg-red-950/40 hover:bg-red-900/40 border border-red-900/40 text-xs rounded text-red-200 transition font-medium"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Clear Logs
-              </button>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-xs">
-            {auditLogs.length === 0 ? (
-              <div className="text-center text-zinc-500 py-10">
-                No logs recorded yet. Start interacting with SuperAgent to generate audit logs.
-              </div>
-            ) : (
-              auditLogs.map((log, index) => (
-                <div key={index} className="p-3 bg-zinc-900/60 rounded border border-zinc-800/80">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] text-zinc-500">{new Date(log.timestamp).toLocaleString()}</span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      log.type === 'prompt' ? 'bg-indigo-950 text-indigo-300 border border-indigo-900/60' :
-                      log.type === 'agent_event' ? 'bg-amber-950 text-amber-300 border border-amber-900/60' :
-                      log.type === 'system' ? 'bg-zinc-950 text-zinc-400 border border-zinc-900/60' :
-                      'bg-emerald-950 text-emerald-300 border border-emerald-900/60'
-                    }`}>
-                      {log.type.toUpperCase()}
-                    </span>
-                  </div>
-                  <pre className="text-zinc-300 overflow-x-auto max-h-60 overflow-y-auto p-1 bg-black/20 rounded">
-                    {JSON.stringify(log.data, null, 2)}
-                  </pre>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        <SuperAgentAuditLogs getAuthHeader={getAuthHeader} />
       )}
     </div>
   );

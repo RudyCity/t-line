@@ -2,12 +2,20 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.484] - 2026-07-20
+
+### Enhanced
+- **Image & Document Attachments**: Integrated document and image trigger buttons next to the console textarea with a visual preview bar above it. Text documents are read as raw text and images are converted to base64 Data URLs, automatically appended as context to the backend prompt.
+- **Strict File Limit Modularization**: Split and refactored [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) to remain strictly under the 1000-line constraint (total lines reduced to 935):
+  - Extracted workspace configuration header to [SuperAgentConsoleHeader.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsoleHeader.tsx).
+  - Extracted log list tab to [SuperAgentAuditLogs.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentAuditLogs.tsx).
+  - Extracted permission, question, and plan approval cards to [SuperAgentInteractiveCards.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentInteractiveCards.tsx).
+
 ## [1.3.483] - 2026-07-20
 
 ### Enhanced
 - **SuperAgent Console Input Upgrades**: Replaced the single-line input field with a multi-line, auto-growing textarea supporting dynamic height (up to `240px`) and custom key bindings (`Enter` to send, `Shift+Enter` for newlines).
 - **Interactive Slash Commands (`/`)**: Introduced autocomplete drop-up menu triggered strictly by typing `/` in the input (supporting `/help`, `/status`, `/abort`, `/clear`, `/mode`, `/single`, `/multi`, `/resume`, `/workspace`, `/explain`, `/test`, `/reset`) with full keyboard navigation support (`ArrowUp`/`ArrowDown`/`Tab`/`Enter`/`Escape`).
-- **Image & Document Attachments**: Integrated document and image trigger buttons next to the textarea with a visual preview bar above it. Text documents are read as raw text and images are converted to base64 Data URLs, automatically appended as context to the backend prompt.
 - **Outside Click Handler**: Added automatic closing of the autocomplete suggestions popup when the user clicks outside the console input container.
 - **Prompt History Navigation**: Enabled cycling through sent prompts inside the textarea using `ArrowUp`/`ArrowDown` navigation.
 - **Input Stats & Helper info**: Displayed character counter and shortcut instruction guide.
