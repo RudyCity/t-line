@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Terminal as TerminalIcon, Send, RefreshCw, Shield, Square, X, Folder, Sparkles, Paperclip, Image as ImageIcon } from 'lucide-react';
+import { Terminal as TerminalIcon, Send, RefreshCw, Shield, Square, X, Folder, Sparkles, Paperclip } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { SuperAgentAuditLogs } from './SuperAgentAuditLogs';
@@ -76,29 +76,19 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
     previewUrl?: string;
   }>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const files = Array.from(e.target.files);
-    const newAttachments = files.map(file => ({
-      id: Math.random().toString(36).substring(7),
-      file,
-      type: 'document' as const
-    }));
-    setAttachments(prev => [...prev, ...newAttachments]);
-    e.target.value = '';
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-    const files = Array.from(e.target.files);
-    const newAttachments = files.map(file => ({
-      id: Math.random().toString(36).substring(7),
-      file,
-      type: 'image' as const,
-      previewUrl: URL.createObjectURL(file)
-    }));
+    const newAttachments = files.map(file => {
+      const isImage = file.type.startsWith('image/');
+      return {
+        id: Math.random().toString(36).substring(7),
+        file,
+        type: isImage ? ('image' as const) : ('document' as const),
+        previewUrl: isImage ? URL.createObjectURL(file) : undefined
+      };
+    });
     setAttachments(prev => [...prev, ...newAttachments]);
     e.target.value = '';
   };
@@ -803,14 +793,6 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
               style={{ display: 'none' }}
               multiple
             />
-            <input
-              type="file"
-              ref={imageInputRef}
-              onChange={handleImageChange}
-              accept="image/*"
-              style={{ display: 'none' }}
-              multiple
-            />
 
             {/* Attachment Previews */}
             {attachments.length > 0 && (
@@ -882,19 +864,10 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
               <div className="flex gap-1 shrink-0">
                 <button
                   type="button"
-                  onClick={() => imageInputRef.current?.click()}
-                  disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
-                  className="p-2 bg-[#1e1e24] hover:bg-[#25252d] border border-[#2d2d34] hover:border-zinc-700 text-zinc-400 hover:text-zinc-200 rounded-lg transition h-[38px] w-[38px] flex items-center justify-center cursor-pointer disabled:opacity-50"
-                  title="Attach Images"
-                >
-                  <ImageIcon className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
                   className="p-2 bg-[#1e1e24] hover:bg-[#25252d] border border-[#2d2d34] hover:border-zinc-700 text-zinc-400 hover:text-zinc-200 rounded-lg transition h-[38px] w-[38px] flex items-center justify-center cursor-pointer disabled:opacity-50"
-                  title="Attach Documents"
+                  title="Attach Files"
                 >
                   <Paperclip className="w-4 h-4" />
                 </button>
