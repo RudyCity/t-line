@@ -5,7 +5,7 @@ All notable changes to the **t-line** workspace manager project will be document
 ## [1.3.484] - 2026-07-20
 
 ### Enhanced
-- **Image & Document Attachments**: Integrated document and image trigger buttons next to the console textarea with a visual preview bar above it. Text documents are read as raw text and images are converted to base64 Data URLs, automatically appended as context to the backend prompt.
+- **Unified File & Image Attachments**: Merged image and document pickers into a single, compact `Paperclip` trigger button next to the console textarea. The file selection automatically detects file types: images render visual thumbnail previews, while text-based files/documents are read as raw text and automatically appended to the backend prompt.
 - **Strict File Limit Modularization**: Split and refactored [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) to remain strictly under the 1000-line constraint (total lines reduced to 935):
   - Extracted workspace configuration header to [SuperAgentConsoleHeader.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsoleHeader.tsx).
   - Extracted log list tab to [SuperAgentAuditLogs.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentAuditLogs.tsx).
