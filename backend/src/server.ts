@@ -509,6 +509,50 @@ app.delete('/api/superagent/audit-logs', authMiddleware, (req, res) => {
   }
 });
 
+const getModelConfigPath = () => {
+  const override = process.env.SUPERAGENT_CONFIG_DIR?.trim();
+  if (override) {
+    return path.resolve(override, 'model-config.json');
+  }
+  return path.join(os.homedir(), '.superagent-r', 'model-config.json');
+};
+
+app.get('/api/superagent/config', authMiddleware, (req, res) => {
+  const configPath = getModelConfigPath();
+  if (!fs.existsSync(configPath)) {
+    return res.status(404).json({ error: 'SuperAgent config file not found' });
+  }
+  try {
+    const data = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    res.json({
+      presets: data.presets || { single: [], multi: [] },
+      activePresetId: data.activePresetId || { single: '', multi: '' }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to parse config file: ' + err.message });
+  }
+});
+
+app.post('/api/superagent/config/active-preset', authMiddleware, (req, res) => {
+  const { mode, presetId } = req.body;
+  if (!mode || !presetId) {
+    return res.status(400).json({ error: 'Mode and presetId are required' });
+  }
+  const configPath = getModelConfigPath();
+  if (!fs.existsSync(configPath)) {
+    return res.status(404).json({ error: 'SuperAgent config file not found' });
+  }
+  try {
+    const data = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    if (!data.activePresetId) data.activePresetId = {};
+    data.activePresetId[mode] = presetId;
+    fs.writeFileSync(configPath, JSON.stringify(data, null, 2), 'utf8');
+    res.json({ success: true, activePresetId: data.activePresetId });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to update config file: ' + err.message });
+  }
+});
+
 app.use('/api', gitRouter);
 app.use('/api/fs', fsRouter);
 

@@ -5,17 +5,13 @@ import { WorkspaceInfo } from '../hooks/useTerminals';
 import { SuperAgentAuditLogs } from './SuperAgentAuditLogs';
 import { SuperAgentConsoleHeader } from './SuperAgentConsoleHeader';
 import { PermissionCard, QuestionCard, PlanCard, PendingPermission, PendingQuestion } from './SuperAgentInteractiveCards';
+import { getSlashCommands, SlashCommand } from './SuperAgentCommands';
 
 
 
 
 
-interface SlashCommand {
-  command: string;
-  description: string;
-  argsHelp?: string;
-  action?: (args?: string) => void;
-}
+
 
 interface SuperAgentConsoleProps {
   activeWorkspacePath?: string;
@@ -43,6 +39,86 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
   const [agentMode, setAgentMode] = useState<'single' | 'multi'>('single');
   const [customArgs, setCustomArgs] = useState('');
   const [connectTrigger, setConnectTrigger] = useState(0);
+
+  interface ModelPreset {
+    id: string;
+    name: string;
+    description: string;
+    models: Record<string, { providerProfileId: string; model: string } | string | any>;
+  }
+
+  const [presets, setPresets] = useState<{ single: ModelPreset[]; multi: ModelPreset[] }>({ single: [], multi: [] });
+  const [activePresetId, setActivePresetId] = useState<{ single: string; multi: string }>({ single: '', multi: '' });
+
+  const fetchConfig = async () => {
+    try {
+      const response = await fetch('/api/superagent/config', {
+        headers: getAuthHeader()
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPresets(data.presets || { single: [], multi: [] });
+        setActivePresetId(data.activePresetId || { single: '', multi: '' });
+      }
+    } catch (e) {
+      console.error('Failed to fetch SuperAgent model config:', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchConfig();
+  }, [connectTrigger]);
+
+  const handlePresetChange = async (presetId: string) => {
+    try {
+      const response = await fetch('/api/superagent/config/active-preset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeader()
+        },
+        body: JSON.stringify({ mode: agentMode, presetId })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setActivePresetId(data.activePresetId);
+        const match = (presets[agentMode] || []).find(p => p.id === presetId);
+        const name = match ? match.name : presetId;
+        setMessages(prev => [...prev, { role: 'system', text: `Model preset changed to "${name}". Restarting bridge...` }]);
+        setConnectTrigger(prev => prev + 1);
+      }
+    } catch (e) {
+      console.error('Failed to change preset:', e);
+    }
+  };
+
+  const getMainModelLabel = (preset: ModelPreset | undefined) => {
+    if (!preset || !preset.models) return 'Unknown';
+    const models = preset.models;
+    
+    if (agentMode === 'multi' && models.master) {
+      if (typeof models.master === 'object' && models.master.model) {
+        return models.master.model;
+      }
+      if (typeof models.master === 'string') {
+        return models.master;
+      }
+    }
+    
+    if (models.superagent) {
+      if (typeof models.superagent === 'object' && models.superagent.model) {
+        return models.superagent.model;
+      }
+      if (typeof models.superagent === 'string') {
+        return models.superagent;
+      }
+    }
+    
+    if (models.MODEL) return typeof models.MODEL === 'object' ? (models.MODEL as any).model : models.MODEL;
+    if (models.MODEL_SINGLE) return typeof models.MODEL_SINGLE === 'object' ? (models.MODEL_SINGLE as any).model : models.MODEL_SINGLE;
+
+    return 'Default';
+  };
 
   // Interactive agent states
   const [pendingPermission, setPendingPermission] = useState<PendingPermission | null>(null);
@@ -281,7 +357,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, pendingPermission, pendingQuestion, pendingPlanApproval, toolProgressMsg, loading]);
 
-  const handleSend = async (customPrompt?: string) => {
+  async function handleSend(customPrompt?: string) {
     const prompt = (customPrompt !== undefined ? customPrompt : input).trim();
     if (!prompt && attachments.length === 0) return;
 
@@ -359,136 +435,19 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
     }));
   };
 
-  const slashCommands: SlashCommand[] = [
-    {
-      command: '/help',
-      description: 'Show available commands & system instructions',
-      action: () => {
-        setMessages(prev => [
-          ...prev,
-          { role: 'system', text: 'Available commands:\n' +
-            '/help - Show this help message\n' +
-            '/status - Show agent connection & server status\n' +
-            '/abort - Abort active agent execution immediately\n' +
-            '/clear - Clear all console messages\n' +
-            '/mode [single|multi] - Switch agent execution mode\n' +
-            '/single - Switch agent mode to Single Agent and restart\n' +
-            '/multi - Switch agent mode to Multi-Agent Master (--multi) and restart\n' +
-            '/resume - Restart the agent process with the --resume flag\n' +
-            '/workspace [path] - Switch active workspace\n' +
-            '/explain - Ask SuperAgent to explain the codebase structure\n' +
-            '/test - Ask SuperAgent to check and run tests\n' +
-            '/reset - Reset and restart WebSocket connection'
-          }
-        ]);
-      }
-    },
-    {
-      command: '/status',
-      description: 'Check agent server and connection status',
-      action: () => {
-        const statusText = `WebSocket Connection: ${ws?.readyState === WebSocket.OPEN ? 'Connected (OPEN)' : 'Disconnected'}\n` +
-          `Active Workspace: ${workspace || 'None'}\n` +
-          `CLI Mode: ${agentMode === 'multi' ? 'Multi-Agent Master (--multi)' : 'Single Agent Mode'}\n` +
-          `Custom CLI Flags: ${customArgs || 'None'}`;
-        setMessages(prev => [...prev, { role: 'system', text: statusText }]);
-      }
-    },
-    {
-      command: '/abort',
-      description: 'Abort the active running agent task',
-      action: () => {
-        handleAbort();
-      }
-    },
-    {
-      command: '/clear',
-      description: 'Clear the local console chat messages',
-      action: () => {
-        setMessages([{ role: 'system', text: 'Console cleared. Connected to t-line workspace context.' }]);
-      }
-    },
-    {
-      command: '/mode',
-      description: 'Switch CLI mode',
-      argsHelp: '[single|multi]',
-      action: (args?: string) => {
-        const cleanMode = args?.trim().toLowerCase();
-        if (cleanMode === 'single' || cleanMode === 'multi') {
-          setAgentMode(cleanMode as 'single' | 'multi');
-          setMessages(prev => [...prev, { role: 'system', text: `Mode switched to: ${cleanMode}. Restarting bridge...` }]);
-          setConnectTrigger(prev => prev + 1);
-        } else {
-          setMessages(prev => [...prev, { role: 'system', text: 'Usage: /mode [single|multi]' }]);
-        }
-      }
-    },
-    {
-      command: '/single',
-      description: 'Switch agent mode to Single Agent and restart',
-      action: () => {
-        setAgentMode('single');
-        setMessages(prev => [...prev, { role: 'system', text: 'CLI Mode switched to Single Agent. Restarting bridge...' }]);
-        setConnectTrigger(prev => prev + 1);
-      }
-    },
-    {
-      command: '/multi',
-      description: 'Switch agent mode to Multi-Agent Master (--multi) and restart',
-      action: () => {
-        setAgentMode('multi');
-        setMessages(prev => [...prev, { role: 'system', text: 'CLI Mode switched to Multi-Agent. Restarting bridge...' }]);
-        setConnectTrigger(prev => prev + 1);
-      }
-    },
-    {
-      command: '/resume',
-      description: 'Restart the agent process with the --resume flag',
-      action: () => {
-        setCustomArgs('--resume');
-        setMessages(prev => [...prev, { role: 'system', text: 'Flags set to --resume. Restarting bridge...' }]);
-        setConnectTrigger(prev => prev + 1);
-      }
-    },
-    {
-      command: '/workspace',
-      description: 'Switch active workspace path',
-      argsHelp: '[path]',
-      action: (args?: string) => {
-        const targetPath = args?.trim();
-        if (targetPath) {
-          setWorkspace(targetPath);
-          localStorage.setItem('currentWorkspace', targetPath);
-          setMessages(prev => [...prev, { role: 'system', text: `Workspace switched to: ${targetPath}. Restarting bridge...` }]);
-          setConnectTrigger(prev => prev + 1);
-        } else {
-          setMessages(prev => [...prev, { role: 'system', text: 'Usage: /workspace [directory-path]' }]);
-        }
-      }
-    },
-    {
-      command: '/explain',
-      description: 'Ask SuperAgent to analyze and explain the codebase structure',
-      action: () => {
-        handleSend('Please analyze and explain the codebase structure of this workspace.');
-      }
-    },
-    {
-      command: '/test',
-      description: 'Ask SuperAgent to check and run tests',
-      action: () => {
-        handleSend('Please check the test suite and run tests to verify codebase health.');
-      }
-    },
-    {
-      command: '/reset',
-      description: 'Reset and restart the WebSocket bridge',
-      action: () => {
-        setMessages(prev => [...prev, { role: 'system', text: 'Resetting and reconnecting WebSocket bridge...' }]);
-        setConnectTrigger(prev => prev + 1);
-      }
-    }
-  ];
+  const slashCommands = getSlashCommands({
+    ws,
+    workspace,
+    agentMode,
+    customArgs,
+    setMessages,
+    setAgentMode,
+    setCustomArgs,
+    setWorkspace,
+    setConnectTrigger,
+    handleSend,
+    handleAbort
+  });
 
   // Monitor input to show/hide suggestions
   useEffect(() => {
@@ -584,7 +543,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
     setShowSuggestions(false);
   };
 
-  const handleAbort = () => {
+  function handleAbort() {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     ws.send(JSON.stringify({ type: 'abort' }));
     setLoading(false);
@@ -892,10 +851,44 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
                 <Send className="w-4 h-4" />
               </button>
             </div>
-            {/* Input Helpers Row */}
-            <div className="flex justify-between items-center px-1 text-[10px] text-zinc-500 select-none font-sans">
-              <span>⏎ to send • Shift+⏎ for newline • type / for commands</span>
-              <span>{input.length} chars</span>
+            {/* Input Helpers Row & Preset Switcher */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-[10px] text-zinc-500 select-none font-sans border-t border-[#1a1a22] pt-1.5 mt-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className="text-zinc-600">Preset:</span>
+                {(presets[agentMode] || []).length > 0 ? (
+                  <select
+                    value={activePresetId[agentMode] || ''}
+                    onChange={(e) => handlePresetChange(e.target.value)}
+                    disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
+                    className="bg-[#18181f] text-zinc-400 border border-zinc-800 rounded px-1.5 py-0.5 outline-none focus:border-indigo-500 text-[10px] font-medium transition cursor-pointer max-w-[150px]"
+                  >
+                    {(presets[agentMode] || []).map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="text-zinc-600 font-mono text-[10px]">None</span>
+                )}
+                {/* Main Model Display */}
+                {(() => {
+                  const activePreset = (presets[agentMode] || []).find(p => p.id === activePresetId[agentMode]);
+                  if (activePreset) {
+                    const mainModel = getMainModelLabel(activePreset);
+                    const modelName = mainModel.includes('/') ? mainModel.substring(mainModel.lastIndexOf('/') + 1) : mainModel;
+                    return (
+                      <span className="text-[10px] text-zinc-600 font-mono border border-zinc-850 px-1 py-0.5 rounded bg-zinc-900/40">
+                        {modelName}
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span>⏎ send • Shift+⏎ newline • / commands</span>
+                <span className="text-zinc-600">{input.length} chars</span>
+              </div>
             </div>
           </div>
         </>
