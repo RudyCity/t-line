@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Terminal as TerminalIcon, Send, RefreshCw, Shield, Trash2, Square, Check, X, AlertTriangle, HelpCircle, Folder, Sparkles } from 'lucide-react';
+import { Terminal as TerminalIcon, Send, RefreshCw, Shield, Trash2, Square, Check, X, AlertTriangle, HelpCircle, Folder, Sparkles, Plus } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 
@@ -80,6 +80,22 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
   });
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [showDropUp, setShowDropUp] = useState(false);
+  const consoleContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close dropups/suggestions when clicking outside
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (consoleContainerRef.current && !consoleContainerRef.current.contains(e.target as Node)) {
+        setShowDropUp(false);
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, []);
 
   // Automatically update workspace when activeWorkspacePath prop changes
   useEffect(() => {
@@ -281,6 +297,9 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
             '/abort - Abort active agent execution immediately\n' +
             '/clear - Clear all console messages\n' +
             '/mode [single|multi] - Switch agent execution mode\n' +
+            '/single - Switch agent mode to Single Agent and restart\n' +
+            '/multi - Switch agent mode to Multi-Agent Master (--multi) and restart\n' +
+            '/resume - Restart the agent process with the --resume flag\n' +
             '/workspace [path] - Switch active workspace\n' +
             '/explain - Ask SuperAgent to explain the codebase structure\n' +
             '/test - Ask SuperAgent to check and run tests\n' +
@@ -330,6 +349,33 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
       }
     },
     {
+      command: '/single',
+      description: 'Switch agent mode to Single Agent and restart',
+      action: () => {
+        setAgentMode('single');
+        setMessages(prev => [...prev, { role: 'system', text: 'CLI Mode switched to Single Agent. Restarting bridge...' }]);
+        setConnectTrigger(prev => prev + 1);
+      }
+    },
+    {
+      command: '/multi',
+      description: 'Switch agent mode to Multi-Agent Master (--multi) and restart',
+      action: () => {
+        setAgentMode('multi');
+        setMessages(prev => [...prev, { role: 'system', text: 'CLI Mode switched to Multi-Agent. Restarting bridge...' }]);
+        setConnectTrigger(prev => prev + 1);
+      }
+    },
+    {
+      command: '/resume',
+      description: 'Restart the agent process with the --resume flag',
+      action: () => {
+        setCustomArgs('--resume');
+        setMessages(prev => [...prev, { role: 'system', text: 'Flags set to --resume. Restarting bridge...' }]);
+        setConnectTrigger(prev => prev + 1);
+      }
+    },
+    {
       command: '/workspace',
       description: 'Switch active workspace path',
       argsHelp: '[path]',
@@ -367,14 +413,6 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
         setConnectTrigger(prev => prev + 1);
       }
     }
-  ];
-
-  const quickActions = [
-    { label: 'Clear Chat', command: '/clear' },
-    { label: 'Explain Code', command: '/explain' },
-    { label: 'Run Tests', command: '/test' },
-    { label: 'Show Help', command: '/help' },
-    { label: 'Check Status', command: '/status' },
   ];
 
   // Monitor input to show/hide suggestions
@@ -859,22 +897,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
             <div ref={chatEndRef} />
           </div>
 
-          {/* Quick Actions Chips */}
-          <div className="px-4 py-2 bg-[#121214] border-t border-[#2d2d34] flex flex-wrap gap-2 items-center">
-            <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold select-none">Quick Actions:</span>
-            {quickActions.map(act => (
-              <button
-                key={act.label}
-                onClick={() => handleSend(act.command)}
-                disabled={(loading && act.command !== '/abort') || !ws || ws.readyState !== WebSocket.OPEN}
-                className="bg-[#1e1e24] hover:bg-indigo-950 hover:text-indigo-300 border border-[#2d2d34] hover:border-indigo-800/60 rounded px-2.5 py-1 text-[11px] font-medium text-zinc-300 transition flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed select-none"
-              >
-                {act.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="p-4 bg-[#121214] border-t border-[#2d2d34] flex flex-col gap-1.5 relative">
+          <div ref={consoleContainerRef} className="p-4 bg-[#121214] border-t border-[#2d2d34] flex flex-col gap-1.5 relative">
             {/* Slash Command Autocomplete Popover */}
             {showSuggestions && (
               <div className="absolute bottom-[calc(100%-8px)] left-4 right-4 bg-[#16161a] border-2 border-indigo-500/80 rounded-lg shadow-2xl z-50 max-h-60 overflow-y-auto font-mono text-xs divide-y divide-zinc-800">
@@ -902,6 +925,46 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
             )}
 
             <div className="flex gap-2 items-end">
+              {/* Drop-up Action Button Trigger */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowDropUp(prev => !prev)}
+                  disabled={!ws || ws.readyState !== WebSocket.OPEN}
+                  className={`p-2 rounded-lg transition border flex items-center justify-center h-[38px] w-[38px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                    showDropUp 
+                      ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' 
+                      : 'bg-[#1e1e24] border-[#2d2d34] text-zinc-400 hover:text-zinc-200 hover:bg-[#25252d]'
+                  }`}
+                  title="SuperAgent Actions"
+                >
+                  <Plus className={`w-5 h-5 transition-transform duration-200 ${showDropUp ? 'rotate-45 text-white' : ''}`} />
+                </button>
+
+                {/* Drop-up Actions Menu List */}
+                {showDropUp && (
+                  <div className="absolute bottom-[calc(100%+8px)] left-0 w-56 bg-[#16161a] border border-[#2d2d34] rounded-lg shadow-2xl z-50 py-1 font-sans text-xs divide-y divide-[#2d2d34]">
+                    <div className="px-3 py-1.5 text-[10px] text-zinc-500 font-bold uppercase tracking-wider select-none">
+                      SuperAgent Actions
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {slashCommands.map(cmd => (
+                        <button
+                          key={cmd.command}
+                          onClick={() => {
+                            handleSelectSuggestion(cmd);
+                            setShowDropUp(false);
+                          }}
+                          className="w-full text-left px-3 py-2 text-zinc-300 hover:text-white hover:bg-indigo-600/30 transition flex flex-col gap-0.5"
+                        >
+                          <div className="font-semibold text-indigo-300 font-mono">{cmd.command}</div>
+                          <div className="text-[10px] text-zinc-500 truncate">{cmd.description}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <textarea
                 ref={textareaRef}
                 value={input}

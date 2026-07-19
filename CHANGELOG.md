@@ -6,9 +6,10 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ### Enhanced
 - **SuperAgent Console Input Upgrades**: Replaced the single-line input field with a multi-line, auto-growing textarea supporting dynamic height (up to `240px`) and custom key bindings (`Enter` to send, `Shift+Enter` for newlines).
-- **Interactive Slash Commands (`/`)**: Introduced autocomplete popup menu when typing `/` in the input (supporting `/help`, `/status`, `/abort`, `/clear`, `/mode`, `/workspace`, `/explain`, `/test`, `/reset`) with full keyboard navigation support (`ArrowUp`/`ArrowDown`/`Tab`/`Enter`/`Escape`).
+- **Interactive Slash Commands (`/`)**: Introduced autocomplete popup menu when typing `/` in the input (supporting `/help`, `/status`, `/abort`, `/clear`, `/mode`, `/single`, `/multi`, `/resume`, `/workspace`, `/explain`, `/test`, `/reset`) with full keyboard navigation support (`ArrowUp`/`ArrowDown`/`Tab`/`Enter`/`Escape`).
+- **Quick Action Drop-Up Menu**: Replaced the horizontal chips row with a sleek, toggleable floating Drop-Up Actions menu accessed via a `+` trigger button next to the input area.
+- **Outside Click Handler**: Added automatic closing of suggestions and drop-up menus when the user clicks outside the console input container.
 - **Prompt History Navigation**: Enabled cycling through sent prompts inside the textarea using `ArrowUp`/`ArrowDown` navigation.
-- **Quick Action Chips**: Added instant-trigger chips above the input container for common commands (`Clear Chat`, `Explain Code`, `Run Tests`, `Show Help`, `Check Status`).
 - **Input Stats & Helper info**: Displayed character counter and shortcut instruction guide.
 
 ## [1.3.482] - 2026-07-19
