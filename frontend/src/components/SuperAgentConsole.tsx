@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Terminal as TerminalIcon, Send, RefreshCw, Shield, Trash2, Square, Check, X, AlertTriangle, HelpCircle, Folder, Sparkles } from 'lucide-react';
+import { Terminal as TerminalIcon, Send, RefreshCw, Shield, Trash2, Square, Check, X, AlertTriangle, HelpCircle, Folder, Sparkles, Paperclip, Image as ImageIcon } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 
@@ -81,6 +81,69 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const consoleContainerRef = useRef<HTMLDivElement>(null);
+
+  // Attachment States & Helpers
+  const [attachments, setAttachments] = useState<Array<{
+    id: string;
+    file: File;
+    type: 'image' | 'document';
+    previewUrl?: string;
+  }>>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    const newAttachments = files.map(file => ({
+      id: Math.random().toString(36).substring(7),
+      file,
+      type: 'document' as const
+    }));
+    setAttachments(prev => [...prev, ...newAttachments]);
+    e.target.value = '';
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    const newAttachments = files.map(file => ({
+      id: Math.random().toString(36).substring(7),
+      file,
+      type: 'image' as const,
+      previewUrl: URL.createObjectURL(file)
+    }));
+    setAttachments(prev => [...prev, ...newAttachments]);
+    e.target.value = '';
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments(prev => {
+      const target = prev.find(att => att.id === id);
+      if (target?.previewUrl) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return prev.filter(att => att.id !== id);
+    });
+  };
+
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsText(file);
+    });
+  };
+
+  const readFileAsDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  };
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -242,9 +305,9 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, pendingPermission, pendingQuestion, pendingPlanApproval, toolProgressMsg, loading]);
 
-  const handleSend = (customPrompt?: string) => {
+  const handleSend = async (customPrompt?: string) => {
     const prompt = (customPrompt !== undefined ? customPrompt : input).trim();
-    if (!prompt) return;
+    if (!prompt && attachments.length === 0) return;
 
     // Check if it's a slash command first!
     if (prompt.startsWith('/')) {
@@ -254,6 +317,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
       const match = slashCommands.find(c => c.command.toLowerCase() === cmdName.toLowerCase());
       if (match) {
         setInput('');
+        setAttachments([]);
         if (match.action) {
           match.action(cmdArgs);
         }
@@ -265,11 +329,48 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
 
     setInput('');
     setLoading(true);
+    setToolProgressMsg('Reading attachments...');
+
+    let finalPrompt = prompt;
+
+    // Process attachments
+    if (attachments.length > 0) {
+      const documentParts: string[] = [];
+      const imageParts: string[] = [];
+
+      for (const att of attachments) {
+        try {
+          if (att.type === 'document') {
+            const content = await readFileAsText(att.file);
+            documentParts.push(`\n--- ATTACHED FILE: ${att.file.name} ---\n${content}\n---------------------------------\n`);
+          } else if (att.type === 'image') {
+            const base64 = await readFileAsDataURL(att.file);
+            imageParts.push(`\n--- ATTACHED IMAGE: ${att.file.name} ---\nData URL: ${base64}\n----------------------------------\n`);
+          }
+        } catch (err) {
+          console.error('Failed to read file:', att.file.name, err);
+        }
+      }
+
+      if (documentParts.length > 0) {
+        finalPrompt += '\n\n[Attached Files]:' + documentParts.join('');
+      }
+      if (imageParts.length > 0) {
+        finalPrompt += '\n\n[Attached Images]:' + imageParts.join('');
+      }
+    }
+
+    // Clean up previews
+    attachments.forEach(att => {
+      if (att.previewUrl) URL.revokeObjectURL(att.previewUrl);
+    });
+    setAttachments([]);
+
     setToolProgressMsg('');
-    setMessages(prev => [...prev, { role: 'user', text: prompt }]);
+    setMessages(prev => [...prev, { role: 'user', text: prompt || `Sent ${attachments.length} attachment(s)` }]);
 
     // Save to history
-    if (!history.includes(prompt)) {
+    if (prompt && !history.includes(prompt)) {
       const newHistory = [prompt, ...history].slice(0, 50);
       setHistory(newHistory);
       localStorage.setItem('superagent_prompt_history', JSON.stringify(newHistory));
@@ -278,7 +379,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
 
     ws.send(JSON.stringify({
       type: 'prompt',
-      text: prompt
+      text: finalPrompt
     }));
   };
 
@@ -896,6 +997,62 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
           </div>
 
           <div ref={consoleContainerRef} className="p-4 bg-[#121214] border-t border-[#2d2d34] flex flex-col gap-1.5 relative">
+            {/* Hidden Input Elements */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+              multiple
+            />
+            <input
+              type="file"
+              ref={imageInputRef}
+              onChange={handleImageChange}
+              accept="image/*"
+              style={{ display: 'none' }}
+              multiple
+            />
+
+            {/* Attachment Previews */}
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 px-1 py-1 max-h-32 overflow-y-auto mb-1 scrollbar-thin">
+                {attachments.map(att => (
+                  <div
+                    key={att.id}
+                    className="relative group flex items-center gap-2 p-1.5 bg-[#16161a] border border-[#2d2d34] rounded-lg shadow-sm max-w-xs transition hover:border-zinc-700"
+                  >
+                    {att.type === 'image' && att.previewUrl ? (
+                      <img
+                        src={att.previewUrl}
+                        alt={att.file.name}
+                        className="w-8 h-8 rounded object-cover border border-zinc-800"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 bg-zinc-800 border border-zinc-700 rounded flex items-center justify-center text-zinc-400">
+                        <Paperclip className="w-4 h-4" />
+                      </div>
+                    )}
+                    <div className="flex flex-col min-w-0 pr-6">
+                      <span className="text-[11px] text-zinc-300 font-medium truncate font-sans w-24">
+                        {att.file.name}
+                      </span>
+                      <span className="text-[9px] text-zinc-500 font-mono">
+                        {(att.file.size / 1024).toFixed(1)} KB
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(att.id)}
+                      className="absolute top-0.5 right-0.5 bg-red-950/80 border border-red-900/50 hover:bg-red-900 text-red-200 p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center"
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Slash Command Autocomplete Popover */}
             {showSuggestions && (
               <div className="absolute bottom-[calc(100%-8px)] left-4 right-4 bg-[#16161a] border-2 border-indigo-500/80 rounded-lg shadow-2xl z-50 max-h-60 overflow-y-auto font-mono text-xs divide-y divide-zinc-800">
@@ -923,6 +1080,28 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
             )}
 
             <div className="flex gap-2 items-end">
+              {/* Attachment Actions */}
+              <div className="flex gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
+                  className="p-2 bg-[#1e1e24] hover:bg-[#25252d] border border-[#2d2d34] hover:border-zinc-700 text-zinc-400 hover:text-zinc-200 rounded-lg transition h-[38px] w-[38px] flex items-center justify-center cursor-pointer disabled:opacity-50"
+                  title="Attach Images"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
+                  className="p-2 bg-[#1e1e24] hover:bg-[#25252d] border border-[#2d2d34] hover:border-zinc-700 text-zinc-400 hover:text-zinc-200 rounded-lg transition h-[38px] w-[38px] flex items-center justify-center cursor-pointer disabled:opacity-50"
+                  title="Attach Documents"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
+              </div>
+
               <textarea
                 ref={textareaRef}
                 value={input}
@@ -936,8 +1115,8 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
               />
               <button
                 onClick={() => handleSend()}
-                disabled={loading || !input.trim() || !ws || ws.readyState !== WebSocket.OPEN}
-                className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-600 transition px-4 py-2 rounded-lg text-white font-semibold flex items-center justify-center h-[38px] cursor-pointer"
+                disabled={loading || (!input.trim() && attachments.length === 0) || !ws || ws.readyState !== WebSocket.OPEN}
+                className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-600 transition px-4 py-2 rounded-lg text-white font-semibold flex items-center justify-center h-[38px] cursor-pointer shrink-0"
               >
                 <Send className="w-4 h-4" />
               </button>
