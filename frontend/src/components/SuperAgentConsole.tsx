@@ -100,14 +100,10 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
         const payload = JSON.parse(event.data);
         
         if (payload.type === 'chat_response') {
-          if (payload.result && payload.result.text) {
-            setMessages(prev => [...prev, { role: 'assistant', text: payload.result.text }]);
-          } else if (payload.result && payload.result.error) {
+          if (payload.result && payload.result.error) {
             setLoading(false);
             setToolProgressMsg('');
             setMessages(prev => [...prev, { role: 'system', text: `Error: ${payload.result.error}` }]);
-          } else if (payload.raw) {
-            setMessages(prev => [...prev, { role: 'assistant', text: payload.raw }]);
           }
         } else if (payload.type === 'status') {
           setMessages(prev => [...prev, { role: 'system', text: payload.text }]);
@@ -135,9 +131,30 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
             }]);
           } else if (innerEvent.type === 'thought' || innerEvent.type === 'reasoning') {
             setLoading(true);
-            setMessages(prev => [...prev, { role: 'thought', text: innerEvent.text || innerEvent.content || '' }]);
+            const chunk = innerEvent.text || innerEvent.content || '';
+            if (chunk) {
+              setMessages(prev => {
+                const lastMsg = prev[prev.length - 1];
+                if (lastMsg && lastMsg.role === 'thought') {
+                  const newText = chunk.startsWith(lastMsg.text) ? chunk : (lastMsg.text + chunk);
+                  return [...prev.slice(0, -1), { ...lastMsg, text: newText }];
+                }
+                return [...prev, { role: 'thought', text: chunk }];
+              });
+            }
           } else if (innerEvent.type === 'message' || innerEvent.type === 'text') {
-            setMessages(prev => [...prev, { role: 'assistant', text: innerEvent.text || innerEvent.content || '' }]);
+            setLoading(true);
+            const chunk = innerEvent.text || innerEvent.content || '';
+            if (chunk) {
+              setMessages(prev => {
+                const lastMsg = prev[prev.length - 1];
+                if (lastMsg && lastMsg.role === 'assistant') {
+                  const newText = chunk.startsWith(lastMsg.text) ? chunk : (lastMsg.text + chunk);
+                  return [...prev.slice(0, -1), { ...lastMsg, text: newText }];
+                }
+                return [...prev, { role: 'assistant', text: chunk }];
+              });
+            }
           } else if (innerEvent.type === 'done' || innerEvent.type === 'goal_done') {
             setLoading(false);
             setToolProgressMsg('');
