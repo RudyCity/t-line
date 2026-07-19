@@ -617,40 +617,47 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
 
   return (
     <div className="flex flex-col h-full bg-[#1e1e24] text-gray-200">
-      <div className="flex items-center justify-between px-4 py-3 bg-[#121214] border-b border-[#2d2d34]">
-        <div className="flex items-center gap-2">
-          <TerminalIcon className="w-5 h-5 text-indigo-400" />
-          <span className="font-semibold text-sm tracking-wide">SuperAgent Panel</span>
+      <div className="grid grid-cols-3 items-center px-4 py-2.5 bg-[#121214] border-b border-[#2d2d34] min-h-[48px]">
+        {/* Left Column */}
+        <div className="flex items-center gap-2 min-w-0">
+          <TerminalIcon className="w-4 h-4 text-indigo-400 shrink-0" />
+          <span className="font-semibold text-xs tracking-wide shrink-0">SuperAgent Panel</span>
           {workspace && (
-            <span className="bg-indigo-950 text-indigo-300 text-[10px] px-2 py-0.5 rounded border border-indigo-900/60 font-mono truncate max-w-xs flex items-center gap-1">
-              <Folder className="w-3 h-3 text-indigo-400" />
+            <span className="bg-indigo-950 text-indigo-300 text-[10px] px-1.5 py-0.5 rounded border border-indigo-900/60 font-mono truncate hidden sm:flex items-center gap-1">
+              <Folder className="w-2.5 h-2.5 text-indigo-400" />
               {workspace.split(/[/\\]/).pop()}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex bg-zinc-900 rounded-md p-0.5 border border-zinc-800">
+
+        {/* Center Column - Centered Tab Selectors */}
+        <div className="flex justify-center">
+          <div className="flex bg-[#161619] rounded-lg p-0.5 border border-zinc-800">
             <button
               onClick={() => setActiveTab('console')}
-              className={`px-3 py-1 text-xs rounded transition ${activeTab === 'console' ? 'bg-indigo-600 text-white font-medium' : 'text-zinc-400 hover:text-zinc-200'}`}
+              className={`px-3 py-1 text-[11px] rounded transition ${activeTab === 'console' ? 'bg-indigo-600 text-white font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}`}
             >
               Console
             </button>
             <button
               onClick={() => setActiveTab('audit')}
-              className={`px-3 py-1 text-xs rounded transition flex items-center gap-1.5 ${activeTab === 'audit' ? 'bg-indigo-600 text-white font-medium' : 'text-zinc-400 hover:text-zinc-200'}`}
+              className={`px-3 py-1 text-[11px] rounded transition flex items-center gap-1.5 ${activeTab === 'audit' ? 'bg-indigo-600 text-white font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}`}
             >
               <Shield className="w-3.5 h-3.5" />
               Audit Trails
             </button>
           </div>
+        </div>
+
+        {/* Right Column */}
+        <div className="flex justify-end gap-2 items-center">
           {loading && (
             <button
               onClick={handleAbort}
-              className="bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-2.5 py-1 rounded transition flex items-center gap-1 animate-pulse"
+              className="bg-red-650 hover:bg-red-600 text-white text-[10px] font-semibold px-2 py-1 rounded transition flex items-center gap-1 animate-pulse"
               title="Stop current agent execution"
             >
-              <Square className="w-3 h-3 fill-current" />
+              <Square className="w-2.5 h-2.5 fill-current" />
               Stop Agent
             </button>
           )}
@@ -674,16 +681,16 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
             {messages.map((msg, index) => (
               <div
                 key={index}
-                className={`p-3 rounded-lg border max-w-[85%] ${
+                className={`p-3 rounded-lg border w-full ${
                   msg.role === 'user'
-                    ? 'bg-indigo-950/40 border-indigo-900/60 ml-auto text-indigo-200'
+                    ? 'bg-indigo-950/20 border-indigo-900/30 text-indigo-200'
                     : msg.role === 'system'
-                    ? 'bg-zinc-900/50 border-zinc-800/80 text-zinc-400 text-xs text-center mx-auto w-full'
+                    ? 'bg-zinc-900/50 border-zinc-800/80 text-zinc-400 text-xs text-center'
                     : msg.role === 'tool'
-                    ? 'bg-amber-950/20 border-amber-900/40 mr-auto text-amber-200 font-mono text-xs w-[90%]'
+                    ? 'bg-amber-950/15 border-amber-900/30 text-amber-200 font-mono text-xs'
                     : msg.role === 'thought'
-                    ? 'bg-slate-900/80 border-slate-800/80 mr-auto text-slate-400 text-xs italic border-l-4 border-l-slate-500 pl-4 w-[90%]'
-                    : 'bg-zinc-900/80 border-zinc-800/80 mr-auto text-gray-300'
+                    ? 'bg-slate-900/40 border-slate-800/50 text-slate-400 text-xs italic border-l-4 border-l-slate-500 pl-4'
+                    : 'bg-zinc-900/40 border-zinc-800/50 text-gray-300'
                 }`}
               >
                 {msg.role !== 'system' && (
