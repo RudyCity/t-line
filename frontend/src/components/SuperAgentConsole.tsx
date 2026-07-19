@@ -843,13 +843,25 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
                 disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
                 style={{ height: 'auto', minHeight: '38px' }}
               />
-              <button
-                onClick={() => handleSend()}
-                disabled={loading || (!input.trim() && attachments.length === 0) || !ws || ws.readyState !== WebSocket.OPEN}
-                className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-600 transition px-4 py-2 rounded-lg text-white font-semibold flex items-center justify-center h-[38px] cursor-pointer shrink-0"
-              >
-                <Send className="w-4 h-4" />
-              </button>
+              {loading ? (
+                <button
+                  onClick={handleAbort}
+                  disabled={!ws || ws.readyState !== WebSocket.OPEN}
+                  className="bg-red-600 hover:bg-red-500 disabled:bg-zinc-800 disabled:text-zinc-600 transition px-4 py-2 rounded-lg text-white font-semibold flex items-center justify-center h-[38px] cursor-pointer shrink-0"
+                  title="Stop Execution"
+                >
+                  <Square className="w-4 h-4 fill-current" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleSend()}
+                  disabled={(!input.trim() && attachments.length === 0) || !ws || ws.readyState !== WebSocket.OPEN}
+                  className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-600 transition px-4 py-2 rounded-lg text-white font-semibold flex items-center justify-center h-[38px] cursor-pointer shrink-0"
+                  title="Send Message"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              )}
             </div>
             {/* Input Helpers Row & Preset Switcher */}
             <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-[10px] text-zinc-500 select-none font-sans border-t border-[#1a1a22] pt-1.5 mt-0.5">
