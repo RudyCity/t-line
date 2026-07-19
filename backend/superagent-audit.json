@@ -4973,5 +4973,115 @@
       "message": "Connected to local SuperAgent SSE events",
       "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
     }
+  },
+  {
+    "timestamp": "2026-07-19T22:20:53.681Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-19T22:20:53.700Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\superagent",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-19T22:21:08.730Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
+    }
+  },
+  {
+    "timestamp": "2026-07-19T22:21:11.737Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
+    }
+  },
+  {
+    "timestamp": "2026-07-19T22:21:33.507Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
+    }
+  },
+  {
+    "timestamp": "2026-07-19T22:21:43.927Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-19T22:21:43.947Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\superagent",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-19T22:21:44.098Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-19T22:21:57.252Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-19T22:21:57.266Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\superagent",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-19T22:22:02.043Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
+    }
+  },
+  {
+    "timestamp": "2026-07-19T22:22:12.306Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
+    }
+  },
+  {
+    "timestamp": "2026-07-19T22:22:15.294Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
+    }
   }
 ]

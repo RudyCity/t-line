@@ -553,6 +553,30 @@ app.post('/api/superagent/config/active-preset', authMiddleware, (req, res) => {
   }
 });
 
+app.get('/api/superagent/instances', authMiddleware, (req, res) => {
+  const request = http.get('http://127.0.0.1:7888/api/instances', { timeout: 1500 }, (resp) => {
+    let body = '';
+    resp.on('data', chunk => { body += chunk; });
+    resp.on('end', () => {
+      try {
+        const parsed = JSON.parse(body);
+        res.json(parsed);
+      } catch {
+        res.json({ subagents: [], superagents: [] });
+      }
+    });
+  });
+
+  request.on('error', () => {
+    res.json({ subagents: [], superagents: [] });
+  });
+
+  request.on('timeout', () => {
+    request.destroy();
+    res.json({ subagents: [], superagents: [] });
+  });
+});
+
 app.use('/api', gitRouter);
 app.use('/api/fs', fsRouter);
 
