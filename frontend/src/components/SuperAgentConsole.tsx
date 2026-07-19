@@ -703,8 +703,8 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
 
 
   return (
-    <div className="flex flex-col h-full bg-[#1e1e24] text-gray-200">
-      <div className="grid grid-cols-3 items-center px-4 py-2.5 bg-[#121214] border-b border-[#2d2d34] min-h-[48px]">
+    <div className="flex flex-col h-full w-full bg-[#1e1e24] text-gray-200 overflow-hidden">
+      <div className="grid grid-cols-3 items-center px-4 py-2.5 bg-[#121214] border-b border-[#2d2d34] min-h-[48px] w-full">
         {/* Left Column */}
         <div className="flex items-center gap-2 min-w-0">
           <TerminalIcon className="w-4 h-4 text-indigo-400 shrink-0" />
@@ -773,9 +773,9 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
       />
 
       {activeTab === 'console' ? (
-        <div className="flex-1 flex overflow-hidden relative">
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 font-mono text-sm leading-relaxed">
+        <div className="flex-1 flex overflow-hidden relative w-full">
+          <div className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 font-mono text-sm leading-relaxed w-full">
             {messages.map((msg, index) => (
               <div
                 key={index}

@@ -67,7 +67,7 @@ export function SuperAgentInputContainer({
   const modelName = mainModel.includes('/') ? mainModel.substring(mainModel.lastIndexOf('/') + 1) : mainModel;
 
   return (
-    <div ref={consoleContainerRef} className="p-4 bg-[#121214] border-t border-[#2d2d34] flex flex-col gap-1.5 relative">
+    <div ref={consoleContainerRef} className="p-4 bg-[#121214] border-t border-[#2d2d34] flex flex-col gap-1.5 relative w-full">
       {/* Hidden File Input */}
       <input
         type="file"

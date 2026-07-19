@@ -23,7 +23,7 @@ export function SuperAgentConsoleHeader({
   setConnectTrigger
 }: SuperAgentConsoleHeaderProps) {
   return (
-    <div className="bg-[#16161a] border-b border-[#2d2d34] px-4 py-2 flex flex-wrap items-center gap-4 text-xs select-none">
+    <div className="bg-[#16161a] border-b border-[#2d2d34] px-4 py-2 flex flex-wrap items-center gap-4 text-xs select-none w-full">
       <div className="flex flex-col gap-1">
         <label className="text-zinc-400 font-medium flex items-center gap-1">
           <Folder className="w-3 h-3 text-zinc-500" /> Active Workspace
