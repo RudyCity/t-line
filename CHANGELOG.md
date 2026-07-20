@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.542] - 2026-07-20
+
+### Fixed
+- **Missing RAM Stats Endpoint & Responsive Visibility in Footer (`server.ts`, `Footer.tsx`)**:
+  - Added missing `/api/system/stats` GET endpoint in `backend/src/server.ts` to return Node process memory usage (RSS, heapUsed, heapTotal) and OS system memory (total, free, platform).
+  - Fixed `useSystemStats` hook silently failing with 404 network error when fetching system stats.
+  - Adjusted the responsive Tailwind CSS breakpoint for RAM resource stats badge in `Footer.tsx` from `hidden lg:flex` to `hidden sm:flex`, ensuring RAM usage stays visible even on narrower or half-screen snapped windows.
+
 ## [1.3.541] - 2026-07-20
 
 ### Optimized

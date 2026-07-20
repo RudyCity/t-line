@@ -336,6 +336,22 @@ app.get('/api/terminals/active', authMiddleware, (req, res) => {
   res.json(terminalManager.listTerminals());
 });
 
+app.get('/api/system/stats', authMiddleware, (_req, res) => {
+  const memoryUsage = process.memoryUsage();
+  res.json({
+    backend: {
+      rss: memoryUsage.rss,
+      heapUsed: memoryUsage.heapUsed,
+      heapTotal: memoryUsage.heapTotal,
+    },
+    system: {
+      total: os.totalmem(),
+      free: os.freemem(),
+      platform: os.platform(),
+    }
+  });
+});
+
 // Centralized tab and quick-launch state sync
 const SYNC_FILE = path.join(os.homedir(), '.tline-sync.json');
 

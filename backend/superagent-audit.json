@@ -1,231 +1,5 @@
 [
   {
-    "timestamp": "2026-07-20T07:33:06.812Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "done"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:06.831Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "done"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:22.993Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "socket hang up"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:23.016Z",
-    "type": "system",
-    "data": {
-      "message": "Auto-starting SuperAgent server process",
-      "workspacePath": "D:\\backup from pc asus\\Documents Development\\superagent",
-      "agentMode": "single",
-      "customArgs": ""
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:24.435Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "socket hang up"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:24.544Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "socket hang up"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:24.582Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "socket hang up"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:24.625Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "socket hang up"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:24.648Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "socket hang up"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:39.501Z",
-    "type": "system",
-    "data": {
-      "message": "Connected to local SuperAgent SSE events",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:39.698Z",
-    "type": "system",
-    "data": {
-      "message": "Connected to local SuperAgent SSE events",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:39.772Z",
-    "type": "system",
-    "data": {
-      "message": "Connected to local SuperAgent SSE events",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:39.792Z",
-    "type": "system",
-    "data": {
-      "message": "Connected to local SuperAgent SSE events",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:40.419Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "socket hang up"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:40.439Z",
-    "type": "system",
-    "data": {
-      "message": "Auto-starting SuperAgent server process",
-      "workspacePath": "D:\\backup from pc asus\\Documents Development\\superagent",
-      "agentMode": "single",
-      "customArgs": ""
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:40.475Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "socket hang up"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:40.500Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "socket hang up"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:40.522Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "socket hang up"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:41.040Z",
-    "type": "system",
-    "data": {
-      "message": "Connected to local SuperAgent SSE events",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:50.358Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "socket hang up"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:50.381Z",
-    "type": "system",
-    "data": {
-      "message": "Auto-starting SuperAgent server process",
-      "workspacePath": "D:\\backup from pc asus\\Documents Development\\superagent",
-      "agentMode": "single",
-      "customArgs": ""
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:50.404Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "socket hang up"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:50.426Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "socket hang up"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:37:58.558Z",
-    "type": "system",
-    "data": {
-      "message": "Connected to local SuperAgent SSE events",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:38:05.454Z",
-    "type": "system",
-    "data": {
-      "message": "Connected to local SuperAgent SSE events",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:38:05.481Z",
-    "type": "system",
-    "data": {
-      "message": "Connected to local SuperAgent SSE events",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:38:05.500Z",
-    "type": "system",
-    "data": {
-      "message": "Connected to local SuperAgent SSE events",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
-    }
-  },
-  {
     "timestamp": "2026-07-20T07:38:05.519Z",
     "type": "system",
     "data": {
@@ -10281,6 +10055,228 @@
     "type": "system_error",
     "data": {
       "message": "Failed to send prompt to SuperAgent",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:43:37.050Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:43:37.078Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:43:37.230Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:43:37.333Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:43:37.423Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:43:37.493Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:43:37.512Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:43:40.112Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:17.290Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:17.305Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:17.358Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:17.586Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:17.612Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:17.701Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:17.821Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:17.849Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:20.336Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:21.787Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:21.804Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:21.828Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:21.931Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:22.044Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:22.069Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:22.160Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:22.229Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:22.255Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:44:24.821Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
       "error": "connect ECONNREFUSED 127.0.0.1:7888"
     }
   }

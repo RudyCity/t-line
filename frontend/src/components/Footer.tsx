@@ -182,10 +182,10 @@ export function Footer({
           </span>
         )}
 
-        {/* System Resource Stats — hidden on mobile & tablet */}
+        {/* System Resource Stats — visible on small screens and up */}
         {systemStats && (
           <div 
-            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all duration-200 shadow-inner cursor-default relative group"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all duration-200 shadow-inner cursor-default relative group"
             style={{
               backgroundColor: 'color-mix(in srgb, var(--bg-main) 60%, transparent)',
               borderColor: 'var(--border-color)',
