@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.583] - 2026-07-21
+
+### Changed
+- **Default Expanded Tool Use in SuperAgent Chat (`SuperAgentGroupedMessages.tsx`)**:
+  - Updated `CollapsibleProcessBlock` in SuperAgent chat UI so process steps and tool usage default to expanded (`expanded = true`) across active and historical chat turns.
+  - Removed auto-collapsing on response completion, ensuring tool execution steps (`Read file`, `Ran command`, `Searched`, etc.) remain visible by default in SuperAgent chat log.
+
 ## [1.3.582] - 2026-07-21
 
 ### Fixed

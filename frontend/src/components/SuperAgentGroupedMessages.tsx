@@ -80,27 +80,16 @@ function CollapsibleProcessBlock({
   isLastTurn: boolean;
   isStreaming?: boolean;
 }) {
-  // Default to expanded while streaming on the last turn
-  const [expanded, setExpanded] = useState<boolean>(Boolean(isLastTurn && isStreaming));
+  // Always default to expanded so tool usage is displayed by default
+  const [expanded, setExpanded] = useState<boolean>(true);
   const userToggledRef = React.useRef<boolean>(false);
   const prevStreamingRef = React.useRef<boolean | undefined>(isStreaming);
 
-  // Manage expansion state: keep expanded while streaming/running on active turn until final response arrives
+  // Manage expansion state: keep expanded so thinking & tool usage remain visible by default
   useEffect(() => {
-    const wasStreaming = prevStreamingRef.current;
-    const nowStreaming = Boolean(isStreaming);
-
-    // 1. Streaming or loading is active on the last turn -> force expand block so thinking & tool usage are live
-    if (isLastTurn && nowStreaming) {
+    if (isLastTurn && isStreaming && !userToggledRef.current) {
       setExpanded(true);
-      userToggledRef.current = false;
     }
-    // 2. Final response complete (streaming transitioned from true to false) -> auto collapse
-    else if (isLastTurn && wasStreaming && !nowStreaming) {
-      setExpanded(false);
-      userToggledRef.current = false;
-    }
-
     prevStreamingRef.current = isStreaming;
   }, [msgs.length, isLastTurn, isStreaming]);
 
