@@ -181,6 +181,27 @@ async function apiDeleteSession(workspace: string, sessionId: string): Promise<b
   return false;
 }
 
+export function generateSessionTitle(messages: SuperAgentMessage[]): string {
+  const userMsgs = messages.filter(m => m.role === 'user' && m.text && m.text.trim());
+  if (userMsgs.length === 0) return 'New Chat';
+
+  const firstMsg = userMsgs[0].text.trim().split('\n')[0];
+  const firstShort = firstMsg.length > 22 ? firstMsg.slice(0, 22) + '...' : firstMsg;
+
+  if (userMsgs.length === 1) {
+    return firstShort;
+  }
+
+  const lastMsg = userMsgs[userMsgs.length - 1].text.trim().split('\n')[0];
+  const lastShort = lastMsg.length > 22 ? lastMsg.slice(0, 22) + '...' : lastMsg;
+
+  if (firstShort === lastShort) {
+    return firstShort;
+  }
+
+  return `${firstShort} ➔ ${lastShort}`;
+}
+
 export function useSuperAgentSessions(workspace: string) {
   const [sessions, setSessions] = useState<ChatSession[]>(() => loadWorkspaceSessions(workspace));
   const [activeSessionId, setActiveSessionId] = useState<string>(() => {
@@ -295,15 +316,7 @@ export function useSuperAgentSessions(workspace: string) {
         if (targetIdx < 0) return prevSessions;
 
         const currentSession = prevSessions[targetIdx];
-        let newTitle = currentSession.title;
-
-        if (newTitle === 'New Chat') {
-          const firstUserMsg = messages.find(m => m.role === 'user');
-          if (firstUserMsg && firstUserMsg.text) {
-            const line = firstUserMsg.text.trim().split('\n')[0];
-            newTitle = line.length > 30 ? line.slice(0, 30) + '...' : line;
-          }
-        }
+        const newTitle = generateSessionTitle(messages);
 
         const updated = [...prevSessions];
         const updatedSession = {

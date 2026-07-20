@@ -1,6 +1,6 @@
 {
   "name": "desktop-tauri",
-  "version": "1.3.515",
+  "version": "1.3.516",
   "private": true,
   "scripts": {
     "copy-assets": "node copy-assets.js",

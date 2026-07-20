@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.516] - 2026-07-20
+
+### Added & Improved
+- **First Chat ➔ Last Chat Session Title Formatting**:
+  - Implemented `generateSessionTitle(messages)` in `useSuperAgentSessions.ts`
+  - Chat session titles are now automatically formatted as `First Chat ➔ Last Chat` (e.g. `hai ➔ chat nya juga di buat...`)
+  - Ensures session titles in the history sidebar dynamically reflect both the initial prompt and the latest topic of discussion
+
 ## [1.3.515] - 2026-07-20
 
 ### Added & Optimized
