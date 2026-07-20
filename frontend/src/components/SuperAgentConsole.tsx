@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Terminal as TerminalIcon, RefreshCw, Shield, Square, Folder, Sparkles, Activity, Settings } from 'lucide-react';
+import { Terminal as TerminalIcon, RefreshCw, Shield, Square, Folder, Sparkles, Activity, Settings, History } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { SuperAgentAuditLogs } from './SuperAgentAuditLogs';
@@ -10,6 +10,8 @@ import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
 import { SuperAgentInputContainer } from './SuperAgentInputContainer';
 import { SuperAgentSettingsMenu } from './SuperAgentSettingsMenu';
 import { SuperAgentMessageItem } from './SuperAgentMessageItem';
+import { SuperAgentHistorySidebar } from './SuperAgentHistorySidebar';
+import { useSuperAgentSessions } from './useSuperAgentSessions';
 
 interface SuperAgentConsoleProps {
   activeWorkspacePath?: string;
@@ -21,32 +23,19 @@ interface SuperAgentConsoleProps {
 export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpenSettings, onLoadingChange }: SuperAgentConsoleProps) {
   // Workspace & Config state
   const [workspace, setWorkspace] = useState(() => activeWorkspacePath || localStorage.getItem('currentWorkspace') || '');
-  const prevWorkspaceRef = useRef(workspace);
 
-  const [messages, setMessages] = useState<Array<{
-    role: 'user' | 'assistant' | 'system' | 'tool' | 'thought';
-    text: string;
-    toolName?: string;
-    args?: any;
-    result?: any;
-  }>>(() => {
-    try {
-      const initWs = activeWorkspacePath || localStorage.getItem('currentWorkspace') || '';
-      const key = `superagent_messages_${initWs || 'default'}`;
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error('Failed to load persisted superagent messages:', e);
-    }
-    return [
-      { role: 'system', text: 'SuperAgent ready. Connected to t-line workspace context.' }
-    ];
-  });
+  // Session & Chat History management
+  const [showHistorySidebar, setShowHistorySidebar] = useState<boolean>(true);
+  const {
+    sessions,
+    activeSessionId,
+    messages,
+    setMessages,
+    handleSelectSession,
+    handleNewChat,
+    handleDeleteSession,
+    handleRenameSession
+  } = useSuperAgentSessions(workspace);
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -59,49 +48,17 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   const [connectTrigger, setConnectTrigger] = useState(0);
   const isAbortedRef = useRef<boolean>(false);
 
-  // Persist messages whenever they change
-  useEffect(() => {
-    if (messages && messages.length > 0) {
-      try {
-        const key = `superagent_messages_${workspace || 'default'}`;
-        localStorage.setItem(key, JSON.stringify(messages.slice(-300)));
-      } catch (e) {
-        console.error('Failed to persist superagent messages:', e);
-      }
-    }
-  }, [messages, workspace]);
-
   // Notify parent of AI agent loading state
   useEffect(() => {
     onLoadingChange?.(loading);
   }, [loading, onLoadingChange]);
 
-  // Sync workspace prop and load messages when workspace changes
+  // Sync workspace prop when activeWorkspacePath changes
   useEffect(() => {
     if (activeWorkspacePath && activeWorkspacePath !== workspace) {
       setWorkspace(activeWorkspacePath);
     }
   }, [activeWorkspacePath]);
-
-  useEffect(() => {
-    if (prevWorkspaceRef.current !== workspace) {
-      prevWorkspaceRef.current = workspace;
-      try {
-        const key = `superagent_messages_${workspace || 'default'}`;
-        const saved = localStorage.getItem(key);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setMessages(parsed);
-            return;
-          }
-        }
-      } catch (e) {}
-      setMessages([
-        { role: 'system', text: `SuperAgent ready. Workspace: ${workspace || 'Default'}` }
-      ]);
-    }
-  }, [workspace]);
 
   interface ModelPreset {
     id: string;
@@ -750,10 +707,19 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
       <div className="grid grid-cols-3 items-center px-4 py-2.5 bg-[#090c14] border-b border-zinc-800/80 min-h-[48px] w-full shadow-sm">
         {/* Left Column */}
         <div className="flex items-center gap-2 min-w-0">
+          <button
+            onClick={() => setShowHistorySidebar(!showHistorySidebar)}
+            className={`p-1.5 rounded-md border transition flex items-center gap-1 cursor-pointer font-medium ${
+              showHistorySidebar ? 'bg-indigo-950/80 border-indigo-700/80 text-indigo-300 shadow-sm' : 'bg-[#121622] border-zinc-800 text-zinc-400 hover:text-zinc-200'
+            }`}
+            title="Toggle Chat History Sidebar"
+          >
+            <History className="w-3.5 h-3.5" />
+          </button>
           <TerminalIcon className="w-4 h-4 text-indigo-400 shrink-0" />
-          <span className="font-semibold text-xs tracking-wide shrink-0">SuperAgent Panel</span>
+          <span className="font-semibold text-xs tracking-wide shrink-0 hidden sm:inline">SuperAgent</span>
           {workspace && (
-            <span className="bg-indigo-950/70 text-indigo-300 text-[10px] px-2 py-0.5 rounded-md border border-indigo-800/60 font-mono truncate hidden sm:flex items-center gap-1">
+            <span className="bg-indigo-950/70 text-indigo-300 text-[10px] px-2 py-0.5 rounded-md border border-indigo-800/60 font-mono truncate hidden md:flex items-center gap-1">
               <Folder className="w-2.5 h-2.5 text-indigo-400" />
               {workspace.split(/[/\\]/).pop()}
             </span>
@@ -837,6 +803,18 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
 
       {activeTab === 'console' ? (
         <div className="flex-1 flex overflow-hidden relative w-full">
+          {/* Left Chat History Sidebar */}
+          {showHistorySidebar && (
+            <SuperAgentHistorySidebar
+              sessions={sessions}
+              activeSessionId={activeSessionId}
+              onSelectSession={handleSelectSession}
+              onNewChat={handleNewChat}
+              onDeleteSession={handleDeleteSession}
+              onRenameSession={handleRenameSession}
+            />
+          )}
+
           <div className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0">
             <div className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-xs leading-relaxed w-full">
             {messages.map((msg, index) => (

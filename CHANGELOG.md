@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.497] - 2026-07-20
+
+### Added
+- **SuperAgent Left Chat History & New Chat Feature**:
+  - Implemented collapsible left history sidebar [SuperAgentHistorySidebar.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentHistorySidebar.tsx) featuring a prominent **+ New Chat** button, real-time title search filter, dynamic title editing/renaming, and session deletion.
+  - Added multi-session state hook [useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts) with workspace-keyed `localStorage` persistence, automatic session creation, title auto-generation from first user prompt, and backward-compatible migration from legacy single-session storage.
+  - Integrated history toggle button (`History` icon) into the header of [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx).
+
 ## [1.3.496] - 2026-07-20
 
 ### Fixed
