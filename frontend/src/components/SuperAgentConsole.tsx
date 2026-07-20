@@ -445,7 +445,6 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
     if (attachments.length > 0) {
       const documentParts: string[] = [];
       const imageParts: string[] = [];
-
       for (const att of attachments) {
         try {
           if (att.type === 'document') {
@@ -459,13 +458,8 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
           console.error('Failed to read file:', att.file.name, err);
         }
       }
-
-      if (documentParts.length > 0) {
-        finalPrompt += '\n\n[Attached Files]:' + documentParts.join('');
-      }
-      if (imageParts.length > 0) {
-        finalPrompt += '\n\n[Attached Images]:' + imageParts.join('');
-      }
+      if (documentParts.length > 0) finalPrompt += '\n\n[Attached Files]:' + documentParts.join('');
+      if (imageParts.length > 0) finalPrompt += '\n\n[Attached Images]:' + imageParts.join('');
     }
 
     // Clean up previews
@@ -614,6 +608,20 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
     setMessages(prev => [...prev, { role: 'system', text: '⏹️ Agent execution stopped by user.' }]);
   };
 
+  const handleSelectSessionWrapped = (id: string) => {
+    isAbortedRef.current = true;
+    setLoading(false); setToolProgressMsg(''); setPendingPermission(null);
+    setPendingQuestion(null); setPendingPlanApproval(false);
+    handleSelectSession(id);
+  };
+
+  const handleNewChatWrapped = () => {
+    isAbortedRef.current = true;
+    setLoading(false); setToolProgressMsg(''); setPendingPermission(null);
+    setPendingQuestion(null); setPendingPlanApproval(false);
+    handleNewChat();
+  };
+
   const handlePermissionDecision = (approval: boolean | 'session') => {
     if (!pendingPermission || !ws) return;
     ws.send(JSON.stringify({
@@ -753,8 +761,8 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
               <SuperAgentHistorySidebar
                 sessions={sessions}
                 activeSessionId={activeSessionId}
-                onSelectSession={handleSelectSession}
-                onNewChat={handleNewChat}
+                onSelectSession={handleSelectSessionWrapped}
+                onNewChat={handleNewChatWrapped}
                 onDeleteSession={handleDeleteSession}
                 onRenameSession={handleRenameSession}
                 hasMoreSessions={hasMoreSessions}

@@ -252,23 +252,30 @@ export function useSuperAgentSessions(workspace: string) {
   const syncSessions = useCallback(async (wsPath: string, preserveActiveId?: string) => {
     const res = await apiGetSessions(wsPath, SESSION_PAGE_SIZE, 0);
     if (res && res.sessions.length > 0) {
-      setSessions(res.sessions);
+      setSessions(prev => {
+        const serverIds = new Set(res.sessions.map(s => s.id));
+        const localOnly = prev.filter(s => !serverIds.has(s.id));
+        return [...localOnly, ...res.sessions];
+      });
       setHasMoreSessions(res.hasMore);
       currentSessionOffsetRef.current = SESSION_PAGE_SIZE;
       
-      let activeId = res.sessions[0].id;
-      if (preserveActiveId && res.sessions.some(s => s.id === preserveActiveId)) {
-        activeId = preserveActiveId;
-      }
+      const targetActiveId = preserveActiveId || activeSessionIdRef.current || res.sessions[0].id;
       
-      setActiveSessionId(activeId);
-      // Load initial page (latest messages)
-      const result = await apiGetSessionMessages(wsPath, activeId, PAGE_SIZE, 0);
-      if (result) {
-        setMessages(result.messages);
-        setHasMore(result.hasMore);
-        currentOffsetRef.current = PAGE_SIZE;
-        loadedSessionIdRef.current = activeId;
+      if (res.sessions.some(s => s.id === targetActiveId)) {
+        setActiveSessionId(targetActiveId);
+        const result = await apiGetSessionMessages(wsPath, targetActiveId, PAGE_SIZE, 0);
+        if (result) {
+          setMessages(result.messages);
+          setHasMore(result.hasMore);
+          currentOffsetRef.current = PAGE_SIZE;
+          loadedSessionIdRef.current = targetActiveId;
+          return;
+        }
+      } else {
+        // Target active ID is a local-only session (e.g., brand new chat)
+        setActiveSessionId(targetActiveId);
+        loadedSessionIdRef.current = targetActiveId;
         return;
       }
     }
@@ -451,6 +458,9 @@ export function useSuperAgentSessions(workspace: string) {
     try {
       localStorage.setItem(`superagent_messages_${wsKey}_${newId}`, JSON.stringify([]));
     } catch (e) {}
+
+    // Register session on backend server
+    apiSaveSession(workspace, newSession, []);
   }, [workspace]);
 
   const handleDeleteSession = useCallback(async (id: string, e: React.MouseEvent) => {

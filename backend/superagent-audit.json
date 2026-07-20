@@ -1,648 +1,5 @@
 [
   {
-    "timestamp": "2026-07-20T07:32:51.636Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 1s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:51.651Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 1s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:52.590Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\r\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:52.609Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\r\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:52.631Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\r\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:52.647Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\r\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:52.667Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\r\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:58.614Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n[SYS] Communication error: Failed after 3 attempts. Last error: Cannot connect to API: . Retrying in 10s (attempt 2/3)...\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:58.633Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 10s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:58.651Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n[SYS] Communication error: Failed after 3 attempts. Last error: Cannot connect to API: . Retrying in 10s (attempt 2/3)...\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:58.667Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 10s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:58.685Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n[SYS] Communication error: Failed after 3 attempts. Last error: Cannot connect to API: . Retrying in 10s (attempt 2/3)...\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:58.704Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 10s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:58.720Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n[SYS] Communication error: Failed after 3 attempts. Last error: Cannot connect to API: . Retrying in 10s (attempt 2/3)...\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:58.737Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 10s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:58.754Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n[SYS] Communication error: Failed after 3 attempts. Last error: Cannot connect to API: . Retrying in 10s (attempt 2/3)...\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:58.772Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 10s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:59.620Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 9s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:59.645Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 9s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:59.665Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 9s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:59.686Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 9s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:32:59.706Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 9s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:00.625Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 8s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:00.648Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 8s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:00.664Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 8s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:00.686Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 8s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:00.710Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 8s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:01.635Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 7s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:01.656Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 7s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:01.672Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 7s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:01.688Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 7s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:01.704Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 7s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:02.639Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 6s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:02.653Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 6s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:02.670Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 6s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:02.691Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 6s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:02.712Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 6s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:03.643Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 5s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:03.665Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 5s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:03.685Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 5s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:03.703Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 5s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:03.722Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 5s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:04.653Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 4s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:04.669Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 4s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:04.689Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 4s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:04.711Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 4s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:04.729Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 4s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:05.661Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 3s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:05.682Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 3s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:05.699Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 3s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:05.715Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 3s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:05.731Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\rRetrying in 3s... "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:06.101Z",
-    "type": "abort_request",
-    "data": {
-      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:06.656Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n\n[Interrupted]"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:06.677Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n\n[Interrupted]"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:06.696Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n\n[Interrupted]"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:06.715Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "done"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:06.734Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n\n[Interrupted]"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:06.754Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "done"
-      }
-    }
-  },
-  {
     "timestamp": "2026-07-20T07:33:06.771Z",
     "type": "agent_event",
     "data": {
@@ -10423,6 +9780,513 @@
     "data": {
       "message": "Failed to connect to SuperAgent server",
       "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:07.751Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:07.778Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:07.826Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:18.279Z",
+    "type": "prompt",
+    "data": {
+      "text": "hai",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:18.401Z",
+    "type": "chat_response",
+    "data": {
+      "success": true,
+      "sessionId": "sess_1784535336697_58pf5g"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:18.693Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:18.711Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "checkpoint_auto",
+        "name": "Auto: User message at 15.22.18",
+        "id": "chk_1784535738688"
+      }
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:18.729Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:18.748Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "checkpoint_auto",
+        "name": "Auto: User message at 15.22.18",
+        "id": "chk_1784535738688"
+      }
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:18.765Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:18.782Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "checkpoint_auto",
+        "name": "Auto: User message at 15.22.18",
+        "id": "chk_1784535738688"
+      }
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:18.803Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:18.821Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "checkpoint_auto",
+        "name": "Auto: User message at 15.22.18",
+        "id": "chk_1784535738688"
+      }
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:18.842Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:18.861Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "checkpoint_auto",
+        "name": "Auto: User message at 15.22.18",
+        "id": "chk_1784535738688"
+      }
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:31.438Z",
+    "type": "abort_request",
+    "data": {
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:32.426Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "read ECONNRESET"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:32.443Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:32.465Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "read ECONNRESET"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:32.485Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "read ECONNRESET"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:32.503Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "read ECONNRESET"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:32.520Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "read ECONNRESET"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:35.462Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:39.874Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:39.892Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:39.994Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:40.065Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:40.149Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:42.907Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:43.586Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:43.601Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:43.622Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:43.642Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:43.659Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:22:46.612Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:07.893Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:07.905Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:07.925Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:07.940Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:07.958Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:10.916Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:12.454Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:12.474Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:12.497Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:12.515Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:12.532Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:15.498Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:21.183Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:21.202Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:21.223Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:21.326Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:21.403Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:24.212Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:41.014Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:41.034Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:41.165Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:41.236Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:41.272Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:23:44.047Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
     }
   }
 ]

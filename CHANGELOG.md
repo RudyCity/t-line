@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.540] - 2026-07-20
+
+### Fixed
+- **Unsaved "New Chat" Session Reset & Chat Stream Leak Fix (`useSuperAgentSessions.ts`, `SuperAgentConsole.tsx`)**:
+  - Fixed a critical bug in `useSuperAgentSessions.ts` where creating a new chat session (`+ New Chat`) was overwritten and reset back to the previous chat session whenever `syncSessions` or `superagent-sessions-changed` was triggered before a prompt was sent.
+  - `syncSessions` now preserves local-only unsaved sessions (`localOnly`) and keeps `activeSessionIdRef.current` active without wiping out empty chat messages or jumping back to older history.
+  - `handleNewChat` now immediately invokes `apiSaveSession(workspace, newSession, [])` to register new session IDs (`/api/init`) with the backend server upon creation.
+  - Wrapped `handleSelectSession` and `handleNewChat` in `SuperAgentConsole.tsx` to set `isAbortedRef.current = true` and clear loading/progress/permission states on session switch, preventing in-flight SSE stream chunks from leaking into newly selected or created chat sessions.
+
 ## [1.3.539] - 2026-07-20
 
 ### Fixed
