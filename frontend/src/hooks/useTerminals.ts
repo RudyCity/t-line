@@ -552,16 +552,27 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     onTerminalOpen?.();
   }, [tabs, onTerminalOpen]);
   const openAgentTab = useCallback((workspaceId?: string) => {
-    const tabId = `agent-${Date.now()}`;
-    const newTab: TabData = {
-      id: tabId,
-      name: 'SuperAgent',
-      type: 'agent',
-      workspaceId
-    };
-    setTabs(prev => [...prev, newTab]);
-    setActiveTabId(tabId);
-    onTerminalOpen?.();
+    // Enforce single-tab rule: reuse existing agent tab instead of creating a new one
+    setTabs(prev => {
+      const existingAgentTab = prev.find(t => t.type === 'agent' && !t.isDetached);
+      if (existingAgentTab) {
+        // Switch to the existing agent tab
+        setActiveTabId(existingAgentTab.id);
+        onTerminalOpen?.();
+        return prev;
+      }
+      // No agent tab exists, create one
+      const tabId = `agent-${Date.now()}`;
+      const newTab: TabData = {
+        id: tabId,
+        name: 'SuperAgent',
+        type: 'agent',
+        workspaceId
+      };
+      setActiveTabId(tabId);
+      onTerminalOpen?.();
+      return [...prev, newTab];
+    });
   }, [onTerminalOpen]);
   const closeTerminal = useCallback((tabId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
