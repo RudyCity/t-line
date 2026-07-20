@@ -81,7 +81,8 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   const [isLoadingMonitor, setIsLoadingMonitor] = useState<boolean>(false);
 
   // Resizable Sidebars state & drag handlers
-  const { historyWidth, monitorWidth, startResizingLeft, startResizingRight } = useSidebarResize();
+  const mainConsoleRef = useRef<HTMLDivElement>(null);
+  const { historyWidth, monitorWidth, isResizingLeft, isResizingRight, startResizingLeft, startResizingRight } = useSidebarResize(mainConsoleRef);
 
   const fetchMonitorData = async () => {
     if (!workspace) return;
@@ -805,10 +806,10 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
       </div>
 
       {activeTab === 'console' ? (
-        <div className="flex-1 flex overflow-hidden relative w-full">
+        <div ref={mainConsoleRef} className="flex-1 flex overflow-hidden relative w-full">
           {/* Left Resizable Chat History Sidebar */}
           {showHistorySidebar && (
-            <div style={{ width: `${historyWidth}px` }} className="h-full shrink-0 flex relative min-w-[160px] max-w-[500px]">
+            <div style={{ width: `${historyWidth}px` }} className="h-full shrink-0 relative min-w-[160px] max-w-[500px]">
               <SuperAgentHistorySidebar
                 sessions={sessions}
                 activeSessionId={activeSessionId}
@@ -817,12 +818,16 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
                 onDeleteSession={handleDeleteSession}
                 onRenameSession={handleRenameSession}
               />
-              <div
-                onMouseDown={startResizingLeft}
-                className="w-1.5 hover:w-2 hover:bg-indigo-500/80 bg-zinc-800/80 cursor-col-resize select-none transition-all h-full shrink-0 z-20 hover:shadow-lg"
-                title="Drag to resize History panel"
-              />
             </div>
+          )}
+
+          {/* Left Resizer Drag Handle */}
+          {showHistorySidebar && (
+            <div
+              onMouseDown={startResizingLeft}
+              className="w-1.5 hover:w-2 hover:bg-indigo-500/90 bg-zinc-800/80 cursor-col-resize select-none transition-all h-full shrink-0 z-20 hover:shadow-lg active:bg-indigo-600"
+              title="Drag to resize History panel"
+            />
           )}
 
           <div className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0">
@@ -930,14 +935,18 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
             />
           </div>
 
+          {/* Right Resizer Drag Handle */}
+          {showSidebar && (
+            <div
+              onMouseDown={startResizingRight}
+              className="w-1.5 hover:w-2 hover:bg-indigo-500/90 bg-zinc-800/80 cursor-col-resize select-none transition-all h-full shrink-0 z-20 hover:shadow-lg active:bg-indigo-600"
+              title="Drag to resize Monitor panel"
+            />
+          )}
+
           {/* Right Resizable Live Monitor Sidebar */}
           {showSidebar && (
-            <div style={{ width: `${monitorWidth}px` }} className="h-full shrink-0 flex relative min-w-[180px] max-w-[600px]">
-              <div
-                onMouseDown={startResizingRight}
-                className="w-1.5 hover:w-2 hover:bg-indigo-500/80 bg-zinc-800/80 cursor-col-resize select-none transition-all h-full shrink-0 z-20 hover:shadow-lg"
-                title="Drag to resize Monitor panel"
-              />
+            <div style={{ width: `${monitorWidth}px` }} className="h-full shrink-0 relative min-w-[180px] max-w-[600px]">
               <SuperAgentSidebar
                 workspacePath={workspace}
                 getAuthHeader={getAuthHeader}
@@ -949,6 +958,11 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
                 isLoadingData={isLoadingMonitor}
               />
             </div>
+          )}
+
+          {/* Drag Overlay to prevent mouse event loss */}
+          {(isResizingLeft || isResizingRight) && (
+            <div className="fixed inset-0 z-50 cursor-col-resize select-none bg-transparent" />
           )}
         </div>
       ) : (

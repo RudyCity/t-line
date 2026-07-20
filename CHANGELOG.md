@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.501] - 2026-07-20
+
+### Fixed
+- **Sidebar Drag Resizing Math & Event Overlay**:
+  - Updated [useSidebarResize.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSidebarResize.ts) to calculate relative offsets using `getBoundingClientRect()` of the main console container (`e.clientX - rect.left` for History, `rect.right - e.clientX` for Monitor).
+  - Solved screen position jump bugs when workspace sidebars or split panels are present.
+  - Added standalone resizer drag bars (`col-resize`) with glowing hover states and a global drag overlay in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) to prevent iframe/mouse selection traps during active dragging.
+
 ## [1.3.500] - 2026-07-20
 
 ### Added
