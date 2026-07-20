@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.533] - 2026-07-20
+
+### Fixed & Added
+- **Delete Confirmation & Session Purge (`SuperAgentHistorySidebar.tsx`, `sessionManager.ts`)**:
+  - Added inline confirmation buttons ("Hapus chat?" -> `Hapus` / `Batal`) when clicking the delete icon in [SuperAgentHistorySidebar.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentHistorySidebar.tsx) to prevent accidental deletions.
+  - Fixed backend session deletion logic in [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) to explicitly purge all session messages and session records inside a database transaction.
+
 ## [1.3.532] - 2026-07-20
 
 ### Fixed & Enhanced

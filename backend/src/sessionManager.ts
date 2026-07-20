@@ -583,7 +583,7 @@ export function saveWorkspaceSession(
   }
 }
 
-/** Delete a session (CASCADE deletes messages too) */
+/** Delete a session (explicitly purge messages and session record) */
 export function deleteWorkspaceSession(_workspace: string, prefixedId: string) {
   let sessionId = prefixedId;
   if (prefixedId.includes('::')) {
@@ -592,8 +592,13 @@ export function deleteWorkspaceSession(_workspace: string, prefixedId: string) {
 
   try {
     const db = getDb();
-    db.pragma('foreign_keys = ON');
-    db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
+    const deleteMsgsStmt = db.prepare('DELETE FROM messages WHERE session_id = ?');
+    const deleteSessionStmt = db.prepare('DELETE FROM sessions WHERE id = ?');
+    
+    db.transaction(() => {
+      deleteMsgsStmt.run(sessionId);
+      deleteSessionStmt.run(sessionId);
+    })();
   } catch (e) {
     console.error(`[SessionManager] deleteWorkspaceSession error for ${prefixedId}:`, e);
   }

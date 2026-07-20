@@ -35,6 +35,23 @@ export function SuperAgentHistorySidebar({
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleStartDelete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeletingId(id);
+  };
+
+  const handleConfirmDelete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeletingId(null);
+    onDeleteSession(id, e);
+  };
+
+  const handleCancelDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeletingId(null);
+  };
 
   const filteredSessions = useMemo(() => {
     if (!searchQuery.trim()) return sessions;
@@ -197,6 +214,26 @@ export function SuperAgentHistorySidebar({
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </form>
+                ) : deletingId === session.id ? (
+                  <div className="flex items-center justify-between w-full px-1 text-xs">
+                    <span className="text-rose-400 font-medium text-[11px] truncate">Hapus chat?</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={(e) => handleConfirmDelete(session.id, e)}
+                        className="px-1.5 py-0.5 bg-rose-600 hover:bg-rose-500 text-white rounded text-[10px] font-semibold transition"
+                        title="Ya, hapus"
+                      >
+                        Hapus
+                      </button>
+                      <button
+                        onClick={handleCancelDelete}
+                        className="px-1.5 py-0.5 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded text-[10px] transition"
+                        title="Batal"
+                      >
+                        Batal
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <>
                     <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
@@ -219,7 +256,7 @@ export function SuperAgentHistorySidebar({
                         </button>
                       )}
                       <button
-                        onClick={(e) => onDeleteSession(session.id, e)}
+                        onClick={(e) => handleStartDelete(session.id, e)}
                         className="p-1 text-zinc-400 hover:text-rose-400 rounded transition"
                         title="Delete chat"
                       >
