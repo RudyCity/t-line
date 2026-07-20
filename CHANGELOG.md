@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.544] - 2026-07-20
+
+### Fixed
+- **SuperAgent ECONNREFUSED 127.0.0.1:7888 Auto-Recovery & Resilient Reconnection (`superAgentBridge.ts`)**:
+  - Registered an `exit` event listener on `autoSuperAgentProcess` to immediately reset process reference when the background `superagent --server` process exits or is killed.
+  - Added auto-start verification and `ECONNREFUSED` exception handling in `superAgentBridge.ts` when processing `prompt` messages. If the SuperAgent server process is unreachable or terminated, `superAgentBridge` automatically spawns `superagent --server`, initializes the session, and retries prompt delivery seamlessly.
+
 ## [1.3.543] - 2026-07-20
 
 ### Fixed

@@ -159,10 +159,17 @@ function ensureSuperAgentServer(
       stdio: 'ignore'
     });
 
+    autoSuperAgentProcess.on('exit', (code: any, signal: any) => {
+      console.log(`[WS-Agent] SuperAgent server process exited with code ${code}, signal ${signal}`);
+      autoSuperAgentProcess = null;
+      isStartingSuperAgent = false;
+    });
+
     autoSuperAgentProcess.on('error', (err: any) => {
       console.error('[WS-Agent] Failed to spawn SuperAgent:', err);
       ws.send(JSON.stringify({ type: 'status', text: `Failed to auto-start SuperAgent: ${err.message}` }));
       isStartingSuperAgent = false;
+      autoSuperAgentProcess = null;
     });
 
     setTimeout(() => {
@@ -357,6 +364,11 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
         logSuperAgentEvent('prompt', { text, workspace: workspacePath });
         await saveCliPromptHistory(text);
 
+        // Ensure SuperAgent server process is running
+        await new Promise<void>((resolve) => {
+          ensureSuperAgentServer(workspacePath, agentMode, customArgs, ws, resolve);
+        });
+
         // Ensure session exists
         await initializeSuperAgentSession(workspacePath, agentMode, parsed.sessionId);
 
@@ -366,7 +378,24 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
             chatPayload.sessionId = parsed.sessionId;
           }
 
-          let response = await sendSuperAgentRequest('/api/chat', chatPayload, workspacePath);
+          let response: any;
+          try {
+            response = await sendSuperAgentRequest('/api/chat', chatPayload, workspacePath);
+          } catch (err: any) {
+            if (err?.code === 'ECONNREFUSED' || err?.message?.includes('ECONNREFUSED')) {
+              console.log('[WS-Agent] Connection refused on port 7888. Auto-restarting SuperAgent server process...');
+              ws.send(JSON.stringify({ type: 'status', text: 'SuperAgent server unreachable. Auto-restarting...' }));
+              autoSuperAgentProcess = null;
+              isStartingSuperAgent = false;
+              await new Promise<void>((resolve) => {
+                ensureSuperAgentServer(workspacePath, agentMode, customArgs, ws, resolve);
+              });
+              await initializeSuperAgentSession(workspacePath, agentMode, parsed.sessionId);
+              response = await sendSuperAgentRequest('/api/chat', chatPayload, workspacePath);
+            } else {
+              throw err;
+            }
+          }
 
           // Retry once if session wasn't initialized
           if (response && response.error === 'Session not initialized') {
