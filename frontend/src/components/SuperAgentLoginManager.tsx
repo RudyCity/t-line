@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Key, Server, Plus, Trash2, Check, Eye, EyeOff, ShieldCheck, Cpu, ExternalLink, RefreshCw } from 'lucide-react';
+import { Key, Server, Plus, Trash2, Check, Eye, EyeOff, ShieldCheck, Cpu, ExternalLink, RefreshCw, Edit3 } from 'lucide-react';
 
 export interface ProviderProfile {
   id: string;
@@ -204,9 +204,11 @@ export const SuperAgentLoginManager: React.FC<SuperAgentLoginManagerProps> = ({
                     )}
                     <button
                       onClick={() => openEditForm(p)}
-                      className="px-2.5 py-1 rounded-md bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 font-medium text-[11px] transition"
+                      className="px-2.5 py-1 rounded-md bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 font-medium text-[11px] transition flex items-center gap-1 cursor-pointer"
+                      title="Edit provider profile & credentials"
                     >
-                      Edit
+                      <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Edit</span>
                     </button>
                     <button
                       onClick={() => onDeleteProvider(p.id)}

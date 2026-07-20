@@ -142,6 +142,63 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
     }
   }, [showAddModal, providers]);
 
+  const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
+
+  const openAddPresetModal = () => {
+    setEditingPresetId(null);
+    setPresetName('');
+    setPresetDesc('');
+    const defaultP = providers[0]?.id || '';
+    setMainProviderId(defaultP);
+    setMainModel('gemini-2.5-flash');
+    setIsMainModelCustom(false);
+    setSubDefaultProviderId(defaultP);
+    setSubDefaultModel('gemini-2.5-flash');
+    setIsSubDefaultModelCustom(false);
+    setSubagentOverrides([]);
+    setShowAddModal(true);
+  };
+
+  const openEditPresetModal = (p: ModelPreset) => {
+    setEditingPresetId(p.id);
+    setPresetName(p.name);
+    setPresetDesc(p.description || '');
+
+    const m = p.models || {};
+    const mainConfig = selectedMode === 'multi' ? (m.master || m.superagent) : m.superagent;
+    const subDefaultConfig = m.subagentDefault;
+    const details = m.subagentDetails || {};
+
+    const mProvider = typeof mainConfig === 'object' ? (mainConfig?.providerProfileId || '') : '';
+    const mModelStr = typeof mainConfig === 'object' ? (mainConfig?.model || '') : (typeof mainConfig === 'string' ? mainConfig : '');
+    setMainProviderId(mProvider || providers[0]?.id || '');
+    setMainModel(mModelStr || 'gemini-2.5-flash');
+    setIsMainModelCustom(!!mModelStr && !['gemini-2.5-flash', 'gpt-4o', 'claude-3-5-sonnet-20241022'].includes(mModelStr));
+
+    const sProvider = typeof subDefaultConfig === 'object' ? (subDefaultConfig?.providerProfileId || '') : '';
+    const sModelStr = typeof subDefaultConfig === 'object' ? (subDefaultConfig?.model || '') : (typeof subDefaultConfig === 'string' ? subDefaultConfig : '');
+    setSubDefaultProviderId(sProvider || providers[0]?.id || '');
+    setSubDefaultModel(sModelStr || 'gemini-2.5-flash');
+    setIsSubDefaultModelCustom(!!sModelStr && !['gemini-2.5-flash', 'gpt-4o-mini', 'claude-3-5-haiku-20241022'].includes(sModelStr));
+
+    const loadedOverrides: SubagentRoleOverride[] = [];
+    if (details && typeof details === 'object') {
+      for (const [roleName, roleConfig] of Object.entries(details)) {
+        const rc: any = roleConfig;
+        const rProvider = typeof rc === 'object' ? (rc?.providerProfileId || '') : '';
+        const rModelStr = typeof rc === 'object' ? (rc?.model || '') : (typeof rc === 'string' ? rc : '');
+        loadedOverrides.push({
+          role: roleName,
+          providerProfileId: rProvider || providers[0]?.id || '',
+          model: rModelStr || '',
+          isCustomModel: true
+        });
+      }
+    }
+    setSubagentOverrides(loadedOverrides);
+    setShowAddModal(true);
+  };
+
   const handleAddOverride = () => {
     const defaultRole = COMMON_SUBAGENT_ROLES.find(r => !subagentOverrides.some(o => o.role === r.id))?.id || 'coder';
     const pId = providers[0]?.id || '';
@@ -192,8 +249,10 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
         }
       });
 
+      const targetId = editingPresetId || presetName.toLowerCase().replace(/\s+/g, '-');
+
       await onSaveCustomPreset(selectedMode, {
-        id: presetName.toLowerCase().replace(/\s+/g, '-'),
+        id: targetId,
         name: presetName.trim(),
         description: presetDesc.trim() || 'Custom cross-provider model preset.',
         models: structuredModels
@@ -202,6 +261,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
       setPresetName('');
       setPresetDesc('');
       setSubagentOverrides([]);
+      setEditingPresetId(null);
     } catch (e) {
       console.error('Failed to save preset:', e);
     } finally {
@@ -257,8 +317,8 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
           </div>
 
           <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-1.5 px-3 rounded-lg transition flex items-center gap-1 text-xs shadow-xs"
+            onClick={openAddPresetModal}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-1.5 px-3 rounded-lg transition flex items-center gap-1 text-xs shadow-xs cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" /> Create Preset
           </button>
@@ -287,18 +347,28 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                     <Cpu className={`w-4 h-4 ${isActive ? 'text-indigo-400' : 'text-zinc-500'}`} />
                     <span className="font-semibold text-zinc-100 text-xs">{p.name}</span>
                   </div>
-                  {isActive ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-700/50 font-medium">
-                      <Check className="w-3 h-3" /> Active
-                    </span>
-                  ) : (
+                  <div className="flex items-center gap-1.5">
                     <button
-                      onClick={() => onSelectPreset(p.id)}
-                      className="px-2.5 py-1 rounded-md bg-zinc-800 hover:bg-indigo-600 hover:text-white text-zinc-300 font-medium text-[11px] transition"
+                      onClick={() => openEditPresetModal(p)}
+                      className="px-2 py-1 rounded-md bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 font-medium text-[11px] transition flex items-center gap-1 cursor-pointer"
+                      title="Edit model preset configuration"
                     >
-                      Activate
+                      <Edit3 className="w-3 h-3 text-indigo-400" />
+                      <span>Edit</span>
                     </button>
-                  )}
+                    {isActive ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-700/50 font-medium">
+                        <Check className="w-3 h-3" /> Active
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => onSelectPreset(p.id)}
+                        className="px-2.5 py-1 rounded-md bg-zinc-800 hover:bg-indigo-600 hover:text-white text-zinc-300 font-medium text-[11px] transition cursor-pointer"
+                      >
+                        Activate
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <p className="text-[11px] text-zinc-400">{p.description}</p>
