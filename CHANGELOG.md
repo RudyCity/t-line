@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.518] - 2026-07-20
+
+### Fixed
+- **Fully Fixed Session Ordering Stability**:
+  - Changed SQLite query in `getWorkspaceSessions` to `ORDER BY created_at DESC` instead of `last_modified DESC`
+  - Prevents backend auto-save operations from updating `last_modified` and triggering server-side re-sorting
+  - Chat session positions in the sidebar are now 100% fixed and stable by creation timestamp, ensuring selecting/viewing a session never shifts its order
+
 ## [1.3.517] - 2026-07-20
 
 ### Fixed

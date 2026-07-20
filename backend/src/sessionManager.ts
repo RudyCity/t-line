@@ -252,7 +252,7 @@ export function getWorkspaceSessions(
           `SELECT id, display_name, message_count, last_modified, created_at
            FROM sessions
            WHERE LOWER(REPLACE(working_directory, '\\', '/')) = ?
-           ORDER BY last_modified DESC
+           ORDER BY created_at DESC
            LIMIT ? OFFSET ?`
         ).all(normalizedWs, limit, safeOffset) as any[];
       } else {
@@ -261,7 +261,7 @@ export function getWorkspaceSessions(
           `SELECT id, display_name, message_count, last_modified, created_at
            FROM sessions
            WHERE working_directory LIKE ?
-           ORDER BY last_modified DESC
+           ORDER BY created_at DESC
            LIMIT ? OFFSET ?`
         ).all(likePattern, limit, safeOffset) as any[];
       }
@@ -271,7 +271,7 @@ export function getWorkspaceSessions(
           `SELECT id, display_name, message_count, last_modified, created_at
            FROM sessions
            WHERE LOWER(REPLACE(working_directory, '\\', '/')) = ?
-           ORDER BY last_modified DESC`
+           ORDER BY created_at DESC`
         ).all(normalizedWs) as any[];
       } else {
         const likePattern = `%${workspace.replace(/\\/g, '%').replace(/\//g, '%')}%`;
@@ -279,7 +279,7 @@ export function getWorkspaceSessions(
           `SELECT id, display_name, message_count, last_modified, created_at
            FROM sessions
            WHERE working_directory LIKE ?
-           ORDER BY last_modified DESC`
+           ORDER BY created_at DESC`
         ).all(likePattern) as any[];
       }
     }
