@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.515] - 2026-07-20
+
+### Added & Optimized
+- **SuperAgent Chat Session Sidebar Infinite Scroll**:
+  - Backend `getWorkspaceSessions` now supports `limit`/`offset` query params, returning `{ sessions, totalCount, hasMore }`
+  - Sidebar initially loads 30 most recent chat sessions for ultra-fast sidebar rendering
+  - Automatically loads next batch of older chat sessions when scrolling down the history sidebar
+  - Added "Load more chats..." button and loading indicator at bottom of sidebar list
+
 ## [1.3.514] - 2026-07-20
 
 ### Added & Optimized

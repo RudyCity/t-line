@@ -15,6 +15,9 @@ interface SuperAgentHistorySidebarProps {
   onNewChat: () => void;
   onDeleteSession: (id: string, e: React.MouseEvent) => void;
   onRenameSession?: (id: string, newTitle: string) => void;
+  hasMoreSessions?: boolean;
+  loadingMoreSessions?: boolean;
+  onLoadMoreSessions?: () => void;
 }
 
 export function SuperAgentHistorySidebar({
@@ -23,7 +26,10 @@ export function SuperAgentHistorySidebar({
   onSelectSession,
   onNewChat,
   onDeleteSession,
-  onRenameSession
+  onRenameSession,
+  hasMoreSessions,
+  loadingMoreSessions,
+  onLoadMoreSessions
 }: SuperAgentHistorySidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
@@ -128,7 +134,21 @@ export function SuperAgentHistorySidebar({
       )}
 
       {/* Session List */}
-      <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1 custom-scrollbar">
+      <div
+        className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1 custom-scrollbar"
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          if (
+            el.scrollHeight - el.scrollTop - el.clientHeight < 60 &&
+            hasMoreSessions &&
+            !loadingMoreSessions &&
+            !searchQuery &&
+            onLoadMoreSessions
+          ) {
+            onLoadMoreSessions();
+          }
+        }}
+      >
         {filteredSessions.length === 0 ? (
           <div className="p-4 text-center text-zinc-500 text-xs italic">
             {searchQuery ? 'No matching chats' : 'No chat history'}
@@ -211,6 +231,22 @@ export function SuperAgentHistorySidebar({
               </div>
             );
           })
+        )}
+
+        {/* Loading indicator for loading more sessions */}
+        {hasMoreSessions && !searchQuery && (
+          <div className="p-2 text-center text-zinc-500 text-[11px]">
+            {loadingMoreSessions ? (
+              <span className="animate-pulse">Loading older chats...</span>
+            ) : (
+              <button
+                onClick={() => onLoadMoreSessions && onLoadMoreSessions()}
+                className="text-indigo-400 hover:text-indigo-300 transition"
+              >
+                Load more chats...
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>

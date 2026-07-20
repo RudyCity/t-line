@@ -38,6 +38,9 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
     hasMore,
     loadingMore,
     loadMoreMessages,
+    hasMoreSessions,
+    loadingMoreSessions,
+    loadMoreSessions,
     handleSelectSession,
     handleNewChat,
     handleDeleteSession,
@@ -760,6 +763,9 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
                 onNewChat={handleNewChat}
                 onDeleteSession={handleDeleteSession}
                 onRenameSession={handleRenameSession}
+                hasMoreSessions={hasMoreSessions}
+                loadingMoreSessions={loadingMoreSessions}
+                onLoadMoreSessions={loadMoreSessions}
               />
             </div>
           )}

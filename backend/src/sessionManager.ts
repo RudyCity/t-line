@@ -218,39 +218,86 @@ function mapGuiToDbRows(msgs: SuperAgentMessage[]): InsertMessageRow[] {
 
 // ─── Public API ───────────────────────────────────────────────
 
-/** Get all sessions for a given workspace path */
-export function getWorkspaceSessions(workspace: string): ChatSession[] {
+/** Get paginated sessions for a given workspace path */
+export function getWorkspaceSessions(
+  workspace: string,
+  limit?: number,
+  offset?: number
+): { sessions: ChatSession[]; totalCount: number; hasMore: boolean } {
   try {
     const db = getDb();
     const normalizedWs = path.normalize(workspace).replace(/\\/g, '/').toLowerCase();
 
-    // Try exact match first, then LIKE match
-    let rows = db.prepare(
-      `SELECT id, display_name, message_count, last_modified, created_at
-       FROM sessions
-       WHERE LOWER(REPLACE(working_directory, '\\', '/')) = ?
-       ORDER BY last_modified DESC`
-    ).all(normalizedWs) as any[];
+    // Get total count first
+    let countRow = db.prepare(
+      `SELECT COUNT(*) as cnt FROM sessions WHERE LOWER(REPLACE(working_directory, '\\', '/')) = ?`
+    ).get(normalizedWs) as any;
+    let totalCount = countRow?.cnt || 0;
 
-    if (rows.length === 0) {
+    let isExact = true;
+    if (totalCount === 0) {
+      isExact = false;
       const likePattern = `%${workspace.replace(/\\/g, '%').replace(/\//g, '%')}%`;
-      rows = db.prepare(
-        `SELECT id, display_name, message_count, last_modified, created_at
-         FROM sessions
-         WHERE working_directory LIKE ?
-         ORDER BY last_modified DESC`
-      ).all(likePattern) as any[];
+      countRow = db.prepare(
+        `SELECT COUNT(*) as cnt FROM sessions WHERE working_directory LIKE ?`
+      ).get(likePattern) as any;
+      totalCount = countRow?.cnt || 0;
     }
 
-    return rows.map(r => ({
+    let rows: any[];
+    if (limit && limit > 0) {
+      const safeOffset = offset || 0;
+      if (isExact) {
+        rows = db.prepare(
+          `SELECT id, display_name, message_count, last_modified, created_at
+           FROM sessions
+           WHERE LOWER(REPLACE(working_directory, '\\', '/')) = ?
+           ORDER BY last_modified DESC
+           LIMIT ? OFFSET ?`
+        ).all(normalizedWs, limit, safeOffset) as any[];
+      } else {
+        const likePattern = `%${workspace.replace(/\\/g, '%').replace(/\//g, '%')}%`;
+        rows = db.prepare(
+          `SELECT id, display_name, message_count, last_modified, created_at
+           FROM sessions
+           WHERE working_directory LIKE ?
+           ORDER BY last_modified DESC
+           LIMIT ? OFFSET ?`
+        ).all(likePattern, limit, safeOffset) as any[];
+      }
+    } else {
+      if (isExact) {
+        rows = db.prepare(
+          `SELECT id, display_name, message_count, last_modified, created_at
+           FROM sessions
+           WHERE LOWER(REPLACE(working_directory, '\\', '/')) = ?
+           ORDER BY last_modified DESC`
+        ).all(normalizedWs) as any[];
+      } else {
+        const likePattern = `%${workspace.replace(/\\/g, '%').replace(/\//g, '%')}%`;
+        rows = db.prepare(
+          `SELECT id, display_name, message_count, last_modified, created_at
+           FROM sessions
+           WHERE working_directory LIKE ?
+           ORDER BY last_modified DESC`
+        ).all(likePattern) as any[];
+      }
+    }
+
+    const sessions = rows.map(r => ({
       id: r.id,
       title: r.display_name || 'Untitled CLI Chat',
       createdAt: r.created_at || r.last_modified,
       updatedAt: r.last_modified
     }));
+
+    const safeOffset = offset || 0;
+    const hasMore = limit ? (safeOffset + limit) < totalCount : false;
+
+    return { sessions, totalCount, hasMore };
   } catch (e) {
     console.error('[SessionManager] getWorkspaceSessions error:', e);
-    return [];
+    return { sessions: [], totalCount: 0, hasMore: false };
   }
 }
 

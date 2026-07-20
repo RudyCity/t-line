@@ -83,15 +83,34 @@ export function loadWorkspaceSessions(wsPath: string): ChatSession[] {
 
 import { wsManager } from '../services/websocket';
 
+interface PaginatedSessionsResponse {
+  sessions: ChatSession[];
+  totalCount: number;
+  hasMore: boolean;
+}
+
+const SESSION_PAGE_SIZE = 30;
+
 // API Sync Helpers
-async function apiGetSessions(workspace: string): Promise<ChatSession[] | null> {
+async function apiGetSessions(
+  workspace: string,
+  limit?: number,
+  offset?: number
+): Promise<PaginatedSessionsResponse | null> {
   try {
-    const res = await fetch(`/api/superagent/sessions?workspace=${encodeURIComponent(workspace)}`, {
-      headers: getAuthHeader()
-    });
+    let url = `/api/superagent/sessions?workspace=${encodeURIComponent(workspace)}`;
+    if (limit !== undefined) url += `&limit=${limit}`;
+    if (offset !== undefined) url += `&offset=${offset}`;
+    const res = await fetch(url, { headers: getAuthHeader() });
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data.sessions)) return data.sessions;
+      if (Array.isArray(data.sessions)) {
+        return {
+          sessions: data.sessions,
+          totalCount: data.totalCount ?? data.sessions.length,
+          hasMore: data.hasMore ?? false
+        };
+      }
     }
   } catch (e) {
     console.error('[SessionsAPI] GET sessions failed:', e);
@@ -173,6 +192,11 @@ export function useSuperAgentSessions(workspace: string) {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const currentOffsetRef = useRef(0);
+
+  const [hasMoreSessions, setHasMoreSessions] = useState(false);
+  const [loadingMoreSessions, setLoadingMoreSessions] = useState(false);
+  const currentSessionOffsetRef = useRef(0);
+
   const prevWorkspaceRef = useRef(workspace);
   const activeSessionIdRef = useRef(activeSessionId);
 
@@ -183,12 +207,14 @@ export function useSuperAgentSessions(workspace: string) {
 
   // Initial Sync from Backend on switch/mount
   const syncSessions = useCallback(async (wsPath: string, preserveActiveId?: string) => {
-    const apiSessions = await apiGetSessions(wsPath);
-    if (apiSessions && apiSessions.length > 0) {
-      setSessions(apiSessions);
+    const res = await apiGetSessions(wsPath, SESSION_PAGE_SIZE, 0);
+    if (res && res.sessions.length > 0) {
+      setSessions(res.sessions);
+      setHasMoreSessions(res.hasMore);
+      currentSessionOffsetRef.current = SESSION_PAGE_SIZE;
       
-      let activeId = apiSessions[0].id;
-      if (preserveActiveId && apiSessions.some(s => s.id === preserveActiveId)) {
+      let activeId = res.sessions[0].id;
+      if (preserveActiveId && res.sessions.some(s => s.id === preserveActiveId)) {
         activeId = preserveActiveId;
       }
       
@@ -206,6 +232,8 @@ export function useSuperAgentSessions(workspace: string) {
     // Fallback to localStorage
     const localSessions = loadWorkspaceSessions(wsPath);
     setSessions(localSessions);
+    setHasMoreSessions(false);
+    currentSessionOffsetRef.current = 0;
     
     let localActiveId = localSessions[0]?.id || `session_${Date.now()}`;
     if (preserveActiveId && localSessions.some(s => s.id === preserveActiveId)) {
@@ -451,6 +479,33 @@ export function useSuperAgentSessions(workspace: string) {
     });
   }, [workspace, messages]);
 
+  /** Load older sessions (append to sidebar list) */
+  const loadMoreSessions = useCallback(async () => {
+    if (loadingMoreSessions || !hasMoreSessions) return;
+    setLoadingMoreSessions(true);
+
+    try {
+      const res = await apiGetSessions(
+        workspace, SESSION_PAGE_SIZE, currentSessionOffsetRef.current
+      );
+      if (res && res.sessions.length > 0) {
+        setSessions(prev => {
+          const existingIds = new Set(prev.map(s => s.id));
+          const uniqueNew = res.sessions.filter(s => !existingIds.has(s.id));
+          return [...prev, ...uniqueNew];
+        });
+        currentSessionOffsetRef.current += SESSION_PAGE_SIZE;
+        setHasMoreSessions(res.hasMore);
+      } else {
+        setHasMoreSessions(false);
+      }
+    } catch (e) {
+      console.error('[Sessions] loadMoreSessions error:', e);
+    } finally {
+      setLoadingMoreSessions(false);
+    }
+  }, [workspace, hasMoreSessions, loadingMoreSessions]);
+
   return {
     sessions,
     activeSessionId,
@@ -459,6 +514,9 @@ export function useSuperAgentSessions(workspace: string) {
     hasMore,
     loadingMore,
     loadMoreMessages,
+    hasMoreSessions,
+    loadingMoreSessions,
+    loadMoreSessions,
     handleSelectSession,
     handleNewChat,
     handleDeleteSession,

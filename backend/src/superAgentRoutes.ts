@@ -196,9 +196,11 @@ router.get('/instances', (req, res) => {
 // Chat Session history sync endpoints
 router.get('/sessions', (req, res) => {
   const workspace = (req.query.workspace as string) || '';
+  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+  const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
   try {
-    const sessions = getWorkspaceSessions(workspace);
-    res.json({ sessions });
+    const result = getWorkspaceSessions(workspace, limit, offset);
+    res.json(result);
   } catch (e: any) {
     res.status(500).json({ error: 'Failed to read workspace sessions: ' + e.message });
   }
