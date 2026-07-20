@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Terminal as TerminalIcon, RefreshCw, Shield, Square, Folder, Sparkles } from 'lucide-react';
+import { Terminal as TerminalIcon, RefreshCw, Shield, Square, Folder, Sparkles, Activity, Settings } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { SuperAgentAuditLogs } from './SuperAgentAuditLogs';
@@ -9,20 +9,15 @@ import { getSlashCommands, SlashCommand } from './SuperAgentCommands';
 import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSidebar';
 import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
 import { SuperAgentInputContainer } from './SuperAgentInputContainer';
-import { Activity } from 'lucide-react';
-
-
-
-
-
-
+import { SuperAgentSettingsMenu } from './SuperAgentSettingsMenu';
 
 interface SuperAgentConsoleProps {
   activeWorkspacePath?: string;
   workspaces?: WorkspaceInfo[];
+  onOpenSettings?: () => void;
 }
 
-export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: SuperAgentConsoleProps) {
+export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpenSettings }: SuperAgentConsoleProps) {
   const [messages, setMessages] = useState<Array<{
     role: 'user' | 'assistant' | 'system' | 'tool' | 'thought';
     text: string;
@@ -60,6 +55,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
   const [recentChangeList, setRecentChangeList] = useState<RecentChangeItem[]>([]);
   const [selectedSubagent, setSelectedSubagent] = useState<SubAgentItem | null>(null);
   const [showSidebar, setShowSidebar] = useState<boolean>(true);
+  const [showSettingsMenu, setShowSettingsMenu] = useState<boolean>(false);
   const [isLoadingMonitor, setIsLoadingMonitor] = useState<boolean>(false);
 
   const fetchMonitorData = async () => {
@@ -737,7 +733,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
         </div>
 
         {/* Right Column */}
-        <div className="flex justify-end gap-2 items-center">
+        <div className="flex justify-end gap-2 items-center relative">
           <button
             onClick={() => setShowSidebar(!showSidebar)}
             className={`px-2.5 py-1 text-[11px] rounded-md border transition flex items-center gap-1.5 cursor-pointer font-medium ${
@@ -748,6 +744,18 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
             <Activity className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Monitor</span>
           </button>
+
+          <button
+            onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+            className={`px-2.5 py-1 text-[11px] rounded-md border transition flex items-center gap-1.5 cursor-pointer font-medium ${
+              showSettingsMenu ? 'bg-indigo-950/80 border-indigo-700/80 text-indigo-300 shadow-sm' : 'bg-[#121622] border-zinc-800 text-zinc-400 hover:text-zinc-200'
+            }`}
+            title="SuperAgent & App Settings"
+          >
+            <Settings className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden sm:inline">Setting</span>
+          </button>
+
           {loading && (
             <button
               onClick={handleAbort}
@@ -758,6 +766,22 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
               Stop Agent
             </button>
           )}
+
+          <SuperAgentSettingsMenu
+            isOpen={showSettingsMenu}
+            onClose={() => setShowSettingsMenu(false)}
+            agentMode={agentMode}
+            setAgentMode={setAgentMode}
+            customArgs={customArgs}
+            setCustomArgs={setCustomArgs}
+            setConnectTrigger={setConnectTrigger}
+            showSidebar={showSidebar}
+            setShowSidebar={setShowSidebar}
+            onRefreshMonitor={fetchMonitorData}
+            isLoadingMonitor={isLoadingMonitor}
+            onClearConsole={() => setMessages([{ role: 'system', text: 'Console output cleared.' }])}
+            onOpenGlobalSettings={onOpenSettings}
+          />
         </div>
       </div>
 

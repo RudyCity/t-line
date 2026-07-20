@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.489] - 2026-07-20
+
+### Added
+- **Top-Right Setting Menu**: Added a new `Setting` menu button next to the `Monitor` button in the top right header of the SuperAgent Panel.
+  - Created [SuperAgentSettingsMenu.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentSettingsMenu.tsx) popover component providing quick access to CLI Mode switcher, custom flags, bridge restart, live monitor toggles, console output cleaner, and global application settings modal.
+  - Integrated [SuperAgentSettingsMenu](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentSettingsMenu.tsx) into [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) and updated [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx) to pass global settings handler.
+
 ## [1.3.488] - 2026-07-20
 
 ### Fixed

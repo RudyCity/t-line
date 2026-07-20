@@ -2393,6 +2393,7 @@ export default function App() {
                     <SuperAgentConsole
                       activeWorkspacePath={panelWorkspace?.path}
                       workspaces={workspaces}
+                      onOpenSettings={() => setShowSettingsModal(true)}
                     />
                   );
                 } else if (activeTab.type === 'terminal' && activeTab.layout) {
