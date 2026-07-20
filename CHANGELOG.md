@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.581] - 2026-07-21
+
+### Changed
+- **Live Process & Thinking Step Auto-Expansion (`SuperAgentGroupedMessages.tsx`)**:
+  - Updated `CollapsibleProcessBlock` to automatically stay open/expanded while an agent is actively running or streaming (`isStreaming = true`).
+  - Tool calls, execution reasoning, and thoughts remain visible live during turn execution, and automatically collapse into a summary pill only after the final assistant response completes.
+
 ## [1.3.580] - 2026-07-21
 
 ### Fixed
