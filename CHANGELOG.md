@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.495] - 2026-07-20
+
+### Added
+- **Collapsible Tool Call Summaries**: Implemented clean, expandable tool call rows matching modern IDE agent UI:
+  - Created [SuperAgentToolItem.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentToolItem.tsx) component with compact single-line summaries (e.g. `Analyzed App.tsx #L2125-2150`, `Edited SuperAgentConsole.tsx`, `Searched "query"`).
+  - Features interactive click-to-expand / collapse (`>` to `v`) to reveal full JSON arguments, execution output/stdout, and a one-click copy button.
+  - Integrated [SuperAgentToolItem](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentToolItem.tsx) into [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx#L874-L878) to replace previous bulky tool output boxes.
+
 ## [1.3.494] - 2026-07-20
 
 ### Added
