@@ -207,9 +207,11 @@ router.get('/sessions', (req, res) => {
 router.get('/sessions/:id', (req, res) => {
   const workspace = (req.query.workspace as string) || '';
   const sessionId = req.params.id;
+  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+  const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
   try {
-    const messages = getSessionMessages(workspace, sessionId);
-    res.json({ messages });
+    const result = getSessionMessages(workspace, sessionId, limit, offset);
+    res.json(result);
   } catch (e: any) {
     res.status(500).json({ error: 'Failed to read session messages: ' + e.message });
   }

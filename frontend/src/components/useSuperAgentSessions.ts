@@ -99,14 +99,35 @@ async function apiGetSessions(workspace: string): Promise<ChatSession[] | null> 
   return null;
 }
 
-async function apiGetSessionMessages(workspace: string, sessionId: string): Promise<SuperAgentMessage[] | null> {
+interface PaginatedMessagesResponse {
+  messages: SuperAgentMessage[];
+  totalCount: number;
+  hasMore: boolean;
+}
+
+const PAGE_SIZE = 50;
+
+async function apiGetSessionMessages(
+  workspace: string,
+  sessionId: string,
+  limit?: number,
+  offset?: number
+): Promise<PaginatedMessagesResponse | null> {
   try {
-    const res = await fetch(`/api/superagent/sessions/${encodeURIComponent(sessionId)}?workspace=${encodeURIComponent(workspace)}`, {
-      headers: getAuthHeader()
-    });
+    let url = `/api/superagent/sessions/${encodeURIComponent(sessionId)}?workspace=${encodeURIComponent(workspace)}`;
+    if (limit !== undefined) url += `&limit=${limit}`;
+    if (offset !== undefined) url += `&offset=${offset}`;
+    const res = await fetch(url, { headers: getAuthHeader() });
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data.messages)) return data.messages;
+      // Handle both old format (just {messages}) and new format ({messages, totalCount, hasMore})
+      if (Array.isArray(data.messages)) {
+        return {
+          messages: data.messages,
+          totalCount: data.totalCount ?? data.messages.length,
+          hasMore: data.hasMore ?? false
+        };
+      }
     }
   } catch (e) {
     console.error('[SessionsAPI] GET messages failed:', e);
@@ -149,6 +170,9 @@ export function useSuperAgentSessions(workspace: string) {
   });
 
   const [messages, setMessages] = useState<SuperAgentMessage[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const currentOffsetRef = useRef(0);
   const prevWorkspaceRef = useRef(workspace);
   const activeSessionIdRef = useRef(activeSessionId);
 
@@ -169,9 +193,12 @@ export function useSuperAgentSessions(workspace: string) {
       }
       
       setActiveSessionId(activeId);
-      const apiMsgs = await apiGetSessionMessages(wsPath, activeId);
-      if (apiMsgs) {
-        setMessages(apiMsgs);
+      // Load initial page (latest messages)
+      const result = await apiGetSessionMessages(wsPath, activeId, PAGE_SIZE, 0);
+      if (result) {
+        setMessages(result.messages);
+        setHasMore(result.hasMore);
+        currentOffsetRef.current = PAGE_SIZE;
         return;
       }
     }
@@ -193,11 +220,15 @@ export function useSuperAgentSessions(workspace: string) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
           setMessages(parsed);
+          setHasMore(false);
+          currentOffsetRef.current = 0;
           return;
         }
       } catch (e) {}
     }
     setMessages([]);
+    setHasMore(false);
+    currentOffsetRef.current = 0;
   }, []);
 
   // Sync on workspace changes
@@ -226,7 +257,7 @@ export function useSuperAgentSessions(workspace: string) {
     const msgKey = `superagent_messages_${wsKey}_${activeSessionId}`;
 
     if (messages && messages.length > 0) {
-      // Local backup
+      // Local backup (only last 300 messages)
       try {
         localStorage.setItem(msgKey, JSON.stringify(messages.slice(-300)));
       } catch (e) {}
@@ -267,13 +298,39 @@ export function useSuperAgentSessions(workspace: string) {
     }
   }, [messages, activeSessionId, workspace]);
 
+  /** Load older messages (prepend to current list) */
+  const loadMoreMessages = useCallback(async () => {
+    if (loadingMore || !hasMore || !activeSessionId) return;
+    setLoadingMore(true);
+
+    try {
+      const result = await apiGetSessionMessages(
+        workspace, activeSessionId, PAGE_SIZE, currentOffsetRef.current
+      );
+      if (result && result.messages.length > 0) {
+        setMessages(prev => [...result.messages, ...prev]);
+        currentOffsetRef.current += PAGE_SIZE;
+        setHasMore(result.hasMore);
+      } else {
+        setHasMore(false);
+      }
+    } catch (e) {
+      console.error('[Sessions] loadMoreMessages error:', e);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [workspace, activeSessionId, hasMore, loadingMore]);
+
   const handleSelectSession = useCallback(async (id: string) => {
     if (id === activeSessionId) return;
     setActiveSessionId(id);
+    currentOffsetRef.current = 0;
 
-    const apiMsgs = await apiGetSessionMessages(workspace, id);
-    if (apiMsgs) {
-      setMessages(apiMsgs);
+    const result = await apiGetSessionMessages(workspace, id, PAGE_SIZE, 0);
+    if (result) {
+      setMessages(result.messages);
+      setHasMore(result.hasMore);
+      currentOffsetRef.current = PAGE_SIZE;
       return;
     }
 
@@ -284,11 +341,13 @@ export function useSuperAgentSessions(workspace: string) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setMessages(parsed);
+          setHasMore(false);
           return;
         }
       } catch (e) {}
     }
     setMessages([]);
+    setHasMore(false);
   }, [activeSessionId, workspace]);
 
   const handleNewChat = useCallback(() => {
@@ -311,6 +370,8 @@ export function useSuperAgentSessions(workspace: string) {
 
     setActiveSessionId(newId);
     setMessages([]);
+    setHasMore(false);
+    currentOffsetRef.current = 0;
 
     try {
       localStorage.setItem(`superagent_messages_${wsKey}_${newId}`, JSON.stringify([]));
@@ -342,9 +403,11 @@ export function useSuperAgentSessions(workspace: string) {
         const nextId = remainingSessions[0].id;
         setActiveSessionId(nextId);
         
-        const apiMsgs = await apiGetSessionMessages(workspace, nextId);
-        if (apiMsgs) {
-          setMessages(apiMsgs);
+        const result = await apiGetSessionMessages(workspace, nextId, PAGE_SIZE, 0);
+        if (result) {
+          setMessages(result.messages);
+          setHasMore(result.hasMore);
+          currentOffsetRef.current = PAGE_SIZE;
           return;
         }
 
@@ -354,11 +417,13 @@ export function useSuperAgentSessions(workspace: string) {
             const parsed = JSON.parse(saved);
             if (Array.isArray(parsed) && parsed.length > 0) {
               setMessages(parsed);
+              setHasMore(false);
               return;
             }
           } catch (err) {}
         }
         setMessages([]);
+        setHasMore(false);
       } else {
         handleNewChat();
       }
@@ -377,8 +442,8 @@ export function useSuperAgentSessions(workspace: string) {
       const renamedSession = updated.find(s => s.id === id);
       if (renamedSession) {
         // Fetch current session messages to preserve them
-        apiGetSessionMessages(workspace, id).then(currentMsgs => {
-          apiSaveSession(workspace, renamedSession, currentMsgs || messages);
+        apiGetSessionMessages(workspace, id).then(result => {
+          apiSaveSession(workspace, renamedSession, result?.messages || messages);
         });
       }
 
@@ -391,6 +456,9 @@ export function useSuperAgentSessions(workspace: string) {
     activeSessionId,
     messages,
     setMessages,
+    hasMore,
+    loadingMore,
+    loadMoreMessages,
     handleSelectSession,
     handleNewChat,
     handleDeleteSession,

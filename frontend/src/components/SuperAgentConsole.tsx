@@ -35,6 +35,9 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
     activeSessionId,
     messages,
     setMessages,
+    hasMore,
+    loadingMore,
+    loadMoreMessages,
     handleSelectSession,
     handleNewChat,
     handleDeleteSession,
@@ -46,6 +49,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [activeTab, setActiveTab] = useState<'console' | 'audit'>('console');
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const [agentMode, setAgentMode] = useState<'single' | 'multi'>('single');
   const [customArgs, setCustomArgs] = useState('');
@@ -770,7 +774,51 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
           )}
 
           <div className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0">
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-xs leading-relaxed w-full">
+            <div
+              ref={messagesContainerRef}
+              className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-xs leading-relaxed w-full"
+              onScroll={(e) => {
+                const el = e.currentTarget;
+                if (el.scrollTop < 80 && hasMore && !loadingMore) {
+                  const prevHeight = el.scrollHeight;
+                  loadMoreMessages().then(() => {
+                    // Preserve scroll position after prepending older messages
+                    requestAnimationFrame(() => {
+                      const newHeight = el.scrollHeight;
+                      el.scrollTop = newHeight - prevHeight;
+                    });
+                  });
+                }
+              }}
+            >
+            {/* Infinite scroll: loading older messages indicator */}
+            {hasMore && (
+              <div className="flex items-center justify-center py-2 gap-2 text-zinc-500 text-xs">
+                {loadingMore ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                    <span>Loading older messages...</span>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => {
+                      const el = messagesContainerRef.current;
+                      if (!el) return;
+                      const prevHeight = el.scrollHeight;
+                      loadMoreMessages().then(() => {
+                        requestAnimationFrame(() => {
+                          const newHeight = el.scrollHeight;
+                          el.scrollTop = newHeight - prevHeight;
+                        });
+                      });
+                    }}
+                    className="text-indigo-400 hover:text-indigo-300 transition-colors px-3 py-1 rounded border border-zinc-700/50 hover:border-indigo-500/50 bg-zinc-800/40"
+                  >
+                    ↑ Load older messages
+                  </button>
+                )}
+              </div>
+            )}
             {messages.filter(m => !isSystemNoiseMsg(m)).map((msg, index) => (
               <SuperAgentMessageItem key={index} msg={msg} index={index} />
             ))}

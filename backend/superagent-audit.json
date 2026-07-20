@@ -1,192 +1,5 @@
 [
   {
-    "timestamp": "2026-07-20T02:13:22.687Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n  }\n  ...\n}\n\nIssue 3:\nSeverity: [IMPORTANT]\nFile/Line: src/pages/api/audit-logs.ts ("
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.708Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "lines 35-41)\nDescription: Information disclosure to scoped admins. Non-assignment logs (such as system configuration, report exports, and user modifications)"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.730Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " are included in the results unfiltered (via logs.filter((log) => log.entityType !== \"assignment\")). A department-scoped admin can thus"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.753Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " view sensitive actions performed by super admins or other department admins.\nProposed Fix:\nRestricted scoped admins to only view"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.816Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " logs where entityType is \"assignment\":\nconst scopedLogs = assignmentLogs;\n\nIssue 4:\nSeverity: [IMPORTANT]\nFile"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.838Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "/Line: src/pages/api/audit-logs.ts (lines 30-41)\nDescription: Ign"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.861Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "ored search filters for assignment logs. When a scoped admin searches/filters logs (e.g. by action), the API fetches"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.882Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " all assignment logs via findAuditLogsForAssignments without passing along the user's action or entity ID filter.\nProposed Fix:\nUpdate findAuditLogsForAssignments to"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.905Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " accept and apply filters (such as action) in the database query.\n\nIssue 5:\nSeverity: [IMPORTANT]\nFile/Line: src/pages/admin/audit."
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.929Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "astro (lines 239-248)\nDescription: Client-side JavaScript exception in bulk selection. The selectedIndices Set"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.952Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " contains array index offsets. If the user selects items, changes filters, and triggers a search, the logs array is overwritten"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.973Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " with new results. Clicking \"Salin Entity ID\" uses stale indices which can exceed the new logs array boundaries, causing an unc"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.996Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "aught exception.\nProposed Fix:\nClear selectedIndices and hide the bulk bar whenever loadLogs() is called or the logs array is refreshed."
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:23.019Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n\nIssue 6:\nSeverity: [MINOR]\nFile/Line: src/lib/server/repositories/postgres-repository.ts (lines "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:23.052Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "212-218)\nDescription: Lack of try/catch parsing in mapAuditLogRow. If row.metadata contains"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:23.075Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " invalid JSON or formatting issues, JSON.parse will throw an uncaught syntax error, causing the entire endpoint/page to crash.\nProposed Fix:\nWrap JSON.parse in"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:23.097Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " a try/catch block and handle failures gracefully.\n\nLet's check if we followed the formatting rule: \"plain"
-      }
-    }
-  },
-  {
     "timestamp": "2026-07-20T02:13:23.122Z",
     "type": "agent_event",
     "data": {
@@ -10333,6 +10146,148 @@
   },
   {
     "timestamp": "2026-07-20T03:52:39.420Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T06:23:15.260Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T06:23:15.278Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\superagent",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T06:23:15.324Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T06:23:15.454Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T06:23:18.303Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T06:23:20.562Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T06:23:20.579Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\superagent",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T06:23:20.616Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T06:23:20.633Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T06:23:20.650Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T06:23:20.667Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T06:23:23.598Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T06:26:51.615Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T06:26:51.942Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T06:26:51.976Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T06:26:51.993Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T06:26:54.954Z",
     "type": "system_error",
     "data": {
       "message": "Failed to connect to SuperAgent server",

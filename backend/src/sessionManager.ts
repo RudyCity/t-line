@@ -254,8 +254,13 @@ export function getWorkspaceSessions(workspace: string): ChatSession[] {
   }
 }
 
-/** Get all messages for a given session ID */
-export function getSessionMessages(_workspace: string, sessionId: string): SuperAgentMessage[] {
+/** Get paginated messages for a given session ID */
+export function getSessionMessages(
+  _workspace: string,
+  sessionId: string,
+  limit?: number,
+  offset?: number
+): { messages: SuperAgentMessage[]; totalCount: number; hasMore: boolean } {
   let actualId = sessionId;
   if (sessionId.includes('::')) {
     actualId = sessionId.split('::')[1];
@@ -263,21 +268,50 @@ export function getSessionMessages(_workspace: string, sessionId: string): Super
 
   try {
     const db = getDb();
-    const rows = db.prepare(
-      `SELECT id, session_id, role, content, tool_calls, tool_results, reasoning, timestamp, sequence_order
-       FROM messages
-       WHERE session_id = ?
-       ORDER BY sequence_order ASC`
-    ).all(actualId) as DbMessageRow[];
+
+    // Get total row count first
+    const countRow = db.prepare(
+      `SELECT COUNT(*) as cnt FROM messages WHERE session_id = ?`
+    ).get(actualId) as any;
+    const totalDbRows = countRow?.cnt || 0;
+
+    let rows: DbMessageRow[];
+    if (limit && limit > 0) {
+      // Paginated: fetch from the END (newest messages first page).
+      // offset=0 means the latest `limit` messages.
+      const safeOffset = offset || 0;
+      // We fetch in reverse: skip the newest `safeOffset` rows, take `limit` rows from the end
+      // SQL: ORDER BY sequence_order DESC LIMIT ? OFFSET ? — then reverse in JS
+      rows = db.prepare(
+        `SELECT id, session_id, role, content, tool_calls, tool_results, reasoning, timestamp, sequence_order
+         FROM messages
+         WHERE session_id = ?
+         ORDER BY sequence_order DESC
+         LIMIT ? OFFSET ?`
+      ).all(actualId, limit, safeOffset) as DbMessageRow[];
+      rows.reverse(); // back to chronological order
+    } else {
+      // No pagination — return all
+      rows = db.prepare(
+        `SELECT id, session_id, role, content, tool_calls, tool_results, reasoning, timestamp, sequence_order
+         FROM messages
+         WHERE session_id = ?
+         ORDER BY sequence_order ASC`
+      ).all(actualId) as DbMessageRow[];
+    }
 
     const guiMsgs: SuperAgentMessage[] = [];
     for (const row of rows) {
       guiMsgs.push(...mapDbRowToGuiMessages(row));
     }
-    return guiMsgs;
+
+    const safeOffset = offset || 0;
+    const hasMore = limit ? (safeOffset + limit) < totalDbRows : false;
+
+    return { messages: guiMsgs, totalCount: totalDbRows, hasMore };
   } catch (e) {
     console.error(`[SessionManager] getSessionMessages error for ${sessionId}:`, e);
-    return [];
+    return { messages: [], totalCount: 0, hasMore: false };
   }
 }
 

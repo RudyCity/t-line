@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.514] - 2026-07-20
+
+### Added & Optimized
+- **SuperAgent Infinite Scroll Pagination**:
+  - Backend `getSessionMessages` now supports `limit`/`offset` query params, returning `{ messages, totalCount, hasMore }` for paginated responses
+  - Frontend loads only the latest 50 messages on session open, with automatic infinite scroll to load older messages when scrolling to top
+  - Added "↑ Load older messages" button as manual fallback, plus a spinning indicator during loading
+  - Scroll position is preserved after prepending older messages (no jarring jumps)
+  - Drastically reduces initial load time for sessions with hundreds of messages
+
 ## [1.3.513] - 2026-07-20
 
 ### Refactored
