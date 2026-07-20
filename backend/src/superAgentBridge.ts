@@ -216,18 +216,25 @@ function ensureSuperAgentServer(
     }
   }
 
+  // Mark as starting SYNCHRONOUSLY before the async ping so any concurrent
+  // ensureSuperAgentServer / startSuperAgentEager call sees the flag immediately
+  // and queues itself instead of racing to spawn a second server.
+  isStartingSuperAgent = true;
+  console.log('[WS-Agent][debug] ensureSuperAgentServer: acquired startup lock');
+
   // Before spawning, ping port 7888 — it may already be running externally.
   pingPort7888().then((alreadyRunning) => {
     if (alreadyRunning) {
       console.log('[WS-Agent] SuperAgent server already running on port 7888. Skipping spawn.');
+      isStartingSuperAgent = false;
       currentWorkspacePath = workspacePath;
       currentAgentMode = agentMode;
       currentCustomArgs = customArgs;
       callback();
+      drainPendingCallbacks();
       return;
     }
 
-    isStartingSuperAgent = true;
     ws.send(JSON.stringify({ type: 'status', text: 'Auto-starting SuperAgent server on port 7888...' }));
     logSuperAgentEvent('system', { message: 'Auto-starting SuperAgent server process', workspacePath, agentMode, customArgs });
 
@@ -356,11 +363,18 @@ export function startSuperAgentEager(agentMode: string = 'single', customArgs: s
   // Already running or starting → skip
   if (isStartingSuperAgent || autoSuperAgentProcess) return;
 
+  // Mark as starting SYNCHRONOUSLY before the async ping — same race-prevention
+  // as ensureSuperAgentServer above.
+  isStartingSuperAgent = true;
+  console.log('[WS-Agent][debug] startSuperAgentEager: acquired startup lock');
+
   pingPort7888().then((alreadyRunning) => {
     if (alreadyRunning) {
       console.log('[WS-Agent] SuperAgent server already running on port 7888 (eager check). Skipping spawn.');
+      isStartingSuperAgent = false;
       currentAgentMode = agentMode;
       currentCustomArgs = customArgs;
+      drainPendingCallbacks();
       return;
     }
 

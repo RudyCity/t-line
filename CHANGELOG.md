@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.554] - 2026-07-20
+
+### Fixed
+- **SuperAgent Double-Spawn Race Condition (`superAgentBridge.ts`)**:
+  - Root cause: `isStartingSuperAgent` was set to `true` **inside** the async `.then()` of `pingPort7888()`, not before. During the ~1.5ms window while the ping was in flight, a second concurrent caller (e.g. eager startup + WS connection arriving simultaneously) would also see `isStartingSuperAgent = false`, also call `pingPort7888()`, also get `false`, and also spawn — resulting in two SuperAgent servers competing on port 7888.
+  - **Fix**: Set `isStartingSuperAgent = true` **synchronously** (before the async ping) in both `ensureSuperAgentServer()` and `startSuperAgentEager()`. Any second caller immediately sees the flag and queues itself via `pendingStartCallbacks` instead of racing.
+  - When the ping returns `true` (server already running), `isStartingSuperAgent` is reset to `false` and `drainPendingCallbacks()` is called so queued callers proceed immediately.
+
 ## [1.3.553] - 2026-07-20
 
 ### Fixed
