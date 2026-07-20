@@ -97,16 +97,16 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
         onClick={() => setExpanded(!expanded)}
         className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 cursor-pointer transition-colors py-0.5 select-none"
       >
-        <span className="shrink-0">
+        {info.icon}
+        <span className="font-sans font-medium text-zinc-400">{info.action}</span>
+        <span className="font-mono text-zinc-300 truncate max-w-md">{info.target}</span>
+        <span className="ml-auto shrink-0">
           {expanded ? (
             <ChevronDown className="w-3 h-3 text-zinc-400" />
           ) : (
             <ChevronRight className="w-3 h-3 text-zinc-600" />
           )}
         </span>
-        {info.icon}
-        <span className="font-sans font-medium text-zinc-400">{info.action}</span>
-        <span className="font-mono text-zinc-300 truncate max-w-md">{info.target}</span>
       </div>
 
       {/* Expanded Details */}

@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.524] - 2026-07-20
+
+### Improved
+- **Moved Chevron Arrow Indicator to Right End (`SuperAgentToolItem.tsx`)**:
+  - Moved the expand/collapse chevron arrow (`ChevronRight` / `ChevronDown`) to the right end (`ml-auto`) of the tool item header line
+  - Keeps tool action (`Read`, `Ran`, `Edited`) and target filename clean and aligned at the beginning of the line
+
 ## [1.3.523] - 2026-07-20
 
 ### Redesigned & Simplified
