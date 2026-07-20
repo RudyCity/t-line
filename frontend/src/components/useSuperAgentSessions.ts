@@ -81,6 +81,8 @@ export function loadWorkspaceSessions(wsPath: string): ChatSession[] {
   return loadedSessions;
 }
 
+import { wsManager } from '../services/websocket';
+
 // API Sync Helpers
 async function apiGetSessions(workspace: string): Promise<ChatSession[] | null> {
   try {
@@ -148,13 +150,24 @@ export function useSuperAgentSessions(workspace: string) {
 
   const [messages, setMessages] = useState<SuperAgentMessage[]>([]);
   const prevWorkspaceRef = useRef(workspace);
+  const activeSessionIdRef = useRef(activeSessionId);
+
+  // Keep activeSessionIdRef up to date
+  useEffect(() => {
+    activeSessionIdRef.current = activeSessionId;
+  }, [activeSessionId]);
 
   // Initial Sync from Backend on switch/mount
-  const syncSessions = useCallback(async (wsPath: string) => {
+  const syncSessions = useCallback(async (wsPath: string, preserveActiveId?: string) => {
     const apiSessions = await apiGetSessions(wsPath);
     if (apiSessions && apiSessions.length > 0) {
       setSessions(apiSessions);
-      const activeId = apiSessions[0].id;
+      
+      let activeId = apiSessions[0].id;
+      if (preserveActiveId && apiSessions.some(s => s.id === preserveActiveId)) {
+        activeId = preserveActiveId;
+      }
+      
       setActiveSessionId(activeId);
       const apiMsgs = await apiGetSessionMessages(wsPath, activeId);
       if (apiMsgs) {
@@ -166,7 +179,11 @@ export function useSuperAgentSessions(workspace: string) {
     // Fallback to localStorage
     const localSessions = loadWorkspaceSessions(wsPath);
     setSessions(localSessions);
-    const localActiveId = localSessions[0]?.id || `session_${Date.now()}`;
+    
+    let localActiveId = localSessions[0]?.id || `session_${Date.now()}`;
+    if (preserveActiveId && localSessions.some(s => s.id === preserveActiveId)) {
+      localActiveId = preserveActiveId;
+    }
     setActiveSessionId(localActiveId);
     
     const wsKey = wsPath || 'default';
@@ -187,6 +204,19 @@ export function useSuperAgentSessions(workspace: string) {
   useEffect(() => {
     prevWorkspaceRef.current = workspace;
     syncSessions(workspace);
+  }, [workspace, syncSessions]);
+
+  // Listen for real-time history file updates from server (e.g. from CLI execution)
+  useEffect(() => {
+    const handleWsMessage = (payload: any) => {
+      if (payload && payload.type === 'superagent-sessions-changed') {
+        syncSessions(workspace, activeSessionIdRef.current);
+      }
+    };
+    wsManager.addGlobalMessageListener(handleWsMessage);
+    return () => {
+      wsManager.removeGlobalMessageListener(handleWsMessage);
+    };
   }, [workspace, syncSessions]);
 
   // Persist messages & update title/timestamp

@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.511] - 2026-07-20
+
+### Added & Enhanced
+- **Real-time CLI Chat History Sync Watcher**:
+  - Implemented recursive directory watcher for `~/.superagent-r` in [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) to push events (`superagent-sessions-changed`) on session history file writes.
+  - Linked global WebSocket manager to [useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts) hook on the frontend to automatically refresh chat sessions and message lists in real-time, preserving the user's active session choice during updates.
+
 ## [1.3.510] - 2026-07-20
 
 ### Added & Fixed
