@@ -65,6 +65,27 @@ let currentWorkspacePath = '';
 let currentAgentMode = 'single';
 let currentCustomArgs = '';
 
+export function forceKillPort7888() {
+  try {
+    if (os.platform() === 'win32') {
+      const out = execSync('netstat -ano | findstr :7888', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+      const lines = out.split('\n');
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 5) {
+          const pidStr = parts[parts.length - 1];
+          const pid = parseInt(pidStr, 10);
+          if (pid && pid > 0 && pid !== process.pid) {
+            execSync(`taskkill /pid ${pid} /T /F`, { stdio: 'ignore' });
+          }
+        }
+      }
+    } else {
+      execSync('lsof -t -i:7888 | xargs kill -9', { stdio: 'ignore' });
+    }
+  } catch (e) {}
+}
+
 function ensureSuperAgentServer(
   workspacePath: string,
   agentMode: string,
@@ -407,6 +428,11 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
           autoSuperAgentProcess = null;
           isStartingSuperAgent = false;
         }
+
+        // Additional fallback: ensure any process bound to port 7888 is killed
+        forceKillPort7888();
+        autoSuperAgentProcess = null;
+        isStartingSuperAgent = false;
 
         ws.send(JSON.stringify({ type: 'status', text: 'Agent execution aborted by user.' }));
         ws.send(JSON.stringify({ type: 'agent_event', event: { type: 'done' } }));

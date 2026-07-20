@@ -78,7 +78,6 @@ export const handleAgentEventPayload = (
     if (typeof payload.text === 'string') {
       const statusLower = payload.text.toLowerCase();
       if (statusLower.includes('aborted')) {
-        isAbortedRef.current = false;
         setLoading(false);
         setToolProgressMsg('');
       }
@@ -98,9 +97,10 @@ export const handleAgentEventPayload = (
   } else if (payload.type === 'agent_event') {
     const innerEvent = payload.event;
     if (innerEvent.type === 'done' || innerEvent.type === 'goal_done') {
-      isAbortedRef.current = false;
-      setLoading(false);
-      setToolProgressMsg('');
+      if (!isAbortedRef.current) {
+        setLoading(false);
+        setToolProgressMsg('');
+      }
       return;
     }
 
@@ -169,15 +169,19 @@ export const handleAgentEventPayload = (
       setMessages(prev => [...prev, { role: 'system', text: `Agent Error: ${innerEvent.message || 'Unknown error'}` }]);
     }
   } else if (payload.type === 'permission_required') {
+    if (isAbortedRef.current) return;
     setPendingPermission({ permissionId: payload.permissionId, toolCall: payload.toolCall, description: payload.description });
   } else if (payload.type === 'question_required') {
+    if (isAbortedRef.current) return;
     setPendingQuestion({ questionId: payload.questionId, question: payload.question, options: payload.options, isMultiSelect: payload.isMultiSelect });
     setSelectedQuestionAnswers([]);
     setCustomQuestionInput('');
   } else if (payload.type === 'plan_approval_required') {
+    if (isAbortedRef.current) return;
     setPendingPlanApproval(payload.planState === 'PLANNING_PENDING');
     setMessages(prev => [...prev, { role: 'system', text: '⭐ Plan approval required! Please review and authorize execution below.' }]);
   } else if (payload.type === 'tool_progress') {
+    if (isAbortedRef.current) return;
     setToolProgressMsg(payload.content || payload.message || '');
   } else {
     // Unknown payload type — log warning to help debug missed events

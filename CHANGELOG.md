@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.539] - 2026-07-20
+
+### Fixed
+- **SuperAgent Process Termination & Abort Event Filtering Fix (`superAgentBridge.ts`, `SuperAgentConsoleUtils.ts`, `SuperAgentConsole.tsx`)**:
+  - Fixed a critical bug in `SuperAgentConsoleUtils.ts` where receiving status messages containing `"aborted"` prematurely reset `isAbortedRef.current = false`. This caused lingering in-flight SSE events (like `thought`, `tool_start`, `content_delta`, and prompts) to re-enable loading spinners and print messages after the user clicked Stop.
+  - `isAbortedRef.current` now stays strictly `true` until the user submits a new prompt in `handleSend`.
+  - Updated `handleAgentEventPayload` to also ignore `permission_required`, `question_required`, `plan_approval_required`, and `tool_progress` payloads when `isAbortedRef.current` is true.
+  - Implemented `forceKillPort7888()` fallback in `superAgentBridge.ts` to inspect and terminate any active process listening on port 7888 during abort, guaranteeing that background LLM generations, CLI server processes, and subagent tools stop completely even if `autoSuperAgentProcess` is detached or null.
+  - Updated `handleAbort()` in `SuperAgentConsole.tsx` to automatically mark any active subagents in `subagentList` as `'CANCELLED'`.
+
 ## [1.3.538] - 2026-07-20
 
 ### Fixed

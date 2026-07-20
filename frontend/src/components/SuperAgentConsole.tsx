@@ -379,17 +379,9 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
         const payload = JSON.parse(event.data);
         
         handleAgentEventPayload(
-          payload,
-          setLoading,
-          setToolProgressMsg,
-          setMessages,
-          setSubagentList,
-          setPendingPermission,
-          setPendingQuestion,
-          setSelectedQuestionAnswers,
-          setCustomQuestionInput,
-          setPendingPlanApproval,
-          isAbortedRef
+          payload, setLoading, setToolProgressMsg, setMessages, setSubagentList,
+          setPendingPermission, setPendingQuestion, setSelectedQuestionAnswers,
+          setCustomQuestionInput, setPendingPlanApproval, isAbortedRef
         );
       } catch (e) {
         setMessages(prev => [...prev, { role: 'assistant', text: event.data }]);
@@ -618,6 +610,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
     setPendingPermission(null);
     setPendingQuestion(null);
     setPendingPlanApproval(false);
+    setSubagentList(prev => prev.map(sa => sa.status === 'RUNNING' ? { ...sa, status: 'CANCELLED', logs: [...(sa.logs || []), `[${new Date().toLocaleTimeString()}] Subagent cancelled by user abort.`] } : sa));
     setMessages(prev => [...prev, { role: 'system', text: '⏹️ Agent execution stopped by user.' }]);
   };
 
@@ -975,32 +968,20 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
 
       {/* SuperAgent Unified Settings Modal */}
       <SuperAgentSettingsModal
-        isOpen={showSettingsModal}
-        onClose={() => setShowSettingsModal(false)}
-        workspaces={workspaces}
-        workspace={workspace}
-        setWorkspace={setWorkspace}
-        agentMode={agentMode}
-        setAgentMode={setAgentMode}
-        customArgs={customArgs}
-        setCustomArgs={setCustomArgs}
+        isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)}
+        workspaces={workspaces} workspace={workspace} setWorkspace={setWorkspace}
+        agentMode={agentMode} setAgentMode={setAgentMode}
+        customArgs={customArgs} setCustomArgs={setCustomArgs}
         setConnectTrigger={setConnectTrigger}
-        showSidebar={showSidebar}
-        setShowSidebar={setShowSidebar}
-        onRefreshMonitor={fetchMonitorData}
-        isLoadingMonitor={isLoadingMonitor}
+        showSidebar={showSidebar} setShowSidebar={setShowSidebar}
+        onRefreshMonitor={fetchMonitorData} isLoadingMonitor={isLoadingMonitor}
         onClearConsole={() => setMessages([{ role: 'system', text: 'Console output cleared.' }])}
-        providers={providers}
-        activeProviderId={activeProviderId}
-        onSaveProvider={handleSaveProvider}
-        onDeleteProvider={handleDeleteProvider}
+        providers={providers} activeProviderId={activeProviderId}
+        onSaveProvider={handleSaveProvider} onDeleteProvider={handleDeleteProvider}
         onSetActiveProvider={handleSetActiveProvider}
-        presets={presets}
-        activePresetId={activePresetId}
-        onSelectPreset={handlePresetChange}
-        onSaveCustomPreset={handleSaveCustomPreset}
-        onDeleteCustomPreset={handleDeleteCustomPreset}
-        getAuthHeader={getAuthHeader}
+        presets={presets} activePresetId={activePresetId}
+        onSelectPreset={handlePresetChange} onSaveCustomPreset={handleSaveCustomPreset}
+        onDeleteCustomPreset={handleDeleteCustomPreset} getAuthHeader={getAuthHeader}
         defaultTab={settingsModalTab}
       />
     </div>
