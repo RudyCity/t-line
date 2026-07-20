@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.546] - 2026-07-20
+
+### Fixed
+- **SuperAgent Server Tidak Lagi Dikill saat Abort (`superAgentBridge.ts`)**:
+  - Ditemukan bug kritis: ketika user menekan **Stop/Abort**, kode sebelumnya tidak hanya mengirim `POST /api/abort` ke SuperAgent server tetapi juga langsung **membunuh proses** SuperAgent server (`taskkill /F` di Windows, `SIGKILL` di Unix) dan memanggil `forceKillPort7888()` — menyebabkan server mati total dan harus respawn dari awal untuk request berikutnya.
+  - Sekarang action `abort` hanya memanggil endpoint `POST /api/abort` dan membiarkan SuperAgent server tetap hidup di port 7888, sehingga request berikutnya (prompt baru, hapus sesi, dll.) langsung terlayani tanpa jeda respawn.
+
 ## [1.3.545] - 2026-07-20
 
 ### Fixed
