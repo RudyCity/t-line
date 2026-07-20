@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "1.3.498",
+  "version": "1.3.499",
   "description": "Backend service for t-line workspace manager",
   "main": "dist/server.js",
   "scripts": {

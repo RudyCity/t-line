@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.499] - 2026-07-20
+
+### Fixed
+- **Cleaned Up SuperAgent Header Bar**:
+  - Removed awkward left-aligned icon button from the SuperAgent top left header column in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx).
+  - Placed neat `History` toggle button in the top right control group alongside `Monitor` and `Setting`.
+
 ## [1.3.498] - 2026-07-20
 
 ### Improved

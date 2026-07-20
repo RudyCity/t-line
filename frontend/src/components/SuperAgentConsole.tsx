@@ -707,19 +707,10 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
       <div className="grid grid-cols-3 items-center px-4 py-2.5 bg-[#090c14] border-b border-zinc-800/80 min-h-[48px] w-full shadow-sm">
         {/* Left Column */}
         <div className="flex items-center gap-2 min-w-0">
-          <button
-            onClick={() => setShowHistorySidebar(!showHistorySidebar)}
-            className={`p-1.5 rounded-md border transition flex items-center gap-1 cursor-pointer font-medium ${
-              showHistorySidebar ? 'bg-indigo-950/80 border-indigo-700/80 text-indigo-300 shadow-sm' : 'bg-[#121622] border-zinc-800 text-zinc-400 hover:text-zinc-200'
-            }`}
-            title="Toggle Chat History Sidebar"
-          >
-            <History className="w-3.5 h-3.5" />
-          </button>
           <TerminalIcon className="w-4 h-4 text-indigo-400 shrink-0" />
-          <span className="font-semibold text-xs tracking-wide shrink-0 hidden sm:inline">SuperAgent</span>
+          <span className="font-semibold text-xs tracking-wide shrink-0">SuperAgent Panel</span>
           {workspace && (
-            <span className="bg-indigo-950/70 text-indigo-300 text-[10px] px-2 py-0.5 rounded-md border border-indigo-800/60 font-mono truncate hidden md:flex items-center gap-1">
+            <span className="bg-indigo-950/70 text-indigo-300 text-[10px] px-2 py-0.5 rounded-md border border-indigo-800/60 font-mono truncate hidden sm:flex items-center gap-1">
               <Folder className="w-2.5 h-2.5 text-indigo-400" />
               {workspace.split(/[/\\]/).pop()}
             </span>
@@ -747,6 +738,17 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
 
         {/* Right Column */}
         <div className="flex justify-end gap-2 items-center relative">
+          <button
+            onClick={() => setShowHistorySidebar(!showHistorySidebar)}
+            className={`px-2.5 py-1 text-[11px] rounded-md border transition flex items-center gap-1.5 cursor-pointer font-medium ${
+              showHistorySidebar ? 'bg-indigo-950/80 border-indigo-700/80 text-indigo-300 shadow-sm' : 'bg-[#121622] border-zinc-800 text-zinc-400 hover:text-zinc-200'
+            }`}
+            title="Toggle Chat History Sidebar"
+          >
+            <History className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">History</span>
+          </button>
+
           <button
             onClick={() => setShowSidebar(!showSidebar)}
             className={`px-2.5 py-1 text-[11px] rounded-md border transition flex items-center gap-1.5 cursor-pointer font-medium ${
