@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.534] - 2026-07-20
+
+### Fixed
+- **Session Deduplication Sub-String Matching (`sessionManager.ts`)**:
+  - Enhanced `cleanDuplicateWorkspaceSessions` and `saveWorkspaceSession` in [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) to detect overlapping title sub-strings (e.g. `hai` vs `hai ➔ spawn sub agent...`).
+  - Merges duplicate GUI draft sessions (`session_...`) with CLI sessions (`D__...`) created within a 10-minute window, preventing single chat conversations from splitting into two separate sidebar entries.
+
 ## [1.3.533] - 2026-07-20
 
 ### Fixed & Added

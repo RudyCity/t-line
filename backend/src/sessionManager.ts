@@ -309,17 +309,22 @@ function cleanDuplicateWorkspaceSessions(db: any, normalizedWs: string) {
         if ((isGuiA || isGuiB) && !(isGuiA && isGuiB)) {
           const guiRow = isGuiA ? rowA : rowB;
 
+          // Check if one title is contained inside another (e.g. "hai" and "hai ➔ spawn sub agent...")
+          const titleContains = titleA.includes(titleB) || titleB.includes(titleA);
+
           if (
             guiRow.message_count === 0 ||
             (titleA === titleB && titleA !== 'Untitled Chat' && titleA !== 'New Chat') ||
-            (timeDiff < 300000 && (titleA === titleB || titleA === 'Untitled Chat' || titleB === 'Untitled Chat'))
+            (timeDiff < 600000 && (titleA === titleB || titleContains || titleA === 'Untitled Chat' || titleB === 'Untitled Chat'))
           ) {
             idsToDelete.push(guiRow.id);
           }
         } 
-        // 2. Both are GUI or both are CLI sessions with identical titles or close timestamps
+        // 2. Both are GUI or both are CLI sessions
         else {
-          if (titleA === titleB && titleA !== 'Untitled Chat' && titleA !== 'New Chat') {
+          const titleContains = titleA.includes(titleB) || titleB.includes(titleA);
+
+          if ((titleA === titleB || (titleContains && timeDiff < 600000)) && titleA !== 'Untitled Chat' && titleA !== 'New Chat') {
             // Keep the one with more messages or newer timestamp
             const countA = rowA.message_count || 0;
             const countB = rowB.message_count || 0;
@@ -328,7 +333,7 @@ function cleanDuplicateWorkspaceSessions(db: any, normalizedWs: string) {
             } else {
               idsToDelete.push(rowA.id);
             }
-          } else if (timeDiff < 60000 && (titleA === 'Untitled Chat' || titleB === 'Untitled Chat')) {
+          } else if (timeDiff < 120000 && (titleA === 'Untitled Chat' || titleB === 'Untitled Chat')) {
             const emptyRow = (rowA.message_count || 0) === 0 ? rowA : ((rowB.message_count || 0) === 0 ? rowB : null);
             if (emptyRow) {
               idsToDelete.push(emptyRow.id);
@@ -530,8 +535,9 @@ export function saveWorkspaceSession(
       if (cliSession && cliSession.id) {
         const cliTitle = formatSessionTitleFromDb(db, cliSession.id, '');
         const currentTitle = session.title;
-        // If titles match or CLI session was created within 60s, adopt the CLI session ID
-        if (cliTitle === currentTitle || (session.createdAt && Math.abs(session.createdAt - now) < 60000)) {
+        const titleContains = cliTitle.includes(currentTitle) || currentTitle.includes(cliTitle);
+        // If titles match, contain each other, or CLI session was created within 10 mins, adopt the CLI session ID
+        if (cliTitle === currentTitle || titleContains || (session.createdAt && Math.abs(session.createdAt - now) < 600000)) {
           sessionId = cliSession.id;
         }
       }
