@@ -1,8 +1,6 @@
 import http from 'http';
-import fs from 'fs';
-import path from 'path';
 import os from 'os';
-import Database from 'better-sqlite3';
+import { spawn } from 'child_process';
 
 // ─── Interfaces ───────────────────────────────────────────────
 
@@ -63,8 +61,41 @@ function truncateResult(result: any): any {
   return result;
 }
 
+let isStartingSuperAgentServer = false;
+
+function autoStartSuperAgentServer(workspace: string): Promise<boolean> {
+  if (isStartingSuperAgentServer) {
+    return new Promise((resolve) => setTimeout(() => resolve(true), 2500));
+  }
+  isStartingSuperAgentServer = true;
+  return new Promise((resolve) => {
+    const isWin = os.platform() === 'win32';
+    const cmd = isWin ? 'bunx.cmd' : 'bunx';
+    const workspacePath = workspace || process.cwd();
+
+    console.log(`[SessionManager] SuperAgent server offline on port 7888. Auto-spawning SuperAgent server in ${workspacePath}...`);
+    try {
+      const child = spawn(cmd, ['superagent', '--server'], {
+        cwd: workspacePath,
+        shell: true,
+        detached: false,
+        stdio: 'ignore'
+      });
+
+      child.unref();
+    } catch (e) {
+      console.error('[SessionManager] Failed to auto-start SuperAgent server:', e);
+    }
+
+    setTimeout(() => {
+      isStartingSuperAgentServer = false;
+      resolve(true);
+    }, 2500);
+  });
+}
+
 /** Low-level HTTP helper to request SuperAgent HTTP Server (port 7888) */
-function requestSuperAgentServer(
+function rawRequestSuperAgentServer(
   pathName: string,
   method: string = 'GET',
   payload?: any,
@@ -117,6 +148,22 @@ function requestSuperAgentServer(
     }
     req.end();
   });
+}
+
+/** Requests SuperAgent HTTP Server on port 7888 with auto-spawn retry if server is offline */
+async function requestSuperAgentServer(
+  pathName: string,
+  method: string = 'GET',
+  payload?: any,
+  workspace?: string,
+  timeoutMs: number = 3000
+): Promise<any | null> {
+  let result = await rawRequestSuperAgentServer(pathName, method, payload, workspace, timeoutMs);
+  if (result === null) {
+    await autoStartSuperAgentServer(workspace || process.cwd());
+    result = await rawRequestSuperAgentServer(pathName, method, payload, workspace, timeoutMs);
+  }
+  return result;
 }
 
 // ─── SuperAgent Server Session History API ───────────────────
@@ -271,14 +318,19 @@ export async function saveWorkspaceSession(
   }
 }
 
-/** Delete a session from SuperAgent Server or fallback to SQLite */
+/** Delete a session from SuperAgent Server */
 export async function deleteWorkspaceSession(workspace: string, prefixedId: string): Promise<boolean> {
   let sessionId = prefixedId;
   if (prefixedId.includes('::')) {
     sessionId = prefixedId.split('::')[1];
   }
 
-  // 1. Try deleting via SuperAgent HTTP Server (if active)
+  // 1. Draft/unsaved local session
+  if (sessionId.startsWith('session_')) {
+    return true;
+  }
+
+  // 2. Delete 100% via SuperAgent HTTP Server API (auto-spawns server if offline)
   try {
     const res = await requestSuperAgentServer(`/api/history/session/${encodeURIComponent(sessionId)}`, 'DELETE', undefined, workspace);
     if (res && (res.success || res.ok || res.status === 'ok' || res.status === 'success' || res.deleted || res.message)) {
@@ -286,38 +338,6 @@ export async function deleteWorkspaceSession(workspace: string, prefixedId: stri
     }
   } catch (e) {
     console.error(`[SessionManager] HTTP delete request error for ${prefixedId}:`, e);
-  }
-
-  // 2. Draft/unsaved local session
-  if (sessionId.startsWith('session_')) {
-    return true;
-  }
-
-  // 3. Fallback: Direct SQLite DB deletion when SuperAgent HTTP server is offline
-  try {
-    const possibleDbPaths = [
-      path.join(os.homedir(), '.superagent-r', 'history.db'),
-      path.join(os.homedir(), '.superagent', 'history.db')
-    ];
-
-    for (const dbPath of possibleDbPaths) {
-      if (fs.existsSync(dbPath)) {
-        const db = new Database(dbPath);
-        const delSession = db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
-        db.prepare('DELETE FROM messages WHERE session_id = ?').run(sessionId);
-        try {
-          db.prepare('DELETE FROM input_history WHERE session_id = ?').run(sessionId);
-        } catch {}
-        db.close();
-
-        if (delSession.changes > 0) {
-          console.log(`[SessionManager] Successfully deleted session ${sessionId} via SQLite fallback (${dbPath})`);
-          return true;
-        }
-      }
-    }
-  } catch (e) {
-    console.error(`[SessionManager] SQLite fallback delete error for ${prefixedId}:`, e);
   }
 
   return false;
