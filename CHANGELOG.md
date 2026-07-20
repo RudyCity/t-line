@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.551] - 2026-07-20
+
+### Changed
+- **SuperAgent Server Spawned Once at Backend Startup (`superAgentBridge.ts`, `server.ts`)**:
+  - Previously the SuperAgent server was spawned lazily — only when the first WebSocket connection arrived and the SSE connection to port 7888 failed. This caused race conditions when multiple workspaces connected simultaneously (each could trigger its own spawn attempt).
+  - Added `startSuperAgentEager()` — a WebSocket-independent startup function that uses the same global `autoSuperAgentProcess` / `isStartingSuperAgent` singleton flags. Called immediately in `server.listen()` callback so the server is warming up before any client connects.
+  - `cwd` for the eager spawn is `process.cwd()` (the backend's own working directory), not a user workspace path, making it truly workspace-agnostic.
+  - Subsequent `ensureSuperAgentServer()` calls from WS handlers will hit `pingPort7888()` → already up → `callback()` immediately, zero spawning.
+
 ## [1.3.550] - 2026-07-20
 
 ### Fixed

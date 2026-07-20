@@ -30,7 +30,7 @@ import gitRouter, { registerWorkspaceChangeCallback } from './gitRoutes';
 import fsRouter, { registerFileChangeCallback } from './fsRoutes';
 import { previewProxy } from './previewProxy';
 import { TLINE_HELPER_CODE } from './tline-helper-code';
-import { handleSuperAgentConnection } from './superAgentBridge';
+import { handleSuperAgentConnection, startSuperAgentEager } from './superAgentBridge';
 import superAgentRouter from './superAgentRoutes';
 import { closeSessionDb } from './sessionManager';
 
@@ -864,4 +864,7 @@ server.listen(port, () => {
   console.log(`Bypass Token: ${localBypassToken}`);
   console.log(`========================================`);
   updateWorkspaceWatchers();
+  // Pre-warm the SuperAgent server so it is ready before the first WS connection.
+  // Uses the global process singleton — subsequent WS handlers will see it's already up.
+  startSuperAgentEager();
 });
