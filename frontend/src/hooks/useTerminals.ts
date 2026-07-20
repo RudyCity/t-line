@@ -552,16 +552,18 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     onTerminalOpen?.();
   }, [tabs, onTerminalOpen]);
   const openAgentTab = useCallback((workspaceId?: string) => {
-    // Enforce single-tab rule: reuse existing agent tab instead of creating a new one
+    // Enforce one agent tab per workspace: reuse existing tab for the same workspace
     setTabs(prev => {
-      const existingAgentTab = prev.find(t => t.type === 'agent' && !t.isDetached);
+      const existingAgentTab = prev.find(
+        t => t.type === 'agent' && !t.isDetached && t.workspaceId === workspaceId
+      );
       if (existingAgentTab) {
-        // Switch to the existing agent tab
+        // Switch to the existing agent tab for this workspace
         setActiveTabId(existingAgentTab.id);
         onTerminalOpen?.();
         return prev;
       }
-      // No agent tab exists, create one
+      // No agent tab for this workspace yet, create one
       const tabId = `agent-${Date.now()}`;
       const newTab: TabData = {
         id: tabId,
