@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.570] - 2026-07-20
+
+### Fixed
+- **SuperAgent Tab Theme Color Alignment (`App.tsx`, `SuperAgentConsole.tsx`, `SuperAgentSettingsModal.tsx`, `SuperAgentPresetManager.tsx`, `TabsDropdown.tsx`, `components.css`)**:
+  - Replaced hardcoded `#818cf8` and `indigo` style colors across the SuperAgent tab icon, quick launch button, header mode/navigation pills, and settings modal buttons with dynamic CSS theme variables (`var(--color-primary)` & `color-mix()`). SuperAgent elements now seamlessly adapt to the user's active theme palette.
+
 ## [1.3.569] - 2026-07-20
 
 ### Fixed

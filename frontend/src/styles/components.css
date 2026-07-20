@@ -2937,8 +2937,13 @@
   cursor: pointer;
 }
 
+.sa-tab-pill.active {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
 .sa-tab-pill:focus-visible {
-  outline: 2px solid oklch(65% 0.22 260);
+  outline: 2px solid var(--color-primary);
   outline-offset: 1px;
 }
 
@@ -2952,11 +2957,11 @@
 }
 
 .sa-card-base:hover {
-  border-color: rgba(99, 102, 241, 0.3);
+  border-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .sa-btn-primary {
-  background: oklch(58% 0.22 260);
+  background: var(--color-primary);
   color: #ffffff;
   font-weight: 500;
   font-size: 12px;
@@ -2968,7 +2973,7 @@
 }
 
 .sa-btn-primary:hover {
-  background: oklch(64% 0.22 260);
+  background: var(--color-primary-hover, var(--color-primary));
 }
 
 .sa-btn-primary:active {
@@ -2976,7 +2981,7 @@
 }
 
 .sa-btn-primary:focus-visible {
-  outline: 2px solid oklch(75% 0.2 260);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 

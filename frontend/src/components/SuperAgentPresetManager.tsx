@@ -301,16 +301,18 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
             <button
               onClick={() => setSelectedMode('single')}
               className={`px-3 py-1 rounded-md text-[11px] font-medium transition ${
-                selectedMode === 'single' ? 'bg-indigo-600 text-white shadow-xs' : 'text-zinc-400 hover:text-zinc-200'
+                selectedMode === 'single' ? 'text-white shadow-xs' : 'text-zinc-400 hover:text-zinc-200'
               }`}
+              style={selectedMode === 'single' ? { backgroundColor: 'var(--color-primary)' } : undefined}
             >
               Single Agent Mode
             </button>
             <button
               onClick={() => setSelectedMode('multi')}
               className={`px-3 py-1 rounded-md text-[11px] font-medium transition ${
-                selectedMode === 'multi' ? 'bg-indigo-600 text-white shadow-xs' : 'text-zinc-400 hover:text-zinc-200'
+                selectedMode === 'multi' ? 'text-white shadow-xs' : 'text-zinc-400 hover:text-zinc-200'
               }`}
+              style={selectedMode === 'multi' ? { backgroundColor: 'var(--color-primary)' } : undefined}
             >
               Multi-Agent Mode
             </button>

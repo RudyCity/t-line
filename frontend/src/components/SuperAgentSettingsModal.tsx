@@ -96,11 +96,16 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
             onClick={() => setActiveTab('login')}
             className={`px-4 py-2.5 font-medium border-b-2 transition flex items-center gap-2 text-xs ${
               activeTab === 'login'
-                ? 'border-indigo-500 text-indigo-300 bg-indigo-950/20'
+                ? 'font-semibold'
                 : 'border-transparent text-zinc-400 hover:text-zinc-200'
             }`}
+            style={activeTab === 'login' ? {
+              borderColor: 'var(--color-primary)',
+              color: 'var(--color-primary)',
+              backgroundColor: 'color-mix(in srgb, var(--color-primary) 15%, transparent)'
+            } : undefined}
           >
-            <Key className="w-3.5 h-3.5 text-indigo-400" />
+            <Key className="w-3.5 h-3.5" style={{ color: activeTab === 'login' ? 'var(--color-primary)' : undefined }} />
             Management Login ({providers.length})
           </button>
 
@@ -108,11 +113,16 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
             onClick={() => setActiveTab('presets')}
             className={`px-4 py-2.5 font-medium border-b-2 transition flex items-center gap-2 text-xs ${
               activeTab === 'presets'
-                ? 'border-indigo-500 text-indigo-300 bg-indigo-950/20'
+                ? 'font-semibold'
                 : 'border-transparent text-zinc-400 hover:text-zinc-200'
             }`}
+            style={activeTab === 'presets' ? {
+              borderColor: 'var(--color-primary)',
+              color: 'var(--color-primary)',
+              backgroundColor: 'color-mix(in srgb, var(--color-primary) 15%, transparent)'
+            } : undefined}
           >
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+            <Sparkles className="w-3.5 h-3.5" style={{ color: activeTab === 'presets' ? 'var(--color-primary)' : undefined }} />
             Model Presets
           </button>
 
@@ -120,11 +130,16 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
             onClick={() => setActiveTab('execution')}
             className={`px-4 py-2.5 font-medium border-b-2 transition flex items-center gap-2 text-xs ${
               activeTab === 'execution'
-                ? 'border-indigo-500 text-indigo-300 bg-indigo-950/20'
+                ? 'font-semibold'
                 : 'border-transparent text-zinc-400 hover:text-zinc-200'
             }`}
+            style={activeTab === 'execution' ? {
+              borderColor: 'var(--color-primary)',
+              color: 'var(--color-primary)',
+              backgroundColor: 'color-mix(in srgb, var(--color-primary) 15%, transparent)'
+            } : undefined}
           >
-            <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+            <Sliders className="w-3.5 h-3.5" style={{ color: activeTab === 'execution' ? 'var(--color-primary)' : undefined }} />
             Execution & Workspace
           </button>
 
@@ -132,11 +147,16 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
             onClick={() => setActiveTab('monitor')}
             className={`px-4 py-2.5 font-medium border-b-2 transition flex items-center gap-2 text-xs ${
               activeTab === 'monitor'
-                ? 'border-indigo-500 text-indigo-300 bg-indigo-950/20'
+                ? 'font-semibold'
                 : 'border-transparent text-zinc-400 hover:text-zinc-200'
             }`}
+            style={activeTab === 'monitor' ? {
+              borderColor: 'var(--color-primary)',
+              color: 'var(--color-primary)',
+              backgroundColor: 'color-mix(in srgb, var(--color-primary) 15%, transparent)'
+            } : undefined}
           >
-            <Activity className="w-3.5 h-3.5 text-indigo-400" />
+            <Activity className="w-3.5 h-3.5" style={{ color: activeTab === 'monitor' ? 'var(--color-primary)' : undefined }} />
             Monitor & Console
           </button>
         </div>

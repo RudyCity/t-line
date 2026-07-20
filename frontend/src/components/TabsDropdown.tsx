@@ -212,11 +212,11 @@ export const TabsDropdown: React.FC<TabsDropdownProps> = ({
                 <div className="tabs-dropdown-item-content">
                   {/* Icon */}
                   {isFile ? (
-                    <FileCode size={13} className={isActive ? 'text-purple-400' : 'text-slate-400'} />
+                    <FileCode size={13} style={{ color: isActive ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                   ) : isDiff ? (
-                    <GitCompare size={13} className={isActive ? 'text-purple-400' : 'text-slate-400'} />
+                    <GitCompare size={13} style={{ color: isActive ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                   ) : (
-                    <TerminalIcon size={13} className={isActive ? 'text-purple-400' : 'text-slate-400'} />
+                    <TerminalIcon size={13} style={{ color: isActive ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                   )}
 
                   {/* Name and path details */}

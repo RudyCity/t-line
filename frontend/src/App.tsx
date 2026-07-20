@@ -2134,9 +2134,9 @@ export default function App() {
                               <Globe size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                             ) : t.type === 'agent' ? (
                               isAgentLoading ? (
-                                <Loader2 size={13} className="tab-icon shrink-0 animate-spin text-indigo-400" />
+                                <Loader2 size={13} className="tab-icon shrink-0 animate-spin" style={{ color: 'var(--color-primary)' }} />
                               ) : (
-                                <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: '#818cf8' }} />
+                                <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                               )
                             ) : (
                               <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
@@ -2180,7 +2180,7 @@ export default function App() {
                     className="action-btn shrink-0 animate-pulse hover:animate-none"
                     onClick={() => openAgentTab(panelWorkspace?.id)}
                     title="Ask SuperAgent"
-                    style={{ marginLeft: '6px', color: '#818cf8' }}
+                    style={{ marginLeft: '6px', color: 'var(--color-primary)' }}
                   >
                     <TerminalIcon size={14} />
                   </button>

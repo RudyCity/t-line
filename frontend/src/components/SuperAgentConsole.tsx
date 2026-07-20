@@ -662,16 +662,28 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
           <button
             onClick={() => setShowHistorySidebar(!showHistorySidebar)}
             className={`px-2.5 py-1 text-[11px] rounded-md border transition flex items-center gap-1.5 cursor-pointer font-medium ${
-              showHistorySidebar ? 'bg-indigo-950/80 border-indigo-700/80 text-indigo-300 shadow-sm' : 'bg-[#121622] border-zinc-800 text-zinc-400 hover:text-zinc-200'
+              showHistorySidebar ? 'shadow-sm' : 'bg-[#121622] border-zinc-800 text-zinc-400 hover:text-zinc-200'
             }`}
+            style={showHistorySidebar ? {
+              backgroundColor: 'color-mix(in srgb, var(--color-primary) 18%, transparent)',
+              borderColor: 'color-mix(in srgb, var(--color-primary) 50%, transparent)',
+              color: 'var(--color-primary)'
+            } : undefined}
             title="Toggle Chat History Sidebar"
           >
             <History className="w-3.5 h-3.5" />
             <span>History</span>
           </button>
           {workspace && (
-            <span className="bg-indigo-950/70 text-indigo-300 text-[10px] px-2 py-0.5 rounded-md border border-indigo-800/60 font-mono truncate hidden sm:flex items-center gap-1">
-              <Folder className="w-2.5 h-2.5 text-indigo-400" />
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-md border font-mono truncate hidden sm:flex items-center gap-1"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--color-primary) 15%, transparent)',
+                borderColor: 'color-mix(in srgb, var(--color-primary) 40%, transparent)',
+                color: 'var(--color-primary)'
+              }}
+            >
+              <Folder className="w-2.5 h-2.5" style={{ color: 'var(--color-primary)' }} />
               {workspace.split(/[/\\]/).pop()}
             </span>
           )}
@@ -682,13 +694,21 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
           <div className="flex bg-[#121622] rounded-lg p-0.5 border border-zinc-800/80">
             <button
               onClick={() => setActiveTab('console')}
-              className={`sa-tab-pill ${activeTab === 'console' ? 'bg-indigo-600 text-white font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}`}
+              className={`sa-tab-pill ${activeTab === 'console' ? 'font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}`}
+              style={activeTab === 'console' ? {
+                backgroundColor: 'var(--color-primary)',
+                color: '#ffffff'
+              } : undefined}
             >
               Console
             </button>
             <button
               onClick={() => setActiveTab('audit')}
-              className={`sa-tab-pill flex items-center gap-1.5 ${activeTab === 'audit' ? 'bg-indigo-600 text-white font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}`}
+              className={`sa-tab-pill flex items-center gap-1.5 ${activeTab === 'audit' ? 'font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}`}
+              style={activeTab === 'audit' ? {
+                backgroundColor: 'var(--color-primary)',
+                color: '#ffffff'
+              } : undefined}
             >
               <Shield className="w-3.5 h-3.5" />
               Audit Trails
@@ -701,8 +721,13 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
           <button
             onClick={() => setShowSidebar(!showSidebar)}
             className={`px-2.5 py-1 text-[11px] rounded-md border transition flex items-center gap-1.5 cursor-pointer font-medium ${
-              showSidebar ? 'bg-indigo-950/80 border-indigo-700/80 text-indigo-300 shadow-sm' : 'bg-[#121622] border-zinc-800 text-zinc-400 hover:text-zinc-200'
+              showSidebar ? 'shadow-sm' : 'bg-[#121622] border-zinc-800 text-zinc-400 hover:text-zinc-200'
             }`}
+            style={showSidebar ? {
+              backgroundColor: 'color-mix(in srgb, var(--color-primary) 18%, transparent)',
+              borderColor: 'color-mix(in srgb, var(--color-primary) 50%, transparent)',
+              color: 'var(--color-primary)'
+            } : undefined}
             title="Toggle Live Monitor Sidebar"
           >
             <Activity className="w-3.5 h-3.5" />
@@ -712,11 +737,16 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
           <button
             onClick={() => setShowSettingsMenu(!showSettingsMenu)}
             className={`px-2.5 py-1 text-[11px] rounded-md border transition flex items-center gap-1.5 cursor-pointer font-medium ${
-              showSettingsMenu ? 'bg-indigo-950/80 border-indigo-700/80 text-indigo-300 shadow-sm' : 'bg-[#121622] border-zinc-800 text-zinc-400 hover:text-zinc-200'
+              showSettingsMenu ? 'shadow-sm' : 'bg-[#121622] border-zinc-800 text-zinc-400 hover:text-zinc-200'
             }`}
+            style={showSettingsMenu ? {
+              backgroundColor: 'color-mix(in srgb, var(--color-primary) 18%, transparent)',
+              borderColor: 'color-mix(in srgb, var(--color-primary) 50%, transparent)',
+              color: 'var(--color-primary)'
+            } : undefined}
             title="SuperAgent & App Settings"
           >
-            <Settings className="w-3.5 h-3.5 text-indigo-400" />
+            <Settings className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />
             <span className="hidden sm:inline">Setting</span>
           </button>
 
