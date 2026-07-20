@@ -6008,5 +6008,55 @@
       "agentMode": "single",
       "customArgs": ""
     }
+  },
+  {
+    "timestamp": "2026-07-20T01:02:41.553Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T01:02:44.842Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T01:03:32.960Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T01:03:33.246Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T01:03:47.970Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T01:03:51.282Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"
+    }
   }
 ]

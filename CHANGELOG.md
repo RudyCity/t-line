@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.488] - 2026-07-20
+
+### Fixed
+- **Superagent CLI Preset Integration**: Fixed preset sync and loading for Superagent:
+  - Created [presetUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/presetUtils.ts) to merge presets stored in `~/.superagent-r/model-presets.json` (saved via Superagent CLI `/model` command) with `model-config.json`.
+  - Updated `/api/superagent/config` endpoint in [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) so all CLI presets appear in the frontend preset dropdown switcher.
+  - Updated `/api/superagent/config/active-preset` endpoint to parse and apply the selected preset's model parameters and active provider profile to `model-config.json`, ensuring selected CLI presets take effect upon bridge restart.
+
 ## [1.3.487] - 2026-07-20
 
 ### Fixed
