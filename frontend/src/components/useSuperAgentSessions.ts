@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChatSession } from './SuperAgentHistorySidebar';
+import { getAuthHeader } from './SuperAgentConsoleUtils';
 
 export interface SuperAgentMessage {
   role: 'user' | 'assistant' | 'system' | 'tool' | 'thought';
@@ -80,6 +81,64 @@ export function loadWorkspaceSessions(wsPath: string): ChatSession[] {
   return loadedSessions;
 }
 
+// API Sync Helpers
+async function apiGetSessions(workspace: string): Promise<ChatSession[] | null> {
+  try {
+    const res = await fetch(`/api/superagent/sessions?workspace=${encodeURIComponent(workspace)}`, {
+      headers: getAuthHeader()
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.sessions)) return data.sessions;
+    }
+  } catch (e) {
+    console.error('[SessionsAPI] GET sessions failed:', e);
+  }
+  return null;
+}
+
+async function apiGetSessionMessages(workspace: string, sessionId: string): Promise<SuperAgentMessage[] | null> {
+  try {
+    const res = await fetch(`/api/superagent/sessions/${encodeURIComponent(sessionId)}?workspace=${encodeURIComponent(workspace)}`, {
+      headers: getAuthHeader()
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.messages)) return data.messages;
+    }
+  } catch (e) {
+    console.error('[SessionsAPI] GET messages failed:', e);
+  }
+  return null;
+}
+
+async function apiSaveSession(workspace: string, session: ChatSession, messages: SuperAgentMessage[]): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/superagent/sessions?workspace=${encodeURIComponent(workspace)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({ session, messages })
+    });
+    return res.ok;
+  } catch (e) {
+    console.error('[SessionsAPI] POST save failed:', e);
+  }
+  return false;
+}
+
+async function apiDeleteSession(workspace: string, sessionId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/superagent/sessions/${encodeURIComponent(sessionId)}?workspace=${encodeURIComponent(workspace)}`, {
+      method: 'DELETE',
+      headers: getAuthHeader()
+    });
+    return res.ok;
+  } catch (e) {
+    console.error('[SessionsAPI] DELETE failed:', e);
+  }
+  return false;
+}
+
 export function useSuperAgentSessions(workspace: string) {
   const [sessions, setSessions] = useState<ChatSession[]>(() => loadWorkspaceSessions(workspace));
   const [activeSessionId, setActiveSessionId] = useState<string>(() => {
@@ -87,46 +146,48 @@ export function useSuperAgentSessions(workspace: string) {
     return loaded[0]?.id || `session_${Date.now()}`;
   });
 
-  const [messages, setMessages] = useState<SuperAgentMessage[]>(() => {
-    try {
-      const loaded = loadWorkspaceSessions(workspace);
-      const activeId = loaded[0]?.id;
-      if (activeId) {
-        const savedMsgs = localStorage.getItem(`superagent_messages_${workspace || 'default'}_${activeId}`);
-        if (savedMsgs) {
-          const parsed = JSON.parse(savedMsgs);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      }
-    } catch (e) {}
-    return [];
-  });
-
+  const [messages, setMessages] = useState<SuperAgentMessage[]>([]);
   const prevWorkspaceRef = useRef(workspace);
 
-  // Sync state on workspace changes
-  useEffect(() => {
-    if (prevWorkspaceRef.current !== workspace) {
-      prevWorkspaceRef.current = workspace;
-      const loaded = loadWorkspaceSessions(workspace);
-      setSessions(loaded);
-      const activeId = loaded[0]?.id || `session_${Date.now()}`;
+  // Initial Sync from Backend on switch/mount
+  const syncSessions = useCallback(async (wsPath: string) => {
+    const apiSessions = await apiGetSessions(wsPath);
+    if (apiSessions && apiSessions.length > 0) {
+      setSessions(apiSessions);
+      const activeId = apiSessions[0].id;
       setActiveSessionId(activeId);
-
-      const wsKey = workspace || 'default';
-      const saved = localStorage.getItem(`superagent_messages_${wsKey}_${activeId}`);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setMessages(parsed);
-            return;
-          }
-        } catch (e) {}
+      const apiMsgs = await apiGetSessionMessages(wsPath, activeId);
+      if (apiMsgs) {
+        setMessages(apiMsgs);
+        return;
       }
-      setMessages([]);
     }
-  }, [workspace]);
+
+    // Fallback to localStorage
+    const localSessions = loadWorkspaceSessions(wsPath);
+    setSessions(localSessions);
+    const localActiveId = localSessions[0]?.id || `session_${Date.now()}`;
+    setActiveSessionId(localActiveId);
+    
+    const wsKey = wsPath || 'default';
+    const saved = localStorage.getItem(`superagent_messages_${wsKey}_${localActiveId}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setMessages(parsed);
+          return;
+        }
+      } catch (e) {}
+    }
+    setMessages([]);
+  }, []);
+
+  // Sync on workspace changes
+  useEffect(() => {
+    prevWorkspaceRef.current = workspace;
+    syncSessions(workspace);
+  }, [workspace, syncSessions]);
 
   // Persist messages & update title/timestamp
   useEffect(() => {
@@ -135,6 +196,7 @@ export function useSuperAgentSessions(workspace: string) {
     const msgKey = `superagent_messages_${wsKey}_${activeSessionId}`;
 
     if (messages && messages.length > 0) {
+      // Local backup
       try {
         localStorage.setItem(msgKey, JSON.stringify(messages.slice(-300)));
       } catch (e) {}
@@ -155,23 +217,36 @@ export function useSuperAgentSessions(workspace: string) {
         }
 
         const updated = [...prevSessions];
-        updated[targetIdx] = {
+        const updatedSession = {
           ...currentSession,
           title: newTitle,
           updatedAt: Date.now()
         };
+        updated[targetIdx] = updatedSession;
         updated.sort((a, b) => b.updatedAt - a.updatedAt);
+        
         try {
           localStorage.setItem(`superagent_sessions_${wsKey}`, JSON.stringify(updated));
         } catch (e) {}
+
+        // Save to backend disk
+        apiSaveSession(workspace, updatedSession, messages);
+
         return updated;
       });
     }
   }, [messages, activeSessionId, workspace]);
 
-  const handleSelectSession = useCallback((id: string) => {
+  const handleSelectSession = useCallback(async (id: string) => {
     if (id === activeSessionId) return;
     setActiveSessionId(id);
+
+    const apiMsgs = await apiGetSessionMessages(workspace, id);
+    if (apiMsgs) {
+      setMessages(apiMsgs);
+      return;
+    }
+
     const wsKey = workspace || 'default';
     const saved = localStorage.getItem(`superagent_messages_${wsKey}_${id}`);
     if (saved) {
@@ -205,16 +280,17 @@ export function useSuperAgentSessions(workspace: string) {
     });
 
     setActiveSessionId(newId);
-
-    const initialMsgs: SuperAgentMessage[] = [];
-    setMessages(initialMsgs);
+    setMessages([]);
 
     try {
-      localStorage.setItem(`superagent_messages_${wsKey}_${newId}`, JSON.stringify(initialMsgs));
+      localStorage.setItem(`superagent_messages_${wsKey}_${newId}`, JSON.stringify([]));
     } catch (e) {}
+
+    // Save empty chat session to backend
+    apiSaveSession(workspace, newSession, []);
   }, [workspace]);
 
-  const handleDeleteSession = useCallback((id: string, e: React.MouseEvent) => {
+  const handleDeleteSession = useCallback(async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const wsKey = workspace || 'default';
     let remainingSessions: ChatSession[] = [];
@@ -224,14 +300,24 @@ export function useSuperAgentSessions(workspace: string) {
       try {
         localStorage.setItem(`superagent_sessions_${wsKey}`, JSON.stringify(remainingSessions));
         localStorage.removeItem(`superagent_messages_${wsKey}_${id}`);
-      } catch (e) {}
+      } catch (err) {}
       return remainingSessions;
     });
+
+    // Delete session from backend
+    apiDeleteSession(workspace, id);
 
     if (id === activeSessionId) {
       if (remainingSessions.length > 0) {
         const nextId = remainingSessions[0].id;
         setActiveSessionId(nextId);
+        
+        const apiMsgs = await apiGetSessionMessages(workspace, nextId);
+        if (apiMsgs) {
+          setMessages(apiMsgs);
+          return;
+        }
+
         const saved = localStorage.getItem(`superagent_messages_${wsKey}_${nextId}`);
         if (saved) {
           try {
@@ -256,9 +342,19 @@ export function useSuperAgentSessions(workspace: string) {
       try {
         localStorage.setItem(`superagent_sessions_${wsKey}`, JSON.stringify(updated));
       } catch (e) {}
+
+      // Find the session and update it on backend
+      const renamedSession = updated.find(s => s.id === id);
+      if (renamedSession) {
+        // Fetch current session messages to preserve them
+        apiGetSessionMessages(workspace, id).then(currentMsgs => {
+          apiSaveSession(workspace, renamedSession, currentMsgs || messages);
+        });
+      }
+
       return updated;
     });
-  }, [workspace]);
+  }, [workspace, messages]);
 
   return {
     sessions,

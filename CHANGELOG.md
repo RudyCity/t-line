@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.509] - 2026-07-20
+
+### Added & Refactored
+- **SuperAgent Chat Session History Sync with Disk**:
+  - Implemented [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) to read and persist chat sessions and message histories under `~/.superagent/sessions/<workspaceHash>/`.
+  - Added REST API endpoints `GET/POST/DELETE /api/superagent/sessions` for sessions list and message synchronization.
+  - Updated [useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts) to sync GUI sidebar chat lists and history logs with backend API endpoints, falling back to `localStorage` when offline.
+- **Codebase Length Reduction Refactoring**:
+  - Refactored [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) by extracting authentication and security connection endpoints into a dedicated router at [authRoutes.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/authRoutes.ts) and all superagent endpoints into [superAgentRoutes.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentRoutes.ts).
+  - Reduced [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) from over 1220 lines to a clean 816 lines (well under the project limit of 1000 lines).
+
 ## [1.3.508] - 2026-07-20
 
 ### Added & Enhanced
