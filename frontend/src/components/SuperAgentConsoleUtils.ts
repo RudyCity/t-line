@@ -149,7 +149,13 @@ export const handleAgentEventPayload = (
           innerEvent.data;
       }
 
-      const callId = innerEvent.toolResult?.id || innerEvent.toolCall?.id || innerEvent.callId || innerEvent.id || innerEvent.tool_call_id;
+      const callId = 
+        innerEvent.toolResult?.toolCallId || 
+        innerEvent.toolResult?.id || 
+        innerEvent.toolCall?.id || 
+        innerEvent.callId || 
+        innerEvent.id || 
+        innerEvent.tool_call_id;
 
       if (innerEvent.type === 'tool_end' || innerEvent.type === 'tool_result' || innerEvent.type === 'tool_output' || result !== undefined) {
         setToolProgressMsg('');
@@ -177,14 +183,25 @@ export const handleAgentEventPayload = (
 
       setMessages(prev => {
         let idx = -1;
-        for (let i = prev.length - 1; i >= 0; i--) {
-          const m = prev[i];
-          if (m && m.role === 'tool') {
-            const matchesId = callId && m.callId ? m.callId === callId : false;
-            const matchesName = toolName !== 'tool' && m.toolName ? (m.toolName === toolName || m.toolName === 'tool') : true;
-            if (m.result === undefined && (matchesId || matchesName)) {
+        // Priority 1: match exact callId if available
+        if (callId) {
+          for (let i = prev.length - 1; i >= 0; i--) {
+            if (prev[i] && prev[i].role === 'tool' && prev[i].callId === callId) {
               idx = i;
               break;
+            }
+          }
+        }
+        // Priority 2: fallback match last tool item without result if toolName matches or is generic
+        if (idx === -1) {
+          for (let i = prev.length - 1; i >= 0; i--) {
+            const m = prev[i];
+            if (m && m.role === 'tool' && m.result === undefined) {
+              const matchesName = toolName !== 'tool' && m.toolName ? (m.toolName === toolName || m.toolName === 'tool') : true;
+              if (matchesName) {
+                idx = i;
+                break;
+              }
             }
           }
         }
@@ -194,12 +211,14 @@ export const handleAgentEventPayload = (
         if (idx !== -1) {
           const updated = [...prev];
           const resolvedName = (toolName && toolName !== 'tool') ? toolName : (updated[idx].toolName || toolName);
+          const mergedResult = result !== undefined ? result : updated[idx].result;
           updated[idx] = {
             ...updated[idx],
             toolName: resolvedName,
-            text: result !== undefined ? `Tool '${resolvedName}' completed.` : updated[idx].text,
+            text: mergedResult !== undefined ? `Tool '${resolvedName}' completed.` : updated[idx].text,
             args: hasNewArgs ? args : updated[idx].args,
-            result: result !== undefined ? result : updated[idx].result
+            result: mergedResult,
+            callId: callId || updated[idx].callId
           };
           return updated;
         }

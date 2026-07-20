@@ -15,6 +15,7 @@ export interface SuperAgentMessage {
   toolName?: string;
   args?: any;
   result?: any;
+  callId?: string;
 }
 
 /** Graceful no-op for closing DB connection on process exit */
@@ -266,7 +267,7 @@ export async function getSessionMessages(
         }
 
         // Extract args from all possible fields
-        let args = rawMsg.args || rawMsg.arguments;
+        let args = rawMsg.args || rawMsg.arguments || rawMsg.toolCalls?.[0]?.args || rawMsg.tool_calls?.[0]?.args;
         if (!args && Array.isArray(rawMsg.tool_calls) && rawMsg.tool_calls[0]?.function?.arguments) {
           try {
             args = JSON.parse(rawMsg.tool_calls[0].function.arguments);
@@ -290,6 +291,8 @@ export async function getSessionMessages(
           rawResult = rawMsg.content;
         }
 
+        const callId = rawMsg.callId || rawMsg.id || rawMsg.toolCallId || rawMsg.toolCalls?.[0]?.id || rawMsg.tool_calls?.[0]?.id;
+
         if (role === 'tool' || toolName || rawMsg.tool_calls || rawMsg.toolCalls) {
           const resolvedToolName = toolName || 'tool';
           guiMsgs.push({
@@ -297,7 +300,8 @@ export async function getSessionMessages(
             text: `Tool '${resolvedToolName}' completed.`,
             toolName: resolvedToolName,
             args: args || {},
-            result: truncateResult(rawResult)
+            result: truncateResult(rawResult),
+            callId
           });
         }
       }

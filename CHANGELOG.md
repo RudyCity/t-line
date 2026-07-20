@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.574] - 2026-07-20
+
+### Fixed
+- **SuperAgent Tool Call Pairing & Parameter Preservation (`SuperAgentConsoleUtils.ts`, `sessionManager.ts`)**:
+  - Fixed a critical bug where SuperAgent's `toolResult.toolCallId` property was not being extracted during `tool_end` SSE events. This caused `tool_end` to fail matching its corresponding `tool_start` item, resulting in orphaned tool items with missing parameters or un-merged results.
+  - Added `toolCallId` property extraction across SSE events and historical session message payloads, ensuring `args` and `result` are seamlessly merged into a single complete tool call item.
+
 ## [1.3.573] - 2026-07-20
 
 ### Fixed
