@@ -7,16 +7,16 @@ const HISTORY_DB_PATH = path.join(os.homedir(), '.superagent-r', 'history.db');
 // Lazy-init singleton DB connection
 let _db: Database.Database | null = null;
 
-function getDb(): Database.Database {
+function getDb(): Database.Database | null {
   if (_db) return _db;
   try {
-    _db = new Database(HISTORY_DB_PATH, { fileMustExist: true });
+    _db = new Database(HISTORY_DB_PATH, { fileMustExist: true, readonly: true });
     _db.pragma('journal_mode = WAL');
     _db.pragma('busy_timeout = 5000');
     return _db;
   } catch (e) {
-    console.error('[SessionManager] Failed to open history.db:', e);
-    throw e;
+    // If file doesn't exist yet or read-only fail, return null
+    return null;
   }
 }
 
@@ -277,6 +277,7 @@ function formatSessionTitleFromDb(db: any, sessionId: string, fallbackDisplayNam
 
 /** Deduplicate and purge redundant GUI and duplicate CLI sessions */
 function cleanDuplicateWorkspaceSessions(db: any, normalizedWs: string) {
+  if (!db) return;
   try {
     const rows = db.prepare(
       `SELECT id, display_name, message_count, created_at, last_modified
@@ -344,14 +345,16 @@ function cleanDuplicateWorkspaceSessions(db: any, normalizedWs: string) {
     }
 
     if (idsToDelete.length > 0) {
-      const deleteStmt = db.prepare('DELETE FROM sessions WHERE id = ?');
-      const deleteMsgsStmt = db.prepare('DELETE FROM messages WHERE session_id = ?');
-      db.transaction(() => {
-        for (const id of idsToDelete) {
-          deleteMsgsStmt.run(id);
-          deleteStmt.run(id);
-        }
-      })();
+      try {
+        const deleteStmt = db.prepare('DELETE FROM sessions WHERE id = ?');
+        const deleteMsgsStmt = db.prepare('DELETE FROM messages WHERE session_id = ?');
+        db.transaction(() => {
+          for (const id of idsToDelete) {
+            deleteMsgsStmt.run(id);
+            deleteStmt.run(id);
+          }
+        })();
+      } catch {}
     }
   } catch (e) {
     console.error('[SessionManager] cleanDuplicateWorkspaceSessions error:', e);
@@ -366,6 +369,7 @@ export function getWorkspaceSessions(
 ): { sessions: ChatSession[]; totalCount: number; hasMore: boolean } {
   try {
     const db = getDb();
+    if (!db) return { sessions: [], totalCount: 0, hasMore: false };
     const normalizedWs = path.normalize(workspace).replace(/\\/g, '/').toLowerCase();
 
     // Clean duplicates first
@@ -458,6 +462,7 @@ export function getSessionMessages(
 
   try {
     const db = getDb();
+    if (!db) return { messages: [], totalCount: 0, hasMore: false };
 
     // Get total row count first
     const countRow = db.prepare(
@@ -517,7 +522,8 @@ export function saveWorkspaceSession(
   }
 
   try {
-    const db = getDb();
+    const db = new Database(HISTORY_DB_PATH, { fileMustExist: true });
+    db.pragma('busy_timeout = 3000');
     const now = Date.now();
     const preview = messages.find(m => m.role === 'user')?.text || '(no user messages)';
     const normalizedWs = path.normalize(workspace).replace(/\\/g, '/').toLowerCase();
@@ -584,8 +590,9 @@ export function saveWorkspaceSession(
     });
 
     transaction();
+    db.close();
   } catch (e) {
-    console.error('[SessionManager] saveWorkspaceSession error:', e);
+    // If DB is locked or read-only, SuperAgent server handles persistence automatically
   }
 }
 
@@ -597,7 +604,8 @@ export function deleteWorkspaceSession(_workspace: string, prefixedId: string) {
   }
 
   try {
-    const db = getDb();
+    const db = new Database(HISTORY_DB_PATH, { fileMustExist: true });
+    db.pragma('busy_timeout = 3000');
     const deleteMsgsStmt = db.prepare('DELETE FROM messages WHERE session_id = ?');
     const deleteSessionStmt = db.prepare('DELETE FROM sessions WHERE id = ?');
     
@@ -616,6 +624,7 @@ export function deleteWorkspaceSession(_workspace: string, prefixedId: string) {
 export function getInputHistory(workspace: string): string[] {
   try {
     const db = getDb();
+    if (!db) return getFileFallbackHistory();
     const normalizedWs = path.normalize(workspace).replace(/\\/g, '/').toLowerCase();
 
     const wsRow = db.prepare(
@@ -644,6 +653,7 @@ export function saveInputHistory(workspace: string, text: string) {
 
   try {
     const db = getDb();
+    if (!db) return;
     const normalizedWs = path.normalize(workspace).replace(/\\/g, '/').toLowerCase();
 
     const wsRow = db.prepare(

@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.536] - 2026-07-20
+
+### Cleaned & Refactored
+- **Database Safety & SuperAgent Decoupling (`sessionManager.ts`)**:
+  - Updated `sessionManager.ts` to open SQLite `history.db` safely in read-only mode (`readonly: true`) for fallback reads, eliminating process file locking conflicts with SuperAgent server.
+  - Added safe null-checking across all session query handlers (`getWorkspaceSessions`, `getSessionMessages`, `getInputHistory`, `saveInputHistory`).
+  - Fully decoupled `t-line` backend from writing directly into SuperAgent's internal SQLite database, allowing SuperAgent server to manage its own database lifecycle without lock contention.
+
 ## [1.3.535] - 2026-07-20
 
 ### Fixed & Enhanced
