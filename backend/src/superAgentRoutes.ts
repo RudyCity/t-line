@@ -245,8 +245,12 @@ router.delete('/sessions/:id', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';
   const sessionId = req.params.id;
   try {
-    await deleteWorkspaceSession(workspace, sessionId);
-    res.json({ success: true });
+    const success = await deleteWorkspaceSession(workspace, sessionId);
+    if (success) {
+      res.json({ success: true });
+    } else {
+      res.status(500).json({ error: 'Failed to delete workspace session' });
+    }
   } catch (e: any) {
     res.status(500).json({ error: 'Failed to delete workspace session: ' + e.message });
   }

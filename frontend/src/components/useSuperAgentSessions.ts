@@ -242,6 +242,7 @@ export function useSuperAgentSessions(workspace: string) {
   const prevWorkspaceRef = useRef(workspace);
   const activeSessionIdRef = useRef(activeSessionId);
   const loadedSessionIdRef = useRef<string | null>(null);
+  const deletedSessionIdsRef = useRef<Set<string>>(new Set());
 
   // Keep activeSessionIdRef up to date
   useEffect(() => {
@@ -252,17 +253,18 @@ export function useSuperAgentSessions(workspace: string) {
   const syncSessions = useCallback(async (wsPath: string, preserveActiveId?: string) => {
     const res = await apiGetSessions(wsPath, SESSION_PAGE_SIZE, 0);
     if (res && res.sessions.length > 0) {
+      const validServerSessions = res.sessions.filter(s => !deletedSessionIdsRef.current.has(s.id));
       setSessions(prev => {
-        const serverIds = new Set(res.sessions.map(s => s.id));
-        const localOnly = prev.filter(s => !serverIds.has(s.id));
-        return [...localOnly, ...res.sessions];
+        const serverIds = new Set(validServerSessions.map(s => s.id));
+        const localOnly = prev.filter(s => !serverIds.has(s.id) && !deletedSessionIdsRef.current.has(s.id));
+        return [...localOnly, ...validServerSessions];
       });
       setHasMoreSessions(res.hasMore);
       currentSessionOffsetRef.current = SESSION_PAGE_SIZE;
       
-      const targetActiveId = preserveActiveId || activeSessionIdRef.current || res.sessions[0].id;
+      const targetActiveId = preserveActiveId || activeSessionIdRef.current || (validServerSessions[0]?.id);
       
-      if (res.sessions.some(s => s.id === targetActiveId)) {
+      if (targetActiveId && validServerSessions.some(s => s.id === targetActiveId)) {
         setActiveSessionId(targetActiveId);
         const result = await apiGetSessionMessages(wsPath, targetActiveId, PAGE_SIZE, 0);
         if (result) {
@@ -272,7 +274,7 @@ export function useSuperAgentSessions(workspace: string) {
           loadedSessionIdRef.current = targetActiveId;
           return;
         }
-      } else {
+      } else if (targetActiveId && !deletedSessionIdsRef.current.has(targetActiveId)) {
         // Target active ID is a local-only session (e.g., brand new chat)
         setActiveSessionId(targetActiveId);
         loadedSessionIdRef.current = targetActiveId;
@@ -466,8 +468,19 @@ export function useSuperAgentSessions(workspace: string) {
   const handleDeleteSession = useCallback(async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const wsKey = workspace || 'default';
-    let remainingSessions: ChatSession[] = [];
+    deletedSessionIdsRef.current.add(id);
 
+    // Call backend API to delete session
+    const success = await apiDeleteSession(workspace, id);
+    if (!success) {
+      deletedSessionIdsRef.current.delete(id);
+      window.dispatchEvent(new CustomEvent('tline-toast', {
+        detail: { message: 'Gagal menghapus session chat' }
+      }));
+      return;
+    }
+
+    let remainingSessions: ChatSession[] = [];
     setSessions(prev => {
       remainingSessions = prev.filter(s => s.id !== id);
       try {
@@ -477,10 +490,11 @@ export function useSuperAgentSessions(workspace: string) {
       return remainingSessions;
     });
 
-    // Delete session from backend
-    apiDeleteSession(workspace, id);
+    window.dispatchEvent(new CustomEvent('tline-toast', {
+      detail: { message: 'Session chat berhasil dihapus' }
+    }));
 
-    if (id === activeSessionId) {
+    if (id === activeSessionIdRef.current) {
       if (remainingSessions.length > 0) {
         const nextId = remainingSessions[0].id;
         setActiveSessionId(nextId);
@@ -490,6 +504,7 @@ export function useSuperAgentSessions(workspace: string) {
           setMessages(result.messages);
           setHasMore(result.hasMore);
           currentOffsetRef.current = PAGE_SIZE;
+          loadedSessionIdRef.current = nextId;
           return;
         }
 
@@ -500,17 +515,19 @@ export function useSuperAgentSessions(workspace: string) {
             if (Array.isArray(parsed) && parsed.length > 0) {
               setMessages(parsed);
               setHasMore(false);
+              loadedSessionIdRef.current = nextId;
               return;
             }
           } catch (err) {}
         }
         setMessages([]);
         setHasMore(false);
+        loadedSessionIdRef.current = nextId;
       } else {
         handleNewChat();
       }
     }
-  }, [activeSessionId, handleNewChat, workspace]);
+  }, [handleNewChat, workspace]);
 
   const handleRenameSession = useCallback((id: string, newTitle: string) => {
     const wsKey = workspace || 'default';

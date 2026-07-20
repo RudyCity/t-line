@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.543] - 2026-07-20
+
+### Fixed
+- **Session Chat Deletion Bug & Success/Failure Toast Notifications (`useSuperAgentSessions.ts`, `sessionManager.ts`, `superAgentRoutes.ts`)**:
+  - Added success toast (`"Session chat berhasil dihapus"`) and error toast (`"Gagal menghapus session chat"`) on chat session removal using `tline-toast`.
+  - Fixed a race condition bug where deleting a session previously caused the deleted session to reappear in the sidebar when real-time WebSocket events (`superagent-sessions-changed`) triggered `syncSessions`.
+  - Added `deletedSessionIdsRef` to prevent deleted session IDs from being restored during session synchronization.
+  - Made `deleteWorkspaceSession` in `sessionManager.ts` return boolean status to handle draft vs server sessions cleanly.
+
 ## [1.3.542] - 2026-07-20
 
 ### Fixed

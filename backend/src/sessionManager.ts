@@ -268,17 +268,24 @@ export async function saveWorkspaceSession(
 }
 
 /** Delete a session from SuperAgent Server */
-export async function deleteWorkspaceSession(workspace: string, prefixedId: string) {
+export async function deleteWorkspaceSession(workspace: string, prefixedId: string): Promise<boolean> {
   let sessionId = prefixedId;
   if (prefixedId.includes('::')) {
     sessionId = prefixedId.split('::')[1];
   }
 
   try {
-    await requestSuperAgentServer(`/api/history/session/${encodeURIComponent(sessionId)}`, 'DELETE', undefined, workspace);
+    const res = await requestSuperAgentServer(`/api/history/session/${encodeURIComponent(sessionId)}`, 'DELETE', undefined, workspace);
+    if (res && (res.success || res.ok)) {
+      return true;
+    }
+    if (sessionId.startsWith('session_')) {
+      return true;
+    }
   } catch (e) {
     console.error(`[SessionManager] deleteWorkspaceSession error for ${prefixedId}:`, e);
   }
+  return false;
 }
 
 // ─── Input Prompt History (100% SuperAgent Server) ───
