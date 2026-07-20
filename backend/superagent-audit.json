@@ -1,26 +1,5 @@
 [
   {
-    "timestamp": "2026-07-20T07:33:06.771Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n\n[Interrupted]"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T07:33:06.791Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "done"
-      }
-    }
-  },
-  {
     "timestamp": "2026-07-20T07:33:06.812Z",
     "type": "agent_event",
     "data": {
@@ -10286,6 +10265,22 @@
     "type": "system_error",
     "data": {
       "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:26:20.462Z",
+    "type": "prompt",
+    "data": {
+      "text": "frrrr",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T08:26:20.485Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to send prompt to SuperAgent",
       "error": "connect ECONNREFUSED 127.0.0.1:7888"
     }
   }

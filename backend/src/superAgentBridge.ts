@@ -97,11 +97,10 @@ function ensureSuperAgentServer(
   const cmd = isWin ? 'bunx.cmd' : 'bunx';
 
   const modeChanged = currentAgentMode !== agentMode;
-  const pathChanged = currentWorkspacePath !== workspacePath;
   const argsChanged = currentCustomArgs !== customArgs;
 
-  if (autoSuperAgentProcess && (modeChanged || pathChanged || argsChanged)) {
-    console.log('[WS-Agent] Settings changed. Restarting SuperAgent server process...');
+  if (autoSuperAgentProcess && (modeChanged || argsChanged)) {
+    console.log('[WS-Agent] Settings changed (mode/args). Restarting SuperAgent server process...');
     ws.send(JSON.stringify({ type: 'status', text: 'Settings changed. Restarting SuperAgent server...' }));
     try {
       if (isWin) {

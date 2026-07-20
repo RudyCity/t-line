@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.541] - 2026-07-20
+
+### Optimized
+- **Multi-Workspace Daemon Mode Support (`superAgentBridge.ts`)**:
+  - Removed `pathChanged` from the process kill/restart condition in `ensureSuperAgentServer`.
+  - The `superagent --server` process now runs ONCE as a permanent background daemon serving all workspaces concurrently.
+  - Workspace switching in `t-line` is now 100% instant without server restarts, process kills, or connection delays.
+
 ## [1.3.540] - 2026-07-20
 
 ### Fixed
