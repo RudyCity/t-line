@@ -17,26 +17,83 @@ interface SuperAgentConsoleProps {
 }
 
 export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpenSettings }: SuperAgentConsoleProps) {
+  // Workspace & Config state
+  const [workspace, setWorkspace] = useState(() => activeWorkspacePath || localStorage.getItem('currentWorkspace') || '');
+  const prevWorkspaceRef = useRef(workspace);
+
   const [messages, setMessages] = useState<Array<{
     role: 'user' | 'assistant' | 'system' | 'tool' | 'thought';
     text: string;
     toolName?: string;
     args?: any;
     result?: any;
-  }>>([
-    { role: 'system', text: 'SuperAgent ready. Connected to t-line workspace context.' }
-  ]);
+  }>>(() => {
+    try {
+      const initWs = activeWorkspacePath || localStorage.getItem('currentWorkspace') || '';
+      const key = `superagent_messages_${initWs || 'default'}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load persisted superagent messages:', e);
+    }
+    return [
+      { role: 'system', text: 'SuperAgent ready. Connected to t-line workspace context.' }
+    ];
+  });
+
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [activeTab, setActiveTab] = useState<'console' | 'audit'>('console');
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Workspace & Config state
-  const [workspace, setWorkspace] = useState(() => activeWorkspacePath || localStorage.getItem('currentWorkspace') || '');
   const [agentMode, setAgentMode] = useState<'single' | 'multi'>('single');
   const [customArgs, setCustomArgs] = useState('');
   const [connectTrigger, setConnectTrigger] = useState(0);
+
+  // Persist messages whenever they change
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      try {
+        const key = `superagent_messages_${workspace || 'default'}`;
+        localStorage.setItem(key, JSON.stringify(messages.slice(-300)));
+      } catch (e) {
+        console.error('Failed to persist superagent messages:', e);
+      }
+    }
+  }, [messages, workspace]);
+
+  // Sync workspace prop and load messages when workspace changes
+  useEffect(() => {
+    if (activeWorkspacePath && activeWorkspacePath !== workspace) {
+      setWorkspace(activeWorkspacePath);
+    }
+  }, [activeWorkspacePath]);
+
+  useEffect(() => {
+    if (prevWorkspaceRef.current !== workspace) {
+      prevWorkspaceRef.current = workspace;
+      try {
+        const key = `superagent_messages_${workspace || 'default'}`;
+        const saved = localStorage.getItem(key);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMessages(parsed);
+            return;
+          }
+        }
+      } catch (e) {}
+      setMessages([
+        { role: 'system', text: `SuperAgent ready. Workspace: ${workspace || 'Default'}` }
+      ]);
+    }
+  }, [workspace]);
 
   interface ModelPreset {
     id: string;
@@ -309,7 +366,12 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
     const socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
-      setMessages(prev => [...prev, { role: 'system', text: `WebSocket connection established. Workspace: ${workspace || 'Default'}` }]);
+      setMessages(prev => {
+        const connText = `WebSocket connection established. Workspace: ${workspace || 'Default'}`;
+        const last = prev[prev.length - 1];
+        if (last && last.text === connText) return prev;
+        return [...prev, { role: 'system', text: connText }];
+      });
     };
 
     socket.onmessage = (event) => {

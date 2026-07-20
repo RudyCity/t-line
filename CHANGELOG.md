@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.492] - 2026-07-20
+
+### Fixed
+- **SuperAgent Chat History Persistence**: Fixed chat history disappearing when switching tabs in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx):
+  - Integrated `localStorage` persistence keyed per workspace (`superagent_messages_<workspace>`) so chat stream, system notifications, tool calls, and assistant responses are automatically preserved.
+  - Added workspace change detection to seamlessly load history when switching active project workspaces.
+  - Deduplicated WebSocket connection notifications on tab re-activation to prevent cluttering the message log.
+
 ## [1.3.491] - 2026-07-20
 
 ### Fixed
