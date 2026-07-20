@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.562] - 2026-07-20
+
+### Fixed
+- **Permanent Session Deletion Persistence Bug (`sessionManager.ts`)**:
+  - Fixed a bug where deleting chat sessions created with `session_<timestamp>` IDs bypassed calling SuperAgent's HTTP DELETE API (`/api/history/session/:id`). This left the session intact in SuperAgent's SQLite database (`sessions` table) and on disk, causing deleted sessions to reappear upon app/server restart.
+
 ## [1.3.561] - 2026-07-20
 
 ### Fixed

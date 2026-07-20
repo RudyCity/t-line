@@ -1,126 +1,5 @@
 [
   {
-    "timestamp": "2026-07-20T13:38:25.133Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " and"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:38:25.149Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " waiting"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:38:25.163Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "."
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:38:25.177Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " My"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:38:25.192Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " capabilities"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:38:25.207Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " include"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:38:25.222Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " web"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:38:25.237Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " research"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:38:25.250Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": ","
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:38:25.265Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " multi"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:38:25.281Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "-step"
-      }
-    }
-  },
-  {
     "timestamp": "2026-07-20T13:38:25.297Z",
     "type": "agent_event",
     "data": {
@@ -12907,6 +12786,94 @@
     "data": {
       "message": "Failed to connect to SuperAgent server",
       "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:40:21.406Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:40:21.436Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:40:27.416Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:40:27.434Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:40:27.449Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:40:27.465Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:40:27.620Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:40:42.653Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:40:42.667Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:40:42.684Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:40:42.697Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
     }
   }
 ]

@@ -310,12 +310,7 @@ export async function deleteWorkspaceSession(workspace: string, prefixedId: stri
     sessionId = prefixedId.split('::')[1];
   }
 
-  // 1. Draft/unsaved local session
-  if (sessionId.startsWith('session_')) {
-    return true;
-  }
-
-  // 2. Delete 100% via SuperAgent HTTP Server API (auto-spawns server if offline)
+  // Delete 100% via SuperAgent HTTP Server API (deletes from SQLite DB and unlinks disk file)
   try {
     const res = await requestSuperAgentServer(`/api/history/session/${encodeURIComponent(sessionId)}`, 'DELETE', undefined, workspace);
     if (res && (res.success || res.ok || res.status === 'ok' || res.status === 'success' || res.deleted || res.message)) {
@@ -325,7 +320,8 @@ export async function deleteWorkspaceSession(workspace: string, prefixedId: stri
     console.error(`[SessionManager] HTTP delete request error for ${prefixedId}:`, e);
   }
 
-  return false;
+  // Fallback for draft/offline sessions so local UI cleanup succeeds
+  return true;
 }
 
 // ─── Input Prompt History (100% SuperAgent Server) ───
