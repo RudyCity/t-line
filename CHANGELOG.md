@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.523] - 2026-07-20
+
+### Redesigned & Simplified
+- **Ultra-Compact 1-Line Tool Usage Entries (`SuperAgentToolItem.tsx`)**:
+  - Simplified tool usage rendering into clean, single-line log items (e.g. `> [icon] Read filename.ts:L1-50`, `> [icon] Ran git commit...`)
+  - Reduced vertical height and visual clutter in chat console
+  - Retained expandable details panel with left accent border (`border-l border-zinc-800`) for inspecting tool arguments and outputs on demand
+
 ## [1.3.522] - 2026-07-20
 
 ### Redesigned
