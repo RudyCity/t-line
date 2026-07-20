@@ -157,31 +157,11 @@ export async function getWorkspaceSessions(
         });
       }
 
-      // Deduplicate overlapping / duplicate sessions
-      const uniqueSessions: ChatSession[] = [];
-      for (const curr of cleanedSessions) {
-        const dupIndex = uniqueSessions.findIndex(existing => {
-          const titleMatch = existing.title === curr.title ||
-            existing.title.includes(curr.title) ||
-            curr.title.includes(existing.title);
-          const timeDiff = Math.abs(existing.updatedAt - curr.updatedAt);
-          return titleMatch || (timeDiff < 600000 && (existing.title === 'Untitled Chat' || curr.title === 'Untitled Chat'));
-        });
-
-        if (dupIndex >= 0) {
-          if (curr.title !== 'Untitled Chat' && uniqueSessions[dupIndex].title === 'Untitled Chat') {
-            uniqueSessions[dupIndex] = curr;
-          }
-        } else {
-          uniqueSessions.push(curr);
-        }
-      }
-
-      uniqueSessions.sort((a, b) => b.updatedAt - a.updatedAt);
+      cleanedSessions.sort((a, b) => b.updatedAt - a.updatedAt);
 
       const safeOffset = offset || 0;
-      const totalCount = uniqueSessions.length;
-      const paginated = limit && limit > 0 ? uniqueSessions.slice(safeOffset, safeOffset + limit) : uniqueSessions;
+      const totalCount = cleanedSessions.length;
+      const paginated = limit && limit > 0 ? cleanedSessions.slice(safeOffset, safeOffset + limit) : cleanedSessions;
       const hasMore = limit ? (safeOffset + limit) < totalCount : false;
 
       return { sessions: paginated, totalCount, hasMore };

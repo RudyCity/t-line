@@ -1,149 +1,5 @@
 [
   {
-    "timestamp": "2026-07-20T03:24:38.773Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "connect ECONNREFUSED 127.0.0.1:7888"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T03:24:38.792Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "connect ECONNREFUSED 127.0.0.1:7888"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T03:24:38.811Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "connect ECONNREFUSED 127.0.0.1:7888"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T03:24:38.929Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "connect ECONNREFUSED 127.0.0.1:7888"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T03:24:38.956Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "socket hang up"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T03:24:38.974Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "connect ECONNREFUSED 127.0.0.1:7888"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T03:24:38.990Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "connect ECONNREFUSED 127.0.0.1:7888"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T03:24:39.007Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "connect ECONNREFUSED 127.0.0.1:7888"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T03:24:41.703Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "connect ECONNREFUSED 127.0.0.1:7888"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T03:26:10.210Z",
-    "type": "prompt",
-    "data": {
-      "text": "testing",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T03:26:10.251Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to send prompt to SuperAgent",
-      "error": "connect ECONNREFUSED 127.0.0.1:7888"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T03:27:26.920Z",
-    "type": "abort_request",
-    "data": {
-      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T03:27:30.678Z",
-    "type": "prompt",
-    "data": {
-      "text": "hai",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T03:27:30.700Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to send prompt to SuperAgent",
-      "error": "connect ECONNREFUSED 127.0.0.1:7888"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T03:27:43.967Z",
-    "type": "abort_request",
-    "data": {
-      "workspace": "D:\\backup from pc asus\\Documents Development\\superagent"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T03:31:13.188Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "connect ECONNREFUSED 127.0.0.1:7888"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T03:31:13.208Z",
-    "type": "system",
-    "data": {
-      "message": "Auto-starting SuperAgent server process",
-      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
-      "agentMode": "single",
-      "customArgs": ""
-    }
-  },
-  {
-    "timestamp": "2026-07-20T03:31:13.233Z",
-    "type": "system_error",
-    "data": {
-      "message": "Failed to connect to SuperAgent server",
-      "error": "connect ECONNREFUSED 127.0.0.1:7888"
-    }
-  },
-  {
     "timestamp": "2026-07-20T03:31:13.271Z",
     "type": "system_error",
     "data": {
@@ -9209,6 +9065,156 @@
   },
   {
     "timestamp": "2026-07-20T07:51:14.770Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:54:39.332Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:54:39.347Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:54:39.389Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:54:56.864Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:54:56.884Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:54:56.905Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:55:01.220Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:55:01.239Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:55:01.260Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:55:01.280Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:55:01.298Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:55:01.456Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:55:14.926Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:55:16.508Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:55:16.527Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:55:16.546Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:55:16.564Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T07:55:19.278Z",
     "type": "system",
     "data": {
       "message": "Connected to local SuperAgent SSE events",
