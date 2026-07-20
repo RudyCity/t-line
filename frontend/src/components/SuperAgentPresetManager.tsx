@@ -79,9 +79,12 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
     }
   }, [providers]);
 
+  // Real Provider Models Fetch Status
+  const [providerFetchStatus, setProviderFetchStatus] = useState<Record<string, { isRealFetched: boolean; error?: string; count?: number }>>({});
+
   // Fetch models for a given provider ID
-  const fetchProviderModels = async (providerId: string) => {
-    if (!providerId || providerModelsCache[providerId]) return;
+  const fetchProviderModels = async (providerId: string, force = false) => {
+    if (!providerId || (!force && providerModelsCache[providerId])) return;
     setLoadingModelsMap(prev => ({ ...prev, [providerId]: true }));
     try {
       const token = localStorage.getItem('token');
@@ -95,10 +98,22 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
         const data = await res.json();
         if (Array.isArray(data.models)) {
           setProviderModelsCache(prev => ({ ...prev, [providerId]: data.models }));
+          setProviderFetchStatus(prev => ({
+            ...prev,
+            [providerId]: {
+              isRealFetched: !!data.isRealFetched,
+              error: data.error,
+              count: data.models.length
+            }
+          }));
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to fetch provider models:', e);
+      setProviderFetchStatus(prev => ({
+        ...prev,
+        [providerId]: { isRealFetched: false, error: e.message }
+      }));
     } finally {
       setLoadingModelsMap(prev => ({ ...prev, [providerId]: false }));
     }
@@ -363,7 +378,18 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] text-zinc-400">Provider Profile</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] text-zinc-400">Provider Profile</label>
+                      <button
+                        type="button"
+                        onClick={() => fetchProviderModels(mainProviderId, true)}
+                        className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium"
+                        title="Fetch real models directly from provider API endpoint"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${loadingModelsMap[mainProviderId] ? 'animate-spin' : ''}`} />
+                        <span>Fetch Live API</span>
+                      </button>
+                    </div>
                     <select
                       value={mainProviderId}
                       onChange={(e) => {
@@ -376,12 +402,19 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                         <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
                       ))}
                     </select>
+                    {providerFetchStatus[mainProviderId] && (
+                      <p className={`text-[9px] ${providerFetchStatus[mainProviderId]?.isRealFetched ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {providerFetchStatus[mainProviderId]?.isRealFetched
+                          ? `🟢 Live models fetched (${providerFetchStatus[mainProviderId]?.count} models)`
+                          : `⚠️ Provider Defaults (${providerFetchStatus[mainProviderId]?.error || 'Add API key to fetch live'})`}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-[10px] text-zinc-400 flex items-center justify-between">
                       <span>Model Name</span>
-                      {loadingModelsMap[mainProviderId] && <span className="text-[9px] text-indigo-400 flex items-center gap-1"><RefreshCw className="w-2.5 h-2.5 animate-spin" /> Fetching models...</span>}
+                      {loadingModelsMap[mainProviderId] && <span className="text-[9px] text-indigo-400 flex items-center gap-1"><RefreshCw className="w-2.5 h-2.5 animate-spin" /> Fetching...</span>}
                     </label>
                     <div className="space-y-1">
                       <select
@@ -413,7 +446,18 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] text-zinc-400">Provider Profile</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] text-zinc-400">Provider Profile</label>
+                      <button
+                        type="button"
+                        onClick={() => fetchProviderModels(subDefaultProviderId, true)}
+                        className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium"
+                        title="Fetch real models directly from provider API endpoint"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${loadingModelsMap[subDefaultProviderId] ? 'animate-spin' : ''}`} />
+                        <span>Fetch Live API</span>
+                      </button>
+                    </div>
                     <select
                       value={subDefaultProviderId}
                       onChange={(e) => {
@@ -426,6 +470,13 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                         <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
                       ))}
                     </select>
+                    {providerFetchStatus[subDefaultProviderId] && (
+                      <p className={`text-[9px] ${providerFetchStatus[subDefaultProviderId]?.isRealFetched ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {providerFetchStatus[subDefaultProviderId]?.isRealFetched
+                          ? `🟢 Live models fetched (${providerFetchStatus[subDefaultProviderId]?.count} models)`
+                          : `⚠️ Provider Defaults (${providerFetchStatus[subDefaultProviderId]?.error || 'Add API key to fetch live'})`}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-1">

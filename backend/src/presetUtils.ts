@@ -354,10 +354,10 @@ const DEFAULT_PROVIDER_MODELS: Record<string, string[]> = {
   azure: ['gpt-4o', 'gpt-4o-mini']
 };
 
-export async function getProviderModels(providerId: string): Promise<{ models: string[]; providerType: string }> {
+export async function getProviderModels(providerId: string): Promise<{ models: string[]; providerType: string; isRealFetched: boolean; error?: string }> {
   const configPath = getModelConfigPath();
   if (!fs.existsSync(configPath)) {
-    return { models: DEFAULT_PROVIDER_MODELS.openai, providerType: 'openai' };
+    return { models: DEFAULT_PROVIDER_MODELS.openai, providerType: 'openai', isRealFetched: false, error: 'Config file not found' };
   }
 
   try {
@@ -366,56 +366,121 @@ export async function getProviderModels(providerId: string): Promise<{ models: s
     const provider = providers.find((p: any) => p.id === providerId) || providers[0];
 
     if (!provider) {
-      return { models: DEFAULT_PROVIDER_MODELS.openai, providerType: 'openai' };
+      return { models: DEFAULT_PROVIDER_MODELS.openai, providerType: 'openai', isRealFetched: false, error: 'Provider profile not found' };
     }
 
     const providerType = (provider.type || 'openai').toLowerCase();
     const defaultModels = DEFAULT_PROVIDER_MODELS[providerType] || DEFAULT_PROVIDER_MODELS.openai;
     let fetchedModels: string[] = [];
+    let isRealFetched = false;
+    let fetchError: string | undefined = undefined;
 
-    if (providerType === 'ollama') {
-      const baseUrl = provider.baseUrl || 'http://localhost:11434';
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        const resp = await fetch(`${baseUrl}/api/tags`, { signal: controller.signal });
-        clearTimeout(timeoutId);
+    const apiKey = (provider.apiKey || '').trim();
+    let baseUrl = (provider.baseUrl || '').trim().replace(/\/+$/, '');
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    try {
+      if (providerType === 'ollama') {
+        const url = baseUrl ? (baseUrl.endsWith('/api/tags') ? baseUrl : `${baseUrl}/api/tags`) : 'http://localhost:11434/api/tags';
+        const resp = await fetch(url, { signal: controller.signal });
         if (resp.ok) {
           const data: any = await resp.json();
           if (Array.isArray(data.models)) {
             fetchedModels = data.models.map((m: any) => m.name || m.model).filter(Boolean);
+            isRealFetched = fetchedModels.length > 0;
           }
+        } else {
+          fetchError = `Ollama returned HTTP ${resp.status}`;
         }
-      } catch (e) {
-        // Fall back gracefully
-      }
-    } else if (provider.apiKey && (providerType === 'openai' || providerType === 'deepseek' || providerType === 'openrouter' || providerType === 'groq' || providerType === 'mistral')) {
-      const baseUrl = provider.baseUrl || (providerType === 'openai' ? 'https://api.openai.com/v1' : '');
-      if (baseUrl) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 2000);
-          const resp = await fetch(`${baseUrl}/models`, {
-            headers: { 'Authorization': `Bearer ${provider.apiKey}` },
+      } else if (providerType === 'anthropic') {
+        if (!apiKey) {
+          fetchError = 'API Key is missing for Anthropic';
+        } else {
+          const url = baseUrl ? (baseUrl.endsWith('/models') ? baseUrl : `${baseUrl}/v1/models`) : 'https://api.anthropic.com/v1/models';
+          const resp = await fetch(url, {
+            headers: {
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01'
+            },
             signal: controller.signal
           });
-          clearTimeout(timeoutId);
           if (resp.ok) {
             const data: any = await resp.json();
-            if (Array.isArray(data.data)) {
-              fetchedModels = data.data.map((m: any) => m.id).filter(Boolean);
+            const rawList = Array.isArray(data.data) ? data.data : (Array.isArray(data.models) ? data.models : []);
+            fetchedModels = rawList.map((m: any) => m.id || m.name).filter(Boolean);
+            isRealFetched = fetchedModels.length > 0;
+          } else {
+            fetchError = `Anthropic API returned HTTP ${resp.status}`;
+          }
+        }
+      } else if (providerType === 'gemini') {
+        if (!apiKey) {
+          fetchError = 'API Key is missing for Gemini';
+        } else {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+          const resp = await fetch(url, { signal: controller.signal });
+          if (resp.ok) {
+            const data: any = await resp.json();
+            if (Array.isArray(data.models)) {
+              fetchedModels = data.models
+                .map((m: any) => (m.name || '').replace(/^models\//, ''))
+                .filter((name: string) => name && name.includes('gemini'));
+              isRealFetched = fetchedModels.length > 0;
+            }
+          } else {
+            fetchError = `Gemini API returned HTTP ${resp.status}`;
+          }
+        }
+      } else {
+        // OpenAI, DeepSeek, OpenRouter, Groq, Mistral, Azure, Custom REST
+        if (!apiKey && providerType !== 'custom') {
+          fetchError = `API Key is missing for ${providerType}`;
+        } else {
+          if (!baseUrl) {
+            if (providerType === 'openai') baseUrl = 'https://api.openai.com/v1';
+            else if (providerType === 'deepseek') baseUrl = 'https://api.deepseek.com/v1';
+            else if (providerType === 'openrouter') baseUrl = 'https://openrouter.ai/api/v1';
+            else if (providerType === 'groq') baseUrl = 'https://api.groq.com/openai/v1';
+            else if (providerType === 'mistral') baseUrl = 'https://api.mistral.ai/v1';
+          }
+          if (baseUrl) {
+            const url = baseUrl.endsWith('/models') ? baseUrl : `${baseUrl}/models`;
+            const headers: Record<string, string> = {};
+            if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+            if (providerType === 'azure') headers['api-key'] = apiKey;
+
+            const resp = await fetch(url, { headers, signal: controller.signal });
+            if (resp.ok) {
+              const data: any = await resp.json();
+              const rawList = Array.isArray(data.data) ? data.data : (Array.isArray(data.models) ? data.models : []);
+              fetchedModels = rawList.map((m: any) => m.id || m.name).filter(Boolean);
+              isRealFetched = fetchedModels.length > 0;
+            } else {
+              fetchError = `${providerType} API returned HTTP ${resp.status}`;
             }
           }
-        } catch (e) {
-          // Fall back gracefully
         }
       }
+    } catch (e: any) {
+      fetchError = e.name === 'AbortError' ? 'Provider request timed out (5s)' : e.message;
+    } finally {
+      clearTimeout(timeoutId);
     }
 
-    const combined = Array.from(new Set([...fetchedModels, ...defaultModels]));
-    return { models: combined, providerType };
-  } catch (e) {
-    return { models: DEFAULT_PROVIDER_MODELS.openai, providerType: 'openai' };
+    const combined = isRealFetched
+      ? Array.from(new Set([...fetchedModels, ...defaultModels]))
+      : defaultModels;
+
+    return {
+      models: combined,
+      providerType,
+      isRealFetched,
+      error: fetchError
+    };
+  } catch (e: any) {
+    return { models: DEFAULT_PROVIDER_MODELS.openai, providerType: 'openai', isRealFetched: false, error: e.message };
   }
 }
 
