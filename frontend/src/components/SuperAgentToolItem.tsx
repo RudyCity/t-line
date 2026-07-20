@@ -100,7 +100,7 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
         {info.icon}
         <span className="font-sans font-medium text-zinc-400">{info.action}</span>
         <span className="font-mono text-zinc-300 truncate max-w-md">{info.target}</span>
-        <span className="ml-auto shrink-0">
+        <span className="shrink-0">
           {expanded ? (
             <ChevronDown className="w-3 h-3 text-zinc-400" />
           ) : (

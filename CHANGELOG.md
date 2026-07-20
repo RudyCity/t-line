@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.525] - 2026-07-20
+
+### Improved
+- **Inline Tool Item Chevron Indicator (`SuperAgentToolItem.tsx`)**:
+  - Placed the chevron arrow indicator (`ChevronRight` / `ChevronDown`) directly inline following the target text (`[icon] Action Target >`)
+  - Removed far-right positioning (`ml-auto`), keeping tool item headers compact and naturally grouped together
+
 ## [1.3.524] - 2026-07-20
 
 ### Improved
