@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.555] - 2026-07-20
+
+### Improved
+- **Deduplicated Spawn Implementation (`superAgentBridge.ts`)**:
+  - Extracted common spawning logic (stdout, stderr, exit handlers, timeouts, and polling) into a shared `spawnSuperAgentProcess` function.
+  - Implemented cached bun environment mapping (`getCachedBunEnv()`) to avoid executing `where bun` / `which bun` repeatedly.
+  - Added stdout event capture to trigger `onReady` immediately when the server's running marker is found (removing the artificial polling delay when starting fresh).
+  - Reset `connectionAttempts = 0` upon successful SSE connection to allow future auto-start attempts if the server goes down and comes back.
+  - Registered a process exit listener (`process.on('exit')`) to cleanly kill the spawned SuperAgent server sub-process on backend exit (preventing orphaned processes).
+
 ## [1.3.554] - 2026-07-20
 
 ### Fixed
