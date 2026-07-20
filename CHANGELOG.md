@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.559] - 2026-07-20
+
+### Fixed
+- **WebSocket Proactive Init Race Condition (`superAgentBridge.ts`)**:
+  - Removed the redundant proactive `initializeSuperAgentSession` call when establishing a WebSocket connection. This prevents a race condition where the proactive call (initializing a default session without ID) concurrently aborted a prompt's chat run sent immediately after opening the connection.
+
+### Added
+- **Comprehensive Integration Test Suite (`test_tline_superagent_all_features.js`)**:
+  - Added a test script that validates all SuperAgent REST API endpoints and real-time WebSocket chat/SSE streaming against the running t-line backend server with auth bypass token integration.
+
 ## [1.3.558] - 2026-07-20
 
 ### Fixed

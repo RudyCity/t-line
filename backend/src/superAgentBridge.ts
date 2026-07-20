@@ -573,9 +573,6 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
       ws.send(JSON.stringify({ type: 'status', text: `Connected to SuperAgent server (${path.basename(workspacePath)})` }));
       logSuperAgentEvent('system', { message: 'Connected to local SuperAgent SSE events', workspace: workspacePath });
 
-      // Proactively initialize session for this workspace
-      initializeSuperAgentSession(workspacePath, agentMode).catch(() => {});
-
       res.setEncoding('utf8');
       let buffer = '';
       res.on('data', (chunk) => {
