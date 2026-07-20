@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.504] - 2026-07-20
+
+### Fixed
+- **Complete Render-Level Hiding of System Connection Noise Pills**:
+  - Implemented `isSystemNoiseMsg()` helper in [useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts) and applied it to the render filter in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx).
+  - Guarantees all WebSocket connection pills ("WebSocket connection established", "SuperAgent WebSocket connection closed", "Connected to SuperAgent server", "SuperAgent ready", "Restarting bridge", etc.) stored in existing `localStorage` sessions or received from state are completely hidden from the chat UI.
+  - Cleared default system greeting messages when initializing or switching sessions.
+
 ## [1.3.503] - 2026-07-20
 
 ### Fixed

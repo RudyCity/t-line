@@ -11,7 +11,7 @@ import { SuperAgentInputContainer } from './SuperAgentInputContainer';
 import { SuperAgentSettingsMenu } from './SuperAgentSettingsMenu';
 import { SuperAgentMessageItem } from './SuperAgentMessageItem';
 import { SuperAgentHistorySidebar } from './SuperAgentHistorySidebar';
-import { useSuperAgentSessions } from './useSuperAgentSessions';
+import { useSuperAgentSessions, isSystemNoiseMsg } from './useSuperAgentSessions';
 import { useSidebarResize } from './useSidebarResize';
 
 interface SuperAgentConsoleProps {
@@ -837,7 +837,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
 
           <div className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0">
             <div className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-xs leading-relaxed w-full">
-            {messages.map((msg, index) => (
+            {messages.filter(m => !isSystemNoiseMsg(m)).map((msg, index) => (
               <SuperAgentMessageItem key={index} msg={msg} index={index} />
             ))}
 

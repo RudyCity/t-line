@@ -9,6 +9,22 @@ export interface SuperAgentMessage {
   result?: any;
 }
 
+export function isSystemNoiseMsg(msg: { role: string; text?: string }): boolean {
+  if (msg.role !== 'system') return false;
+  const textLower = (msg.text || '').toLowerCase();
+  return (
+    textLower.includes('websocket') ||
+    textLower.includes('connected to superagent') ||
+    textLower.includes('starting superagent') ||
+    textLower.includes('superagent ready') ||
+    textLower.includes('restarting bridge') ||
+    textLower.includes('model preset changed') ||
+    textLower.includes('workspace switched') ||
+    textLower.includes('mode switched') ||
+    textLower.includes('flags set')
+  );
+}
+
 export function loadWorkspaceSessions(wsPath: string): ChatSession[] {
   const wsKey = wsPath || 'default';
   const sessionsKey = `superagent_sessions_${wsKey}`;
@@ -83,7 +99,7 @@ export function useSuperAgentSessions(workspace: string) {
         }
       }
     } catch (e) {}
-    return [{ role: 'system', text: 'SuperAgent ready. Connected to t-line workspace context.' }];
+    return [];
   });
 
   const prevWorkspaceRef = useRef(workspace);
@@ -108,7 +124,7 @@ export function useSuperAgentSessions(workspace: string) {
           }
         } catch (e) {}
       }
-      setMessages([{ role: 'system', text: `SuperAgent ready. Workspace: ${workspace || 'Default'}` }]);
+      setMessages([]);
     }
   }, [workspace]);
 
@@ -167,7 +183,7 @@ export function useSuperAgentSessions(workspace: string) {
         }
       } catch (e) {}
     }
-    setMessages([{ role: 'system', text: 'SuperAgent ready. Connected to session.' }]);
+    setMessages([]);
   }, [activeSessionId, workspace]);
 
   const handleNewChat = useCallback(() => {
@@ -190,7 +206,7 @@ export function useSuperAgentSessions(workspace: string) {
 
     setActiveSessionId(newId);
 
-    const initialMsgs: SuperAgentMessage[] = [{ role: 'system', text: `SuperAgent ready. Workspace: ${workspace || 'Default'}` }];
+    const initialMsgs: SuperAgentMessage[] = [];
     setMessages(initialMsgs);
 
     try {
@@ -226,7 +242,7 @@ export function useSuperAgentSessions(workspace: string) {
             }
           } catch (err) {}
         }
-        setMessages([{ role: 'system', text: 'SuperAgent ready.' }]);
+        setMessages([]);
       } else {
         handleNewChat();
       }
