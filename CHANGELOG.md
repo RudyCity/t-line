@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.532] - 2026-07-20
+
+### Fixed & Enhanced
+- **Filtered Injected Emergency Summary Noise & Session Title Deduplication (`sessionManager.ts`, `useSuperAgentSessions.ts`)**:
+  - Filtered out `[Emergency Summary...]`, `[Emergency Context...]`, `[Context...]`, `[SYS]`, and other injected system noise from session title generation and chat message rendering.
+  - Enhanced `cleanDuplicateWorkspaceSessions` in `sessionManager.ts` to purge duplicate CLI and GUI session records in SQLite database that shared matching titles or close timestamps.
+  - Resolved session history sidebar clutter and restored clean chat title display (`First Msg ➔ Last Msg`).
+
 ## [1.3.531] - 2026-07-20
 
 ### Fixed & Enhanced

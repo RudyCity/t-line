@@ -218,6 +218,26 @@ function mapGuiToDbRows(msgs: SuperAgentMessage[]): InsertMessageRow[] {
 
 // ─── Public API ───────────────────────────────────────────────
 
+/** Check if message content is internal noise or system injection */
+function isNoiseMessageContent(content: string): boolean {
+  if (!content) return true;
+  const c = content.trim();
+  return (
+    c.startsWith('[RMemory') ||
+    c.startsWith('[TencentDB') ||
+    c.startsWith('[Emergency') ||
+    c.startsWith('[Context') ||
+    c.startsWith('[SYS]') ||
+    c.startsWith('[System') ||
+    c.startsWith('<relevant-memories>') ||
+    c.startsWith('<USER_REQUEST>') ||
+    c.startsWith('<user_request>') ||
+    c.includes('Agent Memory Context') ||
+    c.includes('Emergency Summary') ||
+    c.includes('Context Restoration')
+  );
+}
+
 /** Format session title as First Chat ➔ Last Chat directly from SQLite messages */
 function formatSessionTitleFromDb(db: any, sessionId: string, fallbackDisplayName?: string): string {
   try {
@@ -225,20 +245,11 @@ function formatSessionTitleFromDb(db: any, sessionId: string, fallbackDisplayNam
       `SELECT content FROM messages WHERE session_id = ? AND role = 'user' AND content IS NOT NULL AND content != '' ORDER BY sequence_order ASC`
     ).all(sessionId) as { content: string }[];
 
-    // Filter out memory context & noise messages
-    const realUserMsgs = userMsgs.filter(m => {
-      const c = (m.content || '').trim();
-      return (
-        !c.startsWith('[RMemory') &&
-        !c.startsWith('[TencentDB') &&
-        !c.startsWith('<relevant-memories>') &&
-        !c.includes('Agent Memory Context') &&
-        !c.startsWith('[SYS]')
-      );
-    });
+    // Filter out memory context, emergency summaries & noise messages
+    const realUserMsgs = userMsgs.filter(m => !isNoiseMessageContent(m.content));
 
     if (realUserMsgs.length === 0) {
-      if (fallbackDisplayName && !fallbackDisplayName.includes('\\') && !fallbackDisplayName.includes('/') && !fallbackDisplayName.includes('RMemory') && !fallbackDisplayName.includes('Memory Context')) {
+      if (fallbackDisplayName && !fallbackDisplayName.includes('\\') && !fallbackDisplayName.includes('/') && !fallbackDisplayName.includes('RMemory') && !fallbackDisplayName.includes('Memory Context') && !fallbackDisplayName.includes('Emergency')) {
         return fallbackDisplayName;
       }
       return 'Untitled Chat';
@@ -264,7 +275,7 @@ function formatSessionTitleFromDb(db: any, sessionId: string, fallbackDisplayNam
   }
 }
 
-/** Deduplicate and purge redundant GUI sessions that match CLI sessions */
+/** Deduplicate and purge redundant GUI and duplicate CLI sessions */
 function cleanDuplicateWorkspaceSessions(db: any, normalizedWs: string) {
   try {
     const rows = db.prepare(
@@ -286,37 +297,42 @@ function cleanDuplicateWorkspaceSessions(db: any, normalizedWs: string) {
         const rowB = rows[j];
         if (idsToDelete.includes(rowB.id)) continue;
 
-        // Check if one is a GUI temporary ID (starts with session_) and the other is CLI ID
         const isGuiA = rowA.id.startsWith('session_');
         const isGuiB = rowB.id.startsWith('session_');
 
+        const titleA = formatSessionTitleFromDb(db, rowA.id, rowA.display_name);
+        const titleB = formatSessionTitleFromDb(db, rowB.id, rowB.display_name);
+
+        const timeDiff = Math.abs((rowA.created_at || 0) - (rowB.created_at || 0));
+
+        // 1. One is temporary GUI session and the other is CLI session
         if ((isGuiA || isGuiB) && !(isGuiA && isGuiB)) {
           const guiRow = isGuiA ? rowA : rowB;
-          const cliRow = isGuiA ? rowB : rowA;
 
-          const titleA = formatSessionTitleFromDb(db, rowA.id, rowA.display_name);
-          const titleB = formatSessionTitleFromDb(db, rowB.id, rowB.display_name);
-
-          const timeDiff = Math.abs((rowA.created_at || 0) - (rowB.created_at || 0));
-
-          // If titles match or creation time is within 60s, or GUI session is empty
           if (
             guiRow.message_count === 0 ||
             (titleA === titleB && titleA !== 'Untitled Chat' && titleA !== 'New Chat') ||
-            (timeDiff < 60000 && titleA === titleB)
+            (timeDiff < 300000 && (titleA === titleB || titleA === 'Untitled Chat' || titleB === 'Untitled Chat'))
           ) {
             idsToDelete.push(guiRow.id);
           }
-        } else if (isGuiA && isGuiB) {
-          // Both are GUI temporary sessions created close together
-          const titleA = formatSessionTitleFromDb(db, rowA.id, rowA.display_name);
-          const titleB = formatSessionTitleFromDb(db, rowB.id, rowB.display_name);
-          const timeDiff = Math.abs((rowA.created_at || 0) - (rowB.created_at || 0));
-
-          if (titleA === titleB && timeDiff < 60000 && titleA !== 'Untitled Chat' && titleA !== 'New Chat') {
-            // Keep the newer one or the one with more messages
-            const toDelete = rowA.message_count >= rowB.message_count ? rowB.id : rowA.id;
-            idsToDelete.push(toDelete);
+        } 
+        // 2. Both are GUI or both are CLI sessions with identical titles or close timestamps
+        else {
+          if (titleA === titleB && titleA !== 'Untitled Chat' && titleA !== 'New Chat') {
+            // Keep the one with more messages or newer timestamp
+            const countA = rowA.message_count || 0;
+            const countB = rowB.message_count || 0;
+            if (countA >= countB) {
+              idsToDelete.push(rowB.id);
+            } else {
+              idsToDelete.push(rowA.id);
+            }
+          } else if (timeDiff < 60000 && (titleA === 'Untitled Chat' || titleB === 'Untitled Chat')) {
+            const emptyRow = (rowA.message_count || 0) === 0 ? rowA : ((rowB.message_count || 0) === 0 ? rowB : null);
+            if (emptyRow) {
+              idsToDelete.push(emptyRow.id);
+            }
           }
         }
       }

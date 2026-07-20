@@ -14,13 +14,20 @@ export function isSystemNoiseMsg(msg: { role: string; text?: string }): boolean 
   if (!msg || !msg.text) return false;
   const text = msg.text.trim();
 
-  // Filter out injected memory context & prompt headers
+  // Filter out injected memory context, emergency summaries & prompt headers
   if (
     text.startsWith('[RMemory') ||
     text.startsWith('[TencentDB') ||
+    text.startsWith('[Emergency') ||
+    text.startsWith('[Context') ||
+    text.startsWith('[SYS]') ||
+    text.startsWith('[System') ||
     text.startsWith('<relevant-memories>') ||
+    text.startsWith('<USER_REQUEST>') ||
+    text.startsWith('<user_request>') ||
     text.includes('Agent Memory Context') ||
-    text.startsWith('[SYS]')
+    text.includes('Emergency Summary') ||
+    text.includes('Context Restoration')
   ) {
     return true;
   }
