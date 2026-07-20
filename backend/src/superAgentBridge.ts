@@ -234,15 +234,29 @@ function ensureSuperAgentServer(
 
       autoSuperAgentProcess.on('exit', (code: any, signal: any) => {
         console.log(`[WS-Agent] SuperAgent server process exited with code ${code}, signal ${signal}`);
-        // NOTE: with shell:true, the shell wrapper process exits almost immediately
-        // while the actual bun/node server continues running. Do NOT abort the ping
-        // loop here — let pingPort7888() be the sole readiness signal.
-        // We only clean up the process reference if startup was already resolved.
         if (spawnAborted) {
           autoSuperAgentProcess = null;
           isStartingSuperAgent = false;
+          return;
         }
-        // If the shell exits early AND we later time out, abortStartup will fire then.
+        // With shell:true the wrapper shell exits almost immediately while the real
+        // server may still be starting. Give it 2 seconds, then check whether the
+        // port actually came up. If not, abort early with the captured stderr so the
+        // user gets a meaningful error instead of waiting the full 20-second timeout.
+        const CHECK_DELAY_MS = 2000;
+        setTimeout(() => {
+          if (spawnAborted) return;
+          pingPort7888().then((running) => {
+            if (spawnAborted) return;
+            if (!running) {
+              const detail = stderrOutput.trim()
+                ? `\n${stderrOutput.trim().slice(0, 400)}`
+                : ' No error output captured. Run "bunx superagent --server" manually to diagnose.';
+              abortStartup(`Process exited with code ${code}.${detail}`);
+            }
+            // If running, the polling loop will pick it up and call callback() normally.
+          });
+        }, CHECK_DELAY_MS);
       });
 
       autoSuperAgentProcess.on('error', (err: any) => {

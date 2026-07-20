@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.550] - 2026-07-20
+
+### Fixed
+- **SuperAgent Still Waits 20s on Genuine Startup Failure (`superAgentBridge.ts`)**:
+  - When `bunx superagent --server` exits with code 1 (genuine failure, e.g. unsupported workspace), the v1.3.549 fix still waited the full 20-second poll timeout before reporting the error because the exit handler no longer called `abortStartup` at all.
+  - **Fix**: Added a deferred 2-second ping after process exit. Flow:
+    1. Process exits → wait 2 seconds
+    2. `pingPort7888()` → if server IS up: do nothing (polling loop will resolve normally)
+    3. If server is NOT up: call `abortStartup` immediately with the captured stderr output
+  - This correctly handles both scenarios: shell-wrapper-exits-fast (server still comes up) and genuine process crash (fast failure with real error message in ≤ 3 seconds instead of 20).
+
 ## [1.3.549] - 2026-07-20
 
 ### Fixed
