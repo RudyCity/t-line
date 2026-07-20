@@ -140,20 +140,9 @@ export function setActivePreset(mode: 'single' | 'multi', presetId: string) {
   configData.activePresetId[mode] = presetId;
 
   if (targetPreset) {
-    if (!configData.presets) configData.presets = { single: [], multi: [] };
-    if (!configData.presets[mode]) configData.presets[mode] = [];
-
-    const existingIndex = configData.presets[mode].findIndex(
-      (p: any) => p.id?.toLowerCase() === presetId.toLowerCase() || p.name?.toLowerCase() === presetId.toLowerCase()
-    );
-    if (existingIndex !== -1) {
-      configData.presets[mode][existingIndex] = targetPreset;
-    } else {
-      configData.presets[mode].push(targetPreset);
-    }
-
-    if (!configData.activePreset) configData.activePreset = {};
-    configData.activePreset[mode] = targetPreset;
+    const configuredProviders = Array.isArray(configData.providers) ? configData.providers : [];
+    const validProviderIds = configuredProviders.map((p: any) => p.id).filter(Boolean);
+    const firstProviderWithKey = configuredProviders.find((p: any) => p.apiKey && p.apiKey.trim())?.id || validProviderIds[0] || '';
 
     const mainModelConfig = targetPreset.models?.master || targetPreset.models?.superagent;
     let mainProfile = typeof mainModelConfig === 'object' ? mainModelConfig?.providerProfileId : '';
@@ -164,9 +153,58 @@ export function setActivePreset(mode: 'single' | 'multi', presetId: string) {
       }
     }
 
-    if (mainProfile) {
-      configData.activeProviderProfileId = mainProfile;
+    let effectiveProfile = configData.activeProviderProfileId;
+    if (mainProfile && validProviderIds.includes(mainProfile)) {
+      effectiveProfile = mainProfile;
+    } else if (!validProviderIds.includes(effectiveProfile)) {
+      effectiveProfile = firstProviderWithKey;
     }
+
+    configData.activeProviderProfileId = effectiveProfile;
+
+    const fixTierConfig = (tierConfig: any) => {
+      if (!tierConfig || typeof tierConfig !== 'object') return tierConfig;
+      const profile = tierConfig.providerProfileId && validProviderIds.includes(tierConfig.providerProfileId)
+        ? tierConfig.providerProfileId
+        : effectiveProfile;
+      return { ...tierConfig, providerProfileId: profile };
+    };
+
+    const structuredModels: any = { subagentDetails: {} };
+    if (targetPreset.models?.superagent) structuredModels.superagent = fixTierConfig(targetPreset.models.superagent);
+    if (targetPreset.models?.subagentDefault) structuredModels.subagentDefault = fixTierConfig(targetPreset.models.subagentDefault);
+    if (targetPreset.models?.master) structuredModels.master = fixTierConfig(targetPreset.models.master);
+
+    if (targetPreset.models?.subagentDetails) {
+      for (const [subName, subConfig] of Object.entries(targetPreset.models.subagentDetails)) {
+        structuredModels.subagentDetails[subName] = fixTierConfig(subConfig);
+      }
+    }
+
+    const updatedPreset = {
+      id: targetPreset.id || presetId.toLowerCase(),
+      name: targetPreset.name || presetId,
+      description: targetPreset.description || 'Custom model preset.',
+      models: {
+        ...targetPreset.models,
+        ...structuredModels
+      }
+    };
+
+    if (!configData.presets) configData.presets = { single: [], multi: [] };
+    if (!configData.presets[mode]) configData.presets[mode] = [];
+
+    const existingIndex = configData.presets[mode].findIndex(
+      (p: any) => p.id?.toLowerCase() === presetId.toLowerCase() || p.name?.toLowerCase() === presetId.toLowerCase()
+    );
+    if (existingIndex !== -1) {
+      configData.presets[mode][existingIndex] = updatedPreset;
+    } else {
+      configData.presets[mode].push(updatedPreset);
+    }
+
+    if (!configData.activePreset) configData.activePreset = {};
+    configData.activePreset[mode] = updatedPreset;
   }
 
   fs.writeFileSync(configPath, JSON.stringify(configData, null, 2), 'utf8');

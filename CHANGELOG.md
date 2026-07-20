@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.491] - 2026-07-20
+
+### Fixed
+- **Superagent Preset & Provider Profile Resolution**: Fixed preset application in [presetUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/presetUtils.ts) when switching presets:
+  - Validates and resolves `providerProfileId` against configured provider profiles in `model-config.json`.
+  - Automatically falls back to the active/configured provider profile if a CLI preset references a non-existent provider profile ID, preventing Superagent from using invalid credential references.
+  - Correctly builds structured tier configs (`superagent`, `subagentDefault`, `master`) so preset model settings match the Superagent core expectations.
+
 ## [1.3.490] - 2026-07-20
 
 ### Removed
