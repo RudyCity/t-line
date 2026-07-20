@@ -279,7 +279,16 @@ export async function getSessionMessages(
         }
 
         // Extract result from all possible fields
-        const rawResult = rawMsg.result !== undefined ? rawMsg.result : (rawMsg.output !== undefined ? rawMsg.output : (role === 'tool' ? rawMsg.content : undefined));
+        let rawResult = undefined;
+        if (rawMsg.result !== undefined) rawResult = rawMsg.result;
+        else if (rawMsg.output !== undefined) rawResult = rawMsg.output;
+        else if (rawMsg.toolResult !== undefined) {
+          rawResult = (typeof rawMsg.toolResult === 'object' && rawMsg.toolResult !== null && rawMsg.toolResult.result !== undefined)
+            ? rawMsg.toolResult.result
+            : rawMsg.toolResult;
+        } else if (role === 'tool' && rawMsg.content !== undefined) {
+          rawResult = rawMsg.content;
+        }
 
         if (role === 'tool' || toolName || rawMsg.tool_calls || rawMsg.toolCalls) {
           const resolvedToolName = toolName || 'tool';

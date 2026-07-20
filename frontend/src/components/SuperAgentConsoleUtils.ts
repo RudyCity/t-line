@@ -163,11 +163,28 @@ export const handleAgentEventPayload = (
         try { args = JSON.parse(args); } catch (e) {}
       }
 
-      const result = 
-        innerEvent.toolResult?.result !== undefined ? innerEvent.toolResult.result : 
-        innerEvent.result !== undefined ? innerEvent.result : 
-        innerEvent.output !== undefined ? innerEvent.output : 
-        innerEvent.content;
+      let result: any = undefined;
+      if (innerEvent.toolResult !== undefined) {
+        if (typeof innerEvent.toolResult === 'object' && innerEvent.toolResult !== null) {
+          result = innerEvent.toolResult.result !== undefined 
+            ? innerEvent.toolResult.result 
+            : innerEvent.toolResult.output !== undefined 
+            ? innerEvent.toolResult.output 
+            : innerEvent.toolResult.content !== undefined 
+            ? innerEvent.toolResult.content 
+            : innerEvent.toolResult;
+        } else {
+          result = innerEvent.toolResult;
+        }
+      }
+      if (result === undefined) {
+        result = 
+          innerEvent.result !== undefined ? innerEvent.result : 
+          innerEvent.output !== undefined ? innerEvent.output : 
+          innerEvent.toolOutput !== undefined ? innerEvent.toolOutput :
+          innerEvent.content !== undefined ? innerEvent.content :
+          innerEvent.data;
+      }
 
       const callId = innerEvent.toolResult?.id || innerEvent.toolCall?.id || innerEvent.callId || innerEvent.id || innerEvent.tool_call_id;
 
@@ -188,11 +205,12 @@ export const handleAgentEventPayload = (
         if (idx !== -1) {
           const updated = [...prev];
           const resolvedName = (toolName && toolName !== 'tool') ? toolName : (updated[idx].toolName || toolName);
+          const hasNewArgs = args && (typeof args === 'string' ? args.trim().length > 0 : Object.keys(args).length > 0);
           updated[idx] = {
             ...updated[idx],
             toolName: resolvedName,
             text: `Tool '${resolvedName}' completed.`,
-            args: (args && Object.keys(args).length > 0) ? args : updated[idx].args,
+            args: hasNewArgs ? args : updated[idx].args,
             result
           };
           return updated;

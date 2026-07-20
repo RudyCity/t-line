@@ -16,31 +16,52 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
   const [copied, setCopied] = useState(false);
 
   let rawToolName = (msg.toolName || '').toLowerCase();
+
+  // Safely parse args if string
+  let args = msg.args || {};
+  if (typeof args === 'string') {
+    try {
+      args = JSON.parse(args);
+    } catch {
+      args = { raw: msg.args };
+    }
+  }
+
   if (!rawToolName || rawToolName === 'tool') {
     const textMatch = (msg.text || '').match(/(?:Tool '|Invoking tool: |tool: )([a-zA-Z0-9_-]+)/i);
     if (textMatch && textMatch[1]) {
       rawToolName = textMatch[1].toLowerCase();
-    } else if (msg.args) {
-      if (msg.args.Query || msg.args.query || msg.args.pattern) rawToolName = 'grep_search';
-      else if (msg.args.CommandLine || msg.args.command || msg.args.cmd) rawToolName = 'run_command';
-      else if (msg.args.AbsolutePath || msg.args.TargetFile || msg.args.path) rawToolName = 'view_file';
-      else if (msg.args.Subagents || msg.args.subagents) rawToolName = 'invoke_subagent';
+    } else if (args && typeof args === 'object') {
+      if (args.Query || args.query || args.pattern || args.search || args.q) rawToolName = 'grep_search';
+      else if (args.CommandLine || args.command || args.cmd) rawToolName = 'run_command';
+      else if (args.AbsolutePath || args.TargetFile || args.path || args.file) rawToolName = 'view_file';
+      else if (args.Subagents || args.subagents) rawToolName = 'invoke_subagent';
       else rawToolName = 'tool';
     } else {
       rawToolName = 'tool';
     }
   }
 
-  const args = msg.args || {};
-  const result = msg.result;
+  // Safely parse result if stringified JSON
+  let result = msg.result;
+  if (typeof result === 'string') {
+    try {
+      const parsed = JSON.parse(result);
+      if (typeof parsed === 'object' && parsed !== null) {
+        result = parsed;
+      }
+    } catch {
+      // keep raw string
+    }
+  }
 
   const getToolDetails = () => {
     const actionName = rawToolName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
     // 1. Read / View File
     if (rawToolName.includes('view') || rawToolName.includes('read_file')) {
-      const path = args.AbsolutePath || args.path || args.file || args.TargetFile || '';
-      const filename = path ? path.split(/[/\\]/).pop() : '';
+      const path = args.AbsolutePath || args.path || args.file || args.TargetFile || args.filePath || '';
+      const filename = path ? String(path).split(/[/\\]/).pop() : '';
       let lines = '';
       if (args.StartLine && args.EndLine) {
         lines = `:L${args.StartLine}-${args.EndLine}`;
@@ -56,8 +77,8 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
 
     // 2. Edit / Replace / Write File
     if (rawToolName.includes('replace') || rawToolName.includes('write') || rawToolName.includes('edit')) {
-      const path = args.TargetFile || args.path || args.file || '';
-      const filename = path ? path.split(/[/\\]/).pop() : '';
+      const path = args.TargetFile || args.path || args.file || args.filePath || '';
+      const filename = path ? String(path).split(/[/\\]/).pop() : '';
       const desc = args.Description ? ` (${args.Description})` : '';
       return {
         action: 'Edited',
@@ -66,19 +87,21 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
       };
     }
 
-    // 3. Search / Grep
-    if (rawToolName.includes('grep') || rawToolName.includes('search')) {
-      const query = args.Query || args.query || args.pattern || '';
+    // 3. Search / Grep / Query
+    if (rawToolName.includes('grep') || rawToolName.includes('search') || rawToolName.includes('query')) {
+      const query = args.Query || args.query || args.pattern || args.search || args.q || args.searchTerm || args.text || args.Prompt || args.prompt || '';
+      const path = args.SearchPath || args.path || args.TargetFile || args.file || '';
+      const targetText = query ? `"${query}"` : (path ? String(path).split(/[/\\]/).pop() : 'workspace');
       return {
         action: 'Searched',
-        target: query ? `"${query}"` : 'workspace',
+        target: targetText,
         icon: <Search className="w-3 h-3 text-amber-400 shrink-0" />
       };
     }
 
     // 4. Command Execution
     if (rawToolName.includes('command') || rawToolName.includes('shell') || rawToolName.includes('exec') || rawToolName.includes('run')) {
-      const cmd = args.CommandLine || args.command || args.cmd || '';
+      const cmd = args.CommandLine || args.command || args.cmd || args.script || '';
       return {
         action: 'Ran',
         target: cmd || 'command',
@@ -120,14 +143,16 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
     }
 
     // 8. General Smart Fallback for any other tool
-    const primaryArgKey = Object.keys(args).find(k => 
-      ['Action', 'action', 'Target', 'target', 'Description', 'description', 'Url', 'url', 'Prompt', 'prompt', 'Name', 'name', 'Title', 'title', 'Question', 'question'].includes(k)
-    );
+    const primaryArgKey = typeof args === 'object' && args !== null
+      ? Object.keys(args).find(k =>
+          ['Action', 'action', 'Target', 'target', 'Description', 'description', 'Url', 'url', 'Prompt', 'prompt', 'Name', 'name', 'Title', 'title', 'Question', 'question', 'Query', 'query'].includes(k)
+        )
+      : undefined;
     const primaryArgVal = primaryArgKey ? String(args[primaryArgKey]) : '';
-    
+
     return {
       action: actionName,
-      target: primaryArgVal || (Object.keys(args).length > 0 ? JSON.stringify(args).slice(0, 50) : rawToolName),
+      target: primaryArgVal || (typeof args === 'object' && args !== null && Object.keys(args).length > 0 ? JSON.stringify(args).slice(0, 50) : rawToolName),
       icon: <Wrench className="w-3 h-3 text-zinc-400 shrink-0" />
     };
   };
@@ -141,6 +166,12 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const hasArgs = args && (
+    typeof args === 'object' ? Object.keys(args).length > 0 : Boolean(args)
+  );
+
+  const hasResult = result !== undefined && result !== null;
 
   return (
     <div className="py-0.5 px-1 font-mono text-[11px] w-full select-text">
@@ -176,20 +207,20 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
             </button>
           </div>
 
-          {msg.args && Object.keys(msg.args).length > 0 && (
+          {hasArgs && (
             <div>
               <span className="text-[10px] text-indigo-400 font-semibold uppercase block">Arguments:</span>
               <pre className="p-1 text-[10px] text-indigo-200/90 overflow-x-auto max-h-32 overflow-y-auto font-mono">
-                {JSON.stringify(msg.args, null, 2)}
+                {typeof args === 'string' ? args : JSON.stringify(args, null, 2)}
               </pre>
             </div>
           )}
 
-          {result !== undefined && (
+          {hasResult && (
             <div>
               <span className="text-[10px] text-amber-400 font-semibold uppercase block">Output:</span>
               <pre className="p-1 text-[10px] text-zinc-300 overflow-x-auto max-h-48 overflow-y-auto font-mono whitespace-pre-wrap">
-                {typeof result === 'string' ? result : JSON.stringify(result, null, 2)}
+                {typeof result === 'string' ? (result || '(empty output)') : JSON.stringify(result, null, 2)}
               </pre>
             </div>
           )}

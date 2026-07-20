@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.571] - 2026-07-20
+
+### Fixed
+- **Tool Contract Query & Result Display (`SuperAgentToolItem.tsx`, `SuperAgentConsoleUtils.ts`, `sessionManager.ts`)**:
+  - Fixed an issue where expanding a tool call item (details contract block) resulted in search queries or tool execution outputs not appearing.
+  - Enhanced search query extraction across all field aliases (`Query`, `query`, `pattern`, `search`, `q`, `searchTerm`, `text`, `Prompt`, `prompt`, etc.).
+  - Fixed `tool_end` / `tool_result` event parsing to capture raw strings, objects, and nested `toolResult` outputs so tool results reliably populate `msg.result` and display when expanding the tool contract block.
+  - Added robust stringified JSON handling for `args` and `result` displaying formatted JSON or fallback string output when expanded.
+
 ## [1.3.570] - 2026-07-20
 
 ### Fixed
