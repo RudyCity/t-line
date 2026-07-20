@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.487] - 2026-07-20
+
+### Fixed
+- **Left-Aligned System Message Pills**: Changed status pill alignment for `system` role messages from centered to left-aligned (`justify-start`, `text-left`), creating a consistent vertical alignment along the left edge of the SuperAgent message stream.
+
 ## [1.3.486] - 2026-07-20
 
 ### Fixed

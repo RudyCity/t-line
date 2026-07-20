@@ -779,8 +779,8 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
             {messages.map((msg, index) => {
               if (msg.role === 'system') {
                 return (
-                  <div key={index} className="flex items-center justify-center my-1 select-none">
-                    <div className="text-[10px] text-zinc-400/90 font-mono bg-[#0c0f18] border border-zinc-800/80 px-3 py-0.5 rounded-full tracking-tight max-w-2xl text-center shadow-xs flex items-center justify-center gap-1.5 truncate">
+                  <div key={index} className="flex items-center justify-start my-1 select-none">
+                    <div className="text-[10px] text-zinc-400/90 font-mono bg-[#0c0f18] border border-zinc-800/80 px-3 py-0.5 rounded-full tracking-tight max-w-2xl text-left shadow-xs flex items-center justify-start gap-1.5 truncate">
                       <span className="w-1.5 h-1.5 rounded-full bg-indigo-500/70 inline-block shrink-0"></span>
                       <span className="truncate">{msg.text}</span>
                     </div>
