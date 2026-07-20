@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.530] - 2026-07-20
+
+### Added & Integrated
+- **SuperAgent Explicit `sessionId` Integration (`SuperAgentConsole.tsx`, `superAgentBridge.ts`)**:
+  - Integrated full support for SuperAgent CLI's new `sessionId` parameter handling in `/api/chat` and WebSocket payloads.
+  - `SuperAgentConsole.tsx` now passes `activeSessionId` directly in WebSocket prompt payloads.
+  - `superAgentBridge.ts` forwards `sessionId` to SuperAgent server `/api/chat` endpoint, guaranteeing 100% session alignment between GUI and SuperAgent engine.
+
 ## [1.3.529] - 2026-07-20
 
 ### Fixed

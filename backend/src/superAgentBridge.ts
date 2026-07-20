@@ -318,12 +318,17 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
         await initializeSuperAgentSession(workspacePath, agentMode);
 
         try {
-          let response = await sendSuperAgentRequest('/api/chat', { message: text }, workspacePath);
+          const chatPayload: any = { message: text };
+          if (parsed.sessionId) {
+            chatPayload.sessionId = parsed.sessionId;
+          }
+
+          let response = await sendSuperAgentRequest('/api/chat', chatPayload, workspacePath);
 
           // Retry once if session wasn't initialized
           if (response && response.error === 'Session not initialized') {
             await initializeSuperAgentSession(workspacePath, agentMode);
-            response = await sendSuperAgentRequest('/api/chat', { message: text }, workspacePath);
+            response = await sendSuperAgentRequest('/api/chat', chatPayload, workspacePath);
           }
 
           ws.send(JSON.stringify({ type: 'chat_response', success: true, result: response }));

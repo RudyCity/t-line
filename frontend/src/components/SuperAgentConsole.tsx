@@ -495,7 +495,8 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
 
     ws.send(JSON.stringify({
       type: 'prompt',
-      text: finalPrompt
+      text: finalPrompt,
+      sessionId: activeSessionId
     }));
   };
 
