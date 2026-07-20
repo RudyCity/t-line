@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Settings, RefreshCw, Activity, Trash2, Sliders, X, Terminal, ExternalLink, Folder } from 'lucide-react';
+import { Settings, RefreshCw, Activity, Trash2, Sliders, X, Terminal, ExternalLink, Folder, Key, Sparkles } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 
 interface SuperAgentSettingsMenuProps {
@@ -85,7 +85,7 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
       </div>
 
       <div className="space-y-3.5 max-h-[75vh] overflow-y-auto pr-0.5">
-        {/* Quick Links Section */}
+        {/* Management Login & Model Presets Quick Links */}
         {onOpenSettingsModal && (
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -93,13 +93,13 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
                 onOpenSettingsModal('login');
                 onClose();
               }}
-              className="p-2.5 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/50 text-indigo-200 transition text-left flex flex-col gap-1"
+              className="p-2.5 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/50 text-indigo-200 transition text-left flex flex-col gap-1 cursor-pointer"
             >
               <div className="flex items-center gap-1.5 font-medium text-xs text-indigo-300">
-                <Sliders className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Login Credentials</span>
+                <Key className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Management Login</span>
               </div>
-              <span className="text-[10px] text-zinc-400">API keys & provider logins</span>
+              <span className="text-[10px] text-zinc-400">API keys & LLM logins</span>
             </button>
 
             <button
@@ -107,10 +107,10 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
                 onOpenSettingsModal('presets');
                 onClose();
               }}
-              className="p-2.5 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/50 text-indigo-200 transition text-left flex flex-col gap-1"
+              className="p-2.5 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/50 text-indigo-200 transition text-left flex flex-col gap-1 cursor-pointer"
             >
               <div className="flex items-center gap-1.5 font-medium text-xs text-indigo-300">
-                <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
                 <span>Model Presets</span>
               </div>
               <span className="text-[10px] text-zinc-400">Model selection & roles</span>

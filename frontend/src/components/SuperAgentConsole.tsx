@@ -16,7 +16,6 @@ import { SuperAgentHistorySidebar } from './SuperAgentHistorySidebar';
 import { useSuperAgentSessions, isSystemNoiseMsg } from './useSuperAgentSessions';
 import { useSidebarResize } from './useSidebarResize';
 import { getAuthHeader, readFileAsText, readFileAsDataURL, getMainModelLabel as getModelLabelUtil, handleAgentEventPayload } from './SuperAgentConsoleUtils';
-import { Key } from 'lucide-react';
 
 interface SuperAgentConsoleProps {
   activeWorkspacePath?: string;
@@ -674,24 +673,6 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
 
         {/* Right Column */}
         <div className="flex justify-end gap-2 items-center relative">
-          <button
-            onClick={() => handleOpenSettingsModal('login')}
-            className="px-2 py-1 text-[11px] rounded-md border border-zinc-800 bg-[#121622] hover:bg-indigo-950/60 text-zinc-300 hover:text-indigo-300 transition flex items-center gap-1 cursor-pointer font-medium"
-            title="Management Login & Credentials"
-          >
-            <Key className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="hidden md:inline">Login</span>
-          </button>
-
-          <button
-            onClick={() => handleOpenSettingsModal('presets')}
-            className="px-2 py-1 text-[11px] rounded-md border border-zinc-800 bg-[#121622] hover:bg-indigo-950/60 text-zinc-300 hover:text-indigo-300 transition flex items-center gap-1 cursor-pointer font-medium"
-            title="Model Presets Manager"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="hidden md:inline">Preset</span>
-          </button>
-
           <button
             onClick={() => setShowSidebar(!showSidebar)}
             className={`px-2.5 py-1 text-[11px] rounded-md border transition flex items-center gap-1.5 cursor-pointer font-medium ${
