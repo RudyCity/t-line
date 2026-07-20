@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.527] - 2026-07-20
+
+### Added & Redesigned
+- **Collapsible Process & Tool Execution Blocks (`SuperAgentGroupedMessages.tsx`)**:
+  - Automatically groups intermediate `thought` and `tool` steps for each turn into a clean collapsible block (`> Process steps (N thoughts • M tool steps)`)
+  - Automatically contracts intermediate steps upon task completion, keeping the final `assistant` response prominent and clean
+  - Live active turn auto-expands while streaming so users can monitor real-time execution steps, and contracts smoothly once finished
+
 ## [1.3.526] - 2026-07-20
 
 ### Fixed

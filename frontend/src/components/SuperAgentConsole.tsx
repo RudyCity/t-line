@@ -11,7 +11,7 @@ import { SuperAgentInputContainer } from './SuperAgentInputContainer';
 import { SuperAgentSettingsMenu } from './SuperAgentSettingsMenu';
 import { SuperAgentSettingsModal } from './SuperAgentSettingsModal';
 import { ProviderProfile } from './SuperAgentLoginManager';
-import { SuperAgentMessageItem } from './SuperAgentMessageItem';
+import { SuperAgentGroupedMessages } from './SuperAgentGroupedMessages';
 import { SuperAgentHistorySidebar } from './SuperAgentHistorySidebar';
 import { useSuperAgentSessions, isSystemNoiseMsg } from './useSuperAgentSessions';
 import { useSidebarResize } from './useSidebarResize';
@@ -825,9 +825,11 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
                 )}
               </div>
             )}
-            {messages.filter(m => !isSystemNoiseMsg(m)).map((msg, index) => (
-              <SuperAgentMessageItem key={index} msg={msg} index={index} />
-            ))}
+            <SuperAgentGroupedMessages
+              messages={messages}
+              isSystemNoiseMsg={isSystemNoiseMsg}
+              isStreaming={loading}
+            />
 
             {/* Live Progress Tool Message */}
             {toolProgressMsg && (
