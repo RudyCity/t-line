@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.545] - 2026-07-20
+
+### Fixed
+- **SuperAgent Chat Session Deletion Offline Fallback & Flexible Response Handling (`sessionManager.ts`)**:
+  - Fixed an issue where deleting a SuperAgent chat session failed with `"Gagal menghapus session chat"` if the SuperAgent HTTP server (`http://127.0.0.1:7888`) was offline or not yet auto-started.
+  - Added direct SQLite database fallback in `deleteWorkspaceSession` (`~/.superagent-r/history.db` / `~/.superagent/history.db`) to safely remove the session record and messages even when the SuperAgent HTTP server is offline.
+  - Expanded API response status checking (`res.success`, `res.ok`, `res.status === 'ok'`, `res.status === 'success'`, `res.deleted`, `res.message`) to support all SuperAgent server response formats cleanly.
+
 ## [1.3.544] - 2026-07-20
 
 ### Fixed

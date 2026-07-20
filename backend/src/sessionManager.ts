@@ -1,4 +1,8 @@
 import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import Database from 'better-sqlite3';
 
 // ─── Interfaces ───────────────────────────────────────────────
 
@@ -267,24 +271,55 @@ export async function saveWorkspaceSession(
   }
 }
 
-/** Delete a session from SuperAgent Server */
+/** Delete a session from SuperAgent Server or fallback to SQLite */
 export async function deleteWorkspaceSession(workspace: string, prefixedId: string): Promise<boolean> {
   let sessionId = prefixedId;
   if (prefixedId.includes('::')) {
     sessionId = prefixedId.split('::')[1];
   }
 
+  // 1. Try deleting via SuperAgent HTTP Server (if active)
   try {
     const res = await requestSuperAgentServer(`/api/history/session/${encodeURIComponent(sessionId)}`, 'DELETE', undefined, workspace);
-    if (res && (res.success || res.ok)) {
-      return true;
-    }
-    if (sessionId.startsWith('session_')) {
+    if (res && (res.success || res.ok || res.status === 'ok' || res.status === 'success' || res.deleted || res.message)) {
       return true;
     }
   } catch (e) {
-    console.error(`[SessionManager] deleteWorkspaceSession error for ${prefixedId}:`, e);
+    console.error(`[SessionManager] HTTP delete request error for ${prefixedId}:`, e);
   }
+
+  // 2. Draft/unsaved local session
+  if (sessionId.startsWith('session_')) {
+    return true;
+  }
+
+  // 3. Fallback: Direct SQLite DB deletion when SuperAgent HTTP server is offline
+  try {
+    const possibleDbPaths = [
+      path.join(os.homedir(), '.superagent-r', 'history.db'),
+      path.join(os.homedir(), '.superagent', 'history.db')
+    ];
+
+    for (const dbPath of possibleDbPaths) {
+      if (fs.existsSync(dbPath)) {
+        const db = new Database(dbPath);
+        const delSession = db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
+        db.prepare('DELETE FROM messages WHERE session_id = ?').run(sessionId);
+        try {
+          db.prepare('DELETE FROM input_history WHERE session_id = ?').run(sessionId);
+        } catch {}
+        db.close();
+
+        if (delSession.changes > 0) {
+          console.log(`[SessionManager] Successfully deleted session ${sessionId} via SQLite fallback (${dbPath})`);
+          return true;
+        }
+      }
+    }
+  } catch (e) {
+    console.error(`[SessionManager] SQLite fallback delete error for ${prefixedId}:`, e);
+  }
+
   return false;
 }
 
