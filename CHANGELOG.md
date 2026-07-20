@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.566] - 2026-07-20
+
+### Fixed
+- **Rich Markdown Formatting & Table Rendering (`SuperAgentMessageItem.tsx`)**:
+  - Implemented a complete Markdown block and inline parser/renderer in `renderMessageContent`. Chat responses now render rich headings (`#`, `##`, `###`), bold/italic formatting, interactive code blocks with copy buttons, indigo inline code badges, blockquotes, list items, divider lines, and styled Markdown tables (`<table>`) with dark glass borders and zebra striping.
+
 ## [1.3.565] - 2026-07-20
 
 ### Fixed
