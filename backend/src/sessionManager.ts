@@ -24,6 +24,37 @@ export function closeSessionDb() {
 
 // ─── Helpers ──────────────────────────────────────────────────
 
+function extractCleanUserText(content: string): string {
+  if (!content) return '';
+  let text = content.trim();
+
+  // If pure system noise header/context, return empty string
+  if (
+    text.startsWith('[RMemory') ||
+    text.startsWith('[TencentDB') ||
+    text.startsWith('[Emergency') ||
+    text.startsWith('[Context') ||
+    text.startsWith('[SYS]') ||
+    text.startsWith('[System') ||
+    text.startsWith('<relevant-memories>') ||
+    text.includes('Agent Memory Context') ||
+    text.includes('Emergency Summary') ||
+    text.includes('Context Restoration')
+  ) {
+    return '';
+  }
+
+  // Strip <USER_REQUEST> wrappers to keep the real prompt
+  if (text.includes('<USER_REQUEST>')) {
+    text = text.replace(/<\/?USER_REQUEST>/gi, '').trim();
+  }
+  if (text.includes('<user_request>')) {
+    text = text.replace(/<\/?user_request>/gi, '').trim();
+  }
+
+  return text;
+}
+
 function isNoiseMessageContent(content: string): boolean {
   if (!content) return true;
   const c = content.trim();
@@ -35,8 +66,6 @@ function isNoiseMessageContent(content: string): boolean {
     c.startsWith('[SYS]') ||
     c.startsWith('[System') ||
     c.startsWith('<relevant-memories>') ||
-    c.startsWith('<USER_REQUEST>') ||
-    c.startsWith('<user_request>') ||
     c.includes('Agent Memory Context') ||
     c.includes('Emergency Summary') ||
     c.includes('Context Restoration')
@@ -130,12 +159,12 @@ export async function getWorkspaceSessions(
       const cleanedSessions: ChatSession[] = [];
 
       for (const s of response.sessions) {
-        let title = 'Untitled Chat';
+        let title = 'New Chat';
         const first = (s.firstChat || '').trim();
         const last = (s.lastChat || '').trim();
 
-        const cleanFirst = !isNoiseMessageContent(first) ? first.split('\n')[0] : '';
-        const cleanLast = !isNoiseMessageContent(last) ? last.split('\n')[0] : '';
+        const cleanFirst = extractCleanUserText(first).split('\n')[0];
+        const cleanLast = extractCleanUserText(last).split('\n')[0];
 
         if (cleanFirst && cleanLast) {
           const firstShort = cleanFirst.length > 22 ? cleanFirst.slice(0, 22) + '...' : cleanFirst;
@@ -143,7 +172,14 @@ export async function getWorkspaceSessions(
           title = firstShort === lastShort ? firstShort : `${firstShort} ➔ ${lastShort}`;
         } else if (cleanFirst) {
           title = cleanFirst.length > 30 ? cleanFirst.slice(0, 30) + '...' : cleanFirst;
-        } else if (s.displayName && !isNoiseMessageContent(s.displayName)) {
+        } else if (
+          s.displayName && 
+          !isNoiseMessageContent(s.displayName) && 
+          s.displayName !== s.id && 
+          !s.displayName.startsWith('sess/') && 
+          !s.displayName.startsWith('sess_') && 
+          !s.displayName.startsWith('session_')
+        ) {
           title = s.displayName;
         }
 

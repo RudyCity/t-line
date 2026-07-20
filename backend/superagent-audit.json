@@ -1,1468 +1,5 @@
 [
   {
-    "timestamp": "2026-07-20T13:34:33.975Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " Amb"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:33.990Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "il"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.004Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " kont"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.021Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "en"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.039Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " dari"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.055Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " URL"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.069Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.087Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "-"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.105Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " `"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.123Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "search"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.139Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "_history"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.157Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "`"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.170Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " —"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.187Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " C"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.205Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "ari"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.228Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " history"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.240Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " perc"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.254Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "ak"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.270Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "apan"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.286Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " sebelumnya"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.301Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.318Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "-"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.333Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " `"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.350Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "search"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.364Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "_p"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.380Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "inned"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.399Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "_k"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.415Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "now"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.431Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "ledge"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.448Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "`"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.465Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " —"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.481Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " C"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.495Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "ari"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.508Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " knowledge"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.522Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " yang"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.537Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " di"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.559Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "-p"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.574Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "in"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.592Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.611Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "**"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.630Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "🧠"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.647Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " Memory"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.661Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " System"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.678Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "**\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.694Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "-"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.708Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " `"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.722Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "rm"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.736Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "emory"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.750Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "_search"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.764Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "`"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.777Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " —"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.790Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " C"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.804Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "ari"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.817Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " long"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.841Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "-term"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.855Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " memory"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.869Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " ("
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.883Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "L"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.895Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "1"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.909Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": ")\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.922Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "-"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.937Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " `"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.951Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "rm"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.965Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "emory"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.978Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "_con"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:34.992Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "vers"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.006Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "ation"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.021Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "_search"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.034Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "`"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.048Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " —"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.062Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " C"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.075Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "ari"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.089Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " perc"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.102Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "ak"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.116Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "apan"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.128Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " ment"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.141Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "ah"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.159Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " ("
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.173Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "L"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.189Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "0"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.204Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": ")\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.218Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "-"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.232Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " `"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.245Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "rm"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.259Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "emory"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.274Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "_read"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.288Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "_c"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.302Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "os"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.316Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "`"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.329Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " —"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.342Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " B"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.357Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "aca"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.371Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " scenario"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.385Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " file"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.399Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " ("
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.412Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "L"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.425Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "2"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.441Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": ")\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.456Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "-"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.470Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " `"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.483Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "read"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.496Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "_"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.509Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "shared"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.523Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "_m"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.537Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "emory"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.550Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "`"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.562Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " —"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.590Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " B"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.601Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "aca"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.611Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " shared"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.621Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " memory"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.633Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.645Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "**"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.661Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "🎯"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.677Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " Skills"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.691Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " &"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.707Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " Knowledge"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.724Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "**\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.741Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "-"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.756Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " `"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.771Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "get"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.785Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "_"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.803Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "skills"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.821Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "`"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.837Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " —"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.855Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " Li"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.871Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "hat"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.888Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " skill"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.906Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " yang"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.922Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " ter"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.940Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "install"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.955Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T13:34:35.972Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "-"
-      }
-    }
-  },
-  {
     "timestamp": "2026-07-20T13:34:35.988Z",
     "type": "agent_event",
     "data": {
@@ -11822,6 +10359,1397 @@
       "event": {
         "type": "done"
       }
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:08.967Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:08.988Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:09.006Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:09.022Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:20.655Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:20.674Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:20.692Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:20.713Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:23.510Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:23.530Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:23.546Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:23.563Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:26.948Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:26.966Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:26.985Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:27.006Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:32.269Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:32.286Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:32.301Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:32.327Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:35.248Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:35.267Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:35.283Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:35.297Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:38.469Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:38.487Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:38.504Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:38.520Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:41.848Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:41.866Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:41.881Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:41.899Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:45.069Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:45.087Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:45.104Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:45.121Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:48.149Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:48.167Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:48.182Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:19:48.199Z",
+    "type": "agent_event",
+    "data": {
+      "type": "superagent-sessions-changed"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:05.865Z",
+    "type": "system",
+    "data": {
+      "message": "Eager SuperAgent server ready"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:17.355Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:17.390Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:23.345Z",
+    "type": "prompt",
+    "data": {
+      "text": "hi",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:23.651Z",
+    "type": "chat_response",
+    "data": {
+      "success": true,
+      "sessionId": "session_1784537343552"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:25.865Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:25.891Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "checkpoint_auto",
+        "name": "Auto: User message at 21.33.25",
+        "id": "chk_1784558005856"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:25.911Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:25.932Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "checkpoint_auto",
+        "name": "Auto: User message at 21.33.25",
+        "id": "chk_1784558005856"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:25.955Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:25.973Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "checkpoint_auto",
+        "name": "Auto: User message at 21.33.25",
+        "id": "chk_1784558005856"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:25.995Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:26.015Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "checkpoint_auto",
+        "name": "Auto: User message at 21.33.25",
+        "id": "chk_1784558005856"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.128Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": "Hello"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.145Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": "!"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.164Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " How"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.180Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " can"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.197Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " I"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.214Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " assist"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.229Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " you"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.244Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " with"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.260Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " browser"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.277Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " automation"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.294Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " or"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.311Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " web"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.324Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " research"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.336Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " today"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.350Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": "?"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.364Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "token_usage",
+        "promptTokens": 1515,
+        "completionTokens": 417,
+        "durationMs": 4400
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.378Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "done"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.391Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": "Hello"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.405Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": "!"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.424Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " How"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.437Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " can"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.452Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " I"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.468Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " assist"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.483Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " you"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.497Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " with"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.512Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " browser"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.528Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " automation"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.546Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " or"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.560Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " web"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.578Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " research"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.593Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " today"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.608Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": "?"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.623Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "token_usage",
+        "promptTokens": 1515,
+        "completionTokens": 417,
+        "durationMs": 4400
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.641Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "done"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.656Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": "Hello"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.673Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": "!"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.688Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " How"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.704Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " can"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.725Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " I"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.739Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " assist"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.755Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " you"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.769Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " with"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.784Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " browser"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.798Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " automation"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.811Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " or"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.825Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " web"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.840Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " research"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.855Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " today"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.868Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": "?"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.883Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "token_usage",
+        "promptTokens": 1515,
+        "completionTokens": 417,
+        "durationMs": 4400
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.898Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "done"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.912Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": "Hello"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.931Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": "!"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.945Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " How"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.960Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " can"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.974Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " I"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:30.986Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " assist"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:31.001Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " you"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:31.017Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " with"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:31.034Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " browser"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:31.048Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " automation"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:31.063Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " or"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:31.075Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " web"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:31.091Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " research"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:31.104Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": " today"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:31.120Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "text",
+        "content": "?"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:31.133Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "token_usage",
+        "promptTokens": 1515,
+        "completionTokens": 417,
+        "durationMs": 4400
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:33:31.147Z",
+    "type": "agent_event",
+    "data": {
+      "type": "agent_event",
+      "event": {
+        "type": "done"
+      },
+      "sessionId": "session_1784537343552",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:35:40.675Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:35:40.699Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:35:40.719Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:35:40.736Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:35:55.689Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:35:55.719Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:35:55.767Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:35:55.845Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:36:03.938Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:36:03.957Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:36:03.972Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:36:03.996Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
     }
   }
 ]

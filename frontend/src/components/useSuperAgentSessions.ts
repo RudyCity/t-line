@@ -23,8 +23,6 @@ export function isSystemNoiseMsg(msg: { role: string; text?: string }): boolean 
     text.startsWith('[SYS]') ||
     text.startsWith('[System') ||
     text.startsWith('<relevant-memories>') ||
-    text.startsWith('<USER_REQUEST>') ||
-    text.startsWith('<user_request>') ||
     text.includes('Agent Memory Context') ||
     text.includes('Emergency Summary') ||
     text.includes('Context Restoration')
@@ -202,22 +200,34 @@ async function apiDeleteSession(workspace: string, sessionId: string): Promise<b
   return false;
 }
 
+export function getCleanUserText(rawText: string): string {
+  if (!rawText) return '';
+  let text = rawText.trim();
+  if (text.includes('<USER_REQUEST>')) {
+    text = text.replace(/<\/?USER_REQUEST>/gi, '').trim();
+  }
+  if (text.includes('<user_request>')) {
+    text = text.replace(/<\/?user_request>/gi, '').trim();
+  }
+  return text;
+}
+
 export function generateSessionTitle(messages: SuperAgentMessage[]): string {
   const userMsgs = messages.filter(m => m.role === 'user' && m.text && !isSystemNoiseMsg(m));
   if (userMsgs.length === 0) return 'New Chat';
 
-  const firstMsg = userMsgs[0].text.trim().split('\n')[0];
-  const firstShort = firstMsg.length > 22 ? firstMsg.slice(0, 22) + '...' : firstMsg;
+  const cleanFirst = getCleanUserText(userMsgs[0].text).split('\n')[0];
+  const firstShort = cleanFirst.length > 22 ? cleanFirst.slice(0, 22) + '...' : cleanFirst;
 
   if (userMsgs.length === 1) {
-    return firstShort;
+    return firstShort || 'New Chat';
   }
 
-  const lastMsg = userMsgs[userMsgs.length - 1].text.trim().split('\n')[0];
-  const lastShort = lastMsg.length > 22 ? lastMsg.slice(0, 22) + '...' : lastMsg;
+  const cleanLast = getCleanUserText(userMsgs[userMsgs.length - 1].text).split('\n')[0];
+  const lastShort = cleanLast.length > 22 ? cleanLast.slice(0, 22) + '...' : cleanLast;
 
   if (firstShort === lastShort) {
-    return firstShort;
+    return firstShort || 'New Chat';
   }
 
   return `${firstShort} ➔ ${lastShort}`;

@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.560] - 2026-07-20
+
+### Fixed
+- **SuperAgent Session Title & New Chat Display Bug (`sessionManager.ts` & `useSuperAgentSessions.ts`)**:
+  - Fixed an issue where raw session IDs (e.g. `sess/1784537657160/6gu4c4`) were rendered in the sidebar for new chat sessions. Raw session ID strings starting with `sess/`, `sess_`, or `session_` are now sanitized and fallback to `'New Chat'`.
+  - Fixed `extractCleanUserText` and `getCleanUserText` to strip `<USER_REQUEST>` prompt wrappers instead of marking the prompt as system noise, enabling proper title generation from user queries.
+
 ## [1.3.559] - 2026-07-20
 
 ### Fixed
