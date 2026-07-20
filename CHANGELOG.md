@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.498] - 2026-07-20
+
+### Improved
+- **SuperAgent History Header Icon Controls & Search Dropdown**:
+  - Converted **+ New Chat** and **Search** into compact icon action buttons positioned directly in the History sidebar header row next to the title badge.
+  - Implemented collapsible search dropdown panel in [SuperAgentHistorySidebar.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentHistorySidebar.tsx) that smoothly toggles open/close upon clicking the search icon button.
+
 ## [1.3.497] - 2026-07-20
 
 ### Added
