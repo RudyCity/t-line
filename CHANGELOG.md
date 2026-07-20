@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.552] - 2026-07-20
+
+### Fixed
+- **`bunx.cmd` Not Recognized on Windows (`superAgentBridge.ts`)**:
+  - Root cause: bun on Windows installs as `bun.exe`, not `bunx.cmd`. Spawning `bunx.cmd` failed with "not recognized as an internal or external command".
+  - **Fix**: Changed spawn command from `bunx.cmd` / `bunx` to `bun.cmd` / `bun` with `x` prepended as the first argument (`bun x superagent --server`). This is the canonical cross-platform way to run bun packages and doesn't depend on the `bunx` shim being present.
+  - Applied in both `ensureSuperAgentServer()` and `startSuperAgentEager()`.
+
 ## [1.3.551] - 2026-07-20
 
 ### Changed

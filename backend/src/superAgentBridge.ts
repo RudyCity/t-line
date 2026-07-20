@@ -126,7 +126,7 @@ function ensureSuperAgentServer(
   callback: () => void
 ): void {
   const isWin = os.platform() === 'win32';
-  const cmd = isWin ? 'bunx.cmd' : 'bunx';
+  const cmd = isWin ? 'bun.cmd' : 'bun';
 
   const modeChanged = currentAgentMode !== agentMode;
   const argsChanged = currentCustomArgs !== customArgs;
@@ -205,7 +205,7 @@ function ensureSuperAgentServer(
     }
 
     try {
-      const spawnArgs = ['superagent', '--server'];
+      const spawnArgs = ['x', 'superagent', '--server'];
       if (agentMode === 'multi') spawnArgs.push('--multi');
       if (customArgs && customArgs.trim()) {
         spawnArgs.push(...customArgs.trim().split(/\s+/));
@@ -312,7 +312,7 @@ export function startSuperAgentEager(agentMode: string = 'single', customArgs: s
     }
 
     const isWin = os.platform() === 'win32';
-    const cmd = isWin ? 'bunx.cmd' : 'bunx';
+    const cmd = isWin ? 'bun.cmd' : 'bun';
 
     isStartingSuperAgent = true;
     currentAgentMode = agentMode;
@@ -331,7 +331,7 @@ export function startSuperAgentEager(agentMode: string = 'single', customArgs: s
       drainPendingCallbacks(new Error(reason));
     }
 
-    const spawnArgs = ['superagent', '--server'];
+    const spawnArgs = ['x', 'superagent', '--server'];
     if (agentMode === 'multi') spawnArgs.push('--multi');
     if (customArgs && customArgs.trim()) spawnArgs.push(...customArgs.trim().split(/\s+/));
 
