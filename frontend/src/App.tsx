@@ -2323,6 +2323,21 @@ export default function App() {
                 />
               ))}
 
+              {/* SuperAgent console tabs stay mounted continuously so background execution and WS stay alive on tab switches */}
+              {tabs.filter(t => t.type === 'agent' && !t.isDetached).map(tab => (
+                <div
+                  key={tab.id}
+                  className="w-full h-full"
+                  style={{ display: tab.id === activeTabId ? 'block' : 'none' }}
+                >
+                  <SuperAgentConsole
+                    activeWorkspacePath={panelWorkspace?.path}
+                    workspaces={workspaces}
+                    onOpenSettings={() => setShowSettingsModal(true)}
+                  />
+                </div>
+              ))}
+
               {(() => {
                 const activeTab = tabs.find(t => t.id === activeTabId);
                 if (!activeTab) return null;
@@ -2389,13 +2404,8 @@ export default function App() {
                     />
                   );
                 } else if (activeTab.type === 'agent') {
-                  tabElement = (
-                    <SuperAgentConsole
-                      activeWorkspacePath={panelWorkspace?.path}
-                      workspaces={workspaces}
-                      onOpenSettings={() => setShowSettingsModal(true)}
-                    />
-                  );
+                  // SuperAgentConsole is handled by persistent mapping above
+                  tabElement = null;
                 } else if (activeTab.type === 'terminal' && activeTab.layout) {
                   tabElement = (
                     <SplitLayoutRenderer

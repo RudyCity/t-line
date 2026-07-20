@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.493] - 2026-07-20
+
+### Fixed
+- **Background Execution & Persistent SuperAgent Component**: Fixed SuperAgent process stopping when switching tabs in [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx#L2326-L2338):
+  - Changed tab rendering so `SuperAgentConsole` remains continuously mounted in the DOM (`display: none` when non-active) instead of conditionally unmounting.
+  - Keeps the WebSocket connection and SSE listener alive when switching to terminal, file, or diff tabs, enabling AI tasks to run seamlessly in the background without process interruption.
+
 ## [1.3.492] - 2026-07-20
 
 ### Fixed
