@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.496] - 2026-07-20
+
+### Fixed
+- **SuperAgent Chat Abort & Execution Stop Fix**: Resolved an issue where clicking "Stop Agent", clicking "Stop Execution", or running `/abort` did not stop the active chat execution:
+  - Added HTTP request timeout handling (2000ms) in [superAgentBridge.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentBridge.ts) so `/api/abort` calls do not block backend WebSocket processing if the server is non-responsive.
+  - Implemented forceful process termination (`taskkill` on Win32 / `SIGKILL` on Unix) for `autoSuperAgentProcess` upon abort, guaranteeing active background LLM generation and subagent tools stop immediately.
+  - Added `isAbortedRef` event suppression tracking in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) to prevent lingering SSE stream chunks from turning loading states back on after user cancels.
+  - Fixed `/abort` slash command in chat input to immediately trigger `handleAbort()` rather than forwarding `/abort` text as a prompt to the AI model.
+- **Strict File Limit Refactoring**: Extracted message rendering into [SuperAgentMessageItem.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentMessageItem.tsx) to maintain `SuperAgentConsole.tsx` strictly under 1000 lines of code.
+
 ## [1.3.495] - 2026-07-20
 
 ### Added

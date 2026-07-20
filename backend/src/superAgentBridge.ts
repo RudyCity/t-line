@@ -181,7 +181,7 @@ async function initializeSuperAgentSession(workspacePath: string, mode: string):
   });
 }
 
-function sendSuperAgentRequest(pathName: string, payload: any, workspacePath: string): Promise<any> {
+function sendSuperAgentRequest(pathName: string, payload: any, workspacePath: string, timeoutMs: number = 30000): Promise<any> {
   return new Promise((resolve, reject) => {
     const postData = JSON.stringify(payload);
     const req = http.request({
@@ -193,7 +193,8 @@ function sendSuperAgentRequest(pathName: string, payload: any, workspacePath: st
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(postData),
         'x-workspace-path': workspacePath
-      }
+      },
+      timeout: timeoutMs
     }, (res) => {
       let body = '';
       res.on('data', chunk => { body += chunk; });
@@ -205,6 +206,11 @@ function sendSuperAgentRequest(pathName: string, payload: any, workspacePath: st
           resolve({ raw: body });
         }
       });
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error(`Request to ${pathName} timed out after ${timeoutMs}ms`));
     });
 
     req.on('error', (err) => reject(err));
@@ -328,8 +334,32 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
         await sendSuperAgentRequest('/api/plan/approve', { action }, workspacePath);
       } else if (actionType === 'abort') {
         logSuperAgentEvent('abort_request', { workspace: workspacePath });
-        await sendSuperAgentRequest('/api/abort', {}, workspacePath);
+        try {
+          await sendSuperAgentRequest('/api/abort', {}, workspacePath, 2000);
+        } catch (err: any) {
+          console.log('[WS-Agent] /api/abort request failed or timed out:', err.message);
+        }
+
+        if (autoSuperAgentProcess) {
+          console.log('[WS-Agent] Force killing SuperAgent server process on user abort...');
+          try {
+            if (os.platform() === 'win32') {
+              const pid = autoSuperAgentProcess.pid;
+              if (pid) {
+                execSync(`taskkill /pid ${pid} /T /F`, { stdio: 'ignore' });
+              }
+            } else {
+              autoSuperAgentProcess.kill('SIGKILL');
+            }
+          } catch (e) {
+            console.error('[WS-Agent] Failed to kill SuperAgent process on abort:', e);
+          }
+          autoSuperAgentProcess = null;
+          isStartingSuperAgent = false;
+        }
+
         ws.send(JSON.stringify({ type: 'status', text: 'Agent execution aborted by user.' }));
+        ws.send(JSON.stringify({ type: 'agent_event', event: { type: 'done' } }));
       }
     } catch (e) {
       console.error('[WS-Agent] Error parsing client message:', e);

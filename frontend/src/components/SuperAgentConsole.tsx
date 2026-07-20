@@ -9,7 +9,7 @@ import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSi
 import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
 import { SuperAgentInputContainer } from './SuperAgentInputContainer';
 import { SuperAgentSettingsMenu } from './SuperAgentSettingsMenu';
-import { SuperAgentToolItem } from './SuperAgentToolItem';
+import { SuperAgentMessageItem } from './SuperAgentMessageItem';
 
 interface SuperAgentConsoleProps {
   activeWorkspacePath?: string;
@@ -57,6 +57,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   const [agentMode, setAgentMode] = useState<'single' | 'multi'>('single');
   const [customArgs, setCustomArgs] = useState('');
   const [connectTrigger, setConnectTrigger] = useState(0);
+  const isAbortedRef = useRef<boolean>(false);
 
   // Persist messages whenever they change
   useEffect(() => {
@@ -223,30 +224,12 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   };
 
   const getMainModelLabel = (preset: ModelPreset | undefined) => {
-    if (!preset || !preset.models) return 'Unknown';
-    const models = preset.models;
-    
-    if (agentMode === 'multi' && models.master) {
-      if (typeof models.master === 'object' && models.master.model) {
-        return models.master.model;
-      }
-      if (typeof models.master === 'string') {
-        return models.master;
-      }
-    }
-    
-    if (models.superagent) {
-      if (typeof models.superagent === 'object' && models.superagent.model) {
-        return models.superagent.model;
-      }
-      if (typeof models.superagent === 'string') {
-        return models.superagent;
-      }
-    }
-    
-    if (models.MODEL) return typeof models.MODEL === 'object' ? (models.MODEL as any).model : models.MODEL;
-    if (models.MODEL_SINGLE) return typeof models.MODEL_SINGLE === 'object' ? (models.MODEL_SINGLE as any).model : models.MODEL_SINGLE;
-
+    if (!preset?.models) return 'Unknown';
+    const m = preset.models;
+    if (agentMode === 'multi' && m.master) return typeof m.master === 'object' ? m.master.model : m.master;
+    if (m.superagent) return typeof m.superagent === 'object' ? m.superagent.model : m.superagent;
+    if (m.MODEL) return typeof m.MODEL === 'object' ? (m.MODEL as any).model : m.MODEL;
+    if (m.MODEL_SINGLE) return typeof m.MODEL_SINGLE === 'object' ? (m.MODEL_SINGLE as any).model : m.MODEL_SINGLE;
     return 'Default';
   };
 
@@ -309,23 +292,13 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
     });
   };
 
-  const readFileAsText = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(reader.error);
-      reader.readAsText(file);
-    });
-  };
+  const readFileAsText = (file: File): Promise<string> => new Promise((res, rej) => {
+    const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = () => rej(r.error); r.readAsText(file);
+  });
 
-  const readFileAsDataURL = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
-    });
-  };
+  const readFileAsDataURL = (file: File): Promise<string> => new Promise((res, rej) => {
+    const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = () => rej(r.error); r.readAsDataURL(file);
+  });
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -392,9 +365,25 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
             setMessages(prev => [...prev, { role: 'system', text: `Error: ${payload.result.error}` }]);
           }
         } else if (payload.type === 'status') {
+          if (typeof payload.text === 'string' && payload.text.toLowerCase().includes('aborted')) {
+            isAbortedRef.current = false;
+            setLoading(false);
+            setToolProgressMsg('');
+          }
           setMessages(prev => [...prev, { role: 'system', text: payload.text }]);
         } else if (payload.type === 'agent_event') {
           const innerEvent = payload.event;
+          if (innerEvent.type === 'done' || innerEvent.type === 'goal_done') {
+            isAbortedRef.current = false;
+            setLoading(false);
+            setToolProgressMsg('');
+            return;
+          }
+
+          if (isAbortedRef.current) {
+            return;
+          }
+
           if (innerEvent.type === 'tool_start') {
             setLoading(true);
             const toolName = innerEvent.toolCall?.name || innerEvent.toolCall?.toolName || innerEvent.toolName || innerEvent.name || 'tool';
@@ -462,9 +451,6 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
                 return [...prev, { role: 'assistant', text: chunk }];
               });
             }
-          } else if (innerEvent.type === 'done' || innerEvent.type === 'goal_done') {
-            setLoading(false);
-            setToolProgressMsg('');
           } else if (innerEvent.type === 'error') {
             setLoading(false);
             setToolProgressMsg('');
@@ -516,6 +502,14 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   async function handleSend(customPrompt?: string) {
     const prompt = (customPrompt !== undefined ? customPrompt : input).trim();
     if (!prompt && attachments.length === 0) return;
+
+    if (prompt === '/abort') {
+      setInput('');
+      handleAbort();
+      return;
+    }
+
+    isAbortedRef.current = false;
 
     // Check if it's a slash command first!
     if (prompt.startsWith('/')) {
@@ -700,10 +694,16 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   };
 
   function handleAbort() {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ type: 'abort' }));
+    isAbortedRef.current = true;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'abort' }));
+    }
     setLoading(false);
     setToolProgressMsg('');
+    setPendingPermission(null);
+    setPendingQuestion(null);
+    setPendingPlanApproval(false);
+    setMessages(prev => [...prev, { role: 'system', text: '⏹️ Agent execution stopped by user.' }]);
   };
 
   const handlePermissionDecision = (approval: boolean | 'session') => {
@@ -741,28 +741,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
     setPendingPlanApproval(false);
   };
 
-  const renderMessageContent = (text: string) => {
-    if (!text) return null;
-    const lines = text.split('\n');
-    return (
-      <div className="flex flex-col gap-0.5">
-        {lines.map((line, i) => {
-          if (line.trim().startsWith('[SYS]')) {
-            return (
-              <div key={i} className="text-[10px] text-zinc-550 font-mono tracking-tight leading-normal">
-                {line}
-              </div>
-            );
-          }
-          return (
-            <div key={i} className="whitespace-pre-wrap">
-              {line}
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
+
 
 
 
@@ -860,42 +839,9 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
         <div className="flex-1 flex overflow-hidden relative w-full">
           <div className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0">
             <div className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-xs leading-relaxed w-full">
-            {messages.map((msg, index) => {
-              if (msg.role === 'system') {
-                return (
-                  <div key={index} className="flex items-center justify-start my-1 select-none">
-                    <div className="text-[10px] text-zinc-400/90 font-mono bg-[#0c0f18] border border-zinc-800/80 px-3 py-0.5 rounded-full tracking-tight max-w-2xl text-left shadow-xs flex items-center justify-start gap-1.5 truncate">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500/70 inline-block shrink-0"></span>
-                      <span className="truncate">{msg.text}</span>
-                    </div>
-                  </div>
-                );
-              }
-
-              if (msg.role === 'tool') {
-                return <SuperAgentToolItem key={index} msg={msg} />;
-              }
-
-              return (
-                <div
-                  key={index}
-                  className={`p-3.5 rounded-xl border w-full transition-all shadow-sm ${
-                    msg.role === 'user'
-                      ? 'bg-indigo-950/30 border-indigo-800/40 text-indigo-100'
-                      : msg.role === 'thought'
-                      ? 'bg-slate-950/50 border-slate-800/50 text-slate-400 text-xs italic border-l-4 border-l-indigo-500 pl-4'
-                      : 'bg-[#0d101a] border-zinc-800/80 text-zinc-200'
-                  }`}
-                >
-                  <span className={`block text-[10px] uppercase tracking-wider mb-1.5 font-bold font-mono ${
-                    msg.role === 'thought' ? 'text-indigo-400' : 'text-zinc-500'
-                  }`}>
-                    {msg.role}
-                  </span>
-                  {renderMessageContent(msg.text)}
-                </div>
-              );
-            })}
+            {messages.map((msg, index) => (
+              <SuperAgentMessageItem key={index} msg={msg} index={index} />
+            ))}
 
             {/* Live Progress Tool Message */}
             {toolProgressMsg && (
