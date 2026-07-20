@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.503] - 2026-07-20
+
+### Fixed
+- **Filtered Out Connection Noise System Messages from Chat UI**:
+  - Filtered out routine WebSocket system connection pills ("WebSocket connection established", "SuperAgent WebSocket connection closed", "Connected to SuperAgent server", "Auto-starting SuperAgent server") from popping up in the chat UI view in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx).
+  - All connection events are now logged cleanly to developer `console.log` / `console.info` instead to keep the chat interface clean and clutter-free.
+
 ## [1.3.502] - 2026-07-20
 
 ### Improved

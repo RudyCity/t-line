@@ -308,12 +308,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
     const socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
-      setMessages(prev => {
-        const connText = `WebSocket connection established. Workspace: ${workspace || 'Default'}`;
-        const last = prev[prev.length - 1];
-        if (last && last.text === connText) return prev;
-        return [...prev, { role: 'system', text: connText }];
-      });
+      console.log(`[SuperAgent WS] Connection established. Workspace: ${workspace || 'Default'}`);
     };
 
     socket.onmessage = (event) => {
@@ -327,12 +322,22 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
             setMessages(prev => [...prev, { role: 'system', text: `Error: ${payload.result.error}` }]);
           }
         } else if (payload.type === 'status') {
-          if (typeof payload.text === 'string' && payload.text.toLowerCase().includes('aborted')) {
-            isAbortedRef.current = false;
-            setLoading(false);
-            setToolProgressMsg('');
+          console.log('[SuperAgent WS Status]', payload.text);
+          if (typeof payload.text === 'string') {
+            const statusLower = payload.text.toLowerCase();
+            if (statusLower.includes('aborted')) {
+              isAbortedRef.current = false;
+              setLoading(false);
+              setToolProgressMsg('');
+            }
+            const isConnNoise = statusLower.includes('websocket') ||
+                                statusLower.includes('connected to superagent') ||
+                                statusLower.includes('starting superagent') ||
+                                statusLower.includes('restarting superagent');
+            if (!isConnNoise) {
+              setMessages(prev => [...prev, { role: 'system', text: payload.text }]);
+            }
           }
-          setMessages(prev => [...prev, { role: 'system', text: payload.text }]);
         } else if (payload.type === 'agent_event') {
           const innerEvent = payload.event;
           if (innerEvent.type === 'done' || innerEvent.type === 'goal_done') {
@@ -446,7 +451,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
     };
 
     socket.onclose = () => {
-      setMessages(prev => [...prev, { role: 'system', text: 'SuperAgent WebSocket connection closed.' }]);
+      console.log('[SuperAgent WS] Connection closed.');
       setLoading(false);
     };
 
