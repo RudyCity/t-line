@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Plus, Trash2, Check, Cpu, RefreshCw, Layers, ShieldCheck } from 'lucide-react';
+import { Sparkles, Plus, Trash2, Check, Cpu, RefreshCw, Layers, ShieldCheck, Edit3 } from 'lucide-react';
 import { ProviderProfile } from './SuperAgentLoginManager';
 
 export interface ModelPreset {
@@ -23,6 +23,7 @@ interface SubagentRoleOverride {
   role: string;
   providerProfileId: string;
   model: string;
+  isCustomModel?: boolean;
 }
 
 const COMMON_SUBAGENT_ROLES = [
@@ -55,10 +56,12 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
   // Main Agent Model Config
   const [mainProviderId, setMainProviderId] = useState('');
   const [mainModel, setMainModel] = useState('gemini-2.5-flash');
+  const [isMainModelCustom, setIsMainModelCustom] = useState(false);
 
   // Subagent Default Model Config
   const [subDefaultProviderId, setSubDefaultProviderId] = useState('');
   const [subDefaultModel, setSubDefaultModel] = useState('gemini-2.5-flash');
+  const [isSubDefaultModelCustom, setIsSubDefaultModelCustom] = useState(false);
 
   // Specialized Subagent Overrides
   const [subagentOverrides, setSubagentOverrides] = useState<SubagentRoleOverride[]>([]);
@@ -108,10 +111,10 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
             }
           }));
 
-          if (providerId === mainProviderId && (!mainModel || mainModel === 'gemini-2.5-flash')) {
+          if (!isMainModelCustom && providerId === mainProviderId && (!mainModel || mainModel === 'gemini-2.5-flash')) {
             setMainModel(data.models[0]);
           }
-          if (providerId === subDefaultProviderId && (!subDefaultModel || subDefaultModel === 'gemini-2.5-flash')) {
+          if (!isSubDefaultModelCustom && providerId === subDefaultProviderId && (!subDefaultModel || subDefaultModel === 'gemini-2.5-flash')) {
             setSubDefaultModel(data.models[0]);
           }
         }
@@ -142,17 +145,17 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
   const handleAddOverride = () => {
     const defaultRole = COMMON_SUBAGENT_ROLES.find(r => !subagentOverrides.some(o => o.role === r.id))?.id || 'coder';
     const pId = providers[0]?.id || '';
-    setSubagentOverrides(prev => [...prev, { role: defaultRole, providerProfileId: pId, model: 'gemini-2.5-flash' }]);
+    setSubagentOverrides(prev => [...prev, { role: defaultRole, providerProfileId: pId, model: 'gemini-2.5-flash', isCustomModel: false }]);
   };
 
-  const handleUpdateOverride = (index: number, field: keyof SubagentRoleOverride, value: string) => {
+  const handleUpdateOverride = (index: number, field: keyof SubagentRoleOverride, value: any) => {
     setSubagentOverrides(prev => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
       return updated;
     });
     if (field === 'providerProfileId' && value) {
-      fetchProviderModels(value);
+      fetchProviderModels(value, true);
     }
   };
 
@@ -425,29 +428,46 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] text-zinc-400 flex items-center justify-between">
-                      <span>Model Name</span>
-                      {loadingModelsMap[mainProviderId] && <span className="text-[9px] text-indigo-400 flex items-center gap-1"><RefreshCw className="w-2.5 h-2.5 animate-spin" /> Fetching...</span>}
-                    </label>
-                    <div className="space-y-1">
-                      <select
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] text-zinc-400">Model Name</label>
+                      <button
+                        type="button"
+                        onClick={() => setIsMainModelCustom(!isMainModelCustom)}
+                        className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium cursor-pointer"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>{isMainModelCustom ? 'Select from List' : 'Custom Input'}</span>
+                      </button>
+                    </div>
+
+                    {isMainModelCustom ? (
+                      <input
+                        type="text"
                         value={mainModel}
                         onChange={(e) => setMainModel(e.target.value)}
+                        placeholder="Type custom model string e.g. gpt-4o-2024-08-06"
+                        className="w-full bg-[#090c14] border border-indigo-500/80 rounded-lg px-2.5 py-1.5 text-zinc-100 font-mono text-xs outline-none"
+                        autoFocus
+                      />
+                    ) : (
+                      <select
+                        value={mainModel}
+                        onChange={(e) => {
+                          if (e.target.value === '__custom__') {
+                            setIsMainModelCustom(true);
+                          } else {
+                            setMainModel(e.target.value);
+                          }
+                        }}
                         className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-2.5 py-1.5 text-zinc-200 font-mono text-xs outline-none focus:border-indigo-500"
                       >
                         <option value="">-- Not Set (Use Default Model) --</option>
                         {(providerModelsCache[mainProviderId] || ['gemini-2.5-flash', 'gpt-4o', 'claude-3-5-sonnet-20241022']).map(m => (
                           <option key={m} value={m}>{m}</option>
                         ))}
+                        <option value="__custom__">✏️ Custom Model (Type manual string)...</option>
                       </select>
-                      <input
-                        type="text"
-                        value={mainModel}
-                        onChange={(e) => setMainModel(e.target.value)}
-                        placeholder="Custom model string"
-                        className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-2.5 py-1 text-zinc-300 font-mono text-[11px] outline-none focus:border-indigo-500"
-                      />
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -495,29 +515,46 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] text-zinc-400 flex items-center justify-between">
-                      <span>Model Name</span>
-                      {loadingModelsMap[subDefaultProviderId] && <span className="text-[9px] text-indigo-400 flex items-center gap-1"><RefreshCw className="w-2.5 h-2.5 animate-spin" /> Fetching models...</span>}
-                    </label>
-                    <div className="space-y-1">
-                      <select
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] text-zinc-400">Model Name</label>
+                      <button
+                        type="button"
+                        onClick={() => setIsSubDefaultModelCustom(!isSubDefaultModelCustom)}
+                        className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium cursor-pointer"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>{isSubDefaultModelCustom ? 'Select from List' : 'Custom Input'}</span>
+                      </button>
+                    </div>
+
+                    {isSubDefaultModelCustom ? (
+                      <input
+                        type="text"
                         value={subDefaultModel}
                         onChange={(e) => setSubDefaultModel(e.target.value)}
+                        placeholder="Type custom subagent default model"
+                        className="w-full bg-[#090c14] border border-indigo-500/80 rounded-lg px-2.5 py-1.5 text-zinc-100 font-mono text-xs outline-none"
+                        autoFocus
+                      />
+                    ) : (
+                      <select
+                        value={subDefaultModel}
+                        onChange={(e) => {
+                          if (e.target.value === '__custom__') {
+                            setIsSubDefaultModelCustom(true);
+                          } else {
+                            setSubDefaultModel(e.target.value);
+                          }
+                        }}
                         className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-2.5 py-1.5 text-zinc-200 font-mono text-xs outline-none focus:border-indigo-500"
                       >
                         <option value="">-- Not Set (Use Default Model) --</option>
                         {(providerModelsCache[subDefaultProviderId] || ['gemini-2.5-flash', 'gpt-4o-mini', 'claude-3-5-haiku-20241022']).map(m => (
                           <option key={m} value={m}>{m}</option>
                         ))}
+                        <option value="__custom__">✏️ Custom Model (Type manual string)...</option>
                       </select>
-                      <input
-                        type="text"
-                        value={subDefaultModel}
-                        onChange={(e) => setSubDefaultModel(e.target.value)}
-                        placeholder="Custom subagent default model"
-                        className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-2.5 py-1 text-zinc-300 font-mono text-[11px] outline-none focus:border-indigo-500"
-                      />
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -532,7 +569,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                   <button
                     type="button"
                     onClick={handleAddOverride}
-                    className="px-2.5 py-1 bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/50 rounded-lg text-[11px] transition flex items-center gap-1 font-medium"
+                    className="px-2.5 py-1 bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/50 rounded-lg text-[11px] transition flex items-center gap-1 font-medium cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" /> Add Subagent Role
                   </button>
@@ -544,56 +581,93 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                   </p>
                 ) : (
                   <div className="space-y-2.5">
-                    {subagentOverrides.map((ov, idx) => (
-                      <div key={idx} className="bg-[#090c14] p-3 rounded-lg border border-zinc-800/80 flex flex-col md:flex-row items-center gap-2.5">
-                        <div className="w-full md:w-1/3 space-y-0.5">
-                          <label className="text-[9px] text-zinc-400">Subagent Role</label>
-                          <select
-                            value={ov.role}
-                            onChange={(e) => handleUpdateOverride(idx, 'role', e.target.value)}
-                            className="w-full bg-[#121622] border border-zinc-700/60 rounded-md px-2 py-1 text-zinc-200 text-xs capitalize outline-none focus:border-indigo-500"
-                          >
-                            {COMMON_SUBAGENT_ROLES.map(r => (
-                              <option key={r.id} value={r.id}>{r.label}</option>
-                            ))}
-                          </select>
-                        </div>
+                    {subagentOverrides.map((ov, idx) => {
+                      const availModels = providerModelsCache[ov.providerProfileId || subDefaultProviderId] || ['gemini-2.5-flash', 'gpt-4o', 'claude-3-5-sonnet-20241022'];
 
-                        <div className="w-full md:w-1/3 space-y-0.5">
-                          <label className="text-[9px] text-zinc-400">Provider Profile</label>
-                          <select
-                            value={ov.providerProfileId}
-                            onChange={(e) => handleUpdateOverride(idx, 'providerProfileId', e.target.value)}
-                            className="w-full bg-[#121622] border border-zinc-700/60 rounded-md px-2 py-1 text-zinc-200 text-xs outline-none focus:border-indigo-500"
-                          >
-                            <option value="">-- Not Set (Inherit Default Profile) --</option>
-                            {providers.map(p => (
-                              <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="w-full md:w-1/3 space-y-0.5">
-                          <label className="text-[9px] text-zinc-400">Model Name</label>
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="text"
-                              value={ov.model}
-                              onChange={(e) => handleUpdateOverride(idx, 'model', e.target.value)}
-                              placeholder="e.g. claude-3-5-sonnet-20241022"
-                              className="w-full bg-[#121622] border border-zinc-700/60 rounded-md px-2 py-1 text-zinc-200 font-mono text-[11px] outline-none focus:border-indigo-500"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveOverride(idx)}
-                              className="p-1 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 rounded-md transition shrink-0"
+                      return (
+                        <div key={idx} className="bg-[#090c14] p-3 rounded-lg border border-zinc-800/80 flex flex-col md:flex-row items-center gap-2.5">
+                          <div className="w-full md:w-1/3 space-y-0.5">
+                            <label className="text-[9px] text-zinc-400">Subagent Role</label>
+                            <select
+                              value={ov.role}
+                              onChange={(e) => handleUpdateOverride(idx, 'role', e.target.value)}
+                              className="w-full bg-[#121622] border border-zinc-700/60 rounded-md px-2 py-1 text-zinc-200 text-xs capitalize outline-none focus:border-indigo-500"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                              {COMMON_SUBAGENT_ROLES.map(r => (
+                                <option key={r.id} value={r.id}>{r.label}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="w-full md:w-1/3 space-y-0.5">
+                            <label className="text-[9px] text-zinc-400">Provider Profile</label>
+                            <select
+                              value={ov.providerProfileId}
+                              onChange={(e) => handleUpdateOverride(idx, 'providerProfileId', e.target.value)}
+                              className="w-full bg-[#121622] border border-zinc-700/60 rounded-md px-2 py-1 text-zinc-200 text-xs outline-none focus:border-indigo-500"
+                            >
+                              <option value="">-- Not Set (Inherit Default Profile) --</option>
+                              {providers.map(p => (
+                                <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="w-full md:w-1/3 space-y-0.5">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[9px] text-zinc-400">Model Name</label>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateOverride(idx, 'isCustomModel', !ov.isCustomModel)}
+                                className="text-[9px] text-indigo-400 hover:text-indigo-300 flex items-center gap-0.5"
+                              >
+                                <Edit3 className="w-2.5 h-2.5" />
+                                <span>{ov.isCustomModel ? 'List' : 'Custom'}</span>
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              {ov.isCustomModel ? (
+                                <input
+                                  type="text"
+                                  value={ov.model}
+                                  onChange={(e) => handleUpdateOverride(idx, 'model', e.target.value)}
+                                  placeholder="e.g. claude-3-5-sonnet-20241022"
+                                  className="w-full bg-[#121622] border border-indigo-500/80 rounded-md px-2 py-1 text-zinc-100 font-mono text-[11px] outline-none"
+                                  autoFocus
+                                />
+                              ) : (
+                                <select
+                                  value={ov.model}
+                                  onChange={(e) => {
+                                    if (e.target.value === '__custom__') {
+                                      handleUpdateOverride(idx, 'isCustomModel', true);
+                                    } else {
+                                      handleUpdateOverride(idx, 'model', e.target.value);
+                                    }
+                                  }}
+                                  className="w-full bg-[#121622] border border-zinc-700/60 rounded-md px-2 py-1 text-zinc-200 font-mono text-[11px] outline-none focus:border-indigo-500"
+                                >
+                                  <option value="">-- Not Set (Use Default Model) --</option>
+                                  {availModels.map(m => (
+                                    <option key={m} value={m}>{m}</option>
+                                  ))}
+                                  <option value="__custom__">✏️ Custom Model...</option>
+                                </select>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveOverride(idx)}
+                                className="p-1 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 rounded-md transition shrink-0"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -602,14 +676,14 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-3.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium text-xs"
+                  className="px-3.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium text-xs cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center gap-1.5"
+                  className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center gap-1.5 cursor-pointer"
                 >
                   {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                   Save Preset
