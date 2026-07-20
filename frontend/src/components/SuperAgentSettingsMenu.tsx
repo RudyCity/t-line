@@ -1,9 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { Settings, RefreshCw, Activity, Trash2, Sliders, X, Terminal, ExternalLink } from 'lucide-react';
+import { Settings, RefreshCw, Activity, Trash2, Sliders, X, Terminal, ExternalLink, Folder } from 'lucide-react';
+import { WorkspaceInfo } from '../hooks/useTerminals';
 
 interface SuperAgentSettingsMenuProps {
   isOpen: boolean;
   onClose: () => void;
+  workspaces?: WorkspaceInfo[];
+  workspace?: string;
+  setWorkspace?: (workspace: string) => void;
   agentMode: 'single' | 'multi';
   setAgentMode: (mode: 'single' | 'multi') => void;
   customArgs: string;
@@ -20,6 +24,9 @@ interface SuperAgentSettingsMenuProps {
 export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
   isOpen,
   onClose,
+  workspaces = [],
+  workspace = '',
+  setWorkspace,
   agentMode,
   setAgentMode,
   customArgs,
@@ -63,7 +70,7 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
           </div>
           <div>
             <h4 className="font-semibold text-zinc-100 text-xs">SuperAgent Settings</h4>
-            <p className="text-[10px] text-zinc-400">Manage agent execution & monitor preferences</p>
+            <p className="text-[10px] text-zinc-400">Manage workspace, agent execution & monitor</p>
           </div>
         </div>
         <button
@@ -76,12 +83,49 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
       </div>
 
       <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-0.5">
-        {/* Section 1: Agent Execution Config */}
+        {/* Section 1: Agent & Workspace Config */}
         <div className="bg-[#121622] p-3 rounded-lg border border-zinc-800/60 space-y-2.5">
           <div className="flex items-center gap-1.5 text-zinc-300 font-medium text-[11px]">
             <Sliders className="w-3.5 h-3.5 text-indigo-400" />
-            <span>CLI & Agent Mode</span>
+            <span>Workspace & Agent Configuration</span>
           </div>
+
+          {setWorkspace && (
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-zinc-400 flex items-center gap-1">
+                <Folder className="w-3 h-3 text-indigo-400" />
+                Active Workspace
+              </label>
+              {workspaces.length > 0 ? (
+                <select
+                  value={workspace}
+                  onChange={(e) => {
+                    setWorkspace(e.target.value);
+                    localStorage.setItem('currentWorkspace', e.target.value);
+                  }}
+                  className="w-full bg-[#090c14] border border-zinc-700/60 rounded-md px-2.5 py-1.5 text-zinc-200 font-mono outline-none focus:border-indigo-500 text-xs transition truncate"
+                >
+                  {workspaces.map(w => (
+                    <option key={w.id} value={w.path}>{w.name} ({w.path})</option>
+                  ))}
+                  {!workspaces.some(w => w.path === workspace) && workspace && (
+                    <option value={workspace}>Custom ({workspace})</option>
+                  )}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={workspace}
+                  onChange={(e) => {
+                    setWorkspace(e.target.value);
+                    localStorage.setItem('currentWorkspace', e.target.value);
+                  }}
+                  className="w-full bg-[#090c14] border border-zinc-700/60 rounded-md px-2.5 py-1.5 text-zinc-200 font-mono outline-none focus:border-indigo-500 text-xs transition"
+                  placeholder="Workspace directory path"
+                />
+              )}
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <label className="text-[10px] text-zinc-400">Execution Mode</label>

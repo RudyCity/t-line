@@ -3,7 +3,6 @@ import { Terminal as TerminalIcon, RefreshCw, Shield, Square, Folder, Sparkles, 
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { SuperAgentAuditLogs } from './SuperAgentAuditLogs';
-import { SuperAgentConsoleHeader } from './SuperAgentConsoleHeader';
 import { PermissionCard, QuestionCard, PlanCard, PendingPermission, PendingQuestion } from './SuperAgentInteractiveCards';
 import { getSlashCommands, SlashCommand } from './SuperAgentCommands';
 import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSidebar';
@@ -770,6 +769,9 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
           <SuperAgentSettingsMenu
             isOpen={showSettingsMenu}
             onClose={() => setShowSettingsMenu(false)}
+            workspaces={workspaces}
+            workspace={workspace}
+            setWorkspace={setWorkspace}
             agentMode={agentMode}
             setAgentMode={setAgentMode}
             customArgs={customArgs}
@@ -784,17 +786,6 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
           />
         </div>
       </div>
-
-      <SuperAgentConsoleHeader
-        workspaces={workspaces}
-        workspace={workspace}
-        setWorkspace={setWorkspace}
-        agentMode={agentMode}
-        setAgentMode={setAgentMode}
-        customArgs={customArgs}
-        setCustomArgs={setCustomArgs}
-        setConnectTrigger={setConnectTrigger}
-      />
 
       {activeTab === 'console' ? (
         <div className="flex-1 flex overflow-hidden relative w-full">

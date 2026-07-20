@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.490] - 2026-07-20
+
+### Removed
+- **Redundant SuperAgent Header Bar**: Removed the `SuperAgentConsoleHeader` sub-bar (`Active Workspace`, `CLI Mode`, `Custom CLI Flags`, `Apply & Restart Bridge`) from [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx).
+  - All workspace, execution mode, and bridge restart controls have been fully consolidated into the top-right [SuperAgentSettingsMenu.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentSettingsMenu.tsx) popover, maximizing vertical space for the console log.
+
 ## [1.3.489] - 2026-07-20
 
 ### Added
