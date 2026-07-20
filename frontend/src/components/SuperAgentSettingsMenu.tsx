@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Settings, RefreshCw, Activity, Trash2, Sliders, X, Terminal, ExternalLink, Folder, Key, Sparkles } from 'lucide-react';
+import { Settings, RefreshCw, Activity, Trash2, Sliders, X, Terminal, ExternalLink, Folder, Key } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 
 interface SuperAgentSettingsMenuProps {
@@ -85,37 +85,28 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
       </div>
 
       <div className="space-y-3.5 max-h-[75vh] overflow-y-auto pr-0.5">
-        {/* Management Login & Model Presets Quick Links */}
+        {/* Combined SuperAgent Login & Presets Settings Link */}
         {onOpenSettingsModal && (
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => {
-                onOpenSettingsModal('login');
-                onClose();
-              }}
-              className="p-2.5 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/50 text-indigo-200 transition text-left flex flex-col gap-1 cursor-pointer"
-            >
-              <div className="flex items-center gap-1.5 font-medium text-xs text-indigo-300">
-                <Key className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Management Login</span>
+          <button
+            onClick={() => {
+              onOpenSettingsModal('login');
+              onClose();
+            }}
+            className="w-full p-2.5 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/50 text-indigo-200 transition flex items-center justify-between cursor-pointer shadow-xs"
+          >
+            <div className="flex items-center gap-2.5 text-left">
+              <div className="p-1.5 rounded-md bg-indigo-900/50 border border-indigo-700/50 text-indigo-400">
+                <Key className="w-4 h-4" />
               </div>
-              <span className="text-[10px] text-zinc-400">API keys & LLM logins</span>
-            </button>
-
-            <button
-              onClick={() => {
-                onOpenSettingsModal('presets');
-                onClose();
-              }}
-              className="p-2.5 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/50 text-indigo-200 transition text-left flex flex-col gap-1 cursor-pointer"
-            >
-              <div className="flex items-center gap-1.5 font-medium text-xs text-indigo-300">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Model Presets</span>
+              <div>
+                <div className="font-semibold text-xs text-indigo-300 flex items-center gap-1.5">
+                  <span>Manage Login & Model Presets</span>
+                </div>
+                <p className="text-[10px] text-zinc-400">Configure API Keys, LLM logins, and model presets</p>
               </div>
-              <span className="text-[10px] text-zinc-400">Model selection & roles</span>
-            </button>
-          </div>
+            </div>
+            <ExternalLink className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          </button>
         )}
         {/* Section 1: Agent & Workspace Config */}
         <div className="bg-[#121622] p-3 rounded-lg border border-zinc-800/60 space-y-2.5">

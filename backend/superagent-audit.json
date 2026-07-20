@@ -1,16 +1,5 @@
 [
   {
-    "timestamp": "2026-07-20T02:13:13.820Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n        <td class=\"px-4 py-3 w-10\"><input type=\"checkbox\" class=\"row"
-      }
-    }
-  },
-  {
     "timestamp": "2026-07-20T02:13:13.873Z",
     "type": "agent_event",
     "data": {
@@ -11038,6 +11027,14 @@
   },
   {
     "timestamp": "2026-07-20T03:09:35.473Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\fassst-manager"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:10:21.250Z",
     "type": "system",
     "data": {
       "message": "Connected to local SuperAgent SSE events",
