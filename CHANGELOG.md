@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.565] - 2026-07-20
+
+### Fixed
+- **Tool Message Duplication & Premature Block Collapse Bug (`SuperAgentConsoleUtils.ts` & `SuperAgentGroupedMessages.tsx`)**:
+  - Fixed an issue where live tool execution created duplicate entries for `tool_start` and `tool_end` events, causing tool counts to jump and vanish upon backend history sync. `tool_end` events now update the matching `tool_start` message in-place with execution results.
+  - Ensured all process blocks in an active streaming turn stay expanded during execution without collapsing prematurely.
+
 ## [1.3.564] - 2026-07-20
 
 ### Fixed

@@ -179,14 +179,13 @@ export const SuperAgentGroupedMessages: React.FC<SuperAgentGroupedMessagesProps>
 
             {/* Turn blocks in chronological order */}
             {turn.blocks.map((block, blockIdx) => {
-              const isLastBlock = isLastTurn && blockIdx === turn.blocks.length - 1;
               if (block.type === 'process') {
                 return (
                   <CollapsibleProcessBlock
                     key={`proc-${blockIdx}`}
                     msgs={block.messages}
                     isLastTurn={isLastTurn}
-                    isStreaming={isStreaming && isLastBlock}
+                    isStreaming={isStreaming}
                   />
                 );
               }

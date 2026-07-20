@@ -110,6 +110,7 @@ export const handleAgentEventPayload = (
       setLoading(true);
       const toolName = innerEvent.toolCall?.name || innerEvent.toolCall?.toolName || innerEvent.toolName || innerEvent.name || 'tool';
       const args = innerEvent.toolCall?.args || innerEvent.args;
+      const callId = innerEvent.toolCall?.id || innerEvent.callId || innerEvent.id;
 
       if (toolName === 'invoke_subagent' && args) {
         const subagentsPayload = args.Subagents || args.subagents || [];
@@ -131,12 +132,38 @@ export const handleAgentEventPayload = (
         }
       }
 
-      setMessages(prev => [...prev, { role: 'tool', text: `Invoking tool: ${toolName}`, toolName, args }]);
+      setMessages(prev => [...prev, { role: 'tool', text: `Invoking tool: ${toolName}`, toolName, args, callId }]);
     } else if (innerEvent.type === 'tool_end') {
       setToolProgressMsg('');
       const toolName = innerEvent.toolResult?.name || innerEvent.toolCall?.name || innerEvent.toolName || 'tool';
       const result = innerEvent.toolResult?.result !== undefined ? innerEvent.toolResult.result : innerEvent.result;
-      setMessages(prev => [...prev, { role: 'tool', text: `Tool '${toolName}' completed.`, toolName, result }]);
+      const callId = innerEvent.toolResult?.id || innerEvent.toolCall?.id || innerEvent.callId || innerEvent.id;
+
+      setMessages(prev => {
+        let idx = -1;
+        for (let i = prev.length - 1; i >= 0; i--) {
+          const m = prev[i];
+          if (m && m.role === 'tool') {
+            const matchesId = callId && m.callId ? m.callId === callId : false;
+            const matchesName = !callId && m.toolName === toolName && m.result === undefined;
+            if (matchesId || matchesName) {
+              idx = i;
+              break;
+            }
+          }
+        }
+
+        if (idx !== -1) {
+          const updated = [...prev];
+          updated[idx] = {
+            ...updated[idx],
+            text: `Tool '${toolName}' completed.`,
+            result
+          };
+          return updated;
+        }
+        return [...prev, { role: 'tool', text: `Tool '${toolName}' completed.`, toolName, result, callId }];
+      });
     } else if (innerEvent.type === 'thought' || innerEvent.type === 'reasoning') {
       setLoading(true);
       const chunk = innerEvent.text || innerEvent.content || '';
