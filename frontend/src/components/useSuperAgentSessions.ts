@@ -299,7 +299,7 @@ export function useSuperAgentSessions(workspace: string) {
     };
   }, [workspace, syncSessions]);
 
-  // Persist messages & update title/timestamp
+  // Persist messages & update title
   useEffect(() => {
     if (!activeSessionId) return;
     const wsKey = workspace || 'default';
@@ -318,14 +318,17 @@ export function useSuperAgentSessions(workspace: string) {
         const currentSession = prevSessions[targetIdx];
         const newTitle = generateSessionTitle(messages);
 
+        // Only update if title actually changed
+        if (currentSession.title === newTitle) {
+          return prevSessions;
+        }
+
         const updated = [...prevSessions];
         const updatedSession = {
           ...currentSession,
-          title: newTitle,
-          updatedAt: Date.now()
+          title: newTitle
         };
         updated[targetIdx] = updatedSession;
-        updated.sort((a, b) => b.updatedAt - a.updatedAt);
         
         try {
           localStorage.setItem(`superagent_sessions_${wsKey}`, JSON.stringify(updated));

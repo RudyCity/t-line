@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.517] - 2026-07-20
+
+### Fixed
+- **Stable Chat Session Sidebar Ordering**:
+  - Removed automatic session re-sorting (`updated.sort`) when selecting or viewing a session
+  - Selecting/viewing a chat session no longer jumps the active session to the top of the sidebar list
+  - Session list maintains a fixed, stable order matching the database sequence
+
 ## [1.3.516] - 2026-07-20
 
 ### Added & Improved
