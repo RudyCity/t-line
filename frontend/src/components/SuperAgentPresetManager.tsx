@@ -406,15 +406,16 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                       value={mainProviderId}
                       onChange={(e) => {
                         setMainProviderId(e.target.value);
-                        fetchProviderModels(e.target.value, true);
+                        if (e.target.value) fetchProviderModels(e.target.value, true);
                       }}
                       className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-2.5 py-1.5 text-zinc-200 text-xs outline-none focus:border-indigo-500"
                     >
+                      <option value="">-- Not Set (Use Global Active Profile) --</option>
                       {providers.map(p => (
                         <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
                       ))}
                     </select>
-                    {providerFetchStatus[mainProviderId] && (
+                    {mainProviderId && providerFetchStatus[mainProviderId] && (
                       <p className={`text-[9px] ${providerFetchStatus[mainProviderId]?.isRealFetched ? 'text-emerald-400' : 'text-amber-400'}`}>
                         {providerFetchStatus[mainProviderId]?.isRealFetched
                           ? `🟢 Live models fetched (${providerFetchStatus[mainProviderId]?.count} models)`
@@ -434,6 +435,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                         onChange={(e) => setMainModel(e.target.value)}
                         className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-2.5 py-1.5 text-zinc-200 font-mono text-xs outline-none focus:border-indigo-500"
                       >
+                        <option value="">-- Not Set (Use Default Model) --</option>
                         {(providerModelsCache[mainProviderId] || ['gemini-2.5-flash', 'gpt-4o', 'claude-3-5-sonnet-20241022']).map(m => (
                           <option key={m} value={m}>{m}</option>
                         ))}
@@ -474,15 +476,16 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                       value={subDefaultProviderId}
                       onChange={(e) => {
                         setSubDefaultProviderId(e.target.value);
-                        fetchProviderModels(e.target.value, true);
+                        if (e.target.value) fetchProviderModels(e.target.value, true);
                       }}
                       className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-2.5 py-1.5 text-zinc-200 text-xs outline-none focus:border-indigo-500"
                     >
+                      <option value="">-- Not Set (Use Global Active Profile) --</option>
                       {providers.map(p => (
                         <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
                       ))}
                     </select>
-                    {providerFetchStatus[subDefaultProviderId] && (
+                    {subDefaultProviderId && providerFetchStatus[subDefaultProviderId] && (
                       <p className={`text-[9px] ${providerFetchStatus[subDefaultProviderId]?.isRealFetched ? 'text-emerald-400' : 'text-amber-400'}`}>
                         {providerFetchStatus[subDefaultProviderId]?.isRealFetched
                           ? `🟢 Live models fetched (${providerFetchStatus[subDefaultProviderId]?.count} models)`
@@ -502,6 +505,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                         onChange={(e) => setSubDefaultModel(e.target.value)}
                         className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-2.5 py-1.5 text-zinc-200 font-mono text-xs outline-none focus:border-indigo-500"
                       >
+                        <option value="">-- Not Set (Use Default Model) --</option>
                         {(providerModelsCache[subDefaultProviderId] || ['gemini-2.5-flash', 'gpt-4o-mini', 'claude-3-5-haiku-20241022']).map(m => (
                           <option key={m} value={m}>{m}</option>
                         ))}
@@ -562,6 +566,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                             onChange={(e) => handleUpdateOverride(idx, 'providerProfileId', e.target.value)}
                             className="w-full bg-[#121622] border border-zinc-700/60 rounded-md px-2 py-1 text-zinc-200 text-xs outline-none focus:border-indigo-500"
                           >
+                            <option value="">-- Not Set (Inherit Default Profile) --</option>
                             {providers.map(p => (
                               <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
                             ))}

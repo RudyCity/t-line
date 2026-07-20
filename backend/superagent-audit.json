@@ -1,126 +1,5 @@
 [
   {
-    "timestamp": "2026-07-20T02:13:13.873Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "-checkbox w-4 h-4 text-primary-600 border-secondary-300 rounded focus:ring-primary-500\""
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:13.924Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " data-idx=\"${idx}\" ${selectedIndices.has(idx) ? \"checked\" : \"\"} /></td>\n        <td class=\"px-4"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:13.978Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " py-3 text-sm text-secondary-600 whitespace-nowrap\">${escapeHtml(formatDateTime(log.createdAt))}</td>\n        <td class=\"px-4 py"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:14.033Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "-3 text-sm font-medium text-secondary-900\">${escapeHtml(log.actorId)}</td>\n        <td class=\"px"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:14.080Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "-4 py-3\">\n          <span class=\"${actionClass(log.action)} px-2 py-0.5 rounded"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:14.124Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "-full text-xs font-medium\">${escapeHtml(actionLabel(log.action))}</span>\n        </td>\n        <td class=\"px-4"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:14.208Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " py-3 text-sm text-secondary-600\">\n          <div class=\"font-medium\">${escapeHtml(log.entity"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:14.277Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "Type)}</div>\n          <div class=\"text-xs text-secondary-400\">${escapeHtml(log.entityId)}"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:14.335Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "</div>\n        </td>\n        <td class=\"px-4 py-3 text-sm text-secondary-500 max-w-xs truncate"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:14.396Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\" title=\"${escapeHtml(JSON.stringify(log.metadata))}\">\n          ${escapeHtml(formatMetadata(log.metadata))}"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:14.444Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "\n        </td>\n      </tr>\n    `\n      )\n```\nWait! Where is `escapeHtml` defined"
-      }
-    }
-  },
-  {
     "timestamp": "2026-07-20T02:13:14.492Z",
     "type": "agent_event",
     "data": {
@@ -11039,6 +10918,96 @@
     "data": {
       "message": "Connected to local SuperAgent SSE events",
       "workspace": "D:\\backup from pc asus\\Documents Development\\fassst-manager"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:17:02.001Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:17:02.045Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\fassst-manager",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:17:02.110Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:17:02.166Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:17:02.217Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:17:02.281Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:17:02.311Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:17:02.351Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:17:02.383Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:17:02.413Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:17:05.075Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
     }
   }
 ]
