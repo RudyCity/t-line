@@ -60,16 +60,30 @@ export const handleAgentEventPayload = (
   isAbortedRef: React.MutableRefObject<boolean>
 ) => {
   if (payload.type === 'chat_response') {
-    if (payload.result && payload.result.error) {
+    // Handle all error scenarios from server
+    const result = payload.result;
+    const isError = payload.success === false || result?.error || result?.raw;
+
+    if (isError) {
       setLoading(false);
       setToolProgressMsg('');
-      setMessages(prev => [...prev, { role: 'system', text: `Error: ${payload.result.error}` }]);
+      const errorText = result?.error
+        || (result?.raw ? `Unexpected server response: ${String(result.raw).slice(0, 300)}` : null)
+        || result?.message
+        || 'Unknown server error';
+      setMessages(prev => [...prev, { role: 'system', text: `Error: ${errorText}` }]);
     }
+    // If success and no error, the response was accepted — SSE events deliver the actual content
   } else if (payload.type === 'status') {
     if (typeof payload.text === 'string') {
       const statusLower = payload.text.toLowerCase();
       if (statusLower.includes('aborted')) {
         isAbortedRef.current = false;
+        setLoading(false);
+        setToolProgressMsg('');
+      }
+      // Also stop loading for failure statuses
+      if (statusLower.includes('failed to') || statusLower.includes('error')) {
         setLoading(false);
         setToolProgressMsg('');
       }
@@ -165,6 +179,9 @@ export const handleAgentEventPayload = (
     setMessages(prev => [...prev, { role: 'system', text: '⭐ Plan approval required! Please review and authorize execution below.' }]);
   } else if (payload.type === 'tool_progress') {
     setToolProgressMsg(payload.content || payload.message || '');
+  } else {
+    // Unknown payload type — log warning to help debug missed events
+    console.warn('[SuperAgent] Unhandled payload type:', payload.type, payload);
   }
 };
 

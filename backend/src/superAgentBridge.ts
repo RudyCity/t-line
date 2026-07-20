@@ -211,14 +211,33 @@ function sendSuperAgentRequest(pathName: string, payload: any, workspacePath: st
       },
       timeout: timeoutMs
     }, (res) => {
+      const statusCode = res.statusCode || 0;
       let body = '';
       res.on('data', chunk => { body += chunk; });
       res.on('end', () => {
+        // Detect HTML error pages (e.g. proxy 404/502 returning <!doctype html>)
+        const trimmed = body.trim().toLowerCase();
+        if (trimmed.startsWith('<!doctype') || trimmed.startsWith('<html')) {
+          resolve({ error: `SuperAgent server returned an HTML error page (HTTP ${statusCode}). The server may not be running or the endpoint is unreachable.` });
+          return;
+        }
+
+        // Non-2xx status code
+        if (statusCode < 200 || statusCode >= 300) {
+          try {
+            const parsed = JSON.parse(body);
+            resolve({ error: parsed.error || parsed.message || `SuperAgent server returned HTTP ${statusCode}`, statusCode });
+          } catch {
+            resolve({ error: `SuperAgent server returned HTTP ${statusCode}: ${body.slice(0, 200)}`, statusCode });
+          }
+          return;
+        }
+
         try {
           const parsed = JSON.parse(body);
           resolve(parsed);
         } catch {
-          resolve({ raw: body });
+          resolve({ error: `Invalid response from SuperAgent server: ${body.slice(0, 200)}` });
         }
       });
     });
@@ -335,10 +354,20 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
             response = await sendSuperAgentRequest('/api/chat', chatPayload, workspacePath);
           }
 
-          ws.send(JSON.stringify({ type: 'chat_response', success: true, result: response }));
-          logSuperAgentEvent('chat_response', response);
+          // Determine if response indicates an error
+          const hasError = response && (response.error || response.raw);
+          const errorMsg = response?.error || (response?.raw ? `Unexpected response from server: ${String(response.raw).slice(0, 200)}` : null);
+
+          if (hasError) {
+            ws.send(JSON.stringify({ type: 'chat_response', success: false, result: { error: errorMsg } }));
+            logSuperAgentEvent('chat_response_error', { error: errorMsg });
+          } else {
+            ws.send(JSON.stringify({ type: 'chat_response', success: true, result: response }));
+            logSuperAgentEvent('chat_response', response);
+          }
         } catch (err: any) {
-          ws.send(JSON.stringify({ type: 'status', text: `Failed to send prompt: ${err.message}` }));
+          const errMsg = `Failed to send prompt: ${err.message}`;
+          ws.send(JSON.stringify({ type: 'chat_response', success: false, result: { error: errMsg } }));
           logSuperAgentEvent('system_error', { message: 'Failed to send prompt to SuperAgent', error: err.message });
         }
       } else if (actionType === 'approve_permission') {

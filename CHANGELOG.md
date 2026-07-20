@@ -8,6 +8,12 @@ All notable changes to the **t-line** workspace manager project will be document
 - **Backend crash: double-response in `/api/superagent/instances` (`superAgentRoutes.ts`)**:
   - When the upstream SuperAgent server at `127.0.0.1:7888` was unreachable or timed out, `request.destroy()` triggered both the `timeout` and `error` handlers sequentially, each calling `res.json()`. The second call threw `"Cannot set headers after they are sent to the client"`, crashing the entire backend process.
   - Added a `responded` guard flag via `safeSend()` wrapper so only the first handler actually sends the response; subsequent calls are silently ignored.
+- **Server errors not propagated to chat UI (`superAgentBridge.ts`, `SuperAgentConsoleUtils.ts`)**:
+  - `sendSuperAgentRequest` now detects HTTP non-2xx status codes and HTML error pages instead of silently resolving with `{ raw: body }`.
+  - Chat prompt handler now sends `chat_response` with `success: false` when the SuperAgent response contains errors, instead of always reporting `success: true`.
+  - Frontend `handleAgentEventPayload` now handles `success === false`, `result.raw`, and `result.message` error variants — previously only `result.error` was checked, causing the loading spinner to spin indefinitely on server errors.
+  - Status messages containing "failed" or "error" keywords now also stop the loading state.
+  - Unknown payload types are now logged with `console.warn` instead of being silently dropped.
 
 ### Added
 - **Process-level crash protection (`server.ts`)**: Added `uncaughtException` and `unhandledRejection` handlers as a safety net. These log the error but keep the backend process alive, preventing future unhandled errors from taking down the server.
