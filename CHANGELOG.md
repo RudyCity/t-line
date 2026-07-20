@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.547] - 2026-07-20
+
+### Fixed
+- **Loop Spawn SuperAgent Server Berulang (`superAgentBridge.ts`, `sessionManager.ts`)**:
+  - Ditemukan dua bug bersamaan yang menyebabkan SuperAgent server di-spawn berulang kali dan keluar dengan `exit code 1`:
+    1. **Dual Spawner**: `sessionManager.ts` yang baru diperbarui juga memiliki `autoStartSuperAgentServer` yang men-spawn server secara paralel dengan `ensureSuperAgentServer` di `superAgentBridge.ts`, menyebabkan dua spawn bersaing memperebutkan port 7888 — spawn kedua langsung exit `EADDRINUSE`.
+    2. **Respawn Tanpa Ping**: `ensureSuperAgentServer` langsung spawn server baru tanpa mengecek dulu apakah port 7888 sudah ada yang listen.
+  - **Fix**: Hapus total `autoStartSuperAgentServer` dan spawn logic dari `sessionManager.ts` — `sessionManager` kini hanya HTTP client murni, bukan spawner.
+  - **Fix**: Tambahkan `pingPort7888()` sebelum spawn di `ensureSuperAgentServer`. Jika port 7888 sudah ada server yang berjalan (dari instance external atau spawn sebelumnya), langsung `callback()` tanpa spawn ulang.
+
 ## [1.3.546] - 2026-07-20
 
 ### Fixed

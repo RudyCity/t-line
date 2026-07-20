@@ -86,6 +86,24 @@ export function forceKillPort7888() {
   } catch (e) {}
 }
 
+function pingPort7888(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const req = http.request({
+      hostname: '127.0.0.1',
+      port: 7888,
+      path: '/api/instances',
+      method: 'GET',
+      timeout: 1500
+    }, (res) => {
+      res.resume();
+      resolve(res.statusCode !== undefined);
+    });
+    req.on('error', () => resolve(false));
+    req.on('timeout', () => { req.destroy(); resolve(false); });
+    req.end();
+  });
+}
+
 function ensureSuperAgentServer(
   workspacePath: string,
   agentMode: string,
@@ -132,55 +150,68 @@ function ensureSuperAgentServer(
     }
   }
 
-  isStartingSuperAgent = true;
-  ws.send(JSON.stringify({ type: 'status', text: 'Auto-starting SuperAgent server on port 7888...' }));
-  logSuperAgentEvent('system', { message: 'Auto-starting SuperAgent server process', workspacePath, agentMode, customArgs });
-
-  currentWorkspacePath = workspacePath;
-  currentAgentMode = agentMode;
-  currentCustomArgs = customArgs;
-
-  try {
-    const spawnArgs = ['superagent', '--server'];
-    if (agentMode === 'multi') {
-      spawnArgs.push('--multi');
-    }
-    if (customArgs && customArgs.trim()) {
-      const parts = customArgs.trim().split(/\s+/);
-      spawnArgs.push(...parts);
-    }
-
-    console.log(`[WS-Agent] Spawning SuperAgent with args: ${spawnArgs.join(' ')} in cwd: ${workspacePath}`);
-
-    autoSuperAgentProcess = spawn(cmd, spawnArgs, {
-      cwd: workspacePath,
-      shell: true,
-      detached: false,
-      stdio: 'ignore'
-    });
-
-    autoSuperAgentProcess.on('exit', (code: any, signal: any) => {
-      console.log(`[WS-Agent] SuperAgent server process exited with code ${code}, signal ${signal}`);
-      autoSuperAgentProcess = null;
-      isStartingSuperAgent = false;
-    });
-
-    autoSuperAgentProcess.on('error', (err: any) => {
-      console.error('[WS-Agent] Failed to spawn SuperAgent:', err);
-      ws.send(JSON.stringify({ type: 'status', text: `Failed to auto-start SuperAgent: ${err.message}` }));
-      isStartingSuperAgent = false;
-      autoSuperAgentProcess = null;
-    });
-
-    setTimeout(() => {
-      isStartingSuperAgent = false;
+  // Before spawning a new server, ping port 7888 first.
+  // SuperAgent may already be running (externally or from a previous spawn).
+  pingPort7888().then((alreadyRunning) => {
+    if (alreadyRunning) {
+      console.log('[WS-Agent] SuperAgent server already running on port 7888. Skipping spawn.');
+      currentWorkspacePath = workspacePath;
+      currentAgentMode = agentMode;
+      currentCustomArgs = customArgs;
       callback();
-    }, 3000);
-  } catch (e: any) {
-    console.error('[WS-Agent] Spawn error:', e);
-    ws.send(JSON.stringify({ type: 'status', text: `Error spawning SuperAgent process: ${e.message}` }));
-    isStartingSuperAgent = false;
-  }
+      return;
+    }
+
+    isStartingSuperAgent = true;
+    ws.send(JSON.stringify({ type: 'status', text: 'Auto-starting SuperAgent server on port 7888...' }));
+    logSuperAgentEvent('system', { message: 'Auto-starting SuperAgent server process', workspacePath, agentMode, customArgs });
+
+    currentWorkspacePath = workspacePath;
+    currentAgentMode = agentMode;
+    currentCustomArgs = customArgs;
+
+    try {
+      const spawnArgs = ['superagent', '--server'];
+      if (agentMode === 'multi') {
+        spawnArgs.push('--multi');
+      }
+      if (customArgs && customArgs.trim()) {
+        const parts = customArgs.trim().split(/\s+/);
+        spawnArgs.push(...parts);
+      }
+
+      console.log(`[WS-Agent] Spawning SuperAgent with args: ${spawnArgs.join(' ')} in cwd: ${workspacePath}`);
+
+      autoSuperAgentProcess = spawn(cmd, spawnArgs, {
+        cwd: workspacePath,
+        shell: true,
+        detached: false,
+        stdio: 'ignore'
+      });
+
+      autoSuperAgentProcess.on('exit', (code: any, signal: any) => {
+        console.log(`[WS-Agent] SuperAgent server process exited with code ${code}, signal ${signal}`);
+        autoSuperAgentProcess = null;
+        isStartingSuperAgent = false;
+      });
+
+      autoSuperAgentProcess.on('error', (err: any) => {
+        console.error('[WS-Agent] Failed to spawn SuperAgent:', err);
+        ws.send(JSON.stringify({ type: 'status', text: `Failed to auto-start SuperAgent: ${err.message}` }));
+        isStartingSuperAgent = false;
+        autoSuperAgentProcess = null;
+      });
+
+      setTimeout(() => {
+        isStartingSuperAgent = false;
+        callback();
+      }, 3000);
+    } catch (e: any) {
+      console.error('[WS-Agent] Spawn error:', e);
+      ws.send(JSON.stringify({ type: 'status', text: `Error spawning SuperAgent process: ${e.message}` }));
+      isStartingSuperAgent = false;
+    }
+  });
 }
 
 async function initializeSuperAgentSession(workspacePath: string, mode: string, sessionId?: string): Promise<boolean> {

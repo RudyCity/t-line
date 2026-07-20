@@ -1,6 +1,4 @@
 import http from 'http';
-import os from 'os';
-import { spawn } from 'child_process';
 
 // ─── Interfaces ───────────────────────────────────────────────
 
@@ -61,41 +59,8 @@ function truncateResult(result: any): any {
   return result;
 }
 
-let isStartingSuperAgentServer = false;
-
-function autoStartSuperAgentServer(workspace: string): Promise<boolean> {
-  if (isStartingSuperAgentServer) {
-    return new Promise((resolve) => setTimeout(() => resolve(true), 2500));
-  }
-  isStartingSuperAgentServer = true;
-  return new Promise((resolve) => {
-    const isWin = os.platform() === 'win32';
-    const cmd = isWin ? 'bunx.cmd' : 'bunx';
-    const workspacePath = workspace || process.cwd();
-
-    console.log(`[SessionManager] SuperAgent server offline on port 7888. Auto-spawning SuperAgent server in ${workspacePath}...`);
-    try {
-      const child = spawn(cmd, ['superagent', '--server'], {
-        cwd: workspacePath,
-        shell: true,
-        detached: false,
-        stdio: 'ignore'
-      });
-
-      child.unref();
-    } catch (e) {
-      console.error('[SessionManager] Failed to auto-start SuperAgent server:', e);
-    }
-
-    setTimeout(() => {
-      isStartingSuperAgentServer = false;
-      resolve(true);
-    }, 2500);
-  });
-}
-
-/** Low-level HTTP helper to request SuperAgent HTTP Server (port 7888) */
-function rawRequestSuperAgentServer(
+/** HTTP helper to request SuperAgent HTTP Server (port 7888). Returns null if server is offline. */
+function requestSuperAgentServer(
   pathName: string,
   method: string = 'GET',
   payload?: any,
@@ -104,7 +69,7 @@ function rawRequestSuperAgentServer(
 ): Promise<any | null> {
   return new Promise((resolve) => {
     const wsPath = workspace || process.cwd();
-    const urlPath = pathName.includes('?') 
+    const urlPath = pathName.includes('?')
       ? `${pathName}&workspace=${encodeURIComponent(wsPath)}`
       : `${pathName}?workspace=${encodeURIComponent(wsPath)}`;
 
@@ -148,22 +113,6 @@ function rawRequestSuperAgentServer(
     }
     req.end();
   });
-}
-
-/** Requests SuperAgent HTTP Server on port 7888 with auto-spawn retry if server is offline */
-async function requestSuperAgentServer(
-  pathName: string,
-  method: string = 'GET',
-  payload?: any,
-  workspace?: string,
-  timeoutMs: number = 3000
-): Promise<any | null> {
-  let result = await rawRequestSuperAgentServer(pathName, method, payload, workspace, timeoutMs);
-  if (result === null) {
-    await autoStartSuperAgentServer(workspace || process.cwd());
-    result = await rawRequestSuperAgentServer(pathName, method, payload, workspace, timeoutMs);
-  }
-  return result;
 }
 
 // ─── SuperAgent Server Session History API ───────────────────

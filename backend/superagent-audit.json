@@ -30,5 +30,245 @@
       "success": true,
       "sessionId": "session_1784537721917"
     }
+  },
+  {
+    "timestamp": "2026-07-20T09:02:39.158Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:02:39.177Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:02:39.281Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:02:39.319Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:02:39.322Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:02:39.398Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:02:39.418Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:02:39.465Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:02:39.481Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:02:42.228Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:02:42.374Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:02:42.497Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:14:27.991Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:14:28.009Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:14:28.171Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:14:28.330Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:14:28.345Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:14:28.404Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:14:28.419Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:14:28.468Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:14:28.482Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:14:31.040Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:14:31.366Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:14:31.490Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:14:32.423Z",
+    "type": "prompt",
+    "data": {
+      "text": "hai",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\Orbit"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:14:34.932Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:14:37.950Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\Orbit",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T09:14:40.969Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to send prompt to SuperAgent",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
   }
 ]
