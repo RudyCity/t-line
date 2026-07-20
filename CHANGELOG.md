@@ -2,6 +2,19 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.553] - 2026-07-20
+
+### Fixed
+- **`bun.cmd` Also Not Recognized — Bun PATH Not Inherited by Spawn (`superAgentBridge.ts`)**:
+  - Root cause: bun installs to `~/.bun/bin/` which is added to the **user's interactive PATH** but is NOT present in the environment inherited by Node.js child processes spawned by the backend (e.g. when launched as a service or via Tauri). So both `bunx.cmd` and `bun.cmd` failed with "not recognized".
+  - **Fix**: Added `resolveBunEnv()` helper that:
+    1. Tries `where bun` (Windows) / `which bun` (Unix) using the current process PATH.
+    2. Falls back to checking `~/.bun/bin/bun.exe` directly on disk.
+    3. If found via path 2, injects `~/.bun/bin` into the `PATH` of the spawn env so bun can find its own dependencies.
+    4. Returns `{ cmd: absolutePath, spawnEnv }` used in all spawn calls.
+  - Switched `shell: false` since we now pass an absolute path — avoids CMD/PowerShell wrapper ambiguity entirely.
+  - Applied to both `ensureSuperAgentServer()` and `startSuperAgentEager()`.
+
 ## [1.3.552] - 2026-07-20
 
 ### Fixed

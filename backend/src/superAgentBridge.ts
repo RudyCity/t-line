@@ -118,6 +118,42 @@ function drainPendingCallbacks(err?: Error) {
   }
 }
 
+/**
+ * Resolves the bun executable and returns a spawn-safe { cmd, env } pair.
+ *
+ * Problem: bun installs to ~/.bun/bin which is in the user's interactive PATH
+ * but not necessarily in the PATH inherited by Node child processes.
+ * We resolve the absolute path at runtime so spawn always works.
+ */
+function resolveBunEnv(): { cmd: string; spawnEnv: NodeJS.ProcessEnv } {
+  const isWin = os.platform() === 'win32';
+
+  // 1. Try to find bun via where / which (uses inherited PATH)
+  try {
+    const found = execSync(
+      isWin ? 'where bun 2>nul' : 'which bun 2>/dev/null',
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
+    ).split(/\r?\n/)[0].trim();
+    if (found && fs.existsSync(found)) {
+      return { cmd: found, spawnEnv: { ...process.env } };
+    }
+  } catch {}
+
+  // 2. Check the default bun install location: ~/.bun/bin/bun[.exe]
+  const bunBinDir = path.join(os.homedir(), '.bun', 'bin');
+  const bunExe = path.join(bunBinDir, isWin ? 'bun.exe' : 'bun');
+  if (fs.existsSync(bunExe)) {
+    // Inject bun's bin dir into PATH so child processes (like superagent itself) can also find it
+    const sep = isWin ? ';' : ':';
+    const patchedPath = `${bunBinDir}${sep}${process.env.PATH || ''}`;
+    return { cmd: bunExe, spawnEnv: { ...process.env, PATH: patchedPath } };
+  }
+
+  // 3. Last resort — just use 'bun' and hope the OS can resolve it
+  console.warn('[WS-Agent] Could not resolve bun path. Falling back to plain "bun".');
+  return { cmd: 'bun', spawnEnv: { ...process.env } };
+}
+
 function ensureSuperAgentServer(
   workspacePath: string,
   agentMode: string,
@@ -126,7 +162,6 @@ function ensureSuperAgentServer(
   callback: () => void
 ): void {
   const isWin = os.platform() === 'win32';
-  const cmd = isWin ? 'bun.cmd' : 'bun';
 
   const modeChanged = currentAgentMode !== agentMode;
   const argsChanged = currentCustomArgs !== customArgs;
@@ -211,12 +246,14 @@ function ensureSuperAgentServer(
         spawnArgs.push(...customArgs.trim().split(/\s+/));
       }
 
-      console.log(`[WS-Agent] Spawning SuperAgent with args: ${spawnArgs.join(' ')} in cwd: ${workspacePath}`);
+      const { cmd: bunCmd, spawnEnv } = resolveBunEnv();
+      console.log(`[WS-Agent] Spawning SuperAgent: ${bunCmd} ${spawnArgs.join(' ')} in cwd: ${workspacePath}`);
 
-      autoSuperAgentProcess = spawn(cmd, spawnArgs, {
+      autoSuperAgentProcess = spawn(bunCmd, spawnArgs, {
         cwd: workspacePath,
-        shell: true,
+        shell: false,
         detached: false,
+        env: spawnEnv,
         stdio: ['ignore', 'ignore', 'pipe']   // capture stderr for diagnostics
       });
 
@@ -311,8 +348,9 @@ export function startSuperAgentEager(agentMode: string = 'single', customArgs: s
       return;
     }
 
-    const isWin = os.platform() === 'win32';
-    const cmd = isWin ? 'bun.cmd' : 'bun';
+    const spawnArgs = ['x', 'superagent', '--server'];
+    if (agentMode === 'multi') spawnArgs.push('--multi');
+    if (customArgs && customArgs.trim()) spawnArgs.push(...customArgs.trim().split(/\s+/));
 
     isStartingSuperAgent = true;
     currentAgentMode = agentMode;
@@ -331,17 +369,15 @@ export function startSuperAgentEager(agentMode: string = 'single', customArgs: s
       drainPendingCallbacks(new Error(reason));
     }
 
-    const spawnArgs = ['x', 'superagent', '--server'];
-    if (agentMode === 'multi') spawnArgs.push('--multi');
-    if (customArgs && customArgs.trim()) spawnArgs.push(...customArgs.trim().split(/\s+/));
-
-    console.log(`[WS-Agent] Eager-starting SuperAgent: ${cmd} ${spawnArgs.join(' ')}`);
+    const { cmd: bunCmd, spawnEnv } = resolveBunEnv();
+    console.log(`[WS-Agent] Eager-starting SuperAgent: ${bunCmd} ${spawnArgs.join(' ')}`);
 
     try {
-      autoSuperAgentProcess = spawn(cmd, spawnArgs, {
+      autoSuperAgentProcess = spawn(bunCmd, spawnArgs, {
         cwd: process.cwd(),            // backend's own cwd, not a workspace path
-        shell: true,
+        shell: false,
         detached: false,
+        env: spawnEnv,
         stdio: ['ignore', 'ignore', 'pipe']
       });
 
