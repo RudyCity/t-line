@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.521] - 2026-07-20
+
+### Added & Redesigned
+- **Borderless & Backgroundless Chat Message Styling**:
+  - Removed message box backgrounds (`bg-transparent`) and borders (`border-none`) from `SuperAgentMessageItem.tsx`
+  - Replaced heavy card borders with a clean, modern, borderless layout with colored role header labels (`User`, `Assistant`, `Thought`)
+  - Significantly improves readability and eliminates visual clutter in the chat console
+
 ## [1.3.520] - 2026-07-20
 
 ### Fixed
