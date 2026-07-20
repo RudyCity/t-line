@@ -825,7 +825,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
           {showHistorySidebar && (
             <div
               onMouseDown={startResizingLeft}
-              className="w-1.5 hover:w-2 hover:bg-indigo-500/90 bg-zinc-800/80 cursor-col-resize select-none transition-all h-full shrink-0 z-20 hover:shadow-lg active:bg-indigo-600"
+              className="w-[2px] hover:w-[4px] bg-zinc-800/80 hover:bg-indigo-500/90 cursor-col-resize select-none transition-all duration-150 h-full shrink-0 z-20 active:bg-indigo-600"
               title="Drag to resize History panel"
             />
           )}
@@ -939,7 +939,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
           {showSidebar && (
             <div
               onMouseDown={startResizingRight}
-              className="w-1.5 hover:w-2 hover:bg-indigo-500/90 bg-zinc-800/80 cursor-col-resize select-none transition-all h-full shrink-0 z-20 hover:shadow-lg active:bg-indigo-600"
+              className="w-[2px] hover:w-[4px] bg-zinc-800/80 hover:bg-indigo-500/90 cursor-col-resize select-none transition-all duration-150 h-full shrink-0 z-20 active:bg-indigo-600"
               title="Drag to resize Monitor panel"
             />
           )}

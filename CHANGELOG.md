@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.502] - 2026-07-20
+
+### Improved
+- **Ultra-Thin Resizer Lines**:
+  - Updated sidebar resizer handles in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) to ultra-thin `2px` lines (`w-[2px]`), expanding smoothly to `4px` with indigo glow on hover (`hover:w-[4px] hover:bg-indigo-500/90`).
+
 ## [1.3.501] - 2026-07-20
 
 ### Fixed
