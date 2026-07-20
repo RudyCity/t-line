@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.506] - 2026-07-20
+
+### Removed
+- **SuperAgent Tab Loading Text Badge**:
+  - Removed explicit "Working..." badge from SuperAgent tab header in [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx) for a cleaner tab UI.
+
 ## [1.3.505] - 2026-07-20
 
 ### Added

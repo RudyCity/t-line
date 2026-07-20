@@ -2143,12 +2143,7 @@ export default function App() {
                             )}
                             <span className="tab-title-container">
                               <span className="tab-title">{displayName}</span>
-                              {t.type === 'agent' && isAgentLoading && (
-                                <span className="ml-1.5 px-1.5 py-0.5 text-[9px] font-medium bg-indigo-500/20 text-indigo-300 rounded-full animate-pulse flex items-center gap-1 shrink-0">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping" />
-                                  Working...
-                                </span>
-                              )}
+
                               {shellType && (
                                 <span className="tab-shell-type">({shellType === 'powershell' ? 'ps' : shellType})</span>
                               )}
