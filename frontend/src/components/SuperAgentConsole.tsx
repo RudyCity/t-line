@@ -776,41 +776,49 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [] }: Supe
         <div className="flex-1 flex overflow-hidden relative w-full">
           <div className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0">
             <div className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-xs leading-relaxed w-full">
-            {messages.map((msg, index) => (
-              <div
-                key={index}
-                className={`p-3.5 rounded-xl border w-full transition-all shadow-sm ${
-                  msg.role === 'user'
-                    ? 'bg-indigo-950/30 border-indigo-800/40 text-indigo-100'
-                    : msg.role === 'system'
-                    ? 'bg-[#0e121d] border-zinc-800/60 text-zinc-400 text-[11px] text-center'
-                    : msg.role === 'tool'
-                    ? 'bg-amber-950/20 border-amber-800/40 text-amber-200 font-mono text-xs'
-                    : msg.role === 'thought'
-                    ? 'bg-slate-950/50 border-slate-800/50 text-slate-400 text-xs italic border-l-4 border-l-indigo-500 pl-4'
-                    : 'bg-[#0d101a] border-zinc-800/80 text-zinc-200'
-                }`}
-              >
-                {msg.role !== 'system' && (
+            {messages.map((msg, index) => {
+              if (msg.role === 'system') {
+                return (
+                  <div key={index} className="flex items-center justify-center my-1 select-none">
+                    <div className="text-[10px] text-zinc-400/90 font-mono bg-[#0c0f18] border border-zinc-800/80 px-3 py-0.5 rounded-full tracking-tight max-w-2xl text-center shadow-xs flex items-center justify-center gap-1.5 truncate">
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500/70 inline-block shrink-0"></span>
+                      <span className="truncate">{msg.text}</span>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key={index}
+                  className={`p-3.5 rounded-xl border w-full transition-all shadow-sm ${
+                    msg.role === 'user'
+                      ? 'bg-indigo-950/30 border-indigo-800/40 text-indigo-100'
+                      : msg.role === 'tool'
+                      ? 'bg-amber-950/20 border-amber-800/40 text-amber-200 font-mono text-xs'
+                      : msg.role === 'thought'
+                      ? 'bg-slate-950/50 border-slate-800/50 text-slate-400 text-xs italic border-l-4 border-l-indigo-500 pl-4'
+                      : 'bg-[#0d101a] border-zinc-800/80 text-zinc-200'
+                  }`}
+                >
                   <span className={`block text-[10px] uppercase tracking-wider mb-1.5 font-bold font-mono ${
                     msg.role === 'tool' ? 'text-amber-400' : msg.role === 'thought' ? 'text-indigo-400' : 'text-zinc-500'
                   }`}>
                     {msg.role} {msg.toolName ? `(${msg.toolName})` : ''}
                   </span>
-                )}
-                {renderMessageContent(msg.text)}
-                {msg.args && (
-                  <pre className="mt-2.5 p-2 bg-[#05070c] rounded-md border border-amber-900/30 text-[10px] text-amber-300 overflow-x-auto">
-                    {JSON.stringify(msg.args, null, 2)}
-                  </pre>
-                )}
-                {msg.result && (
-                  <pre className="mt-2.5 p-2 bg-[#05070c] rounded-md border border-amber-900/30 text-[10px] text-zinc-400 overflow-x-auto max-h-48 overflow-y-auto">
-                    {typeof msg.result === 'string' ? msg.result : JSON.stringify(msg.result, null, 2)}
-                  </pre>
-                )}
-              </div>
-            ))}
+                  {renderMessageContent(msg.text)}
+                  {msg.args && (
+                    <pre className="mt-2.5 p-2 bg-[#05070c] rounded-md border border-amber-900/30 text-[10px] text-amber-300 overflow-x-auto">
+                      {JSON.stringify(msg.args, null, 2)}
+                    </pre>
+                  )}
+                  {msg.result && (
+                    <pre className="mt-2.5 p-2 bg-[#05070c] rounded-md border border-amber-900/30 text-[10px] text-zinc-400 overflow-x-auto max-h-48 overflow-y-auto">
+                      {typeof msg.result === 'string' ? msg.result : JSON.stringify(msg.result, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              );
+            })}
 
             {/* Live Progress Tool Message */}
             {toolProgressMsg && (

@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.486] - 2026-07-20
+
+### Fixed
+- **Cleaned Up System Message Cards**: Replaced wide, heavy card container blocks for `system` status messages with sleek, compact centered status pills featuring an status indicator dot. Prevents cluttering the stream and conserves vertical space.
+
 ## [1.3.485] - 2026-07-20
 
 ### Enhanced
