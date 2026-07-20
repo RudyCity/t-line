@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.535] - 2026-07-20
+
+### Fixed & Enhanced
+- **SuperAgent Direct Server Session Fetching (`superAgentRoutes.ts`)**:
+  - Updated `/api/superagent/sessions` endpoint in [superAgentRoutes.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentRoutes.ts) to query history sessions directly from SuperAgent HTTP server (`http://127.0.0.1:7888/api/history/sessions`).
+  - Added `fetchSessionsFromSuperAgentServer` helper with automated noise filtering (`[Emergency...]`, `[RMemory]`, `[SYS]`, etc.) and title deduplication.
+  - Retained graceful SQLite database fallback (`getWorkspaceSessions`) when SuperAgent server is offline or restarting.
+
 ## [1.3.534] - 2026-07-20
 
 ### Fixed
