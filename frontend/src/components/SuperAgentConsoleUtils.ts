@@ -5,6 +5,21 @@ export const getAuthHeader = (): Record<string, string> => {
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
+export const fetchCliPromptHistory = async (): Promise<string[]> => {
+  try {
+    const res = await fetch('/api/superagent/history', { headers: getAuthHeader() });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.history)) {
+        return data.history;
+      }
+    }
+  } catch (e) {
+    console.error('Failed to fetch CLI prompt history:', e);
+  }
+  return [];
+};
+
 export const readFileAsText = (file: File): Promise<string> =>
   new Promise((res, rej) => {
     const r = new FileReader();

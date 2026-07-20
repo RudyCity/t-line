@@ -40,7 +40,7 @@ import {
 } from './presetUtils';
 import { previewProxy } from './previewProxy';
 import { TLINE_HELPER_CODE } from './tline-helper-code';
-import { handleSuperAgentConnection, getAuditLogs, clearAuditLogs } from './superAgentBridge';
+import { handleSuperAgentConnection, getAuditLogs, clearAuditLogs, getCliPromptHistory, saveCliPromptHistory } from './superAgentBridge';
 
 dotenv.config();
 
@@ -516,6 +516,28 @@ app.delete('/api/superagent/audit-logs', authMiddleware, (req, res) => {
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Failed to clear audit logs' });
+  }
+});
+
+app.get('/api/superagent/history', authMiddleware, (req, res) => {
+  try {
+    const history = getCliPromptHistory();
+    res.json({ history });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to read CLI history: ' + e.message });
+  }
+});
+
+app.post('/api/superagent/history', authMiddleware, (req, res) => {
+  const { text } = req.body;
+  if (!text) {
+    return res.status(400).json({ error: 'Prompt text is required' });
+  }
+  try {
+    saveCliPromptHistory(text);
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to save CLI history: ' + e.message });
   }
 });
 

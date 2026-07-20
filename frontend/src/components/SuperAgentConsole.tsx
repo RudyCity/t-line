@@ -15,7 +15,7 @@ import { SuperAgentMessageItem } from './SuperAgentMessageItem';
 import { SuperAgentHistorySidebar } from './SuperAgentHistorySidebar';
 import { useSuperAgentSessions, isSystemNoiseMsg } from './useSuperAgentSessions';
 import { useSidebarResize } from './useSidebarResize';
-import { getAuthHeader, readFileAsText, readFileAsDataURL, getMainModelLabel as getModelLabelUtil, handleAgentEventPayload } from './SuperAgentConsoleUtils';
+import { getAuthHeader, readFileAsText, readFileAsDataURL, getMainModelLabel as getModelLabelUtil, handleAgentEventPayload, fetchCliPromptHistory } from './SuperAgentConsoleUtils';
 
 interface SuperAgentConsoleProps {
   activeWorkspacePath?: string;
@@ -272,6 +272,21 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const consoleContainerRef = useRef<HTMLDivElement>(null);
+
+  // Sync prompt history with CLI history file
+  useEffect(() => {
+    fetchCliPromptHistory().then(cliHistory => {
+      if (cliHistory && cliHistory.length > 0) {
+        setHistory(prev => {
+          const merged = Array.from(new Set([...cliHistory.slice().reverse(), ...prev])).slice(0, 100);
+          try {
+            localStorage.setItem('superagent_prompt_history', JSON.stringify(merged));
+          } catch (e) {}
+          return merged;
+        });
+      }
+    });
+  }, [connectTrigger]);
 
   // Attachment States & Helpers
   const [attachments, setAttachments] = useState<Array<{

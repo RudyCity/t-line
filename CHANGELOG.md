@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.508] - 2026-07-20
+
+### Added & Enhanced
+- **SuperAgent CLI History Synchronization**:
+  - Implemented `getCliPromptHistory()` and `saveCliPromptHistory()` in [superAgentBridge.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentBridge.ts) to read and persist prompts into `~/.superagent_history`.
+  - Added REST API endpoints `GET /api/superagent/history` and `POST /api/superagent/history` in [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts).
+  - Integrated `fetchCliPromptHistory()` in [SuperAgentConsoleUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsoleUtils.ts) and connected it to [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) so Up/Down arrow prompt navigation seamlessly syncs between CLI and GUI.
+
 ## [1.3.507] - 2026-07-20
 
 ### Fixed & Enhanced
