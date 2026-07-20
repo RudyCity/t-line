@@ -265,9 +265,25 @@ export function useSuperAgentSessions(workspace: string) {
     if (res && res.sessions.length > 0) {
       const validServerSessions = res.sessions.filter(s => !deletedSessionIdsRef.current.has(s.id));
       setSessions(prev => {
+        const prevMap = new Map(prev.map(s => [s.id, s]));
         const serverIds = new Set(validServerSessions.map(s => s.id));
         const localOnly = prev.filter(s => !serverIds.has(s.id) && !deletedSessionIdsRef.current.has(s.id));
-        return [...localOnly, ...validServerSessions];
+
+        const mergedServerSessions = validServerSessions.map(serverSession => {
+          const localSession = prevMap.get(serverSession.id);
+          // Preserve local title if local session has a non-default title and server returns generic "New Chat"
+          if (
+            localSession &&
+            localSession.title &&
+            localSession.title !== 'New Chat' &&
+            (!serverSession.title || serverSession.title === 'New Chat')
+          ) {
+            return { ...serverSession, title: localSession.title };
+          }
+          return serverSession;
+        });
+
+        return [...localOnly, ...mergedServerSessions];
       });
       setHasMoreSessions(res.hasMore);
       currentSessionOffsetRef.current = SESSION_PAGE_SIZE;
@@ -357,14 +373,15 @@ export function useSuperAgentSessions(workspace: string) {
         localStorage.setItem(msgKey, JSON.stringify(messages.slice(-300)));
       } catch (e) {}
 
+      const newTitle = generateSessionTitle(messages);
+
       setSessions(prevSessions => {
         const targetIdx = prevSessions.findIndex(s => s.id === activeSessionId);
         if (targetIdx < 0) return prevSessions;
 
         const currentSession = prevSessions[targetIdx];
-        const newTitle = generateSessionTitle(messages);
 
-        // Only update if title actually changed
+        // Skip if title is unchanged
         if (currentSession.title === newTitle) {
           return prevSessions;
         }
@@ -372,7 +389,8 @@ export function useSuperAgentSessions(workspace: string) {
         const updated = [...prevSessions];
         const updatedSession = {
           ...currentSession,
-          title: newTitle
+          title: newTitle,
+          updatedAt: Date.now()
         };
         updated[targetIdx] = updatedSession;
         

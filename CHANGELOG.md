@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.578] - 2026-07-21
+
+### Fixed
+- **Instant New Chat Session Title Synchronization (`useSuperAgentSessions.ts`, `historyDb.ts`)**:
+  - Fixed a bug where a new chat session title defaulted to "New Chat" and only updated after opening/clicking the session.
+  - Added title preservation in `useSuperAgentSessions.ts` `syncSessions()` so background session list syncing doesn't overwrite generated session titles with "New Chat".
+  - Updated `historyDb.ts` in SuperAgent to invalidate `clearHistoryCache()` immediately when session history is saved or deleted, eliminating 30-second stale session list cache delays.
+
 ## [1.3.577] - 2026-07-21
 
 ### Added
