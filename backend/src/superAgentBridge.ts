@@ -439,29 +439,6 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
           console.log('[WS-Agent] /api/abort request failed or timed out:', err.message);
         }
 
-        if (autoSuperAgentProcess) {
-          console.log('[WS-Agent] Force killing SuperAgent server process on user abort...');
-          try {
-            if (os.platform() === 'win32') {
-              const pid = autoSuperAgentProcess.pid;
-              if (pid) {
-                execSync(`taskkill /pid ${pid} /T /F`, { stdio: 'ignore' });
-              }
-            } else {
-              autoSuperAgentProcess.kill('SIGKILL');
-            }
-          } catch (e) {
-            console.error('[WS-Agent] Failed to kill SuperAgent process on abort:', e);
-          }
-          autoSuperAgentProcess = null;
-          isStartingSuperAgent = false;
-        }
-
-        // Additional fallback: ensure any process bound to port 7888 is killed
-        forceKillPort7888();
-        autoSuperAgentProcess = null;
-        isStartingSuperAgent = false;
-
         ws.send(JSON.stringify({ type: 'status', text: 'Agent execution aborted by user.' }));
         ws.send(JSON.stringify({ type: 'agent_event', event: { type: 'done' } }));
       }
