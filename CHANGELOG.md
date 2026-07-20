@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.520] - 2026-07-20
+
+### Fixed
+- **Filtered RMemory & System Prompt Context from Console & Session Titles**:
+  - Updated `isSystemNoiseMsg` in `useSuperAgentSessions.ts` to filter out injected memory context headers (`[RMemory`, `[TencentDB`, `<relevant-memories>`, `Agent Memory Context`, `[SYS]`)
+  - Memory context headers are no longer rendered as regular chat bubbles in the console UI
+  - Updated `generateSessionTitle` (frontend) and `formatSessionTitleFromDb` (backend) to ignore memory context prompts when extracting `First Chat ➔ Last Chat` titles
+
 ## [1.3.519] - 2026-07-20
 
 ### Fixed & Improved

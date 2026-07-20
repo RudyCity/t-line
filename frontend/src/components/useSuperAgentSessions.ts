@@ -11,8 +11,22 @@ export interface SuperAgentMessage {
 }
 
 export function isSystemNoiseMsg(msg: { role: string; text?: string }): boolean {
+  if (!msg || !msg.text) return false;
+  const text = msg.text.trim();
+
+  // Filter out injected memory context & prompt headers
+  if (
+    text.startsWith('[RMemory') ||
+    text.startsWith('[TencentDB') ||
+    text.startsWith('<relevant-memories>') ||
+    text.includes('Agent Memory Context') ||
+    text.startsWith('[SYS]')
+  ) {
+    return true;
+  }
+
   if (msg.role !== 'system') return false;
-  const textLower = (msg.text || '').toLowerCase();
+  const textLower = text.toLowerCase();
   return (
     textLower.includes('websocket') ||
     textLower.includes('connected to superagent') ||
@@ -182,7 +196,7 @@ async function apiDeleteSession(workspace: string, sessionId: string): Promise<b
 }
 
 export function generateSessionTitle(messages: SuperAgentMessage[]): string {
-  const userMsgs = messages.filter(m => m.role === 'user' && m.text && m.text.trim());
+  const userMsgs = messages.filter(m => m.role === 'user' && m.text && !isSystemNoiseMsg(m));
   if (userMsgs.length === 0) return 'New Chat';
 
   const firstMsg = userMsgs[0].text.trim().split('\n')[0];

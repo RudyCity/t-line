@@ -225,21 +225,33 @@ function formatSessionTitleFromDb(db: any, sessionId: string, fallbackDisplayNam
       `SELECT content FROM messages WHERE session_id = ? AND role = 'user' AND content IS NOT NULL AND content != '' ORDER BY sequence_order ASC`
     ).all(sessionId) as { content: string }[];
 
-    if (userMsgs.length === 0) {
-      if (fallbackDisplayName && !fallbackDisplayName.includes('\\') && !fallbackDisplayName.includes('/')) {
+    // Filter out memory context & noise messages
+    const realUserMsgs = userMsgs.filter(m => {
+      const c = (m.content || '').trim();
+      return (
+        !c.startsWith('[RMemory') &&
+        !c.startsWith('[TencentDB') &&
+        !c.startsWith('<relevant-memories>') &&
+        !c.includes('Agent Memory Context') &&
+        !c.startsWith('[SYS]')
+      );
+    });
+
+    if (realUserMsgs.length === 0) {
+      if (fallbackDisplayName && !fallbackDisplayName.includes('\\') && !fallbackDisplayName.includes('/') && !fallbackDisplayName.includes('RMemory') && !fallbackDisplayName.includes('Memory Context')) {
         return fallbackDisplayName;
       }
       return 'Untitled Chat';
     }
 
-    const firstMsg = userMsgs[0].content.trim().split('\n')[0];
+    const firstMsg = realUserMsgs[0].content.trim().split('\n')[0];
     const firstShort = firstMsg.length > 22 ? firstMsg.slice(0, 22) + '...' : firstMsg;
 
-    if (userMsgs.length === 1) {
+    if (realUserMsgs.length === 1) {
       return firstShort;
     }
 
-    const lastMsg = userMsgs[userMsgs.length - 1].content.trim().split('\n')[0];
+    const lastMsg = realUserMsgs[realUserMsgs.length - 1].content.trim().split('\n')[0];
     const lastShort = lastMsg.length > 22 ? lastMsg.slice(0, 22) + '...' : lastMsg;
 
     if (firstShort === lastShort) {
