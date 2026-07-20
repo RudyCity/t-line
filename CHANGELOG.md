@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.531] - 2026-07-20
+
+### Fixed & Enhanced
+- **SuperAgent `/api/init` Session ID Handshake (`superAgentBridge.ts`)**:
+  - Extended `initializeSuperAgentSession` in `superAgentBridge.ts` to forward `sessionId` during `/api/init` requests.
+  - Ensures SuperAgent CLI server immediately binds its active session Map to the GUI's selected session ID upon initialization, closing any remaining session alignment gaps.
+
 ## [1.3.530] - 2026-07-20
 
 ### Added & Integrated

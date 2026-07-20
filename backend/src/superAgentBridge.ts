@@ -156,12 +156,16 @@ function ensureSuperAgentServer(
   }
 }
 
-async function initializeSuperAgentSession(workspacePath: string, mode: string): Promise<boolean> {
+async function initializeSuperAgentSession(workspacePath: string, mode: string, sessionId?: string): Promise<boolean> {
   return new Promise((resolve) => {
-    const postData = JSON.stringify({
+    const initPayload: any = {
       workspace: workspacePath,
       mode: mode === 'multi' ? 'multi' : 'single'
-    });
+    };
+    if (sessionId) {
+      initPayload.sessionId = sessionId;
+    }
+    const postData = JSON.stringify(initPayload);
 
     const req = http.request({
       hostname: '127.0.0.1',
@@ -315,7 +319,7 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
         saveCliPromptHistory(text);
 
         // Ensure session exists
-        await initializeSuperAgentSession(workspacePath, agentMode);
+        await initializeSuperAgentSession(workspacePath, agentMode, parsed.sessionId);
 
         try {
           const chatPayload: any = { message: text };
@@ -327,7 +331,7 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
 
           // Retry once if session wasn't initialized
           if (response && response.error === 'Session not initialized') {
-            await initializeSuperAgentSession(workspacePath, agentMode);
+            await initializeSuperAgentSession(workspacePath, agentMode, parsed.sessionId);
             response = await sendSuperAgentRequest('/api/chat', chatPayload, workspacePath);
           }
 
