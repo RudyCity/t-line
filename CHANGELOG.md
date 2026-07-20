@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.563] - 2026-07-20
+
+### Fixed
+- **Manual Expansion Persistence Bug (`SuperAgentGroupedMessages.tsx`)**:
+  - Fixed an issue where manually expanding the process steps block (`CollapsibleProcessBlock`) while idle caused `useEffect` to trigger a re-render collapse. Expansion state transitions are now strictly scoped to active streaming start/finish events, allowing users to expand and collapse process blocks and tool details freely without auto-collapsing.
+
 ## [1.3.562] - 2026-07-20
 
 ### Fixed
