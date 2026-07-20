@@ -59,8 +59,8 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
     const actionName = rawToolName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
     // 1. Read / View File
-    if (rawToolName.includes('view') || rawToolName.includes('read_file')) {
-      const path = args.AbsolutePath || args.path || args.file || args.TargetFile || args.filePath || '';
+    if (rawToolName.includes('view') || rawToolName.includes('read') || rawToolName.includes('file')) {
+      const path = args.AbsolutePath || args.path || args.file || args.TargetFile || args.filePath || args.filename || args.Url || args.url || '';
       const filename = path ? String(path).split(/[/\\]/).pop() : '';
       let lines = '';
       if (args.StartLine && args.EndLine) {
@@ -68,9 +68,11 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
       } else if (args.StartLine) {
         lines = `:L${args.StartLine}`;
       }
+      const rawTarget = filename || path || '';
+      const cleanTarget = (rawTarget && rawTarget.toLowerCase() !== rawToolName && rawTarget.toLowerCase() !== 'read') ? rawTarget : 'file';
       return {
         action: 'Read',
-        target: (filename || path || 'file') + lines,
+        target: cleanTarget + lines,
         icon: <Code2 className="w-3 h-3 text-blue-400 shrink-0" />
       };
     }
@@ -80,9 +82,11 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
       const path = args.TargetFile || args.path || args.file || args.filePath || '';
       const filename = path ? String(path).split(/[/\\]/).pop() : '';
       const desc = args.Description ? ` (${args.Description})` : '';
+      const rawTarget = filename || path || '';
+      const cleanTarget = (rawTarget && rawTarget.toLowerCase() !== rawToolName) ? rawTarget : 'file';
       return {
         action: 'Edited',
-        target: (filename || path || 'file') + desc,
+        target: cleanTarget + desc,
         icon: <FileCode className="w-3 h-3 text-emerald-400 shrink-0" />
       };
     }
@@ -114,7 +118,7 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
       const role = args.name || args.Role || args.role || args.Subagents?.[0]?.Role || args.Action || '';
       return {
         action: 'Subagent',
-        target: role || rawToolName,
+        target: (role && role.toLowerCase() !== 'subagent' ? role : 'agent'),
         icon: <Cpu className="w-3 h-3 text-indigo-400 shrink-0" />
       };
     }
@@ -126,7 +130,7 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
       const targetText = subAction ? `${subAction}${detail ? ` (${detail})` : ''}` : detail;
       return {
         action: actionName,
-        target: targetText || rawToolName,
+        target: targetText || 'task',
         icon: <Wrench className="w-3 h-3 text-cyan-400 shrink-0" />
       };
     }
@@ -149,19 +153,23 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
         )
       : undefined;
     const primaryArgVal = primaryArgKey ? String(args[primaryArgKey]) : '';
+    const fallbackTarget = primaryArgVal || (typeof args === 'object' && args !== null && Object.keys(args).length > 0 ? JSON.stringify(args).slice(0, 50) : '');
 
     return {
       action: actionName,
-      target: primaryArgVal || (typeof args === 'object' && args !== null && Object.keys(args).length > 0 ? JSON.stringify(args).slice(0, 50) : rawToolName),
+      target: (fallbackTarget && fallbackTarget.toLowerCase() !== rawToolName ? fallbackTarget : 'step'),
       icon: <Wrench className="w-3 h-3 text-zinc-400 shrink-0" />
     };
   };
 
   const info = getToolDetails();
+  const displayTarget = info.target && info.target.toLowerCase() !== info.action.toLowerCase() && info.target.toLowerCase() !== rawToolName
+    ? info.target
+    : (rawToolName.includes('read') || rawToolName.includes('view') ? 'file' : rawToolName.includes('search') || rawToolName.includes('grep') ? 'workspace' : 'step');
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const content = typeof result === 'string' ? result : JSON.stringify(result ?? args, null, 2);
+    const content = typeof result === 'string' ? result : JSON.stringify(result ?? args ?? msg.text, null, 2);
     navigator.clipboard.writeText(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -182,7 +190,7 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
       >
         {info.icon}
         <span className="font-sans font-medium text-zinc-400">{info.action}</span>
-        <span className="font-mono text-zinc-300 truncate max-w-md">{info.target}</span>
+        <span className="font-mono text-zinc-300 truncate max-w-md">{displayTarget}</span>
         <span className="shrink-0">
           {expanded ? (
             <ChevronDown className="w-3 h-3 text-zinc-400" />
@@ -221,6 +229,15 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
               <span className="text-[10px] text-amber-400 font-semibold uppercase block">Output:</span>
               <pre className="p-1 text-[10px] text-zinc-300 overflow-x-auto max-h-48 overflow-y-auto font-mono whitespace-pre-wrap">
                 {typeof result === 'string' ? (result || '(empty output)') : JSON.stringify(result, null, 2)}
+              </pre>
+            </div>
+          )}
+
+          {!hasArgs && !hasResult && (
+            <div>
+              <span className="text-[10px] text-zinc-500 font-semibold uppercase block">Status / Log:</span>
+              <pre className="p-1 text-[10px] text-zinc-400 overflow-x-auto max-h-32 overflow-y-auto font-mono whitespace-pre-wrap">
+                {msg.text || 'Tool invocation completed.'}
               </pre>
             </div>
           )}

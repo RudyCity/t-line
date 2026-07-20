@@ -106,11 +106,14 @@ export const handleAgentEventPayload = (
 
     if (isAbortedRef.current) return;
 
-    if (innerEvent.type === 'tool_start' || innerEvent.type === 'tool_call' || innerEvent.type === 'tool') {
+    const isToolType = innerEvent.type === 'tool_start' || innerEvent.type === 'tool_call' || innerEvent.type === 'tool' || innerEvent.type === 'tool_end' || innerEvent.type === 'tool_result' || innerEvent.type === 'tool_use' || innerEvent.type === 'tool_output';
+
+    if (isToolType) {
       setLoading(true);
       const toolName = 
         innerEvent.toolCall?.name || 
         innerEvent.toolCall?.toolName || 
+        innerEvent.toolResult?.name ||
         innerEvent.toolName || 
         innerEvent.name || 
         innerEvent.tool || 
@@ -118,47 +121,7 @@ export const handleAgentEventPayload = (
         innerEvent.function?.name || 
         'tool';
 
-      let args = innerEvent.toolCall?.args || innerEvent.args || innerEvent.arguments || innerEvent.function?.arguments;
-      if (typeof args === 'string') {
-        try { args = JSON.parse(args); } catch (e) {}
-      }
-
-      const callId = innerEvent.toolCall?.id || innerEvent.callId || innerEvent.id || innerEvent.tool_call_id;
-
-      if (toolName === 'invoke_subagent' && args) {
-        const subagentsPayload = args.Subagents || args.subagents || [];
-        if (Array.isArray(subagentsPayload)) {
-          subagentsPayload.forEach((sa: any) => {
-            const saId = Math.random().toString(36).substring(7);
-            setSubagentList(prev => [
-              {
-                id: saId,
-                role: sa.Role || sa.role || sa.TypeName || 'subagent',
-                typeName: sa.TypeName || sa.typeName,
-                status: 'RUNNING',
-                prompt: sa.Prompt || sa.prompt,
-                logs: [`[${new Date().toLocaleTimeString()}] Subagent launched: ${sa.Role || sa.TypeName}`]
-              },
-              ...prev
-            ]);
-          });
-        }
-      }
-
-      setMessages(prev => [...prev, { role: 'tool', text: `Invoking tool: ${toolName}`, toolName, args: args || {}, callId }]);
-    } else if (innerEvent.type === 'tool_end' || innerEvent.type === 'tool_result') {
-      setToolProgressMsg('');
-      const toolName = 
-        innerEvent.toolResult?.name || 
-        innerEvent.toolCall?.name || 
-        innerEvent.toolName || 
-        innerEvent.name || 
-        innerEvent.tool || 
-        innerEvent.fn || 
-        innerEvent.function?.name || 
-        'tool';
-
-      let args = innerEvent.toolResult?.args || innerEvent.toolCall?.args || innerEvent.args || innerEvent.arguments;
+      let args = innerEvent.toolCall?.args || innerEvent.toolResult?.args || innerEvent.args || innerEvent.arguments || innerEvent.function?.arguments;
       if (typeof args === 'string') {
         try { args = JSON.parse(args); } catch (e) {}
       }
@@ -188,34 +151,62 @@ export const handleAgentEventPayload = (
 
       const callId = innerEvent.toolResult?.id || innerEvent.toolCall?.id || innerEvent.callId || innerEvent.id || innerEvent.tool_call_id;
 
+      if (innerEvent.type === 'tool_end' || innerEvent.type === 'tool_result' || innerEvent.type === 'tool_output' || result !== undefined) {
+        setToolProgressMsg('');
+      }
+
+      if (toolName === 'invoke_subagent' && args) {
+        const subagentsPayload = args.Subagents || args.subagents || [];
+        if (Array.isArray(subagentsPayload)) {
+          subagentsPayload.forEach((sa: any) => {
+            const saId = Math.random().toString(36).substring(7);
+            setSubagentList(prev => [
+              {
+                id: saId,
+                role: sa.Role || sa.role || sa.TypeName || 'subagent',
+                typeName: sa.TypeName || sa.typeName,
+                status: 'RUNNING',
+                prompt: sa.Prompt || sa.prompt,
+                logs: [`[${new Date().toLocaleTimeString()}] Subagent launched: ${sa.Role || sa.TypeName}`]
+              },
+              ...prev
+            ]);
+          });
+        }
+      }
+
       setMessages(prev => {
         let idx = -1;
         for (let i = prev.length - 1; i >= 0; i--) {
           const m = prev[i];
-          if (m && m.role === 'tool' && m.result === undefined) {
+          if (m && m.role === 'tool') {
             const matchesId = callId && m.callId ? m.callId === callId : false;
             const matchesName = toolName !== 'tool' && m.toolName ? (m.toolName === toolName || m.toolName === 'tool') : true;
-            if (matchesId || matchesName) {
+            if (m.result === undefined && (matchesId || matchesName)) {
               idx = i;
               break;
             }
           }
         }
 
+        const hasNewArgs = args && (typeof args === 'string' ? args.trim().length > 0 : Object.keys(args).length > 0);
+
         if (idx !== -1) {
           const updated = [...prev];
           const resolvedName = (toolName && toolName !== 'tool') ? toolName : (updated[idx].toolName || toolName);
-          const hasNewArgs = args && (typeof args === 'string' ? args.trim().length > 0 : Object.keys(args).length > 0);
           updated[idx] = {
             ...updated[idx],
             toolName: resolvedName,
-            text: `Tool '${resolvedName}' completed.`,
+            text: result !== undefined ? `Tool '${resolvedName}' completed.` : updated[idx].text,
             args: hasNewArgs ? args : updated[idx].args,
-            result
+            result: result !== undefined ? result : updated[idx].result
           };
           return updated;
         }
-        return [...prev, { role: 'tool', text: `Tool '${toolName}' completed.`, toolName, args: args || {}, result, callId }];
+
+        const resolvedName = toolName || 'tool';
+        const text = result !== undefined ? `Tool '${resolvedName}' completed.` : `Invoking tool: ${resolvedName}`;
+        return [...prev, { role: 'tool', text, toolName: resolvedName, args: args || {}, result, callId }];
       });
     } else if (innerEvent.type === 'thought' || innerEvent.type === 'reasoning') {
       setLoading(true);

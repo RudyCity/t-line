@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.572] - 2026-07-20
+
+### Fixed
+- **Unified Tool Event Listener & Target Label Duplication (`SuperAgentConsoleUtils.ts`, `SuperAgentToolItem.tsx`)**:
+  - Unified tool event handling across `tool_start`, `tool_call`, `tool`, `tool_end`, `tool_result`, and `tool_output` so single or multi-phase tool SSE events never drop tool results or arguments.
+  - Resolved `Read read` label duplication bug by cleanly resolving target filenames/URLs or defaulting to `file` / `workspace` / `command`.
+  - Added fallback `Status / Log` block when expanding tool items to guarantee tool invocation status is always visible even when arguments or output are absent.
+
 ## [1.3.571] - 2026-07-20
 
 ### Fixed
