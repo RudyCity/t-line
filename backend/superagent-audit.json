@@ -1,60 +1,5 @@
 [
   {
-    "timestamp": "2026-07-20T02:13:22.572Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " scope. If a scoped admin (isScopedAdmin is true) has a null or empty department assignment, the check \""
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.593Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "if (deptCodes && deptCodes.length > 0)\" is skipped, causing the code to fall through to \""
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.613Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "return json({ data: logs })\" and return all system-wide audit logs.\nProposed Fix:\nExplicitly return an empty list if"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.635Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " a scoped admin has no resolved departments:\nif (scopeCtx.isScopedAdmin) {\n  const deptCodes = await resolveDepartmentCodes(scopeCtx, services"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.660Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": ".repository);\n  if (!deptCodes || deptCodes.length === 0) {\n    return json({ data: [] });"
-      }
-    }
-  },
-  {
     "timestamp": "2026-07-20T02:13:22.687Z",
     "type": "agent_event",
     "data": {
@@ -10346,6 +10291,48 @@
   },
   {
     "timestamp": "2026-07-20T03:48:34.312Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:52:36.375Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:52:36.391Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\superagent",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:52:36.440Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:52:36.460Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:52:39.420Z",
     "type": "system_error",
     "data": {
       "message": "Failed to connect to SuperAgent server",

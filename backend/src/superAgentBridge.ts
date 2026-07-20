@@ -4,32 +4,18 @@ import fs from 'fs';
 import os from 'os';
 import { spawn, execSync } from 'child_process';
 import WebSocket from 'ws';
+import { getInputHistory, saveInputHistory } from './sessionManager';
 
 const AUDIT_FILE = path.join(process.cwd(), 'superagent-audit.json');
-const CLI_HISTORY_FILE = path.join(os.homedir(), '.superagent_history');
 
-export function getCliPromptHistory(): string[] {
-  try {
-    if (fs.existsSync(CLI_HISTORY_FILE)) {
-      const content = fs.readFileSync(CLI_HISTORY_FILE, 'utf8');
-      return content.split('\n').map(s => s.trim()).filter(Boolean);
-    }
-  } catch (e) {
-    console.error('[WS-Agent] Failed to read CLI history:', e);
-  }
-  return [];
+/** Delegates to SQLite-based input history in sessionManager */
+export function getCliPromptHistory(workspace?: string): string[] {
+  return getInputHistory(workspace || process.cwd());
 }
 
-export function saveCliPromptHistory(prompt: string) {
-  if (!prompt || !prompt.trim()) return;
-  const cleanPrompt = prompt.trim();
-  try {
-    const history = getCliPromptHistory();
-    const updated = [...history.filter(h => h !== cleanPrompt), cleanPrompt].slice(-500);
-    fs.writeFileSync(CLI_HISTORY_FILE, updated.join('\n'), 'utf8');
-  } catch (e) {
-    console.error('[WS-Agent] Failed to write CLI history:', e);
-  }
+/** Delegates to SQLite-based input history in sessionManager */
+export function saveCliPromptHistory(prompt: string, workspace?: string) {
+  saveInputHistory(workspace || process.cwd(), prompt);
 }
 
 export function logSuperAgentEvent(type: string, data: any) {

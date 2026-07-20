@@ -1,20 +1,34 @@
-import fs from 'fs';
+import Database from 'better-sqlite3';
 import path from 'path';
 import os from 'os';
 
-const CLI_HISTORY_DIR = path.join(os.homedir(), '.superagent-r', 'history');
+const HISTORY_DB_PATH = path.join(os.homedir(), '.superagent-r', 'history.db');
 
-function matchesWorkspace(dir1: string, dir2: string): boolean {
-  if (!dir1 || !dir2) return false;
-  const norm1 = path.normalize(dir1).toLowerCase().replace(/\\/g, '/');
-  const norm2 = path.normalize(dir2).toLowerCase().replace(/\\/g, '/');
-  return norm1 === norm2 || norm1.endsWith('/' + norm2) || norm2.endsWith('/' + norm1);
+// Lazy-init singleton DB connection
+let _db: Database.Database | null = null;
+
+function getDb(): Database.Database {
+  if (_db) return _db;
+  try {
+    _db = new Database(HISTORY_DB_PATH, { fileMustExist: true });
+    _db.pragma('journal_mode = WAL');
+    _db.pragma('busy_timeout = 5000');
+    return _db;
+  } catch (e) {
+    console.error('[SessionManager] Failed to open history.db:', e);
+    throw e;
+  }
 }
 
-function getCliFolderName(workspace: string, timestamp: number): string {
-  const norm = workspace.replace(/[^a-zA-Z0-9]/g, '_');
-  return `${norm}_${timestamp}`;
+/** Gracefully close the DB on process exit */
+export function closeSessionDb() {
+  if (_db) {
+    try { _db.close(); } catch {}
+    _db = null;
+  }
 }
+
+// ─── Interfaces ───────────────────────────────────────────────
 
 export interface ChatSession {
   id: string;
@@ -31,43 +45,15 @@ export interface SuperAgentMessage {
   result?: any;
 }
 
-// Memory Cache for history-metadata.json files
-interface MetadataCache {
-  mtime: number;
-  data: any;
-}
+// ─── Helpers ──────────────────────────────────────────────────
 
-const metadataCache: Record<string, MetadataCache> = {
-  single: { mtime: 0, data: {} },
-  multi: { mtime: 0, data: {} }
-};
-
-function getMetadata(mode: 'single' | 'multi'): any {
-  const metadataFile = path.join(CLI_HISTORY_DIR, mode, 'history-metadata.json');
-  if (!fs.existsSync(metadataFile)) return {};
-
-  try {
-    const stats = fs.statSync(metadataFile);
-    if (stats.mtimeMs > metadataCache[mode].mtime) {
-      const content = fs.readFileSync(metadataFile, 'utf8');
-      metadataCache[mode].data = JSON.parse(content || '{}');
-      metadataCache[mode].mtime = stats.mtimeMs;
-    }
-    return metadataCache[mode].data;
-  } catch (e) {
-    console.error(`[SessionManager] Failed to read metadata for ${mode}:`, e);
-    return {};
-  }
-}
-
-// Truncate excessively large tool outputs to prevent lags
+/** Truncate large tool outputs to prevent UI lags */
 function truncateResult(result: any): any {
   if (result === undefined || result === null) return result;
   if (typeof result === 'string') {
-    if (result.length > 10000) {
-      return result.slice(0, 10000) + '\n\n[... Truncated for performance ...]';
-    }
-    return result;
+    return result.length > 10000
+      ? result.slice(0, 10000) + '\n\n[... Truncated for performance ...]'
+      : result;
   }
   try {
     const str = JSON.stringify(result);
@@ -78,306 +64,361 @@ function truncateResult(result: any): any {
   return result;
 }
 
-// Map CLI messages format to GUI Console format
-export function mapCliToGuiMessages(cliMsgs: any[]): SuperAgentMessage[] {
-  const guiMsgs: SuperAgentMessage[] = [];
-
-  for (const msg of cliMsgs) {
-    if (!msg || !msg.role) continue;
-
-    if (msg.role === 'user') {
-      guiMsgs.push({
-        role: 'user',
-        text: msg.content || msg.text || ''
-      });
-    } else if (msg.role === 'assistant') {
-      // 1. Thought/Reasoning
-      if (msg.reasoning) {
-        guiMsgs.push({
-          role: 'thought',
-          text: msg.reasoning
-        });
-      }
-      // 2. Assistant text content
-      if (msg.content || msg.text) {
-        guiMsgs.push({
-          role: 'assistant',
-          text: msg.content || msg.text || ''
-        });
-      }
-      // 3. Tool Calls (Invoking tool)
-      if (Array.isArray(msg.toolCalls)) {
-        for (const tc of msg.toolCalls) {
-          if (tc && tc.name) {
-            guiMsgs.push({
-              role: 'tool',
-              text: `Invoking tool: ${tc.name}`,
-              toolName: tc.name,
-              args: tc.args || {}
-            });
-          }
-        }
-      }
-    } else if (msg.role === 'tool') {
-      // 4. Tool completion results (Truncated if too large)
-      if (Array.isArray(msg.toolResults)) {
-        for (const tr of msg.toolResults) {
-          guiMsgs.push({
-            role: 'tool',
-            text: `Tool '${tr.name || 'tool'}' completed.`,
-            toolName: tr.name || 'tool',
-            result: truncateResult(tr.result !== undefined ? tr.result : (tr.content || ''))
-          });
-        }
-      } else {
-        guiMsgs.push({
-          role: 'tool',
-          text: `Tool completed.`,
-          toolName: msg.toolName || 'tool',
-          result: truncateResult(msg.result !== undefined ? msg.result : (msg.content || ''))
-        });
-      }
-    } else if (msg.role === 'system') {
-      guiMsgs.push({
-        role: 'system',
-        text: msg.content || msg.text || ''
-      });
-    }
-  }
-
-  return guiMsgs;
+function safeJsonParse(str: string | null | undefined): any {
+  if (!str) return null;
+  try { return JSON.parse(str); } catch { return null; }
 }
 
-// Map GUI Console messages to CLI format
-export function mapGuiToCliMessages(guiMsgs: SuperAgentMessage[]): any[] {
-  const cliMsgs: any[] = [];
+// ─── Map SQLite rows → GUI messages ───────────────────────────
 
-  for (let i = 0; i < guiMsgs.length; i++) {
-    const msg = guiMsgs[i];
+interface DbMessageRow {
+  id: number;
+  session_id: string;
+  role: string;
+  content: string;
+  tool_calls: string | null;
+  tool_results: string | null;
+  reasoning: string | null;
+  timestamp: number;
+  sequence_order: number;
+}
+
+/** Map a single DB message row to one or more GUI SuperAgentMessages */
+function mapDbRowToGuiMessages(row: DbMessageRow): SuperAgentMessage[] {
+  const out: SuperAgentMessage[] = [];
+
+  if (row.role === 'user') {
+    out.push({ role: 'user', text: row.content || '' });
+  } else if (row.role === 'assistant') {
+    // 1. Thinking / reasoning
+    if (row.reasoning) {
+      out.push({ role: 'thought', text: row.reasoning });
+    }
+    // 2. Text content
+    if (row.content) {
+      out.push({ role: 'assistant', text: row.content });
+    }
+    // 3. Tool calls
+    const toolCalls = safeJsonParse(row.tool_calls);
+    if (Array.isArray(toolCalls)) {
+      for (const tc of toolCalls) {
+        if (tc && tc.name) {
+          out.push({
+            role: 'tool',
+            text: `Invoking tool: ${tc.name}`,
+            toolName: tc.name,
+            args: tc.args || {}
+          });
+        }
+      }
+    }
+  } else if (row.role === 'tool') {
+    const toolResults = safeJsonParse(row.tool_results);
+    if (Array.isArray(toolResults)) {
+      for (const tr of toolResults) {
+        out.push({
+          role: 'tool',
+          text: `Tool '${tr.name || 'tool'}' completed.`,
+          toolName: tr.name || 'tool',
+          result: truncateResult(tr.result !== undefined ? tr.result : '')
+        });
+      }
+    } else if (row.content) {
+      out.push({
+        role: 'tool',
+        text: 'Tool completed.',
+        toolName: 'tool',
+        result: truncateResult(row.content)
+      });
+    }
+  } else if (row.role === 'system') {
+    out.push({ role: 'system', text: row.content || '' });
+  }
+
+  return out;
+}
+
+// ─── Map GUI messages → SQLite insert rows ────────────────────
+
+interface InsertMessageRow {
+  role: string;
+  content: string;
+  tool_calls: string | null;
+  tool_results: string | null;
+  reasoning: string | null;
+  timestamp: number;
+  sequence_order: number;
+}
+
+function mapGuiToDbRows(msgs: SuperAgentMessage[]): InsertMessageRow[] {
+  const rows: InsertMessageRow[] = [];
+  const now = Date.now();
+
+  for (let i = 0; i < msgs.length; i++) {
+    const msg = msgs[i];
+    const seq = i;
+
     if (msg.role === 'user') {
-      cliMsgs.push({
-        role: 'user',
-        content: msg.text,
-        timestamp: Date.now()
+      rows.push({
+        role: 'user', content: msg.text, tool_calls: null,
+        tool_results: null, reasoning: null, timestamp: now, sequence_order: seq
       });
     } else if (msg.role === 'thought') {
-      const next = guiMsgs[i + 1];
+      // Merge with next assistant message if available
+      const next = msgs[i + 1];
       if (next && next.role === 'assistant') {
-        cliMsgs.push({
-          role: 'assistant',
-          content: next.text,
-          reasoning: msg.text,
-          timestamp: Date.now()
+        rows.push({
+          role: 'assistant', content: next.text, tool_calls: null,
+          tool_results: null, reasoning: msg.text, timestamp: now, sequence_order: seq
         });
-        i++; // skip next assistant message
+        i++; // skip next
       } else {
-        cliMsgs.push({
-          role: 'assistant',
-          content: '',
-          reasoning: msg.text,
-          timestamp: Date.now()
+        rows.push({
+          role: 'assistant', content: '', tool_calls: null,
+          tool_results: null, reasoning: msg.text, timestamp: now, sequence_order: seq
         });
       }
     } else if (msg.role === 'assistant') {
-      cliMsgs.push({
-        role: 'assistant',
-        content: msg.text,
-        timestamp: Date.now()
+      rows.push({
+        role: 'assistant', content: msg.text, tool_calls: null,
+        tool_results: null, reasoning: null, timestamp: now, sequence_order: seq
       });
     } else if (msg.role === 'tool') {
       if (msg.result !== undefined) {
-        cliMsgs.push({
-          role: 'tool',
-          content: '',
-          toolResults: [{
-            name: msg.toolName,
-            result: msg.result
-          }],
-          timestamp: Date.now()
+        rows.push({
+          role: 'tool', content: '', tool_calls: null,
+          tool_results: JSON.stringify([{ name: msg.toolName, result: msg.result }]),
+          reasoning: null, timestamp: now, sequence_order: seq
         });
       } else {
-        const last = cliMsgs[cliMsgs.length - 1];
-        if (last && last.role === 'assistant') {
-          if (!last.toolCalls) last.toolCalls = [];
-          last.toolCalls.push({
-            name: msg.toolName,
-            args: msg.args
-          });
+        // Tool invocation — attach to previous assistant row if possible
+        const prev = rows[rows.length - 1];
+        if (prev && prev.role === 'assistant') {
+          const existing = safeJsonParse(prev.tool_calls) || [];
+          existing.push({ name: msg.toolName, args: msg.args });
+          prev.tool_calls = JSON.stringify(existing);
         } else {
-          cliMsgs.push({
-            role: 'assistant',
-            content: '',
-            toolCalls: [{
-              name: msg.toolName,
-              args: msg.args
-            }],
-            timestamp: Date.now()
+          rows.push({
+            role: 'assistant', content: '',
+            tool_calls: JSON.stringify([{ name: msg.toolName, args: msg.args }]),
+            tool_results: null, reasoning: null, timestamp: now, sequence_order: seq
           });
         }
       }
     } else if (msg.role === 'system') {
-      cliMsgs.push({
-        role: 'system',
-        content: msg.text,
-        timestamp: Date.now()
+      rows.push({
+        role: 'system', content: msg.text, tool_calls: null,
+        tool_results: null, reasoning: null, timestamp: now, sequence_order: seq
       });
     }
   }
 
-  return cliMsgs;
+  return rows;
 }
 
+// ─── Public API ───────────────────────────────────────────────
+
+/** Get all sessions for a given workspace path */
 export function getWorkspaceSessions(workspace: string): ChatSession[] {
-  const sessions: ChatSession[] = [];
-  const modes = ['single', 'multi'] as const;
+  try {
+    const db = getDb();
+    const normalizedWs = path.normalize(workspace).replace(/\\/g, '/').toLowerCase();
 
-  for (const mode of modes) {
-    const metadata = getMetadata(mode);
-    for (const [key, value] of Object.entries(metadata)) {
-      const val = value as any;
-      if (val && val.workingDirectory && matchesWorkspace(val.workingDirectory, workspace)) {
-        const parts = key.split('_');
-        const tsStr = parts[parts.length - 1];
-        const timestamp = parseInt(tsStr, 10) || val.mtimeMs || Date.now();
+    // Try exact match first, then LIKE match
+    let rows = db.prepare(
+      `SELECT id, display_name, message_count, last_modified, created_at
+       FROM sessions
+       WHERE LOWER(REPLACE(working_directory, '\\', '/')) = ?
+       ORDER BY last_modified DESC`
+    ).all(normalizedWs) as any[];
 
-        sessions.push({
-          id: `${mode}::${key}`,
-          title: val.displayName || val.preview || 'Untitled CLI Chat',
-          createdAt: timestamp,
-          updatedAt: val.mtimeMs || timestamp
-        });
-      }
+    if (rows.length === 0) {
+      const likePattern = `%${workspace.replace(/\\/g, '%').replace(/\//g, '%')}%`;
+      rows = db.prepare(
+        `SELECT id, display_name, message_count, last_modified, created_at
+         FROM sessions
+         WHERE working_directory LIKE ?
+         ORDER BY last_modified DESC`
+      ).all(likePattern) as any[];
     }
-  }
 
-  return sessions.sort((a, b) => b.updatedAt - a.updatedAt);
+    return rows.map(r => ({
+      id: r.id,
+      title: r.display_name || 'Untitled CLI Chat',
+      createdAt: r.created_at || r.last_modified,
+      updatedAt: r.last_modified
+    }));
+  } catch (e) {
+    console.error('[SessionManager] getWorkspaceSessions error:', e);
+    return [];
+  }
 }
 
-export function getSessionMessages(workspace: string, prefixedId: string): SuperAgentMessage[] {
-  let mode = 'single';
-  let sessionId = prefixedId;
-
-  if (prefixedId.includes('::')) {
-    const parts = prefixedId.split('::');
-    mode = parts[0];
-    sessionId = parts[1];
+/** Get all messages for a given session ID */
+export function getSessionMessages(_workspace: string, sessionId: string): SuperAgentMessage[] {
+  let actualId = sessionId;
+  if (sessionId.includes('::')) {
+    actualId = sessionId.split('::')[1];
   }
 
   try {
-    const sessionFile = path.join(CLI_HISTORY_DIR, mode, sessionId, `${sessionId}.json`);
-    if (fs.existsSync(sessionFile)) {
-      const content = fs.readFileSync(sessionFile, 'utf8');
-      const data = JSON.parse(content || '{}');
-      const rawMessages = data.messages || [];
-      return mapCliToGuiMessages(rawMessages);
+    const db = getDb();
+    const rows = db.prepare(
+      `SELECT id, session_id, role, content, tool_calls, tool_results, reasoning, timestamp, sequence_order
+       FROM messages
+       WHERE session_id = ?
+       ORDER BY sequence_order ASC`
+    ).all(actualId) as DbMessageRow[];
+
+    const guiMsgs: SuperAgentMessage[] = [];
+    for (const row of rows) {
+      guiMsgs.push(...mapDbRowToGuiMessages(row));
     }
+    return guiMsgs;
   } catch (e) {
-    console.error(`[SessionManager] Failed to read messages for ${prefixedId}:`, e);
+    console.error(`[SessionManager] getSessionMessages error for ${sessionId}:`, e);
+    return [];
   }
-  return [];
 }
 
+/** Save (insert or update) a session and its messages */
 export function saveWorkspaceSession(
   workspace: string,
   session: ChatSession,
   messages: SuperAgentMessage[]
 ) {
-  let mode = 'single';
   let sessionId = session.id;
-
-  if (session.id.includes('::')) {
-    const parts = session.id.split('::');
-    mode = parts[0];
-    sessionId = parts[1];
-  } else {
-    // New session from GUI
-    const timestamp = session.createdAt || Date.now();
-    sessionId = getCliFolderName(workspace, timestamp);
-    session.id = `${mode}::${sessionId}`;
+  if (sessionId.includes('::')) {
+    sessionId = sessionId.split('::')[1];
   }
 
   try {
-    const dir = path.join(CLI_HISTORY_DIR, mode, sessionId);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+    const db = getDb();
+    const now = Date.now();
+    const preview = messages.find(m => m.role === 'user')?.text || '(no user messages)';
 
-    const sessionFile = path.join(dir, `${sessionId}.json`);
-    const cliMsgs = mapGuiToCliMessages(messages);
-    const sessionData = {
-      messages: cliMsgs,
-      planState: 'IDLE',
-      workingDirectory: workspace
-    };
-    fs.writeFileSync(sessionFile, JSON.stringify(sessionData, null, 2), 'utf8');
+    // Resolve workspace_id from workspaces table
+    const normalizedWs = path.normalize(workspace).replace(/\\/g, '/').toLowerCase();
+    const wsRow = db.prepare(
+      `SELECT id FROM workspaces WHERE LOWER(REPLACE(path, '\\', '/')) = ?`
+    ).get(normalizedWs) as any;
+    const workspaceId = wsRow?.id || null;
 
-    const metadataFile = path.join(dir, 'metadata.json');
-    const metadataJson = {
-      mtimeMs: Date.now(),
-      displayName: session.title,
-      messageCount: cliMsgs.length,
-      preview: messages.find(m => m.role === 'user')?.text || '(no user messages)',
-      workingDirectory: workspace
-    };
-    fs.writeFileSync(metadataFile, JSON.stringify(metadataJson, null, 2), 'utf8');
+    // Upsert session
+    db.prepare(`
+      INSERT INTO sessions (id, file_path, display_name, message_count, last_modified, preview, working_directory, created_at, updated_at, workspace_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        display_name = excluded.display_name,
+        message_count = excluded.message_count,
+        last_modified = excluded.last_modified,
+        preview = excluded.preview,
+        updated_at = excluded.updated_at
+    `).run(
+      sessionId, sessionId, session.title,
+      messages.length, now, preview, workspace,
+      session.createdAt || now, now, workspaceId
+    );
 
-    const globalMetadataFile = path.join(CLI_HISTORY_DIR, mode, 'history-metadata.json');
-    let globalMetadata: any = {};
-    if (fs.existsSync(globalMetadataFile)) {
-      try {
-        globalMetadata = JSON.parse(fs.readFileSync(globalMetadataFile, 'utf8') || '{}');
-      } catch {}
-    }
-    globalMetadata[sessionId] = {
-      mtimeMs: Date.now(),
-      displayName: session.title,
-      messageCount: cliMsgs.length,
-      preview: metadataJson.preview,
-      workingDirectory: workspace
-    };
-    fs.writeFileSync(globalMetadataFile, JSON.stringify(globalMetadata, null, 2), 'utf8');
-    
-    // Invalidate memory cache so next read picks it up
-    metadataCache[mode].mtime = 0;
+    // Replace messages: delete old, insert new in a transaction
+    const insertMsg = db.prepare(`
+      INSERT INTO messages (session_id, role, content, tool_calls, tool_results, reasoning, timestamp, sequence_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const deleteOld = db.prepare('DELETE FROM messages WHERE session_id = ?');
+    const dbRows = mapGuiToDbRows(messages);
+
+    const transaction = db.transaction(() => {
+      deleteOld.run(sessionId);
+      for (const row of dbRows) {
+        insertMsg.run(
+          sessionId, row.role, row.content, row.tool_calls,
+          row.tool_results, row.reasoning, row.timestamp, row.sequence_order
+        );
+      }
+    });
+
+    transaction();
   } catch (e) {
-    console.error('[SessionManager] Failed to save session:', e);
+    console.error('[SessionManager] saveWorkspaceSession error:', e);
   }
 }
 
-export function deleteWorkspaceSession(workspace: string, prefixedId: string) {
-  let mode = 'single';
+/** Delete a session (CASCADE deletes messages too) */
+export function deleteWorkspaceSession(_workspace: string, prefixedId: string) {
   let sessionId = prefixedId;
-
   if (prefixedId.includes('::')) {
-    const parts = prefixedId.split('::');
-    mode = parts[0];
-    sessionId = parts[1];
+    sessionId = prefixedId.split('::')[1];
   }
 
   try {
-    const dir = path.join(CLI_HISTORY_DIR, mode, sessionId);
-    if (fs.existsSync(dir)) {
-      const sessionFile = path.join(dir, `${sessionId}.json`);
-      if (fs.existsSync(sessionFile)) fs.unlinkSync(sessionFile);
-      const metadataFile = path.join(dir, 'metadata.json');
-      if (fs.existsSync(metadataFile)) fs.unlinkSync(metadataFile);
-      try {
-        fs.rmdirSync(dir);
-      } catch {}
+    const db = getDb();
+    db.pragma('foreign_keys = ON');
+    db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
+  } catch (e) {
+    console.error(`[SessionManager] deleteWorkspaceSession error for ${prefixedId}:`, e);
+  }
+}
+
+// ─── Input History (replaces superAgentBridge file-based) ─────
+
+/** Get CLI prompt/input history for a workspace */
+export function getInputHistory(workspace: string): string[] {
+  try {
+    const db = getDb();
+    const normalizedWs = path.normalize(workspace).replace(/\\/g, '/').toLowerCase();
+
+    const wsRow = db.prepare(
+      `SELECT id FROM workspaces WHERE LOWER(REPLACE(path, '\\', '/')) = ?`
+    ).get(normalizedWs) as any;
+
+    if (!wsRow) {
+      return getFileFallbackHistory();
     }
 
-    const globalMetadataFile = path.join(CLI_HISTORY_DIR, mode, 'history-metadata.json');
-    if (fs.existsSync(globalMetadataFile)) {
-      try {
-        const globalMetadata = JSON.parse(fs.readFileSync(globalMetadataFile, 'utf8') || '{}');
-        delete globalMetadata[sessionId];
-        fs.writeFileSync(globalMetadataFile, JSON.stringify(globalMetadata, null, 2), 'utf8');
-      } catch {}
-    }
-    
-    // Invalidate memory cache
-    metadataCache[mode].mtime = 0;
+    const rows = db.prepare(
+      `SELECT command FROM input_history WHERE workspace_id = ? ORDER BY id ASC`
+    ).all(wsRow.id) as any[];
+
+    return rows.map(r => r.command);
   } catch (e) {
-    console.error(`[SessionManager] Failed to delete session ${prefixedId}:`, e);
+    console.error('[SessionManager] getInputHistory error:', e);
+    return getFileFallbackHistory();
   }
+}
+
+/** Save a prompt to input history */
+export function saveInputHistory(workspace: string, text: string) {
+  if (!text || !text.trim()) return;
+  const cleanText = text.trim();
+
+  try {
+    const db = getDb();
+    const normalizedWs = path.normalize(workspace).replace(/\\/g, '/').toLowerCase();
+
+    const wsRow = db.prepare(
+      `SELECT id FROM workspaces WHERE LOWER(REPLACE(path, '\\', '/')) = ?`
+    ).get(normalizedWs) as any;
+
+    if (!wsRow) return;
+
+    db.prepare(
+      `INSERT INTO input_history (workspace_id, command, timestamp) VALUES (?, ?, ?)`
+    ).run(wsRow.id, cleanText, Date.now());
+  } catch (e) {
+    console.error('[SessionManager] saveInputHistory error:', e);
+  }
+}
+
+/** File-based fallback for input history (legacy) */
+function getFileFallbackHistory(): string[] {
+  try {
+    const fs = require('fs');
+    const filePath = path.join(os.homedir(), '.superagent_history');
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf8');
+      return content.split('\n').map((s: string) => s.trim()).filter(Boolean);
+    }
+  } catch {}
+  return [];
 }

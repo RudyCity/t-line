@@ -2,6 +2,20 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.513] - 2026-07-20
+
+### Refactored
+- **SuperAgent Session Manager: JSON → SQLite Migration**:
+  - Rewrote `sessionManager.ts` to read/write directly from SuperAgent CLI's SQLite database (`~/.superagent-r/history.db`) using `better-sqlite3`
+  - Removed all legacy JSON file-based session storage logic (metadata cache, `history-metadata.json`, per-session JSON files)
+  - Sessions now query the `sessions` table with workspace path matching; messages query the `messages` table ordered by `sequence_order`
+  - Full message format mapping: `reasoning` → thought bubbles, `tool_calls` JSON → tool invocations, `tool_results` JSON → tool completions
+  - GUI session save/delete operations write back to the same SQLite database (UPSERT + transaction-based message replacement)
+  - Input history (`getInputHistory`/`saveInputHistory`) now reads from the `input_history` table keyed by `workspace_id`, with file-based fallback
+  - `superAgentBridge.ts` history functions delegate to SQLite-based `sessionManager`
+  - Added `closeSessionDb()` graceful shutdown handler in `server.ts` for clean DB connection teardown
+  - Added `better-sqlite3` and `@types/better-sqlite3` as dependencies
+
 ## [1.3.512] - 2026-07-20
 
 ### Added & Optimized

@@ -32,6 +32,7 @@ import { previewProxy } from './previewProxy';
 import { TLINE_HELPER_CODE } from './tline-helper-code';
 import { handleSuperAgentConnection } from './superAgentBridge';
 import superAgentRouter from './superAgentRoutes';
+import { closeSessionDb } from './sessionManager';
 
 dotenv.config();
 
@@ -827,6 +828,10 @@ if (typeof global.gc === 'function') {
     } catch (e) {}
   }, 60000);
 }
+
+// Graceful shutdown: close SQLite DB connection
+process.on('SIGINT', () => { closeSessionDb(); process.exit(0); });
+process.on('SIGTERM', () => { closeSessionDb(); process.exit(0); });
 
 // Start Server
 server.listen(port, () => {
