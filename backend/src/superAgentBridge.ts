@@ -190,7 +190,7 @@ function spawnSuperAgentProcess(opts: {
 }): void {
   const { agentMode, customArgs, cwd, label, onReady, onFail } = opts;
 
-  const spawnArgs = ['x', 'superagent', '--server'];
+  const spawnArgs = ['x', 'superagent', '--server', '--client-mode', 'tline'];
   if (agentMode === 'multi') spawnArgs.push('--multi');
   if (customArgs && customArgs.trim()) spawnArgs.push(...customArgs.trim().split(/\s+/));
 
@@ -449,7 +449,8 @@ async function initializeSuperAgentSession(workspacePath: string, mode: string, 
   return new Promise((resolve) => {
     const initPayload: any = {
       workspace: workspacePath,
-      mode: mode === 'multi' ? 'multi' : 'single'
+      mode: mode === 'multi' ? 'multi' : 'single',
+      clientMode: 'tline'
     };
     if (sessionId) {
       initPayload.sessionId = sessionId;
@@ -465,7 +466,8 @@ async function initializeSuperAgentSession(workspacePath: string, mode: string, 
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(postData),
-        'x-workspace-path': workspacePath
+        'x-workspace-path': workspacePath,
+        'x-client-mode': 'tline'
       }
     }, (res) => {
       let data = '';
@@ -497,7 +499,8 @@ function sendSuperAgentRequest(pathName: string, payload: any, workspacePath: st
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(postData),
-        'x-workspace-path': workspacePath
+        'x-workspace-path': workspacePath,
+        'x-client-mode': 'tline'
       },
       timeout: timeoutMs
     }, (res) => {

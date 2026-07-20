@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.577] - 2026-07-21
+
+### Added
+- **Dual Client Mode Support for SuperAgent (`server.ts`, `superAgentBridge.ts`, `sidepanel.js`)**:
+  - Added support for `chrome-extension` and `tline` client modes in SuperAgent HTTP Server.
+  - SuperAgent server dynamically configures system prompt and toolsets based on client mode (`CHROME_EXTENSION_SYSTEM_PROMPT` + `chromeExtensionToolset` for Chrome extension; `superagentToolset` / `masterToolset` for `tline`).
+  - Updated `superAgentBridge.ts` to spawn SuperAgent with `--client-mode tline` and pass `x-client-mode: tline` HTTP header and payload for all bridge requests.
+
 ## [1.3.576] - 2026-07-20
 
 ### Fixed
