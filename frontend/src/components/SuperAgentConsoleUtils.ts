@@ -46,6 +46,31 @@ export const getMainModelLabel = (preset: ModelPreset | undefined, agentMode: 's
   return 'Default';
 };
 
+export const extractEventText = (event: any): string => {
+  if (!event) return '';
+  if (typeof event === 'string') return event;
+  if (typeof event.text === 'string') return event.text;
+  if (typeof event.content === 'string') return event.content;
+  if (Array.isArray(event.content)) {
+    return event.content
+      .map((part: any) => {
+        if (typeof part === 'string') return part;
+        if (part && typeof part.text === 'string') return part.text;
+        if (part && typeof part.content === 'string') return part.content;
+        return '';
+      })
+      .join('');
+  }
+  if (event.content && typeof event.content === 'object') {
+    if (typeof event.content.text === 'string') return event.content.text;
+    if (typeof event.content.content === 'string') return event.content.content;
+  }
+  if (event.text && typeof event.text === 'object') {
+    if (typeof event.text.text === 'string') return event.text.text;
+  }
+  return '';
+};
+
 export const handleAgentEventPayload = (
   payload: any,
   setLoading: (l: boolean) => void,
@@ -96,6 +121,8 @@ export const handleAgentEventPayload = (
     }
   } else if (payload.type === 'agent_event') {
     const innerEvent = payload.event;
+    if (!innerEvent) return;
+
     if (innerEvent.type === 'done' || innerEvent.type === 'goal_done') {
       if (!isAbortedRef.current) {
         setLoading(false);
@@ -230,12 +257,12 @@ export const handleAgentEventPayload = (
       });
     } else if (innerEvent.type === 'thought' || innerEvent.type === 'reasoning') {
       setLoading(true);
-      const chunk = innerEvent.text || innerEvent.content || '';
+      const chunk = extractEventText(innerEvent);
       if (chunk) {
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1];
           if (lastMsg && lastMsg.role === 'thought') {
-            const isCumulative = chunk.startsWith(lastMsg.text) && chunk.length > lastMsg.text.length;
+            const isCumulative = typeof chunk === 'string' && typeof lastMsg.text === 'string' && chunk.startsWith(lastMsg.text) && chunk.length > lastMsg.text.length;
             const newText = isCumulative ? chunk : (lastMsg.text + chunk);
             return [...prev.slice(0, -1), { ...lastMsg, text: newText }];
           }
@@ -244,12 +271,12 @@ export const handleAgentEventPayload = (
       }
     } else if (innerEvent.type === 'message' || innerEvent.type === 'text') {
       setLoading(true);
-      const chunk = innerEvent.text || innerEvent.content || '';
+      const chunk = extractEventText(innerEvent);
       if (chunk) {
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1];
           if (lastMsg && lastMsg.role === 'assistant') {
-            const isCumulative = chunk.startsWith(lastMsg.text) && chunk.length > lastMsg.text.length;
+            const isCumulative = typeof chunk === 'string' && typeof lastMsg.text === 'string' && chunk.startsWith(lastMsg.text) && chunk.length > lastMsg.text.length;
             const newText = isCumulative ? chunk : (lastMsg.text + chunk);
             return [...prev.slice(0, -1), { ...lastMsg, text: newText }];
           }

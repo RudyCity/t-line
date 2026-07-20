@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.579] - 2026-07-21
+
+### Fixed
+- **Chat Output Print Stream Bug Fix (`SuperAgentConsoleUtils.ts`, `SuperAgentConsole.tsx`)**:
+  - Added safe `extractEventText()` helper to handle array/object content payloads (`[{ type: 'text', text: '...' }]`) without throwing `TypeError: chunk.startsWith is not a function`.
+  - Optimized chat scroll behavior during active text streaming: uses instant `'auto'` scroll during stream arrival to prevent smooth-scroll animation queue stutter and lag.
+
 ## [1.3.578] - 2026-07-21
 
 ### Fixed

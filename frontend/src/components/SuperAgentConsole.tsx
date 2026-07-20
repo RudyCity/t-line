@@ -424,7 +424,8 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
       isPrependingRef.current = false;
       return;
     }
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const behavior = loading ? 'auto' : 'smooth';
+    chatEndRef.current?.scrollIntoView({ behavior });
   }, [messages, pendingPermission, pendingQuestion, pendingPlanApproval, toolProgressMsg, loading]);
 
   async function handleSend(customPrompt?: string) {
