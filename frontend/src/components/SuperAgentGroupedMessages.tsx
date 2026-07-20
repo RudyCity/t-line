@@ -8,15 +8,11 @@ interface SuperAgentGroupedMessagesProps {
   isStreaming?: boolean;
 }
 
-export interface TurnBlock {
-  type: 'assistant' | 'process';
-  messages: ConsoleMessage[];
-}
-
-export interface MessageTurn {
+interface MessageTurn {
   id: string;
   userMsg?: ConsoleMessage;
-  blocks: TurnBlock[];
+  processMsgs: ConsoleMessage[];
+  assistantMsgs: ConsoleMessage[];
 }
 
 export function groupMessagesIntoTurns(
@@ -28,43 +24,29 @@ export function groupMessagesIntoTurns(
 
   let currentTurn: MessageTurn = {
     id: 'turn-0',
-    blocks: []
+    processMsgs: [],
+    assistantMsgs: []
   };
 
   filtered.forEach((msg, idx) => {
     if (msg.role === 'user') {
-      if (currentTurn.userMsg || currentTurn.blocks.length > 0) {
+      if (currentTurn.userMsg || currentTurn.processMsgs.length > 0 || currentTurn.assistantMsgs.length > 0) {
         turns.push(currentTurn);
       }
       currentTurn = {
         id: `turn-${idx}`,
         userMsg: msg,
-        blocks: []
+        processMsgs: [],
+        assistantMsgs: []
       };
     } else if (msg.role === 'assistant') {
-      const lastBlock = currentTurn.blocks[currentTurn.blocks.length - 1];
-      if (lastBlock && lastBlock.type === 'assistant') {
-        lastBlock.messages.push(msg);
-      } else {
-        currentTurn.blocks.push({
-          type: 'assistant',
-          messages: [msg]
-        });
-      }
+      currentTurn.assistantMsgs.push(msg);
     } else if (msg.role === 'thought' || msg.role === 'tool' || msg.role === 'system') {
-      const lastBlock = currentTurn.blocks[currentTurn.blocks.length - 1];
-      if (lastBlock && lastBlock.type === 'process') {
-        lastBlock.messages.push(msg);
-      } else {
-        currentTurn.blocks.push({
-          type: 'process',
-          messages: [msg]
-        });
-      }
+      currentTurn.processMsgs.push(msg);
     }
   });
 
-  if (currentTurn.userMsg || currentTurn.blocks.length > 0) {
+  if (currentTurn.userMsg || currentTurn.processMsgs.length > 0 || currentTurn.assistantMsgs.length > 0) {
     turns.push(currentTurn);
   }
 
@@ -177,27 +159,23 @@ export const SuperAgentGroupedMessages: React.FC<SuperAgentGroupedMessagesProps>
             {/* User message */}
             {turn.userMsg && <SuperAgentMessageItem msg={turn.userMsg} index={turnIdx * 100} />}
 
-            {/* Turn blocks in chronological order */}
-            {turn.blocks.map((block, blockIdx) => {
-              if (block.type === 'process') {
-                return (
-                  <CollapsibleProcessBlock
-                    key={`proc-${blockIdx}`}
-                    msgs={block.messages}
-                    isLastTurn={isLastTurn}
-                    isStreaming={isStreaming}
-                  />
-                );
-              }
+            {/* Assistant text messages (streaming text appears at top) */}
+            {turn.assistantMsgs.map((astMsg, astIdx) => (
+              <SuperAgentMessageItem
+                key={`ast-${astIdx}`}
+                msg={astMsg}
+                index={turnIdx * 100 + astIdx}
+              />
+            ))}
 
-              return block.messages.map((astMsg, astIdx) => (
-                <SuperAgentMessageItem
-                  key={`ast-${blockIdx}-${astIdx}`}
-                  msg={astMsg}
-                  index={turnIdx * 100 + blockIdx * 10 + astIdx}
-                />
-              ));
-            })}
+            {/* Single Collapsible Process block containing ALL tools & thoughts for this turn */}
+            {turn.processMsgs.length > 0 && (
+              <CollapsibleProcessBlock
+                msgs={turn.processMsgs}
+                isLastTurn={isLastTurn}
+                isStreaming={isStreaming}
+              />
+            )}
           </React.Fragment>
         );
       })}

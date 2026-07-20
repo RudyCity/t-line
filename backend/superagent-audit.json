@@ -1,356 +1,5 @@
 [
   {
-    "timestamp": "2026-07-20T14:49:30.642Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "s"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:30.667Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "`"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:30.685Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " |"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:30.705Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " Dashboard"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:30.725Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " data"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:30.749Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " |\n"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:30.772Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "|"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:30.795Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " `/"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:30.813Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "ws"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:30.835Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "`"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:30.858Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " |"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:30.878Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " Web"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:30.900Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "Socket"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:30.921Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " real"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:30.945Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "time"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:30.968Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " |\n"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:30.996Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "|"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:31.017Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " `/"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:31.039Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "api"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:31.058Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "/images"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:31.083Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "/:"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:31.102Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "log"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:31.122Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "Id"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:31.143Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "/:"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:31.163Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "step"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:31.182Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "/:"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
-    "timestamp": "2026-07-20T14:49:31.203Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "file"
-      },
-      "sessionId": "session_1784518286693",
-      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
-    }
-  },
-  {
     "timestamp": "2026-07-20T14:49:31.225Z",
     "type": "agent_event",
     "data": {
@@ -12999,6 +12648,222 @@
       },
       "sessionId": "session_1784518286693",
       "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:51:42.958Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:51:43.125Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:51:43.146Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:51:43.161Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:51:43.177Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:51:43.196Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:51:43.223Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:51:58.281Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:51:58.294Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:51:58.306Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:51:58.319Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:51:58.331Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:52:55.753Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:52:55.777Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:52:55.800Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:52:55.824Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:52:55.844Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:53:10.689Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:53:10.735Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:53:10.857Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:53:10.870Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:53:10.889Z",
+    "type": "system",
+    "data": {
+      "message": "Connected to local SuperAgent SSE events",
+      "workspace": "D:\\backup from pc asus\\Documents Development\\RamuToken"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:53:12.248Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:53:12.265Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:53:12.280Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:53:12.298Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T14:53:12.312Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
     }
   }
 ]

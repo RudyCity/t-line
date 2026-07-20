@@ -108,7 +108,7 @@ export const handleAgentEventPayload = (
 
     if (innerEvent.type === 'tool_start') {
       setLoading(true);
-      const toolName = innerEvent.toolCall?.name || innerEvent.toolCall?.toolName || innerEvent.toolName || innerEvent.name || 'tool';
+      const toolName = innerEvent.toolCall?.name || innerEvent.toolCall?.toolName || innerEvent.toolName || innerEvent.name || innerEvent.tool || 'tool';
       const args = innerEvent.toolCall?.args || innerEvent.args;
       const callId = innerEvent.toolCall?.id || innerEvent.callId || innerEvent.id;
 
@@ -135,7 +135,7 @@ export const handleAgentEventPayload = (
       setMessages(prev => [...prev, { role: 'tool', text: `Invoking tool: ${toolName}`, toolName, args, callId }]);
     } else if (innerEvent.type === 'tool_end') {
       setToolProgressMsg('');
-      const toolName = innerEvent.toolResult?.name || innerEvent.toolCall?.name || innerEvent.toolName || 'tool';
+      const toolName = innerEvent.toolResult?.name || innerEvent.toolCall?.name || innerEvent.toolName || innerEvent.name || innerEvent.tool || 'tool';
       const result = innerEvent.toolResult?.result !== undefined ? innerEvent.toolResult.result : innerEvent.result;
       const callId = innerEvent.toolResult?.id || innerEvent.toolCall?.id || innerEvent.callId || innerEvent.id;
 
@@ -143,9 +143,9 @@ export const handleAgentEventPayload = (
         let idx = -1;
         for (let i = prev.length - 1; i >= 0; i--) {
           const m = prev[i];
-          if (m && m.role === 'tool') {
+          if (m && m.role === 'tool' && m.result === undefined) {
             const matchesId = callId && m.callId ? m.callId === callId : false;
-            const matchesName = !callId && m.toolName === toolName && m.result === undefined;
+            const matchesName = toolName !== 'tool' && m.toolName ? (m.toolName === toolName || m.toolName === 'tool') : true;
             if (matchesId || matchesName) {
               idx = i;
               break;
@@ -155,9 +155,11 @@ export const handleAgentEventPayload = (
 
         if (idx !== -1) {
           const updated = [...prev];
+          const resolvedName = (toolName && toolName !== 'tool') ? toolName : (updated[idx].toolName || toolName);
           updated[idx] = {
             ...updated[idx],
-            text: `Tool '${toolName}' completed.`,
+            toolName: resolvedName,
+            text: `Tool '${resolvedName}' completed.`,
             result
           };
           return updated;

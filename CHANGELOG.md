@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.567] - 2026-07-20
+
+### Fixed
+- **Process Steps Consolidation & Tool Count Display Bug (`SuperAgentGroupedMessages.tsx`)**:
+  - Fixed an issue where tool steps during a turn were fragmented into separate single-step sub-blocks displaying `Process steps (1 tool step)`. All tool execution and thought steps for a given turn are now consolidated into a single unified `Process steps` block rendered below the assistant text, correctly displaying the total count of tool steps for that turn (e.g. `Process steps (5 tool steps)`).
+
 ## [1.3.566] - 2026-07-20
 
 ### Fixed
