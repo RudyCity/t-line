@@ -35,7 +35,8 @@ import {
   deleteProviderProfile,
   setActiveProviderProfile,
   saveCustomPreset,
-  deleteCustomPreset
+  deleteCustomPreset,
+  getProviderModels
 } from './presetUtils';
 import { previewProxy } from './previewProxy';
 import { TLINE_HELPER_CODE } from './tline-helper-code';
@@ -576,6 +577,16 @@ app.post('/api/superagent/config/active-provider', authMiddleware, (req, res) =>
     res.json({ success: true, ...result });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to update active provider: ' + err.message });
+  }
+});
+
+app.get('/api/superagent/config/provider-models', authMiddleware, async (req, res) => {
+  const providerId = (req.query.providerId as string) || '';
+  try {
+    const data = await getProviderModels(providerId);
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to fetch provider models: ' + err.message });
   }
 });
 

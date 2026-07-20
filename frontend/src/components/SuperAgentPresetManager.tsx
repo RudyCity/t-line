@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Sparkles, Plus, Trash2, Check, Cpu, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sparkles, Plus, Trash2, Check, Cpu, RefreshCw, Layers, ShieldCheck } from 'lucide-react';
 import { ProviderProfile } from './SuperAgentLoginManager';
 
 export interface ModelPreset {
@@ -19,6 +19,23 @@ interface SuperAgentPresetManagerProps {
   onDeleteCustomPreset: (mode: 'single' | 'multi', presetId: string) => Promise<void>;
 }
 
+interface SubagentRoleOverride {
+  role: string;
+  providerProfileId: string;
+  model: string;
+}
+
+const COMMON_SUBAGENT_ROLES = [
+  { id: 'coder', label: 'Coder (Coding & Refactoring)' },
+  { id: 'researcher', label: 'Researcher (Search & Docs)' },
+  { id: 'vision', label: 'Vision (Image Analysis & UI)' },
+  { id: 'planner', label: 'Planner (Architecture & Tasks)' },
+  { id: 'auditor', label: 'Auditor (Code Audit & Security)' },
+  { id: 'writer', label: 'Writer (Documentation & Copy)' },
+  { id: 'browser', label: 'Browser (Web Automation)' },
+  { id: 'tester', label: 'Tester (QA & Unit Testing)' }
+];
+
 export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = ({
   presets,
   activePresetId,
@@ -34,13 +51,87 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
   // Custom Preset Form State
   const [presetName, setPresetName] = useState('');
   const [presetDesc, setPresetDesc] = useState('');
-  const [superagentModel, setSuperagentModel] = useState('gemini-2.5-flash');
-  const [subagentDefaultModel, setSubagentDefaultModel] = useState('gemini-2.5-flash');
-  const [providerProfileId, setProviderProfileId] = useState('');
+  
+  // Main Agent Model Config
+  const [mainProviderId, setMainProviderId] = useState('');
+  const [mainModel, setMainModel] = useState('gemini-2.5-flash');
+
+  // Subagent Default Model Config
+  const [subDefaultProviderId, setSubDefaultProviderId] = useState('');
+  const [subDefaultModel, setSubDefaultModel] = useState('gemini-2.5-flash');
+
+  // Specialized Subagent Overrides
+  const [subagentOverrides, setSubagentOverrides] = useState<SubagentRoleOverride[]>([]);
+
+  // Provider Models Cache
+  const [providerModelsCache, setProviderModelsCache] = useState<Record<string, string[]>>({});
+  const [loadingModelsMap, setLoadingModelsMap] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentPresets = presets[selectedMode] || [];
   const currentActiveId = activePresetId[selectedMode] || '';
+
+  // Initialize form default provider IDs when providers load
+  useEffect(() => {
+    if (providers.length > 0) {
+      if (!mainProviderId) setMainProviderId(providers[0].id);
+      if (!subDefaultProviderId) setSubDefaultProviderId(providers[0].id);
+    }
+  }, [providers]);
+
+  // Fetch models for a given provider ID
+  const fetchProviderModels = async (providerId: string) => {
+    if (!providerId || providerModelsCache[providerId]) return;
+    setLoadingModelsMap(prev => ({ ...prev, [providerId]: true }));
+    try {
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`/api/superagent/config/provider-models?providerId=${encodeURIComponent(providerId)}`, {
+        headers
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.models)) {
+          setProviderModelsCache(prev => ({ ...prev, [providerId]: data.models }));
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch provider models:', e);
+    } finally {
+      setLoadingModelsMap(prev => ({ ...prev, [providerId]: false }));
+    }
+  };
+
+  useEffect(() => {
+    if (mainProviderId) fetchProviderModels(mainProviderId);
+  }, [mainProviderId]);
+
+  useEffect(() => {
+    if (subDefaultProviderId) fetchProviderModels(subDefaultProviderId);
+  }, [subDefaultProviderId]);
+
+  const handleAddOverride = () => {
+    const defaultRole = COMMON_SUBAGENT_ROLES.find(r => !subagentOverrides.some(o => o.role === r.id))?.id || 'coder';
+    const pId = providers[0]?.id || '';
+    setSubagentOverrides(prev => [...prev, { role: defaultRole, providerProfileId: pId, model: 'gemini-2.5-flash' }]);
+  };
+
+  const handleUpdateOverride = (index: number, field: keyof SubagentRoleOverride, value: string) => {
+    setSubagentOverrides(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+    if (field === 'providerProfileId' && value) {
+      fetchProviderModels(value);
+    }
+  };
+
+  const handleRemoveOverride = (index: number) => {
+    setSubagentOverrides(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSavePreset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,25 +139,39 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
 
     setIsSubmitting(true);
     try {
-      const pProfile = providerProfileId || providers[0]?.id || '';
-      const modelsObj: any = {
-        superagent: { providerProfileId: pProfile, model: superagentModel.trim() },
-        subagentDefault: { providerProfileId: pProfile, model: subagentDefaultModel.trim() }
+      const defaultP = providers[0]?.id || '';
+      const mProvider = mainProviderId || defaultP;
+      const sDefaultProvider = subDefaultProviderId || defaultP;
+
+      const structuredModels: any = {
+        superagent: { providerProfileId: mProvider, model: mainModel.trim() },
+        subagentDefault: { providerProfileId: sDefaultProvider, model: subDefaultModel.trim() },
+        subagentDetails: {}
       };
 
       if (selectedMode === 'multi') {
-        modelsObj.master = { providerProfileId: pProfile, model: superagentModel.trim() };
+        structuredModels.master = { providerProfileId: mProvider, model: mainModel.trim() };
       }
+
+      subagentOverrides.forEach(ov => {
+        if (ov.role && ov.model.trim()) {
+          structuredModels.subagentDetails[ov.role.toLowerCase()] = {
+            providerProfileId: ov.providerProfileId || defaultP,
+            model: ov.model.trim()
+          };
+        }
+      });
 
       await onSaveCustomPreset(selectedMode, {
         id: presetName.toLowerCase().replace(/\s+/g, '-'),
         name: presetName.trim(),
-        description: presetDesc.trim() || 'Custom model preset.',
-        models: modelsObj
+        description: presetDesc.trim() || 'Custom cross-provider model preset.',
+        models: structuredModels
       });
       setShowAddModal(false);
       setPresetName('');
       setPresetDesc('');
+      setSubagentOverrides([]);
     } catch (e) {
       console.error('Failed to save preset:', e);
     } finally {
@@ -74,30 +179,34 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
     }
   };
 
-  const getModelSummary = (p: ModelPreset) => {
-    const m = p.models;
-    if (!m) return 'Default Models';
-    const main = m.master?.model || m.superagent?.model || m.MODEL || m.MODEL_SINGLE || 'Default';
-    const sub = m.subagentDefault?.model || m.MODEL_SINGLE_SUBAGENT || 'Default';
-    return `Main: ${typeof main === 'object' ? main.model : main} | Subagent: ${typeof sub === 'object' ? sub.model : sub}`;
+  const getProviderName = (pId: string) => {
+    const match = providers.find(p => p.id === pId);
+    return match ? match.name : (pId || 'Default');
+  };
+
+  const formatModelLabel = (modelConfig: any) => {
+    if (!modelConfig) return 'Default';
+    if (typeof modelConfig === 'string') return modelConfig;
+    const modelName = modelConfig.model || 'Default';
+    const providerName = getProviderName(modelConfig.providerProfileId);
+    return `${modelName} (${providerName})`;
   };
 
   return (
     <div className="space-y-4 text-xs font-sans">
-      {/* Top Controls & Mode Switcher */}
+      {/* Header & Mode Switcher */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-[#121622] p-3.5 rounded-xl border border-zinc-800/80">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-lg bg-indigo-950/80 border border-indigo-700/50 text-indigo-400">
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="font-semibold text-zinc-100 text-xs">Model Presets Manager</h3>
-            <p className="text-[11px] text-zinc-400">Select or create model configurations for Single & Multi-Agent modes</p>
+            <h3 className="font-semibold text-zinc-100 text-xs">Model Presets & Cross-Provider Config</h3>
+            <p className="text-[11px] text-zinc-400">Configure independent LLM providers and models per SuperAgent and Subagent role</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Mode Switch Tabs */}
           <div className="bg-[#090c14] p-1 rounded-lg border border-zinc-800 flex items-center gap-1">
             <button
               onClick={() => setSelectedMode('single')}
@@ -130,6 +239,10 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {currentPresets.map(p => {
           const isActive = p.id.toLowerCase() === currentActiveId.toLowerCase() || p.name.toLowerCase() === currentActiveId.toLowerCase();
+          const m = p.models || {};
+          const mainConfig = selectedMode === 'multi' ? (m.master || m.superagent) : m.superagent;
+          const subDefaultConfig = m.subagentDefault;
+          const details = m.subagentDetails || {};
 
           return (
             <div
@@ -138,7 +251,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                 isActive ? 'border-indigo-500/80 ring-1 ring-indigo-500/30 bg-[#0c101d]' : 'border-zinc-800/80 hover:border-zinc-700/80'
               }`}
             >
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Cpu className={`w-4 h-4 ${isActive ? 'text-indigo-400' : 'text-zinc-500'}`} />
@@ -159,8 +272,29 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                 </div>
 
                 <p className="text-[11px] text-zinc-400">{p.description}</p>
-                <div className="bg-[#121622] p-2 rounded-lg border border-zinc-800/60 font-mono text-[10px] text-zinc-300">
-                  {getModelSummary(p)}
+
+                {/* Structured Model Breakdown */}
+                <div className="bg-[#121622] p-2.5 rounded-lg border border-zinc-800/60 font-mono text-[10px] space-y-1.5 text-zinc-300">
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400 font-sans font-medium">Main Agent:</span>
+                    <span className="text-indigo-300 font-semibold">{formatModelLabel(mainConfig)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400 font-sans font-medium">Subagent Default:</span>
+                    <span className="text-indigo-200">{formatModelLabel(subDefaultConfig)}</span>
+                  </div>
+
+                  {Object.keys(details).length > 0 && (
+                    <div className="pt-1.5 border-t border-zinc-800/80 space-y-1">
+                      <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-sans font-semibold">Subagent Roles Overrides:</span>
+                      {Object.entries(details).map(([roleName, roleConfig]) => (
+                        <div key={roleName} className="flex items-center justify-between text-[10px] pl-1">
+                          <span className="text-zinc-400 capitalize font-sans">{roleName}:</span>
+                          <span className="text-emerald-400 font-semibold">{formatModelLabel(roleConfig)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -183,78 +317,217 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
 
       {/* Add Custom Preset Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0d111c] border border-zinc-800 rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0d111c] border border-zinc-800 rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
               <h4 className="font-semibold text-zinc-100 text-sm flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-indigo-400" />
-                Create Custom Model Preset ({selectedMode.toUpperCase()})
+                Create Cross-Provider Model Preset ({selectedMode.toUpperCase()})
               </h4>
               <button onClick={() => setShowAddModal(false)} className="text-zinc-400 hover:text-zinc-200">
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSavePreset} className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-zinc-300">Preset Name</label>
-                <input
-                  type="text"
-                  value={presetName}
-                  onChange={(e) => setPresetName(e.target.value)}
-                  placeholder="e.g. Claude 3.5 Sonnet Heavy"
-                  className="w-full bg-[#121622] border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-200 text-xs outline-none focus:border-indigo-500"
-                  required
-                />
+            <form onSubmit={handleSavePreset} className="space-y-4 overflow-y-auto flex-1 pr-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-zinc-300">Preset Name</label>
+                  <input
+                    type="text"
+                    value={presetName}
+                    onChange={(e) => setPresetName(e.target.value)}
+                    placeholder="e.g. Multi-Provider Master & Coder"
+                    className="w-full bg-[#121622] border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-200 text-xs outline-none focus:border-indigo-500"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-zinc-300">Description</label>
+                  <input
+                    type="text"
+                    value={presetDesc}
+                    onChange={(e) => setPresetDesc(e.target.value)}
+                    placeholder="OpenAI Master, Anthropic Coder, Gemini Researcher"
+                    className="w-full bg-[#121622] border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-200 text-xs outline-none focus:border-indigo-500"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-zinc-300">Description</label>
-                <input
-                  type="text"
-                  value={presetDesc}
-                  onChange={(e) => setPresetDesc(e.target.value)}
-                  placeholder="High accuracy preset with subagent vision support"
-                  className="w-full bg-[#121622] border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-200 text-xs outline-none focus:border-indigo-500"
-                />
+              {/* Section 1: Main SuperAgent Model */}
+              <div className="bg-[#121622] p-3.5 rounded-xl border border-zinc-800/80 space-y-2.5">
+                <div className="flex items-center gap-2 font-semibold text-zinc-200 text-xs">
+                  <ShieldCheck className="w-4 h-4 text-indigo-400" />
+                  <span>Main SuperAgent Model Config</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-zinc-400">Provider Profile</label>
+                    <select
+                      value={mainProviderId}
+                      onChange={(e) => {
+                        setMainProviderId(e.target.value);
+                        fetchProviderModels(e.target.value);
+                      }}
+                      className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-2.5 py-1.5 text-zinc-200 text-xs outline-none focus:border-indigo-500"
+                    >
+                      {providers.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-zinc-400 flex items-center justify-between">
+                      <span>Model Name</span>
+                      {loadingModelsMap[mainProviderId] && <span className="text-[9px] text-indigo-400 flex items-center gap-1"><RefreshCw className="w-2.5 h-2.5 animate-spin" /> Fetching models...</span>}
+                    </label>
+                    <div className="space-y-1">
+                      <select
+                        value={mainModel}
+                        onChange={(e) => setMainModel(e.target.value)}
+                        className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-2.5 py-1.5 text-zinc-200 font-mono text-xs outline-none focus:border-indigo-500"
+                      >
+                        {(providerModelsCache[mainProviderId] || ['gemini-2.5-flash', 'gpt-4o', 'claude-3-5-sonnet-20241022']).map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        value={mainModel}
+                        onChange={(e) => setMainModel(e.target.value)}
+                        placeholder="Custom model string"
+                        className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-2.5 py-1 text-zinc-300 font-mono text-[11px] outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-zinc-300">Provider Profile</label>
-                <select
-                  value={providerProfileId}
-                  onChange={(e) => setProviderProfileId(e.target.value)}
-                  className="w-full bg-[#121622] border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-200 text-xs outline-none focus:border-indigo-500"
-                >
-                  <option value="">Default Active Profile</option>
-                  {providers.map(pr => (
-                    <option key={pr.id} value={pr.id}>{pr.name} ({pr.type})</option>
-                  ))}
-                </select>
+              {/* Section 2: Subagent Default Config */}
+              <div className="bg-[#121622] p-3.5 rounded-xl border border-zinc-800/80 space-y-2.5">
+                <div className="flex items-center gap-2 font-semibold text-zinc-200 text-xs">
+                  <Layers className="w-4 h-4 text-indigo-400" />
+                  <span>Subagent Default Model Config</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-zinc-400">Provider Profile</label>
+                    <select
+                      value={subDefaultProviderId}
+                      onChange={(e) => {
+                        setSubDefaultProviderId(e.target.value);
+                        fetchProviderModels(e.target.value);
+                      }}
+                      className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-2.5 py-1.5 text-zinc-200 text-xs outline-none focus:border-indigo-500"
+                    >
+                      {providers.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-zinc-400 flex items-center justify-between">
+                      <span>Model Name</span>
+                      {loadingModelsMap[subDefaultProviderId] && <span className="text-[9px] text-indigo-400 flex items-center gap-1"><RefreshCw className="w-2.5 h-2.5 animate-spin" /> Fetching models...</span>}
+                    </label>
+                    <div className="space-y-1">
+                      <select
+                        value={subDefaultModel}
+                        onChange={(e) => setSubDefaultModel(e.target.value)}
+                        className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-2.5 py-1.5 text-zinc-200 font-mono text-xs outline-none focus:border-indigo-500"
+                      >
+                        {(providerModelsCache[subDefaultProviderId] || ['gemini-2.5-flash', 'gpt-4o-mini', 'claude-3-5-haiku-20241022']).map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        value={subDefaultModel}
+                        onChange={(e) => setSubDefaultModel(e.target.value)}
+                        placeholder="Custom subagent default model"
+                        className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-2.5 py-1 text-zinc-300 font-mono text-[11px] outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-zinc-300">Main SuperAgent Model</label>
-                <input
-                  type="text"
-                  value={superagentModel}
-                  onChange={(e) => setSuperagentModel(e.target.value)}
-                  placeholder="gemini-2.5-flash or gpt-4o"
-                  className="w-full bg-[#121622] border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-200 font-mono text-xs outline-none focus:border-indigo-500"
-                  required
-                />
-              </div>
+              {/* Section 3: Specialized Subagent Roles */}
+              <div className="bg-[#121622] p-3.5 rounded-xl border border-zinc-800/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-semibold text-zinc-200 text-xs">
+                    <Cpu className="w-4 h-4 text-indigo-400" />
+                    <span>Specialized Subagent Role Overrides</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddOverride}
+                    className="px-2.5 py-1 bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/50 rounded-lg text-[11px] transition flex items-center gap-1 font-medium"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Subagent Role
+                  </button>
+                </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-zinc-300">Subagent Default Model</label>
-                <input
-                  type="text"
-                  value={subagentDefaultModel}
-                  onChange={(e) => setSubagentDefaultModel(e.target.value)}
-                  placeholder="gemini-2.5-flash or claude-3-5-haiku"
-                  className="w-full bg-[#121622] border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-200 font-mono text-xs outline-none focus:border-indigo-500"
-                  required
-                />
+                {subagentOverrides.length === 0 ? (
+                  <p className="text-[11px] text-zinc-500 text-center py-2 italic">
+                    No subagent role overrides added. Subagents will use Subagent Default model configuration.
+                  </p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {subagentOverrides.map((ov, idx) => (
+                      <div key={idx} className="bg-[#090c14] p-3 rounded-lg border border-zinc-800/80 flex flex-col md:flex-row items-center gap-2.5">
+                        <div className="w-full md:w-1/3 space-y-0.5">
+                          <label className="text-[9px] text-zinc-400">Subagent Role</label>
+                          <select
+                            value={ov.role}
+                            onChange={(e) => handleUpdateOverride(idx, 'role', e.target.value)}
+                            className="w-full bg-[#121622] border border-zinc-700/60 rounded-md px-2 py-1 text-zinc-200 text-xs capitalize outline-none focus:border-indigo-500"
+                          >
+                            {COMMON_SUBAGENT_ROLES.map(r => (
+                              <option key={r.id} value={r.id}>{r.label}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="w-full md:w-1/3 space-y-0.5">
+                          <label className="text-[9px] text-zinc-400">Provider Profile</label>
+                          <select
+                            value={ov.providerProfileId}
+                            onChange={(e) => handleUpdateOverride(idx, 'providerProfileId', e.target.value)}
+                            className="w-full bg-[#121622] border border-zinc-700/60 rounded-md px-2 py-1 text-zinc-200 text-xs outline-none focus:border-indigo-500"
+                          >
+                            {providers.map(p => (
+                              <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="w-full md:w-1/3 space-y-0.5">
+                          <label className="text-[9px] text-zinc-400">Model Name</label>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              value={ov.model}
+                              onChange={(e) => handleUpdateOverride(idx, 'model', e.target.value)}
+                              placeholder="e.g. claude-3-5-sonnet-20241022"
+                              className="w-full bg-[#121622] border border-zinc-700/60 rounded-md px-2 py-1 text-zinc-200 font-mono text-[11px] outline-none focus:border-indigo-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveOverride(idx)}
+                              className="p-1 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 rounded-md transition shrink-0"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-800/80">

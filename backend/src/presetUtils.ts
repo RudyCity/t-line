@@ -342,3 +342,80 @@ export function setActivePreset(mode: 'single' | 'multi', presetId: string) {
   };
 }
 
+const DEFAULT_PROVIDER_MODELS: Record<string, string[]> = {
+  openai: ['gpt-4o', 'gpt-4o-mini', 'o1', 'o1-mini', 'o3-mini', 'gpt-4-turbo'],
+  anthropic: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
+  gemini: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash', 'gemini-1.5-pro'],
+  deepseek: ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'],
+  openrouter: ['anthropic/claude-3.5-sonnet', 'openai/gpt-4o', 'google/gemini-2.5-flash', 'deepseek/deepseek-r1'],
+  groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'deepseek-r1-distill-llama-70b'],
+  mistral: ['mistral-large-latest', 'mistral-small-latest', 'codestral-latest'],
+  ollama: ['llama3.2', 'qwen2.5-coder', 'deepseek-r1', 'mistral', 'phi4', 'codellama'],
+  azure: ['gpt-4o', 'gpt-4o-mini']
+};
+
+export async function getProviderModels(providerId: string): Promise<{ models: string[]; providerType: string }> {
+  const configPath = getModelConfigPath();
+  if (!fs.existsSync(configPath)) {
+    return { models: DEFAULT_PROVIDER_MODELS.openai, providerType: 'openai' };
+  }
+
+  try {
+    const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    const providers = Array.isArray(configData.providers) ? configData.providers : [];
+    const provider = providers.find((p: any) => p.id === providerId) || providers[0];
+
+    if (!provider) {
+      return { models: DEFAULT_PROVIDER_MODELS.openai, providerType: 'openai' };
+    }
+
+    const providerType = (provider.type || 'openai').toLowerCase();
+    const defaultModels = DEFAULT_PROVIDER_MODELS[providerType] || DEFAULT_PROVIDER_MODELS.openai;
+    let fetchedModels: string[] = [];
+
+    if (providerType === 'ollama') {
+      const baseUrl = provider.baseUrl || 'http://localhost:11434';
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const resp = await fetch(`${baseUrl}/api/tags`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (resp.ok) {
+          const data: any = await resp.json();
+          if (Array.isArray(data.models)) {
+            fetchedModels = data.models.map((m: any) => m.name || m.model).filter(Boolean);
+          }
+        }
+      } catch (e) {
+        // Fall back gracefully
+      }
+    } else if (provider.apiKey && (providerType === 'openai' || providerType === 'deepseek' || providerType === 'openrouter' || providerType === 'groq' || providerType === 'mistral')) {
+      const baseUrl = provider.baseUrl || (providerType === 'openai' ? 'https://api.openai.com/v1' : '');
+      if (baseUrl) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2000);
+          const resp = await fetch(`${baseUrl}/models`, {
+            headers: { 'Authorization': `Bearer ${provider.apiKey}` },
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          if (resp.ok) {
+            const data: any = await resp.json();
+            if (Array.isArray(data.data)) {
+              fetchedModels = data.data.map((m: any) => m.id).filter(Boolean);
+            }
+          }
+        } catch (e) {
+          // Fall back gracefully
+        }
+      }
+    }
+
+    const combined = Array.from(new Set([...fetchedModels, ...defaultModels]));
+    return { models: combined, providerType };
+  } catch (e) {
+    return { models: DEFAULT_PROVIDER_MODELS.openai, providerType: 'openai' };
+  }
+}
+
