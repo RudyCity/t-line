@@ -20,7 +20,10 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
   const result = msg.result;
 
   const getToolDetails = () => {
-    if (rawToolName.includes('view') || rawToolName.includes('read')) {
+    const actionName = rawToolName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+    // 1. Read / View File
+    if (rawToolName.includes('view') || rawToolName.includes('read_file')) {
       const path = args.AbsolutePath || args.path || args.file || args.TargetFile || '';
       const filename = path ? path.split(/[/\\]/).pop() : '';
       let lines = '';
@@ -36,16 +39,19 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
       };
     }
 
+    // 2. Edit / Replace / Write File
     if (rawToolName.includes('replace') || rawToolName.includes('write') || rawToolName.includes('edit')) {
       const path = args.TargetFile || args.path || args.file || '';
       const filename = path ? path.split(/[/\\]/).pop() : '';
+      const desc = args.Description ? ` (${args.Description})` : '';
       return {
         action: 'Edited',
-        target: filename || path || 'file',
+        target: (filename || path || 'file') + desc,
         icon: <FileCode className="w-3 h-3 text-emerald-400 shrink-0" />
       };
     }
 
+    // 3. Search / Grep
     if (rawToolName.includes('grep') || rawToolName.includes('search')) {
       const query = args.Query || args.query || args.pattern || '';
       return {
@@ -55,6 +61,7 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
       };
     }
 
+    // 4. Command Execution
     if (rawToolName.includes('command') || rawToolName.includes('shell') || rawToolName.includes('exec') || rawToolName.includes('run')) {
       const cmd = args.CommandLine || args.command || args.cmd || '';
       return {
@@ -64,18 +71,48 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
       };
     }
 
+    // 5. Subagent Operations
     if (rawToolName.includes('subagent')) {
-      const role = args.Role || args.role || 'subagent';
+      const role = args.name || args.Role || args.role || args.Subagents?.[0]?.Role || args.Action || '';
       return {
-        action: 'Agent',
-        target: role,
+        action: 'Subagent',
+        target: role || rawToolName,
         icon: <Cpu className="w-3 h-3 text-indigo-400 shrink-0" />
       };
     }
 
+    // 6. Manage Task / Manage Plan / Tasks
+    if (rawToolName.includes('task') || rawToolName.includes('plan')) {
+      const subAction = args.Action || args.action || '';
+      const detail = args.Description || args.TargetFile || args.TaskId || args.Input || '';
+      const targetText = subAction ? `${subAction}${detail ? ` (${detail})` : ''}` : detail;
+      return {
+        action: actionName,
+        target: targetText || rawToolName,
+        icon: <Wrench className="w-3 h-3 text-cyan-400 shrink-0" />
+      };
+    }
+
+    // 7. Schedule / Timer
+    if (rawToolName.includes('schedule') || rawToolName.includes('timer')) {
+      const prompt = args.Prompt || '';
+      const duration = args.DurationSeconds ? `${args.DurationSeconds}s` : args.CronExpression || '';
+      return {
+        action: 'Schedule',
+        target: `${duration}${prompt ? `: ${prompt}` : ''}`,
+        icon: <Wrench className="w-3 h-3 text-amber-400 shrink-0" />
+      };
+    }
+
+    // 8. General Smart Fallback for any other tool
+    const primaryArgKey = Object.keys(args).find(k => 
+      ['Action', 'action', 'Target', 'target', 'Description', 'description', 'Url', 'url', 'Prompt', 'prompt', 'Name', 'name', 'Title', 'title', 'Question', 'question'].includes(k)
+    );
+    const primaryArgVal = primaryArgKey ? String(args[primaryArgKey]) : '';
+    
     return {
-      action: 'Tool',
-      target: rawToolName,
+      action: actionName,
+      target: primaryArgVal || (Object.keys(args).length > 0 ? JSON.stringify(args).slice(0, 50) : rawToolName),
       icon: <Wrench className="w-3 h-3 text-zinc-400 shrink-0" />
     };
   };

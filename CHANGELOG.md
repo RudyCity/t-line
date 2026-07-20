@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.526] - 2026-07-20
+
+### Fixed
+- **Smart Parameter & Action Extraction for All Tool Types (`SuperAgentToolItem.tsx`)**:
+  - Updated `getToolDetails` to extract and display primary action parameters for `manage_plan`, `manage_task`, `schedule`, `ask_question`, `ask_permission`, `generate_image`, `read_url`, `subagent`, etc.
+  - Eliminated generic uninformative fallbacks (`Tool manage_plan`), replacing them with clear action descriptions (e.g. `Manage Plan status`, `Manage Task kill (task-123)`, `Schedule 15s: Check build`)
+
 ## [1.3.525] - 2026-07-20
 
 ### Improved
