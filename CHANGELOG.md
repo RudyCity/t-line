@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.510] - 2026-07-20
+
+### Added & Fixed
+- **Sync Chat Session History with Native CLI Storage**:
+  - Updated [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) to read/write session files and meta records directly under the native CLI storage directory `~/.superagent-r/history/single/` and `~/.superagent-r/history/multi/`.
+  - Added full message format mapping between the CLI format (storing messages as `content` with nested `toolCalls` and `toolResults` lists) and the GUI Console interface representation (`text`, `role: 'thought'`, `role: 'tool'`, etc.), ensuring seamless CLI/GUI history synchronization.
+
 ## [1.3.509] - 2026-07-20
 
 ### Added & Refactored
