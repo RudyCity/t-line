@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.549] - 2026-07-20
+
+### Fixed
+- **SuperAgent "Failed to Start Within 15 Seconds" False Positive (`superAgentBridge.ts`)**:
+  - Root cause: on Windows with `shell: true`, Node's `spawn` creates a shell wrapper process (`bunx.cmd`) that **exits almost immediately** after handing off to the real bun/node server. The `exit` event on the child process fired while the server was still booting, which (in v1.3.548) triggered `abortStartup()` — cancelling the polling loop and incorrectly reporting failure even though the server was running fine.
+  - Confirmed by running `bunx superagent --server` manually: `🚀 Superagent Extension Server is running at http://localhost:7888` appears successfully; the stderr "ExperimentalWarning: SQLite" is a harmless Node.js warning that PowerShell treats as stderr, not a real error.
+  - **Fix**: Removed the `abortStartup` call from the `exit` handler. `pingPort7888()` is now the *sole* readiness signal — the polling loop runs regardless of whether the shell wrapper exits early. `abortStartup` is only called from `pollReady` on timeout or from the `error` event (spawn failure).
+  - **Bonus**: Pending callbacks queued during startup are now properly resolved/rejected when polling completes, eliminating the case where a `prompt` action's `ensureSuperAgentServer` Promise would hang forever while a spawn was in flight.
+
 ## [1.3.548] - 2026-07-20
 
 ### Fixed
