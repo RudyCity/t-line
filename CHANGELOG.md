@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.564] - 2026-07-20
+
+### Fixed
+- **Tool Block Ordering & Chronological Stream Layout (`SuperAgentGroupedMessages.tsx`)**:
+  - Updated `groupMessagesIntoTurns` to group messages into chronological turn sub-blocks. Initial assistant text (e.g. streaming responses) now renders at the top below the user query, and tool process blocks render below the assistant text in exact chronological order.
+
 ## [1.3.563] - 2026-07-20
 
 ### Fixed
