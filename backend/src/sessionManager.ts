@@ -261,7 +261,7 @@ export async function saveWorkspaceSession(
       sessionId = sessionId.split('::')[1];
     }
     // Ping SuperAgent server to register/resume session ID
-    await requestSuperAgentServer('/api/init', 'POST', { workspace, sessionId }, workspace);
+    await requestSuperAgentServer('/api/init', 'POST', { workspace, sessionId, resume: sessionId }, workspace);
   } catch (e) {
     console.error('[SessionManager] saveWorkspaceSession error:', e);
   }

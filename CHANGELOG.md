@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.558] - 2026-07-20
+
+### Fixed
+- **New Session ID Persistence Alignment (SuperAgent `PathResolver.ts` & `sessionManager.ts`)**:
+  - Fixed a bug where a newly created chat session (using `session_<timestamp>` format) was generated as a random UUID by the backend's `PathResolver.ts` because the directory did not exist on disk yet. We now ensure the custom session ID is directly used to construct the new history directory and file path if it contains no path separators.
+  - Added `resume: sessionId` parameter inside `saveWorkspaceSession` API call inside `sessionManager.ts` to ensure that server registration properly aligns with database historical persistence.
+
 ## [1.3.557] - 2026-07-20
 
 ### Fixed
