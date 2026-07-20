@@ -8,14 +8,14 @@ import { getInputHistory, saveInputHistory } from './sessionManager';
 
 const AUDIT_FILE = path.join(process.cwd(), 'superagent-audit.json');
 
-/** Delegates to SQLite-based input history in sessionManager */
-export function getCliPromptHistory(workspace?: string): string[] {
+/** Delegates to SuperAgent server-based input history in sessionManager */
+export async function getCliPromptHistory(workspace?: string): Promise<string[]> {
   return getInputHistory(workspace || process.cwd());
 }
 
-/** Delegates to SQLite-based input history in sessionManager */
-export function saveCliPromptHistory(prompt: string, workspace?: string) {
-  saveInputHistory(workspace || process.cwd(), prompt);
+/** Delegates to SuperAgent server-based input history in sessionManager */
+export async function saveCliPromptHistory(prompt: string, workspace?: string): Promise<void> {
+  await saveInputHistory(workspace || process.cwd(), prompt);
 }
 
 export function logSuperAgentEvent(type: string, data: any) {
@@ -316,7 +316,7 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
         const text = parsed.text || '';
         console.log(`[WS-Agent] Prompt (${workspacePath}): ${text}`);
         logSuperAgentEvent('prompt', { text, workspace: workspacePath });
-        saveCliPromptHistory(text);
+        await saveCliPromptHistory(text);
 
         // Ensure session exists
         await initializeSuperAgentSession(workspacePath, agentMode, parsed.sessionId);

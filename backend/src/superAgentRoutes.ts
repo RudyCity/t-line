@@ -48,22 +48,22 @@ router.delete('/audit-logs', (req, res) => {
 });
 
 // History routes
-router.get('/history', (req, res) => {
+router.get('/history', async (req, res) => {
   try {
-    const history = getCliPromptHistory();
+    const history = await getCliPromptHistory();
     res.json({ history });
   } catch (e: any) {
     res.status(500).json({ error: 'Failed to read CLI history: ' + e.message });
   }
 });
 
-router.post('/history', (req, res) => {
+router.post('/history', async (req, res) => {
   const { text } = req.body;
   if (!text) {
     return res.status(400).json({ error: 'Prompt text is required' });
   }
   try {
-    saveCliPromptHistory(text);
+    await saveCliPromptHistory(text);
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: 'Failed to save CLI history: ' + e.message });

@@ -1,7 +1,4 @@
 import http from 'http';
-import path from 'path';
-import os from 'os';
-import fs from 'fs';
 
 // ─── Interfaces ───────────────────────────────────────────────
 
@@ -304,43 +301,28 @@ export async function deleteWorkspaceSession(workspace: string, prefixedId: stri
   }
 }
 
-// ─── Input Prompt History (SuperAgent Server & File Fallback) ───
-
-const memoryInputHistory: Record<string, string[]> = {};
+// ─── Input Prompt History (100% SuperAgent Server) ───
 
 /** Get CLI prompt/input history for a workspace */
-export function getInputHistory(workspace: string): string[] {
-  const wsKey = workspace || 'default';
-  if (memoryInputHistory[wsKey]) {
-    return memoryInputHistory[wsKey];
-  }
-
+export async function getInputHistory(workspace: string): Promise<string[]> {
   try {
-    const filePath = path.join(os.homedir(), '.superagent_history');
-    if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, 'utf8');
-      const lines = content.split('\n').map(s => s.trim()).filter(Boolean);
-      memoryInputHistory[wsKey] = lines;
-      return lines;
+    const response = await requestSuperAgentServer('/api/input-history', 'GET', undefined, workspace);
+    if (response && response.success && Array.isArray(response.history)) {
+      return response.history;
     }
-  } catch {}
-
+  } catch (e) {
+    console.error('[SessionManager] getInputHistory error:', e);
+  }
   return [];
 }
 
 /** Save a prompt to input history */
-export function saveInputHistory(workspace: string, text: string) {
+export async function saveInputHistory(workspace: string, text: string): Promise<void> {
   if (!text || !text.trim()) return;
-  const cleanText = text.trim();
-  const wsKey = workspace || 'default';
-
-  if (!memoryInputHistory[wsKey]) {
-    memoryInputHistory[wsKey] = [];
-  }
-  memoryInputHistory[wsKey].push(cleanText);
-
   try {
-    const filePath = path.join(os.homedir(), '.superagent_history');
-    fs.appendFileSync(filePath, cleanText + '\n', 'utf8');
-  } catch {}
+    await requestSuperAgentServer('/api/input-history', 'POST', { command: text.trim() }, workspace);
+  } catch (e) {
+    console.error('[SessionManager] saveInputHistory error:', e);
+  }
 }
+

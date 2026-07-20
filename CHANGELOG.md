@@ -8,9 +8,15 @@ All notable changes to the **t-line** workspace manager project will be document
 - **100% SuperAgent HTTP Server Migration (`sessionManager.ts`, `superAgentRoutes.ts`)**:
   - Completely removed `better-sqlite3` and all direct SQLite DB access from `sessionManager.ts`. Zero dependency on `~/.superagent-r/history.db` file.
   - All session operations (`getWorkspaceSessions`, `getSessionMessages`, `saveWorkspaceSession`, `deleteWorkspaceSession`) now route 100% through SuperAgent HTTP server at `http://127.0.0.1:7888`.
-  - Input history (`getInputHistory`, `saveInputHistory`) now uses in-memory cache + file-based fallback (`~/.superagent_history`), no SQLite.
+  - Input history (`getInputHistory`, `saveInputHistory`) now routes 100% through SuperAgent HTTP server (`GET/POST /api/input-history`), no more in-memory or file-based fallback.
   - Removed redundant `fetchSessionsFromSuperAgentServer` helper from `superAgentRoutes.ts` (logic consolidated into `sessionManager.ts`).
-  - All Express route handlers in `superAgentRoutes.ts` updated to `async` to support the new Promise-based session API.
+  - All Express route handlers in `superAgentRoutes.ts` and `superAgentBridge.ts` updated to `async` to support the new Promise-based API.
+
+### Added (SuperAgent Server)
+- **New API endpoints in SuperAgent server (`superagent/src/server.ts`)**:
+  - `DELETE /api/history/session/:id` — Delete a session by ID from SuperAgent's history DB.
+  - `GET /api/input-history` — Fetch workspace-scoped input/prompt history from DB.
+  - `POST /api/input-history` — Save a new input/prompt entry to workspace-scoped history DB.
 
 ## [1.3.536] - 2026-07-20
 
