@@ -193,156 +193,51 @@ router.get('/instances', (req, res) => {
   });
 });
 
-// Helper to fetch and clean session history from SuperAgent server
-async function fetchSessionsFromSuperAgentServer(workspace: string): Promise<any[] | null> {
-  return new Promise((resolve) => {
-    const req = http.get(
-      `http://127.0.0.1:7888/api/history/sessions?workspace=${encodeURIComponent(workspace)}`,
-      {
-        headers: { 'x-workspace-path': workspace },
-        timeout: 2500
-      },
-      (res) => {
-        let body = '';
-        res.on('data', chunk => { body += chunk; });
-        res.on('end', () => {
-          try {
-            const data = JSON.parse(body);
-            if (data && data.success && Array.isArray(data.sessions)) {
-              const cleanedSessions: any[] = [];
-
-              for (const s of data.sessions) {
-                let title = 'Untitled Chat';
-                const first = (s.firstChat || '').trim();
-                const last = (s.lastChat || '').trim();
-
-                const isNoise = (str: string) => {
-                  if (!str) return true;
-                  return (
-                    str.startsWith('[RMemory') ||
-                    str.startsWith('[TencentDB') ||
-                    str.startsWith('[Emergency') ||
-                    str.startsWith('[Context') ||
-                    str.startsWith('[SYS]') ||
-                    str.startsWith('<USER_REQUEST>') ||
-                    str.includes('Agent Memory Context')
-                  );
-                };
-
-                const cleanFirst = !isNoise(first) ? first.split('\n')[0] : '';
-                const cleanLast = !isNoise(last) ? last.split('\n')[0] : '';
-
-                if (cleanFirst && cleanLast) {
-                  const firstShort = cleanFirst.length > 22 ? cleanFirst.slice(0, 22) + '...' : cleanFirst;
-                  const lastShort = cleanLast.length > 22 ? cleanLast.slice(0, 22) + '...' : cleanLast;
-                  title = firstShort === lastShort ? firstShort : `${firstShort} ➔ ${lastShort}`;
-                } else if (cleanFirst) {
-                  title = cleanFirst.length > 30 ? cleanFirst.slice(0, 30) + '...' : cleanFirst;
-                } else if (s.displayName && !isNoise(s.displayName)) {
-                  title = s.displayName;
-                }
-
-                const lastMod = s.lastModified ? new Date(s.lastModified).getTime() : Date.now();
-
-                cleanedSessions.push({
-                  id: s.id,
-                  title,
-                  createdAt: lastMod,
-                  updatedAt: lastMod
-                });
-              }
-
-              // Deduplicate overlapping / draft sessions
-              const uniqueSessions: any[] = [];
-              for (const curr of cleanedSessions) {
-                const dupIndex = uniqueSessions.findIndex(existing => {
-                  const titleMatch = existing.title === curr.title ||
-                    existing.title.includes(curr.title) ||
-                    curr.title.includes(existing.title);
-                  const timeDiff = Math.abs(existing.updatedAt - curr.updatedAt);
-                  return titleMatch || (timeDiff < 300000 && (existing.title === 'Untitled Chat' || curr.title === 'Untitled Chat'));
-                });
-
-                if (dupIndex >= 0) {
-                  if (curr.title !== 'Untitled Chat' && uniqueSessions[dupIndex].title === 'Untitled Chat') {
-                    uniqueSessions[dupIndex] = curr;
-                  }
-                } else {
-                  uniqueSessions.push(curr);
-                }
-              }
-
-              uniqueSessions.sort((a, b) => b.updatedAt - a.updatedAt);
-              resolve(uniqueSessions);
-              return;
-            }
-          } catch {}
-          resolve(null);
-        });
-      }
-    );
-
-    req.on('error', () => resolve(null));
-    req.on('timeout', () => { req.destroy(); resolve(null); });
-    req.end();
-  });
-}
-
-// Chat Session history sync endpoints
+// Chat Session history sync endpoints (100% SuperAgent HTTP Server)
 router.get('/sessions', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
   const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
   try {
-    // 1. Try fetching directly from SuperAgent HTTP server
-    const serverSessions = await fetchSessionsFromSuperAgentServer(workspace);
-    if (serverSessions) {
-      const safeOffset = offset || 0;
-      const paginated = limit ? serverSessions.slice(safeOffset, safeOffset + limit) : serverSessions;
-      const hasMore = limit ? (safeOffset + limit) < serverSessions.length : false;
-      return res.json({ sessions: paginated, totalCount: serverSessions.length, hasMore });
-    }
-
-    // 2. Fallback to direct SQLite DB reading
-    const result = getWorkspaceSessions(workspace, limit, offset);
+    const result = await getWorkspaceSessions(workspace, limit, offset);
     res.json(result);
   } catch (e: any) {
     res.status(500).json({ error: 'Failed to read workspace sessions: ' + e.message });
   }
 });
 
-router.get('/sessions/:id', (req, res) => {
+router.get('/sessions/:id', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';
   const sessionId = req.params.id;
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
   const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
   try {
-    const result = getSessionMessages(workspace, sessionId, limit, offset);
+    const result = await getSessionMessages(workspace, sessionId, limit, offset);
     res.json(result);
   } catch (e: any) {
     res.status(500).json({ error: 'Failed to read session messages: ' + e.message });
   }
 });
 
-router.post('/sessions', (req, res) => {
+router.post('/sessions', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';
   const { session, messages } = req.body;
   if (!session || !session.id || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'Session metadata and messages array are required' });
   }
   try {
-    saveWorkspaceSession(workspace, session, messages);
+    await saveWorkspaceSession(workspace, session, messages);
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: 'Failed to save workspace session: ' + e.message });
   }
 });
 
-router.delete('/sessions/:id', (req, res) => {
+router.delete('/sessions/:id', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';
   const sessionId = req.params.id;
   try {
-    deleteWorkspaceSession(workspace, sessionId);
+    await deleteWorkspaceSession(workspace, sessionId);
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: 'Failed to delete workspace session: ' + e.message });

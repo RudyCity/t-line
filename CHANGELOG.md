@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.537] - 2026-07-20
+
+### Refactored (Breaking)
+- **100% SuperAgent HTTP Server Migration (`sessionManager.ts`, `superAgentRoutes.ts`)**:
+  - Completely removed `better-sqlite3` and all direct SQLite DB access from `sessionManager.ts`. Zero dependency on `~/.superagent-r/history.db` file.
+  - All session operations (`getWorkspaceSessions`, `getSessionMessages`, `saveWorkspaceSession`, `deleteWorkspaceSession`) now route 100% through SuperAgent HTTP server at `http://127.0.0.1:7888`.
+  - Input history (`getInputHistory`, `saveInputHistory`) now uses in-memory cache + file-based fallback (`~/.superagent_history`), no SQLite.
+  - Removed redundant `fetchSessionsFromSuperAgentServer` helper from `superAgentRoutes.ts` (logic consolidated into `sessionManager.ts`).
+  - All Express route handlers in `superAgentRoutes.ts` updated to `async` to support the new Promise-based session API.
+
 ## [1.3.536] - 2026-07-20
 
 ### Cleaned & Refactored

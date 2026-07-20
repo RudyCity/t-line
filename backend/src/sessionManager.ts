@@ -1,32 +1,7 @@
-import Database from 'better-sqlite3';
+import http from 'http';
 import path from 'path';
 import os from 'os';
-
-const HISTORY_DB_PATH = path.join(os.homedir(), '.superagent-r', 'history.db');
-
-// Lazy-init singleton DB connection
-let _db: Database.Database | null = null;
-
-function getDb(): Database.Database | null {
-  if (_db) return _db;
-  try {
-    _db = new Database(HISTORY_DB_PATH, { fileMustExist: true, readonly: true });
-    _db.pragma('journal_mode = WAL');
-    _db.pragma('busy_timeout = 5000');
-    return _db;
-  } catch (e) {
-    // If file doesn't exist yet or read-only fail, return null
-    return null;
-  }
-}
-
-/** Gracefully close the DB on process exit */
-export function closeSessionDb() {
-  if (_db) {
-    try { _db.close(); } catch {}
-    _db = null;
-  }
-}
+import fs from 'fs';
 
 // ─── Interfaces ───────────────────────────────────────────────
 
@@ -45,180 +20,13 @@ export interface SuperAgentMessage {
   result?: any;
 }
 
+/** Graceful no-op for closing DB connection on process exit */
+export function closeSessionDb() {
+  // No direct DB connection kept open
+}
+
 // ─── Helpers ──────────────────────────────────────────────────
 
-/** Truncate large tool outputs to prevent UI lags */
-function truncateResult(result: any): any {
-  if (result === undefined || result === null) return result;
-  if (typeof result === 'string') {
-    return result.length > 10000
-      ? result.slice(0, 10000) + '\n\n[... Truncated for performance ...]'
-      : result;
-  }
-  try {
-    const str = JSON.stringify(result);
-    if (str.length > 10000) {
-      return str.slice(0, 10000) + '\n\n[... Truncated for performance ...]';
-    }
-  } catch {}
-  return result;
-}
-
-function safeJsonParse(str: string | null | undefined): any {
-  if (!str) return null;
-  try { return JSON.parse(str); } catch { return null; }
-}
-
-// ─── Map SQLite rows → GUI messages ───────────────────────────
-
-interface DbMessageRow {
-  id: number;
-  session_id: string;
-  role: string;
-  content: string;
-  tool_calls: string | null;
-  tool_results: string | null;
-  reasoning: string | null;
-  timestamp: number;
-  sequence_order: number;
-}
-
-/** Map a single DB message row to one or more GUI SuperAgentMessages */
-function mapDbRowToGuiMessages(row: DbMessageRow): SuperAgentMessage[] {
-  const out: SuperAgentMessage[] = [];
-
-  if (row.role === 'user') {
-    out.push({ role: 'user', text: row.content || '' });
-  } else if (row.role === 'assistant') {
-    // 1. Thinking / reasoning
-    if (row.reasoning) {
-      out.push({ role: 'thought', text: row.reasoning });
-    }
-    // 2. Text content
-    if (row.content) {
-      out.push({ role: 'assistant', text: row.content });
-    }
-    // 3. Tool calls
-    const toolCalls = safeJsonParse(row.tool_calls);
-    if (Array.isArray(toolCalls)) {
-      for (const tc of toolCalls) {
-        if (tc && tc.name) {
-          out.push({
-            role: 'tool',
-            text: `Invoking tool: ${tc.name}`,
-            toolName: tc.name,
-            args: tc.args || {}
-          });
-        }
-      }
-    }
-  } else if (row.role === 'tool') {
-    const toolResults = safeJsonParse(row.tool_results);
-    if (Array.isArray(toolResults)) {
-      for (const tr of toolResults) {
-        out.push({
-          role: 'tool',
-          text: `Tool '${tr.name || 'tool'}' completed.`,
-          toolName: tr.name || 'tool',
-          result: truncateResult(tr.result !== undefined ? tr.result : '')
-        });
-      }
-    } else if (row.content) {
-      out.push({
-        role: 'tool',
-        text: 'Tool completed.',
-        toolName: 'tool',
-        result: truncateResult(row.content)
-      });
-    }
-  } else if (row.role === 'system') {
-    out.push({ role: 'system', text: row.content || '' });
-  }
-
-  return out;
-}
-
-// ─── Map GUI messages → SQLite insert rows ────────────────────
-
-interface InsertMessageRow {
-  role: string;
-  content: string;
-  tool_calls: string | null;
-  tool_results: string | null;
-  reasoning: string | null;
-  timestamp: number;
-  sequence_order: number;
-}
-
-function mapGuiToDbRows(msgs: SuperAgentMessage[]): InsertMessageRow[] {
-  const rows: InsertMessageRow[] = [];
-  const now = Date.now();
-
-  for (let i = 0; i < msgs.length; i++) {
-    const msg = msgs[i];
-    const seq = i;
-
-    if (msg.role === 'user') {
-      rows.push({
-        role: 'user', content: msg.text, tool_calls: null,
-        tool_results: null, reasoning: null, timestamp: now, sequence_order: seq
-      });
-    } else if (msg.role === 'thought') {
-      // Merge with next assistant message if available
-      const next = msgs[i + 1];
-      if (next && next.role === 'assistant') {
-        rows.push({
-          role: 'assistant', content: next.text, tool_calls: null,
-          tool_results: null, reasoning: msg.text, timestamp: now, sequence_order: seq
-        });
-        i++; // skip next
-      } else {
-        rows.push({
-          role: 'assistant', content: '', tool_calls: null,
-          tool_results: null, reasoning: msg.text, timestamp: now, sequence_order: seq
-        });
-      }
-    } else if (msg.role === 'assistant') {
-      rows.push({
-        role: 'assistant', content: msg.text, tool_calls: null,
-        tool_results: null, reasoning: null, timestamp: now, sequence_order: seq
-      });
-    } else if (msg.role === 'tool') {
-      if (msg.result !== undefined) {
-        rows.push({
-          role: 'tool', content: '', tool_calls: null,
-          tool_results: JSON.stringify([{ name: msg.toolName, result: msg.result }]),
-          reasoning: null, timestamp: now, sequence_order: seq
-        });
-      } else {
-        // Tool invocation — attach to previous assistant row if possible
-        const prev = rows[rows.length - 1];
-        if (prev && prev.role === 'assistant') {
-          const existing = safeJsonParse(prev.tool_calls) || [];
-          existing.push({ name: msg.toolName, args: msg.args });
-          prev.tool_calls = JSON.stringify(existing);
-        } else {
-          rows.push({
-            role: 'assistant', content: '',
-            tool_calls: JSON.stringify([{ name: msg.toolName, args: msg.args }]),
-            tool_results: null, reasoning: null, timestamp: now, sequence_order: seq
-          });
-        }
-      }
-    } else if (msg.role === 'system') {
-      rows.push({
-        role: 'system', content: msg.text, tool_calls: null,
-        tool_results: null, reasoning: null, timestamp: now, sequence_order: seq
-      });
-    }
-  }
-
-  return rows;
-}
-
-// ─── Public API ───────────────────────────────────────────────
-
-/** Check if message content is internal noise or system injection */
 function isNoiseMessageContent(content: string): boolean {
   if (!content) return true;
   const c = content.trim();
@@ -238,447 +46,301 @@ function isNoiseMessageContent(content: string): boolean {
   );
 }
 
-/** Format session title as First Chat ➔ Last Chat directly from SQLite messages */
-function formatSessionTitleFromDb(db: any, sessionId: string, fallbackDisplayName?: string): string {
-  try {
-    const userMsgs = db.prepare(
-      `SELECT content FROM messages WHERE session_id = ? AND role = 'user' AND content IS NOT NULL AND content != '' ORDER BY sequence_order ASC`
-    ).all(sessionId) as { content: string }[];
-
-    // Filter out memory context, emergency summaries & noise messages
-    const realUserMsgs = userMsgs.filter(m => !isNoiseMessageContent(m.content));
-
-    if (realUserMsgs.length === 0) {
-      if (fallbackDisplayName && !fallbackDisplayName.includes('\\') && !fallbackDisplayName.includes('/') && !fallbackDisplayName.includes('RMemory') && !fallbackDisplayName.includes('Memory Context') && !fallbackDisplayName.includes('Emergency')) {
-        return fallbackDisplayName;
-      }
-      return 'Untitled Chat';
-    }
-
-    const firstMsg = realUserMsgs[0].content.trim().split('\n')[0];
-    const firstShort = firstMsg.length > 22 ? firstMsg.slice(0, 22) + '...' : firstMsg;
-
-    if (realUserMsgs.length === 1) {
-      return firstShort;
-    }
-
-    const lastMsg = realUserMsgs[realUserMsgs.length - 1].content.trim().split('\n')[0];
-    const lastShort = lastMsg.length > 22 ? lastMsg.slice(0, 22) + '...' : lastMsg;
-
-    if (firstShort === lastShort) {
-      return firstShort;
-    }
-
-    return `${firstShort} ➔ ${lastShort}`;
-  } catch (e) {
-    return fallbackDisplayName || 'Untitled Chat';
+function truncateResult(result: any): any {
+  if (result === undefined || result === null) return result;
+  if (typeof result === 'string') {
+    return result.length > 10000
+      ? result.slice(0, 10000) + '\n\n[... Truncated for performance ...]'
+      : result;
   }
+  try {
+    const str = JSON.stringify(result);
+    if (str.length > 10000) {
+      return str.slice(0, 10000) + '\n\n[... Truncated for performance ...]';
+    }
+  } catch {}
+  return result;
 }
 
-/** Deduplicate and purge redundant GUI and duplicate CLI sessions */
-function cleanDuplicateWorkspaceSessions(db: any, normalizedWs: string) {
-  if (!db) return;
-  try {
-    const rows = db.prepare(
-      `SELECT id, display_name, message_count, created_at, last_modified
-       FROM sessions
-       WHERE LOWER(REPLACE(working_directory, '\\', '/')) = ?
-       ORDER BY created_at DESC`
-    ).all(normalizedWs) as any[];
+/** Low-level HTTP helper to request SuperAgent HTTP Server (port 7888) */
+function requestSuperAgentServer(
+  pathName: string,
+  method: string = 'GET',
+  payload?: any,
+  workspace?: string,
+  timeoutMs: number = 3000
+): Promise<any | null> {
+  return new Promise((resolve) => {
+    const wsPath = workspace || process.cwd();
+    const urlPath = pathName.includes('?') 
+      ? `${pathName}&workspace=${encodeURIComponent(wsPath)}`
+      : `${pathName}?workspace=${encodeURIComponent(wsPath)}`;
 
-    if (rows.length < 2) return;
+    const postData = payload ? JSON.stringify(payload) : undefined;
+    const headers: Record<string, string> = {
+      'x-workspace-path': wsPath
+    };
+    if (postData) {
+      headers['Content-Type'] = 'application/json';
+      headers['Content-Length'] = String(Buffer.byteLength(postData));
+    }
 
-    const idsToDelete: string[] = [];
-
-    for (let i = 0; i < rows.length; i++) {
-      const rowA = rows[i];
-      if (idsToDelete.includes(rowA.id)) continue;
-
-      for (let j = i + 1; j < rows.length; j++) {
-        const rowB = rows[j];
-        if (idsToDelete.includes(rowB.id)) continue;
-
-        const isGuiA = rowA.id.startsWith('session_');
-        const isGuiB = rowB.id.startsWith('session_');
-
-        const titleA = formatSessionTitleFromDb(db, rowA.id, rowA.display_name);
-        const titleB = formatSessionTitleFromDb(db, rowB.id, rowB.display_name);
-
-        const timeDiff = Math.abs((rowA.created_at || 0) - (rowB.created_at || 0));
-
-        // 1. One is temporary GUI session and the other is CLI session
-        if ((isGuiA || isGuiB) && !(isGuiA && isGuiB)) {
-          const guiRow = isGuiA ? rowA : rowB;
-
-          // Check if one title is contained inside another (e.g. "hai" and "hai ➔ spawn sub agent...")
-          const titleContains = titleA.includes(titleB) || titleB.includes(titleA);
-
-          if (
-            guiRow.message_count === 0 ||
-            (titleA === titleB && titleA !== 'Untitled Chat' && titleA !== 'New Chat') ||
-            (timeDiff < 600000 && (titleA === titleB || titleContains || titleA === 'Untitled Chat' || titleB === 'Untitled Chat'))
-          ) {
-            idsToDelete.push(guiRow.id);
-          }
-        } 
-        // 2. Both are GUI or both are CLI sessions
-        else {
-          const titleContains = titleA.includes(titleB) || titleB.includes(titleA);
-
-          if ((titleA === titleB || (titleContains && timeDiff < 600000)) && titleA !== 'Untitled Chat' && titleA !== 'New Chat') {
-            // Keep the one with more messages or newer timestamp
-            const countA = rowA.message_count || 0;
-            const countB = rowB.message_count || 0;
-            if (countA >= countB) {
-              idsToDelete.push(rowB.id);
-            } else {
-              idsToDelete.push(rowA.id);
-            }
-          } else if (timeDiff < 120000 && (titleA === 'Untitled Chat' || titleB === 'Untitled Chat')) {
-            const emptyRow = (rowA.message_count || 0) === 0 ? rowA : ((rowB.message_count || 0) === 0 ? rowB : null);
-            if (emptyRow) {
-              idsToDelete.push(emptyRow.id);
-            }
-          }
+    const req = http.request({
+      hostname: '127.0.0.1',
+      port: 7888,
+      path: urlPath,
+      method,
+      headers,
+      timeout: timeoutMs
+    }, (res) => {
+      let body = '';
+      res.on('data', chunk => { body += chunk; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(body);
+          resolve(parsed);
+        } catch {
+          resolve(null);
         }
-      }
-    }
+      });
+    });
 
-    if (idsToDelete.length > 0) {
-      try {
-        const deleteStmt = db.prepare('DELETE FROM sessions WHERE id = ?');
-        const deleteMsgsStmt = db.prepare('DELETE FROM messages WHERE session_id = ?');
-        db.transaction(() => {
-          for (const id of idsToDelete) {
-            deleteMsgsStmt.run(id);
-            deleteStmt.run(id);
-          }
-        })();
-      } catch {}
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(null);
+    });
+
+    if (postData) {
+      req.write(postData);
     }
-  } catch (e) {
-    console.error('[SessionManager] cleanDuplicateWorkspaceSessions error:', e);
-  }
+    req.end();
+  });
 }
 
-/** Get paginated sessions for a given workspace path */
-export function getWorkspaceSessions(
+// ─── SuperAgent Server Session History API ───────────────────
+
+/** Get paginated sessions for a given workspace path from SuperAgent Server */
+export async function getWorkspaceSessions(
   workspace: string,
   limit?: number,
   offset?: number
-): { sessions: ChatSession[]; totalCount: number; hasMore: boolean } {
+): Promise<{ sessions: ChatSession[]; totalCount: number; hasMore: boolean }> {
   try {
-    const db = getDb();
-    if (!db) return { sessions: [], totalCount: 0, hasMore: false };
-    const normalizedWs = path.normalize(workspace).replace(/\\/g, '/').toLowerCase();
+    const response = await requestSuperAgentServer('/api/history/sessions', 'GET', undefined, workspace);
+    
+    if (response && response.success && Array.isArray(response.sessions)) {
+      const cleanedSessions: ChatSession[] = [];
 
-    // Clean duplicates first
-    cleanDuplicateWorkspaceSessions(db, normalizedWs);
+      for (const s of response.sessions) {
+        let title = 'Untitled Chat';
+        const first = (s.firstChat || '').trim();
+        const last = (s.lastChat || '').trim();
 
-    // Get total count first
-    let countRow = db.prepare(
-      `SELECT COUNT(*) as cnt FROM sessions WHERE LOWER(REPLACE(working_directory, '\\', '/')) = ?`
-    ).get(normalizedWs) as any;
-    let totalCount = countRow?.cnt || 0;
+        const cleanFirst = !isNoiseMessageContent(first) ? first.split('\n')[0] : '';
+        const cleanLast = !isNoiseMessageContent(last) ? last.split('\n')[0] : '';
 
-    let isExact = true;
-    if (totalCount === 0) {
-      isExact = false;
-      const likePattern = `%${workspace.replace(/\\/g, '%').replace(/\//g, '%')}%`;
-      countRow = db.prepare(
-        `SELECT COUNT(*) as cnt FROM sessions WHERE working_directory LIKE ?`
-      ).get(likePattern) as any;
-      totalCount = countRow?.cnt || 0;
-    }
+        if (cleanFirst && cleanLast) {
+          const firstShort = cleanFirst.length > 22 ? cleanFirst.slice(0, 22) + '...' : cleanFirst;
+          const lastShort = cleanLast.length > 22 ? cleanLast.slice(0, 22) + '...' : cleanLast;
+          title = firstShort === lastShort ? firstShort : `${firstShort} ➔ ${lastShort}`;
+        } else if (cleanFirst) {
+          title = cleanFirst.length > 30 ? cleanFirst.slice(0, 30) + '...' : cleanFirst;
+        } else if (s.displayName && !isNoiseMessageContent(s.displayName)) {
+          title = s.displayName;
+        }
 
-    let rows: any[];
-    if (limit && limit > 0) {
+        const lastMod = s.lastModified ? new Date(s.lastModified).getTime() : Date.now();
+
+        cleanedSessions.push({
+          id: s.id,
+          title,
+          createdAt: lastMod,
+          updatedAt: lastMod
+        });
+      }
+
+      // Deduplicate overlapping / duplicate sessions
+      const uniqueSessions: ChatSession[] = [];
+      for (const curr of cleanedSessions) {
+        const dupIndex = uniqueSessions.findIndex(existing => {
+          const titleMatch = existing.title === curr.title ||
+            existing.title.includes(curr.title) ||
+            curr.title.includes(existing.title);
+          const timeDiff = Math.abs(existing.updatedAt - curr.updatedAt);
+          return titleMatch || (timeDiff < 600000 && (existing.title === 'Untitled Chat' || curr.title === 'Untitled Chat'));
+        });
+
+        if (dupIndex >= 0) {
+          if (curr.title !== 'Untitled Chat' && uniqueSessions[dupIndex].title === 'Untitled Chat') {
+            uniqueSessions[dupIndex] = curr;
+          }
+        } else {
+          uniqueSessions.push(curr);
+        }
+      }
+
+      uniqueSessions.sort((a, b) => b.updatedAt - a.updatedAt);
+
       const safeOffset = offset || 0;
-      if (isExact) {
-        rows = db.prepare(
-          `SELECT id, display_name, message_count, last_modified, created_at
-           FROM sessions
-           WHERE LOWER(REPLACE(working_directory, '\\', '/')) = ?
-           ORDER BY created_at DESC
-           LIMIT ? OFFSET ?`
-        ).all(normalizedWs, limit, safeOffset) as any[];
-      } else {
-        const likePattern = `%${workspace.replace(/\\/g, '%').replace(/\//g, '%')}%`;
-        rows = db.prepare(
-          `SELECT id, display_name, message_count, last_modified, created_at
-           FROM sessions
-           WHERE working_directory LIKE ?
-           ORDER BY created_at DESC
-           LIMIT ? OFFSET ?`
-        ).all(likePattern, limit, safeOffset) as any[];
-      }
-    } else {
-      if (isExact) {
-        rows = db.prepare(
-          `SELECT id, display_name, message_count, last_modified, created_at
-           FROM sessions
-           WHERE LOWER(REPLACE(working_directory, '\\', '/')) = ?
-           ORDER BY created_at DESC`
-        ).all(normalizedWs) as any[];
-      } else {
-        const likePattern = `%${workspace.replace(/\\/g, '%').replace(/\//g, '%')}%`;
-        rows = db.prepare(
-          `SELECT id, display_name, message_count, last_modified, created_at
-           FROM sessions
-           WHERE working_directory LIKE ?
-           ORDER BY created_at DESC`
-        ).all(likePattern) as any[];
-      }
+      const totalCount = uniqueSessions.length;
+      const paginated = limit && limit > 0 ? uniqueSessions.slice(safeOffset, safeOffset + limit) : uniqueSessions;
+      const hasMore = limit ? (safeOffset + limit) < totalCount : false;
+
+      return { sessions: paginated, totalCount, hasMore };
     }
-
-    const sessions = rows.map(r => ({
-      id: r.id,
-      title: formatSessionTitleFromDb(db, r.id, r.display_name),
-      createdAt: r.created_at || r.last_modified,
-      updatedAt: r.last_modified
-    }));
-
-    const safeOffset = offset || 0;
-    const hasMore = limit ? (safeOffset + limit) < totalCount : false;
-
-    return { sessions, totalCount, hasMore };
   } catch (e) {
     console.error('[SessionManager] getWorkspaceSessions error:', e);
-    return { sessions: [], totalCount: 0, hasMore: false };
   }
+
+  return { sessions: [], totalCount: 0, hasMore: false };
 }
 
-/** Get paginated messages for a given session ID */
-export function getSessionMessages(
-  _workspace: string,
+/** Get paginated messages for a given session ID from SuperAgent Server */
+export async function getSessionMessages(
+  workspace: string,
   sessionId: string,
   limit?: number,
   offset?: number
-): { messages: SuperAgentMessage[]; totalCount: number; hasMore: boolean } {
+): Promise<{ messages: SuperAgentMessage[]; totalCount: number; hasMore: boolean }> {
   let actualId = sessionId;
   if (sessionId.includes('::')) {
     actualId = sessionId.split('::')[1];
   }
 
   try {
-    const db = getDb();
-    if (!db) return { messages: [], totalCount: 0, hasMore: false };
+    // 1. Resume session on SuperAgent server to populate agent memory
+    await requestSuperAgentServer('/api/init', 'POST', { workspace, resume: actualId }, workspace);
 
-    // Get total row count first
-    const countRow = db.prepare(
-      `SELECT COUNT(*) as cnt FROM messages WHERE session_id = ?`
-    ).get(actualId) as any;
-    const totalDbRows = countRow?.cnt || 0;
+    // 2. Fetch history messages from SuperAgent server
+    const response = await requestSuperAgentServer(`/api/history?sessionId=${encodeURIComponent(actualId)}`, 'GET', undefined, workspace);
 
-    let rows: DbMessageRow[];
-    if (limit && limit > 0) {
-      // Paginated: fetch from the END (newest messages first page).
-      // offset=0 means the latest `limit` messages.
-      const safeOffset = offset || 0;
-      // We fetch in reverse: skip the newest `safeOffset` rows, take `limit` rows from the end
-      // SQL: ORDER BY sequence_order DESC LIMIT ? OFFSET ? — then reverse in JS
-      rows = db.prepare(
-        `SELECT id, session_id, role, content, tool_calls, tool_results, reasoning, timestamp, sequence_order
-         FROM messages
-         WHERE session_id = ?
-         ORDER BY sequence_order DESC
-         LIMIT ? OFFSET ?`
-      ).all(actualId, limit, safeOffset) as DbMessageRow[];
-      rows.reverse(); // back to chronological order
-    } else {
-      // No pagination — return all
-      rows = db.prepare(
-        `SELECT id, session_id, role, content, tool_calls, tool_results, reasoning, timestamp, sequence_order
-         FROM messages
-         WHERE session_id = ?
-         ORDER BY sequence_order ASC`
-      ).all(actualId) as DbMessageRow[];
-    }
+    if (response && response.success && Array.isArray(response.messages)) {
+      const guiMsgs: SuperAgentMessage[] = [];
 
-    const guiMsgs: SuperAgentMessage[] = [];
-    for (const row of rows) {
-      guiMsgs.push(...mapDbRowToGuiMessages(row));
-    }
+      for (const rawMsg of response.messages) {
+        if (!rawMsg) continue;
+        const role = rawMsg.role || 'assistant';
+        const content = rawMsg.content || rawMsg.text || '';
 
-    const safeOffset = offset || 0;
-    const hasMore = limit ? (safeOffset + limit) < totalDbRows : false;
+        if (isNoiseMessageContent(content)) continue;
 
-    return { messages: guiMsgs, totalCount: totalDbRows, hasMore };
-  } catch (e) {
-    console.error(`[SessionManager] getSessionMessages error for ${sessionId}:`, e);
-    return { messages: [], totalCount: 0, hasMore: false };
-  }
-}
+        if (role === 'thought' || rawMsg.reasoning) {
+          if (rawMsg.reasoning) {
+            guiMsgs.push({ role: 'thought', text: rawMsg.reasoning });
+          } else {
+            guiMsgs.push({ role: 'thought', text: content });
+          }
+        }
 
-/** Save (insert or update) a session and its messages */
-export function saveWorkspaceSession(
-  workspace: string,
-  session: ChatSession,
-  messages: SuperAgentMessage[]
-) {
-  let sessionId = session.id;
-  if (sessionId.includes('::')) {
-    sessionId = sessionId.split('::')[1];
-  }
+        if (content && role !== 'thought') {
+          if (role === 'user') {
+            guiMsgs.push({ role: 'user', text: content });
+          } else if (role === 'assistant') {
+            guiMsgs.push({ role: 'assistant', text: content });
+          } else if (role === 'system') {
+            guiMsgs.push({ role: 'system', text: content });
+          }
+        }
 
-  try {
-    const db = new Database(HISTORY_DB_PATH, { fileMustExist: true });
-    db.pragma('busy_timeout = 3000');
-    const now = Date.now();
-    const preview = messages.find(m => m.role === 'user')?.text || '(no user messages)';
-    const normalizedWs = path.normalize(workspace).replace(/\\/g, '/').toLowerCase();
-
-    // If saving a temporary session_ ID, check if a CLI D__... session already exists for this workspace
-    if (sessionId.startsWith('session_')) {
-      const cliSession = db.prepare(
-        `SELECT id FROM sessions
-         WHERE LOWER(REPLACE(working_directory, '\\', '/')) = ?
-         AND id NOT LIKE 'session_%'
-         ORDER BY created_at DESC
-         LIMIT 1`
-      ).get(normalizedWs) as any;
-
-      if (cliSession && cliSession.id) {
-        const cliTitle = formatSessionTitleFromDb(db, cliSession.id, '');
-        const currentTitle = session.title;
-        const titleContains = cliTitle.includes(currentTitle) || currentTitle.includes(cliTitle);
-        // If titles match, contain each other, or CLI session was created within 10 mins, adopt the CLI session ID
-        if (cliTitle === currentTitle || titleContains || (session.createdAt && Math.abs(session.createdAt - now) < 600000)) {
-          sessionId = cliSession.id;
+        if (rawMsg.toolName || rawMsg.toolCalls) {
+          const tName = rawMsg.toolName || 'tool';
+          guiMsgs.push({
+            role: 'tool',
+            text: `Tool '${tName}' completed.`,
+            toolName: tName,
+            args: rawMsg.args || {},
+            result: truncateResult(rawMsg.result !== undefined ? rawMsg.result : rawMsg.output)
+          });
         }
       }
-    }
 
-    // Resolve workspace_id from workspaces table
-    const wsRow = db.prepare(
-      `SELECT id FROM workspaces WHERE LOWER(REPLACE(path, '\\', '/')) = ?`
-    ).get(normalizedWs) as any;
-    const workspaceId = wsRow?.id || null;
-
-    // Upsert session
-    db.prepare(`
-      INSERT INTO sessions (id, file_path, display_name, message_count, last_modified, preview, working_directory, created_at, updated_at, workspace_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        display_name = excluded.display_name,
-        message_count = excluded.message_count,
-        last_modified = excluded.last_modified,
-        preview = excluded.preview,
-        updated_at = excluded.updated_at
-    `).run(
-      sessionId, sessionId, session.title,
-      messages.length, now, preview, workspace,
-      session.createdAt || now, now, workspaceId
-    );
-
-    // Replace messages: delete old, insert new in a transaction
-    const insertMsg = db.prepare(`
-      INSERT INTO messages (session_id, role, content, tool_calls, tool_results, reasoning, timestamp, sequence_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    const deleteOld = db.prepare('DELETE FROM messages WHERE session_id = ?');
-    const dbRows = mapGuiToDbRows(messages);
-
-    const transaction = db.transaction(() => {
-      deleteOld.run(sessionId);
-      for (const row of dbRows) {
-        insertMsg.run(
-          sessionId, row.role, row.content, row.tool_calls,
-          row.tool_results, row.reasoning, row.timestamp, row.sequence_order
-        );
+      const totalCount = guiMsgs.length;
+      const safeOffset = offset || 0;
+      let paginated = guiMsgs;
+      if (limit && limit > 0) {
+        paginated = guiMsgs.slice(safeOffset, safeOffset + limit);
       }
-    });
+      const hasMore = limit ? (safeOffset + limit) < totalCount : false;
 
-    transaction();
-    db.close();
+      return { messages: paginated, totalCount, hasMore };
+    }
   } catch (e) {
-    // If DB is locked or read-only, SuperAgent server handles persistence automatically
+    console.error(`[SessionManager] getSessionMessages error for ${sessionId}:`, e);
+  }
+
+  return { messages: [], totalCount: 0, hasMore: false };
+}
+
+/** Save a session (handled automatically by SuperAgent Server on prompt completion) */
+export async function saveWorkspaceSession(
+  workspace: string,
+  session: ChatSession,
+  _messages: SuperAgentMessage[]
+) {
+  try {
+    let sessionId = session.id;
+    if (sessionId.includes('::')) {
+      sessionId = sessionId.split('::')[1];
+    }
+    // Ping SuperAgent server to register/resume session ID
+    await requestSuperAgentServer('/api/init', 'POST', { workspace, sessionId }, workspace);
+  } catch (e) {
+    console.error('[SessionManager] saveWorkspaceSession error:', e);
   }
 }
 
-/** Delete a session (explicitly purge messages and session record) */
-export function deleteWorkspaceSession(_workspace: string, prefixedId: string) {
+/** Delete a session from SuperAgent Server */
+export async function deleteWorkspaceSession(workspace: string, prefixedId: string) {
   let sessionId = prefixedId;
   if (prefixedId.includes('::')) {
     sessionId = prefixedId.split('::')[1];
   }
 
   try {
-    const db = new Database(HISTORY_DB_PATH, { fileMustExist: true });
-    db.pragma('busy_timeout = 3000');
-    const deleteMsgsStmt = db.prepare('DELETE FROM messages WHERE session_id = ?');
-    const deleteSessionStmt = db.prepare('DELETE FROM sessions WHERE id = ?');
-    
-    db.transaction(() => {
-      deleteMsgsStmt.run(sessionId);
-      deleteSessionStmt.run(sessionId);
-    })();
+    await requestSuperAgentServer(`/api/history/session/${encodeURIComponent(sessionId)}`, 'DELETE', undefined, workspace);
   } catch (e) {
     console.error(`[SessionManager] deleteWorkspaceSession error for ${prefixedId}:`, e);
   }
 }
 
-// ─── Input History (replaces superAgentBridge file-based) ─────
+// ─── Input Prompt History (SuperAgent Server & File Fallback) ───
+
+const memoryInputHistory: Record<string, string[]> = {};
 
 /** Get CLI prompt/input history for a workspace */
 export function getInputHistory(workspace: string): string[] {
-  try {
-    const db = getDb();
-    if (!db) return getFileFallbackHistory();
-    const normalizedWs = path.normalize(workspace).replace(/\\/g, '/').toLowerCase();
-
-    const wsRow = db.prepare(
-      `SELECT id FROM workspaces WHERE LOWER(REPLACE(path, '\\', '/')) = ?`
-    ).get(normalizedWs) as any;
-
-    if (!wsRow) {
-      return getFileFallbackHistory();
-    }
-
-    const rows = db.prepare(
-      `SELECT command FROM input_history WHERE workspace_id = ? ORDER BY id ASC`
-    ).all(wsRow.id) as any[];
-
-    return rows.map(r => r.command);
-  } catch (e) {
-    console.error('[SessionManager] getInputHistory error:', e);
-    return getFileFallbackHistory();
+  const wsKey = workspace || 'default';
+  if (memoryInputHistory[wsKey]) {
+    return memoryInputHistory[wsKey];
   }
+
+  try {
+    const filePath = path.join(os.homedir(), '.superagent_history');
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const lines = content.split('\n').map(s => s.trim()).filter(Boolean);
+      memoryInputHistory[wsKey] = lines;
+      return lines;
+    }
+  } catch {}
+
+  return [];
 }
 
 /** Save a prompt to input history */
 export function saveInputHistory(workspace: string, text: string) {
   if (!text || !text.trim()) return;
   const cleanText = text.trim();
+  const wsKey = workspace || 'default';
 
-  try {
-    const db = getDb();
-    if (!db) return;
-    const normalizedWs = path.normalize(workspace).replace(/\\/g, '/').toLowerCase();
-
-    const wsRow = db.prepare(
-      `SELECT id FROM workspaces WHERE LOWER(REPLACE(path, '\\', '/')) = ?`
-    ).get(normalizedWs) as any;
-
-    if (!wsRow) return;
-
-    db.prepare(
-      `INSERT INTO input_history (workspace_id, command, timestamp) VALUES (?, ?, ?)`
-    ).run(wsRow.id, cleanText, Date.now());
-  } catch (e) {
-    console.error('[SessionManager] saveInputHistory error:', e);
+  if (!memoryInputHistory[wsKey]) {
+    memoryInputHistory[wsKey] = [];
   }
-}
+  memoryInputHistory[wsKey].push(cleanText);
 
-/** File-based fallback for input history (legacy) */
-function getFileFallbackHistory(): string[] {
   try {
-    const fs = require('fs');
     const filePath = path.join(os.homedir(), '.superagent_history');
-    if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, 'utf8');
-      return content.split('\n').map((s: string) => s.trim()).filter(Boolean);
-    }
+    fs.appendFileSync(filePath, cleanText + '\n', 'utf8');
   } catch {}
-  return [];
 }
