@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.582] - 2026-07-21
+
+### Fixed
+- **Normalized Session ID Matching (`SuperAgentConsoleUtils.ts`, `SuperAgentGroupedMessages.tsx`)**:
+  - Added `isMatchingSessionId()` helper to normalize session ID prefixes (`session_`, `sess_`, `workspace::`) so live streaming events match regardless of ID prefix variations.
+  - Updated `SuperAgentGroupedMessages.tsx` so process/thinking block expansion checks `isStreaming && isLastTurn`, keeping process steps open during the active turn until the assistant response completes.
+
 ## [1.3.581] - 2026-07-21
 
 ### Changed

@@ -71,6 +71,14 @@ export const extractEventText = (event: any): string => {
   return '';
 };
 
+export const isMatchingSessionId = (a?: string, b?: string): boolean => {
+  if (!a || !b) return true;
+  if (a === b) return true;
+  const cleanA = a.replace(/^(sess_|session_)/, '').split('::').pop() || a;
+  const cleanB = b.replace(/^(sess_|session_)/, '').split('::').pop() || b;
+  return cleanA === cleanB;
+};
+
 export const handleAgentEventPayload = (
   payload: any,
   setLoading: (l: boolean) => void,
@@ -85,8 +93,8 @@ export const handleAgentEventPayload = (
   isAbortedRef: React.MutableRefObject<boolean>,
   currentActiveSessionId?: string
 ) => {
-  // Filter out stray background events belonging to a different session
-  if (payload.sessionId && currentActiveSessionId && payload.sessionId !== currentActiveSessionId) {
+  // Filter out stray background events belonging to a different session using normalized matching
+  if (payload.sessionId && currentActiveSessionId && !isMatchingSessionId(payload.sessionId, currentActiveSessionId)) {
     return;
   }
   if (payload.type === 'chat_response') {
