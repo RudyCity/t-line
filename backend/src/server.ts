@@ -829,6 +829,14 @@ if (typeof global.gc === 'function') {
   }, 60000);
 }
 
+// Safety net: prevent backend crash on unhandled errors
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught Exception (process kept alive):', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] Unhandled Rejection (process kept alive):', reason);
+});
+
 // Graceful shutdown: close SQLite DB connection
 process.on('SIGINT', () => { closeSessionDb(); process.exit(0); });
 process.on('SIGTERM', () => { closeSessionDb(); process.exit(0); });

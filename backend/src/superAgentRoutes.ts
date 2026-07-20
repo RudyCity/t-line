@@ -170,26 +170,34 @@ router.delete('/config/preset/:mode/:id', (req, res) => {
 
 // Running instances monitor
 router.get('/instances', (req, res) => {
+  const emptyResult = { subagents: [], superagents: [] };
+  let responded = false;
+
+  const safeSend = (data: any) => {
+    if (responded) return;
+    responded = true;
+    res.json(data);
+  };
+
   const request = http.get('http://127.0.0.1:7888/api/instances', { timeout: 1500 }, (resp) => {
     let body = '';
     resp.on('data', chunk => { body += chunk; });
     resp.on('end', () => {
       try {
-        const parsed = JSON.parse(body);
-        res.json(parsed);
+        safeSend(JSON.parse(body));
       } catch {
-        res.json({ subagents: [], superagents: [] });
+        safeSend(emptyResult);
       }
     });
   });
 
   request.on('error', () => {
-    res.json({ subagents: [], superagents: [] });
+    safeSend(emptyResult);
   });
 
   request.on('timeout', () => {
     request.destroy();
-    res.json({ subagents: [], superagents: [] });
+    safeSend(emptyResult);
   });
 });
 

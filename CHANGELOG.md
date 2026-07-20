@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.538] - 2026-07-20
+
+### Fixed
+- **Backend crash: double-response in `/api/superagent/instances` (`superAgentRoutes.ts`)**:
+  - When the upstream SuperAgent server at `127.0.0.1:7888` was unreachable or timed out, `request.destroy()` triggered both the `timeout` and `error` handlers sequentially, each calling `res.json()`. The second call threw `"Cannot set headers after they are sent to the client"`, crashing the entire backend process.
+  - Added a `responded` guard flag via `safeSend()` wrapper so only the first handler actually sends the response; subsequent calls are silently ignored.
+
+### Added
+- **Process-level crash protection (`server.ts`)**: Added `uncaughtException` and `unhandledRejection` handlers as a safety net. These log the error but keep the backend process alive, preventing future unhandled errors from taking down the server.
+
 ## [1.3.537] - 2026-07-20
 
 ### Refactored (Breaking)
