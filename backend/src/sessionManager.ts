@@ -218,6 +218,40 @@ function mapGuiToDbRows(msgs: SuperAgentMessage[]): InsertMessageRow[] {
 
 // ─── Public API ───────────────────────────────────────────────
 
+/** Format session title as First Chat ➔ Last Chat directly from SQLite messages */
+function formatSessionTitleFromDb(db: any, sessionId: string, fallbackDisplayName?: string): string {
+  try {
+    const userMsgs = db.prepare(
+      `SELECT content FROM messages WHERE session_id = ? AND role = 'user' AND content IS NOT NULL AND content != '' ORDER BY sequence_order ASC`
+    ).all(sessionId) as { content: string }[];
+
+    if (userMsgs.length === 0) {
+      if (fallbackDisplayName && !fallbackDisplayName.includes('\\') && !fallbackDisplayName.includes('/')) {
+        return fallbackDisplayName;
+      }
+      return 'Untitled Chat';
+    }
+
+    const firstMsg = userMsgs[0].content.trim().split('\n')[0];
+    const firstShort = firstMsg.length > 22 ? firstMsg.slice(0, 22) + '...' : firstMsg;
+
+    if (userMsgs.length === 1) {
+      return firstShort;
+    }
+
+    const lastMsg = userMsgs[userMsgs.length - 1].content.trim().split('\n')[0];
+    const lastShort = lastMsg.length > 22 ? lastMsg.slice(0, 22) + '...' : lastMsg;
+
+    if (firstShort === lastShort) {
+      return firstShort;
+    }
+
+    return `${firstShort} ➔ ${lastShort}`;
+  } catch (e) {
+    return fallbackDisplayName || 'Untitled Chat';
+  }
+}
+
 /** Get paginated sessions for a given workspace path */
 export function getWorkspaceSessions(
   workspace: string,
@@ -286,7 +320,7 @@ export function getWorkspaceSessions(
 
     const sessions = rows.map(r => ({
       id: r.id,
-      title: r.display_name || 'Untitled CLI Chat',
+      title: formatSessionTitleFromDb(db, r.id, r.display_name),
       createdAt: r.created_at || r.last_modified,
       updatedAt: r.last_modified
     }));

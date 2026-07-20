@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.519] - 2026-07-20
+
+### Fixed & Improved
+- **Backend-side Immediate Session Title Generation**:
+  - Implemented `formatSessionTitleFromDb` in `backend/src/sessionManager.ts`
+  - Session titles are now formatted as `First Chat ➔ Last Chat` directly in the backend when sessions are loaded
+  - All chat sessions in the sidebar immediately display their formatted names upon opening the app without needing to click on each session first
+
 ## [1.3.518] - 2026-07-20
 
 ### Fixed
