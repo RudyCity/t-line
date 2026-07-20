@@ -202,10 +202,26 @@ function ensureSuperAgentServer(
         autoSuperAgentProcess = null;
       });
 
-      setTimeout(() => {
-        isStartingSuperAgent = false;
-        callback();
-      }, 3000);
+      // Poll until port 7888 responds (up to 15 seconds), then fire callback
+      const POLL_INTERVAL_MS = 500;
+      const MAX_WAIT_MS = 15000;
+      const startedAt = Date.now();
+      const pollReady = () => {
+        pingPort7888().then((ready) => {
+          if (ready) {
+            console.log('[WS-Agent] SuperAgent server is now ready on port 7888.');
+            isStartingSuperAgent = false;
+            callback();
+          } else if (Date.now() - startedAt >= MAX_WAIT_MS) {
+            console.warn('[WS-Agent] SuperAgent server did not become ready within 15s.');
+            isStartingSuperAgent = false;
+            ws.send(JSON.stringify({ type: 'status', text: 'SuperAgent server failed to start within 15 seconds. Please check your installation.' }));
+          } else {
+            setTimeout(pollReady, POLL_INTERVAL_MS);
+          }
+        });
+      };
+      setTimeout(pollReady, POLL_INTERVAL_MS);
     } catch (e: any) {
       console.error('[WS-Agent] Spawn error:', e);
       ws.send(JSON.stringify({ type: 'status', text: `Error spawning SuperAgent process: ${e.message}` }));
@@ -416,13 +432,27 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
             if (err?.code === 'ECONNREFUSED' || err?.message?.includes('ECONNREFUSED')) {
               console.log('[WS-Agent] Connection refused on port 7888. Auto-restarting SuperAgent server process...');
               ws.send(JSON.stringify({ type: 'status', text: 'SuperAgent server unreachable. Auto-restarting...' }));
+              // Reset process state so ensureSuperAgentServer will respawn
               autoSuperAgentProcess = null;
               isStartingSuperAgent = false;
+              // Wait for the server to fully come up before retrying
               await new Promise<void>((resolve) => {
                 ensureSuperAgentServer(workspacePath, agentMode, customArgs, ws, resolve);
               });
-              await initializeSuperAgentSession(workspacePath, agentMode, parsed.sessionId);
-              response = await sendSuperAgentRequest('/api/chat', chatPayload, workspacePath);
+              // Re-initialize session on the freshly started server
+              const initOk = await initializeSuperAgentSession(workspacePath, agentMode, parsed.sessionId);
+              if (!initOk) {
+                throw new Error('SuperAgent server restarted but session initialization failed.');
+              }
+              // Retry chat — if it fails again, let the outer catch surface the error
+              try {
+                response = await sendSuperAgentRequest('/api/chat', chatPayload, workspacePath);
+              } catch (retryErr: any) {
+                if (retryErr?.code === 'ECONNREFUSED' || retryErr?.message?.includes('ECONNREFUSED')) {
+                  throw new Error('SuperAgent server is still unreachable after restart. Please check that "superagent --server" can run in this workspace.');
+                }
+                throw retryErr;
+              }
             } else {
               throw err;
             }

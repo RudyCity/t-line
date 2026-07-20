@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.548] - 2026-07-20
+
+### Fixed
+- **SuperAgent ECONNREFUSED — Server Not Ready After Auto-Restart (`superAgentBridge.ts`)**:
+  - Root cause: after an ECONNREFUSED triggered an auto-restart of the SuperAgent server, the bridge waited a fixed 3 seconds then immediately retried `/api/chat`. If the server wasn't yet accepting connections (which is common on slower machines or first-start), a second ECONNREFUSED propagated all the way to the user as "Failed to send prompt: connect ECONNREFUSED 127.0.0.1:7888".
+  - **Fix 1 — Polling startup**: Replaced the hard-coded `setTimeout(3000)` in `ensureSuperAgentServer` with a `pingPort7888()` polling loop (every 500 ms, up to 15 s). The callback is only fired once the port actually responds, so downstream callers are guaranteed the server is reachable.
+  - **Fix 2 — Validated restart retry**: In the ECONNREFUSED recovery path, `initializeSuperAgentSession` is now awaited and its return value checked before retrying `/api/chat`. If init fails, a clear error is thrown immediately rather than blindly retrying.
+  - **Fix 3 — Second ECONNREFUSED surfaced clearly**: If `/api/chat` still fails after restart (e.g. `superagent --server` cannot run in the workspace), the error is caught and re-thrown as a descriptive human-readable message instead of the raw Node.js ECONNREFUSED code.
+
 ## [1.3.547] - 2026-07-20
 
 ### Fixed
