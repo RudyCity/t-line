@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.568] - 2026-07-20
+
+### Fixed
+- **Chronological Tool Placement & Stream Sequence Layout (`SuperAgentGroupedMessages.tsx`)**:
+  - Restored exact chronological stream sequence placement for process blocks. Tools executed between assistant text streaming chunks are rendered at their exact usage positions in the timeline, grouping sequential tool calls into clean `Process steps` blocks right where they occur.
+
 ## [1.3.567] - 2026-07-20
 
 ### Fixed
