@@ -128,29 +128,40 @@ function drainPendingCallbacks(err?: Error) {
 function resolveBunEnv(): { cmd: string; spawnEnv: NodeJS.ProcessEnv } {
   const isWin = os.platform() === 'win32';
 
+  console.log(`[WS-Agent][debug] resolveBunEnv() — platform=${os.platform()}`);
+  console.log(`[WS-Agent][debug] process.env.PATH = ${process.env.PATH}`);
+
   // 1. Try to find bun via where / which (uses inherited PATH)
   try {
+    const whereCmd = isWin ? 'where bun 2>nul' : 'which bun 2>/dev/null';
+    console.log(`[WS-Agent][debug] Trying: ${whereCmd}`);
     const found = execSync(
-      isWin ? 'where bun 2>nul' : 'which bun 2>/dev/null',
+      whereCmd,
       { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
     ).split(/\r?\n/)[0].trim();
+    console.log(`[WS-Agent][debug] where/which result: "${found}" — exists=${fs.existsSync(found)}`);
     if (found && fs.existsSync(found)) {
+      console.log(`[WS-Agent][debug] Resolved bun via PATH: ${found}`);
       return { cmd: found, spawnEnv: { ...process.env } };
     }
-  } catch {}
+  } catch (e: any) {
+    console.log(`[WS-Agent][debug] where/which failed: ${e.message}`);
+  }
 
   // 2. Check the default bun install location: ~/.bun/bin/bun[.exe]
   const bunBinDir = path.join(os.homedir(), '.bun', 'bin');
   const bunExe = path.join(bunBinDir, isWin ? 'bun.exe' : 'bun');
+  console.log(`[WS-Agent][debug] Checking fallback path: ${bunExe} — exists=${fs.existsSync(bunExe)}`);
   if (fs.existsSync(bunExe)) {
-    // Inject bun's bin dir into PATH so child processes (like superagent itself) can also find it
     const sep = isWin ? ';' : ':';
     const patchedPath = `${bunBinDir}${sep}${process.env.PATH || ''}`;
+    console.log(`[WS-Agent][debug] Resolved bun via fallback: ${bunExe}`);
+    console.log(`[WS-Agent][debug] Patched PATH = ${patchedPath}`);
     return { cmd: bunExe, spawnEnv: { ...process.env, PATH: patchedPath } };
   }
 
   // 3. Last resort — just use 'bun' and hope the OS can resolve it
-  console.warn('[WS-Agent] Could not resolve bun path. Falling back to plain "bun".');
+  console.warn('[WS-Agent][debug] Could not resolve bun path anywhere. Falling back to plain "bun".');
   return { cmd: 'bun', spawnEnv: { ...process.env } };
 }
 
