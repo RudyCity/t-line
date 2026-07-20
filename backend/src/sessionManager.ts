@@ -310,9 +310,11 @@ export async function getSessionMessages(
       const safeOffset = offset || 0;
       let paginated = guiMsgs;
       if (limit && limit > 0) {
-        paginated = guiMsgs.slice(safeOffset, safeOffset + limit);
+        const endIdx = Math.max(0, totalCount - safeOffset);
+        const startIdx = Math.max(0, endIdx - limit);
+        paginated = guiMsgs.slice(startIdx, endIdx);
       }
-      const hasMore = limit ? (safeOffset + limit) < totalCount : false;
+      const hasMore = limit ? (totalCount - safeOffset - limit) > 0 : false;
 
       return { messages: paginated, totalCount, hasMore };
     }

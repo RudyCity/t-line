@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.575] - 2026-07-20
+
+### Fixed
+- **Chat Initial Load Message Order & Smooth Infinite Scroll Up (`sessionManager.ts`, `useSuperAgentSessions.ts`, `SuperAgentConsole.tsx`)**:
+  - **Reverse Offset Pagination**: Updated `getSessionMessages` in `sessionManager.ts` so `offset = 0` loads the 50 most recent messages (bottom of chat) in exact chronological order, while scrolling up loads older message chunks backwards without mixing up message history order.
+  - **Scroll Position Preservation**: Prevented `scrollIntoView` auto-scroll to bottom from triggering when older messages are loaded into the chat container during top scrolling, calculating relative scroll height (`newScrollHeight - prevScrollHeight + prevScrollTop`) to keep scrolling completely seamless.
+  - **Top UI Indicators**: Added a sleek infinite scroll header UI displaying a loading spinner during fetch, an "↑ Load older messages" manual trigger button when `hasMore` is true, and a "Beginning of conversation history" badge when the top of session history is reached.
+
 ## [1.3.574] - 2026-07-20
 
 ### Fixed

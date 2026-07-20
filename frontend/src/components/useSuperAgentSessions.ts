@@ -402,6 +402,25 @@ export function useSuperAgentSessions(workspace: string) {
         currentOffsetRef.current += PAGE_SIZE;
         setHasMore(result.hasMore);
       } else {
+        // Fallback to local storage if API returned empty or failed
+        const wsKey = workspace || 'default';
+        const saved = localStorage.getItem(`superagent_messages_${wsKey}_${activeSessionId}`);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > currentOffsetRef.current) {
+              const endIdx = Math.max(0, parsed.length - currentOffsetRef.current);
+              const startIdx = Math.max(0, endIdx - PAGE_SIZE);
+              const older = parsed.slice(startIdx, endIdx);
+              if (older.length > 0) {
+                setMessages(prev => [...older, ...prev]);
+                currentOffsetRef.current += PAGE_SIZE;
+                setHasMore(parsed.length - currentOffsetRef.current > 0);
+                return;
+              }
+            }
+          } catch (err) {}
+        }
         setHasMore(false);
       }
     } catch (e) {

@@ -58,6 +58,24 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   const [customArgs, setCustomArgs] = useState('');
   const [connectTrigger, setConnectTrigger] = useState(0);
   const isAbortedRef = useRef<boolean>(false);
+  const isPrependingRef = useRef<boolean>(false);
+
+  const handleLoadMoreMessagesWithScroll = () => {
+    if (!hasMore || loadingMore) return;
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const prevScrollHeight = el.scrollHeight;
+    const prevScrollTop = el.scrollTop;
+    isPrependingRef.current = true;
+    loadMoreMessages().then(() => {
+      requestAnimationFrame(() => {
+        if (el) {
+          const newScrollHeight = el.scrollHeight;
+          el.scrollTop = newScrollHeight - prevScrollHeight + prevScrollTop;
+        }
+      });
+    });
+  };
 
   // Notify parent of AI agent loading state
   useEffect(() => {
@@ -402,6 +420,10 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   }, [connectTrigger]);
 
   useEffect(() => {
+    if (isPrependingRef.current) {
+      isPrependingRef.current = false;
+      return;
+    }
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, pendingPermission, pendingQuestion, pendingPlanApproval, toolProgressMsg, loading]);
 
@@ -818,20 +840,13 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
               onScroll={(e) => {
                 const el = e.currentTarget;
                 if (el.scrollTop < 80 && hasMore && !loadingMore) {
-                  const prevHeight = el.scrollHeight;
-                  loadMoreMessages().then(() => {
-                    // Preserve scroll position after prepending older messages
-                    requestAnimationFrame(() => {
-                      const newHeight = el.scrollHeight;
-                      el.scrollTop = newHeight - prevHeight;
-                    });
-                  });
+                  handleLoadMoreMessagesWithScroll();
                 }
               }}
             >
             {/* Infinite scroll: loading older messages indicator */}
-            {hasMore && (
-              <div className="flex items-center justify-center py-2 gap-2 text-zinc-500 text-xs">
+            {hasMore ? (
+              <div className="flex items-center justify-center py-2 gap-2 text-zinc-500 text-xs select-none">
                 {loadingMore ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-400" />
@@ -839,24 +854,20 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
                   </>
                 ) : (
                   <button
-                    onClick={() => {
-                      const el = messagesContainerRef.current;
-                      if (!el) return;
-                      const prevHeight = el.scrollHeight;
-                      loadMoreMessages().then(() => {
-                        requestAnimationFrame(() => {
-                          const newHeight = el.scrollHeight;
-                          el.scrollTop = newHeight - prevHeight;
-                        });
-                      });
-                    }}
-                    className="text-indigo-400 hover:text-indigo-300 transition-colors px-3 py-1 rounded border border-zinc-700/50 hover:border-indigo-500/50 bg-zinc-800/40"
+                    onClick={handleLoadMoreMessagesWithScroll}
+                    className="text-indigo-400 hover:text-indigo-300 transition-colors px-3 py-1 rounded border border-zinc-700/50 hover:border-indigo-500/50 bg-zinc-800/40 text-[11px]"
                   >
                     ↑ Load older messages
                   </button>
                 )}
               </div>
-            )}
+            ) : messages.length > 0 ? (
+              <div className="flex items-center justify-center py-2 gap-2 text-zinc-500/70 text-[10px] font-sans select-none">
+                <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                <span>Beginning of conversation history</span>
+                <span className="w-1 h-1 rounded-full bg-zinc-700" />
+              </div>
+            ) : null}
             <SuperAgentGroupedMessages
               messages={messages}
               isSystemNoiseMsg={isSystemNoiseMsg}
