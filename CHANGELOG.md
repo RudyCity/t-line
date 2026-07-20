@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.528] - 2026-07-20
+
+### Fixed
+- **Strict Session Isolation & Switching Bug (`useSuperAgentSessions.ts`)**:
+  - Added `loadedSessionIdRef` guard to prevent race conditions during chat session switching
+  - Fixes an issue where switching sessions previously caused the current message state to overwrite target session messages in local storage and SQLite
+  - Chat sessions are now 100% isolated, preserving independent chat history and titles when switching between sessions
+
 ## [1.3.527] - 2026-07-20
 
 ### Added & Redesigned
