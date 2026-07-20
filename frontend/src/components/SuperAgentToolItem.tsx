@@ -109,11 +109,11 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
   };
 
   return (
-    <div className="my-1 font-mono text-xs select-none">
+    <div className="my-1 font-mono text-xs">
       {/* Clickable Header Bar */}
       <div
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-2 py-1.5 px-3 rounded-lg bg-[#0d101a] hover:bg-[#141826] border border-zinc-800/70 hover:border-zinc-700/80 cursor-pointer transition-all duration-150 group shadow-xs"
+        className="flex items-center gap-2 py-1.5 px-3 rounded-lg bg-[#0d101a] hover:bg-[#141826] border border-zinc-800/70 hover:border-zinc-700/80 cursor-pointer transition-all duration-150 group shadow-xs select-none"
       >
         <span className="text-zinc-500 shrink-0">
           {expanded ? (
@@ -125,10 +125,10 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
 
         <span className="text-zinc-400 font-sans text-[11px] shrink-0 font-medium">{info.verb}</span>
         {info.icon}
-        <span className="font-semibold text-zinc-200 truncate max-w-sm">{info.target}</span>
+        <span className="font-semibold text-zinc-200 truncate max-w-sm select-text">{info.target}</span>
 
         {info.detail && (
-          <span className="text-[10px] text-zinc-500 font-mono ml-0.5">{info.detail}</span>
+          <span className="text-[10px] text-zinc-500 font-mono ml-0.5 select-text">{info.detail}</span>
         )}
 
         <span className="ml-auto text-[10px] text-zinc-600 group-hover:text-zinc-400 transition-colors uppercase font-bold tracking-wider font-mono">
@@ -138,7 +138,7 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
 
       {/* Expanded Body Panel */}
       {expanded && (
-        <div className="mt-1.5 ml-4 p-3 rounded-lg bg-[#060810] border border-zinc-800/80 text-zinc-300 font-mono text-xs space-y-2.5 shadow-md">
+        <div className="mt-1.5 ml-4 p-3 rounded-lg bg-[#060810] border border-zinc-800/80 text-zinc-300 font-mono text-xs space-y-2.5 shadow-md select-text">
           <div className="flex items-center justify-between border-b border-zinc-800/60 pb-1.5">
             <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">
               Tool Arguments & Execution Result

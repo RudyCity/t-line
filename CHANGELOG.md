@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.507] - 2026-07-20
+
+### Fixed & Enhanced
+- **SuperAgent System & Error Message Styling & Text Selection**:
+  - Made system and error message pills dark-themed (`bg-[#060810]` for standard system messages and `bg-[#0a0507]` with rose borders for errors) in [SuperAgentMessageItem.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentMessageItem.tsx).
+  - Enabled full text selection (`select-text`, removing `select-none` and `truncate`) across system messages, user/assistant responses, and tool item outputs in [SuperAgentMessageItem.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentMessageItem.tsx) and [SuperAgentToolItem.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentToolItem.tsx) so users can easily highlight ("block text") and copy error messages and prompt text.
+
 ## [1.3.506] - 2026-07-20
 
 ### Removed

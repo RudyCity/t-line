@@ -34,11 +34,20 @@ export function renderMessageContent(text: string) {
 
 export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: number }> = ({ msg, index }) => {
   if (msg.role === 'system') {
+    const isError = /error|failed|econnrefused|exception|stopped|denied|cannot|invalid/i.test(msg.text);
     return (
-      <div key={index} className="flex items-center justify-start my-1 select-none">
-        <div className="text-[10px] text-zinc-400/90 font-mono bg-[#0c0f18] border border-zinc-800/80 px-3 py-0.5 rounded-full tracking-tight max-w-2xl text-left shadow-xs flex items-center justify-start gap-1.5 truncate">
-          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500/70 inline-block shrink-0"></span>
-          <span className="truncate">{msg.text}</span>
+      <div key={index} className="flex items-center justify-start my-1 select-text">
+        <div
+          className={`text-[11px] font-mono px-3 py-1 rounded-lg border tracking-tight max-w-full text-left shadow-md flex items-center justify-start gap-2 select-text ${
+            isError
+              ? 'bg-[#0a0507] border-rose-900/60 text-rose-300/95'
+              : 'bg-[#060810] border-zinc-800/90 text-zinc-300/95'
+          }`}
+        >
+          <span className={`w-1.5 h-1.5 rounded-full inline-block shrink-0 ${
+            isError ? 'bg-rose-500 animate-pulse' : 'bg-indigo-500/80'
+          }`}></span>
+          <span className="break-all whitespace-pre-wrap select-text">{msg.text}</span>
         </div>
       </div>
     );
@@ -51,7 +60,7 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
   return (
     <div
       key={index}
-      className={`p-3.5 rounded-xl border w-full transition-all shadow-sm ${
+      className={`p-3.5 rounded-xl border w-full transition-all shadow-sm select-text ${
         msg.role === 'user'
           ? 'bg-indigo-950/30 border-indigo-800/40 text-indigo-100'
           : msg.role === 'thought'
