@@ -1,137 +1,5 @@
 [
   {
-    "timestamp": "2026-07-20T02:13:21.892Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " plain terminal text (i.e. no `#`, `**`, `*`, `_`, or bullet indentations using"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:21.939Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " `-` or `*`, but instead plain numbers or simple ASCII separators/dashes without markdown formatting syntax).\n\nLet's list all the reviewed issues in"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.037Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " a clear, plain text format.\n\nIssue 1:\nSeverity: [CRITICAL]\nFile/Line: src/lib/server/repositories/postgres-repository.ts ("
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.138Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "lines 873-882)\nDescription: Database query type mismatch in findAuditLogsForAssignments."
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.254Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " The entity_id column is defined as TEXT in the migration schema, but the query uses ANY($1::int[]) with"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.304Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " numeric values. This causes a Postgres runtime exception (\"operator does not exist: text = integer\") when a department admin attempts to load"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.359Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " logs.\nProposed Fix:\nChange the SQL cast and values to text[]:\nasync findAuditLogsForAssignments("
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.408Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "assignmentIds: string[]): Promise<AuditLog[]> {\n  if (assignmentIds.length === 0) return [];\n  const rows"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.459Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " = await query<AuditLogRow>(\n    `SELECT * FROM audit_logs\n     WHERE entity_type = 'assignment' AND entity_id"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.505Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": " = ANY($1::text[])\n     ORDER BY created_at DESC LIMIT 500`,\n    [assignmentIds]\n  );\n  "
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.529Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "return rows.map(mapAuditLogRow);\n}\n\nIssue 2:\nSeverity: [CRITICAL]\n"
-      }
-    }
-  },
-  {
-    "timestamp": "2026-07-20T02:13:22.551Z",
-    "type": "agent_event",
-    "data": {
-      "type": "agent_event",
-      "event": {
-        "type": "text",
-        "content": "File/Line: src/pages/api/audit-logs.ts (lines 23-48)\nDescription: Authorization bypass on empty department"
-      }
-    }
-  },
-  {
     "timestamp": "2026-07-20T02:13:22.572Z",
     "type": "agent_event",
     "data": {
@@ -10380,6 +10248,104 @@
   },
   {
     "timestamp": "2026-07-20T03:42:55.088Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:48:31.266Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:48:31.292Z",
+    "type": "system",
+    "data": {
+      "message": "Auto-starting SuperAgent server process",
+      "workspacePath": "D:\\backup from pc asus\\Documents Development\\superagent",
+      "agentMode": "single",
+      "customArgs": ""
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:48:31.395Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:48:31.415Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:48:31.455Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:48:31.489Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:48:33.378Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:48:33.398Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "socket hang up"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:48:33.450Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:48:33.470Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:48:33.499Z",
+    "type": "system_error",
+    "data": {
+      "message": "Failed to connect to SuperAgent server",
+      "error": "connect ECONNREFUSED 127.0.0.1:7888"
+    }
+  },
+  {
+    "timestamp": "2026-07-20T03:48:34.312Z",
     "type": "system_error",
     "data": {
       "message": "Failed to connect to SuperAgent server",

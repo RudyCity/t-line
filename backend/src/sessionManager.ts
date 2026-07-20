@@ -31,6 +31,53 @@ export interface SuperAgentMessage {
   result?: any;
 }
 
+// Memory Cache for history-metadata.json files
+interface MetadataCache {
+  mtime: number;
+  data: any;
+}
+
+const metadataCache: Record<string, MetadataCache> = {
+  single: { mtime: 0, data: {} },
+  multi: { mtime: 0, data: {} }
+};
+
+function getMetadata(mode: 'single' | 'multi'): any {
+  const metadataFile = path.join(CLI_HISTORY_DIR, mode, 'history-metadata.json');
+  if (!fs.existsSync(metadataFile)) return {};
+
+  try {
+    const stats = fs.statSync(metadataFile);
+    if (stats.mtimeMs > metadataCache[mode].mtime) {
+      const content = fs.readFileSync(metadataFile, 'utf8');
+      metadataCache[mode].data = JSON.parse(content || '{}');
+      metadataCache[mode].mtime = stats.mtimeMs;
+    }
+    return metadataCache[mode].data;
+  } catch (e) {
+    console.error(`[SessionManager] Failed to read metadata for ${mode}:`, e);
+    return {};
+  }
+}
+
+// Truncate excessively large tool outputs to prevent lags
+function truncateResult(result: any): any {
+  if (result === undefined || result === null) return result;
+  if (typeof result === 'string') {
+    if (result.length > 10000) {
+      return result.slice(0, 10000) + '\n\n[... Truncated for performance ...]';
+    }
+    return result;
+  }
+  try {
+    const str = JSON.stringify(result);
+    if (str.length > 10000) {
+      return str.slice(0, 10000) + '\n\n[... Truncated for performance ...]';
+    }
+  } catch {}
+  return result;
+}
+
 // Map CLI messages format to GUI Console format
 export function mapCliToGuiMessages(cliMsgs: any[]): SuperAgentMessage[] {
   const guiMsgs: SuperAgentMessage[] = [];
@@ -72,14 +119,14 @@ export function mapCliToGuiMessages(cliMsgs: any[]): SuperAgentMessage[] {
         }
       }
     } else if (msg.role === 'tool') {
-      // 4. Tool completion results
+      // 4. Tool completion results (Truncated if too large)
       if (Array.isArray(msg.toolResults)) {
         for (const tr of msg.toolResults) {
           guiMsgs.push({
             role: 'tool',
             text: `Tool '${tr.name || 'tool'}' completed.`,
             toolName: tr.name || 'tool',
-            result: tr.result !== undefined ? tr.result : (tr.content || '')
+            result: truncateResult(tr.result !== undefined ? tr.result : (tr.content || ''))
           });
         }
       } else {
@@ -87,7 +134,7 @@ export function mapCliToGuiMessages(cliMsgs: any[]): SuperAgentMessage[] {
           role: 'tool',
           text: `Tool completed.`,
           toolName: msg.toolName || 'tool',
-          result: msg.result !== undefined ? msg.result : (msg.content || '')
+          result: truncateResult(msg.result !== undefined ? msg.result : (msg.content || ''))
         });
       }
     } else if (msg.role === 'system') {
@@ -182,32 +229,24 @@ export function mapGuiToCliMessages(guiMsgs: SuperAgentMessage[]): any[] {
 
 export function getWorkspaceSessions(workspace: string): ChatSession[] {
   const sessions: ChatSession[] = [];
-  const modes = ['single', 'multi'];
+  const modes = ['single', 'multi'] as const;
 
   for (const mode of modes) {
-    try {
-      const metadataFile = path.join(CLI_HISTORY_DIR, mode, 'history-metadata.json');
-      if (fs.existsSync(metadataFile)) {
-        const content = fs.readFileSync(metadataFile, 'utf8');
-        const metadata = JSON.parse(content || '{}');
-        for (const [key, value] of Object.entries(metadata)) {
-          const val = value as any;
-          if (val && val.workingDirectory && matchesWorkspace(val.workingDirectory, workspace)) {
-            const parts = key.split('_');
-            const tsStr = parts[parts.length - 1];
-            const timestamp = parseInt(tsStr, 10) || val.mtimeMs || Date.now();
+    const metadata = getMetadata(mode);
+    for (const [key, value] of Object.entries(metadata)) {
+      const val = value as any;
+      if (val && val.workingDirectory && matchesWorkspace(val.workingDirectory, workspace)) {
+        const parts = key.split('_');
+        const tsStr = parts[parts.length - 1];
+        const timestamp = parseInt(tsStr, 10) || val.mtimeMs || Date.now();
 
-            sessions.push({
-              id: `${mode}::${key}`,
-              title: val.displayName || val.preview || 'Untitled CLI Chat',
-              createdAt: timestamp,
-              updatedAt: val.mtimeMs || timestamp
-            });
-          }
-        }
+        sessions.push({
+          id: `${mode}::${key}`,
+          title: val.displayName || val.preview || 'Untitled CLI Chat',
+          createdAt: timestamp,
+          updatedAt: val.mtimeMs || timestamp
+        });
       }
-    } catch (e) {
-      console.error(`[SessionManager] Failed to read ${mode} sessions:`, e);
     }
   }
 
@@ -297,6 +336,9 @@ export function saveWorkspaceSession(
       workingDirectory: workspace
     };
     fs.writeFileSync(globalMetadataFile, JSON.stringify(globalMetadata, null, 2), 'utf8');
+    
+    // Invalidate memory cache so next read picks it up
+    metadataCache[mode].mtime = 0;
   } catch (e) {
     console.error('[SessionManager] Failed to save session:', e);
   }
@@ -332,6 +374,9 @@ export function deleteWorkspaceSession(workspace: string, prefixedId: string) {
         fs.writeFileSync(globalMetadataFile, JSON.stringify(globalMetadata, null, 2), 'utf8');
       } catch {}
     }
+    
+    // Invalidate memory cache
+    metadataCache[mode].mtime = 0;
   } catch (e) {
     console.error(`[SessionManager] Failed to delete session ${prefixedId}:`, e);
   }

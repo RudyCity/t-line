@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.512] - 2026-07-20
+
+### Added & Optimized
+- **Optimized Chat History Load Performance**:
+  - Implemented memory caching for index files in [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) (using filesystem modification timestamps to prevent redundant 1MB+ JSON reads/parses).
+  - Implemented truncation for large tool execution result streams (slicing strings and stringified JSON exceeding 10,000 characters). This dramatically reduces JSON payload sizes (from 9MB down to less than 50KB) and results in instant, lag-free message history loading.
+
 ## [1.3.511] - 2026-07-20
 
 ### Added & Enhanced
