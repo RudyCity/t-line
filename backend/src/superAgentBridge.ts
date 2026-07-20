@@ -268,12 +268,15 @@ function ensureSuperAgentServer(
         stdio: ['ignore', 'ignore', 'pipe']   // capture stderr for diagnostics
       });
 
-      // Capture stderr so we can surface it when the process exits
+      console.log(`[WS-Agent][debug] Spawned PID: ${autoSuperAgentProcess.pid}`);
+
+      // Capture stderr — log in real-time AND accumulate for exit error reporting
       if (autoSuperAgentProcess.stderr) {
         autoSuperAgentProcess.stderr.setEncoding('utf8');
         autoSuperAgentProcess.stderr.on('data', (chunk: string) => {
+          const line = chunk.trim();
+          if (line) console.log(`[WS-Agent][stderr] ${line}`);
           stderrOutput += chunk;
-          // Keep last 2000 chars to avoid unbounded growth
           if (stderrOutput.length > 2000) {
             stderrOutput = stderrOutput.slice(stderrOutput.length - 2000);
           }
@@ -317,17 +320,19 @@ function ensureSuperAgentServer(
       const MAX_WAIT_MS = 20000;
       const startedAt = Date.now();
       const pollReady = () => {
-        if (spawnAborted) return;   // process already exited — no-op
+        if (spawnAborted) return;
         pingPort7888().then((ready) => {
           if (spawnAborted) return;
+          const elapsed = Math.round((Date.now() - startedAt) / 100) * 100;
+          console.log(`[WS-Agent][debug] ping 7888 → ${ready ? 'UP ✓' : 'not yet'} (${elapsed}ms elapsed)`);
           if (ready) {
             console.log('[WS-Agent] SuperAgent server is now ready on port 7888.');
-            spawnAborted = true;  // sentinel: polling done
+            spawnAborted = true;
             isStartingSuperAgent = false;
             callback();
             drainPendingCallbacks();
           } else if (Date.now() - startedAt >= MAX_WAIT_MS) {
-            abortStartup('Timed out after 20 seconds. Run "bunx superagent --server" manually to see the error.');
+            abortStartup('Timed out after 20 seconds. Run "bun x superagent --server" manually to see the error.');
           } else {
             setTimeout(pollReady, POLL_INTERVAL_MS);
           }
@@ -392,9 +397,13 @@ export function startSuperAgentEager(agentMode: string = 'single', customArgs: s
         stdio: ['ignore', 'ignore', 'pipe']
       });
 
+      console.log(`[WS-Agent][debug] Eager PID: ${autoSuperAgentProcess.pid}`);
+
       if (autoSuperAgentProcess.stderr) {
         autoSuperAgentProcess.stderr.setEncoding('utf8');
         autoSuperAgentProcess.stderr.on('data', (chunk: string) => {
+          const line = chunk.trim();
+          if (line) console.log(`[WS-Agent][stderr][eager] ${line}`);
           stderrOutput += chunk;
           if (stderrOutput.length > 2000) stderrOutput = stderrOutput.slice(stderrOutput.length - 2000);
         });
@@ -435,6 +444,8 @@ export function startSuperAgentEager(agentMode: string = 'single', customArgs: s
         if (spawnAborted) return;
         pingPort7888().then((ready) => {
           if (spawnAborted) return;
+          const elapsed = Math.round((Date.now() - startedAt) / 100) * 100;
+          console.log(`[WS-Agent][debug] eager ping 7888 → ${ready ? 'UP ✓' : 'not yet'} (${elapsed}ms elapsed)`);
           if (ready) {
             console.log('[WS-Agent] Eager SuperAgent server is ready on port 7888.');
             spawnAborted = true;
@@ -442,7 +453,7 @@ export function startSuperAgentEager(agentMode: string = 'single', customArgs: s
             logSuperAgentEvent('system', { message: 'Eager SuperAgent server ready' });
             drainPendingCallbacks();
           } else if (Date.now() - startedAt >= MAX_WAIT_MS) {
-            abortEager('Timed out after 20 seconds. Run "bunx superagent --server" manually to diagnose.');
+            abortEager('Timed out after 20 seconds. Run "bun x superagent --server" manually to diagnose.');
           } else {
             setTimeout(pollReady, POLL_INTERVAL_MS);
           }
