@@ -453,6 +453,7 @@ async function initializeSuperAgentSession(workspacePath: string, mode: string, 
     };
     if (sessionId) {
       initPayload.sessionId = sessionId;
+      initPayload.resume = sessionId;
     }
     const postData = JSON.stringify(initPayload);
 
@@ -641,9 +642,6 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
         await new Promise<void>((resolve) => {
           ensureSuperAgentServer(workspacePath, agentMode, customArgs, ws, resolve);
         });
-
-        // Ensure session exists
-        await initializeSuperAgentSession(workspacePath, agentMode, parsed.sessionId);
 
         try {
           const chatPayload: any = { message: text };

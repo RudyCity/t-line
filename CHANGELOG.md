@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.557] - 2026-07-20
+
+### Fixed
+- **SuperAgent Session Continuation Bug (`superAgentBridge.ts` & SuperAgent `server.ts`)**:
+  - Removed the redundant unconditional session initialization call (`initializeSuperAgentSession`) on every prompt in the bridge. Instead, the bridge now directly calls `/api/chat` and lazily re-initializes only if the server returns a "Session not initialized" error, preserving the active `Agent` context.
+  - Fixed `initializeSuperAgentSession` to correctly pass the `resume` payload mapping to `sessionId` so the SuperAgent server actually restores/loads the session message history from the database.
+  - Optimized the SuperAgent `/api/init` handler to bypass recreating the `Agent` instance if the requested session is already active in that workspace with the same ID and mode, preserving the runtime context, cache, and token progress.
+
 ## [1.3.556] - 2026-07-20
 
 ### Fixed
