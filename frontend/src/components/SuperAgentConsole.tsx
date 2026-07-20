@@ -399,7 +399,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
         handleAgentEventPayload(
           payload, setLoading, setToolProgressMsg, setMessages, setSubagentList,
           setPendingPermission, setPendingQuestion, setSelectedQuestionAnswers,
-          setCustomQuestionInput, setPendingPlanApproval, isAbortedRef
+          setCustomQuestionInput, setPendingPlanApproval, isAbortedRef, activeSessionId
         );
       } catch (e) {
         setMessages(prev => [...prev, { role: 'assistant', text: event.data }]);

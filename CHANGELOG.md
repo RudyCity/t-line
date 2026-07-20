@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.580] - 2026-07-21
+
+### Fixed
+- **New Chat Session Event Isolation & Mismatch Filter (`SuperAgentConsoleUtils.ts`, `server.ts`, `agent.ts`)**:
+  - Fixed an issue where clicking "New Chat" caused stray `done` / `[Interrupted]` events from the old aborted session to prematurely stop loading for new chat responses.
+  - Added `sessionId` metadata tracking to `Agent` and `server.ts` `onEvent` emissions.
+  - Added `activeSessionId` filtering in `SuperAgentConsoleUtils.ts` to discard stray background events belonging to inactive/previous sessions.
+
 ## [1.3.579] - 2026-07-21
 
 ### Fixed

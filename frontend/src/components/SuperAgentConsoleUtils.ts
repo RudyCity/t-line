@@ -82,8 +82,13 @@ export const handleAgentEventPayload = (
   setSelectedQuestionAnswers: (a: any[]) => void,
   setCustomQuestionInput: (i: string) => void,
   setPendingPlanApproval: (b: boolean) => void,
-  isAbortedRef: React.MutableRefObject<boolean>
+  isAbortedRef: React.MutableRefObject<boolean>,
+  currentActiveSessionId?: string
 ) => {
+  // Filter out stray background events belonging to a different session
+  if (payload.sessionId && currentActiveSessionId && payload.sessionId !== currentActiveSessionId) {
+    return;
+  }
   if (payload.type === 'chat_response') {
     // Handle all error scenarios from server
     const result = payload.result;
