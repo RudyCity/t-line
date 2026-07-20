@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.561] - 2026-07-20
+
+### Fixed
+- **Process Steps Auto-Collapse Timing Bug (`SuperAgentGroupedMessages.tsx`)**:
+  - Fixed an issue where the process steps block (`CollapsibleProcessBlock`) did not automatically contract (collapse) upon agent execution completion. It now remains expanded during active streaming tool processing so users can watch live tool steps, and automatically contracts when execution finishes (`isStreaming` transitions from `true` to `false`).
+
 ## [1.3.560] - 2026-07-20
 
 ### Fixed

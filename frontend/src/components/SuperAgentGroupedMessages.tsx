@@ -62,15 +62,30 @@ function CollapsibleProcessBlock({
   isLastTurn: boolean;
   isStreaming?: boolean;
 }) {
-  // If it's the last active turn and still streaming, default to expanded so live tools are visible.
-  // Once finished, default to collapsed.
+  // Default to expanded while streaming on the last turn
   const [expanded, setExpanded] = useState<boolean>(Boolean(isLastTurn && isStreaming));
+  const userToggledRef = React.useRef<boolean>(false);
+  const prevStreamingRef = React.useRef<boolean | undefined>(isStreaming);
 
-  // Auto-expand when a new streaming step arrives for the active last turn
+  // Reset user manual toggle ref when a new streaming execution starts
+  useEffect(() => {
+    if (isStreaming && !prevStreamingRef.current) {
+      userToggledRef.current = false;
+    }
+  }, [isStreaming]);
+
+  // Manage expansion state: keep expanded during active tool processing, contract automatically when finished
   useEffect(() => {
     if (isLastTurn && isStreaming) {
-      setExpanded(true);
+      if (!userToggledRef.current) {
+        setExpanded(true);
+      }
+    } else if (isLastTurn && prevStreamingRef.current && !isStreaming) {
+      // Process finished: automatically contract (collapse) process steps
+      setExpanded(false);
+      userToggledRef.current = false;
     }
+    prevStreamingRef.current = isStreaming;
   }, [msgs.length, isLastTurn, isStreaming]);
 
   if (msgs.length === 0) return null;
@@ -83,11 +98,16 @@ function CollapsibleProcessBlock({
     toolCount > 0 ? `${toolCount} tool step${toolCount > 1 ? 's' : ''}` : ''
   ].filter(Boolean).join(' • ') || `${msgs.length} process step${msgs.length > 1 ? 's' : ''}`;
 
+  const handleToggle = () => {
+    userToggledRef.current = true;
+    setExpanded(prev => !prev);
+  };
+
   return (
     <div className="my-1.5 font-mono text-xs w-full select-text">
       {/* Collapsible Header */}
       <div
-        onClick={() => setExpanded(!expanded)}
+        onClick={handleToggle}
         className="flex items-center gap-2 py-1 px-1.5 rounded hover:bg-zinc-800/40 cursor-pointer transition-colors text-zinc-400 hover:text-zinc-200 select-none group"
       >
         <span className="shrink-0 text-indigo-400">
