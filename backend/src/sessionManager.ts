@@ -287,6 +287,12 @@ export async function getSessionMessages(
           rawResult = (typeof rawMsg.toolResult === 'object' && rawMsg.toolResult !== null && rawMsg.toolResult.result !== undefined)
             ? rawMsg.toolResult.result
             : rawMsg.toolResult;
+        } else if (Array.isArray(rawMsg.toolResults) && rawMsg.toolResults.length > 0) {
+          const first = rawMsg.toolResults[0];
+          rawResult = (typeof first === 'object' && first !== null && first.result !== undefined) ? first.result : first;
+        } else if (Array.isArray(rawMsg.tool_results) && rawMsg.tool_results.length > 0) {
+          const first = rawMsg.tool_results[0];
+          rawResult = (typeof first === 'object' && first !== null && first.result !== undefined) ? first.result : first;
         } else if (role === 'tool' && rawMsg.content !== undefined) {
           rawResult = rawMsg.content;
         }

@@ -127,17 +127,18 @@ export const handleAgentEventPayload = (
       }
 
       let result: any = undefined;
-      if (innerEvent.toolResult !== undefined) {
-        if (typeof innerEvent.toolResult === 'object' && innerEvent.toolResult !== null) {
-          result = innerEvent.toolResult.result !== undefined 
-            ? innerEvent.toolResult.result 
-            : innerEvent.toolResult.output !== undefined 
-            ? innerEvent.toolResult.output 
-            : innerEvent.toolResult.content !== undefined 
-            ? innerEvent.toolResult.content 
-            : innerEvent.toolResult;
+      const rawTR = innerEvent.toolResult || (Array.isArray(innerEvent.toolResults) ? innerEvent.toolResults[0] : (Array.isArray(innerEvent.tool_results) ? innerEvent.tool_results[0] : undefined));
+      if (rawTR !== undefined) {
+        if (typeof rawTR === 'object' && rawTR !== null) {
+          result = rawTR.result !== undefined 
+            ? rawTR.result 
+            : rawTR.output !== undefined 
+            ? rawTR.output 
+            : rawTR.content !== undefined 
+            ? rawTR.content 
+            : rawTR;
         } else {
-          result = innerEvent.toolResult;
+          result = rawTR;
         }
       }
       if (result === undefined) {
@@ -150,8 +151,8 @@ export const handleAgentEventPayload = (
       }
 
       const callId = 
-        innerEvent.toolResult?.toolCallId || 
-        innerEvent.toolResult?.id || 
+        rawTR?.toolCallId || 
+        rawTR?.id || 
         innerEvent.toolCall?.id || 
         innerEvent.callId || 
         innerEvent.id || 

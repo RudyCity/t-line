@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.576] - 2026-07-20
+
+### Fixed
+- **SuperAgent Plural Tool Results Extraction (`sessionManager.ts`, `SuperAgentConsoleUtils.ts`)**:
+  - SuperAgent stores and streams tool execution outputs as `toolResults` (plural array). Added extraction for `toolResults` / `tool_results` array properties across history session loading and live SSE event handlers so historical tool outputs are never lost or evaluated to `undefined`.
+
 ## [1.3.575] - 2026-07-20
 
 ### Fixed
