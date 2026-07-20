@@ -66,7 +66,7 @@ export function SuperAgentHistorySidebar({
   };
 
   return (
-    <div className="w-64 bg-[#090c14] border-r border-zinc-800/80 flex flex-col h-full shrink-0 select-none font-sans text-xs">
+    <div className="w-full bg-[#090c14] border-r border-zinc-800/80 flex flex-col h-full shrink-0 select-none font-sans text-xs">
       {/* Sidebar Header with History Title & Action Icon Buttons */}
       <div className="p-2.5 px-3 border-b border-zinc-800/80 flex items-center justify-between min-h-[44px]">
         <div className="flex items-center gap-2 font-semibold text-xs text-zinc-200 tracking-wide">

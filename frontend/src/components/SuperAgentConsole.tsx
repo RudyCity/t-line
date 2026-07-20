@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Terminal as TerminalIcon, RefreshCw, Shield, Square, Folder, Sparkles, Activity, Settings, History } from 'lucide-react';
+import { RefreshCw, Shield, Square, Folder, Sparkles, Activity, Settings, History } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { SuperAgentAuditLogs } from './SuperAgentAuditLogs';
@@ -12,6 +12,7 @@ import { SuperAgentSettingsMenu } from './SuperAgentSettingsMenu';
 import { SuperAgentMessageItem } from './SuperAgentMessageItem';
 import { SuperAgentHistorySidebar } from './SuperAgentHistorySidebar';
 import { useSuperAgentSessions } from './useSuperAgentSessions';
+import { useSidebarResize } from './useSidebarResize';
 
 interface SuperAgentConsoleProps {
   activeWorkspacePath?: string;
@@ -78,6 +79,9 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   const [showSidebar, setShowSidebar] = useState<boolean>(true);
   const [showSettingsMenu, setShowSettingsMenu] = useState<boolean>(false);
   const [isLoadingMonitor, setIsLoadingMonitor] = useState<boolean>(false);
+
+  // Resizable Sidebars state & drag handlers
+  const { historyWidth, monitorWidth, startResizingLeft, startResizingRight } = useSidebarResize();
 
   const fetchMonitorData = async () => {
     if (!workspace) return;
@@ -707,8 +711,16 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
       <div className="grid grid-cols-3 items-center px-4 py-2.5 bg-[#090c14] border-b border-zinc-800/80 min-h-[48px] w-full shadow-sm">
         {/* Left Column */}
         <div className="flex items-center gap-2 min-w-0">
-          <TerminalIcon className="w-4 h-4 text-indigo-400 shrink-0" />
-          <span className="font-semibold text-xs tracking-wide shrink-0">SuperAgent Panel</span>
+          <button
+            onClick={() => setShowHistorySidebar(!showHistorySidebar)}
+            className={`px-2.5 py-1 text-[11px] rounded-md border transition flex items-center gap-1.5 cursor-pointer font-medium ${
+              showHistorySidebar ? 'bg-indigo-950/80 border-indigo-700/80 text-indigo-300 shadow-sm' : 'bg-[#121622] border-zinc-800 text-zinc-400 hover:text-zinc-200'
+            }`}
+            title="Toggle Chat History Sidebar"
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>History</span>
+          </button>
           {workspace && (
             <span className="bg-indigo-950/70 text-indigo-300 text-[10px] px-2 py-0.5 rounded-md border border-indigo-800/60 font-mono truncate hidden sm:flex items-center gap-1">
               <Folder className="w-2.5 h-2.5 text-indigo-400" />
@@ -738,17 +750,6 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
 
         {/* Right Column */}
         <div className="flex justify-end gap-2 items-center relative">
-          <button
-            onClick={() => setShowHistorySidebar(!showHistorySidebar)}
-            className={`px-2.5 py-1 text-[11px] rounded-md border transition flex items-center gap-1.5 cursor-pointer font-medium ${
-              showHistorySidebar ? 'bg-indigo-950/80 border-indigo-700/80 text-indigo-300 shadow-sm' : 'bg-[#121622] border-zinc-800 text-zinc-400 hover:text-zinc-200'
-            }`}
-            title="Toggle Chat History Sidebar"
-          >
-            <History className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">History</span>
-          </button>
-
           <button
             onClick={() => setShowSidebar(!showSidebar)}
             className={`px-2.5 py-1 text-[11px] rounded-md border transition flex items-center gap-1.5 cursor-pointer font-medium ${
@@ -805,16 +806,23 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
 
       {activeTab === 'console' ? (
         <div className="flex-1 flex overflow-hidden relative w-full">
-          {/* Left Chat History Sidebar */}
+          {/* Left Resizable Chat History Sidebar */}
           {showHistorySidebar && (
-            <SuperAgentHistorySidebar
-              sessions={sessions}
-              activeSessionId={activeSessionId}
-              onSelectSession={handleSelectSession}
-              onNewChat={handleNewChat}
-              onDeleteSession={handleDeleteSession}
-              onRenameSession={handleRenameSession}
-            />
+            <div style={{ width: `${historyWidth}px` }} className="h-full shrink-0 flex relative min-w-[160px] max-w-[500px]">
+              <SuperAgentHistorySidebar
+                sessions={sessions}
+                activeSessionId={activeSessionId}
+                onSelectSession={handleSelectSession}
+                onNewChat={handleNewChat}
+                onDeleteSession={handleDeleteSession}
+                onRenameSession={handleRenameSession}
+              />
+              <div
+                onMouseDown={startResizingLeft}
+                className="w-1.5 hover:w-2 hover:bg-indigo-500/80 bg-zinc-800/80 cursor-col-resize select-none transition-all h-full shrink-0 z-20 hover:shadow-lg"
+                title="Drag to resize History panel"
+              />
+            </div>
           )}
 
           <div className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0">
@@ -922,18 +930,25 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
             />
           </div>
 
-          {/* Live Right Sidebar */}
+          {/* Right Resizable Live Monitor Sidebar */}
           {showSidebar && (
-            <SuperAgentSidebar
-              workspacePath={workspace}
-              getAuthHeader={getAuthHeader}
-              subagents={subagentList}
-              procs={procList}
-              recentChanges={recentChangeList}
-              onSelectSubAgent={(sa) => setSelectedSubagent(sa)}
-              onRefreshData={fetchMonitorData}
-              isLoadingData={isLoadingMonitor}
-            />
+            <div style={{ width: `${monitorWidth}px` }} className="h-full shrink-0 flex relative min-w-[180px] max-w-[600px]">
+              <div
+                onMouseDown={startResizingRight}
+                className="w-1.5 hover:w-2 hover:bg-indigo-500/80 bg-zinc-800/80 cursor-col-resize select-none transition-all h-full shrink-0 z-20 hover:shadow-lg"
+                title="Drag to resize Monitor panel"
+              />
+              <SuperAgentSidebar
+                workspacePath={workspace}
+                getAuthHeader={getAuthHeader}
+                subagents={subagentList}
+                procs={procList}
+                recentChanges={recentChangeList}
+                onSelectSubAgent={(sa) => setSelectedSubagent(sa)}
+                onRefreshData={fetchMonitorData}
+                isLoadingData={isLoadingMonitor}
+              />
+            </div>
           )}
         </div>
       ) : (

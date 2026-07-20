@@ -57,7 +57,7 @@ export function SuperAgentSidebar({
   };
 
   return (
-    <div className="w-72 bg-[#121215] border-l border-[#26262d] flex flex-col h-full font-sans select-none overflow-hidden shrink-0">
+    <div className="w-full bg-[#121215] border-l border-[#26262d] flex flex-col h-full font-sans select-none overflow-hidden shrink-0">
       {/* Sidebar Header */}
       <div className="flex items-center justify-between px-3 py-2.5 bg-[#161619] border-b border-[#26262d] shrink-0">
         <div className="flex items-center gap-1.5">

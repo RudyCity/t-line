@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.500] - 2026-07-20
+
+### Added
+- **Resizable Left & Right Sidebars in SuperAgent Console**:
+  - Implemented custom mouse drag resizers for both the left Chat History sidebar and right Live Monitor sidebar.
+  - Created [useSidebarResize.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSidebarResize.ts) hook to handle real-time pixel drag resizing, min/max bounds enforcement, and width persistence in `localStorage`.
+  - Updated [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) with interactive resizer bars (`col-resize`) that glow on hover.
+
 ## [1.3.499] - 2026-07-20
 
 ### Fixed
