@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.529] - 2026-07-20
+
+### Fixed
+- **SuperAgent Duplicate Session History Bug (`sessionManager.ts`, `useSuperAgentSessions.ts`)**:
+  - Implemented `cleanDuplicateWorkspaceSessions` helper in `sessionManager.ts` to automatically detect and purge redundant `session_<timestamp>` entries created alongside CLI `D__...` sessions for the same workspace.
+  - Updated `saveWorkspaceSession` to match existing CLI `D__...` sessions for the same prompt/workspace, preventing insertion of parallel session records into SQLite `history.db`.
+  - Updated `handleNewChat` in `useSuperAgentSessions.ts` to defer backend API session persistence until a message is actually sent, eliminating empty draft sessions.
+  - Guarantees clean, single-session history sidebar entries without duplicate chats when sending messages.
+
 ## [1.3.528] - 2026-07-20
 
 ### Fixed

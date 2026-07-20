@@ -444,9 +444,6 @@ export function useSuperAgentSessions(workspace: string) {
     try {
       localStorage.setItem(`superagent_messages_${wsKey}_${newId}`, JSON.stringify([]));
     } catch (e) {}
-
-    // Save empty chat session to backend
-    apiSaveSession(workspace, newSession, []);
   }, [workspace]);
 
   const handleDeleteSession = useCallback(async (id: string, e: React.MouseEvent) => {

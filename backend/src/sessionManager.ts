@@ -264,6 +264,79 @@ function formatSessionTitleFromDb(db: any, sessionId: string, fallbackDisplayNam
   }
 }
 
+/** Deduplicate and purge redundant GUI sessions that match CLI sessions */
+function cleanDuplicateWorkspaceSessions(db: any, normalizedWs: string) {
+  try {
+    const rows = db.prepare(
+      `SELECT id, display_name, message_count, created_at, last_modified
+       FROM sessions
+       WHERE LOWER(REPLACE(working_directory, '\\', '/')) = ?
+       ORDER BY created_at DESC`
+    ).all(normalizedWs) as any[];
+
+    if (rows.length < 2) return;
+
+    const idsToDelete: string[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const rowA = rows[i];
+      if (idsToDelete.includes(rowA.id)) continue;
+
+      for (let j = i + 1; j < rows.length; j++) {
+        const rowB = rows[j];
+        if (idsToDelete.includes(rowB.id)) continue;
+
+        // Check if one is a GUI temporary ID (starts with session_) and the other is CLI ID
+        const isGuiA = rowA.id.startsWith('session_');
+        const isGuiB = rowB.id.startsWith('session_');
+
+        if ((isGuiA || isGuiB) && !(isGuiA && isGuiB)) {
+          const guiRow = isGuiA ? rowA : rowB;
+          const cliRow = isGuiA ? rowB : rowA;
+
+          const titleA = formatSessionTitleFromDb(db, rowA.id, rowA.display_name);
+          const titleB = formatSessionTitleFromDb(db, rowB.id, rowB.display_name);
+
+          const timeDiff = Math.abs((rowA.created_at || 0) - (rowB.created_at || 0));
+
+          // If titles match or creation time is within 60s, or GUI session is empty
+          if (
+            guiRow.message_count === 0 ||
+            (titleA === titleB && titleA !== 'Untitled Chat' && titleA !== 'New Chat') ||
+            (timeDiff < 60000 && titleA === titleB)
+          ) {
+            idsToDelete.push(guiRow.id);
+          }
+        } else if (isGuiA && isGuiB) {
+          // Both are GUI temporary sessions created close together
+          const titleA = formatSessionTitleFromDb(db, rowA.id, rowA.display_name);
+          const titleB = formatSessionTitleFromDb(db, rowB.id, rowB.display_name);
+          const timeDiff = Math.abs((rowA.created_at || 0) - (rowB.created_at || 0));
+
+          if (titleA === titleB && timeDiff < 60000 && titleA !== 'Untitled Chat' && titleA !== 'New Chat') {
+            // Keep the newer one or the one with more messages
+            const toDelete = rowA.message_count >= rowB.message_count ? rowB.id : rowA.id;
+            idsToDelete.push(toDelete);
+          }
+        }
+      }
+    }
+
+    if (idsToDelete.length > 0) {
+      const deleteStmt = db.prepare('DELETE FROM sessions WHERE id = ?');
+      const deleteMsgsStmt = db.prepare('DELETE FROM messages WHERE session_id = ?');
+      db.transaction(() => {
+        for (const id of idsToDelete) {
+          deleteMsgsStmt.run(id);
+          deleteStmt.run(id);
+        }
+      })();
+    }
+  } catch (e) {
+    console.error('[SessionManager] cleanDuplicateWorkspaceSessions error:', e);
+  }
+}
+
 /** Get paginated sessions for a given workspace path */
 export function getWorkspaceSessions(
   workspace: string,
@@ -273,6 +346,9 @@ export function getWorkspaceSessions(
   try {
     const db = getDb();
     const normalizedWs = path.normalize(workspace).replace(/\\/g, '/').toLowerCase();
+
+    // Clean duplicates first
+    cleanDuplicateWorkspaceSessions(db, normalizedWs);
 
     // Get total count first
     let countRow = db.prepare(
@@ -423,9 +499,29 @@ export function saveWorkspaceSession(
     const db = getDb();
     const now = Date.now();
     const preview = messages.find(m => m.role === 'user')?.text || '(no user messages)';
+    const normalizedWs = path.normalize(workspace).replace(/\\/g, '/').toLowerCase();
+
+    // If saving a temporary session_ ID, check if a CLI D__... session already exists for this workspace
+    if (sessionId.startsWith('session_')) {
+      const cliSession = db.prepare(
+        `SELECT id FROM sessions
+         WHERE LOWER(REPLACE(working_directory, '\\', '/')) = ?
+         AND id NOT LIKE 'session_%'
+         ORDER BY created_at DESC
+         LIMIT 1`
+      ).get(normalizedWs) as any;
+
+      if (cliSession && cliSession.id) {
+        const cliTitle = formatSessionTitleFromDb(db, cliSession.id, '');
+        const currentTitle = session.title;
+        // If titles match or CLI session was created within 60s, adopt the CLI session ID
+        if (cliTitle === currentTitle || (session.createdAt && Math.abs(session.createdAt - now) < 60000)) {
+          sessionId = cliSession.id;
+        }
+      }
+    }
 
     // Resolve workspace_id from workspaces table
-    const normalizedWs = path.normalize(workspace).replace(/\\/g, '/').toLowerCase();
     const wsRow = db.prepare(
       `SELECT id FROM workspaces WHERE LOWER(REPLACE(path, '\\', '/')) = ?`
     ).get(normalizedWs) as any;
