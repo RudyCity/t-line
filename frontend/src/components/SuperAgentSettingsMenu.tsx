@@ -19,6 +19,7 @@ interface SuperAgentSettingsMenuProps {
   isLoadingMonitor?: boolean;
   onClearConsole?: () => void;
   onOpenGlobalSettings?: () => void;
+  onOpenSettingsModal?: (tab?: 'login' | 'presets' | 'execution' | 'monitor') => void;
 }
 
 export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
@@ -37,7 +38,8 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
   onRefreshMonitor,
   isLoadingMonitor,
   onClearConsole,
-  onOpenGlobalSettings
+  onOpenGlobalSettings,
+  onOpenSettingsModal
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -69,8 +71,8 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
             <Settings className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="font-semibold text-zinc-100 text-xs">SuperAgent Settings</h4>
-            <p className="text-[10px] text-zinc-400">Manage workspace, agent execution & monitor</p>
+            <h4 className="font-semibold text-zinc-100 text-xs">SuperAgent Quick Settings</h4>
+            <p className="text-[10px] text-zinc-400">Manage workspace, login, presets & monitor</p>
           </div>
         </div>
         <button
@@ -82,7 +84,39 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
         </button>
       </div>
 
-      <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-0.5">
+      <div className="space-y-3.5 max-h-[75vh] overflow-y-auto pr-0.5">
+        {/* Quick Links Section */}
+        {onOpenSettingsModal && (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => {
+                onOpenSettingsModal('login');
+                onClose();
+              }}
+              className="p-2.5 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/50 text-indigo-200 transition text-left flex flex-col gap-1"
+            >
+              <div className="flex items-center gap-1.5 font-medium text-xs text-indigo-300">
+                <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Login Credentials</span>
+              </div>
+              <span className="text-[10px] text-zinc-400">API keys & provider logins</span>
+            </button>
+
+            <button
+              onClick={() => {
+                onOpenSettingsModal('presets');
+                onClose();
+              }}
+              className="p-2.5 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/50 text-indigo-200 transition text-left flex flex-col gap-1"
+            >
+              <div className="flex items-center gap-1.5 font-medium text-xs text-indigo-300">
+                <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Model Presets</span>
+              </div>
+              <span className="text-[10px] text-zinc-400">Model selection & roles</span>
+            </button>
+          </div>
+        )}
         {/* Section 1: Agent & Workspace Config */}
         <div className="bg-[#121622] p-3 rounded-lg border border-zinc-800/60 space-y-2.5">
           <div className="flex items-center gap-1.5 text-zinc-300 font-medium text-[11px]">

@@ -28,7 +28,15 @@ import { terminalManager, getActiveProcessesForPid } from './terminalManager';
 import { tunnelManager } from './tunnelManager';
 import gitRouter, { registerWorkspaceChangeCallback } from './gitRoutes';
 import fsRouter, { registerFileChangeCallback } from './fsRoutes';
-import { loadMergedPresets, setActivePreset } from './presetUtils';
+import {
+  loadMergedPresets,
+  setActivePreset,
+  saveProviderProfile,
+  deleteProviderProfile,
+  setActiveProviderProfile,
+  saveCustomPreset,
+  deleteCustomPreset
+} from './presetUtils';
 import { previewProxy } from './previewProxy';
 import { TLINE_HELPER_CODE } from './tline-helper-code';
 import { handleSuperAgentConnection, getAuditLogs, clearAuditLogs } from './superAgentBridge';
@@ -529,6 +537,71 @@ app.post('/api/superagent/config/active-preset', authMiddleware, (req, res) => {
     res.json({ success: true, ...result });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to update active preset: ' + err.message });
+  }
+});
+
+app.post('/api/superagent/config/provider', authMiddleware, (req, res) => {
+  const { provider } = req.body;
+  if (!provider || !provider.id || !provider.name || !provider.type) {
+    return res.status(400).json({ error: 'Provider ID, name, and type are required' });
+  }
+  try {
+    const result = saveProviderProfile(provider);
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to save provider profile: ' + err.message });
+  }
+});
+
+app.delete('/api/superagent/config/provider/:id', authMiddleware, (req, res) => {
+  const providerId = req.params.id;
+  if (!providerId) {
+    return res.status(400).json({ error: 'Provider ID is required' });
+  }
+  try {
+    const result = deleteProviderProfile(providerId);
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to delete provider profile: ' + err.message });
+  }
+});
+
+app.post('/api/superagent/config/active-provider', authMiddleware, (req, res) => {
+  const { providerId } = req.body;
+  if (!providerId) {
+    return res.status(400).json({ error: 'Provider ID is required' });
+  }
+  try {
+    const result = setActiveProviderProfile(providerId);
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to update active provider: ' + err.message });
+  }
+});
+
+app.post('/api/superagent/config/preset', authMiddleware, (req, res) => {
+  const { mode, preset } = req.body;
+  if (!mode || !preset || !preset.name) {
+    return res.status(400).json({ error: 'Mode and preset name are required' });
+  }
+  try {
+    const data = saveCustomPreset(mode as 'single' | 'multi', preset);
+    res.json({ success: true, ...data });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to save custom preset: ' + err.message });
+  }
+});
+
+app.delete('/api/superagent/config/preset/:mode/:id', authMiddleware, (req, res) => {
+  const { mode, id } = req.params;
+  if (!mode || !id) {
+    return res.status(400).json({ error: 'Mode and preset ID are required' });
+  }
+  try {
+    const data = deleteCustomPreset(mode as 'single' | 'multi', id);
+    res.json({ success: true, ...data });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to delete custom preset: ' + err.message });
   }
 });
 

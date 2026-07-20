@@ -118,8 +118,136 @@ export function loadMergedPresets() {
 
   return {
     presets: result,
-    activePresetId: configData.activePresetId || { single: '', multi: '' }
+    activePresetId: configData.activePresetId || { single: '', multi: '' },
+    providers: Array.isArray(configData.providers) ? configData.providers : [],
+    activeProviderProfileId: configData.activeProviderProfileId || ''
   };
+}
+
+export function saveProviderProfile(provider: { id: string; name: string; type: string; apiKey: string; baseUrl?: string; models?: any }) {
+  const configPath = getModelConfigPath();
+  const dir = path.dirname(configPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  let configData: any = {};
+  if (fs.existsSync(configPath)) {
+    try {
+      configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    } catch {
+      configData = {};
+    }
+  }
+
+  if (!Array.isArray(configData.providers)) {
+    configData.providers = [];
+  }
+
+  const existingIdx = configData.providers.findIndex((p: any) => p.id === provider.id);
+  if (existingIdx !== -1) {
+    configData.providers[existingIdx] = { ...configData.providers[existingIdx], ...provider };
+  } else {
+    configData.providers.push(provider);
+  }
+
+  if (!configData.activeProviderProfileId && provider.id) {
+    configData.activeProviderProfileId = provider.id;
+  }
+
+  fs.writeFileSync(configPath, JSON.stringify(configData, null, 2), 'utf8');
+  return {
+    providers: configData.providers,
+    activeProviderProfileId: configData.activeProviderProfileId
+  };
+}
+
+export function deleteProviderProfile(providerId: string) {
+  const configPath = getModelConfigPath();
+  if (!fs.existsSync(configPath)) return;
+
+  const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  if (Array.isArray(configData.providers)) {
+    configData.providers = configData.providers.filter((p: any) => p.id !== providerId);
+    if (configData.activeProviderProfileId === providerId) {
+      configData.activeProviderProfileId = configData.providers[0]?.id || '';
+    }
+    fs.writeFileSync(configPath, JSON.stringify(configData, null, 2), 'utf8');
+  }
+
+  return {
+    providers: configData.providers || [],
+    activeProviderProfileId: configData.activeProviderProfileId || ''
+  };
+}
+
+export function setActiveProviderProfile(providerId: string) {
+  const configPath = getModelConfigPath();
+  if (!fs.existsSync(configPath)) {
+    throw new Error('SuperAgent config file not found');
+  }
+
+  const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  configData.activeProviderProfileId = providerId;
+  fs.writeFileSync(configPath, JSON.stringify(configData, null, 2), 'utf8');
+
+  return {
+    activeProviderProfileId: configData.activeProviderProfileId
+  };
+}
+
+export function saveCustomPreset(mode: 'single' | 'multi', preset: { id: string; name: string; description?: string; models: any }) {
+  const configPath = getModelConfigPath();
+  const dir = path.dirname(configPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  let configData: any = {};
+  if (fs.existsSync(configPath)) {
+    try {
+      configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    } catch {
+      configData = {};
+    }
+  }
+
+  if (!configData.presets) configData.presets = { single: [], multi: [] };
+  if (!configData.presets[mode]) configData.presets[mode] = [];
+
+  const presetId = preset.id || preset.name.toLowerCase().replace(/\s+/g, '-');
+  const normalizedPreset = {
+    id: presetId,
+    name: preset.name,
+    description: preset.description || 'Custom model preset.',
+    models: preset.models || {}
+  };
+
+  const existingIndex = configData.presets[mode].findIndex((p: any) => p.id === presetId);
+  if (existingIndex !== -1) {
+    configData.presets[mode][existingIndex] = normalizedPreset;
+  } else {
+    configData.presets[mode].push(normalizedPreset);
+  }
+
+  fs.writeFileSync(configPath, JSON.stringify(configData, null, 2), 'utf8');
+  return loadMergedPresets();
+}
+
+export function deleteCustomPreset(mode: 'single' | 'multi', presetId: string) {
+  const configPath = getModelConfigPath();
+  if (!fs.existsSync(configPath)) return loadMergedPresets();
+
+  const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  if (configData.presets && Array.isArray(configData.presets[mode])) {
+    configData.presets[mode] = configData.presets[mode].filter((p: any) => p.id !== presetId);
+    if (configData.activePresetId?.[mode] === presetId) {
+      configData.activePresetId[mode] = '';
+    }
+    fs.writeFileSync(configPath, JSON.stringify(configData, null, 2), 'utf8');
+  }
+
+  return loadMergedPresets();
 }
 
 export function setActivePreset(mode: 'single' | 'multi', presetId: string) {
@@ -213,3 +341,4 @@ export function setActivePreset(mode: 'single' | 'multi', presetId: string) {
     activeProviderProfileId: configData.activeProviderProfileId
   };
 }
+

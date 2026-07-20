@@ -9,10 +9,14 @@ import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSi
 import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
 import { SuperAgentInputContainer } from './SuperAgentInputContainer';
 import { SuperAgentSettingsMenu } from './SuperAgentSettingsMenu';
+import { SuperAgentSettingsModal } from './SuperAgentSettingsModal';
+import { ProviderProfile } from './SuperAgentLoginManager';
 import { SuperAgentMessageItem } from './SuperAgentMessageItem';
 import { SuperAgentHistorySidebar } from './SuperAgentHistorySidebar';
 import { useSuperAgentSessions, isSystemNoiseMsg } from './useSuperAgentSessions';
 import { useSidebarResize } from './useSidebarResize';
+import { getAuthHeader, readFileAsText, readFileAsDataURL, getMainModelLabel as getModelLabelUtil, handleAgentEventPayload } from './SuperAgentConsoleUtils';
+import { Key } from 'lucide-react';
 
 interface SuperAgentConsoleProps {
   activeWorkspacePath?: string;
@@ -70,6 +74,10 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
 
   const [presets, setPresets] = useState<{ single: ModelPreset[]; multi: ModelPreset[] }>({ single: [], multi: [] });
   const [activePresetId, setActivePresetId] = useState<{ single: string; multi: string }>({ single: '', multi: '' });
+  const [providers, setProviders] = useState<ProviderProfile[]>([]);
+  const [activeProviderId, setActiveProviderId] = useState<string>('');
+  const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
+  const [settingsModalTab, setSettingsModalTab] = useState<'login' | 'presets' | 'execution' | 'monitor'>('login');
 
   // Sidebar Monitor & Subagent Terminal states
   const [subagentList, setSubagentList] = useState<SubAgentItem[]>([]);
@@ -152,6 +160,8 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
         const data = await response.json();
         setPresets(data.presets || { single: [], multi: [] });
         setActivePresetId(data.activePresetId || { single: '', multi: '' });
+        setProviders(data.providers || []);
+        setActiveProviderId(data.activeProviderProfileId || '');
       }
     } catch (e) {
       console.error('Failed to fetch SuperAgent model config:', e);
@@ -161,6 +171,58 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   useEffect(() => {
     fetchConfig();
   }, [connectTrigger]);
+
+  const handleSaveProvider = async (provider: ProviderProfile) => {
+    const res = await fetch('/api/superagent/config/provider', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({ provider })
+    });
+    if (res.ok) fetchConfig();
+  };
+
+  const handleDeleteProvider = async (id: string) => {
+    const res = await fetch(`/api/superagent/config/provider/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: getAuthHeader()
+    });
+    if (res.ok) fetchConfig();
+  };
+
+  const handleSetActiveProvider = async (providerId: string) => {
+    const res = await fetch('/api/superagent/config/active-provider', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({ providerId })
+    });
+    if (res.ok) {
+      setActiveProviderId(providerId);
+      setMessages(prev => [...prev, { role: 'system', text: 'Active provider changed. Restarting bridge...' }]);
+      setConnectTrigger(prev => prev + 1);
+    }
+  };
+
+  const handleSaveCustomPreset = async (mode: 'single' | 'multi', preset: any) => {
+    const res = await fetch('/api/superagent/config/preset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({ mode, preset })
+    });
+    if (res.ok) fetchConfig();
+  };
+
+  const handleDeleteCustomPreset = async (mode: 'single' | 'multi', presetId: string) => {
+    const res = await fetch(`/api/superagent/config/preset/${mode}/${encodeURIComponent(presetId)}`, {
+      method: 'DELETE',
+      headers: getAuthHeader()
+    });
+    if (res.ok) fetchConfig();
+  };
+
+  const handleOpenSettingsModal = (tab: 'login' | 'presets' | 'execution' | 'monitor' = 'login') => {
+    setSettingsModalTab(tab);
+    setShowSettingsModal(true);
+  };
 
   const handlePresetChange = async (presetId: string) => {
     try {
@@ -185,15 +247,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
     }
   };
 
-  const getMainModelLabel = (preset: ModelPreset | undefined) => {
-    if (!preset?.models) return 'Unknown';
-    const m = preset.models;
-    if (agentMode === 'multi' && m.master) return typeof m.master === 'object' ? m.master.model : m.master;
-    if (m.superagent) return typeof m.superagent === 'object' ? m.superagent.model : m.superagent;
-    if (m.MODEL) return typeof m.MODEL === 'object' ? (m.MODEL as any).model : m.MODEL;
-    if (m.MODEL_SINGLE) return typeof m.MODEL_SINGLE === 'object' ? (m.MODEL_SINGLE as any).model : m.MODEL_SINGLE;
-    return 'Default';
-  };
+  const getMainModelLabel = (preset: ModelPreset | undefined) => getModelLabelUtil(preset, agentMode);
 
   // Interactive agent states
   const [pendingPermission, setPendingPermission] = useState<PendingPermission | null>(null);
@@ -254,14 +308,6 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
     });
   };
 
-  const readFileAsText = (file: File): Promise<string> => new Promise((res, rej) => {
-    const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = () => rej(r.error); r.readAsText(file);
-  });
-
-  const readFileAsDataURL = (file: File): Promise<string> => new Promise((res, rej) => {
-    const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = () => rej(r.error); r.readAsDataURL(file);
-  });
-
   // Close suggestions when clicking outside
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -283,11 +329,6 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
       setConnectTrigger(prev => prev + 1);
     }
   }, [activeWorkspacePath]);
-
-  const getAuthHeader = (): Record<string, string> => {
-    const token = localStorage.getItem('token');
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
-  };
 
   useEffect(() => {
     const params = getRuntimeSearchParams();
@@ -315,135 +356,19 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
       try {
         const payload = JSON.parse(event.data);
         
-        if (payload.type === 'chat_response') {
-          if (payload.result && payload.result.error) {
-            setLoading(false);
-            setToolProgressMsg('');
-            setMessages(prev => [...prev, { role: 'system', text: `Error: ${payload.result.error}` }]);
-          }
-        } else if (payload.type === 'status') {
-          console.log('[SuperAgent WS Status]', payload.text);
-          if (typeof payload.text === 'string') {
-            const statusLower = payload.text.toLowerCase();
-            if (statusLower.includes('aborted')) {
-              isAbortedRef.current = false;
-              setLoading(false);
-              setToolProgressMsg('');
-            }
-            const isConnNoise = statusLower.includes('websocket') ||
-                                statusLower.includes('connected to superagent') ||
-                                statusLower.includes('starting superagent') ||
-                                statusLower.includes('restarting superagent');
-            if (!isConnNoise) {
-              setMessages(prev => [...prev, { role: 'system', text: payload.text }]);
-            }
-          }
-        } else if (payload.type === 'agent_event') {
-          const innerEvent = payload.event;
-          if (innerEvent.type === 'done' || innerEvent.type === 'goal_done') {
-            isAbortedRef.current = false;
-            setLoading(false);
-            setToolProgressMsg('');
-            return;
-          }
-
-          if (isAbortedRef.current) {
-            return;
-          }
-
-          if (innerEvent.type === 'tool_start') {
-            setLoading(true);
-            const toolName = innerEvent.toolCall?.name || innerEvent.toolCall?.toolName || innerEvent.toolName || innerEvent.name || 'tool';
-            const args = innerEvent.toolCall?.args || innerEvent.args;
-
-            if (toolName === 'invoke_subagent' && args) {
-              const subagentsPayload = args.Subagents || args.subagents || [];
-              if (Array.isArray(subagentsPayload)) {
-                subagentsPayload.forEach((sa: any) => {
-                  const saId = Math.random().toString(36).substring(7);
-                  setSubagentList(prev => [
-                    {
-                      id: saId,
-                      role: sa.Role || sa.role || sa.TypeName || 'subagent',
-                      typeName: sa.TypeName || sa.typeName,
-                      status: 'RUNNING',
-                      prompt: sa.Prompt || sa.prompt,
-                      logs: [`[${new Date().toLocaleTimeString()}] Subagent launched: ${sa.Role || sa.TypeName}`]
-                    },
-                    ...prev
-                  ]);
-                });
-              }
-            }
-
-            setMessages(prev => [...prev, { 
-              role: 'tool', 
-              text: `Invoking tool: ${toolName}`,
-              toolName,
-              args
-            }]);
-          } else if (innerEvent.type === 'tool_end') {
-            setToolProgressMsg('');
-            const toolName = innerEvent.toolResult?.name || innerEvent.toolCall?.name || innerEvent.toolName || 'tool';
-            const result = innerEvent.toolResult?.result !== undefined ? innerEvent.toolResult.result : innerEvent.result;
-            setMessages(prev => [...prev, { 
-              role: 'tool', 
-              text: `Tool '${toolName}' completed.`,
-              toolName,
-              result
-            }]);
-          } else if (innerEvent.type === 'thought' || innerEvent.type === 'reasoning') {
-            setLoading(true);
-            const chunk = innerEvent.text || innerEvent.content || '';
-            if (chunk) {
-              setMessages(prev => {
-                const lastMsg = prev[prev.length - 1];
-                if (lastMsg && lastMsg.role === 'thought') {
-                  const newText = chunk.startsWith(lastMsg.text) ? chunk : (lastMsg.text + chunk);
-                  return [...prev.slice(0, -1), { ...lastMsg, text: newText }];
-                }
-                return [...prev, { role: 'thought', text: chunk }];
-              });
-            }
-          } else if (innerEvent.type === 'message' || innerEvent.type === 'text') {
-            setLoading(true);
-            const chunk = innerEvent.text || innerEvent.content || '';
-            if (chunk) {
-              setMessages(prev => {
-                const lastMsg = prev[prev.length - 1];
-                if (lastMsg && lastMsg.role === 'assistant') {
-                  const newText = chunk.startsWith(lastMsg.text) ? chunk : (lastMsg.text + chunk);
-                  return [...prev.slice(0, -1), { ...lastMsg, text: newText }];
-                }
-                return [...prev, { role: 'assistant', text: chunk }];
-              });
-            }
-          } else if (innerEvent.type === 'error') {
-            setLoading(false);
-            setToolProgressMsg('');
-            setMessages(prev => [...prev, { role: 'system', text: `Agent Error: ${innerEvent.message || 'Unknown error'}` }]);
-          }
-        } else if (payload.type === 'permission_required') {
-          setPendingPermission({
-            permissionId: payload.permissionId,
-            toolCall: payload.toolCall,
-            description: payload.description
-          });
-        } else if (payload.type === 'question_required') {
-          setPendingQuestion({
-            questionId: payload.questionId,
-            question: payload.question,
-            options: payload.options,
-            isMultiSelect: payload.isMultiSelect
-          });
-          setSelectedQuestionAnswers([]);
-          setCustomQuestionInput('');
-        } else if (payload.type === 'plan_approval_required') {
-          setPendingPlanApproval(payload.planState === 'PLANNING_PENDING');
-          setMessages(prev => [...prev, { role: 'system', text: '⭐ Plan approval required! Please review and authorize execution below.' }]);
-        } else if (payload.type === 'tool_progress') {
-          setToolProgressMsg(payload.content || payload.message || '');
-        }
+        handleAgentEventPayload(
+          payload,
+          setLoading,
+          setToolProgressMsg,
+          setMessages,
+          setSubagentList,
+          setPendingPermission,
+          setPendingQuestion,
+          setSelectedQuestionAnswers,
+          setCustomQuestionInput,
+          setPendingPlanApproval,
+          isAbortedRef
+        );
       } catch (e) {
         setMessages(prev => [...prev, { role: 'assistant', text: event.data }]);
         setLoading(false);
@@ -701,16 +626,9 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
 
   const handlePlanApproval = (action: 'approve' | 'reject') => {
     if (!ws) return;
-    ws.send(JSON.stringify({
-      type: 'approve_plan',
-      action
-    }));
+    ws.send(JSON.stringify({ type: 'approve_plan', action }));
     setPendingPlanApproval(false);
   };
-
-
-
-
 
   return (
     <div className="flex flex-col h-full w-full bg-[#05070c] text-gray-200 overflow-hidden font-sans">
@@ -756,6 +674,24 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
 
         {/* Right Column */}
         <div className="flex justify-end gap-2 items-center relative">
+          <button
+            onClick={() => handleOpenSettingsModal('login')}
+            className="px-2 py-1 text-[11px] rounded-md border border-zinc-800 bg-[#121622] hover:bg-indigo-950/60 text-zinc-300 hover:text-indigo-300 transition flex items-center gap-1 cursor-pointer font-medium"
+            title="Management Login & Credentials"
+          >
+            <Key className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden md:inline">Login</span>
+          </button>
+
+          <button
+            onClick={() => handleOpenSettingsModal('presets')}
+            className="px-2 py-1 text-[11px] rounded-md border border-zinc-800 bg-[#121622] hover:bg-indigo-950/60 text-zinc-300 hover:text-indigo-300 transition flex items-center gap-1 cursor-pointer font-medium"
+            title="Model Presets Manager"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden md:inline">Preset</span>
+          </button>
+
           <button
             onClick={() => setShowSidebar(!showSidebar)}
             className={`px-2.5 py-1 text-[11px] rounded-md border transition flex items-center gap-1.5 cursor-pointer font-medium ${
@@ -806,6 +742,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
             isLoadingMonitor={isLoadingMonitor}
             onClearConsole={() => setMessages([{ role: 'system', text: 'Console output cleared.' }])}
             onOpenGlobalSettings={onOpenSettings}
+            onOpenSettingsModal={handleOpenSettingsModal}
           />
         </div>
       </div>
@@ -981,6 +918,37 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
           onClose={() => setSelectedSubagent(null)}
         />
       )}
+
+      {/* SuperAgent Unified Settings Modal */}
+      <SuperAgentSettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        workspaces={workspaces}
+        workspace={workspace}
+        setWorkspace={setWorkspace}
+        agentMode={agentMode}
+        setAgentMode={setAgentMode}
+        customArgs={customArgs}
+        setCustomArgs={setCustomArgs}
+        setConnectTrigger={setConnectTrigger}
+        showSidebar={showSidebar}
+        setShowSidebar={setShowSidebar}
+        onRefreshMonitor={fetchMonitorData}
+        isLoadingMonitor={isLoadingMonitor}
+        onClearConsole={() => setMessages([{ role: 'system', text: 'Console output cleared.' }])}
+        providers={providers}
+        activeProviderId={activeProviderId}
+        onSaveProvider={handleSaveProvider}
+        onDeleteProvider={handleDeleteProvider}
+        onSetActiveProvider={handleSetActiveProvider}
+        presets={presets}
+        activePresetId={activePresetId}
+        onSelectPreset={handlePresetChange}
+        onSaveCustomPreset={handleSaveCustomPreset}
+        onDeleteCustomPreset={handleDeleteCustomPreset}
+        getAuthHeader={getAuthHeader}
+        defaultTab={settingsModalTab}
+      />
     </div>
   );
 }

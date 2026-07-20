@@ -2,6 +2,21 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.505] - 2026-07-20
+
+### Added
+- **SuperAgent Management Login & Provider Credentials**:
+  - Implemented [SuperAgentLoginManager.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentLoginManager.tsx) for managing LLM provider login profiles and API keys (OpenAI, Anthropic, Gemini, DeepSeek, Ollama, OpenRouter, Groq, Mistral, Azure, Custom REST).
+  - Added backend API endpoints `/api/superagent/config/provider` and `/api/superagent/config/active-provider` in [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) and helpers in [presetUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/presetUtils.ts).
+- **Model Preset Management**:
+  - Created [SuperAgentPresetManager.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentPresetManager.tsx) for viewing model presets, customizing Master & Subagent model roles, and creating custom model presets.
+  - Added backend API endpoints `/api/superagent/config/preset` for preset creation, activation, and deletion.
+- **Unified SuperAgent Settings Modal**:
+  - Built [SuperAgentSettingsModal.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentSettingsModal.tsx) tabbed settings modal (**Management Login**, **Model Presets**, **Execution & Workspace**, **Monitor & Console**).
+  - Enhanced [SuperAgentConsoleHeader.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsoleHeader.tsx) and [SuperAgentSettingsMenu.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentSettingsMenu.tsx) with quick action buttons and preset dropdowns.
+- **Codebase Modularization**:
+  - Created [SuperAgentConsoleUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsoleUtils.ts) to keep [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) well under the strict 1000-line project limit (957 lines).
+
 ## [1.3.504] - 2026-07-20
 
 ### Fixed
