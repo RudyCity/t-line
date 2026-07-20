@@ -84,7 +84,8 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
 
   // Fetch models for a given provider ID
   const fetchProviderModels = async (providerId: string, force = false) => {
-    if (!providerId || (!force && providerModelsCache[providerId])) return;
+    if (!providerId) return;
+    if (!force && providerFetchStatus[providerId]?.isRealFetched && (providerModelsCache[providerId]?.length || 0) > 0) return;
     setLoadingModelsMap(prev => ({ ...prev, [providerId]: true }));
     try {
       const token = localStorage.getItem('token');
@@ -96,7 +97,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
       });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data.models)) {
+        if (Array.isArray(data.models) && data.models.length > 0) {
           setProviderModelsCache(prev => ({ ...prev, [providerId]: data.models }));
           setProviderFetchStatus(prev => ({
             ...prev,
@@ -106,6 +107,13 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
               count: data.models.length
             }
           }));
+
+          if (providerId === mainProviderId && (!mainModel || mainModel === 'gemini-2.5-flash')) {
+            setMainModel(data.models[0]);
+          }
+          if (providerId === subDefaultProviderId && (!subDefaultModel || subDefaultModel === 'gemini-2.5-flash')) {
+            setSubDefaultModel(data.models[0]);
+          }
         }
       }
     } catch (e: any) {
@@ -120,12 +128,16 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
   };
 
   useEffect(() => {
-    if (mainProviderId) fetchProviderModels(mainProviderId);
-  }, [mainProviderId]);
-
-  useEffect(() => {
-    if (subDefaultProviderId) fetchProviderModels(subDefaultProviderId);
-  }, [subDefaultProviderId]);
+    if (showAddModal && providers.length > 0) {
+      const defaultP = providers[0]?.id || '';
+      const mP = mainProviderId || defaultP;
+      const sP = subDefaultProviderId || defaultP;
+      if (!mainProviderId) setMainProviderId(mP);
+      if (!subDefaultProviderId) setSubDefaultProviderId(sP);
+      if (mP) fetchProviderModels(mP, true);
+      if (sP && sP !== mP) fetchProviderModels(sP, true);
+    }
+  }, [showAddModal, providers]);
 
   const handleAddOverride = () => {
     const defaultRole = COMMON_SUBAGENT_ROLES.find(r => !subagentOverrides.some(o => o.role === r.id))?.id || 'coder';
@@ -394,7 +406,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                       value={mainProviderId}
                       onChange={(e) => {
                         setMainProviderId(e.target.value);
-                        fetchProviderModels(e.target.value);
+                        fetchProviderModels(e.target.value, true);
                       }}
                       className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-2.5 py-1.5 text-zinc-200 text-xs outline-none focus:border-indigo-500"
                     >
@@ -462,7 +474,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                       value={subDefaultProviderId}
                       onChange={(e) => {
                         setSubDefaultProviderId(e.target.value);
-                        fetchProviderModels(e.target.value);
+                        fetchProviderModels(e.target.value, true);
                       }}
                       className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-2.5 py-1.5 text-zinc-200 text-xs outline-none focus:border-indigo-500"
                     >

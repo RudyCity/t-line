@@ -219,6 +219,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   };
 
   const handleOpenSettingsModal = (tab: 'login' | 'presets' | 'execution' | 'monitor' = 'login') => {
+    fetchConfig();
     setSettingsModalTab(tab);
     setShowSettingsModal(true);
   };
