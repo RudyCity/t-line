@@ -256,14 +256,39 @@ export async function getSessionMessages(
           }
         }
 
-        if (rawMsg.toolName || rawMsg.toolCalls) {
-          const tName = rawMsg.toolName || 'tool';
+        // Extract tool name from all possible fields in rawMsg
+        let toolName = rawMsg.toolName || rawMsg.name || rawMsg.fn || rawMsg.function?.name;
+        if (!toolName && Array.isArray(rawMsg.tool_calls) && rawMsg.tool_calls.length > 0) {
+          toolName = rawMsg.tool_calls[0]?.function?.name || rawMsg.tool_calls[0]?.name;
+        }
+        if (!toolName && Array.isArray(rawMsg.toolCalls) && rawMsg.toolCalls.length > 0) {
+          toolName = rawMsg.toolCalls[0]?.name || rawMsg.toolCalls[0]?.toolName;
+        }
+
+        // Extract args from all possible fields
+        let args = rawMsg.args || rawMsg.arguments;
+        if (!args && Array.isArray(rawMsg.tool_calls) && rawMsg.tool_calls[0]?.function?.arguments) {
+          try {
+            args = JSON.parse(rawMsg.tool_calls[0].function.arguments);
+          } catch (e) {
+            args = rawMsg.tool_calls[0].function.arguments;
+          }
+        }
+        if (typeof args === 'string') {
+          try { args = JSON.parse(args); } catch (e) {}
+        }
+
+        // Extract result from all possible fields
+        const rawResult = rawMsg.result !== undefined ? rawMsg.result : (rawMsg.output !== undefined ? rawMsg.output : (role === 'tool' ? rawMsg.content : undefined));
+
+        if (role === 'tool' || toolName || rawMsg.tool_calls || rawMsg.toolCalls) {
+          const resolvedToolName = toolName || 'tool';
           guiMsgs.push({
             role: 'tool',
-            text: `Tool '${tName}' completed.`,
-            toolName: tName,
-            args: rawMsg.args || {},
-            result: truncateResult(rawMsg.result !== undefined ? rawMsg.result : rawMsg.output)
+            text: `Tool '${resolvedToolName}' completed.`,
+            toolName: resolvedToolName,
+            args: args || {},
+            result: truncateResult(rawResult)
           });
         }
       }

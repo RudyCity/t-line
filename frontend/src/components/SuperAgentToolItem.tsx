@@ -15,7 +15,22 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const rawToolName = (msg.toolName || msg.text || 'tool').toLowerCase();
+  let rawToolName = (msg.toolName || '').toLowerCase();
+  if (!rawToolName || rawToolName === 'tool') {
+    const textMatch = (msg.text || '').match(/(?:Tool '|Invoking tool: |tool: )([a-zA-Z0-9_-]+)/i);
+    if (textMatch && textMatch[1]) {
+      rawToolName = textMatch[1].toLowerCase();
+    } else if (msg.args) {
+      if (msg.args.Query || msg.args.query || msg.args.pattern) rawToolName = 'grep_search';
+      else if (msg.args.CommandLine || msg.args.command || msg.args.cmd) rawToolName = 'run_command';
+      else if (msg.args.AbsolutePath || msg.args.TargetFile || msg.args.path) rawToolName = 'view_file';
+      else if (msg.args.Subagents || msg.args.subagents) rawToolName = 'invoke_subagent';
+      else rawToolName = 'tool';
+    } else {
+      rawToolName = 'tool';
+    }
+  }
+
   const args = msg.args || {};
   const result = msg.result;
 

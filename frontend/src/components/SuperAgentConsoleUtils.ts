@@ -106,11 +106,24 @@ export const handleAgentEventPayload = (
 
     if (isAbortedRef.current) return;
 
-    if (innerEvent.type === 'tool_start') {
+    if (innerEvent.type === 'tool_start' || innerEvent.type === 'tool_call' || innerEvent.type === 'tool') {
       setLoading(true);
-      const toolName = innerEvent.toolCall?.name || innerEvent.toolCall?.toolName || innerEvent.toolName || innerEvent.name || innerEvent.tool || 'tool';
-      const args = innerEvent.toolCall?.args || innerEvent.args;
-      const callId = innerEvent.toolCall?.id || innerEvent.callId || innerEvent.id;
+      const toolName = 
+        innerEvent.toolCall?.name || 
+        innerEvent.toolCall?.toolName || 
+        innerEvent.toolName || 
+        innerEvent.name || 
+        innerEvent.tool || 
+        innerEvent.fn || 
+        innerEvent.function?.name || 
+        'tool';
+
+      let args = innerEvent.toolCall?.args || innerEvent.args || innerEvent.arguments || innerEvent.function?.arguments;
+      if (typeof args === 'string') {
+        try { args = JSON.parse(args); } catch (e) {}
+      }
+
+      const callId = innerEvent.toolCall?.id || innerEvent.callId || innerEvent.id || innerEvent.tool_call_id;
 
       if (toolName === 'invoke_subagent' && args) {
         const subagentsPayload = args.Subagents || args.subagents || [];
@@ -132,12 +145,31 @@ export const handleAgentEventPayload = (
         }
       }
 
-      setMessages(prev => [...prev, { role: 'tool', text: `Invoking tool: ${toolName}`, toolName, args, callId }]);
-    } else if (innerEvent.type === 'tool_end') {
+      setMessages(prev => [...prev, { role: 'tool', text: `Invoking tool: ${toolName}`, toolName, args: args || {}, callId }]);
+    } else if (innerEvent.type === 'tool_end' || innerEvent.type === 'tool_result') {
       setToolProgressMsg('');
-      const toolName = innerEvent.toolResult?.name || innerEvent.toolCall?.name || innerEvent.toolName || innerEvent.name || innerEvent.tool || 'tool';
-      const result = innerEvent.toolResult?.result !== undefined ? innerEvent.toolResult.result : innerEvent.result;
-      const callId = innerEvent.toolResult?.id || innerEvent.toolCall?.id || innerEvent.callId || innerEvent.id;
+      const toolName = 
+        innerEvent.toolResult?.name || 
+        innerEvent.toolCall?.name || 
+        innerEvent.toolName || 
+        innerEvent.name || 
+        innerEvent.tool || 
+        innerEvent.fn || 
+        innerEvent.function?.name || 
+        'tool';
+
+      let args = innerEvent.toolResult?.args || innerEvent.toolCall?.args || innerEvent.args || innerEvent.arguments;
+      if (typeof args === 'string') {
+        try { args = JSON.parse(args); } catch (e) {}
+      }
+
+      const result = 
+        innerEvent.toolResult?.result !== undefined ? innerEvent.toolResult.result : 
+        innerEvent.result !== undefined ? innerEvent.result : 
+        innerEvent.output !== undefined ? innerEvent.output : 
+        innerEvent.content;
+
+      const callId = innerEvent.toolResult?.id || innerEvent.toolCall?.id || innerEvent.callId || innerEvent.id || innerEvent.tool_call_id;
 
       setMessages(prev => {
         let idx = -1;
@@ -160,11 +192,12 @@ export const handleAgentEventPayload = (
             ...updated[idx],
             toolName: resolvedName,
             text: `Tool '${resolvedName}' completed.`,
+            args: (args && Object.keys(args).length > 0) ? args : updated[idx].args,
             result
           };
           return updated;
         }
-        return [...prev, { role: 'tool', text: `Tool '${toolName}' completed.`, toolName, result, callId }];
+        return [...prev, { role: 'tool', text: `Tool '${toolName}' completed.`, toolName, args: args || {}, result, callId }];
       });
     } else if (innerEvent.type === 'thought' || innerEvent.type === 'reasoning') {
       setLoading(true);

@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.569] - 2026-07-20
+
+### Fixed
+- **Tool Details Parsing & Generic Fallback Bug (`sessionManager.ts`, `SuperAgentConsoleUtils.ts`, `SuperAgentToolItem.tsx`)**:
+  - Fixed an issue where tool calls were displaying generic `Tool tool` names and `tool details` text due to missing fields in SSE events and history payloads. Added comprehensive field extraction across `function`, `tool_calls`, `arguments`, `name`, and `content`, as well as smart regex/args inference fallbacks to correctly display tool names (`Read`, `Edited`, `Searched`, `Ran`, `Subagent`), parameters, arguments, and execution outputs.
+
 ## [1.3.568] - 2026-07-20
 
 ### Fixed
