@@ -109,11 +109,11 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
   };
 
   return (
-    <div className="my-1 font-mono text-xs">
+    <div className="py-1 px-1 font-mono text-xs w-full bg-transparent border-none">
       {/* Clickable Header Bar */}
       <div
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-2 py-1.5 px-3 rounded-lg bg-[#0d101a] hover:bg-[#141826] border border-zinc-800/70 hover:border-zinc-700/80 cursor-pointer transition-all duration-150 group shadow-xs select-none"
+        className="flex items-center gap-2 py-1 px-1 rounded-md bg-transparent hover:bg-zinc-800/30 cursor-pointer transition-all duration-150 group select-none"
       >
         <span className="text-zinc-500 shrink-0">
           {expanded ? (
@@ -138,14 +138,14 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
 
       {/* Expanded Body Panel */}
       {expanded && (
-        <div className="mt-1.5 ml-4 p-3 rounded-lg bg-[#060810] border border-zinc-800/80 text-zinc-300 font-mono text-xs space-y-2.5 shadow-md select-text">
-          <div className="flex items-center justify-between border-b border-zinc-800/60 pb-1.5">
+        <div className="mt-1 ml-3 pl-3 border-l-2 border-zinc-800/80 text-zinc-300 font-mono text-xs space-y-2 select-text bg-transparent">
+          <div className="flex items-center justify-between py-1">
             <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">
-              Tool Arguments & Execution Result
+              Tool Details
             </span>
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1 text-[10px] text-zinc-400 hover:text-white px-2 py-0.5 rounded bg-zinc-800/60 hover:bg-zinc-700/60 transition"
+              className="flex items-center gap-1 text-[10px] text-zinc-400 hover:text-white px-1.5 py-0.5 rounded hover:bg-zinc-800/50 transition"
               title="Copy details"
             >
               {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
@@ -155,8 +155,8 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
 
           {msg.args && Object.keys(msg.args).length > 0 && (
             <div>
-              <span className="text-[10px] text-indigo-400 font-semibold uppercase block mb-1">Arguments:</span>
-              <pre className="p-2 bg-[#090c14] rounded border border-zinc-800/80 text-[11px] text-indigo-200/90 overflow-x-auto max-h-40 overflow-y-auto font-mono">
+              <span className="text-[10px] text-indigo-400 font-semibold uppercase block mb-0.5">Arguments:</span>
+              <pre className="p-1.5 text-[11px] text-indigo-200/90 overflow-x-auto max-h-40 overflow-y-auto font-mono bg-transparent border-none">
                 {JSON.stringify(msg.args, null, 2)}
               </pre>
             </div>
@@ -164,8 +164,8 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
 
           {result !== undefined && (
             <div>
-              <span className="text-[10px] text-amber-400 font-semibold uppercase block mb-1">Result / Output:</span>
-              <pre className="p-2 bg-[#090c14] rounded border border-zinc-800/80 text-[11px] text-zinc-300 overflow-x-auto max-h-60 overflow-y-auto font-mono whitespace-pre-wrap">
+              <span className="text-[10px] text-amber-400 font-semibold uppercase block mb-0.5">Result / Output:</span>
+              <pre className="p-1.5 text-[11px] text-zinc-300 overflow-x-auto max-h-60 overflow-y-auto font-mono whitespace-pre-wrap bg-transparent border-none">
                 {typeof result === 'string' ? result : JSON.stringify(result, null, 2)}
               </pre>
             </div>

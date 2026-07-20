@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.522] - 2026-07-20
+
+### Redesigned
+- **Borderless & Backgroundless Tool Usage Items (`SuperAgentToolItem.tsx`)**:
+  - Removed container background styles (`bg-[#0d101a]`, `bg-[#060810]`, `bg-[#090c14]`) and borders
+  - Replaced card box borders with a subtle hover background (`hover:bg-zinc-800/30`) and transparent panel layout
+  - Clean left accent border (`border-l-2 border-zinc-800/80`) for expanded tool arguments and execution output
+
 ## [1.3.521] - 2026-07-20
 
 ### Added & Redesigned
