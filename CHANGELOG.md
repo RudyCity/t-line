@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.556] - 2026-07-20
+
+### Fixed
+- **SSE Stream Auto-Reconnection (`superAgentBridge.ts`)**:
+  - Implemented self-healing reconnect loop for local SSE events. If the SuperAgent server crashes, is restarted, or terminates, the SSE stream will automatically schedule reconnection attempts (every 1s/2s) until the server is back online.
+- **Robust Hybrid Stream Parser (`SuperAgentConsoleUtils.ts`)**:
+  - Fixed a streaming print bug where repeating characters (like `"aa"` or `"111"` at the start of a message) or duplicate words (like `"haha"`) were swallowed due to a raw `.startsWith()` check.
+  - Implemented a safer hybrid check: it only treats a chunk as cumulative if the incoming chunk strictly starts with the accumulated text AND its length is strictly greater than the accumulated text length. Otherwise, it is correctly treated as a delta chunk and appended.
+
 ## [1.3.555] - 2026-07-20
 
 ### Improved

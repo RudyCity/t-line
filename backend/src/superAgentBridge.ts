@@ -552,8 +552,11 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
 
   let sseReq: http.ClientRequest | null = null;
   let connectionAttempts = 0;
+  let isClosed = false;
 
   function connectToSuperAgentSSE() {
+    if (isClosed || ws.readyState !== WebSocket.OPEN) return;
+
     sseReq = http.request({
       hostname: '127.0.0.1',
       port: 7888,
@@ -591,8 +594,11 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
       });
 
       res.on('end', () => {
-        ws.send(JSON.stringify({ type: 'status', text: 'SuperAgent SSE connection closed.' }));
-        logSuperAgentEvent('system', { message: 'SuperAgent SSE connection closed' });
+        console.log('[WS-Agent] SuperAgent SSE connection ended by server.');
+        if (!isClosed && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'status', text: 'SSE connection ended. Reconnecting...' }));
+          setTimeout(connectToSuperAgentSSE, 1000);
+        }
       });
     });
 
@@ -600,15 +606,18 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
       logSuperAgentEvent('system_error', { message: 'Failed to connect to SuperAgent server', error: err.message });
       connectionAttempts++;
 
-      if (connectionAttempts === 1) {
+      if (connectionAttempts === 1 && !isClosed && ws.readyState === WebSocket.OPEN) {
         ensureSuperAgentServer(workspacePath, agentMode, customArgs, ws, () => {
           connectToSuperAgentSSE();
         });
       } else {
-        ws.send(JSON.stringify({
-          type: 'status',
-          text: 'SuperAgent server not running on port 7888. Run "superagent --server" to connect.'
-        }));
+        if (!isClosed && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'status',
+            text: 'SuperAgent server not running on port 7888. Retrying connection...'
+          }));
+          setTimeout(connectToSuperAgentSSE, 2000);
+        }
       }
     });
 
@@ -727,6 +736,7 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
 
   ws.on('close', () => {
     console.log('[WS-Agent] Client disconnected');
+    isClosed = true;
     if (sseReq) {
       sseReq.destroy();
     }

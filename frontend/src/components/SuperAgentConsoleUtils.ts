@@ -144,7 +144,8 @@ export const handleAgentEventPayload = (
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1];
           if (lastMsg && lastMsg.role === 'thought') {
-            const newText = chunk.startsWith(lastMsg.text) ? chunk : (lastMsg.text + chunk);
+            const isCumulative = chunk.startsWith(lastMsg.text) && chunk.length > lastMsg.text.length;
+            const newText = isCumulative ? chunk : (lastMsg.text + chunk);
             return [...prev.slice(0, -1), { ...lastMsg, text: newText }];
           }
           return [...prev, { role: 'thought', text: chunk }];
@@ -157,7 +158,8 @@ export const handleAgentEventPayload = (
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1];
           if (lastMsg && lastMsg.role === 'assistant') {
-            const newText = chunk.startsWith(lastMsg.text) ? chunk : (lastMsg.text + chunk);
+            const isCumulative = chunk.startsWith(lastMsg.text) && chunk.length > lastMsg.text.length;
+            const newText = isCumulative ? chunk : (lastMsg.text + chunk);
             return [...prev.slice(0, -1), { ...lastMsg, text: newText }];
           }
           return [...prev, { role: 'assistant', text: chunk }];
