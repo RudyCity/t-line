@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.573] - 2026-07-20
+
+### Fixed
+- **Rich Tool Inspection Panel & Full Height Toggle (`SuperAgentToolItem.tsx`)**:
+  - Added a `Full View` / `Compact` toggle button allowing users to un-truncate long tool arguments and outputs without strict scroll height limits.
+  - Added real-time status badges (`COMPLETED` / `RUNNING`) and `callId` tracking pill directly inside expanded tool detail headers for complete transparency.
+
 ## [1.3.572] - 2026-07-20
 
 ### Fixed

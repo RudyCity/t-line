@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronDown, FileCode, Search, Terminal, Wrench, Cpu, Check, Copy, Code2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, FileCode, Search, Terminal, Wrench, Cpu, Check, Copy, Code2, Maximize2, Minimize2 } from 'lucide-react';
 
 interface SuperAgentToolItemProps {
   msg: {
@@ -8,12 +8,14 @@ interface SuperAgentToolItemProps {
     toolName?: string;
     args?: any;
     result?: any;
+    callId?: string;
   };
 }
 
 export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [fullHeight, setFullHeight] = useState(false);
 
   let rawToolName = (msg.toolName || '').toLowerCase();
 
@@ -180,6 +182,7 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
   );
 
   const hasResult = result !== undefined && result !== null;
+  const isCompleted = hasResult || (msg.text && msg.text.includes('completed'));
 
   return (
     <div className="py-0.5 px-1 font-mono text-[11px] w-full select-text">
@@ -190,7 +193,7 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
       >
         {info.icon}
         <span className="font-sans font-medium text-zinc-400">{info.action}</span>
-        <span className="font-mono text-zinc-300 truncate max-w-md">{displayTarget}</span>
+        <span className="font-mono text-zinc-300 truncate max-w-md" title={displayTarget}>{displayTarget}</span>
         <span className="shrink-0">
           {expanded ? (
             <ChevronDown className="w-3 h-3 text-zinc-400" />
@@ -203,22 +206,46 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
       {/* Expanded Details */}
       {expanded && (
         <div className="mt-1 ml-4 pl-2.5 border-l border-zinc-800 text-zinc-400 font-mono text-[11px] space-y-1.5 select-text">
-          <div className="flex items-center justify-between py-0.5 text-[10px] text-zinc-500">
-            <span>{rawToolName} details</span>
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-1 text-zinc-400 hover:text-white transition"
-              title="Copy"
-            >
-              {copied ? <Check className="w-2.5 h-2.5 text-emerald-400" /> : <Copy className="w-2.5 h-2.5" />}
-              <span>{copied ? 'Copied' : 'Copy'}</span>
-            </button>
+          <div className="flex items-center justify-between py-0.5 text-[10px] text-zinc-500 border-b border-zinc-800/60 pb-1">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-zinc-300 uppercase tracking-wider">{rawToolName || 'tool'} details</span>
+              {msg.callId && (
+                <span className="text-[9px] text-zinc-500 font-mono bg-zinc-800/60 px-1 py-0.2 rounded">
+                  {msg.callId}
+                </span>
+              )}
+              <span className={`text-[9px] px-1.5 py-0.2 rounded font-sans font-medium ${
+                isCompleted ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40' : 'bg-amber-950/60 text-amber-400 border border-amber-800/40'
+              }`}>
+                {isCompleted ? 'COMPLETED' : 'RUNNING'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); setFullHeight(!fullHeight); }}
+                className="flex items-center gap-1 text-zinc-400 hover:text-white transition px-1.5 py-0.5 rounded bg-zinc-800/40 hover:bg-zinc-800"
+                title={fullHeight ? "Collapse View" : "Expand Full View"}
+              >
+                {fullHeight ? <Minimize2 className="w-2.5 h-2.5" /> : <Maximize2 className="w-2.5 h-2.5" />}
+                <span>{fullHeight ? 'Compact' : 'Full View'}</span>
+              </button>
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1 text-zinc-400 hover:text-white transition px-1.5 py-0.5 rounded bg-zinc-800/40 hover:bg-zinc-800"
+                title="Copy"
+              >
+                {copied ? <Check className="w-2.5 h-2.5 text-emerald-400" /> : <Copy className="w-2.5 h-2.5" />}
+                <span>{copied ? 'Copied' : 'Copy'}</span>
+              </button>
+            </div>
           </div>
 
           {hasArgs && (
             <div>
-              <span className="text-[10px] text-indigo-400 font-semibold uppercase block">Arguments:</span>
-              <pre className="p-1 text-[10px] text-indigo-200/90 overflow-x-auto max-h-32 overflow-y-auto font-mono">
+              <span className="text-[10px] text-indigo-400 font-semibold uppercase block mb-0.5">Arguments:</span>
+              <pre className={`p-1.5 rounded bg-[#0d111a] border border-zinc-800 text-[10px] text-indigo-200/90 overflow-x-auto font-mono custom-scrollbar ${
+                fullHeight ? 'max-h-none' : 'max-h-48'
+              }`}>
                 {typeof args === 'string' ? args : JSON.stringify(args, null, 2)}
               </pre>
             </div>
@@ -226,8 +253,10 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
 
           {hasResult && (
             <div>
-              <span className="text-[10px] text-amber-400 font-semibold uppercase block">Output:</span>
-              <pre className="p-1 text-[10px] text-zinc-300 overflow-x-auto max-h-48 overflow-y-auto font-mono whitespace-pre-wrap">
+              <span className="text-[10px] text-amber-400 font-semibold uppercase block mb-0.5">Output:</span>
+              <pre className={`p-1.5 rounded bg-[#0d111a] border border-zinc-800 text-[10px] text-zinc-200 overflow-x-auto font-mono whitespace-pre-wrap custom-scrollbar ${
+                fullHeight ? 'max-h-none' : 'max-h-96'
+              }`}>
                 {typeof result === 'string' ? (result || '(empty output)') : JSON.stringify(result, null, 2)}
               </pre>
             </div>
@@ -235,8 +264,10 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
 
           {!hasArgs && !hasResult && (
             <div>
-              <span className="text-[10px] text-zinc-500 font-semibold uppercase block">Status / Log:</span>
-              <pre className="p-1 text-[10px] text-zinc-400 overflow-x-auto max-h-32 overflow-y-auto font-mono whitespace-pre-wrap">
+              <span className="text-[10px] text-zinc-500 font-semibold uppercase block mb-0.5">Status / Log:</span>
+              <pre className={`p-1.5 rounded bg-[#0d111a] border border-zinc-800 text-[10px] text-zinc-400 overflow-x-auto font-mono whitespace-pre-wrap custom-scrollbar ${
+                fullHeight ? 'max-h-none' : 'max-h-32'
+              }`}>
                 {msg.text || 'Tool invocation completed.'}
               </pre>
             </div>
