@@ -200,6 +200,7 @@ export default function App() {
   const [rightMenuOpen, setRightMenuOpen] = useState<boolean>(false);
   const [showShortcutModal, setShowShortcutModal] = useState<boolean>(false);
   const [showBranchModal, setShowBranchModal] = useState<boolean>(false);
+  const [isAgentLoading, setIsAgentLoading] = useState<boolean>(false);
 
   // Sync state refs (Option A)
   const lastSyncState = useRef<string>('');
@@ -2132,12 +2133,22 @@ export default function App() {
                             ) : t.type === 'browser' ? (
                               <Globe size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                             ) : t.type === 'agent' ? (
-                              <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: '#818cf8' }} />
+                              isAgentLoading ? (
+                                <Loader2 size={13} className="tab-icon shrink-0 animate-spin text-indigo-400" />
+                              ) : (
+                                <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: '#818cf8' }} />
+                              )
                             ) : (
                               <TerminalIcon size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                             )}
                             <span className="tab-title-container">
                               <span className="tab-title">{displayName}</span>
+                              {t.type === 'agent' && isAgentLoading && (
+                                <span className="ml-1.5 px-1.5 py-0.5 text-[9px] font-medium bg-indigo-500/20 text-indigo-300 rounded-full animate-pulse flex items-center gap-1 shrink-0">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping" />
+                                  Working...
+                                </span>
+                              )}
                               {shellType && (
                                 <span className="tab-shell-type">({shellType === 'powershell' ? 'ps' : shellType})</span>
                               )}
@@ -2334,6 +2345,7 @@ export default function App() {
                     activeWorkspacePath={panelWorkspace?.path}
                     workspaces={workspaces}
                     onOpenSettings={() => setShowSettingsModal(true)}
+                    onLoadingChange={setIsAgentLoading}
                   />
                 </div>
               ))}

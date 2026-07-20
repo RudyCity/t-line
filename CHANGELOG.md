@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.494] - 2026-07-20
+
+### Added
+- **AI Working Indicator on SuperAgent Tab Header**: Added a visual loading indicator to the SuperAgent tab header in [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx#L2133-L2147):
+  - Automatically converts the tab icon to a spinning `Loader2` indigo icon when the AI agent is thinking or running tools.
+  - Displays a glowing `Working...` pill badge with a pulsing dot next to the tab title so users can instantly monitor AI background activity even while working in other terminal or editor tabs.
+  - Updated [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx#L70-L75) with `onLoadingChange` callback to notify parent header of real-time execution status.
+
 ## [1.3.493] - 2026-07-20
 
 ### Fixed

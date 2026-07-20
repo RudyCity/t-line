@@ -14,9 +14,10 @@ interface SuperAgentConsoleProps {
   activeWorkspacePath?: string;
   workspaces?: WorkspaceInfo[];
   onOpenSettings?: () => void;
+  onLoadingChange?: (isLoading: boolean) => void;
 }
 
-export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpenSettings }: SuperAgentConsoleProps) {
+export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpenSettings, onLoadingChange }: SuperAgentConsoleProps) {
   // Workspace & Config state
   const [workspace, setWorkspace] = useState(() => activeWorkspacePath || localStorage.getItem('currentWorkspace') || '');
   const prevWorkspaceRef = useRef(workspace);
@@ -67,6 +68,11 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
       }
     }
   }, [messages, workspace]);
+
+  // Notify parent of AI agent loading state
+  useEffect(() => {
+    onLoadingChange?.(loading);
+  }, [loading, onLoadingChange]);
 
   // Sync workspace prop and load messages when workspace changes
   useEffect(() => {
