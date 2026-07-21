@@ -8,6 +8,13 @@ import { TLINE_HELPER_CODE } from './tline-helper-code';
 const tabProxyTargets = new Map<string, string>();
 let currentProxyTarget = 'http://localhost';
 
+export const purgeTabProxyTarget = (tabId: string): boolean => {
+  if (typeof tabId === 'string' && tabId.length > 0) {
+    return tabProxyTargets.delete(tabId);
+  }
+  return false;
+};
+
 const rewriteSetCookie = (cookieStr: string): string => {
   let parts = cookieStr.split(';').map(p => p.trim());
   parts = parts.filter(part => {

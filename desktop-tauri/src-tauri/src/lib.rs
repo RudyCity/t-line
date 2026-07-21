@@ -1399,6 +1399,17 @@ fn eval_webview_js(app: tauri::AppHandle, label: String, js: String) -> Result<(
     }
 }
 
+#[tauri::command]
+fn get_webview_url(app: tauri::AppHandle, label: String) -> Result<String, String> {
+    if let Some(webview) = app.get_webview(&label) {
+        webview.url().map(|u| u.to_string()).map_err(|e| e.to_string())
+    } else if let Some(webview_window) = app.get_webview_window(&label) {
+        webview_window.url().map(|u| u.to_string()).map_err(|e| e.to_string())
+    } else {
+        Err(format!("Webview with label {} not found", label))
+    }
+}
+
 fn detached_window_url(query: &str) -> String {
     let base_url = app_base_url();
     format!("{}/?{}", base_url, query.trim_start_matches('?'))
@@ -1559,6 +1570,7 @@ pub fn run() {
             get_memory_usage,
             open_webview_devtools,
             eval_webview_js,
+            get_webview_url,
             quit_app,
             start_backend_command,
             get_app_url,

@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.607] - 2026-07-21
+
+### Fix — Native Webview Live URL Synchronization (`desktop-tauri` & `BrowserTab.tsx`)
+- **Native URL Querying**: Added `get_webview_url` command in Tauri Rust (`lib.rs`) that queries the live URL directly from the native webview instance (`webview.url()`).
+- **Permissions**: Registered `allow-get-webview-url` capability permission in `desktop-tauri/src-tauri/capabilities/default.json`.
+- **Live URL Polling (`BrowserTab.tsx`)**: Updated `pollUrl` loop to invoke `get_webview_url` every 500ms, bypassing cross-origin JS restrictions on external sites like `youtube.com` (where `window.__TAURI__` is undefined). Instantaneous URL bar synchronization for YouTube video clicks and SPA navigations.
+- **UI Cleanup**: Removed Force Dark Mode toggle button from browser navigation bar (`BrowserNavigationBar.tsx`).
+- **Screenshot & Popover Visibility**: Temporarily hide native Tauri webview during `getDisplayMedia` screen picker dialogs, History dropdown, and Bookmark popovers so native HWND webview overlay does not block dialogs/menus.
+- **Screenshot Toast Notification**: Added full file path resolution (`downloadDir()`) and Toast notification dispatch upon taking a screenshot.
+
 ## [1.3.606] - 2026-07-21
 
 ### Fix — YouTube & SPA URL Updates in Electron Webview (`BrowserTab.tsx`)

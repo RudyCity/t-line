@@ -36,7 +36,6 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
   const historyDropdownRef = useRef<HTMLDivElement>(null);
 
-  const [forceDarkMode, setForceDarkMode] = useState(false);
   const [showAddBookmarkPopover, setShowAddBookmarkPopover] = useState(false);
   const [newBookmarkName, setNewBookmarkName] = useState('');
   const [newBookmarkFolder, setNewBookmarkFolder] = useState('');
@@ -85,13 +84,13 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   useEffect(() => {
     const webview = tauriWebviewRef.current;
     if (useTauriWebview && webview && renderMode === 'tauri-native') {
-      if (isActive && !forceHideWebview && !showBookmarksDropdown) {
+      if (isActive && !forceHideWebview && !showBookmarksDropdown && !showHistoryDropdown && !showAddBookmarkPopover) {
         webview.show().catch(() => {});
       } else {
         webview.hide().catch(() => {});
       }
     }
-  }, [isActive, forceHideWebview, showBookmarksDropdown, useTauriWebview, renderMode]);
+  }, [isActive, forceHideWebview, showBookmarksDropdown, showHistoryDropdown, showAddBookmarkPopover, useTauriWebview, renderMode]);
 
   const rafIdRef = useRef<number | null>(null);
 
@@ -568,6 +567,24 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       if (activeLabel && (window as any).__TAURI__?.core?.invoke) {
         const jsCode = getPollWebviewJs(tab.id, zoomFactor);
         (window as any).__TAURI__.core.invoke('eval_webview_js', { label: activeLabel, js: jsCode }).catch(() => {});
+
+        (window as any).__TAURI__.core.invoke('get_webview_url', { label: activeLabel })
+          .then((liveUrl: string) => {
+            if (!isSubscribed || !liveUrl) return;
+            const cleanUrl = getCleanUrl(liveUrl);
+            if (cleanUrl && !cleanUrl.startsWith('blob:') && cleanUrl !== 'about:blank' && cleanUrl !== activeUrlRef.current) {
+              setUrlInput(cleanUrl);
+              setActiveUrl(cleanUrl);
+              onUpdateTabUrl?.(cleanUrl);
+              if (onUpdateTabName) {
+                try {
+                  const hostname = new URL(cleanUrl).hostname;
+                  onUpdateTabName(`Preview: ${hostname}`);
+                } catch (_) {}
+              }
+            }
+          })
+          .catch(() => {});
       }
     };
 
@@ -577,7 +594,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       isSubscribed = false;
       if (timer) clearInterval(timer);
     };
-  }, [useTauriWebview, renderMode, webviewActive, tab.id, zoomFactor]);
+  }, [useTauriWebview, renderMode, webviewActive, tab.id, zoomFactor, onUpdateTabUrl, onUpdateTabName]);
 
   const startLoadingBar = () => {
     setIsLoading(true);
@@ -666,38 +683,6 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     }
   };
 
-
-  // Force Dark Mode Effect
-  useEffect(() => {
-    const js = `
-      (function() {
-        var id = 'tline-force-dark-style';
-        var el = document.getElementById(id);
-        if (${forceDarkMode}) {
-          if (!el) {
-            el = document.createElement('style');
-            el.id = id;
-            el.innerHTML = "html { filter: invert(1) hue-rotate(180deg) !important; } img, video, canvas, [style*='background-image'] { filter: invert(1) hue-rotate(180deg) !important; }";
-            document.documentElement.appendChild(el);
-          }
-        } else {
-          if (el) el.remove();
-        }
-      })()
-    `;
-
-    if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
-      const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
-      if (activeLabel) {
-        (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js }).catch(() => {});
-      }
-    } else if (useElectronWebview && webviewEl && renderMode === 'electron-webview') {
-      try {
-        webviewEl.executeJavaScript(js).catch(() => {});
-      } catch (_) {}
-    }
-  }, [forceDarkMode, activeUrl, renderMode, useTauriWebview, useElectronWebview, webviewEl]);
-
   // Handle Click Outside for Dropdowns & Popovers
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -766,19 +751,39 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   };
 
   const handleCaptureScreenshot = async () => {
+    const fileName = `screenshot-${tab.id}-${Date.now()}.png`;
+
+    let savePath = `Downloads/${fileName}`;
+    try {
+      if (useTauriWebview && (window as any).__TAURI__) {
+        const { downloadDir } = await import('@tauri-apps/api/path');
+        const dir = await downloadDir();
+        if (dir) {
+          const sep = dir.endsWith('\\') || dir.endsWith('/') ? '' : '\\';
+          savePath = `${dir}${sep}${fileName}`;
+        }
+      }
+    } catch (_) {}
+
     if (useElectronWebview && webviewEl) {
       try {
         const img = await (webviewEl as any).capturePage();
         const dataUrl = img.toDataURL();
         const link = document.createElement('a');
-        link.download = `screenshot-${tab.id}-${Date.now()}.png`;
+        link.download = fileName;
         link.href = dataUrl;
         link.click();
+        window.dispatchEvent(
+          new CustomEvent('tline-toast', {
+            detail: { message: `Screenshot tersimpan: ${savePath}` }
+          })
+        );
       } catch (err) {
         console.error('Failed to capture page in Electron:', err);
       }
     } else {
       try {
+        window.dispatchEvent(new CustomEvent('tline-hide-native-webview', { detail: { hide: true } }));
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: { displaySurface: "browser" },
           audio: false
@@ -799,11 +804,19 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
         
         const dataUrl = canvas.toDataURL('image/png');
         const link = document.createElement('a');
-        link.download = `screenshot-${tab.id}-${Date.now()}.png`;
+        link.download = fileName;
         link.href = dataUrl;
         link.click();
+
+        window.dispatchEvent(
+          new CustomEvent('tline-toast', {
+            detail: { message: `Screenshot tersimpan: ${savePath}` }
+          })
+        );
       } catch (err) {
         alert('Gagal mengambil screenshot: Media devices tidak didukung atau dibatalkan.');
+      } finally {
+        window.dispatchEvent(new CustomEvent('tline-hide-native-webview', { detail: { hide: false } }));
       }
     }
   };
@@ -852,8 +865,6 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
         isLoading={isLoading}
         isInspecting={isInspecting}
         toggleInspect={toggleInspect}
-        forceDarkMode={forceDarkMode}
-        setForceDarkMode={setForceDarkMode}
         deviceMode={deviceMode}
         setDeviceMode={setDeviceMode}
         zoomFactor={zoomFactor}
@@ -922,20 +933,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
             } : undefined}
           >
             {/* Actual Inner Viewport Area */}
-            <div className={`w-full h-full relative overflow-hidden bg-[var(--bg-main)] rounded-[inherit] ${forceDarkMode ? 'tline-force-dark' : ''}`}>
-              <style>{`
-                .tline-force-dark {
-                  filter: invert(1) hue-rotate(180deg) !important;
-                }
-                .tline-force-dark img,
-                .tline-force-dark video,
-                .tline-force-dark canvas,
-                .tline-force-dark iframe,
-                .tline-force-dark webview,
-                .tline-force-dark [style*="background-image"] {
-                  filter: invert(1) hue-rotate(180deg) !important;
-                }
-              `}</style>
+            <div className="w-full h-full relative overflow-hidden bg-[var(--bg-main)] rounded-[inherit]">
               {/* Loading progress bar */}
               {isLoading && (
                 <div

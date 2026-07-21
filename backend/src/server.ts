@@ -28,7 +28,7 @@ import { terminalManager, getActiveProcessesForPid } from './terminalManager';
 import { tunnelManager } from './tunnelManager';
 import gitRouter, { registerWorkspaceChangeCallback } from './gitRoutes';
 import fsRouter, { registerFileChangeCallback } from './fsRoutes';
-import { previewProxy } from './previewProxy';
+import { previewProxy, purgeTabProxyTarget } from './previewProxy';
 import { TLINE_HELPER_CODE } from './tline-helper-code';
 import { handleSuperAgentConnection, startSuperAgentEager } from './superAgentBridge';
 import superAgentRouter from './superAgentRoutes';
@@ -277,6 +277,12 @@ app.post('/api/preview-proxy/event', (req, res) => {
   }
   console.log(`[Proxy Event] Broadcasted to ${wsCount} active WebSockets`);
   res.json({ ok: true });
+});
+
+app.delete('/api/preview-proxy/purge-tab/:tabId', (req, res) => {
+  const { tabId } = req.params;
+  const purged = purgeTabProxyTarget(tabId);
+  res.json({ ok: true, purged });
 });
 
 app.use('/api/preview-proxy', previewProxy);

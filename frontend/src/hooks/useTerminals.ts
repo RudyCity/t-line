@@ -594,6 +594,8 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
             termIds.forEach(id => delete next[id]);
             return next;
           });
+        } else if (targetTab.type === 'browser') {
+          fetch(`/api/preview-proxy/purge-tab/${encodeURIComponent(tabId)}`, { method: 'DELETE' }).catch(() => {});
         }
       }
 

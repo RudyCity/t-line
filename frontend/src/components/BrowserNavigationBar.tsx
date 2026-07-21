@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, RotateCw, ExternalLink, MousePointer, ArrowLeft, ArrowRight, Monitor, Tablet, Smartphone, Minus, Plus, Star, History, Camera, Moon, Sun } from 'lucide-react';
+import { Globe, RotateCw, ExternalLink, MousePointer, ArrowLeft, ArrowRight, Monitor, Tablet, Smartphone, Minus, Plus, Star, History, Camera } from 'lucide-react';
 import BookmarksDropdown from './BookmarksDropdown';
 import HistoryDropdown, { HistoryItem } from './HistoryDropdown';
 import { BookmarkItem } from './browserUrlUtils';
@@ -11,8 +11,6 @@ export interface BrowserNavigationBarProps {
   isLoading: boolean;
   isInspecting: boolean;
   toggleInspect: () => void;
-  forceDarkMode: boolean;
-  setForceDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
   deviceMode: 'desktop' | 'tablet' | 'mobile';
   setDeviceMode: (mode: 'desktop' | 'tablet' | 'mobile') => void;
   zoomFactor: number;
@@ -60,8 +58,6 @@ export default function BrowserNavigationBar({
   isLoading,
   isInspecting,
   toggleInspect,
-  forceDarkMode,
-  setForceDarkMode,
   deviceMode,
   setDeviceMode,
   zoomFactor,
@@ -316,18 +312,6 @@ export default function BrowserNavigationBar({
         </div>
 
         <div className="flex items-center gap-1.5">
-          <button 
-            onClick={() => setForceDarkMode(prev => !prev)}
-            className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
-              forceDarkMode 
-                ? 'bg-purple-500/20 border-purple-500 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.2)]' 
-                : 'bg-[var(--bg-main)]/50 border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
-            }`}
-            title="Force Dark Mode"
-          >
-            {forceDarkMode ? <Sun size={14} /> : <Moon size={14} />}
-          </button>
-
           <button 
             onClick={handleCaptureScreenshot}
             className="p-1.5 rounded-lg bg-[var(--bg-main)]/50 border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] transition-all cursor-pointer"

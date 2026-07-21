@@ -9,6 +9,7 @@ fn main() {
             "get_app_url",
             "open_webview_devtools",
             "eval_webview_js",
+            "get_webview_url",
             "create_detached_window",
             "close_detached_window",
             "get_memory_usage",
