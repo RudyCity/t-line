@@ -270,7 +270,9 @@ export function SuperAgentConsole({
     setShowSettingsModal(true);
   };
 
-  const handlePresetChange = async (presetId: string) => {
+  const handlePresetChange = async (presetIdOrMode: string, maybePresetId?: string) => {
+    const mode = (maybePresetId ? presetIdOrMode : agentMode) as 'single' | 'multi';
+    const presetId = maybePresetId || presetIdOrMode;
     try {
       const response = await fetch('/api/superagent/config/active-preset', {
         method: 'POST',
@@ -278,14 +280,14 @@ export function SuperAgentConsole({
           'Content-Type': 'application/json',
           ...getAuthHeader()
         },
-        body: JSON.stringify({ mode: agentMode, presetId })
+        body: JSON.stringify({ mode, presetId })
       });
       if (response.ok) {
         const data = await response.json();
         setActivePresetId(data.activePresetId);
-        const match = (presets[agentMode] || []).find(p => p.id === presetId);
+        const match = (presets[mode] || []).find(p => p.id?.toLowerCase() === presetId.toLowerCase() || p.name?.toLowerCase() === presetId.toLowerCase());
         const name = match ? match.name : presetId;
-        setMessages(prev => [...prev, { role: 'system', text: `Model preset changed to "${name}". Restarting bridge...` }]);
+        setMessages(prev => [...prev, { role: 'system', text: `Model preset changed to "${name}" (${mode.toUpperCase()} mode). Restarting bridge...` }]);
         setConnectTrigger(prev => prev + 1);
       }
     } catch (e) {

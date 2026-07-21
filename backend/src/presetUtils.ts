@@ -17,13 +17,28 @@ export function getModelPresetsPath(): string {
   return getConfigFilePath('model-presets.json');
 }
 
-function parseModelString(val: string): { providerProfileId: string; model: string } | undefined {
-  if (!val || typeof val !== 'string') return undefined;
-  const match = val.match(/^([^@:]+)[@:](.+)$/);
-  if (match && !match[1].includes('/')) {
-    return { providerProfileId: match[1], model: match[2] };
+function parseModelValue(val: any): { providerProfileId: string; model: string } | undefined {
+  if (!val) return undefined;
+  if (typeof val === 'object' && val !== null) {
+    const providerProfileId = typeof val.providerProfileId === 'string' ? val.providerProfileId : '';
+    const model = typeof val.model === 'string' ? val.model : (typeof val.modelName === 'string' ? val.modelName : '');
+    if (providerProfileId || model) {
+      return { providerProfileId, model };
+    }
+    return undefined;
   }
-  return { providerProfileId: '', model: val };
+  if (typeof val === 'string') {
+    const atIndex = val.indexOf('@');
+    if (atIndex > 0) {
+      return { providerProfileId: val.substring(0, atIndex), model: val.substring(atIndex + 1) };
+    }
+    const match = val.match(/^([^@:]+)[@:](.+)$/);
+    if (match && !match[1].includes('/')) {
+      return { providerProfileId: match[1], model: match[2] };
+    }
+    return { providerProfileId: '', model: val };
+  }
+  return undefined;
 }
 
 function normalizeCliPreset(p: any, mode: 'single' | 'multi') {
@@ -34,30 +49,55 @@ function normalizeCliPreset(p: any, mode: 'single' | 'multi') {
   const rawModels = p.models && typeof p.models === 'object' ? p.models : {};
   let structuredModels: any = { subagentDetails: {} };
 
+  if (rawModels.superagent) structuredModels.superagent = parseModelValue(rawModels.superagent);
+  if (rawModels.master) structuredModels.master = parseModelValue(rawModels.master);
+  if (rawModels.subagentDefault) structuredModels.subagentDefault = parseModelValue(rawModels.subagentDefault);
+
+  if (rawModels.subagentDetails && typeof rawModels.subagentDetails === 'object') {
+    for (const [subName, subVal] of Object.entries(rawModels.subagentDetails)) {
+      const parsed = parseModelValue(subVal);
+      if (parsed) structuredModels.subagentDetails[subName] = parsed;
+    }
+  }
+
   if (mode === 'single') {
-    const mainKey = rawModels.MODEL_SINGLE_SUPERAGENT || rawModels.MODEL_SINGLE || rawModels.MODEL || '';
-    const subDefaultKey = rawModels.MODEL_SINGLE_SUBAGENT || rawModels.MODEL_MULTI_SUBAGENT || '';
-    structuredModels.superagent = parseModelString(mainKey);
-    structuredModels.subagentDefault = parseModelString(subDefaultKey);
+    if (!structuredModels.superagent) {
+      const mainKey = rawModels.MODEL_SINGLE_SUPERAGENT || rawModels.MODEL_SINGLE || rawModels.MODEL || '';
+      structuredModels.superagent = parseModelValue(mainKey);
+    }
+    if (!structuredModels.subagentDefault) {
+      const subDefaultKey = rawModels.MODEL_SINGLE_SUBAGENT || rawModels.MODEL_MULTI_SUBAGENT || '';
+      structuredModels.subagentDefault = parseModelValue(subDefaultKey);
+    }
   } else {
-    const masterKey = rawModels.MODEL_MULTI_MASTER || '';
-    const superagentKey = rawModels.MODEL_MULTI_SUPERAGENT || rawModels.MODEL || '';
-    const subDefaultKey = rawModels.MODEL_MULTI_SUBAGENT || '';
-    structuredModels.master = parseModelString(masterKey);
-    structuredModels.superagent = parseModelString(superagentKey);
-    structuredModels.subagentDefault = parseModelString(subDefaultKey);
+    if (!structuredModels.master) {
+      const masterKey = rawModels.MODEL_MULTI_MASTER || '';
+      structuredModels.master = parseModelValue(masterKey);
+    }
+    if (!structuredModels.superagent) {
+      const superagentKey = rawModels.MODEL_MULTI_SUPERAGENT || rawModels.MODEL || '';
+      structuredModels.superagent = parseModelValue(superagentKey);
+    }
+    if (!structuredModels.subagentDefault) {
+      const subDefaultKey = rawModels.MODEL_MULTI_SUBAGENT || '';
+      structuredModels.subagentDefault = parseModelValue(subDefaultKey);
+    }
   }
 
   for (const [k, v] of Object.entries(rawModels)) {
     if (typeof v === 'string' && (k.startsWith('MODEL_MULTI_SUBAGENT_') || k.startsWith('MODEL_SINGLE_SUBAGENT_'))) {
       if (k.endsWith('_VISION')) continue;
       const type = k.replace(/^MODEL_(MULTI|SINGLE)_SUBAGENT_/, '').toLowerCase();
-      structuredModels.subagentDetails[type] = parseModelString(v);
+      if (!structuredModels.subagentDetails[type]) {
+        structuredModels.subagentDetails[type] = parseModelValue(v);
+      }
     }
   }
 
+  const presetId = p.id ? String(p.id).toLowerCase() : name.toLowerCase();
+
   return {
-    id: name.toLowerCase(),
+    id: presetId,
     name: name,
     description: p.description || 'Custom model preset.',
     models: {
@@ -247,11 +287,19 @@ export function deleteCustomPreset(mode: 'single' | 'multi', presetId: string) {
 
 export function setActivePreset(mode: 'single' | 'multi', presetId: string) {
   const configPath = getModelConfigPath();
-  if (!fs.existsSync(configPath)) {
-    throw new Error('SuperAgent config file not found');
+  const dir = path.dirname(configPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
   }
 
-  const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  let configData: any = {};
+  if (fs.existsSync(configPath)) {
+    try {
+      configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    } catch {
+      configData = {};
+    }
+  }
   const merged = loadMergedPresets();
   const availablePresets = merged.presets[mode] || [];
 

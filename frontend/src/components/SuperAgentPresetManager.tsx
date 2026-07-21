@@ -14,7 +14,7 @@ interface SuperAgentPresetManagerProps {
   activePresetId: { single: string; multi: string };
   agentMode: 'single' | 'multi';
   providers: ProviderProfile[];
-  onSelectPreset: (presetId: string) => Promise<void>;
+  onSelectPreset: (mode: 'single' | 'multi', presetId: string) => Promise<void>;
   onSaveCustomPreset: (mode: 'single' | 'multi', preset: { id: string; name: string; description?: string; models: any }) => Promise<void>;
   onDeleteCustomPreset: (mode: 'single' | 'multi', presetId: string) => Promise<void>;
 }
@@ -364,7 +364,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                       </span>
                     ) : (
                       <button
-                        onClick={() => onSelectPreset(p.id)}
+                        onClick={() => onSelectPreset(selectedMode, p.id)}
                         className="px-2.5 py-1 rounded-md bg-[var(--bg-sidebar)] hover:bg-[var(--color-primary)] hover:text-white text-[var(--text-muted)] font-medium text-[11px] transition cursor-pointer border border-[var(--border-color)]"
                       >
                         Activate

@@ -27,7 +27,7 @@ interface SuperAgentSettingsModalProps {
   onSetActiveProvider: (id: string) => Promise<void>;
   presets: { single: ModelPreset[]; multi: ModelPreset[] };
   activePresetId: { single: string; multi: string };
-  onSelectPreset: (presetId: string) => Promise<void>;
+  onSelectPreset: (mode: 'single' | 'multi', presetId: string) => Promise<void>;
   onSaveCustomPreset: (mode: 'single' | 'multi', preset: { id: string; name: string; description?: string; models: any }) => Promise<void>;
   onDeleteCustomPreset: (mode: 'single' | 'multi', presetId: string) => Promise<void>;
   getAuthHeader: () => Record<string, string>;
