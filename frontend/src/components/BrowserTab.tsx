@@ -410,13 +410,9 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     };
 
     const handleElectronNavigate = (e: any) => {
-      // Only update the URL bar for main-frame navigations.
-      // Sub-frame navigations (e.g. YouTube's embedded iframes) would otherwise
-      // overwrite the URL bar with internal iframe URLs.
-      if (e.isMainFrame === false) return;
       if (e.url) {
         const cleanUrl = getCleanUrl(e.url);
-        // Skip blob: / about: URLs generated internally by YouTube player
+        // Skip blob: / about: URLs generated internally by media players
         if (cleanUrl.startsWith('blob:') || cleanUrl === 'about:blank') return;
         setUrlInput(cleanUrl);
         setActiveUrl(cleanUrl);
@@ -424,15 +420,23 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       }
     };
 
+    const handlePageTitleUpdated = (e: any) => {
+      if (e.title) {
+        onUpdateTabName?.(e.title);
+      }
+    };
+
     webview.addEventListener('console-message', handleConsoleMessage);
     webview.addEventListener('did-navigate', handleElectronNavigate);
     webview.addEventListener('did-navigate-in-page', handleElectronNavigate);
+    webview.addEventListener('page-title-updated', handlePageTitleUpdated);
     return () => {
       webview.removeEventListener('console-message', handleConsoleMessage);
       webview.removeEventListener('did-navigate', handleElectronNavigate);
       webview.removeEventListener('did-navigate-in-page', handleElectronNavigate);
+      webview.removeEventListener('page-title-updated', handlePageTitleUpdated);
     };
-  }, [useElectronWebview, iframeKey, webviewEl, renderMode, onUpdateTabUrl]);
+  }, [useElectronWebview, iframeKey, webviewEl, renderMode, onUpdateTabUrl, onUpdateTabName]);
 
   // Listen to load and new-window events in Electron webview
   useEffect(() => {

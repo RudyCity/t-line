@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.606] - 2026-07-21
+
+### Fix — YouTube & SPA URL Updates in Electron Webview (`BrowserTab.tsx`)
+- **Fix URL Bar Updates**: Removed the `isMainFrame === false` filter on `handleElectronNavigate` in Electron `<webview>`. In-page SPA transitions (like YouTube video link clicks via `pushState`) can report `isMainFrame === false` or `undefined` depending on Electron context, causing URL bar updates to be ignored.
+- **Dynamic Tab Title Updates**: Added `page-title-updated` event listener to Electron `<webview>` so YouTube video titles dynamically update the tab name in real time.
+
 ## [1.3.605] - 2026-07-21
 
 ### Fix — Browser Tab URL Bar Not Updating on SPA Navigation
