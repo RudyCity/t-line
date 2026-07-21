@@ -11,7 +11,7 @@ export interface HistoryItem {
 interface HistoryDropdownProps {
   showHistoryDropdown: boolean;
   setShowHistoryDropdown: (show: boolean) => void;
-  historyDropdownRef: React.RefObject<HTMLDivElement>;
+  historyDropdownRef: any;
   history: HistoryItem[];
   clearAllHistory: () => void;
   handleNavigateToHistory: (url: string) => void;

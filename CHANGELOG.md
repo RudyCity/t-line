@@ -2,6 +2,20 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.604] - 2026-07-21
+
+### Performance & Memory — Browser Tab RAM Fix
+- **WebView2 Memory Reclamation on Tab Close (`BrowserTab.tsx`)**:
+  - Navigate to `about:blank` before `.close()` so WebView2 releases its V8 heap immediately instead of holding RAM until GC.
+  - Cancel pending `requestAnimationFrame` (`rafIdRef`) on teardown to prevent stale callbacks from keeping the renderer alive.
+  - Purge backend proxy cache via `DELETE /api/proxy/cache?tabId=` when a tab is destroyed.
+- **BrowserTab Modularization** (`BrowserTab.tsx`, `BrowserNavigationBar.tsx`, `hooks/useBrowserStorageAndHistory.ts`):
+  - Extracted the navigation bar into a standalone `BrowserNavigationBar` component.
+  - Extracted bookmark/history/storage/zoom state and logic into `useBrowserStorageAndHistory` custom hook.
+  - `BrowserTab.tsx` reduced from ~1,447 lines to ~1,033 lines, complying with the 1,000-line target.
+  - Fixed React hook ordering — moved `useBrowserStorageAndHistory` call before the `useEffect` blocks that depend on `zoomFactor` to eliminate "used before declaration" TypeScript errors.
+  - Removed unused `BookmarkItem` and `HistoryItem` imports; introduced a stable `handleReloadRef` to safely pass `handleReload` into the hook without circular initialization.
+
 ## [1.3.603] - 2026-07-21
 
 ### UI/UX & Style Optimization

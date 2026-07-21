@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Bookmark, Trash, AlertTriangle, X, Folder, FolderOpen, ChevronDown, ChevronRight, Edit2, Save } from 'lucide-react';
 import { BookmarkItem } from './browserUrlUtils';
 
 interface BookmarksDropdownProps {
   showBookmarksDropdown: boolean;
   setShowBookmarksDropdown: (show: boolean) => void;
-  bookmarksDropdownRef: React.RefObject<HTMLDivElement>;
+  bookmarksDropdownRef: any;
   bookmarks: BookmarkItem[];
   clearAllBookmarks: () => void;
   handleNavigateToBookmark: (url: string) => void;
