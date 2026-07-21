@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.623] - 2026-07-21
+
+### Keybinding & UI Update — Change Send Message Keybinding to Enter (`SuperAgentConsole.tsx`, `SuperAgentInputContainer.tsx`)
+- **Keybinding Update**: Changed chat prompt submission in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) so pressing `Enter` directly sends the message, while `Shift+Enter` inserts a new line in the text area.
+- **UI Label Alignment**: Updated input container toolbar labels and Send button tooltip in [SuperAgentInputContainer.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentInputContainer.tsx) to accurately display `↵` for sending.
+
 ## [1.3.622] - 2026-07-21
 
 ### Bug Fix — Resolve Empty History List & Fix Mid-Run Abort on Auto-Created Sessions (`sessionManager.ts`, `useSuperAgentSessions.ts`)

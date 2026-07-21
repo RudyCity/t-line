@@ -679,7 +679,7 @@ export function SuperAgentConsole({
     }
 
     if (e.key === 'Enter') {
-      if (e.shiftKey) {
+      if (!e.shiftKey) {
         e.preventDefault();
         handleSend();
       }

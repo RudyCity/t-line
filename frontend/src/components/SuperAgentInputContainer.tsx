@@ -335,7 +335,7 @@ export function SuperAgentInputContainer({
 
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-[10px] text-[var(--text-muted)] font-mono hidden lg:inline">
-              Shift+↵ • / cmds
+              ↵ • / cmds
             </span>
             <span className="text-[10px] text-[var(--text-muted)]/80 font-mono">
               {input.length} chars
@@ -356,7 +356,7 @@ export function SuperAgentInputContainer({
                 onClick={() => handleSend()}
                 disabled={(!input.trim() && attachments.length === 0) || !ws || ws.readyState !== WebSocket.OPEN || !hasActivePreset}
                 className="flex items-center justify-center bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] active:scale-95 disabled:bg-[var(--bg-card)] disabled:text-[var(--text-muted)] disabled:border-[var(--border-color)] border border-[var(--color-primary)] text-white rounded-md p-1.5 shadow-md shadow-[var(--color-primary-glow)] transition-all cursor-pointer shrink-0 focus:outline-none"
-                title="Send Message (Shift+↵)"
+                title="Send Message (↵)"
               >
                 <Send className="w-3.5 h-3.5" />
               </button>
