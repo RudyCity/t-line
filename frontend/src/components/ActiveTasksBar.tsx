@@ -79,20 +79,23 @@ export function ActiveTasksBar({
   if (items.length === 0) return null;
 
   return (
-    <div className="font-mono text-[11px] leading-relaxed max-h-48 overflow-y-auto scrollbar-thin select-none pl-1 mb-0">
-      <div className="relative border-l-2 border-indigo-500/60 ml-3.5 pl-3.5 space-y-1 pt-0.5 pb-0">
+    <div className="mb-1.5 font-mono text-[11px] leading-relaxed max-h-48 overflow-y-auto scrollbar-thin select-none pl-1 relative">
+      <div className="relative ml-2.5 pl-4 space-y-1 pt-0.5 pb-1">
+        {/* Continuous Vector Timeline Line */}
+        <div className="absolute left-[7px] top-[10px] bottom-[-6px] w-[1.5px] bg-indigo-500/50 rounded-full" />
+
         {/* Timeline Root Header / Toggle */}
         <div
           onClick={() => setIsExpanded(!isExpanded)}
-          className="relative flex items-center justify-between group cursor-pointer py-0.5 text-zinc-400 hover:text-zinc-200 transition"
+          className="relative flex items-center justify-between group cursor-pointer py-0.5 text-zinc-400 hover:text-zinc-200 transition pl-1"
         >
-          <span className="absolute -left-[20px] text-indigo-400 font-bold select-none text-[11px]">
-            ┌─►
-          </span>
+          {/* Top Node Indicator */}
+          <div className="absolute -left-[13px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-indigo-500 shadow-sm shadow-indigo-500/50" />
+
           <div className="flex items-center gap-1.5 font-bold uppercase text-[10px] tracking-wide text-zinc-300">
             <span className="text-indigo-400 font-mono">TASKS</span>
             <span className="text-zinc-400 font-mono font-normal">({items.length})</span>
-            <span className="text-zinc-500 font-normal group-hover:text-indigo-300 text-[9px] bg-zinc-900/80 border border-zinc-800 px-1.5 py-0.2 rounded transition">
+            <span className="text-zinc-500 font-normal group-hover:text-indigo-300 text-[9px] bg-zinc-900/90 border border-zinc-800 px-1.5 py-0.2 rounded transition">
               {isExpanded ? '[-] collapse' : '[+] expand'}
             </span>
           </div>
@@ -101,11 +104,9 @@ export function ActiveTasksBar({
         {/* Expanded Tree Items */}
         {isExpanded &&
           items.map(item => (
-            <div key={item.key} className="relative flex items-center justify-between group py-0.5">
-              {/* Timeline Tree Branch Connector */}
-              <span className="absolute -left-[20px] text-indigo-500/80 font-bold select-none text-[11px]">
-                ├──
-              </span>
+            <div key={item.key} className="relative flex items-center justify-between group py-0.5 pl-1">
+              {/* Horizontal Branch Connector */}
+              <div className="absolute -left-[9px] top-1/2 -translate-y-1/2 w-2.5 h-[1.5px] bg-indigo-500/50" />
 
               {item.kind === 'tool' && (
                 <div className="flex items-center gap-1.5 text-indigo-300 min-w-0 pr-2">
@@ -161,13 +162,6 @@ export function ActiveTasksBar({
               )}
             </div>
           ))}
-
-        {/* Bottom Connector line pointing directly into top edge of input card */}
-        <div className="relative h-2 -mb-1">
-          <span className="absolute -left-[20px] top-0 text-indigo-500 font-bold select-none text-[11px] leading-none">
-            └──┐
-          </span>
-        </div>
       </div>
     </div>
   );
