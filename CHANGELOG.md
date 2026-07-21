@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.622] - 2026-07-21
+
+### Bug Fix — Resolve Empty History List & Fix Mid-Run Abort on Auto-Created Sessions (`sessionManager.ts`, `useSuperAgentSessions.ts`)
+- **Fix Mid-Run Abort Collision Node**:
+  - Identified and fixed missing `'x-client-mode': 'tline'` header and payload property in `requestSuperAgentServer` and `saveWorkspaceSession` in [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts). Previously, auto-saving newly created sessions mid-stream triggered a `POST /api/init` with mismatched client modes, causing SuperAgent to abort the running agent mid-thought.
+  - Passing `clientMode: 'tline'` allows SuperAgent to match active session state and return 200 OK without interrupting active LLM execution.
+- **Fix Initial Blank History & Orphan Active Session**:
+  - Updated `loadWorkspaceSessions` in [useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts) to automatically instantiate a default `"New Chat"` session when no existing sessions are found in local or server storage.
+  - Ensures history list is never empty on fresh start, keeping `activeSessionId` properly indexed in `sessions` state array.
+
 ## [1.3.621] - 2026-07-21
 
 ### Bug Fix — Prevent Prompt Execution & Enforce Guard When No Preset is Active (`SuperAgentInputContainer.tsx`, `SuperAgentConsole.tsx`, `superAgentBridge.ts`, SuperAgent `serverRoutes.ts`)

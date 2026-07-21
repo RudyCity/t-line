@@ -74,7 +74,8 @@ function requestSuperAgentServer(
 
     const postData = payload ? JSON.stringify(payload) : undefined;
     const headers: Record<string, string> = {
-      'x-workspace-path': wsPath
+      'x-workspace-path': wsPath,
+      'x-client-mode': 'tline'
     };
     if (postData) {
       headers['Content-Type'] = 'application/json';
@@ -309,7 +310,7 @@ export async function saveWorkspaceSession(
       sessionId = sessionId.split('::')[1];
     }
     // Ping SuperAgent server to register/resume session ID
-    await requestSuperAgentServer('/api/init', 'POST', { workspace, sessionId, resume: sessionId }, workspace);
+    await requestSuperAgentServer('/api/init', 'POST', { workspace, sessionId, resume: sessionId, clientMode: 'tline' }, workspace);
   } catch (e) {
     console.error('[SessionManager] saveWorkspaceSession error:', e);
   }

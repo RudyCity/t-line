@@ -93,6 +93,20 @@ export function loadWorkspaceSessions(wsPath: string): ChatSession[] {
     }
   }
 
+  if (loadedSessions.length === 0) {
+    const initialSessionId = `session_${Date.now()}`;
+    const defaultSession: ChatSession = {
+      id: initialSessionId,
+      title: 'New Chat',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    loadedSessions = [defaultSession];
+    try {
+      localStorage.setItem(sessionsKey, JSON.stringify(loadedSessions));
+    } catch (e) {}
+  }
+
   return loadedSessions;
 }
 
