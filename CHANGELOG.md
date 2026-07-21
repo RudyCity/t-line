@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.618] - 2026-07-21
+
+### Bug Fix — Permanent Preset Deletion Across `model-config.json` & `model-presets.json` (`presetUtils.ts`)
+- **Fix Persistent CLI Presets Re-emerging**: Updated `deleteCustomPreset` in [presetUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/presetUtils.ts#L272) to delete the target preset ID & preset name from **both** `model-config.json` and `model-presets.json`. Previously, presets deleted from `model-config.json` were read back from `model-presets.json` during `loadMergedPresets()` and re-appeared in the list.
+- **Fix User Edit Precedence**: In `loadMergedPresets()`, user-customized presets from `model-config.json` now take precedence over default entries in `model-presets.json`.
+
 ## [1.3.617] - 2026-07-21
 
 ### Feature & Bug Fix — Fast Delete Preset & Toast Notifications with Name (`SuperAgentPresetManager.tsx` & `SuperAgentConsole.tsx`)

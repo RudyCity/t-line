@@ -138,7 +138,7 @@ export function loadMergedPresets() {
                 item => item.id?.toLowerCase() === normalized.id || item.name?.toLowerCase() === normalized.id
               );
               if (existingIndex !== -1) {
-                result[mode][existingIndex] = { ...result[mode][existingIndex], ...normalized };
+                result[mode][existingIndex] = { ...normalized, ...result[mode][existingIndex] };
               } else {
                 result[mode].push(normalized);
               }
@@ -271,15 +271,38 @@ export function saveCustomPreset(mode: 'single' | 'multi', preset: { id: string;
 
 export function deleteCustomPreset(mode: 'single' | 'multi', presetId: string) {
   const configPath = getModelConfigPath();
-  if (!fs.existsSync(configPath)) return loadMergedPresets();
+  const presetsPath = getModelPresetsPath();
+  const targetIdLower = presetId.toLowerCase().trim();
 
-  const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-  if (configData.presets && Array.isArray(configData.presets[mode])) {
-    configData.presets[mode] = configData.presets[mode].filter((p: any) => p.id !== presetId);
-    if (configData.activePresetId?.[mode] === presetId) {
-      configData.activePresetId[mode] = '';
+  if (fs.existsSync(configPath)) {
+    try {
+      const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      if (configData.presets && Array.isArray(configData.presets[mode])) {
+        configData.presets[mode] = configData.presets[mode].filter(
+          (p: any) => p.id?.toLowerCase() !== targetIdLower && p.name?.toLowerCase() !== targetIdLower
+        );
+        if (configData.activePresetId?.[mode]?.toLowerCase() === targetIdLower) {
+          configData.activePresetId[mode] = '';
+        }
+        fs.writeFileSync(configPath, JSON.stringify(configData, null, 2), 'utf8');
+      }
+    } catch (e) {
+      console.error('[PresetUtils] Failed to update model-config.json on delete:', e);
     }
-    fs.writeFileSync(configPath, JSON.stringify(configData, null, 2), 'utf8');
+  }
+
+  if (fs.existsSync(presetsPath)) {
+    try {
+      const presetsData = JSON.parse(fs.readFileSync(presetsPath, 'utf8'));
+      if (presetsData && typeof presetsData === 'object' && Array.isArray(presetsData[mode])) {
+        presetsData[mode] = presetsData[mode].filter(
+          (p: any) => p.id?.toLowerCase() !== targetIdLower && p.name?.toLowerCase() !== targetIdLower
+        );
+        fs.writeFileSync(presetsPath, JSON.stringify(presetsData, null, 2), 'utf8');
+      }
+    } catch (e) {
+      console.error('[PresetUtils] Failed to update model-presets.json on delete:', e);
+    }
   }
 
   return loadMergedPresets();
