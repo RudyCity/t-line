@@ -4,6 +4,7 @@ import {
   ChevronLeft, ChevronsLeft, ChevronsRight,
   MessageSquare, ShieldCheck, Cpu, Bot, AlertTriangle, XCircle, FileText, Activity
 } from 'lucide-react';
+import { ConfirmModal } from './Modals';
 
 interface AuditLog {
   timestamp: string;
@@ -276,8 +277,7 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
     }
   }, [getAuthHeader]);
 
-  const clearAuditLogs = async () => {
-    if (!confirm('Are you sure you want to clear all audit logs? This action cannot be undone.')) return;
+  const executeClearAuditLogs = async () => {
     try {
       const response = await fetch('/api/superagent/audit-logs', {
         method: 'DELETE',
@@ -290,6 +290,10 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
     } catch (e) {
       console.error('Failed to clear audit logs:', e);
     }
+  };
+
+  const clearAuditLogs = () => {
+    setShowClearLogsModal(true);
   };
 
   const exportAuditLogs = () => {
@@ -559,8 +563,24 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
           </div>
         </div>
       )}
+
+      {showClearLogsModal && (
+        <ConfirmModal
+          show={showClearLogsModal}
+          title="Clear Audit Logs"
+          message="Are you sure you want to clear all audit logs? This action cannot be undone."
+          confirmLabel="Clear Logs"
+          variant="danger"
+          onConfirm={() => {
+            setShowClearLogsModal(false);
+            executeClearAuditLogs();
+          }}
+          onCancel={() => setShowClearLogsModal(false)}
+        />
+      )}
     </div>
   );
 }
+
 
 

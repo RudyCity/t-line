@@ -6,6 +6,7 @@ import { determineRenderMode, getCleanUrl, openInSystemBrowser, getFriendlyName,
 import { useBrowserListeners } from '../hooks/useBrowserListeners';
 import BrowserNavigationBar from './BrowserNavigationBar';
 import { useBrowserStorageAndHistory } from '../hooks/useBrowserStorageAndHistory';
+import { ConfirmModal } from './Modals';
 
 interface BrowserTabProps {
   tab: TabData;
@@ -28,6 +29,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   const [inspectedElement, setInspectedElement] = useState<InspectedElement | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isInspecting, setIsInspecting] = useState(false);
+  const [showClearBookmarksModal, setShowClearBookmarksModal] = useState(false);
   const [helperReady, setHelperReady] = useState(false);
   const [deviceMode, setDeviceMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [showBookmarksDropdown, setShowBookmarksDropdown] = useState(false);
@@ -741,9 +743,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   };
 
   const clearAllBookmarks = () => {
-    if (window.confirm('Are you sure you want to clear all bookmarks?')) {
-      setBookmarks([]);
-    }
+    setShowClearBookmarksModal(true);
   };
 
   const clearAllHistory = () => {
@@ -1034,6 +1034,22 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
         onDeleteCookie={deleteCookie}
         onDeleteLocalStorage={deleteLocalStorage}
       />
+
+      {showClearBookmarksModal && (
+        <ConfirmModal
+          show={showClearBookmarksModal}
+          title="Clear All Bookmarks"
+          message="Are you sure you want to clear all bookmarks? This action cannot be undone."
+          confirmLabel="Clear All"
+          variant="danger"
+          onConfirm={() => {
+            setBookmarks([]);
+            setShowClearBookmarksModal(false);
+          }}
+          onCancel={() => setShowClearBookmarksModal(false)}
+        />
+      )}
     </div>
   );
 }
+
