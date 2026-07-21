@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.619] - 2026-07-21
+
+### Bug Fix — SuperAgent & t-line Cross-System Preset Alignment & Storage Synchronization (`presetUtils.ts` & SuperAgent Server)
+- **Synchronized CLI Preset Storage**: Updated `saveCustomPreset` in [presetUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/presetUtils.ts#L234) to serialize and write canonical `MODEL_*` keys (`MODEL_MULTI_MASTER`, `MODEL_MULTI_SUPERAGENT`, `MODEL_MULTI_SUBAGENT`, `MODEL_SINGLE_SUPERAGENT`, etc.) with `providerId@model` string formats into `~/.superagent-r/model-presets.json` alongside `model-config.json`.
+- **SuperAgent HTTP Active Preset Application**: Updated `POST /api/config` in SuperAgent's [serverRoutes.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/serverRoutes.ts#L860) to call `applyModelPreset()` when changing active presets over HTTP, ensuring tier model selections are immediately updated and saved into `model-config.json`.
+- **Resilient Preset Fallback**: Added fallback resolution in SuperAgent's `applyModelPreset()` in [presets.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/config/presets.ts#L305) to check `model-config.json` presets if the requested preset is not present in `model-presets.json`.
+
 ## [1.3.618] - 2026-07-21
 
 ### Bug Fix — Permanent Preset Deletion Across `model-config.json` & `model-presets.json` (`presetUtils.ts`)

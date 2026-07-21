@@ -231,7 +231,101 @@ export function setActiveProviderProfile(providerId: string) {
   };
 }
 
+function saveToCliPresets(mode: 'single' | 'multi', preset: { id: string; name: string; description?: string; models: any }) {
+  const presetsPath = getModelPresetsPath();
+  const dir = path.dirname(presetsPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  let presetsData: { single: any[]; multi: any[] } = { single: [], multi: [] };
+  if (fs.existsSync(presetsPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(presetsPath, 'utf8'));
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        presetsData = {
+          single: Array.isArray(data.single) ? data.single : [],
+          multi: Array.isArray(data.multi) ? data.multi : []
+        };
+      }
+    } catch (e) {
+      console.error('[PresetUtils] Failed to read model-presets.json:', e);
+    }
+  }
+
+  const presetNameLower = preset.name.toLowerCase().trim();
+  const rawModels = preset.models || {};
+  const cliModels: Record<string, string> = {};
+
+  const formatModelVal = (val: any): string => {
+    if (!val) return '';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object' && val.model) {
+      return val.providerProfileId ? `${val.providerProfileId}@${val.model}` : val.model;
+    }
+    return '';
+  };
+
+  if (mode === 'single') {
+    const superVal = formatModelVal(rawModels.MODEL_SINGLE_SUPERAGENT || rawModels.superagent);
+    if (superVal) cliModels.MODEL_SINGLE_SUPERAGENT = superVal;
+
+    const subVal = formatModelVal(rawModels.MODEL_SINGLE_SUBAGENT || rawModels.subagentDefault);
+    if (subVal) cliModels.MODEL_SINGLE_SUBAGENT = subVal;
+
+    if (rawModels.subagentDetails && typeof rawModels.subagentDetails === 'object') {
+      for (const [role, cfg] of Object.entries(rawModels.subagentDetails)) {
+        const val = formatModelVal(cfg);
+        if (val) cliModels[`MODEL_SINGLE_SUBAGENT_${role.toUpperCase()}`] = val;
+      }
+    }
+  } else {
+    const masterVal = formatModelVal(rawModels.MODEL_MULTI_MASTER || rawModels.master);
+    if (masterVal) cliModels.MODEL_MULTI_MASTER = masterVal;
+
+    const superVal = formatModelVal(rawModels.MODEL_MULTI_SUPERAGENT || rawModels.superagent);
+    if (superVal) cliModels.MODEL_MULTI_SUPERAGENT = superVal;
+
+    const subVal = formatModelVal(rawModels.MODEL_MULTI_SUBAGENT || rawModels.subagentDefault);
+    if (subVal) cliModels.MODEL_MULTI_SUBAGENT = subVal;
+
+    if (rawModels.subagentDetails && typeof rawModels.subagentDetails === 'object') {
+      for (const [role, cfg] of Object.entries(rawModels.subagentDetails)) {
+        const val = formatModelVal(cfg);
+        if (val) cliModels[`MODEL_MULTI_SUBAGENT_${role.toUpperCase()}`] = val;
+      }
+    }
+  }
+
+  for (const [k, v] of Object.entries(rawModels)) {
+    if (typeof v === 'string' && k.startsWith('MODEL_')) {
+      cliModels[k] = v;
+    }
+  }
+
+  const cliEntry = {
+    name: presetNameLower,
+    description: preset.description || 'Custom model preset.',
+    models: cliModels
+  };
+
+  const list = presetsData[mode];
+  const existingIdx = list.findIndex(
+    (p: any) => (p.name && p.name.toLowerCase() === presetNameLower) || (p.id && p.id.toLowerCase() === presetNameLower)
+  );
+
+  if (existingIdx !== -1) {
+    list[existingIdx] = cliEntry;
+  } else {
+    list.push(cliEntry);
+  }
+
+  fs.writeFileSync(presetsPath, JSON.stringify(presetsData, null, 2), 'utf8');
+}
+
 export function saveCustomPreset(mode: 'single' | 'multi', preset: { id: string; name: string; description?: string; models: any }) {
+  saveToCliPresets(mode, preset);
+
   const configPath = getModelConfigPath();
   const dir = path.dirname(configPath);
   if (!fs.existsSync(dir)) {
@@ -250,8 +344,8 @@ export function saveCustomPreset(mode: 'single' | 'multi', preset: { id: string;
   if (!configData.presets) configData.presets = { single: [], multi: [] };
   if (!configData.presets[mode]) configData.presets[mode] = [];
 
-  const presetId = preset.id || preset.name.toLowerCase().replace(/\s+/g, '-');
-  const normalizedPreset = {
+  const presetId = preset.id ? preset.id.toLowerCase() : preset.name.toLowerCase().replace(/\s+/g, '-');
+  const normalizedPreset = normalizeCliPreset({ id: presetId, name: preset.name, description: preset.description, models: preset.models }, mode) || {
     id: presetId,
     name: preset.name,
     description: preset.description || 'Custom model preset.',
