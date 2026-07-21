@@ -962,6 +962,8 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
                   </div>
                 ))}
               </div>
+            )}
+
             {/* Active Tasks Widget (Subagents, Checklist Tasks, Processes, Tool Progress) */}
             <ActiveTasksBar
               subagents={subagentList}
