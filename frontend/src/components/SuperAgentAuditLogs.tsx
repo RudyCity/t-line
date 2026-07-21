@@ -34,7 +34,7 @@ const getLogMeta = (log: AuditLog) => {
     return {
       label: 'ERROR',
       icon: XCircle,
-      badgeStyle: 'bg-rose-950/60 text-rose-300 border-rose-800/80',
+      badgeStyle: 'bg-rose-500/15 text-rose-500 border-rose-500/30',
       borderStyle: 'border-l-rose-500',
     };
   }
@@ -42,7 +42,7 @@ const getLogMeta = (log: AuditLog) => {
     return {
       label: 'PROMPT',
       icon: MessageSquare,
-      badgeStyle: 'bg-cyan-950/60 text-cyan-300 border-cyan-800/80',
+      badgeStyle: 'bg-cyan-500/15 text-cyan-500 border-cyan-500/30',
       borderStyle: 'border-l-cyan-500',
     };
   }
@@ -50,7 +50,7 @@ const getLogMeta = (log: AuditLog) => {
     return {
       label: 'DECISION',
       icon: ShieldCheck,
-      badgeStyle: 'bg-purple-950/60 text-purple-300 border-purple-800/80',
+      badgeStyle: 'bg-purple-500/15 text-purple-500 border-purple-500/30',
       borderStyle: 'border-l-purple-500',
     };
   }
@@ -58,14 +58,14 @@ const getLogMeta = (log: AuditLog) => {
     return {
       label: 'AGENT',
       icon: Bot,
-      badgeStyle: 'bg-amber-950/60 text-amber-300 border-amber-800/80',
+      badgeStyle: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
       borderStyle: 'border-l-amber-500',
     };
   }
   return {
     label: 'SYSTEM',
     icon: Cpu,
-    badgeStyle: 'bg-slate-900 text-slate-300 border-slate-700/80',
+    badgeStyle: 'bg-slate-500/15 text-[var(--text-muted)] border-slate-500/30',
     borderStyle: 'border-l-slate-500',
   };
 };
@@ -74,66 +74,66 @@ const renderSummary = (log: AuditLog) => {
   const d = log.data || {};
   if (log.type === 'prompt') {
     return (
-      <div className="text-zinc-200 font-sans text-xs flex items-center gap-1.5 truncate">
-        <span className="text-cyan-400 font-medium font-mono text-[11px]">Prompt:</span>
+      <div className="text-[var(--text-main)] font-sans text-xs flex items-center gap-1.5 truncate">
+        <span className="text-cyan-500 font-medium font-mono text-[11px]">Prompt:</span>
         <span className="truncate">{d.text || 'Empty prompt'}</span>
       </div>
     );
   }
   if (log.type === 'permission_response') {
     return (
-      <div className="text-zinc-200 font-sans text-xs flex items-center gap-2">
-        <span className="text-purple-400 font-mono font-medium text-[11px]">Permission:</span>
-        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold font-mono ${d.approval ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/80' : 'bg-rose-950 text-rose-300 border border-rose-800/80'}`}>
+      <div className="text-[var(--text-main)] font-sans text-xs flex items-center gap-2">
+        <span className="text-purple-500 font-mono font-medium text-[11px]">Permission:</span>
+        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold font-mono ${d.approval ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-500 border border-rose-500/30'}`}>
           {d.approval ? 'APPROVED' : 'DENIED'}
         </span>
-        <span className="text-zinc-400 text-[11px] truncate font-mono">ID: {d.permissionId || 'N/A'}</span>
+        <span className="text-[var(--text-muted)] text-[11px] truncate font-mono">ID: {d.permissionId || 'N/A'}</span>
       </div>
     );
   }
   if (log.type === 'question_response') {
     return (
-      <div className="text-zinc-200 font-sans text-xs flex items-center gap-1.5 truncate">
-        <span className="text-purple-400 font-mono font-medium text-[11px]">User Answer:</span>
+      <div className="text-[var(--text-main)] font-sans text-xs flex items-center gap-1.5 truncate">
+        <span className="text-purple-500 font-mono font-medium text-[11px]">User Answer:</span>
         <span className="truncate">{d.answer || JSON.stringify(d)}</span>
       </div>
     );
   }
   if (log.type === 'plan_response') {
     return (
-      <div className="text-zinc-200 font-sans text-xs flex items-center gap-2">
-        <span className="text-purple-400 font-mono font-medium text-[11px]">Plan Action:</span>
-        <span className="px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800/80 font-mono text-[10px] font-bold">{d.action}</span>
+      <div className="text-[var(--text-main)] font-sans text-xs flex items-center gap-2">
+        <span className="text-purple-500 font-mono font-medium text-[11px]">Plan Action:</span>
+        <span className="px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-500 border border-purple-500/30 font-mono text-[10px] font-bold">{d.action}</span>
       </div>
     );
   }
   if (log.type === 'system_error' || log.type === 'chat_response_error') {
     return (
-      <div className="text-rose-300 font-sans text-xs flex items-center gap-1.5 truncate font-medium">
-        <AlertTriangle className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
+      <div className="text-rose-500 font-sans text-xs flex items-center gap-1.5 truncate font-medium">
+        <AlertTriangle className="w-3.5 h-3.5 text-rose-500 flex-shrink-0" />
         <span className="truncate">{d.message || d.error || 'Unknown system error'}</span>
       </div>
     );
   }
   if (log.type === 'system') {
     return (
-      <div className="text-zinc-300 font-sans text-xs flex items-center gap-1.5 truncate">
+      <div className="text-[var(--text-muted)] font-sans text-xs flex items-center gap-1.5 truncate">
         <span>{d.message || 'System operation'}</span>
-        {d.workspacePath && <span className="text-zinc-500 text-[10px] font-mono">({d.workspacePath})</span>}
+        {d.workspacePath && <span className="text-[var(--text-muted)] opacity-70 text-[10px] font-mono">({d.workspacePath})</span>}
       </div>
     );
   }
   if (log.type === 'agent_event') {
     const evtType = d.type || d.event || 'event';
     return (
-      <div className="text-zinc-300 font-sans text-xs flex items-center gap-2 truncate">
-        <span className="text-amber-400 font-mono text-[11px]">{evtType}</span>
-        <span className="text-zinc-400 truncate text-[11px]">{d.name || d.tool || d.model || (typeof d === 'string' ? d : JSON.stringify(d))}</span>
+      <div className="text-[var(--text-main)] font-sans text-xs flex items-center gap-2 truncate">
+        <span className="text-amber-500 font-mono text-[11px]">{evtType}</span>
+        <span className="text-[var(--text-muted)] truncate text-[11px]">{d.name || d.tool || d.model || (typeof d === 'string' ? d : JSON.stringify(d))}</span>
       </div>
     );
   }
   return (
-    <div className="text-zinc-300 font-mono text-xs truncate">
+    <div className="text-[var(--text-muted)] font-mono text-xs truncate">
       {typeof d === 'string' ? d : JSON.stringify(d)}
     </div>
   );
@@ -158,14 +158,14 @@ const AuditLogItem = React.memo(({ log }: { log: AuditLog }) => {
   const toggleExpand = () => setIsExpanded(prev => !prev);
 
   return (
-    <div className={`bg-[#0d111a] rounded-xl border border-zinc-800/90 shadow-sm transition hover:border-zinc-700/80 border-l-4 ${meta.borderStyle} overflow-hidden`}>
+    <div className={`bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] shadow-sm transition hover:border-[var(--color-primary)]/40 border-l-4 ${meta.borderStyle} overflow-hidden`}>
       {/* Header Row */}
       <div 
         onClick={toggleExpand}
-        className="p-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-zinc-900/40 transition select-none"
+        className="p-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-[var(--surface-overlay-hover)] transition select-none"
       >
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <button className="text-zinc-500 hover:text-zinc-300 flex-shrink-0">
+          <button className="text-[var(--text-muted)] hover:text-[var(--text-main)] flex-shrink-0">
             {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
 
@@ -179,7 +179,7 @@ const AuditLogItem = React.memo(({ log }: { log: AuditLog }) => {
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-[10px] text-zinc-500 font-mono">
+          <span className="text-[10px] text-[var(--text-muted)] font-mono">
             {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </span>
           <span className={`px-2 py-0.5 rounded text-[9px] font-bold font-mono tracking-wider border ${meta.badgeStyle}`}>
@@ -190,55 +190,55 @@ const AuditLogItem = React.memo(({ log }: { log: AuditLog }) => {
 
       {/* Collapsible Details Body */}
       {isExpanded && (
-        <div className="border-t border-zinc-800/80 bg-[#06080e] p-3 flex flex-col gap-2.5">
-          <div className="flex items-center justify-between text-[11px] text-zinc-400 font-mono pb-2 border-b border-zinc-800/60 flex-wrap gap-2">
+        <div className="border-t border-[var(--border-color)] bg-[var(--bg-sidebar)] p-3 flex flex-col gap-2.5">
+          <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] font-mono pb-2 border-b border-[var(--border-color)] flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <span>Timestamp: {new Date(log.timestamp).toLocaleString()}</span>
-              <span className="text-zinc-600">•</span>
-              <span>Type: <strong className="text-zinc-200">{log.type}</strong></span>
+              <span className="opacity-40">•</span>
+              <span>Type: <strong className="text-[var(--text-main)]">{log.type}</strong></span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex rounded-md bg-zinc-900 p-0.5 border border-zinc-800 text-[10px]">
+              <div className="flex rounded-md bg-[var(--bg-card)] p-0.5 border border-[var(--border-color)] text-[10px]">
                 <button
                   onClick={(e) => { e.stopPropagation(); setViewMode('pretty'); }}
-                  className={`px-2 py-0.5 rounded transition ${viewMode === 'pretty' ? 'bg-indigo-600 text-white font-bold' : 'text-zinc-400 hover:text-zinc-200'}`}
+                  className={`px-2 py-0.5 rounded transition ${viewMode === 'pretty' ? 'bg-[var(--color-primary)] text-white font-bold' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
                 >
                   Structured
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setViewMode('json'); }}
-                  className={`px-2 py-0.5 rounded transition ${viewMode === 'json' ? 'bg-indigo-600 text-white font-bold' : 'text-zinc-400 hover:text-zinc-200'}`}
+                  className={`px-2 py-0.5 rounded transition ${viewMode === 'json' ? 'bg-[var(--color-primary)] text-white font-bold' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
                 >
                   Raw JSON
                 </button>
               </div>
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-1 px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded text-[10px] transition font-medium cursor-pointer"
+                className="flex items-center gap-1 px-2 py-1 bg-[var(--bg-card)] hover:bg-[var(--surface-overlay-hover)] text-[var(--text-main)] border border-[var(--border-color)] rounded text-[10px] transition font-medium cursor-pointer"
               >
-                {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
                 {copied ? 'Copied' : 'Copy'}
               </button>
             </div>
           </div>
 
           {viewMode === 'json' ? (
-            <pre className="text-zinc-300 overflow-x-auto max-h-72 overflow-y-auto p-3 bg-[#030407] border border-zinc-800/80 rounded-lg text-[11px] font-mono leading-relaxed select-text">
+            <pre className="text-[var(--text-main)] overflow-x-auto max-h-72 overflow-y-auto p-3 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-lg text-[11px] font-mono leading-relaxed select-text">
               {JSON.stringify(log.data, null, 2)}
             </pre>
           ) : (
-            <div className="bg-[#0b0e17] border border-zinc-800/80 rounded-lg p-3 text-xs font-mono space-y-2">
+            <div className="bg-[var(--bg-main)] border border-[var(--border-color)] rounded-lg p-3 text-xs font-mono space-y-2">
               {typeof log.data === 'object' && log.data !== null ? (
                 Object.entries(log.data).map(([k, v]) => (
-                  <div key={k} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 border-b border-zinc-800/40 last:border-0 pb-1.5 last:pb-0">
-                    <span className="text-zinc-400 font-semibold text-[11px] min-w-[120px] shrink-0 text-cyan-400">{k}:</span>
-                    <span className="text-zinc-200 break-all text-[11px] select-text">
+                  <div key={k} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 border-b border-[var(--border-color)]/50 last:border-0 pb-1.5 last:pb-0">
+                    <span className="text-cyan-500 font-semibold text-[11px] min-w-[120px] shrink-0">{k}:</span>
+                    <span className="text-[var(--text-main)] break-all text-[11px] select-text">
                       {typeof v === 'object' ? JSON.stringify(v) : String(v)}
                     </span>
                   </div>
                 ))
               ) : (
-                <div className="text-zinc-300">{String(log.data)}</div>
+                <div className="text-[var(--text-main)]">{String(log.data)}</div>
               )}
             </div>
           )}
@@ -497,19 +497,19 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
 
       {/* Pagination Footer */}
       {filteredLogs.length > 0 && (
-        <div className="px-4 py-2.5 bg-[#0b0f19] border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-zinc-400 shadow-inner">
+        <div className="px-4 py-2.5 bg-[var(--panel-header-bg)] border-t border-[var(--border-color)] flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-[var(--text-muted)] shadow-inner">
           <div className="flex items-center gap-3">
             <span>
-              Showing <strong className="text-zinc-200">{startRecordNum}</strong> - <strong className="text-zinc-200">{endRecordNum}</strong> of <strong className="text-zinc-200">{filteredLogs.length}</strong>
+              Showing <strong className="text-[var(--text-main)]">{startRecordNum}</strong> - <strong className="text-[var(--text-main)]">{endRecordNum}</strong> of <strong className="text-[var(--text-main)]">{filteredLogs.length}</strong>
             </span>
             <div className="flex items-center gap-1.5 text-[11px]">
-              <span className="text-zinc-500">Rows:</span>
+              <span className="text-[var(--text-muted)] opacity-70">Rows:</span>
               {[15, 25, 50, 100].map(sz => (
                 <button
                   key={sz}
                   onClick={() => setPageSize(sz)}
                   className={`px-1.5 py-0.5 rounded transition cursor-pointer ${
-                    pageSize === sz ? 'bg-indigo-600 text-white font-bold' : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200'
+                    pageSize === sz ? 'bg-[var(--color-primary)] text-white font-bold' : 'bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-color)]'
                   }`}
                 >
                   {sz}
@@ -522,7 +522,7 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
             <button
               onClick={() => setCurrentPage(1)}
               disabled={currentPage === 1}
-              className="p-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-30 border border-zinc-800 rounded text-zinc-300 transition cursor-pointer"
+              className="p-1.5 bg-[var(--bg-card)] hover:bg-[var(--surface-overlay-hover)] disabled:opacity-30 border border-[var(--border-color)] rounded text-[var(--text-main)] transition cursor-pointer"
               title="First Page"
             >
               <ChevronsLeft className="w-3.5 h-3.5" />
@@ -530,20 +530,20 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
             <button
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className="p-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-30 border border-zinc-800 rounded text-zinc-300 transition cursor-pointer"
+              className="p-1.5 bg-[var(--bg-card)] hover:bg-[var(--surface-overlay-hover)] disabled:opacity-30 border border-[var(--border-color)] rounded text-[var(--text-main)] transition cursor-pointer"
               title="Previous Page"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
 
-            <span className="px-2 text-zinc-300 font-semibold text-xs">
+            <span className="px-2 text-[var(--text-main)] font-semibold text-xs">
               Page {currentPage} of {totalPages}
             </span>
 
             <button
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
-              className="p-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-30 border border-zinc-800 rounded text-zinc-300 transition cursor-pointer"
+              className="p-1.5 bg-[var(--bg-card)] hover:bg-[var(--surface-overlay-hover)] disabled:opacity-30 border border-[var(--border-color)] rounded text-[var(--text-main)] transition cursor-pointer"
               title="Next Page"
             >
               <ChevronRight className="w-3.5 h-3.5" />
@@ -551,7 +551,7 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
             <button
               onClick={() => setCurrentPage(totalPages)}
               disabled={currentPage === totalPages}
-              className="p-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-30 border border-zinc-800 rounded text-zinc-300 transition cursor-pointer"
+              className="p-1.5 bg-[var(--bg-card)] hover:bg-[var(--surface-overlay-hover)] disabled:opacity-30 border border-[var(--border-color)] rounded text-[var(--text-main)] transition cursor-pointer"
               title="Last Page"
             >
               <ChevronsRight className="w-3.5 h-3.5" />

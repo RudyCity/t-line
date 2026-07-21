@@ -20,26 +20,26 @@ interface PermissionCardProps {
 
 export function PermissionCard({ pendingPermission, handlePermissionDecision }: PermissionCardProps) {
   return (
-    <div className="group relative p-4 rounded-xl bg-[#0d0a07]/95 border border-amber-800/80 hover:border-amber-700/60 text-amber-100 space-y-3.5 shadow-xl backdrop-blur-md transition-all duration-200">
+    <div className="group relative p-4 rounded-xl bg-[var(--bg-card)] border border-amber-500/50 hover:border-amber-500 text-[var(--text-main)] space-y-3.5 shadow-xl backdrop-blur-md transition-all duration-200">
       {/* Top Header Badge */}
       <div className="flex items-center gap-2">
         <span className="relative flex h-2 w-2">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
           <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
         </span>
-        <div className="flex items-center gap-1.5 text-amber-400 text-[10px] font-mono font-semibold uppercase tracking-widest">
+        <div className="flex items-center gap-1.5 text-amber-500 text-[10px] font-mono font-semibold uppercase tracking-widest">
           <AlertTriangle className="w-3.5 h-3.5" />
           <span>Tool Approval Required</span>
         </div>
       </div>
 
       {/* Description / Tool Call Details */}
-      <p className="text-xs text-amber-200/90 font-mono bg-[#16120e]/60 p-3 rounded-lg border border-amber-900/40 leading-relaxed break-all select-all">
+      <p className="text-xs text-[var(--text-main)] font-mono bg-[var(--bg-sidebar)] p-3 rounded-lg border border-amber-500/30 leading-relaxed break-all select-all">
         {pendingPermission.description || `SuperAgent wants to execute: ${JSON.stringify(pendingPermission.toolCall)}`}
       </p>
 
       {/* Action Footer */}
-      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-amber-900/20">
+      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[var(--border-color)]">
         <button
           onClick={() => handlePermissionDecision(true)}
           className="bg-amber-600 hover:bg-amber-500 active:scale-[0.98] text-white font-medium text-xs px-3.5 py-1.5 rounded-lg shadow-sm transition-all duration-150 flex items-center gap-1.5 cursor-pointer"

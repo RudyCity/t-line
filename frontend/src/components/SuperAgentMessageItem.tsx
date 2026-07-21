@@ -335,7 +335,7 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
         <span className={`text-[10px] uppercase tracking-wider font-bold font-mono ${
           msg.role === 'thought'
             ? 'text-[var(--color-primary)]'
-            : 'text-emerald-400'
+            : 'text-emerald-500'
         }`}>
           {msg.role === 'thought' ? 'Thought' : 'Assistant'}
         </span>

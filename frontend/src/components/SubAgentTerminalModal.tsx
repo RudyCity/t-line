@@ -51,28 +51,28 @@ export function SubAgentTerminalModal({ subagent, onClose }: SubAgentTerminalMod
     const s = (subagent.status || 'RUNNING').toUpperCase();
     if (s === 'RUNNING' || s === 'ACTIVE') {
       return (
-        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
           RUNNING
         </span>
       );
     }
     if (s === 'COMPLETED' || s === 'DONE') {
       return (
-        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-950/80 text-indigo-300 border border-indigo-800/60">
+        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/15 text-indigo-500 border border-indigo-500/30">
           ✓ COMPLETED
         </span>
       );
     }
     if (s === 'FAILED' || s === 'ERROR') {
       return (
-        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-950/80 text-red-300 border border-red-800/60">
+        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/15 text-rose-500 border border-rose-500/30">
           ✕ ERROR
         </span>
       );
     }
     return (
-      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-950/80 text-amber-300 border border-amber-800/60">
+      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-500 border border-amber-500/30">
         {s}
       </span>
     );

@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.602] - 2026-07-21
+
+### Theme & Light Mode Optimization
+- **SuperAgent Light Mode Coloring Fix (`SuperAgentAuditLogs.tsx`, `SuperAgentPresetManager.tsx`, `SuperAgentLoginManager.tsx`, `SuperAgentInteractiveCards.tsx`, `SuperAgentToolItem.tsx`, `SuperAgentSidebar.tsx`, `SubAgentTerminalModal.tsx`, `SuperAgentMessageItem.tsx`, `components.css`)**:
+  - **CSS Theme Variable Conversion**: Converted hardcoded dark hex codes (`#0d111a`, `#06080e`, `#030407`, `#0b0e17`, `#0b0f19`, `#0d111c`, `#121622`, `#090c14`, `#0d0a07`) across all SuperAgent modals, cards, audit log tables, preset managers, and dialogs to root design variables (`var(--bg-main)`, `var(--bg-sidebar)`, `var(--bg-card)`, `var(--border-color)`, `var(--text-main)`, `var(--text-muted)`).
+  - **Adaptive Vibrant Badges**: Transformed dark 950 badge containers into vibrant opacity-based badge styles (`bg-*-500/15`, `text-*-500`, `border-*-500/30`) for high contrast and readability across Light Mode and Dark themes.
+  - **Component Polish**: Added `.theme-light` CSS rules in `components.css` for workbench containers, cards, command popovers, and status badges.
+
 ## [1.3.601] - 2026-07-21
 
 ### Performance & Concurrency Optimizations (Round 2)

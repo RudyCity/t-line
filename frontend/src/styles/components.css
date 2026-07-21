@@ -3014,3 +3014,32 @@
   padding: 2px 8px;
   border-radius: 4px;
 }
+
+/* Light mode specific polish for SuperAgent Workbench */
+.theme-light .sa-workbench-container {
+  background: var(--bg-main, #f8fafc);
+  color: var(--text-main, #0f172a);
+}
+
+.theme-light .sa-header-bar {
+  background: var(--bg-sidebar, #f1f5f9);
+  border-bottom-color: var(--border-color, rgba(0, 0, 0, 0.08));
+}
+
+.theme-light .sa-card-base {
+  background: var(--bg-card, #ffffff);
+  border-color: var(--border-color, rgba(0, 0, 0, 0.08));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.theme-light .sa-input-area {
+  background: var(--bg-card, #ffffff);
+  border-color: var(--border-color, rgba(0, 0, 0, 0.12));
+}
+
+.theme-light .sa-command-popover {
+  background: var(--bg-sidebar, #ffffff);
+  border-color: var(--border-color, rgba(0, 0, 0, 0.12));
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+

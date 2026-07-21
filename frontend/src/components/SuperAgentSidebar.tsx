@@ -55,10 +55,10 @@ export function SuperAgentSidebar({
 
   const getChangeBadge = (type: string) => {
     const t = type.toLowerCase();
-    if (t === 'modified' || t === 'm') return <span className="text-[9px] font-mono font-bold text-amber-400 bg-amber-950/60 px-1 py-0.2 rounded border border-amber-800/40">M</span>;
-    if (t === 'added' || t === 'a') return <span className="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-950/60 px-1 py-0.2 rounded border border-emerald-800/40">A</span>;
-    if (t === 'deleted' || t === 'd') return <span className="text-[9px] font-mono font-bold text-red-400 bg-red-950/60 px-1 py-0.2 rounded border border-red-800/40">D</span>;
-    return <span className="text-[9px] font-mono font-bold text-sky-400 bg-sky-950/60 px-1 py-0.2 rounded border border-sky-800/40">?</span>;
+    if (t === 'modified' || t === 'm') return <span className="text-[9px] font-mono font-bold text-amber-500 bg-amber-500/15 px-1 py-0.2 rounded border border-amber-500/30">M</span>;
+    if (t === 'added' || t === 'a') return <span className="text-[9px] font-mono font-bold text-emerald-500 bg-emerald-500/15 px-1 py-0.2 rounded border border-emerald-500/30">A</span>;
+    if (t === 'deleted' || t === 'd') return <span className="text-[9px] font-mono font-bold text-rose-500 bg-rose-500/15 px-1 py-0.2 rounded border border-rose-500/30">D</span>;
+    return <span className="text-[9px] font-mono font-bold text-sky-500 bg-sky-500/15 px-1 py-0.2 rounded border border-sky-500/30">?</span>;
   };
 
   return (

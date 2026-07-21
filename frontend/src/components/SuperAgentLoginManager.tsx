@@ -247,34 +247,34 @@ export const SuperAgentLoginManager: React.FC<SuperAgentLoginManagerProps> = ({
 
       {/* Add / Edit Provider Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0d111c] border border-zinc-800 rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
-              <h4 className="font-semibold text-zinc-100 text-sm flex items-center gap-2">
-                <Key className="w-4 h-4 text-indigo-400" />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150 text-[var(--text-main)]">
+            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
+              <h4 className="font-semibold text-[var(--text-main)] text-sm flex items-center gap-2">
+                <Key className="w-4 h-4 text-[var(--color-primary)]" />
                 {editingId ? 'Edit Provider Profile' : 'Add New Provider Profile'}
               </h4>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="text-zinc-400 hover:text-zinc-200 p-1 rounded-md"
+                className="text-[var(--text-muted)] hover:text-[var(--text-main)] p-1 rounded-md"
               >
                 ✕
               </button>
             </div>
 
             {errorMessage && (
-              <div className="p-2.5 rounded-lg bg-rose-950/50 border border-rose-800/60 text-rose-300 text-xs">
+              <div className="p-2.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-500 text-xs">
                 {errorMessage}
               </div>
             )}
 
             <form onSubmit={handleSave} className="space-y-3.5">
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-zinc-300">Provider Type</label>
+                <label className="text-[11px] font-medium text-[var(--text-muted)]">Provider Type</label>
                 <select
                   value={formType}
                   onChange={(e) => handleTypeChange(e.target.value)}
-                  className="w-full bg-[#121622] border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-200 text-xs outline-none focus:border-indigo-500"
+                  className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[var(--text-main)] text-xs outline-none focus:border-[var(--color-primary)]"
                 >
                   {PROVIDER_TYPES.map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
@@ -283,26 +283,26 @@ export const SuperAgentLoginManager: React.FC<SuperAgentLoginManagerProps> = ({
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-zinc-300">Profile Name</label>
+                <label className="text-[11px] font-medium text-[var(--text-muted)]">Profile Name</label>
                 <input
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="e.g. Work OpenAI Account"
-                  className="w-full bg-[#121622] border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-200 text-xs outline-none focus:border-indigo-500"
+                  className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[var(--text-main)] text-xs outline-none focus:border-[var(--color-primary)]"
                   required
                 />
               </div>
 
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-medium text-zinc-300">API Key / Secret Token</label>
+                  <label className="text-[11px] font-medium text-[var(--text-muted)]">API Key / Secret Token</label>
                   {PROVIDER_TYPES.find(t => t.id === formType)?.docs && (
                     <a
                       href={PROVIDER_TYPES.find(t => t.id === formType)?.docs}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[10px] text-indigo-400 hover:underline flex items-center gap-0.5"
+                      className="text-[10px] text-[var(--color-primary)] hover:underline flex items-center gap-0.5"
                     >
                       Get API Key <ExternalLink className="w-2.5 h-2.5" />
                     </a>
@@ -313,33 +313,33 @@ export const SuperAgentLoginManager: React.FC<SuperAgentLoginManagerProps> = ({
                   value={formApiKey}
                   onChange={(e) => setFormApiKey(e.target.value)}
                   placeholder={formType === 'ollama' ? 'Optional for local Ollama' : 'sk-...'}
-                  className="w-full bg-[#121622] border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-200 font-mono text-xs outline-none focus:border-indigo-500"
+                  className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[var(--text-main)] font-mono text-xs outline-none focus:border-[var(--color-primary)]"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-zinc-300">Base API URL (Optional)</label>
+                <label className="text-[11px] font-medium text-[var(--text-muted)]">Base API URL (Optional)</label>
                 <input
                   type="text"
                   value={formBaseUrl}
                   onChange={(e) => setFormBaseUrl(e.target.value)}
                   placeholder="https://..."
-                  className="w-full bg-[#121622] border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-200 font-mono text-xs outline-none focus:border-indigo-500"
+                  className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[var(--text-main)] font-mono text-xs outline-none focus:border-[var(--color-primary)]"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-800/80">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--border-color)]">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-3.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium text-xs transition"
+                  className="px-3.5 py-1.5 rounded-lg bg-[var(--bg-sidebar)] hover:bg-[var(--surface-overlay-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] font-medium text-xs transition border border-[var(--border-color)]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition flex items-center gap-1.5 disabled:opacity-50"
+                  className="px-4 py-1.5 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium text-xs transition flex items-center gap-1.5 disabled:opacity-50"
                 >
                   {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                   {editingId ? 'Update Credentials' : 'Save Credentials'}
