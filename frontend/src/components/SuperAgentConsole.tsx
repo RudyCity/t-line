@@ -298,6 +298,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<SlashCommand[]>([]);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
+  const [installedSkills, setInstalledSkills] = useState<Array<{ name: string; description: string }>>([]);
   const [history, setHistory] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('superagent_prompt_history');
@@ -323,6 +324,22 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
         });
       }
     });
+  }, [connectTrigger]);
+
+  // Fetch installed skills from SuperAgent for slash command autocomplete
+  useEffect(() => {
+    const fetchSkills = async () => {
+      try {
+        const res = await fetch('/api/superagent/skills');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.skills)) {
+            setInstalledSkills(data.skills);
+          }
+        }
+      } catch {}
+    };
+    fetchSkills();
   }, [connectTrigger]);
 
   // Attachment States & Helpers
@@ -521,19 +538,30 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
     }));
   };
 
-  const slashCommands = getSlashCommands({
-    ws,
-    workspace,
-    agentMode,
-    customArgs,
-    setMessages,
-    setAgentMode,
-    setCustomArgs,
-    setWorkspace,
-    setConnectTrigger,
-    handleSend,
-    handleAbort
-  });
+  const slashCommands = [
+    ...getSlashCommands({
+      ws,
+      workspace,
+      agentMode,
+      customArgs,
+      setMessages,
+      setAgentMode,
+      setCustomArgs,
+      setWorkspace,
+      setConnectTrigger,
+      handleSend,
+      handleAbort
+    }),
+    // Dynamically inject installed skills as /skill-* commands
+    ...installedSkills.map(skill => {
+      const slug = skill.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      return {
+        command: `/skill-${slug}`,
+        description: skill.description || `Run ${skill.name} skill`,
+        action: () => { handleSend(`/skill-${slug}`); }
+      };
+    })
+  ];
 
   // Monitor input to show/hide suggestions (supports sub-commands & skills)
   useEffect(() => {
