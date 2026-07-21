@@ -409,6 +409,11 @@ export function SuperAgentConsole({
     }
   }, [activeWorkspacePath]);
 
+  const activeSessionIdRef = useRef(activeSessionId);
+  useEffect(() => {
+    activeSessionIdRef.current = activeSessionId;
+  }, [activeSessionId]);
+
   useEffect(() => {
     const params = getRuntimeSearchParams();
     const isWinPort = params.get('port') || window.location.port || '8080';
@@ -438,7 +443,7 @@ export function SuperAgentConsole({
         handleAgentEventPayload(
           payload, setLoading, setToolProgressMsg, setMessages, setSubagentList,
           setPendingPermission, setPendingQuestion, setSelectedQuestionAnswers,
-          setCustomQuestionInput, setPendingPlanApproval, isAbortedRef, activeSessionId
+          setCustomQuestionInput, setPendingPlanApproval, isAbortedRef, activeSessionIdRef.current
         );
       } catch (e) {
         setMessages(prev => [...prev, { role: 'assistant', text: event.data }]);
@@ -544,7 +549,7 @@ export function SuperAgentConsole({
     let targetSessionId = activeSessionId;
     if (!targetSessionId) {
       targetSessionId = `session_${Date.now()}`;
-      handleSelectSessionWrapped(targetSessionId);
+      handleSelectSession(targetSessionId);
     }
 
     ws.send(JSON.stringify({

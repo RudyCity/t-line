@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.610] - 2026-07-21
+
+### Bug Fix — SuperAgent Session Execution on Empty History (`useSuperAgentSessions.ts` & `SuperAgentConsole.tsx`)
+- **Pre-initialized Session Context**: Updated `useSuperAgentSessions` to pre-generate and preserve a valid `activeSessionId` (`session_${Date.now()}`) when history is empty, preventing `activeSessionId` from lingering as an empty string.
+- **Prevent User Message State Wiping**: Removed redundant `handleSelectSessionWrapped` call in `handleSend` when creating target session ID, preventing `handleSelectSession` from executing `setMessages([])` and erasing the user's prompt state.
+- **Active Session ID Ref Sync**: Added `activeSessionIdRef` in `SuperAgentConsole.tsx` so WebSocket `socket.onmessage` event handlers always filter incoming SSE streaming events against the current active session ID instead of a stale closed-over empty string.
+
 ## [1.3.609] - 2026-07-21
 
 ### Feature — Open SuperAgent Button in Workspace Manager (`EmptyDashboard.tsx`)
