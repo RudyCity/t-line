@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.612] - 2026-07-21
+
+### UI Alignment Fix — SuperAgent Settings Modal Tab Height (`SuperAgentSettingsModal.tsx`)
+- **Bottom-Border Tab Alignment**: Replaced vertical flex-centering (`items-center`) with bottom alignment (`items-end`) and `-mb-px` in [SuperAgentSettingsModal.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentSettingsModal.tsx#L94) so active and inactive tabs sit flush with the bottom container border.
+- **Consistent Height & Padding**: Standardized padding (`px-4 py-2.5`), line-height, icon sizes, and top rounded corners (`rounded-t-lg`) across all modal navigation tabs (`login`, `presets`, `execution`, `monitor`), fixing uneven tab heights.
+- **Theme-Consistent Styling**: Replaced inline `color-mix` CSS with design system Tailwind classes (`bg-[var(--color-primary)]/10` and `border-[var(--color-primary)]`).
+
 ## [1.3.611] - 2026-07-21
 
 ### Bug Fix — SuperAgent Thinking Latency & Double Checkpoint Events (`serverRoutes.ts`, `superAgentBridge.ts`, `checkpoints.ts`)

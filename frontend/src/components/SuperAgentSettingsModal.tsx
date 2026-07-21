@@ -91,74 +91,30 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
         </div>
 
         {/* Modal Navigation Tabs */}
-        <div className="px-6 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] flex items-center gap-2 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('login')}
-            className={`px-4 py-2.5 font-medium border-b-2 transition flex items-center gap-2 text-xs ${
-              activeTab === 'login'
-                ? 'font-semibold'
-                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
-            }`}
-            style={activeTab === 'login' ? {
-              borderColor: 'var(--color-primary)',
-              color: 'var(--color-primary)',
-              backgroundColor: 'color-mix(in srgb, var(--color-primary) 15%, transparent)'
-            } : undefined}
-          >
-            <Key className="w-3.5 h-3.5" style={{ color: activeTab === 'login' ? 'var(--color-primary)' : undefined }} />
-            Management Login ({providers.length})
-          </button>
-
-          <button
-            onClick={() => setActiveTab('presets')}
-            className={`px-4 py-2.5 font-medium border-b-2 transition flex items-center gap-2 text-xs ${
-              activeTab === 'presets'
-                ? 'font-semibold'
-                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
-            }`}
-            style={activeTab === 'presets' ? {
-              borderColor: 'var(--color-primary)',
-              color: 'var(--color-primary)',
-              backgroundColor: 'color-mix(in srgb, var(--color-primary) 15%, transparent)'
-            } : undefined}
-          >
-            <Sparkles className="w-3.5 h-3.5" style={{ color: activeTab === 'presets' ? 'var(--color-primary)' : undefined }} />
-            Model Presets
-          </button>
-
-          <button
-            onClick={() => setActiveTab('execution')}
-            className={`px-4 py-2.5 font-medium border-b-2 transition flex items-center gap-2 text-xs ${
-              activeTab === 'execution'
-                ? 'font-semibold'
-                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
-            }`}
-            style={activeTab === 'execution' ? {
-              borderColor: 'var(--color-primary)',
-              color: 'var(--color-primary)',
-              backgroundColor: 'color-mix(in srgb, var(--color-primary) 15%, transparent)'
-            } : undefined}
-          >
-            <Sliders className="w-3.5 h-3.5" style={{ color: activeTab === 'execution' ? 'var(--color-primary)' : undefined }} />
-            Execution & Workspace
-          </button>
-
-          <button
-            onClick={() => setActiveTab('monitor')}
-            className={`px-4 py-2.5 font-medium border-b-2 transition flex items-center gap-2 text-xs ${
-              activeTab === 'monitor'
-                ? 'font-semibold'
-                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
-            }`}
-            style={activeTab === 'monitor' ? {
-              borderColor: 'var(--color-primary)',
-              color: 'var(--color-primary)',
-              backgroundColor: 'color-mix(in srgb, var(--color-primary) 15%, transparent)'
-            } : undefined}
-          >
-            <Activity className="w-3.5 h-3.5" style={{ color: activeTab === 'monitor' ? 'var(--color-primary)' : undefined }} />
-            Monitor & Console
-          </button>
+        <div className="px-6 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] flex items-end gap-1 overflow-x-auto pt-2">
+          {[
+            { id: 'login' as const, label: `Management Login (${providers.length})`, icon: Key },
+            { id: 'presets' as const, label: 'Model Presets', icon: Sparkles },
+            { id: 'execution' as const, label: 'Execution & Workspace', icon: Sliders },
+            { id: 'monitor' as const, label: 'Monitor & Console', icon: Activity },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2.5 font-medium border-b-2 transition flex items-center gap-2 text-xs rounded-t-lg -mb-px cursor-pointer whitespace-nowrap ${
+                  isActive
+                    ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary)]/10 font-semibold'
+                    : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[var(--color-primary)]' : ''}`} />
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Modal Body */}
