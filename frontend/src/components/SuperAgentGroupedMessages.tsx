@@ -109,7 +109,10 @@ function CollapsibleProcessBlock({
   };
 
   return (
-    <div className="my-1.5 font-mono text-xs w-full select-text">
+    <div className="relative my-1.5 font-mono text-xs w-full select-text">
+      {/* Timeline Branch Connector */}
+      <div className="absolute -left-[17px] top-[14px] w-2.5 h-[1.5px] bg-indigo-500/50" />
+
       {/* Collapsible Header */}
       <div
         onClick={handleToggle}
