@@ -59,28 +59,28 @@ export function ActiveTasksBar({
   return (
     <div className="mb-2 bg-[#101014]/90 border border-zinc-800/80 rounded-lg shadow-lg backdrop-blur-sm overflow-hidden font-sans text-xs transition-all">
       {/* Header Bar */}
-      <div className="flex items-center justify-between px-2.5 py-1.5 bg-[#141419] border-b border-zinc-800/60 select-none">
+      <div
+        onClick={() => setIsExpanded(!isExpanded)}
+        className={`flex items-center justify-between px-2.5 py-1.5 bg-[#141419] select-none cursor-pointer transition ${
+          isExpanded ? 'border-b border-zinc-800/60' : ''
+        }`}
+      >
         <div className="flex items-center gap-2">
-          <span className="relative flex items-center justify-center">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping absolute" />
-            <span className="w-2 h-2 rounded-full bg-emerald-500 relative" />
-          </span>
           <span className="text-[11px] font-bold text-zinc-300 font-mono tracking-tight uppercase">
-            Tasks ({totalActiveCount})
+            TASKS ({totalActiveCount})
           </span>
         </div>
 
         <button
-          onClick={() => setIsExpanded(!isExpanded)}
           className="p-0.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 rounded transition cursor-pointer"
-          title={isExpanded ? 'Collapse' : 'Expand'}
+          title={isExpanded ? 'Hide Task List' : 'Show Task List'}
         >
           {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
       </div>
 
-      {/* Main Body */}
-      {isExpanded ? (
+      {/* Main Body - Completely hidden when collapsed */}
+      {isExpanded && (
         <div className="p-1.5 space-y-1 max-h-44 overflow-y-auto scrollbar-thin">
           {hasActiveTool && (
             <div className="flex items-center gap-2 px-2 py-1 bg-indigo-950/40 border border-indigo-900/50 rounded font-mono text-[11px] text-indigo-300">
@@ -97,7 +97,6 @@ export function ActiveTasksBar({
               className="group flex items-center justify-between px-2 py-1 bg-[#16161c] hover:bg-indigo-950/40 border border-zinc-800/80 hover:border-indigo-800/60 rounded font-mono text-[11px] transition cursor-pointer"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
                 <span className="font-semibold text-zinc-200 group-hover:text-indigo-300 truncate">
                   {sa.role || sa.typeName || `SubAgent-${sa.id.slice(0, 6)}`}
                 </span>
@@ -153,42 +152,6 @@ export function ActiveTasksBar({
               </div>
             </div>
           ))}
-        </div>
-      ) : (
-        <div className="px-2.5 py-1 flex items-center gap-1.5 overflow-x-auto scrollbar-none text-[11px] font-mono">
-          {activeSubagents.map(sa => (
-            <button
-              key={sa.id}
-              onClick={() => onSelectSubAgent(sa)}
-              className="flex items-center gap-1 px-2 py-0.5 bg-indigo-950/60 hover:bg-indigo-900/80 border border-indigo-800/60 rounded text-indigo-300 transition cursor-pointer shrink-0"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span>{sa.role || sa.typeName}</span>
-            </button>
-          ))}
-
-          {activeChecklistTasks.map((t, idx) => {
-            const isInProgress = t.status === '/' || (t.status || '').toLowerCase() === 'in_progress';
-            return (
-              <div
-                key={t.id || idx}
-                className={`flex items-center gap-1 px-2 py-0.5 border rounded shrink-0 ${
-                  isInProgress
-                    ? 'bg-amber-950/50 border-amber-800/60 text-amber-300'
-                    : 'bg-zinc-900 border-zinc-800 text-zinc-400'
-                }`}
-              >
-                <span className="truncate max-w-xs">{t.text}</span>
-              </div>
-            );
-          })}
-
-          {hasActiveTool && (
-            <div className="flex items-center gap-1 px-2 py-0.5 bg-indigo-950/40 border border-indigo-900/50 rounded text-indigo-300 shrink-0">
-              <Wrench className="w-3 h-3 text-indigo-400 animate-spin" />
-              <span className="truncate max-w-xs">{toolProgressMsg}</span>
-            </div>
-          )}
         </div>
       )}
     </div>
