@@ -276,14 +276,13 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
   if (msg.role === 'system') {
     const isError = /error|failed|econnrefused|exception|stopped|denied|cannot|invalid/i.test(msg.text);
     return (
-      <div key={index} className="relative flex items-center justify-start py-1 select-text">
-        <div className="absolute -left-[17px] top-1/2 -translate-y-1/2 w-2.5 h-[1.5px] bg-indigo-500/50" />
+      <div key={index} className="flex items-center justify-start py-1 select-text">
         <div className={`text-[11px] font-mono tracking-tight text-left flex items-center justify-start gap-2 select-text ${
           isError ? 'text-rose-400' : 'text-zinc-400'
         }`}>
-          <span className={`text-[10px] font-bold shrink-0 ${isError ? 'text-rose-400' : 'text-zinc-500'}`}>
-            [{isError ? 'ERROR' : 'SYSTEM'}]:
-          </span>
+          <span className={`w-1.5 h-1.5 rounded-full inline-block shrink-0 ${
+            isError ? 'bg-rose-500 animate-pulse' : 'bg-indigo-400'
+          }`}></span>
           <span className="break-all whitespace-pre-wrap select-text">{msg.text}</span>
         </div>
       </div>
@@ -291,35 +290,40 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
   }
 
   if (msg.role === 'tool') {
+    return <SuperAgentToolItem key={index} msg={msg} />;
+  }
+
+  if (msg.role === 'user') {
     return (
-      <div key={index} className="relative select-text">
-        <div className="absolute -left-[17px] top-[14px] w-2.5 h-[1.5px] bg-indigo-500/50" />
-        <SuperAgentToolItem msg={msg} />
+      <div key={index} className="my-3 pt-3 border-t border-zinc-800/80 w-full select-text">
+        <div className="bg-[#10111a] border border-indigo-500/30 rounded-lg p-3 shadow-md transition-all">
+          <div className="flex items-center gap-2 mb-1.5 select-none">
+            <span className="flex items-center gap-1.5 text-[10px] uppercase font-bold font-mono text-indigo-300 bg-indigo-950/70 border border-indigo-800/50 px-2 py-0.5 rounded">
+              <span>❯ USER</span>
+            </span>
+          </div>
+          <div className="text-xs text-zinc-100 font-sans leading-relaxed">
+            {renderMessageContent(msg.text)}
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div key={index} className="relative py-1.5 px-1 w-full transition-all select-text bg-transparent border-none">
-      {/* Timeline Branch Connector */}
-      <div className="absolute -left-[17px] top-[14px] w-2.5 h-[1.5px] bg-indigo-500/50" />
-
+    <div key={index} className="py-2 px-1 w-full transition-all select-text bg-transparent border-none">
       <div className="flex items-center gap-2 mb-1">
         <span className={`text-[10px] uppercase tracking-wider font-bold font-mono ${
-          msg.role === 'user'
-            ? 'text-indigo-400'
-            : msg.role === 'thought'
+          msg.role === 'thought'
             ? 'text-purple-400'
             : 'text-emerald-400'
         }`}>
-          [{msg.role === 'user' ? 'USER' : msg.role === 'thought' ? 'THOUGHT' : 'ASSISTANT'}]:
+          {msg.role === 'thought' ? 'Thought' : 'Assistant'}
         </span>
       </div>
 
       <div className={`text-xs leading-relaxed ${
-        msg.role === 'user'
-          ? 'text-zinc-100 font-sans'
-          : msg.role === 'thought'
+        msg.role === 'thought'
           ? 'text-zinc-400 italic font-mono pl-3 border-l-2 border-indigo-500/50'
           : 'text-zinc-200 font-sans'
       }`}>
