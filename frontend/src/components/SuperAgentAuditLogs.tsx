@@ -255,6 +255,7 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
   const [filterQuery, setFilterQuery] = useState('');
   const [category, setCategory] = useState<FilterCategory>('all');
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [showClearLogsModal, setShowClearLogsModal] = useState(false);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);

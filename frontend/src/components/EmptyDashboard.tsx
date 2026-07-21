@@ -9,6 +9,7 @@ export interface EmptyDashboardProps {
   panelWorkspace: WorkspaceInfo | null;
   workspaces: WorkspaceInfo[];
   panelWorktreePath?: string | null;
+  openAgentTab?: (workspaceId?: string) => void;
 }
 
 export function EmptyDashboard({
@@ -17,7 +18,8 @@ export function EmptyDashboard({
   setPanelWorkspace,
   panelWorkspace,
   workspaces,
-  panelWorktreePath
+  panelWorktreePath,
+  openAgentTab
 }: EmptyDashboardProps): React.JSX.Element {
   return (
     <div className="welcome-card-outer">
@@ -36,7 +38,7 @@ export function EmptyDashboard({
           t-line Workspace Manager
         </h2>
         <p className="text-[11px] sm:text-xs max-w-xs mb-6 leading-relaxed" style={{ color: 'color-mix(in srgb, var(--text-main) 70%, transparent)' }}>
-          Manage your development directories and Git worktrees. Register a workspace folder to get started or open a terminal.
+          Manage your development directories and Git worktrees. Register a workspace folder to get started, open a terminal, or launch SuperAgent.
         </p>
         <div className="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto">
           <button 
@@ -80,6 +82,31 @@ export function EmptyDashboard({
           >
             Open Terminal
           </button>
+          {openAgentTab && (
+            <button 
+              className="px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-150 active:scale-98 cursor-pointer border" 
+              onClick={() => {
+                const targetWs = panelWorkspace || workspaces[0] || null;
+                if (targetWs && !panelWorkspace) setPanelWorkspace(targetWs);
+                openAgentTab(targetWs?.id);
+              }}
+              style={{
+                borderColor: 'var(--border-color)',
+                backgroundColor: 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
+                color: 'color-mix(in srgb, var(--text-main) 80%, transparent)'
+              }}
+              onMouseOver={(e) => { 
+                e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)';
+                e.currentTarget.style.color = 'var(--text-main)';
+              }}
+              onMouseOut={(e) => { 
+                e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--bg-card) 60%, transparent)';
+                e.currentTarget.style.color = 'color-mix(in srgb, var(--text-main) 80%, transparent)';
+              }}
+            >
+              Open SuperAgent
+            </button>
+          )}
         </div>
       </div>
     </div>

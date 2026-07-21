@@ -2303,6 +2303,7 @@ export default function App() {
               panelWorkspace={panelWorkspace}
               workspaces={workspaces}
               panelWorktreePath={panelWorktreePath}
+              openAgentTab={openAgentTab}
             />
             
           ) : (

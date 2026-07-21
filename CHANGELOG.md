@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.609] - 2026-07-21
+
+### Feature — Open SuperAgent Button in Workspace Manager (`EmptyDashboard.tsx`)
+- **SuperAgent Quick Launch**: Added **Open SuperAgent** action button to `EmptyDashboard.tsx` alongside "Add Workspace" and "Open Terminal".
+- **App Integration**: Wired `openAgentTab` prop in `App.tsx` so users can immediately open SuperAgent tab directly from the empty workspace manager dashboard.
+
 ## [1.3.608] - 2026-07-21
 
 ### Refactor & UI — Custom Modal Confirmation for Discarding Git Changes (`GitChanges.tsx`)
