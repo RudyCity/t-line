@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.626] - 2026-07-21
+
+### Bug Fix — SuperAgent Procs & Instances Exposure (`serverRoutes.ts`, `superAgentRoutes.ts`, `SuperAgentConsole.tsx`)
+- **SuperAgent Server `/api/instances` Enhancement**:
+  - Updated `GET /api/instances` in SuperAgent's [serverRoutes.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/serverRoutes.ts) to expose active background processes (`backgroundTasks`) as `procs` alongside `subagents` and `superagents`.
+- **t-line Bridge Proxy Update**:
+  - Updated `/api/superagent/instances` route in [superAgentRoutes.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentRoutes.ts) to include `procs: []` fallback.
+- **Frontend Monitor State Resolution**:
+  - Updated `SuperAgentConsole.tsx` to declare state setter `setProcList` and parse `instData.procs` into `procList`.
+  - Merged both `subagents` AND `superagents` from `instData` into `subagentList` so all active sub-agent and super-agent instances display in the Live Monitor sidebar and Active Tasks bar.
+
 ## [1.3.625] - 2026-07-21
 
 ### Bug Fix — Resolve Historical Session Titles Automatically (`historyDb.ts`, `sessionManager.ts`)

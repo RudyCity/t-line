@@ -200,7 +200,7 @@ function proxyToSuperAgent(pathName: string, fallback: any, workspace?: string, 
 
 // Running instances monitor
 router.get('/instances', async (_req, res) => {
-  const data = await proxyToSuperAgent('/api/instances', { subagents: [], superagents: [] });
+  const data = await proxyToSuperAgent('/api/instances', { subagents: [], superagents: [], procs: [] });
   res.json(data);
 });
 

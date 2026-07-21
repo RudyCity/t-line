@@ -115,7 +115,7 @@ export function SuperAgentConsole({
 
   // Sidebar Monitor & Subagent Terminal states
   const [subagentList, setSubagentList] = useState<SubAgentItem[]>([]);
-  const [procList] = useState<ProcessItem[]>([]);
+  const [procList, setProcList] = useState<ProcessItem[]>([]);
   const [recentChangeList, setRecentChangeList] = useState<RecentChangeItem[]>([]);
   const [checklistTasks, setChecklistTasks] = useState<ChecklistTaskItem[]>([]);
   const [selectedSubagent, setSelectedSubagent] = useState<SubAgentItem | null>(null);
@@ -151,18 +151,23 @@ export function SuperAgentConsole({
       });
       if (instRes.ok) {
         const instData = await instRes.json();
-        if (Array.isArray(instData.subagents)) {
+        const rawAgents = [
+          ...(Array.isArray(instData.subagents) ? instData.subagents : []),
+          ...(Array.isArray(instData.superagents) ? instData.superagents : [])
+        ];
+
+        if (rawAgents.length > 0) {
           setSubagentList(prev => {
             const merged = [...prev];
-            instData.subagents.forEach((sa: any) => {
+            rawAgents.forEach((sa: any) => {
               const idx = merged.findIndex(m => m.id === sa.id);
               if (idx >= 0) {
                 merged[idx] = { ...merged[idx], ...sa };
               } else {
                 merged.push({
                   id: sa.id || Math.random().toString(36).substring(7),
-                  typeName: sa.typeName,
-                  role: sa.role || sa.typeName,
+                  typeName: sa.typeName || 'subagent',
+                  role: sa.role || sa.typeName || 'Agent',
                   status: sa.status || 'RUNNING',
                   result: sa.result,
                   completedAt: sa.completedAt
@@ -171,6 +176,10 @@ export function SuperAgentConsole({
             });
             return merged;
           });
+        }
+
+        if (Array.isArray(instData.procs)) {
+          setProcList(instData.procs);
         }
       }
 
