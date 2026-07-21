@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.600] - 2026-07-21
+
+### Performance & Security Optimizations (Quick Wins)
+- **Dynamic Memory Allocation on File Read (`fsRoutes.ts`)**:
+  - Replaced fixed 1MB buffer allocation with dynamic sizing `Math.min(stat.size, 1024 * 1024)` to reduce memory pressure during file inspection.
+- **Asynchronous Non-Blocking Backend Logger (`server.ts`)**:
+  - Updated backend file logger to non-blocking `fs.appendFile` to avoid event-loop stalls under heavy log output.
+- **SSH Command Argument Sanitization (`sshHelpers.ts`)**:
+  - Implemented robust `escapeShellArg` helper with single-quote escaping across all remote SSH functions to prevent metacharacter errors and shell injection vectors.
+
 ## [1.3.599] - 2026-07-21
 
 ### Features & Integration

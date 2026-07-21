@@ -179,9 +179,10 @@ router.get('/read', authMiddleware, async (req, res) => {
     }
 
     // Limit read size to 1MB to prevent large memory overhead
+    const readSize = Math.min(stat.size, 1024 * 1024);
     const handle = await fs.promises.open(resolvedPath, 'r');
-    const buffer = Buffer.alloc(1024 * 1024);
-    const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+    const buffer = Buffer.alloc(readSize);
+    const { bytesRead } = await handle.read(buffer, 0, readSize, 0);
     await handle.close();
 
     let encoding: BufferEncoding = 'utf8';

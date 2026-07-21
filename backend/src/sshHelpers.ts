@@ -65,12 +65,16 @@ export function runSSHCommand(host: string, port: number, user: string, cmd: str
   });
 }
 
+function escapeShellArg(arg: string): string {
+  return `'${arg.replace(/'/g, "'\\''")}'`;
+}
+
 export async function remoteList(sshPath: string) {
   const ssh = parseSSHPath(sshPath);
   if (!ssh) throw new Error('Invalid SSH Path');
   
-  const escapedPath = ssh.remotePath.replace(/"/g, '\\"');
-  const output = await runSSHCommand(ssh.host, ssh.port, ssh.user, `cd "${escapedPath}" && ls -F -A`);
+  const escapedPath = escapeShellArg(ssh.remotePath);
+  const output = await runSSHCommand(ssh.host, ssh.port, ssh.user, `cd ${escapedPath} && ls -F -A`);
   const lines = output.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   
   const directories = lines
@@ -102,8 +106,8 @@ export async function remoteExplore(sshPath: string) {
   const ssh = parseSSHPath(sshPath);
   if (!ssh) throw new Error('Invalid SSH Path');
   
-  const escapedPath = ssh.remotePath.replace(/"/g, '\\"');
-  const output = await runSSHCommand(ssh.host, ssh.port, ssh.user, `cd "${escapedPath}" && ls -F -A`);
+  const escapedPath = escapeShellArg(ssh.remotePath);
+  const output = await runSSHCommand(ssh.host, ssh.port, ssh.user, `cd ${escapedPath} && ls -F -A`);
   const lines = output.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   
   const contents = lines
@@ -147,12 +151,12 @@ export async function remoteRead(sshPath: string): Promise<{ content: string; tr
   const ssh = parseSSHPath(sshPath);
   if (!ssh) throw new Error('Invalid SSH Path');
   
-  const escapedPath = ssh.remotePath.replace(/"/g, '\\"');
-  const content = await runSSHCommand(ssh.host, ssh.port, ssh.user, `head -c 1048576 "${escapedPath}"`);
+  const escapedPath = escapeShellArg(ssh.remotePath);
+  const content = await runSSHCommand(ssh.host, ssh.port, ssh.user, `head -c 1048576 ${escapedPath}`);
   
   let size = 0;
   try {
-    const sizeStr = await runSSHCommand(ssh.host, ssh.port, ssh.user, `wc -c < "${escapedPath}"`);
+    const sizeStr = await runSSHCommand(ssh.host, ssh.port, ssh.user, `wc -c < ${escapedPath}`);
     size = parseInt(sizeStr.trim(), 10) || 0;
   } catch (e) {
     size = content.length;
@@ -174,7 +178,7 @@ export function remoteWrite(sshPath: string, content: string): Promise<void> {
       '-o', 'BatchMode=yes',
       '-o', 'StrictHostKeyChecking=accept-new',
       `${ssh.user}@${ssh.host}`,
-      `cat > "${ssh.remotePath.replace(/"/g, '\\"')}"`
+      `cat > ${escapeShellArg(ssh.remotePath)}`
     ]);
     
     let errOutput = '';
@@ -197,10 +201,10 @@ export async function remoteCreate(sshPath: string, isDirectory: boolean): Promi
   const ssh = parseSSHPath(sshPath);
   if (!ssh) throw new Error('Invalid SSH Path');
   
-  const escapedPath = ssh.remotePath.replace(/"/g, '\\"');
+  const escapedPath = escapeShellArg(ssh.remotePath);
   const cmd = isDirectory 
-    ? `mkdir -p "${escapedPath}"` 
-    : `mkdir -p "$(dirname "${escapedPath}")" && touch "${escapedPath}"`;
+    ? `mkdir -p ${escapedPath}` 
+    : `mkdir -p "$(dirname ${escapedPath})" && touch ${escapedPath}`;
   await runSSHCommand(ssh.host, ssh.port, ssh.user, cmd);
 }
 
@@ -208,8 +212,8 @@ export async function remoteDelete(sshPath: string): Promise<void> {
   const ssh = parseSSHPath(sshPath);
   if (!ssh) throw new Error('Invalid SSH Path');
   
-  const escapedPath = ssh.remotePath.replace(/"/g, '\\"');
-  await runSSHCommand(ssh.host, ssh.port, ssh.user, `rm -rf "${escapedPath}"`);
+  const escapedPath = escapeShellArg(ssh.remotePath);
+  await runSSHCommand(ssh.host, ssh.port, ssh.user, `rm -rf ${escapedPath}`);
 }
 
 export async function remoteRename(oldSSHPath: string, newSSHPath: string): Promise<void> {
@@ -217,9 +221,9 @@ export async function remoteRename(oldSSHPath: string, newSSHPath: string): Prom
   const newSsh = parseSSHPath(newSSHPath);
   if (!oldSsh || !newSsh) throw new Error('Invalid SSH Path');
   
-  const oldEscaped = oldSsh.remotePath.replace(/"/g, '\\"');
-  const newEscaped = newSsh.remotePath.replace(/"/g, '\\"');
-  await runSSHCommand(oldSsh.host, oldSsh.port, oldSsh.user, `mv "${oldEscaped}" "${newEscaped}"`);
+  const oldEscaped = escapeShellArg(oldSsh.remotePath);
+  const newEscaped = escapeShellArg(newSsh.remotePath);
+  await runSSHCommand(oldSsh.host, oldSsh.port, oldSsh.user, `mv ${oldEscaped} ${newEscaped}`);
 }
 
 export async function remoteExists(sshPath: string): Promise<boolean> {
@@ -227,8 +231,8 @@ export async function remoteExists(sshPath: string): Promise<boolean> {
   if (!ssh) return false;
   
   try {
-    const escapedPath = ssh.remotePath.replace(/"/g, '\\"');
-    const out = await runSSHCommand(ssh.host, ssh.port, ssh.user, `[ -e "${escapedPath}" ] && echo "true" || echo "false"`);
+    const escapedPath = escapeShellArg(ssh.remotePath);
+    const out = await runSSHCommand(ssh.host, ssh.port, ssh.user, `[ -e ${escapedPath} ] && echo "true" || echo "false"`);
     return out.trim() === 'true';
   } catch {
     return false;

@@ -60,7 +60,7 @@ function logToFile(level: 'INFO' | 'ERROR', args: any[]) {
     if (fs.existsSync(BACKEND_LOG_FILE) && fs.statSync(BACKEND_LOG_FILE).size > 5 * 1024 * 1024) {
       fs.writeFileSync(BACKEND_LOG_FILE, `[${timestamp}] [INFO] Log file rotated (exceeded 5MB limit)\n`);
     }
-    fs.appendFileSync(BACKEND_LOG_FILE, logLine);
+    fs.appendFile(BACKEND_LOG_FILE, logLine, () => {});
   } catch (err) {}
 }
 
