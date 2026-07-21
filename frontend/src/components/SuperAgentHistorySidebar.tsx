@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Plus, MessageSquare, Trash2, Edit2, Check, X, Search, History } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Plus, MessageSquare, Trash2, Edit2, Check, X, Search, History, Download } from 'lucide-react';
 
 export interface ChatSession {
   id: string;
@@ -15,6 +15,7 @@ interface SuperAgentHistorySidebarProps {
   onNewChat: () => void;
   onDeleteSession: (id: string, e: React.MouseEvent) => void;
   onRenameSession?: (id: string, newTitle: string) => void;
+  onExportSession?: (id: string, format: 'json' | 'markdown') => void;
   hasMoreSessions?: boolean;
   loadingMoreSessions?: boolean;
   onLoadMoreSessions?: () => void;
@@ -28,16 +29,52 @@ export function SuperAgentHistorySidebar({
   onNewChat,
   onDeleteSession,
   onRenameSession,
+  onExportSession,
   hasMoreSessions,
   loadingMoreSessions,
   onLoadMoreSessions,
   isProcessing = false,
 }: SuperAgentHistorySidebarProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery]       = useState('');
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId]           = useState<string | null>(null);
+  const [editTitle, setEditTitle]           = useState('');
+  const [deletingId, setDeletingId]         = useState<string | null>(null);
+  const [exportMenuId, setExportMenuId]     = useState<string | null>(null);
+  const exportMenuRef                       = useRef<HTMLDivElement>(null);
+
+  // Close export menu on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setExportMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleExport = async (sessionId: string, format: 'json' | 'markdown', e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExportMenuId(null);
+    if (onExportSession) {
+      onExportSession(sessionId, format);
+      return;
+    }
+    // Self-contained download fallback
+    try {
+      const url = `/api/superagent/sessions/${encodeURIComponent(sessionId)}/export?format=${format}`;
+      const res = await fetch(url);
+      const text = await res.text();
+      const ext = format === 'markdown' ? 'md' : 'json';
+      const blob = new Blob([text], { type: format === 'markdown' ? 'text/markdown' : 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `session-${sessionId.slice(0, 8)}.${ext}`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch {}
+  };
 
   const handleStartDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -246,7 +283,7 @@ export function SuperAgentHistorySidebar({
                       </div>
                     </div>
 
-                    {/* Loading dots (right side) or Action Buttons on Hover */}
+                    {/* Loading dots or Action Buttons on Hover */}
                     {isActive && isProcessing ? (
                       <span className="flex items-center gap-0.5 shrink-0 ml-1">
                         <span className="w-1 h-1 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -255,6 +292,32 @@ export function SuperAgentHistorySidebar({
                       </span>
                     ) : (
                       <div className="hidden group-hover:flex items-center gap-1 shrink-0">
+                        {/* Export dropdown */}
+                        <div className="relative" ref={exportMenuId === session.id ? exportMenuRef : undefined}>
+                          <button
+                            onClick={e => { e.stopPropagation(); setExportMenuId(exportMenuId === session.id ? null : session.id); }}
+                            className="p-1 text-zinc-400 hover:text-sky-300 rounded transition"
+                            title="Export session"
+                          >
+                            <Download className="w-3 h-3" />
+                          </button>
+                          {exportMenuId === session.id && (
+                            <div className="absolute right-0 bottom-full mb-1 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg shadow-lg z-50 overflow-hidden min-w-[110px]">
+                              <button
+                                onClick={e => handleExport(session.id, 'json', e)}
+                                className="w-full text-left px-3 py-1.5 text-[11px] text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] transition flex items-center gap-1.5"
+                              >
+                                <span className="font-mono text-[10px] text-amber-400">JSON</span> Export
+                              </button>
+                              <button
+                                onClick={e => handleExport(session.id, 'markdown', e)}
+                                className="w-full text-left px-3 py-1.5 text-[11px] text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] transition flex items-center gap-1.5"
+                              >
+                                <span className="font-mono text-[10px] text-blue-400">.MD</span> Markdown
+                              </button>
+                            </div>
+                          )}
+                        </div>
                         {onRenameSession && (
                           <button
                             onClick={(e) => handleStartRename(session, e)}

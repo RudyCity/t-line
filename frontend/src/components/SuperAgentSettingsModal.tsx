@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { X, Key, Sparkles, Sliders, Activity, Terminal, RefreshCw, Folder, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Key, Sparkles, Sliders, Activity, Terminal, RefreshCw, Folder, Trash2, Server, ShieldCheck, Minus, Plus as PlusIcon } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { SuperAgentLoginManager, ProviderProfile } from './SuperAgentLoginManager';
 import { SuperAgentPresetManager, ModelPreset } from './SuperAgentPresetManager';
+import { SuperAgentMcpManager } from './SuperAgentMcpManager';
 
 interface SuperAgentSettingsModalProps {
   isOpen: boolean;
@@ -31,7 +32,7 @@ interface SuperAgentSettingsModalProps {
   onSaveCustomPreset: (mode: 'single' | 'multi', preset: { id: string; name: string; description?: string; models: any }) => Promise<void>;
   onDeleteCustomPreset: (mode: 'single' | 'multi', presetId: string) => Promise<void>;
   getAuthHeader: () => Record<string, string>;
-  defaultTab?: 'login' | 'presets' | 'execution' | 'monitor';
+  defaultTab?: 'login' | 'presets' | 'execution' | 'monitor' | 'mcp';
 }
 
 export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = ({
@@ -63,7 +64,62 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
   getAuthHeader,
   defaultTab = 'login'
 }) => {
-  const [activeTab, setActiveTab] = useState<'login' | 'presets' | 'execution' | 'monitor'>(defaultTab);
+  const [activeTab, setActiveTab] = useState<'login' | 'presets' | 'execution' | 'monitor' | 'mcp'>(defaultTab);
+  const [execSettings, setExecSettings] = useState<Record<string, any>>({});
+  const [trustedDirs,  setTrustedDirs]  = useState<string[]>([]);
+  const [newDir,       setNewDir]       = useState('');
+  const [addingDir,    setAddingDir]    = useState(false);
+
+  // Load settings & trusted dirs when execution tab is active
+  useEffect(() => {
+    if (activeTab !== 'execution') return;
+    fetch('/api/superagent/config', { headers: getAuthHeader() })
+      .then(r => r.json())
+      .then(d => {
+        setExecSettings(d.settings || {});
+        setTrustedDirs(Array.isArray(d.trustedDirectories) ? d.trustedDirectories : []);
+      })
+      .catch(() => {});
+  }, [activeTab, getAuthHeader]);
+
+  const handleToggleSetting = async (key: string, val: boolean) => {
+    setExecSettings(prev => ({ ...prev, [key]: val }));
+    try {
+      await fetch('/api/superagent/config/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ settings: { [key]: val } }),
+      });
+    } catch {}
+  };
+
+  const handleAddDir = async () => {
+    if (!newDir.trim()) return;
+    setAddingDir(true);
+    try {
+      const r = await fetch('/api/superagent/config/trusted-directory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ path: newDir.trim() }),
+      });
+      const d = await r.json();
+      setTrustedDirs(d.trustedDirectories || []);
+      setNewDir('');
+    } catch {}
+    setAddingDir(false);
+  };
+
+  const handleRemoveDir = async (dir: string) => {
+    try {
+      const r = await fetch('/api/superagent/config/trusted-directory', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ path: dir }),
+      });
+      const d = await r.json();
+      setTrustedDirs(d.trustedDirectories || []);
+    } catch {}
+  };
 
   if (!isOpen) return null;
 
@@ -97,6 +153,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
             { id: 'presets' as const, label: 'Model Presets', icon: Sparkles },
             { id: 'execution' as const, label: 'Execution & Workspace', icon: Sliders },
             { id: 'monitor' as const, label: 'Monitor & Console', icon: Activity },
+            { id: 'mcp' as const, label: 'MCP Servers', icon: Server },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -219,6 +276,70 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
                   Apply Settings & Restart SuperAgent Bridge
                 </button>
               </div>
+
+              {/* System Settings */}
+              <div className="bg-[var(--bg-sidebar)] p-4 rounded-xl border border-[var(--border-color)] space-y-3">
+                <div className="flex items-center gap-2 font-semibold text-[var(--text-main)] text-xs">
+                  <ShieldCheck className="w-4 h-4 text-[var(--color-primary)]" />
+                  <span>System Settings</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-[var(--text-main)]">Disable Streaming</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">Receive responses as complete blocks instead of token-by-token</p>
+                  </div>
+                  <button
+                    onClick={() => handleToggleSetting('disableStreaming', !execSettings?.disableStreaming)}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                      execSettings?.disableStreaming ? 'bg-[var(--color-primary)]' : 'bg-[var(--bg-main)] border-[var(--border-color)]'
+                    }`}
+                  >
+                    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                      execSettings?.disableStreaming ? 'translate-x-4' : 'translate-x-0'
+                    }`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Trusted Directories */}
+              <div className="bg-[var(--bg-sidebar)] p-4 rounded-xl border border-[var(--border-color)] space-y-3">
+                <div className="flex items-center gap-2 font-semibold text-[var(--text-main)] text-xs">
+                  <Folder className="w-4 h-4 text-[var(--color-primary)]" />
+                  <span>Trusted Directories</span>
+                  <span className="text-[10px] text-[var(--color-primary)] bg-[var(--color-primary-glow)] px-1.5 py-0.5 rounded-full border border-[var(--color-primary)]/40 font-mono">
+                    {trustedDirs.length}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[var(--text-muted)]">SuperAgent can read and write files in these directories without asking for permission each time.</p>
+                {trustedDirs.length > 0 && (
+                  <div className="space-y-1">
+                    {trustedDirs.map(dir => (
+                      <div key={dir} className="flex items-center gap-2 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2.5 py-1.5 group">
+                        <Folder className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
+                        <span className="flex-1 text-xs text-[var(--text-main)] font-mono truncate">{dir}</span>
+                        <button onClick={() => handleRemoveDir(dir)}
+                          className="p-0.5 text-zinc-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition">
+                          <Minus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    type="text" value={newDir}
+                    onChange={e => setNewDir(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleAddDir()}
+                    placeholder="/path/to/trusted/directory"
+                    className="flex-1 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--text-main)] font-mono focus:outline-none focus:border-[var(--color-primary)] transition"
+                  />
+                  <button onClick={handleAddDir} disabled={addingDir || !newDir.trim()}
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-medium rounded-lg transition disabled:opacity-40">
+                    <PlusIcon className="w-3 h-3" />
+                    {addingDir ? '...' : 'Add'}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -275,6 +396,10 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
                 </div>
               )}
             </div>
+          )}
+
+          {activeTab === 'mcp' && (
+            <SuperAgentMcpManager getAuthHeader={getAuthHeader} />
           )}
         </div>
 
