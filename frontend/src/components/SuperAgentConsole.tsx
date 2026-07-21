@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { RefreshCw, Shield, Folder, Sparkles, Activity, Settings, History } from 'lucide-react';
+import { RefreshCw, Sparkles } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { SuperAgentAuditLogs } from './SuperAgentAuditLogs';
@@ -9,7 +9,7 @@ import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSi
 import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
 import { ActiveTasksBar, ChecklistTaskItem } from './ActiveTasksBar';
 import { SuperAgentInputContainer } from './SuperAgentInputContainer';
-import { SuperAgentSettingsMenu } from './SuperAgentSettingsMenu';
+import { SuperAgentConsoleHeader } from './SuperAgentConsoleHeader';
 import { SuperAgentSettingsModal } from './SuperAgentSettingsModal';
 import { ProviderProfile } from './SuperAgentLoginManager';
 import { SuperAgentGroupedMessages } from './SuperAgentGroupedMessages';
@@ -755,123 +755,34 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
 
   return (
     <div className="flex flex-col h-full w-full bg-[#05070c] text-gray-200 overflow-hidden font-sans">
-      <div className="grid grid-cols-3 items-center px-4 py-2.5 bg-[#090c14] border-b border-zinc-800/80 min-h-[48px] w-full shadow-sm">
-        {/* Left Column */}
-        <div className="flex items-center gap-2 min-w-0">
-          <button
-            onClick={() => setShowHistorySidebar(!showHistorySidebar)}
-            className={`px-2.5 py-1 text-[11px] rounded-md border transition flex items-center gap-1.5 cursor-pointer font-medium ${
-              showHistorySidebar ? 'shadow-sm' : 'bg-[#121622] border-zinc-800 text-zinc-400 hover:text-zinc-200'
-            }`}
-            style={showHistorySidebar ? {
-              backgroundColor: 'color-mix(in srgb, var(--color-primary) 18%, transparent)',
-              borderColor: 'color-mix(in srgb, var(--color-primary) 50%, transparent)',
-              color: 'var(--color-primary)'
-            } : undefined}
-            title="Toggle Chat History Sidebar"
-          >
-            <History className="w-3.5 h-3.5" />
-            <span>History</span>
-          </button>
-          {workspace && (
-            <span
-              className="text-[10px] px-2 py-0.5 rounded-md border font-mono truncate hidden sm:flex items-center gap-1"
-              style={{
-                backgroundColor: 'color-mix(in srgb, var(--color-primary) 15%, transparent)',
-                borderColor: 'color-mix(in srgb, var(--color-primary) 40%, transparent)',
-                color: 'var(--color-primary)'
-              }}
-            >
-              <Folder className="w-2.5 h-2.5" style={{ color: 'var(--color-primary)' }} />
-              {workspace.split(/[/\\]/).pop()}
-            </span>
-          )}
-        </div>
-
-        {/* Center Column - Centered Tab Selectors */}
-        <div className="flex justify-center">
-          <div className="flex bg-[#121622] rounded-lg p-0.5 border border-zinc-800/80">
-            <button
-              onClick={() => setActiveTab('console')}
-              className={`sa-tab-pill ${activeTab === 'console' ? 'font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}`}
-              style={activeTab === 'console' ? {
-                backgroundColor: 'var(--color-primary)',
-                color: '#ffffff'
-              } : undefined}
-            >
-              Console
-            </button>
-            <button
-              onClick={() => setActiveTab('audit')}
-              className={`sa-tab-pill flex items-center gap-1.5 ${activeTab === 'audit' ? 'font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}`}
-              style={activeTab === 'audit' ? {
-                backgroundColor: 'var(--color-primary)',
-                color: '#ffffff'
-              } : undefined}
-            >
-              <Shield className="w-3.5 h-3.5" />
-              Audit Trails
-            </button>
-          </div>
-        </div>
-
-        {/* Right Column */}
-        <div className="flex justify-end gap-2 items-center relative">
-          <button
-            onClick={() => setShowSidebar(!showSidebar)}
-            className={`px-2.5 py-1 text-[11px] rounded-md border transition flex items-center gap-1.5 cursor-pointer font-medium ${
-              showSidebar ? 'shadow-sm' : 'bg-[#121622] border-zinc-800 text-zinc-400 hover:text-zinc-200'
-            }`}
-            style={showSidebar ? {
-              backgroundColor: 'color-mix(in srgb, var(--color-primary) 18%, transparent)',
-              borderColor: 'color-mix(in srgb, var(--color-primary) 50%, transparent)',
-              color: 'var(--color-primary)'
-            } : undefined}
-            title="Toggle Live Monitor Sidebar"
-          >
-            <Activity className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Monitor</span>
-          </button>
-
-          <button
-            onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-            className={`px-2.5 py-1 text-[11px] rounded-md border transition flex items-center gap-1.5 cursor-pointer font-medium ${
-              showSettingsMenu ? 'shadow-sm' : 'bg-[#121622] border-zinc-800 text-zinc-400 hover:text-zinc-200'
-            }`}
-            style={showSettingsMenu ? {
-              backgroundColor: 'color-mix(in srgb, var(--color-primary) 18%, transparent)',
-              borderColor: 'color-mix(in srgb, var(--color-primary) 50%, transparent)',
-              color: 'var(--color-primary)'
-            } : undefined}
-            title="SuperAgent & App Settings"
-          >
-            <Settings className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />
-            <span className="hidden sm:inline">Setting</span>
-          </button>
-
-
-
-          <SuperAgentSettingsMenu
-            isOpen={showSettingsMenu}
-            onClose={() => setShowSettingsMenu(false)}
-            workspaces={workspaces}
-            workspace={workspace}
-            setWorkspace={setWorkspace}
-            agentMode={agentMode}
-            setAgentMode={setAgentMode}
-            customArgs={customArgs}
-            setCustomArgs={setCustomArgs}
-            setConnectTrigger={setConnectTrigger}
-            showSidebar={showSidebar}
-            setShowSidebar={setShowSidebar}
-            onRefreshMonitor={fetchMonitorData}
-            isLoadingMonitor={isLoadingMonitor}
-            onClearConsole={() => setMessages([{ role: 'system', text: 'Console output cleared.' }])}
-            onOpenGlobalSettings={onOpenSettings}
-            onOpenSettingsModal={handleOpenSettingsModal}
-          />
-        </div>
-      </div>
+      <SuperAgentConsoleHeader
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        showHistorySidebar={showHistorySidebar}
+        setShowHistorySidebar={setShowHistorySidebar}
+        showSidebar={showSidebar}
+        setShowSidebar={setShowSidebar}
+        showSettingsMenu={showSettingsMenu}
+        setShowSettingsMenu={setShowSettingsMenu}
+        workspaces={workspaces}
+        workspace={workspace}
+        setWorkspace={setWorkspace}
+        agentMode={agentMode}
+        setAgentMode={setAgentMode}
+        customArgs={customArgs}
+        setCustomArgs={setCustomArgs}
+        setConnectTrigger={setConnectTrigger}
+        presets={presets}
+        activePresetId={activePresetId}
+        onPresetChange={handlePresetChange}
+        activeProviderName={providers.find(p => p.id === activeProviderId)?.name || activeProviderId}
+        onOpenSettingsModal={handleOpenSettingsModal}
+        onRefreshMonitor={fetchMonitorData}
+        isLoadingMonitor={isLoadingMonitor}
+        onClearConsole={() => setMessages([{ role: 'system', text: 'Console output cleared.' }])}
+        onOpenSettings={onOpenSettings}
+        isConnected={Boolean(ws && ws.readyState === WebSocket.OPEN)}
+      />
 
       {activeTab === 'console' ? (
         <div ref={mainConsoleRef} className="flex-1 flex overflow-hidden relative w-full">
