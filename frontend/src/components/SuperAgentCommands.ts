@@ -34,24 +34,87 @@ export function getSlashCommands({
 }: CommandContext): SlashCommand[] {
   return [
     {
+      command: '/hallmark',
+      description: 'Anti-AI-slop design skill for audits & redesigns',
+      argsHelp: '[redesign|audit|study]',
+      action: (args?: string) => {
+        handleSend(`/hallmark ${args || ''}`.trim());
+      }
+    },
+    {
+      command: '/goal',
+      description: 'Run long-running task until goal is fully achieved',
+      argsHelp: '[prompt]',
+      action: (args?: string) => {
+        handleSend(`/goal ${args || ''}`.trim());
+      }
+    },
+    {
+      command: '/schedule',
+      description: 'Schedule a one-shot timer or recurring cron job',
+      argsHelp: '[cron/duration]',
+      action: (args?: string) => {
+        handleSend(`/schedule ${args || ''}`.trim());
+      }
+    },
+    {
+      command: '/browser',
+      description: 'Web browsing, searching, and web interaction',
+      argsHelp: '[query/url]',
+      action: (args?: string) => {
+        handleSend(`/browser ${args || ''}`.trim());
+      }
+    },
+    {
+      command: '/grill-me',
+      description: 'Align on plan through interactive interview',
+      action: () => {
+        handleSend('/grill-me');
+      }
+    },
+    {
+      command: '/teamwork-preview',
+      description: 'Multi-agent team preview for autonomous tasks',
+      action: () => {
+        handleSend('/teamwork-preview');
+      }
+    },
+    {
+      command: '/learn',
+      description: 'Save corrected instructions/behavior for future tasks',
+      argsHelp: '[rule/skill]',
+      action: (args?: string) => {
+        handleSend(`/learn ${args || ''}`.trim());
+      }
+    },
+    {
       command: '/help',
       description: 'Show available commands & system instructions',
       action: () => {
         setMessages(prev => [
           ...prev,
-          { role: 'system', text: 'Available commands:\n' +
-            '/help - Show this help message\n' +
-            '/status - Show agent connection & server status\n' +
-            '/abort - Abort active agent execution immediately\n' +
-            '/clear - Clear all console messages\n' +
-            '/mode [single|multi] - Switch agent execution mode\n' +
-            '/single - Switch agent mode to Single Agent and restart\n' +
-            '/multi - Switch agent mode to Multi-Agent Master (--multi) and restart\n' +
-            '/resume - Restart the agent process with the --resume flag\n' +
-            '/workspace [path] - Switch active workspace\n' +
-            '/explain - Ask SuperAgent to explain the codebase structure\n' +
-            '/test - Ask SuperAgent to check and run tests\n' +
-            '/reset - Reset and restart WebSocket connection'
+          {
+            role: 'system',
+            text: 'Available commands:\n' +
+              '/hallmark - Anti-AI-slop design skill for audits & redesigns\n' +
+              '/goal - Run long-running task until goal is fully achieved\n' +
+              '/schedule - Schedule a one-shot timer or recurring cron job\n' +
+              '/browser - Web browsing, searching, and web interaction\n' +
+              '/grill-me - Align on plan through interactive interview\n' +
+              '/teamwork-preview - Multi-agent team preview for autonomous tasks\n' +
+              '/learn - Save corrected instructions/behavior for future tasks\n' +
+              '/help - Show this help message\n' +
+              '/status - Show agent connection & server status\n' +
+              '/abort - Abort active agent execution immediately\n' +
+              '/clear - Clear all console messages\n' +
+              '/mode [single|multi] - Switch agent execution mode\n' +
+              '/single - Switch agent mode to Single Agent and restart\n' +
+              '/multi - Switch agent mode to Multi-Agent Master (--multi) and restart\n' +
+              '/resume - Restart the agent process with the --resume flag\n' +
+              '/workspace [path] - Switch active workspace\n' +
+              '/explain - Ask SuperAgent to explain the codebase structure\n' +
+              '/test - Ask SuperAgent to check and run tests\n' +
+              '/reset - Reset and restart WebSocket connection'
           }
         ]);
       }

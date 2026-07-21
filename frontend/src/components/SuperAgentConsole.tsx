@@ -851,7 +851,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
             />
           )}
 
-          <div className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0">
+          <div className="relative flex-1 flex flex-col h-full w-full min-w-0">
             <div
               ref={messagesContainerRef}
               className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-xs leading-relaxed w-full"
