@@ -35,7 +35,7 @@ export function getSlashCommands({
   return [
     {
       command: '/hallmark',
-      description: 'Anti-AI-slop design skill for audits & redesigns',
+      description: 'Anti-AI-slop design skill for greenfield pages, audits, redesigns & study',
       argsHelp: '[redesign|audit|study]',
       action: (args?: string) => {
         handleSend(`/hallmark ${args || ''}`.trim());
@@ -43,48 +43,44 @@ export function getSlashCommands({
     },
     {
       command: '/goal',
-      description: 'Run long-running task until goal is fully achieved',
-      argsHelp: '[prompt]',
-      action: (args?: string) => {
-        handleSend(`/goal ${args || ''}`.trim());
+      description: 'Run long-running task with extra thoroughness until goal is fully achieved',
+      action: () => {
+        handleSend('/goal');
       }
     },
     {
       command: '/schedule',
-      description: 'Schedule a one-shot timer or recurring cron job',
-      argsHelp: '[cron/duration]',
-      action: (args?: string) => {
-        handleSend(`/schedule ${args || ''}`.trim());
+      description: 'Schedule a one-time timer or recurring cron job',
+      action: () => {
+        handleSend('/schedule');
       }
     },
     {
       command: '/browser',
-      description: 'Web browsing, searching, and web interaction',
-      argsHelp: '[query/url]',
-      action: (args?: string) => {
-        handleSend(`/browser ${args || ''}`.trim());
+      description: 'Launch web browsing, web search, or web app interaction',
+      action: () => {
+        handleSend('/browser');
       }
     },
     {
       command: '/grill-me',
-      description: 'Align on plan through interactive interview',
+      description: 'Start interactive alignment interview to resolve design decisions',
       action: () => {
         handleSend('/grill-me');
       }
     },
     {
       command: '/teamwork-preview',
-      description: 'Multi-agent team preview for autonomous tasks',
+      description: 'Preview multi-agent team collaborative execution',
       action: () => {
         handleSend('/teamwork-preview');
       }
     },
     {
       command: '/learn',
-      description: 'Save corrected instructions/behavior for future tasks',
-      argsHelp: '[rule/skill]',
-      action: (args?: string) => {
-        handleSend(`/learn ${args || ''}`.trim());
+      description: 'Persist user corrections or complex setup for future tasks',
+      action: () => {
+        handleSend('/learn');
       }
     },
     {
@@ -96,25 +92,24 @@ export function getSlashCommands({
           {
             role: 'system',
             text: 'Available commands:\n' +
-              '/hallmark - Anti-AI-slop design skill for audits & redesigns\n' +
-              '/goal - Run long-running task until goal is fully achieved\n' +
-              '/schedule - Schedule a one-shot timer or recurring cron job\n' +
-              '/browser - Web browsing, searching, and web interaction\n' +
-              '/grill-me - Align on plan through interactive interview\n' +
-              '/teamwork-preview - Multi-agent team preview for autonomous tasks\n' +
-              '/learn - Save corrected instructions/behavior for future tasks\n' +
               '/help - Show this help message\n' +
+              '/hallmark [redesign|audit|study] - Anti-slop UI design, audit & redesign\n' +
+              '/goal - Run long-running goal-oriented task\n' +
+              '/schedule - Schedule timer or recurring cron job\n' +
+              '/browser - Web browsing & automation\n' +
+              '/grill-me - Interactive alignment interview\n' +
+              '/teamwork-preview - Multi-agent team preview\n' +
+              '/learn - Persist custom rule/skill\n' +
               '/status - Show agent connection & server status\n' +
-              '/abort - Abort active agent execution immediately\n' +
-              '/clear - Clear all console messages\n' +
               '/mode [single|multi] - Switch agent execution mode\n' +
-              '/single - Switch agent mode to Single Agent and restart\n' +
-              '/multi - Switch agent mode to Multi-Agent Master (--multi) and restart\n' +
-              '/resume - Restart the agent process with the --resume flag\n' +
+              '/single - Switch agent mode to Single Agent\n' +
+              '/multi - Switch agent mode to Multi-Agent Master (--multi)\n' +
               '/workspace [path] - Switch active workspace\n' +
-              '/explain - Ask SuperAgent to explain the codebase structure\n' +
-              '/test - Ask SuperAgent to check and run tests\n' +
-              '/reset - Reset and restart WebSocket connection'
+              '/explain - Explain codebase structure\n' +
+              '/test - Run codebase tests\n' +
+              '/clear - Clear console messages\n' +
+              '/abort - Abort active execution\n' +
+              '/reset - Reset WebSocket bridge'
           }
         ]);
       }
@@ -131,22 +126,8 @@ export function getSlashCommands({
       }
     },
     {
-      command: '/abort',
-      description: 'Abort the active running agent task',
-      action: () => {
-        handleAbort();
-      }
-    },
-    {
-      command: '/clear',
-      description: 'Clear the local console chat messages',
-      action: () => {
-        setMessages([{ role: 'system', text: 'Console cleared. Connected to t-line workspace context.' }]);
-      }
-    },
-    {
       command: '/mode',
-      description: 'Switch CLI mode',
+      description: 'Switch CLI execution mode',
       argsHelp: '[single|multi]',
       action: (args?: string) => {
         const cleanMode = args?.trim().toLowerCase();
@@ -178,15 +159,6 @@ export function getSlashCommands({
       }
     },
     {
-      command: '/resume',
-      description: 'Restart the agent process with the --resume flag',
-      action: () => {
-        setCustomArgs('--resume');
-        setMessages(prev => [...prev, { role: 'system', text: 'Flags set to --resume. Restarting bridge...' }]);
-        setConnectTrigger(prev => prev + 1);
-      }
-    },
-    {
       command: '/workspace',
       description: 'Switch active workspace path',
       argsHelp: '[path]',
@@ -203,8 +175,31 @@ export function getSlashCommands({
       }
     },
     {
+      command: '/abort',
+      description: 'Abort the active running agent task',
+      action: () => {
+        handleAbort();
+      }
+    },
+    {
+      command: '/clear',
+      description: 'Clear the local console chat messages',
+      action: () => {
+        setMessages([{ role: 'system', text: 'Console cleared. Connected to t-line workspace context.' }]);
+      }
+    },
+    {
+      command: '/resume',
+      description: 'Restart the agent process with the --resume flag',
+      action: () => {
+        setCustomArgs('--resume');
+        setMessages(prev => [...prev, { role: 'system', text: 'Flags set to --resume. Restarting bridge...' }]);
+        setConnectTrigger(prev => prev + 1);
+      }
+    },
+    {
       command: '/explain',
-      description: 'Ask SuperAgent to analyze and explain the codebase structure',
+      description: 'Ask SuperAgent to analyze and explain codebase structure',
       action: () => {
         handleSend('Please analyze and explain the codebase structure of this workspace.');
       }
@@ -225,4 +220,68 @@ export function getSlashCommands({
       }
     }
   ];
+}
+
+export function getSubCommands(
+  parentCmd: string,
+  context: { workspace: string; agentMode: 'single' | 'multi' }
+): SlashCommand[] {
+  const cleanCmd = parentCmd.toLowerCase().trim();
+
+  if (cleanCmd === '/mode') {
+    return [
+      {
+        command: '/mode single',
+        description: 'Single Agent execution mode (default)',
+        argsHelp: 'single'
+      },
+      {
+        command: '/mode multi',
+        description: 'Multi-Agent Master mode (--multi)',
+        argsHelp: 'multi'
+      }
+    ];
+  }
+
+  if (cleanCmd === '/workspace') {
+    return [
+      {
+        command: `/workspace ${context.workspace}`,
+        description: 'Current active workspace path',
+        argsHelp: context.workspace
+      },
+      {
+        command: ' /workspace d:\\backup from pc asus\\Documents Development\\t-line'.trim(),
+        description: 't-line project workspace',
+        argsHelp: 't-line'
+      },
+      {
+        command: ' /workspace d:\\backup from pc asus\\Documents Development\\superagent'.trim(),
+        description: 'SuperAgent core engine workspace',
+        argsHelp: 'superagent'
+      }
+    ];
+  }
+
+  if (cleanCmd === '/hallmark') {
+    return [
+      {
+        command: '/hallmark redesign',
+        description: 'Redesign visual UI structure within existing component boundaries',
+        argsHelp: 'redesign'
+      },
+      {
+        command: '/hallmark audit',
+        description: 'Score UI against anti-pattern list & return ranked punch list',
+        argsHelp: 'audit'
+      },
+      {
+        command: '/hallmark study',
+        description: 'Extract design DNA from screenshot or live URL',
+        argsHelp: 'study'
+      }
+    ];
+  }
+
+  return [];
 }

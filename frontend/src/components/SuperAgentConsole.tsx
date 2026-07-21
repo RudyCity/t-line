@@ -4,7 +4,7 @@ import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { SuperAgentAuditLogs } from './SuperAgentAuditLogs';
 import { PermissionCard, QuestionCard, PlanCard, PendingPermission, PendingQuestion } from './SuperAgentInteractiveCards';
-import { getSlashCommands, SlashCommand } from './SuperAgentCommands';
+import { getSlashCommands, getSubCommands, SlashCommand } from './SuperAgentCommands';
 import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSidebar';
 import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
 import { ActiveTasksBar, ChecklistTaskItem } from './ActiveTasksBar';
@@ -535,19 +535,37 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
     handleAbort
   });
 
-  // Monitor input to show/hide suggestions
+  // Monitor input to show/hide suggestions (supports sub-commands & skills)
   useEffect(() => {
-    if (input.startsWith('/') && !input.includes(' ')) {
-      const query = input.slice(1).toLowerCase();
-      const filtered = slashCommands.filter(c => c.command.slice(1).toLowerCase().startsWith(query));
-      setSuggestions(filtered);
-      setShowSuggestions(filtered.length > 0);
-      setSuggestionIndex(0);
+    if (input.startsWith('/')) {
+      const trimmed = input.slice(1);
+      const spaceIndex = trimmed.indexOf(' ');
+
+      if (spaceIndex === -1) {
+        // Top-level command matching
+        const query = trimmed.toLowerCase();
+        const filtered = slashCommands.filter(c => c.command.slice(1).toLowerCase().startsWith(query));
+        setSuggestions(filtered);
+        setShowSuggestions(filtered.length > 0);
+        setSuggestionIndex(0);
+      } else {
+        // Sub-command matching (e.g. /workspace ..., /mode ..., /hallmark ...)
+        const parentCmd = '/' + trimmed.slice(0, spaceIndex).toLowerCase();
+        const argQuery = trimmed.slice(spaceIndex + 1).toLowerCase();
+
+        const subCmds = getSubCommands(parentCmd, { workspace, agentMode }).filter(sc =>
+          sc.command.toLowerCase().includes(argQuery) || (sc.argsHelp && sc.argsHelp.toLowerCase().includes(argQuery))
+        );
+
+        setSuggestions(subCmds);
+        setShowSuggestions(subCmds.length > 0);
+        setSuggestionIndex(0);
+      }
     } else {
       setShowSuggestions(false);
       setSuggestions([]);
     }
-  }, [input]);
+  }, [input, workspace, agentMode]);
 
   const adjustHeight = () => {
     const textarea = textareaRef.current;
@@ -622,13 +640,18 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   };
 
   const handleSelectSuggestion = (s: SlashCommand) => {
-    if (s.argsHelp) {
+    if (s.argsHelp && !s.command.includes(' ')) {
       setInput(s.command + ' ');
     } else {
       setInput(s.command);
-      const immediateCommands = ['/help', '/status', '/abort', '/clear', '/reset', '/explain', '/test'];
-      if (immediateCommands.includes(s.command)) {
-        handleSend(s.command);
+      if (s.action) {
+        const args = s.command.includes(' ') ? s.command.split(' ').slice(1).join(' ') : '';
+        s.action(args);
+      } else {
+        const immediateCommands = ['/help', '/status', '/abort', '/clear', '/reset', '/explain', '/test', '/goal', '/browser', '/grill-me', '/teamwork-preview', '/learn'];
+        if (immediateCommands.includes(s.command)) {
+          handleSend(s.command);
+        }
       }
     }
     setShowSuggestions(false);
@@ -851,7 +874,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
             />
           )}
 
-          <div className="relative flex-1 flex flex-col h-full w-full min-w-0">
+          <div className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0">
             <div
               ref={messagesContainerRef}
               className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-xs leading-relaxed w-full"
