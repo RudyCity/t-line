@@ -9,10 +9,13 @@ export interface RecentChangeItem {
 }
 
 export interface ProcessItem {
+  id?: string;
   pid: number;
   name: string;
   status: 'running' | 'idle' | 'stopped' | string;
   commandLine?: string;
+  hasExited?: boolean;
+  logs?: string[];
 }
 
 interface SuperAgentSidebarProps {
@@ -22,6 +25,7 @@ interface SuperAgentSidebarProps {
   procs: ProcessItem[];
   recentChanges: RecentChangeItem[];
   onSelectSubAgent: (subagent: SubAgentItem) => void;
+  onSelectProc?: (proc: ProcessItem) => void;
   onRefreshData?: () => void;
   isLoadingData?: boolean;
   onOpenFile?: (filePath: string, fileName?: string) => void;
@@ -34,6 +38,7 @@ export function SuperAgentSidebar({
   procs = [],
   recentChanges = [],
   onSelectSubAgent,
+  onSelectProc,
   onRefreshData,
   isLoadingData = false,
   onOpenFile,
@@ -154,22 +159,47 @@ export function SuperAgentSidebar({
           {openSections.procs && (
             <div className="p-1.5 space-y-1 max-h-48 overflow-y-auto scrollbar-thin">
               {procs.length > 0 ? (
-                procs.map(proc => (
-                  <div
-                    key={proc.pid}
-                    className="p-1.5 bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md flex items-center justify-between text-xs"
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                      <span className="font-mono text-[var(--text-main)] font-medium truncate text-[11px]">
-                        {proc.name}
-                      </span>
+                procs.map(proc => {
+                  const isRunning = !proc.hasExited && proc.status === 'running';
+                  return (
+                    <div
+                      key={proc.id || proc.pid}
+                      onClick={() => {
+                        if (onSelectProc) {
+                          onSelectProc(proc);
+                        } else {
+                          onSelectSubAgent({
+                            id: proc.id || `proc-${proc.pid}`,
+                            typeName: 'Process',
+                            role: `Process #${proc.pid} — ${proc.name || proc.commandLine || 'Command'}`,
+                            status: proc.hasExited ? 'COMPLETED' : (proc.status === 'running' ? 'RUNNING' : proc.status),
+                            prompt: proc.commandLine || proc.name,
+                            logs: proc.logs || [],
+                          });
+                        }
+                      }}
+                      className="group p-2 bg-[var(--bg-sidebar)] hover:bg-[var(--color-primary-glow)] border border-[var(--border-color)] hover:border-[var(--color-primary)] rounded-md transition cursor-pointer flex flex-col gap-1"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${isRunning ? 'bg-sky-400 animate-ping' : 'bg-slate-400'}`} />
+                          <span className="text-xs font-mono font-medium text-[var(--text-main)] group-hover:text-[var(--color-primary)] truncate">
+                            {proc.name || proc.commandLine || `Process #${proc.pid}`}
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-mono text-[var(--text-muted)] group-hover:text-[var(--color-primary)] flex items-center gap-0.5">
+                          <TerminalIcon className="w-2.5 h-2.5" />
+                          PID:{proc.pid}
+                        </span>
+                      </div>
+                      {proc.commandLine && proc.commandLine !== proc.name && (
+                        <p className="text-[10px] text-[var(--text-muted)] font-sans truncate pl-3">
+                          {proc.commandLine}
+                        </p>
+                      )}
                     </div>
-                    <span className="text-[9px] font-mono text-[var(--text-muted)] bg-[var(--bg-card)] border border-[var(--border-color)] px-1 rounded">
-                      PID:{proc.pid}
-                    </span>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="p-3 text-center text-[11px] text-[var(--text-muted)] font-mono">
                   No active processes

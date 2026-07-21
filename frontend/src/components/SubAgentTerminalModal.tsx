@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Copy, Check, ArrowDown, Cpu, Sparkles } from 'lucide-react';
+import { X, Copy, Check, ArrowDown, Cpu, Sparkles, Terminal } from 'lucide-react';
 
 export interface SubAgentItem {
   id: string;
@@ -78,14 +78,16 @@ export function SubAgentTerminalModal({ subagent, onClose }: SubAgentTerminalMod
     );
   };
 
+  const isProcess = subagent.typeName === 'Process' || subagent.id.startsWith('proc-');
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
       <div className="flex flex-col w-full max-w-4xl h-[80vh] bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl shadow-2xl overflow-hidden font-sans">
         {/* Terminal Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="p-1.5 bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/40 rounded-lg text-[var(--color-primary)] shrink-0">
-              <Cpu className="w-4 h-4" />
+            <div className={`p-1.5 rounded-lg border shrink-0 ${isProcess ? 'bg-sky-950/40 border-sky-500/40 text-sky-400' : 'bg-[var(--color-primary-glow)] border-[var(--color-primary)]/40 text-[var(--color-primary)]'}`}>
+              {isProcess ? <Terminal className="w-4 h-4" /> : <Cpu className="w-4 h-4" />}
             </div>
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-2">
@@ -135,7 +137,7 @@ export function SubAgentTerminalModal({ subagent, onClose }: SubAgentTerminalMod
           {subagent.prompt && (
             <div className="mb-4 p-3 bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/30 rounded-lg">
               <span className="text-[10px] text-[var(--color-primary)] uppercase tracking-wider font-bold block mb-1">
-                Input Prompt / Task
+                {isProcess ? 'Command Line / Task' : 'Input Prompt / Task'}
               </span>
               <p className="whitespace-pre-wrap text-[var(--text-main)]">{subagent.prompt}</p>
             </div>
@@ -173,7 +175,7 @@ export function SubAgentTerminalModal({ subagent, onClose }: SubAgentTerminalMod
             !subagent.result && (
               <div className="flex flex-col items-center justify-center h-48 text-[var(--text-muted)] gap-2">
                 <Sparkles className="w-6 h-6 animate-pulse text-[var(--color-primary)]" />
-                <span className="text-xs">Streaming subagent terminal output...</span>
+                <span className="text-xs">{isProcess ? 'Streaming process output...' : 'Streaming subagent terminal output...'}</span>
               </div>
             )
           )}
@@ -192,10 +194,10 @@ export function SubAgentTerminalModal({ subagent, onClose }: SubAgentTerminalMod
 
         {/* Status Bar Footer */}
         <div className="px-4 py-2 bg-[var(--panel-header-bg)] border-t border-[var(--border-color)] text-[11px] text-[var(--text-muted)] flex justify-between items-center shrink-0">
-          <span>Subagent ID: {subagent.id}</span>
+          <span>{isProcess ? 'Process / Task ID' : 'Subagent ID'}: {subagent.id}</span>
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            Live Subagent Session Active
+            {isProcess ? 'Live Process Terminal Output' : 'Live Subagent Session Active'}
           </span>
         </div>
       </div>

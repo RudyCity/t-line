@@ -10,11 +10,13 @@ export interface ChecklistTaskItem {
 }
 
 export interface ProcessItem {
+  id?: string;
   pid: number;
   name: string;
   status: 'running' | 'idle' | 'stopped' | string;
   commandLine?: string;
   hasExited?: boolean;
+  logs?: string[];
 }
 
 interface ActiveTasksBarProps {
@@ -23,6 +25,7 @@ interface ActiveTasksBarProps {
   checklistTasks: ChecklistTaskItem[];
   toolProgressMsg?: string;
   onSelectSubAgent: (subagent: SubAgentItem) => void;
+  onSelectProc?: (proc: ProcessItem) => void;
 }
 
 type TimelineItem =
@@ -37,6 +40,7 @@ export function ActiveTasksBar({
   checklistTasks = [],
   toolProgressMsg,
   onSelectSubAgent,
+  onSelectProc,
 }: ActiveTasksBarProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -153,10 +157,32 @@ export function ActiveTasksBar({
               )}
 
               {item.kind === 'proc' && (
-                <div className="flex items-center gap-1.5 text-sky-300 min-w-0 pr-2">
-                  <span className="text-sky-400 font-bold shrink-0">[PROC:{item.data.pid}]:</span>
-                  <span className="text-[var(--text-main)] truncate">
-                    {item.data.name || item.data.commandLine || `Process #${item.data.pid}`}
+                <div
+                  onClick={() => {
+                    if (onSelectProc) {
+                      onSelectProc(item.data);
+                    } else {
+                      onSelectSubAgent({
+                        id: item.data.id || `proc-${item.data.pid}`,
+                        typeName: 'Process',
+                        role: `Process #${item.data.pid} — ${item.data.name || item.data.commandLine || 'Command'}`,
+                        status: item.data.hasExited ? 'COMPLETED' : (item.data.status === 'running' ? 'RUNNING' : item.data.status),
+                        prompt: item.data.commandLine || item.data.name,
+                        logs: item.data.logs || [],
+                      });
+                    }
+                  }}
+                  className="flex items-center justify-between w-full hover:text-sky-300 cursor-pointer transition"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-sky-400 font-bold shrink-0">[PROC:{item.data.pid}]:</span>
+                    <span className="text-[var(--text-main)] font-semibold truncate">
+                      {item.data.name || item.data.commandLine || `Process #${item.data.pid}`}
+                    </span>
+                  </div>
+                  <span className="flex items-center gap-1 text-[10px] text-sky-400 group-hover:text-sky-300 bg-sky-950/40 px-1.5 py-0.2 rounded border border-sky-500/40 shrink-0 ml-2 transition">
+                    <Terminal className="w-2.5 h-2.5" />
+                    Terminal
                   </span>
                 </div>
               )}

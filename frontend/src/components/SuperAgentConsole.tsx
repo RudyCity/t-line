@@ -799,6 +799,18 @@ export function SuperAgentConsole({
     setPendingPlanApproval(false);
   };
 
+  const handleSelectProc = (proc: any) => {
+    const saItem: SubAgentItem = {
+      id: proc.id || `proc-${proc.pid}`,
+      typeName: 'Process',
+      role: `Process #${proc.pid} — ${proc.name || proc.commandLine || 'Command'}`,
+      status: proc.hasExited ? 'COMPLETED' : (proc.status === 'running' ? 'RUNNING' : proc.status),
+      prompt: proc.commandLine || proc.name,
+      logs: proc.logs || [],
+    };
+    setSelectedSubagent(saItem);
+  };
+
   return (
     <div className="flex flex-col h-full w-full bg-[var(--bg-main)] text-[var(--text-main)] overflow-hidden font-sans">
       <div className="flex flex-wrap items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)] border-b border-[var(--border-color)] min-h-[48px] w-full shadow-md gap-3 select-none">
@@ -879,8 +891,6 @@ export function SuperAgentConsole({
             <Settings className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Setting</span>
           </button>
-
-
 
           <SuperAgentSettingsMenu
             isOpen={showSettingsMenu}
@@ -1032,8 +1042,8 @@ export function SuperAgentConsole({
             checklistTasks={checklistTasks}
             toolProgressMsg={toolProgressMsg}
             onSelectSubAgent={(sa) => setSelectedSubagent(sa)}
+            onSelectProc={handleSelectProc}
           />
-
 
             <SuperAgentInputContainer
               input={input}
@@ -1081,6 +1091,7 @@ export function SuperAgentConsole({
                 procs={procList}
                 recentChanges={recentChangeList}
                 onSelectSubAgent={(sa) => setSelectedSubagent(sa)}
+                onSelectProc={handleSelectProc}
                 onRefreshData={fetchMonitorData}
                 isLoadingData={isLoadingMonitor}
                 onOpenFile={onOpenFile}
@@ -1098,10 +1109,26 @@ export function SuperAgentConsole({
         <SuperAgentAuditLogs getAuthHeader={getAuthHeader} />
       )}
 
-      {/* Subagent Live Terminal Output Modal */}
+      {/* Subagent / Process Live Terminal Output Modal */}
       {selectedSubagent && (
         <SubAgentTerminalModal
-          subagent={subagentList.find(sa => sa.id === selectedSubagent.id) || selectedSubagent}
+          subagent={
+            subagentList.find(sa => sa.id === selectedSubagent.id) ||
+            (() => {
+              const foundProc = procList.find(p => (p.id && p.id === selectedSubagent.id) || `proc-${p.pid}` === selectedSubagent.id);
+              if (foundProc) {
+                return {
+                  id: foundProc.id || `proc-${foundProc.pid}`,
+                  typeName: 'Process',
+                  role: `Process #${foundProc.pid} — ${foundProc.name || foundProc.commandLine || 'Command'}`,
+                  status: foundProc.hasExited ? 'COMPLETED' : (foundProc.status === 'running' ? 'RUNNING' : foundProc.status),
+                  prompt: foundProc.commandLine || foundProc.name,
+                  logs: foundProc.logs || [],
+                } as SubAgentItem;
+              }
+              return selectedSubagent;
+            })()
+          }
           onClose={() => setSelectedSubagent(null)}
         />
       )}

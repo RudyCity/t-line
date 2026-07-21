@@ -2,6 +2,18 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.627] - 2026-07-22
+
+### Feature — Interactive Clickable Processes (Procs) & Log Terminal Viewer (`serverRoutes.ts`, `ActiveTasksBar.tsx`, `SuperAgentSidebar.tsx`, `SubAgentTerminalModal.tsx`, `SuperAgentConsole.tsx`)
+- **Process Log Output Streaming (`serverRoutes.ts`)**:
+  - Updated `GET /api/instances` endpoint in SuperAgent's [serverRoutes.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/serverRoutes.ts) to read log files (`logPath`) or buffered stdout (`output`) for each background process and include `logs: string[]` in the `procs` JSON payload.
+- **Clickable Process Items (`ActiveTasksBar.tsx`, `SuperAgentSidebar.tsx`)**:
+  - Made processes clickable in both the **Active Tasks Bar** (with `Terminal` action button) and the **Live Monitor Sidebar** process cards.
+  - Clicking any active or stopped background process opens the terminal log viewer modal.
+- **Unified Process & SubAgent Terminal Modal (`SubAgentTerminalModal.tsx`, `SuperAgentConsole.tsx`)**:
+  - Enhanced `SubAgentTerminalModal.tsx` to detect `typeName === 'Process'`, displaying process icons, command line prompt header, auto-scrolling terminal logs, copy button, and live status bar.
+  - Linked `handleSelectProc` in `SuperAgentConsole.tsx` so process logs update dynamically in real time as SuperAgent streams process output.
+
 ## [1.3.626] - 2026-07-21
 
 ### Bug Fix — SuperAgent Procs & Instances Exposure (`serverRoutes.ts`, `superAgentRoutes.ts`, `SuperAgentConsole.tsx`)
