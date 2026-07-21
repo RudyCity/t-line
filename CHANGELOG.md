@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.599] - 2026-07-21
+
+### Agent Skills & Customization
+- **Feature Gap & Bottleneck Analysis Skill (`.agents/skills/feature-gap-bottleneck-analysis/SKILL.md`)**:
+  - Added new workspace skill designed for systematic scanning and detection of missing features, functional gaps, performance bottlenecks, technical debt, and security flaws across codebases.
+  - Implemented 4-phase audit workflow (Scope Discovery, 5-Vector Audit Matrix, Impact vs Effort Scoring, and Structured Action Plan with concrete before/after diff solutions).
+
 ## [1.3.598] - 2026-07-21
 
 ### UI/UX & Theme Customization
