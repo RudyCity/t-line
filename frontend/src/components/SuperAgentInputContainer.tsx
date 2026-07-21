@@ -140,7 +140,7 @@ export function SuperAgentInputContainer({
             className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 text-xs text-zinc-100 placeholder-zinc-600 font-mono py-0.5 px-0 resize-none overflow-y-auto max-h-[220px] leading-relaxed"
             rows={1}
             disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
-            style={{ height: 'auto', minHeight: '36px' }}
+            style={{ minHeight: '36px' }}
           />
         </div>
 

@@ -552,8 +552,13 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   const adjustHeight = () => {
     const textarea = textareaRef.current;
     if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 240)}px`;
+      if (!input || input.trim() === '') {
+        textarea.style.height = '36px';
+        return;
+      }
+      textarea.style.height = '36px';
+      const scrollH = textarea.scrollHeight;
+      textarea.style.height = `${Math.min(scrollH, 220)}px`;
     }
   };
 
@@ -849,7 +854,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
           <div className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0">
             <div
               ref={messagesContainerRef}
-              className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed w-full scrollbar-thin"
+              className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-xs leading-relaxed w-full"
               onScroll={(e) => {
                 const el = e.currentTarget;
                 if (el.scrollTop < 80 && hasMore && !loadingMore) {
@@ -857,31 +862,30 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
                 }
               }}
             >
-              <div className="relative border-l border-indigo-500/40 ml-2.5 pl-4 space-y-3 pb-2 min-h-full">
-                {/* Infinite scroll: loading older messages indicator */}
-                {hasMore ? (
-                  <div className="flex items-center justify-center py-2 gap-2 text-zinc-500 text-xs select-none">
-                    {loadingMore ? (
-                      <>
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-400" />
-                        <span>Loading older messages...</span>
-                      </>
-                    ) : (
-                      <button
-                        onClick={handleLoadMoreMessagesWithScroll}
-                        className="text-indigo-400 hover:text-indigo-300 transition-colors px-3 py-1 rounded border border-zinc-700/50 hover:border-indigo-500/50 bg-zinc-800/40 text-[11px]"
-                      >
-                        ↑ Load older messages
-                      </button>
-                    )}
-                  </div>
-                ) : messages.length > 0 ? (
-                  <div className="flex items-center justify-center py-2 gap-2 text-zinc-500/70 text-[10px] font-sans select-none">
-                    <span className="w-1 h-1 rounded-full bg-zinc-700" />
-                    <span>Beginning of conversation history</span>
-                    <span className="w-1 h-1 rounded-full bg-zinc-700" />
-                  </div>
-                ) : null}
+            {/* Infinite scroll: loading older messages indicator */}
+            {hasMore ? (
+              <div className="flex items-center justify-center py-2 gap-2 text-zinc-500 text-xs select-none">
+                {loadingMore ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                    <span>Loading older messages...</span>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleLoadMoreMessagesWithScroll}
+                    className="text-indigo-400 hover:text-indigo-300 transition-colors px-3 py-1 rounded border border-zinc-700/50 hover:border-indigo-500/50 bg-zinc-800/40 text-[11px]"
+                  >
+                    ↑ Load older messages
+                  </button>
+                )}
+              </div>
+            ) : messages.length > 0 ? (
+              <div className="flex items-center justify-center py-2 gap-2 text-zinc-500/70 text-[10px] font-sans select-none">
+                <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                <span>Beginning of conversation history</span>
+                <span className="w-1 h-1 rounded-full bg-zinc-700" />
+              </div>
+            ) : null}
             <SuperAgentGroupedMessages
               messages={messages}
               isSystemNoiseMsg={isSystemNoiseMsg}
@@ -937,8 +941,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
               </div>
             )}
             <div ref={chatEndRef} />
-              </div>
-            </div>
+          </div>
 
             {/* Slash Command Autocomplete Popover */}
             {showSuggestions && (
