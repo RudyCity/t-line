@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.594] - 2026-07-21
+
+### Fixed
+- **Support thinking/reasoning events rendering (`SuperAgentConsoleUtils.ts`, `sessionManager.ts`)**:
+  - **Root Cause**: `extractEventText` tidak mengekstrak field `reasoning`, `thought`, `thinking`, atau `delta` pada event streaming. Akibatnya event `type: 'thought'` / `type: 'reasoning'` menghasilkan text kosong `""` dan tidak dirender ke dalam Process Steps.
+  - **Fix**: Diperbarui `extractEventText` dan pengenalan event `isThoughtType` di `SuperAgentConsoleUtils.ts` untuk mendukung seluruh bentuk event reasoning/thought/thinking.
+  - **History Fix**: Diperbarui `sessionManager.ts` pada backend agar mendukung ekstraksi field `rawMsg.thought` dan `rawMsg.thinking` saat memuat histori.
+
 ## [1.3.593] - 2026-07-21
 
 ### Features

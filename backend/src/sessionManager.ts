@@ -239,12 +239,9 @@ export async function getSessionMessages(
 
         if (role !== 'tool' && role !== 'thought' && isNoiseMessageContent(content)) continue;
 
-        if (role === 'thought' || rawMsg.reasoning) {
-          if (rawMsg.reasoning) {
-            guiMsgs.push({ role: 'thought', text: rawMsg.reasoning });
-          } else {
-            guiMsgs.push({ role: 'thought', text: content });
-          }
+        const thoughtText = rawMsg.reasoning || rawMsg.thought || rawMsg.thinking || (role === 'thought' ? content : null);
+        if (thoughtText) {
+          guiMsgs.push({ role: 'thought', text: thoughtText });
         }
 
         if (content && role !== 'thought') {

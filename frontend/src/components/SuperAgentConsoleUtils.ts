@@ -49,12 +49,24 @@ export const getMainModelLabel = (preset: ModelPreset | undefined, agentMode: 's
 export const extractEventText = (event: any): string => {
   if (!event) return '';
   if (typeof event === 'string') return event;
-  if (typeof event.text === 'string') return event.text;
-  if (typeof event.content === 'string') return event.content;
+  if (typeof event.reasoning === 'string' && event.reasoning) return event.reasoning;
+  if (typeof event.thought === 'string' && event.thought) return event.thought;
+  if (typeof event.thinking === 'string' && event.thinking) return event.thinking;
+  if (typeof event.text === 'string' && event.text) return event.text;
+  if (typeof event.content === 'string' && event.content) return event.content;
+  if (typeof event.delta === 'string' && event.delta) return event.delta;
+  if (event.delta && typeof event.delta === 'object') {
+    if (typeof event.delta.reasoning === 'string' && event.delta.reasoning) return event.delta.reasoning;
+    if (typeof event.delta.thought === 'string' && event.delta.thought) return event.delta.thought;
+    if (typeof event.delta.text === 'string' && event.delta.text) return event.delta.text;
+    if (typeof event.delta.content === 'string' && event.delta.content) return event.delta.content;
+  }
   if (Array.isArray(event.content)) {
     return event.content
       .map((part: any) => {
         if (typeof part === 'string') return part;
+        if (part && typeof part.reasoning === 'string') return part.reasoning;
+        if (part && typeof part.thought === 'string') return part.thought;
         if (part && typeof part.text === 'string') return part.text;
         if (part && typeof part.content === 'string') return part.content;
         return '';
@@ -62,11 +74,15 @@ export const extractEventText = (event: any): string => {
       .join('');
   }
   if (event.content && typeof event.content === 'object') {
-    if (typeof event.content.text === 'string') return event.content.text;
-    if (typeof event.content.content === 'string') return event.content.content;
+    if (typeof event.content.reasoning === 'string' && event.content.reasoning) return event.content.reasoning;
+    if (typeof event.content.thought === 'string' && event.content.thought) return event.content.thought;
+    if (typeof event.content.text === 'string' && event.content.text) return event.content.text;
+    if (typeof event.content.content === 'string' && event.content.content) return event.content.content;
   }
   if (event.text && typeof event.text === 'object') {
-    if (typeof event.text.text === 'string') return event.text.text;
+    if (typeof event.text.reasoning === 'string' && event.text.reasoning) return event.text.reasoning;
+    if (typeof event.text.thought === 'string' && event.text.thought) return event.text.thought;
+    if (typeof event.text.text === 'string' && event.text.text) return event.text.text;
   }
   return '';
 };
@@ -281,7 +297,19 @@ export const handleAgentEventPayload = (
         const text = result !== undefined ? `Tool '${resolvedName}' completed.` : `Invoking tool: ${resolvedName}`;
         return [...prev, { role: 'tool', text, toolName: resolvedName, args: args || {}, result, callId }];
       });
-    } else if (innerEvent.type === 'thought' || innerEvent.type === 'reasoning') {
+    } else if (
+      innerEvent.type === 'thought' ||
+      innerEvent.type === 'reasoning' ||
+      innerEvent.type === 'thinking' ||
+      innerEvent.type === 'reasoning_content' ||
+      innerEvent.type === 'thought_delta' ||
+      innerEvent.type === 'reasoning_delta' ||
+      innerEvent.target === 'reasoning' ||
+      innerEvent.target === 'thought' ||
+      Boolean(innerEvent.reasoning) ||
+      Boolean(innerEvent.thought) ||
+      Boolean(innerEvent.thinking)
+    ) {
       setLoading(true);
       const chunk = extractEventText(innerEvent);
       if (chunk) {
