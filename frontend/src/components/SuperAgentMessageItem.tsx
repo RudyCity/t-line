@@ -295,16 +295,12 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
 
   if (msg.role === 'user') {
     return (
-      <div key={index} className="my-3 pt-3 border-t border-zinc-800/80 w-full select-text">
-        <div className="bg-[#10111a] border border-indigo-500/30 rounded-lg p-3 shadow-md transition-all">
-          <div className="flex items-center gap-2 mb-1.5 select-none">
-            <span className="flex items-center gap-1.5 text-[10px] uppercase font-bold font-mono text-indigo-300 bg-indigo-950/70 border border-indigo-800/50 px-2 py-0.5 rounded">
-              <span>❯ USER</span>
-            </span>
-          </div>
-          <div className="text-xs text-zinc-100 font-sans leading-relaxed">
-            {renderMessageContent(msg.text)}
-          </div>
+      <div key={index} className="my-2 py-2 px-3 border-l-2 border-indigo-500 bg-indigo-950/20 text-xs font-mono text-zinc-100 select-text rounded-r-md">
+        <div className="flex items-center gap-1.5 mb-1 select-none text-[10px] font-bold text-indigo-400 uppercase">
+          <span>❯ USER</span>
+        </div>
+        <div className="leading-relaxed">
+          {renderMessageContent(msg.text)}
         </div>
       </div>
     );

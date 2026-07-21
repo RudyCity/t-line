@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronDown, Cpu, Sparkles } from 'lucide-react';
-import { ConsoleMessage, SuperAgentMessageItem } from './SuperAgentMessageItem';
+import { ConsoleMessage, SuperAgentMessageItem, renderMessageContent } from './SuperAgentMessageItem';
 
 interface SuperAgentGroupedMessagesProps {
   messages: ConsoleMessage[];
@@ -80,12 +80,10 @@ function CollapsibleProcessBlock({
   isLastTurn: boolean;
   isStreaming?: boolean;
 }) {
-  // Always default to expanded so tool usage is displayed by default
   const [expanded, setExpanded] = useState<boolean>(true);
   const userToggledRef = React.useRef<boolean>(false);
   const prevStreamingRef = React.useRef<boolean | undefined>(isStreaming);
 
-  // Manage expansion state: keep expanded so thinking & tool usage remain visible by default
   useEffect(() => {
     if (isLastTurn && isStreaming && !userToggledRef.current) {
       setExpanded(true);
@@ -109,10 +107,7 @@ function CollapsibleProcessBlock({
   };
 
   return (
-    <div className="relative my-1.5 font-mono text-xs w-full select-text">
-      {/* Timeline Branch Connector */}
-      <div className="absolute -left-[17px] top-[14px] w-2.5 h-[1.5px] bg-indigo-500/50" />
-
+    <div className="my-1.5 font-mono text-xs w-full select-text">
       {/* Collapsible Header */}
       <div
         onClick={handleToggle}
@@ -157,13 +152,24 @@ export const SuperAgentGroupedMessages: React.FC<SuperAgentGroupedMessagesProps>
   const turns = groupMessagesIntoTurns(messages, isSystemNoiseMsg);
 
   return (
-    <>
+    <div className="space-y-6">
       {turns.map((turn, turnIdx) => {
         const isLastTurn = turnIdx === turns.length - 1;
         return (
-          <React.Fragment key={turn.id || turnIdx}>
-            {/* User message */}
-            {turn.userMsg && <SuperAgentMessageItem msg={turn.userMsg} index={turnIdx * 100} />}
+          <div key={turn.id || turnIdx} className="relative space-y-2">
+            {/* Sticky Floating User Prompt Header */}
+            {turn.userMsg && (
+              <div className="sticky top-0 z-20 py-2 px-3 -mx-4 backdrop-blur-md bg-[#090a0f]/90 border-b border-indigo-500/30 shadow-md transition-all">
+                <div className="flex items-start gap-2.5 border-l-2 border-indigo-500 pl-2.5">
+                  <span className="text-[10px] uppercase font-bold font-mono text-indigo-400 shrink-0 pt-0.5 select-none">
+                    ❯ USER
+                  </span>
+                  <div className="text-xs text-zinc-100 font-mono leading-relaxed flex-1 select-text">
+                    {renderMessageContent(turn.userMsg.text)}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Turn blocks in exact chronological usage order */}
             {turn.blocks.map((block, blockIdx) => {
@@ -186,9 +192,9 @@ export const SuperAgentGroupedMessages: React.FC<SuperAgentGroupedMessagesProps>
                 />
               ));
             })}
-          </React.Fragment>
+          </div>
         );
       })}
-    </>
+    </div>
   );
 };
