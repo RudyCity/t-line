@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Paperclip, Square, Send, ChevronDown, X, Cpu, Terminal } from 'lucide-react';
+import { Paperclip, Square, Send, ChevronDown, X, Cpu, Terminal, Search } from 'lucide-react';
 import { SlashCommand } from './SuperAgentCommands';
 
 interface SuperAgentInputContainerProps {
@@ -30,7 +30,7 @@ interface SuperAgentInputContainerProps {
   suggestions?: SlashCommand[];
   suggestionIndex?: number;
   setSuggestionIndex?: (idx: number) => void;
-  handleSelectSuggestion?: (s: SlashCommand) => void;
+  handleSelectSuggestion?: (cmd: SlashCommand) => void;
 }
 
 export function SuperAgentInputContainer({
@@ -59,6 +59,7 @@ export function SuperAgentInputContainer({
   handleSelectSuggestion,
 }: SuperAgentInputContainerProps) {
   const [showPresetMenu, setShowPresetMenu] = useState(false);
+  const [presetFilterQuery, setPresetFilterQuery] = useState('');
   const presetMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -233,38 +234,85 @@ export function SuperAgentInputContainer({
                 </button>
 
                 {showPresetMenu && (
-                  <div className="sa-command-popover absolute bottom-full left-0 mb-1.5 w-60 py-1 z-[100] overflow-hidden font-mono bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-xl shadow-2xl backdrop-blur-md">
-                    <div className="px-2.5 py-1 text-[9px] font-bold text-[var(--color-primary)] uppercase tracking-wider border-b border-[var(--border-color)] mb-1">
-                      Select Preset
+                  <div className="sa-command-popover absolute bottom-full left-0 mb-1.5 w-64 py-1 z-[100] overflow-hidden font-mono bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-xl shadow-2xl backdrop-blur-md">
+                    <div className="px-2.5 py-1 text-[9px] font-bold text-[var(--color-primary)] uppercase tracking-wider border-b border-[var(--border-color)] flex items-center justify-between">
+                      <span>Select Preset</span>
+                      <span className="text-[var(--text-muted)] font-normal">
+                        ({(presets[agentMode] || []).filter(p => {
+                          if (!presetFilterQuery.trim()) return true;
+                          const q = presetFilterQuery.toLowerCase().trim();
+                          return p.name?.toLowerCase().includes(q) || p.id?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q);
+                        }).length})
+                      </span>
                     </div>
-                    {(presets[agentMode] || []).map(p => {
-                      const isActive = p.id?.toLowerCase() === (activePresetId[agentMode] || '').toLowerCase() || p.name?.toLowerCase() === (activePresetId[agentMode] || '').toLowerCase();
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => {
-                            handlePresetChange(p.id);
-                            setShowPresetMenu(false);
-                          }}
-                          className={`w-full text-left px-2.5 py-1.5 text-[10px] transition flex flex-col cursor-pointer ${
-                            isActive
-                              ? 'bg-[var(--color-primary-glow)] text-[var(--color-primary)] font-bold border-l-2 border-[var(--color-primary)]'
-                              : 'text-[var(--text-muted)] hover:bg-[var(--surface-overlay-hover)] hover:text-[var(--text-main)]'
-                          }`}
-                        >
-                          <span className="flex items-center justify-between">
-                            <span>{p.name}</span>
-                            {isActive && <span className="text-[9px] text-[var(--color-primary)] font-semibold">● Active</span>}
-                          </span>
-                          {p.description && p.description !== '/model' && (
-                            <span className="text-[9px] text-[var(--text-muted)] font-sans truncate mt-0.5">
-                              {p.description}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
+
+                    <div className="px-2 py-1 border-b border-[var(--border-color)]/60">
+                      <div className="relative flex items-center">
+                        <Search className="w-3 h-3 absolute left-2 text-[var(--text-muted)]" />
+                        <input
+                          type="text"
+                          placeholder="Filter presets..."
+                          value={presetFilterQuery}
+                          onChange={(e) => setPresetFilterQuery(e.target.value)}
+                          className="w-full bg-[var(--bg-card)] text-[var(--text-main)] placeholder-[var(--text-muted)] text-[10px] rounded-md pl-6 pr-5 py-1 border border-[var(--border-color)] focus:outline-none focus:border-[var(--color-primary)] transition"
+                          autoFocus
+                        />
+                        {presetFilterQuery && (
+                          <button
+                            onClick={() => setPresetFilterQuery('')}
+                            className="absolute right-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] p-0.5 cursor-pointer"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="max-h-56 overflow-y-auto scrollbar-thin divide-y divide-[var(--border-color)]/30">
+                      {(presets[agentMode] || []).filter(p => {
+                        if (!presetFilterQuery.trim()) return true;
+                        const q = presetFilterQuery.toLowerCase().trim();
+                        return p.name?.toLowerCase().includes(q) || p.id?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q);
+                      }).length === 0 ? (
+                        <div className="px-3 py-2 text-[10px] text-[var(--text-muted)] italic text-center">
+                          No matching presets found
+                        </div>
+                      ) : (
+                        (presets[agentMode] || []).filter(p => {
+                          if (!presetFilterQuery.trim()) return true;
+                          const q = presetFilterQuery.toLowerCase().trim();
+                          return p.name?.toLowerCase().includes(q) || p.id?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q);
+                        }).map(p => {
+                          const isActive = p.id?.toLowerCase() === (activePresetId[agentMode] || '').toLowerCase() || p.name?.toLowerCase() === (activePresetId[agentMode] || '').toLowerCase();
+                          return (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => {
+                                handlePresetChange(p.id);
+                                setShowPresetMenu(false);
+                                setPresetFilterQuery('');
+                              }}
+                              className={`w-full text-left px-2.5 py-1.5 text-[10px] transition flex flex-col cursor-pointer ${
+                                isActive
+                                  ? 'bg-[var(--color-primary-glow)] text-[var(--color-primary)] font-bold border-l-2 border-[var(--color-primary)]'
+                                  : 'text-[var(--text-muted)] hover:bg-[var(--surface-overlay-hover)] hover:text-[var(--text-main)]'
+                              }`}
+                            >
+                              <span className="flex items-center justify-between">
+                                <span>{p.name}</span>
+                                {isActive && <span className="text-[9px] text-[var(--color-primary)] font-semibold">● Active</span>}
+                              </span>
+                              {p.description && p.description !== '/model' && (
+                                <span className="text-[9px] text-[var(--text-muted)] font-sans truncate mt-0.5">
+                                  {p.description}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

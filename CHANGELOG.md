@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.614] - 2026-07-21
+
+### Feature — Model Preset Search & Pagination (`SuperAgentPresetManager.tsx` & `SuperAgentInputContainer.tsx`)
+- **Search Bar & Filtering in Preset Manager**: Added a real-time search input bar in [SuperAgentPresetManager.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentPresetManager.tsx#L350) allowing instant filtering of model presets by name, preset ID, description, or model string.
+- **Card Pagination Controls**: Implemented 6-item page grid pagination with page range indicators, previous/next controls (`ChevronLeft`/`ChevronRight`), and empty search result fallbacks.
+- **Quick Filter Search in Console Dropup**: Integrated a compact filter input inside the console dropup popover menu in [SuperAgentInputContainer.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentInputContainer.tsx#L245) with auto-scroll containment for fast preset switching.
+
 ## [1.3.613] - 2026-07-21
 
 ### Bug Fix — SuperAgent Preset Dropup Popover Visibility & Settings Modal (`SuperAgentInputContainer.tsx` & `SuperAgentSettingsModal.tsx`)
