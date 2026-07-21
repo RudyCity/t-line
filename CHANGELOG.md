@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.584] - 2026-07-21
+
+### Added
+- **Stream Response Logging to Terminal (`superAgentBridge.ts`)**:
+  - Added stdout/console logging for SSE stream response events (`text_delta`, `message`, `tool_call`, `tool_result`, and execution events).
+  - Stream response events arriving from SuperAgent are now formatted and displayed live in the backend terminal console output.
+
 ## [1.3.583] - 2026-07-21
 
 ### Changed
