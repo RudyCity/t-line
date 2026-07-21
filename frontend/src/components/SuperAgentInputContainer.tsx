@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Paperclip, Square, Send, ChevronDown, X, Cpu } from 'lucide-react';
+import { Paperclip, Square, Send, ChevronDown, X, Cpu, Terminal } from 'lucide-react';
+import { SlashCommand } from './SuperAgentCommands';
 
 interface SuperAgentInputContainerProps {
   input: string;
@@ -25,6 +26,11 @@ interface SuperAgentInputContainerProps {
   agentMode: 'single' | 'multi';
   handlePresetChange: (presetId: string) => void;
   getMainModelLabel: (preset: any) => string;
+  showSuggestions?: boolean;
+  suggestions?: SlashCommand[];
+  suggestionIndex?: number;
+  setSuggestionIndex?: (idx: number) => void;
+  handleSelectSuggestion?: (s: SlashCommand) => void;
 }
 
 export function SuperAgentInputContainer({
@@ -45,7 +51,12 @@ export function SuperAgentInputContainer({
   activePresetId,
   agentMode,
   handlePresetChange,
-  getMainModelLabel
+  getMainModelLabel,
+  showSuggestions,
+  suggestions = [],
+  suggestionIndex = 0,
+  setSuggestionIndex,
+  handleSelectSuggestion,
 }: SuperAgentInputContainerProps) {
   const [showPresetMenu, setShowPresetMenu] = useState(false);
   const presetMenuRef = useRef<HTMLDivElement>(null);
@@ -79,6 +90,52 @@ export function SuperAgentInputContainer({
         style={{ display: 'none' }}
         multiple
       />
+
+      {/* Hallmark Minimalist Slash Command Autocomplete Popover */}
+      {showSuggestions && suggestions.length > 0 && handleSelectSuggestion && (
+        <div className="absolute bottom-full left-0 right-0 mb-2 bg-[#0d0e14]/95 backdrop-blur-xl border border-zinc-800/90 rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto scrollbar-thin font-mono text-xs divide-y divide-zinc-800/60 select-none">
+          <div className="px-3 py-1.5 bg-[#12141e]/90 text-[10px] text-indigo-400 font-bold uppercase tracking-wider flex items-center justify-between sticky top-0 backdrop-blur-md border-b border-zinc-800/80">
+            <span className="flex items-center gap-1.5">
+              <Terminal className="w-3.5 h-3.5 text-indigo-400" />
+              <span>COMMANDS</span>
+              <span className="text-zinc-500 font-normal">({suggestions.length})</span>
+            </span>
+            <span className="text-zinc-500 font-normal normal-case font-sans text-[9px]">
+              ↑↓ Navigate • Tab/Enter Select • Esc Close
+            </span>
+          </div>
+
+          {suggestions.map((s, idx) => {
+            const isSelected = idx === suggestionIndex;
+            return (
+              <div
+                key={s.command}
+                onClick={() => handleSelectSuggestion(s)}
+                onMouseEnter={() => setSuggestionIndex?.(idx)}
+                className={`px-3 py-2 cursor-pointer transition flex items-center justify-between gap-3 ${
+                  isSelected
+                    ? 'bg-indigo-950/70 text-white border-l-2 border-indigo-500 pl-2.5'
+                    : 'text-zinc-300 hover:bg-zinc-800/40'
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`font-bold font-mono text-xs ${isSelected ? 'text-indigo-300' : 'text-indigo-400'}`}>
+                    {s.command}
+                  </span>
+                  {s.argsHelp && (
+                    <span className="text-zinc-500 text-[10px] font-mono truncate">
+                      {s.argsHelp}
+                    </span>
+                  )}
+                </div>
+                <span className="text-zinc-400 text-[11px] font-sans truncate max-w-xs shrink-0">
+                  {s.description}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Unified High-Craft CLI Input Card (Frameless sides & bottom) */}
       <div className="bg-[#0b0c10] border-t border-zinc-800/80 focus-within:border-t-indigo-500/70 rounded-t-xl transition-all duration-200">

@@ -943,32 +943,6 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
             <div ref={chatEndRef} />
           </div>
 
-            {/* Slash Command Autocomplete Popover */}
-            {showSuggestions && (
-              <div className="absolute bottom-[calc(100%-8px)] left-4 right-4 bg-[#16161a] border-2 border-indigo-500/80 rounded-lg shadow-2xl z-50 max-h-60 overflow-y-auto font-mono text-xs divide-y divide-zinc-800">
-                <div className="px-3 py-2 bg-[#121214] border-b border-zinc-800 text-[10px] text-indigo-400 font-bold uppercase tracking-wider flex items-center justify-between select-none">
-                  <span>SuperAgent Commands</span>
-                  <span className="text-zinc-500 font-normal normal-case font-sans">↑↓ Navigate • Tab/Enter Select • Esc Close</span>
-                </div>
-                {suggestions.map((s, idx) => (
-                  <div
-                    key={s.command}
-                    onClick={() => handleSelectSuggestion(s)}
-                    onMouseEnter={() => setSuggestionIndex(idx)}
-                    className={`px-4 py-2 cursor-pointer transition flex items-center justify-between ${
-                      idx === suggestionIndex ? 'bg-indigo-600/30 text-white border-l-4 border-indigo-500 pl-3' : 'text-zinc-300 hover:bg-zinc-800/40'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-indigo-300">{s.command}</span>
-                      {s.argsHelp && <span className="text-zinc-500 text-[10px]">{s.argsHelp}</span>}
-                    </div>
-                    <span className="text-zinc-400 text-[11px] truncate max-w-xs">{s.description}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
             {/* Active Tasks Widget (Subagents, Checklist Tasks, Processes, Tool Progress) */}
             <ActiveTasksBar
               subagents={subagentList}
@@ -997,6 +971,11 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
               agentMode={agentMode}
               handlePresetChange={handlePresetChange}
               getMainModelLabel={getMainModelLabel}
+              showSuggestions={showSuggestions}
+              suggestions={suggestions}
+              suggestionIndex={suggestionIndex}
+              setSuggestionIndex={setSuggestionIndex}
+              handleSelectSuggestion={handleSelectSuggestion}
             />
           </div>
 
