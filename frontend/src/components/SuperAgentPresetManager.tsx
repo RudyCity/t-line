@@ -604,10 +604,15 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                       }}
                       className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2.5 py-1.5 text-[var(--text-main)] text-xs outline-none focus:border-[var(--color-primary)]"
                     >
-                      <option value="">-- Not Set (Use Global Active Profile) --</option>
-                      {providers.map(p => (
-                        <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
-                      ))}
+                      <option value="" className="bg-[#18181b] text-white py-1">-- Not Set (Use Global Active Profile) --</option>
+                      {providers.map(p => {
+                        const pType = p.type || (p as any).provider || '';
+                        return (
+                          <option key={p.id} value={p.id} className="bg-[#18181b] text-white py-1">
+                            {p.name}{pType ? ` (${pType})` : ''}
+                          </option>
+                        );
+                      })}
                     </select>
                     {mainProviderId && providerFetchStatus[mainProviderId] && (
                       <p className={`text-[9px] ${providerFetchStatus[mainProviderId]?.isRealFetched ? 'text-emerald-500' : 'text-amber-500'}`}>
@@ -652,11 +657,11 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                         }}
                         className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2.5 py-1.5 text-[var(--text-main)] font-mono text-xs outline-none focus:border-[var(--color-primary)]"
                       >
-                        <option value="">-- Not Set (Use Default Model) --</option>
+                        <option value="" className="bg-[#18181b] text-white py-1">-- Not Set (Use Default Model) --</option>
                         {(providerModelsCache[mainProviderId] || ['gemini-2.5-flash', 'gpt-4o', 'claude-3-5-sonnet-20241022']).map(m => (
-                          <option key={m} value={m}>{m}</option>
+                          <option key={m} value={m} className="bg-[#18181b] text-white py-1">{m}</option>
                         ))}
-                        <option value="__custom__">✏️ Custom Model (Type manual string)...</option>
+                        <option value="__custom__" className="bg-[#18181b] text-white py-1">✏️ Custom Model (Type manual string)...</option>
                       </select>
                     )}
                   </div>
@@ -691,10 +696,15 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                       }}
                       className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2.5 py-1.5 text-[var(--text-main)] text-xs outline-none focus:border-[var(--color-primary)]"
                     >
-                      <option value="">-- Not Set (Use Global Active Profile) --</option>
-                      {providers.map(p => (
-                        <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
-                      ))}
+                      <option value="" className="bg-[#18181b] text-white py-1">-- Not Set (Use Global Active Profile) --</option>
+                      {providers.map(p => {
+                        const pType = p.type || (p as any).provider || '';
+                        return (
+                          <option key={p.id} value={p.id} className="bg-[#18181b] text-white py-1">
+                            {p.name}{pType ? ` (${pType})` : ''}
+                          </option>
+                        );
+                      })}
                     </select>
                     {subDefaultProviderId && providerFetchStatus[subDefaultProviderId] && (
                       <p className={`text-[9px] ${providerFetchStatus[subDefaultProviderId]?.isRealFetched ? 'text-emerald-500' : 'text-amber-500'}`}>
@@ -739,11 +749,11 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                         }}
                         className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2.5 py-1.5 text-[var(--text-main)] font-mono text-xs outline-none focus:border-[var(--color-primary)]"
                       >
-                        <option value="">-- Not Set (Use Default Model) --</option>
+                        <option value="" className="bg-[#18181b] text-white py-1">-- Not Set (Use Default Model) --</option>
                         {(providerModelsCache[subDefaultProviderId] || ['gemini-2.5-flash', 'gpt-4o-mini', 'claude-3-5-haiku-20241022']).map(m => (
-                          <option key={m} value={m}>{m}</option>
+                          <option key={m} value={m} className="bg-[#18181b] text-white py-1">{m}</option>
                         ))}
-                        <option value="__custom__">✏️ Custom Model (Type manual string)...</option>
+                        <option value="__custom__" className="bg-[#18181b] text-white py-1">✏️ Custom Model (Type manual string)...</option>
                       </select>
                     )}
                   </div>
@@ -785,7 +795,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                               className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md px-2 py-1 text-[var(--text-main)] text-xs capitalize outline-none focus:border-[var(--color-primary)]"
                             >
                               {COMMON_SUBAGENT_ROLES.map(r => (
-                                <option key={r.id} value={r.id}>{r.label}</option>
+                                <option key={r.id} value={r.id} className="bg-[#18181b] text-white py-1">{r.label}</option>
                               ))}
                             </select>
                           </div>
@@ -797,10 +807,15 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                               onChange={(e) => handleUpdateOverride(idx, 'providerProfileId', e.target.value)}
                               className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md px-2 py-1 text-[var(--text-main)] text-xs outline-none focus:border-[var(--color-primary)]"
                             >
-                              <option value="">-- Not Set (Inherit Default Profile) --</option>
-                              {providers.map(p => (
-                                <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
-                              ))}
+                              <option value="" className="bg-[#18181b] text-white py-1">-- Not Set (Inherit Default Profile) --</option>
+                              {providers.map(p => {
+                                const pType = p.type || (p as any).provider || '';
+                                return (
+                                  <option key={p.id} value={p.id} className="bg-[#18181b] text-white py-1">
+                                    {p.name}{pType ? ` (${pType})` : ''}
+                                  </option>
+                                );
+                              })}
                             </select>
                           </div>
 
@@ -839,11 +854,11 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                                   }}
                                   className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md px-2 py-1 text-[var(--text-main)] font-mono text-[11px] outline-none focus:border-[var(--color-primary)]"
                                 >
-                                  <option value="">-- Not Set (Use Default Model) --</option>
+                                  <option value="" className="bg-[#18181b] text-white py-1">-- Not Set (Use Default Model) --</option>
                                   {availModels.map(m => (
-                                    <option key={m} value={m}>{m}</option>
+                                    <option key={m} value={m} className="bg-[#18181b] text-white py-1">{m}</option>
                                   ))}
-                                  <option value="__custom__">✏️ Custom Model...</option>
+                                  <option value="__custom__" className="bg-[#18181b] text-white py-1">✏️ Custom Model...</option>
                                 </select>
                               )}
 

@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.616] - 2026-07-21
+
+### UI Fix — Select Dropdown Option High Contrast Styling & Empty Parenthetical Type (`SuperAgentPresetManager.tsx`)
+- **Fix Option Contrast & Background**: Applied explicit `bg-[#18181b] text-white py-1` styling to all `<option>` elements in provider profile and model selects, preventing browser default washed-out/gray option popups in dark mode.
+- **Fix Empty `()` Parenthetical Display**: Conditionalized the provider type badge `{pType ? ` (${pType})` : ''}` across all provider profile dropdown menus so profiles without a explicit type string render cleanly (e.g. `opencodefree` instead of `opencodefree ()`).
+
 ## [1.3.615] - 2026-07-21
 
 ### Bug Fix — SuperAgent Model Preset Modal "Not Set" Selection & Save Pipeline (`SuperAgentPresetManager.tsx` & `SuperAgentConsole.tsx`)
