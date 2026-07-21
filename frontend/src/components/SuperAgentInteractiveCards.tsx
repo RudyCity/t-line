@@ -20,32 +20,45 @@ interface PermissionCardProps {
 
 export function PermissionCard({ pendingPermission, handlePermissionDecision }: PermissionCardProps) {
   return (
-    <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-500/60 text-amber-100 space-y-3 select-none shadow-lg backdrop-filter backdrop-blur-md">
-      <div className="flex items-center gap-2 text-amber-400 font-bold text-xs tracking-wide uppercase font-mono">
-        <AlertTriangle className="w-4 h-4" />
-        <span>Tool Approval Required</span>
+    <div className="group relative p-4 rounded-xl bg-[#0d0a07]/95 border border-amber-800/80 hover:border-amber-700/60 text-amber-100 space-y-3.5 shadow-xl backdrop-blur-md transition-all duration-200">
+      {/* Top Header Badge */}
+      <div className="flex items-center gap-2">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+        </span>
+        <div className="flex items-center gap-1.5 text-amber-400 text-[10px] font-mono font-semibold uppercase tracking-widest">
+          <AlertTriangle className="w-3.5 h-3.5" />
+          <span>Tool Approval Required</span>
+        </div>
       </div>
-      <p className="text-xs text-amber-200/90 font-mono bg-amber-950/50 p-2.5 rounded-md border border-amber-500/20 leading-relaxed break-all">
+
+      {/* Description / Tool Call Details */}
+      <p className="text-xs text-amber-200/90 font-mono bg-[#16120e]/60 p-3 rounded-lg border border-amber-900/40 leading-relaxed break-all select-all">
         {pendingPermission.description || `SuperAgent wants to execute: ${JSON.stringify(pendingPermission.toolCall)}`}
       </p>
-      <div className="flex flex-wrap gap-2 pt-1">
+
+      {/* Action Footer */}
+      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-amber-900/20">
         <button
           onClick={() => handlePermissionDecision(true)}
-          className="bg-amber-600 hover:bg-amber-500 active:translate-y-0.5 text-white font-medium text-xs px-3 py-1.5 rounded-md flex items-center gap-1.5 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400"
+          className="bg-amber-600 hover:bg-amber-500 active:scale-[0.98] text-white font-medium text-xs px-3.5 py-1.5 rounded-lg shadow-sm transition-all duration-150 flex items-center gap-1.5 cursor-pointer"
         >
-          <Check className="w-3.5 h-3.5" /> Allow Once
+          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>Allow Once</span>
         </button>
         <button
           onClick={() => handlePermissionDecision('session')}
-          className="bg-indigo-600 hover:bg-indigo-500 active:translate-y-0.5 text-white font-medium text-xs px-3 py-1.5 rounded-md transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          className="bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-medium text-xs px-3.5 py-1.5 rounded-lg shadow-sm transition-all duration-150 cursor-pointer"
         >
-          Allow for Session
+          <span>Allow for Session</span>
         </button>
         <button
           onClick={() => handlePermissionDecision(false)}
-          className="bg-zinc-800 hover:bg-zinc-700 active:translate-y-0.5 text-zinc-300 font-medium text-xs px-3 py-1.5 rounded-md flex items-center gap-1.5 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-zinc-400"
+          className="bg-zinc-800 hover:bg-zinc-700 active:scale-[0.98] border border-zinc-700/60 text-zinc-300 font-medium text-xs px-3.5 py-1.5 rounded-lg transition-all duration-150 flex items-center gap-1.5 cursor-pointer"
         >
-          <X className="w-3.5 h-3.5" /> Deny
+          <X className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>Deny</span>
         </button>
       </div>
     </div>
@@ -181,25 +194,38 @@ interface PlanCardProps {
 export function PlanCard({ pendingPlanApproval, handlePlanApproval }: PlanCardProps) {
   if (!pendingPlanApproval) return null;
   return (
-    <div className="p-4 rounded-xl bg-indigo-950/30 border border-indigo-500/60 text-indigo-100 space-y-3 select-none shadow-lg backdrop-filter backdrop-blur-md">
-      <div className="flex items-center gap-2 text-indigo-300 font-bold text-xs tracking-wide uppercase font-mono">
-        <span>⭐ Plan Approval Required</span>
+    <div className="group relative p-4 rounded-xl bg-[#090d16]/95 border border-indigo-800/80 hover:border-indigo-700/60 text-indigo-100 space-y-3.5 shadow-xl backdrop-blur-md transition-all duration-200">
+      {/* Top Header Badge */}
+      <div className="flex items-center gap-2">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+        </span>
+        <span className="text-[10px] font-mono uppercase tracking-widest text-indigo-400 font-semibold">
+          Plan Approval Required
+        </span>
       </div>
-      <p className="text-xs text-zinc-300 leading-relaxed">
+
+      {/* Description */}
+      <p className="text-xs text-zinc-300 leading-relaxed font-medium">
         The agent has created an implementation plan. Review the plan details in the workspace, then authorize execution.
       </p>
-      <div className="flex gap-2 pt-1">
+
+      {/* Actions */}
+      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-indigo-900/20">
         <button
           onClick={() => handlePlanApproval('approve')}
-          className="bg-emerald-600 hover:bg-emerald-500 active:translate-y-0.5 text-white font-medium text-xs px-4 py-1.5 rounded-md flex items-center gap-1.5 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-400"
+          className="bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-medium text-xs px-4 py-1.5 rounded-lg shadow-sm hover:shadow-emerald-500/20 transition-all duration-150 flex items-center gap-1.5 cursor-pointer"
         >
-          <Check className="w-3.5 h-3.5" /> Approve & Execute Plan
+          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>Approve & Execute Plan</span>
         </button>
         <button
           onClick={() => handlePlanApproval('reject')}
-          className="bg-zinc-800 hover:bg-zinc-700 active:translate-y-0.5 border border-zinc-700 text-zinc-300 font-medium text-xs px-4 py-1.5 rounded-md flex items-center gap-1.5 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-zinc-400"
+          className="bg-zinc-800 hover:bg-zinc-700 active:scale-[0.98] border border-zinc-700/60 text-zinc-300 font-medium text-xs px-4 py-1.5 rounded-lg transition-all duration-150 flex items-center gap-1.5 cursor-pointer"
         >
-          <X className="w-3.5 h-3.5" /> Reject Plan
+          <X className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>Reject Plan</span>
         </button>
       </div>
     </div>

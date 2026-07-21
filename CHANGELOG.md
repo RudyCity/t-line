@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.588] - 2026-07-21
+
+### Changed
+- **SuperAgent Permission & Plan Approval Card Redesign (`SuperAgentInteractiveCards.tsx`)**:
+  - Redesigned both the `PermissionCard` and `PlanCard` components to adhere to Hallmark minimalist design guidelines.
+  - Implemented clean, themed dark containers (`bg-[#0d0a07]` for amber/permission warning and `bg-[#090d16]` for indigo/plan approval).
+  - Integrated modern pulsing active beacon states and proper responsive borders.
+  - Refined buttons with hover transformations, active click states, and clean borders.
+
 ## [1.3.587] - 2026-07-21
 
 ### Changed
