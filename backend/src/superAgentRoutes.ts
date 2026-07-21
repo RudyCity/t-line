@@ -288,4 +288,40 @@ router.delete('/sessions/:id', async (req, res) => {
   }
 });
 
+// Proxy: Get installed skills from SuperAgent for autocomplete
+router.get('/skills', async (req, res) => {
+  try {
+    const http = await import('http');
+    const options = {
+      hostname: '127.0.0.1',
+      port: 7888,
+      path: '/api/skills',
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    };
+    const proxyReq = http.request(options, (proxyRes) => {
+      let body = '';
+      proxyRes.on('data', (chunk) => { body += chunk; });
+      proxyRes.on('end', () => {
+        try {
+          res.json(JSON.parse(body));
+        } catch {
+          res.status(500).json({ error: 'Invalid response from SuperAgent' });
+        }
+      });
+    });
+    proxyReq.on('error', () => {
+      res.status(503).json({ skills: [], error: 'SuperAgent not running' });
+    });
+    proxyReq.setTimeout(2000, () => {
+      proxyReq.destroy();
+      res.status(503).json({ skills: [], error: 'SuperAgent timeout' });
+    });
+    proxyReq.end();
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to fetch skills: ' + e.message });
+  }
+});
+
 export default router;
+
