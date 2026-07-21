@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Cpu, Terminal, ListTodo, ChevronUp, ChevronDown, Wrench, CheckCircle2, PlayCircle, Activity } from 'lucide-react';
+import { Cpu, Terminal, ListTodo, ChevronUp, ChevronDown, Wrench, Activity } from 'lucide-react';
 import { SubAgentItem } from './SubAgentTerminalModal';
 
 export interface ChecklistTaskItem {
@@ -49,7 +49,7 @@ export function ActiveTasksBar({
     return !p.hasExited && s !== 'stopped' && s !== 'idle';
   });
 
-  const hasActiveTool = !!toolProgressMsg && toolProgressMsg.trim().length > 0;
+  const hasActiveTool = Boolean(toolProgressMsg && toolProgressMsg.trim().length > 0);
 
   const totalActiveCount = activeSubagents.length + activeChecklistTasks.length + activeProcs.length + (hasActiveTool ? 1 : 0);
 
@@ -83,10 +83,9 @@ export function ActiveTasksBar({
         </button>
       </div>
 
-      {/* Expanded Detailed View */}
+      {/* Main Body */}
       {isExpanded ? (
         <div className="p-2.5 space-y-2 max-h-52 overflow-y-auto scrollbar-thin">
-          {/* Ongoing Tool Execution */}
           {hasActiveTool && (
             <div className="flex items-center gap-2.5 p-2 bg-indigo-950/30 border border-indigo-800/40 rounded-lg text-xs font-mono text-indigo-200">
               <Wrench className="w-4 h-4 text-indigo-400 animate-spin shrink-0" />
@@ -97,7 +96,6 @@ export function ActiveTasksBar({
             </div>
           )}
 
-          {/* Active Subagents */}
           {activeSubagents.map(sa => (
             <div
               key={sa.id}
@@ -113,7 +111,7 @@ export function ActiveTasksBar({
                     <span className="text-xs font-bold font-mono text-zinc-100 group-hover:text-indigo-300 truncate">
                       {sa.role || sa.typeName || `SubAgent-${sa.id.slice(0, 6)}`}
                     </span>
-                    <span className="flex items-center gap-1 text-[9px] font-bold font-mono bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 px-1.5 py-0.2 rounded-full">
+                    <span className="flex items-center gap-1 text-[9px] font-bold font-mono bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 px-1.5 py-0.5 rounded-full">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                       SUBAGENT
                     </span>
@@ -133,7 +131,6 @@ export function ActiveTasksBar({
             </div>
           ))}
 
-          {/* Active Checklist Tasks (task.md) */}
           {activeChecklistTasks.map((t, idx) => (
             <div
               key={t.id || idx}
@@ -144,7 +141,7 @@ export function ActiveTasksBar({
                   <ListTodo className="w-3.5 h-3.5" />
                 </div>
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-[10px] font-bold font-mono bg-amber-950/80 text-amber-300 border border-amber-800/60 px-1.5 py-0.2 rounded-full shrink-0">
+                  <span className="text-[10px] font-bold font-mono bg-amber-950/80 text-amber-300 border border-amber-800/60 px-1.5 py-0.5 rounded-full shrink-0">
                     IN PROGRESS
                   </span>
                   <span className="text-zinc-200 font-mono text-xs truncate">
@@ -155,7 +152,6 @@ export function ActiveTasksBar({
             </div>
           ))}
 
-          {/* Active Background Processes */}
           {activeProcs.map(p => (
             <div
               key={p.pid}
@@ -166,7 +162,7 @@ export function ActiveTasksBar({
                   <Terminal className="w-3.5 h-3.5" />
                 </div>
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-[10px] font-bold font-mono bg-sky-950/80 text-sky-300 border border-sky-800/60 px-1.5 py-0.2 rounded-full shrink-0">
+                  <span className="text-[10px] font-bold font-mono bg-sky-950/80 text-sky-300 border border-sky-800/60 px-1.5 py-0.5 rounded-full shrink-0">
                     PID {p.pid}
                   </span>
                   <span className="text-zinc-300 font-mono text-xs truncate">
@@ -178,7 +174,6 @@ export function ActiveTasksBar({
           ))}
         </div>
       ) : (
-        /* Collapsed Horizontal Pills View */
         <div className="px-3 py-1.5 flex items-center gap-2 overflow-x-auto scrollbar-none">
           {activeSubagents.map(sa => (
             <button
@@ -207,7 +202,7 @@ export function ActiveTasksBar({
               <Wrench className="w-3 h-3 text-indigo-400 animate-spin" />
               <span className="truncate max-w-xs">{toolProgressMsg}</span>
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>
