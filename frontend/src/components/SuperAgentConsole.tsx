@@ -365,6 +365,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
       };
     });
     setAttachments(prev => [...prev, ...newAttachments]);
+    setInput('');
     e.target.value = '';
   };
 
@@ -486,7 +487,10 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
       }
     }
 
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      setInput('');
+      return;
+    }
 
     setInput('');
     setLoading(true);
