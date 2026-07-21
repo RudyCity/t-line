@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Paperclip, Square, Send, ChevronDown, X, Terminal, Cpu } from 'lucide-react';
+import { Paperclip, Square, Send, ChevronDown, X, Cpu } from 'lucide-react';
 
 interface SuperAgentInputContainerProps {
   input: string;
@@ -82,81 +82,6 @@ export function SuperAgentInputContainer({
 
       {/* Unified High-Craft CLI Input Card */}
       <div className="bg-[#0b0c10] border border-zinc-800/90 focus-within:border-indigo-500/70 rounded-xl shadow-2xl overflow-hidden transition-all duration-200">
-        {/* Terminal Header Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 bg-[#0e0f15] border-b border-zinc-800/70 text-[11px]">
-          <div className="flex items-center gap-2 min-w-0">
-            {/* Prompt Lead Symbol connected to timeline */}
-            <span className="flex items-center gap-1.5 font-bold text-indigo-400">
-              <Terminal className="w-3.5 h-3.5 text-indigo-400" />
-              <span>PROMPT</span>
-              <span className="text-zinc-600">❯</span>
-            </span>
-
-            {/* Preset Switcher Pill */}
-            {(presets[agentMode] || []).length > 0 && (
-              <div className="relative inline-block" ref={presetMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => setShowPresetMenu(!showPresetMenu)}
-                  disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
-                  className="flex items-center gap-1 bg-[#13141d] hover:bg-[#181a26] text-zinc-300 hover:text-white border border-zinc-800/90 hover:border-zinc-700 rounded-md px-2 py-0.5 text-[10px] font-mono transition cursor-pointer"
-                >
-                  <span className="text-zinc-500 font-normal">preset:</span>
-                  <span className="font-semibold text-indigo-300">
-                    {(presets[agentMode] || []).find(p => p.id === activePresetId[agentMode])?.name || activePresetId[agentMode] || 'default'}
-                  </span>
-                  <ChevronDown className="w-3 h-3 text-zinc-500 ml-0.5" />
-                </button>
-
-                {showPresetMenu && (
-                  <div className="sa-command-popover absolute bottom-full left-0 mb-1 w-52 py-1 z-50 overflow-hidden font-mono bg-[#12131b] border border-zinc-800 rounded-lg shadow-2xl">
-                    <div className="px-2.5 py-1 text-[9px] font-bold text-indigo-400 uppercase tracking-wider border-b border-zinc-800/80 mb-1">
-                      Select Preset
-                    </div>
-                    {(presets[agentMode] || []).map(p => {
-                      const isActive = p.id === activePresetId[agentMode];
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => {
-                            handlePresetChange(p.id);
-                            setShowPresetMenu(false);
-                          }}
-                          className={`w-full text-left px-2.5 py-1 text-[10px] transition flex flex-col ${
-                            isActive
-                              ? 'bg-indigo-950/60 text-indigo-300 font-bold border-l-2 border-indigo-500'
-                              : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200'
-                          }`}
-                        >
-                          <span>{p.name}</span>
-                          {p.description && p.description !== '/model' && (
-                            <span className="text-[9px] text-zinc-500 font-sans truncate mt-0.5">
-                              {p.description}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Model Badge */}
-            {modelName && (
-              <span className="flex items-center gap-1 text-[10px] text-zinc-400 font-mono border border-zinc-800/80 px-2 py-0.5 rounded-md bg-[#12131b]">
-                <Cpu className="w-2.5 h-2.5 text-zinc-500" />
-                <span>{modelName}</span>
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
-            <span>{input.length} chars</span>
-          </div>
-        </div>
-
         {/* Attachment Previews */}
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 px-3 pt-2 max-h-32 overflow-y-auto scrollbar-thin border-b border-zinc-800/60">
@@ -219,9 +144,9 @@ export function SuperAgentInputContainer({
           />
         </div>
 
-        {/* Control Footer Toolbar */}
-        <div className="flex items-center justify-between px-3 py-2 bg-[#090a0e]/60 border-t border-zinc-800/50">
-          <div className="flex items-center gap-2">
+        {/* Control Footer Toolbar with Presets & Model */}
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-[#090a0e]/60 border-t border-zinc-800/50">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -233,12 +158,74 @@ export function SuperAgentInputContainer({
               <span>[+] Attach</span>
             </button>
 
-            <span className="text-[10px] text-zinc-600 font-mono hidden sm:inline">
-              Shift+↵ newline • / commands
-            </span>
+            {/* Preset Switcher Pill */}
+            {(presets[agentMode] || []).length > 0 && (
+              <div className="relative inline-block" ref={presetMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowPresetMenu(!showPresetMenu)}
+                  disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
+                  className="flex items-center gap-1 bg-[#13141d] hover:bg-[#181a26] text-zinc-300 hover:text-white border border-zinc-800/90 hover:border-zinc-700 rounded-md px-2 py-1 text-[10px] font-mono transition cursor-pointer"
+                >
+                  <span className="text-zinc-500 font-normal">preset:</span>
+                  <span className="font-semibold text-indigo-300">
+                    {(presets[agentMode] || []).find(p => p.id === activePresetId[agentMode])?.name || activePresetId[agentMode] || 'default'}
+                  </span>
+                  <ChevronDown className="w-3 h-3 text-zinc-500 ml-0.5" />
+                </button>
+
+                {showPresetMenu && (
+                  <div className="sa-command-popover absolute bottom-full left-0 mb-1 w-52 py-1 z-50 overflow-hidden font-mono bg-[#12131b] border border-zinc-800 rounded-lg shadow-2xl">
+                    <div className="px-2.5 py-1 text-[9px] font-bold text-indigo-400 uppercase tracking-wider border-b border-zinc-800/80 mb-1">
+                      Select Preset
+                    </div>
+                    {(presets[agentMode] || []).map(p => {
+                      const isActive = p.id === activePresetId[agentMode];
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            handlePresetChange(p.id);
+                            setShowPresetMenu(false);
+                          }}
+                          className={`w-full text-left px-2.5 py-1 text-[10px] transition flex flex-col ${
+                            isActive
+                              ? 'bg-indigo-950/60 text-indigo-300 font-bold border-l-2 border-indigo-500'
+                              : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200'
+                          }`}
+                        >
+                          <span>{p.name}</span>
+                          {p.description && p.description !== '/model' && (
+                            <span className="text-[9px] text-zinc-500 font-sans truncate mt-0.5">
+                              {p.description}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Model Badge */}
+            {modelName && (
+              <span className="flex items-center gap-1 text-[10px] text-zinc-400 font-mono border border-zinc-800/80 px-2 py-1 rounded-md bg-[#12131b]">
+                <Cpu className="w-2.5 h-2.5 text-zinc-500" />
+                <span>{modelName}</span>
+              </span>
+            )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-zinc-500 font-mono hidden md:inline">
+              Shift+↵ newline • / commands
+            </span>
+            <span className="text-[10px] text-zinc-600 font-mono">
+              {input.length} chars
+            </span>
+
             {loading ? (
               <button
                 onClick={handleAbort}
