@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   RefreshCw, Trash2, Search, Download, Copy, Check, ChevronDown, ChevronRight,
+  ChevronLeft, ChevronsLeft, ChevronsRight,
   MessageSquare, ShieldCheck, Cpu, Bot, AlertTriangle, XCircle, FileText, Activity
 } from 'lucide-react';
 
@@ -16,17 +17,249 @@ interface SuperAgentAuditLogsProps {
 
 type FilterCategory = 'all' | 'prompts' | 'decisions' | 'agent' | 'system' | 'errors';
 
+// Helper logic for log categorization & metadata
+const isDecisionLog = (type: string) => 
+  ['permission_response', 'question_response', 'plan_response'].includes(type);
+const isErrorLog = (type: string) => 
+  ['system_error', 'chat_response_error'].includes(type);
+const isSystemLog = (type: string) => 
+  ['system', 'abort_request'].includes(type);
+const isAgentLog = (type: string) => 
+  ['agent_event', 'chat_response'].includes(type);
+const isPromptLog = (type: string) => 
+  type === 'prompt';
+
+const getLogMeta = (log: AuditLog) => {
+  if (isErrorLog(log.type)) {
+    return {
+      label: 'ERROR',
+      icon: XCircle,
+      badgeStyle: 'bg-rose-950/60 text-rose-300 border-rose-800/80',
+      borderStyle: 'border-l-rose-500',
+    };
+  }
+  if (isPromptLog(log.type)) {
+    return {
+      label: 'PROMPT',
+      icon: MessageSquare,
+      badgeStyle: 'bg-cyan-950/60 text-cyan-300 border-cyan-800/80',
+      borderStyle: 'border-l-cyan-500',
+    };
+  }
+  if (isDecisionLog(log.type)) {
+    return {
+      label: 'DECISION',
+      icon: ShieldCheck,
+      badgeStyle: 'bg-purple-950/60 text-purple-300 border-purple-800/80',
+      borderStyle: 'border-l-purple-500',
+    };
+  }
+  if (isAgentLog(log.type)) {
+    return {
+      label: 'AGENT',
+      icon: Bot,
+      badgeStyle: 'bg-amber-950/60 text-amber-300 border-amber-800/80',
+      borderStyle: 'border-l-amber-500',
+    };
+  }
+  return {
+    label: 'SYSTEM',
+    icon: Cpu,
+    badgeStyle: 'bg-slate-900 text-slate-300 border-slate-700/80',
+    borderStyle: 'border-l-slate-500',
+  };
+};
+
+const renderSummary = (log: AuditLog) => {
+  const d = log.data || {};
+  if (log.type === 'prompt') {
+    return (
+      <div className="text-zinc-200 font-sans text-xs flex items-center gap-1.5 truncate">
+        <span className="text-cyan-400 font-medium font-mono text-[11px]">Prompt:</span>
+        <span className="truncate">{d.text || 'Empty prompt'}</span>
+      </div>
+    );
+  }
+  if (log.type === 'permission_response') {
+    return (
+      <div className="text-zinc-200 font-sans text-xs flex items-center gap-2">
+        <span className="text-purple-400 font-mono font-medium text-[11px]">Permission:</span>
+        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold font-mono ${d.approval ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/80' : 'bg-rose-950 text-rose-300 border border-rose-800/80'}`}>
+          {d.approval ? 'APPROVED' : 'DENIED'}
+        </span>
+        <span className="text-zinc-400 text-[11px] truncate font-mono">ID: {d.permissionId || 'N/A'}</span>
+      </div>
+    );
+  }
+  if (log.type === 'question_response') {
+    return (
+      <div className="text-zinc-200 font-sans text-xs flex items-center gap-1.5 truncate">
+        <span className="text-purple-400 font-mono font-medium text-[11px]">User Answer:</span>
+        <span className="truncate">{d.answer || JSON.stringify(d)}</span>
+      </div>
+    );
+  }
+  if (log.type === 'plan_response') {
+    return (
+      <div className="text-zinc-200 font-sans text-xs flex items-center gap-2">
+        <span className="text-purple-400 font-mono font-medium text-[11px]">Plan Action:</span>
+        <span className="px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800/80 font-mono text-[10px] font-bold">{d.action}</span>
+      </div>
+    );
+  }
+  if (log.type === 'system_error' || log.type === 'chat_response_error') {
+    return (
+      <div className="text-rose-300 font-sans text-xs flex items-center gap-1.5 truncate font-medium">
+        <AlertTriangle className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
+        <span className="truncate">{d.message || d.error || 'Unknown system error'}</span>
+      </div>
+    );
+  }
+  if (log.type === 'system') {
+    return (
+      <div className="text-zinc-300 font-sans text-xs flex items-center gap-1.5 truncate">
+        <span>{d.message || 'System operation'}</span>
+        {d.workspacePath && <span className="text-zinc-500 text-[10px] font-mono">({d.workspacePath})</span>}
+      </div>
+    );
+  }
+  if (log.type === 'agent_event') {
+    const evtType = d.type || d.event || 'event';
+    return (
+      <div className="text-zinc-300 font-sans text-xs flex items-center gap-2 truncate">
+        <span className="text-amber-400 font-mono text-[11px]">{evtType}</span>
+        <span className="text-zinc-400 truncate text-[11px]">{d.name || d.tool || d.model || (typeof d === 'string' ? d : JSON.stringify(d))}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="text-zinc-300 font-mono text-xs truncate">
+      {typeof d === 'string' ? d : JSON.stringify(d)}
+    </div>
+  );
+};
+
+// Isolated, Memoized Item Component for Instant UI Clicks
+const AuditLogItem = React.memo(({ log }: { log: AuditLog }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [viewMode, setViewMode] = useState<'pretty' | 'json'>('pretty');
+  const [copied, setCopied] = useState(false);
+
+  const meta = getLogMeta(log);
+  const Icon = meta.icon;
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(JSON.stringify(log, null, 2));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const toggleExpand = () => setIsExpanded(prev => !prev);
+
+  return (
+    <div className={`bg-[#0d111a] rounded-xl border border-zinc-800/90 shadow-sm transition hover:border-zinc-700/80 border-l-4 ${meta.borderStyle} overflow-hidden`}>
+      {/* Header Row */}
+      <div 
+        onClick={toggleExpand}
+        className="p-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-zinc-900/40 transition select-none"
+      >
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <button className="text-zinc-500 hover:text-zinc-300 flex-shrink-0">
+            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </button>
+
+          <div className={`p-1.5 rounded-lg border flex-shrink-0 ${meta.badgeStyle}`}>
+            <Icon className="w-3.5 h-3.5" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            {renderSummary(log)}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-[10px] text-zinc-500 font-mono">
+            {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </span>
+          <span className={`px-2 py-0.5 rounded text-[9px] font-bold font-mono tracking-wider border ${meta.badgeStyle}`}>
+            {meta.label}
+          </span>
+        </div>
+      </div>
+
+      {/* Collapsible Details Body */}
+      {isExpanded && (
+        <div className="border-t border-zinc-800/80 bg-[#06080e] p-3 flex flex-col gap-2.5">
+          <div className="flex items-center justify-between text-[11px] text-zinc-400 font-mono pb-2 border-b border-zinc-800/60 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <span>Timestamp: {new Date(log.timestamp).toLocaleString()}</span>
+              <span className="text-zinc-600">•</span>
+              <span>Type: <strong className="text-zinc-200">{log.type}</strong></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex rounded-md bg-zinc-900 p-0.5 border border-zinc-800 text-[10px]">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setViewMode('pretty'); }}
+                  className={`px-2 py-0.5 rounded transition ${viewMode === 'pretty' ? 'bg-indigo-600 text-white font-bold' : 'text-zinc-400 hover:text-zinc-200'}`}
+                >
+                  Structured
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setViewMode('json'); }}
+                  className={`px-2 py-0.5 rounded transition ${viewMode === 'json' ? 'bg-indigo-600 text-white font-bold' : 'text-zinc-400 hover:text-zinc-200'}`}
+                >
+                  Raw JSON
+                </button>
+              </div>
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1 px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded text-[10px] transition font-medium cursor-pointer"
+              >
+                {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                {copied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+          </div>
+
+          {viewMode === 'json' ? (
+            <pre className="text-zinc-300 overflow-x-auto max-h-72 overflow-y-auto p-3 bg-[#030407] border border-zinc-800/80 rounded-lg text-[11px] font-mono leading-relaxed select-text">
+              {JSON.stringify(log.data, null, 2)}
+            </pre>
+          ) : (
+            <div className="bg-[#0b0e17] border border-zinc-800/80 rounded-lg p-3 text-xs font-mono space-y-2">
+              {typeof log.data === 'object' && log.data !== null ? (
+                Object.entries(log.data).map(([k, v]) => (
+                  <div key={k} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 border-b border-zinc-800/40 last:border-0 pb-1.5 last:pb-0">
+                    <span className="text-zinc-400 font-semibold text-[11px] min-w-[120px] shrink-0 text-cyan-400">{k}:</span>
+                    <span className="text-zinc-200 break-all text-[11px] select-text">
+                      {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-zinc-300">{String(log.data)}</div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+});
+
 export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps) {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [filterQuery, setFilterQuery] = useState('');
   const [category, setCategory] = useState<FilterCategory>('all');
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const [viewModeMap, setViewModeMap] = useState<Record<number, 'pretty' | 'json'>>({});
 
-  const fetchAuditLogs = async () => {
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  const fetchAuditLogs = useCallback(async () => {
     setLoadingAudit(true);
     try {
       const response = await fetch('/api/superagent/audit-logs', {
@@ -41,7 +274,7 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
     } finally {
       setLoadingAudit(false);
     }
-  };
+  }, [getAuthHeader]);
 
   const clearAuditLogs = async () => {
     if (!confirm('Are you sure you want to clear all audit logs? This action cannot be undone.')) return;
@@ -52,7 +285,7 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
       });
       if (response.ok) {
         setAuditLogs([]);
-        setExpandedIndex(null);
+        setCurrentPage(1);
       }
     } catch (e) {
       console.error('Failed to clear audit logs:', e);
@@ -69,15 +302,9 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
     downloadAnchor.remove();
   };
 
-  const handleCopyJson = (log: AuditLog, idx: number) => {
-    navigator.clipboard.writeText(JSON.stringify(log, null, 2));
-    setCopiedIndex(idx);
-    setTimeout(() => setCopiedIndex(null), 2000);
-  };
-
   useEffect(() => {
     fetchAuditLogs();
-  }, []);
+  }, [fetchAuditLogs]);
 
   useEffect(() => {
     if (!autoRefresh) return;
@@ -85,19 +312,12 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
       fetchAuditLogs();
     }, 3000);
     return () => clearInterval(timer);
-  }, [autoRefresh]);
+  }, [autoRefresh, fetchAuditLogs]);
 
-  // Categorize logs
-  const isDecisionLog = (type: string) => 
-    ['permission_response', 'question_response', 'plan_response'].includes(type);
-  const isErrorLog = (type: string) => 
-    ['system_error', 'chat_response_error'].includes(type);
-  const isSystemLog = (type: string) => 
-    ['system', 'abort_request'].includes(type);
-  const isAgentLog = (type: string) => 
-    ['agent_event', 'chat_response'].includes(type);
-  const isPromptLog = (type: string) => 
-    type === 'prompt';
+  // Reset page when category or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [category, filterQuery, pageSize]);
 
   const categoryCounts = useMemo(() => {
     let prompts = 0, decisions = 0, agent = 0, system = 0, errors = 0;
@@ -113,14 +333,12 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
 
   const filteredLogs = useMemo(() => {
     return auditLogs.filter(log => {
-      // Category filter
       if (category === 'prompts' && !isPromptLog(log.type)) return false;
       if (category === 'decisions' && !isDecisionLog(log.type)) return false;
       if (category === 'agent' && !isAgentLog(log.type)) return false;
       if (category === 'system' && !isSystemLog(log.type)) return false;
       if (category === 'errors' && !isErrorLog(log.type)) return false;
 
-      // Text query search
       if (!filterQuery.trim()) return true;
       const q = filterQuery.toLowerCase();
       return log.type.toLowerCase().includes(q) || 
@@ -129,120 +347,16 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
     }).reverse(); // Most recent first
   }, [auditLogs, category, filterQuery]);
 
-  const getLogMeta = (log: AuditLog) => {
-    if (isErrorLog(log.type)) {
-      return {
-        label: 'ERROR',
-        icon: XCircle,
-        badgeStyle: 'bg-rose-950/60 text-rose-300 border-rose-800/80',
-        borderStyle: 'border-l-rose-500',
-        accentBg: 'bg-rose-500/10'
-      };
-    }
-    if (isPromptLog(log.type)) {
-      return {
-        label: 'PROMPT',
-        icon: MessageSquare,
-        badgeStyle: 'bg-cyan-950/60 text-cyan-300 border-cyan-800/80',
-        borderStyle: 'border-l-cyan-500',
-        accentBg: 'bg-cyan-500/10'
-      };
-    }
-    if (isDecisionLog(log.type)) {
-      return {
-        label: 'DECISION',
-        icon: ShieldCheck,
-        badgeStyle: 'bg-purple-950/60 text-purple-300 border-purple-800/80',
-        borderStyle: 'border-l-purple-500',
-        accentBg: 'bg-purple-500/10'
-      };
-    }
-    if (isAgentLog(log.type)) {
-      return {
-        label: 'AGENT',
-        icon: Bot,
-        badgeStyle: 'bg-amber-950/60 text-amber-300 border-amber-800/80',
-        borderStyle: 'border-l-amber-500',
-        accentBg: 'bg-amber-500/10'
-      };
-    }
-    return {
-      label: 'SYSTEM',
-      icon: Cpu,
-      badgeStyle: 'bg-slate-900 text-slate-300 border-slate-700/80',
-      borderStyle: 'border-l-slate-500',
-      accentBg: 'bg-slate-500/10'
-    };
-  };
+  // Paginated Slice
+  const totalPages = useMemo(() => Math.ceil(filteredLogs.length / pageSize) || 1, [filteredLogs.length, pageSize]);
+  
+  const paginatedLogs = useMemo(() => {
+    const startIdx = (currentPage - 1) * pageSize;
+    return filteredLogs.slice(startIdx, startIdx + pageSize);
+  }, [filteredLogs, currentPage, pageSize]);
 
-  const renderSummary = (log: AuditLog) => {
-    const d = log.data || {};
-    if (log.type === 'prompt') {
-      return (
-        <div className="text-zinc-200 font-sans text-xs flex items-center gap-1.5 truncate">
-          <span className="text-cyan-400 font-medium font-mono text-[11px]">Prompt:</span>
-          <span className="truncate">{d.text || 'Empty prompt'}</span>
-        </div>
-      );
-    }
-    if (log.type === 'permission_response') {
-      return (
-        <div className="text-zinc-200 font-sans text-xs flex items-center gap-2">
-          <span className="text-purple-400 font-mono font-medium text-[11px]">Permission:</span>
-          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold font-mono ${d.approval ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/80' : 'bg-rose-950 text-rose-300 border border-rose-800/80'}`}>
-            {d.approval ? 'APPROVED' : 'DENIED'}
-          </span>
-          <span className="text-zinc-400 text-[11px] truncate font-mono">ID: {d.permissionId || 'N/A'}</span>
-        </div>
-      );
-    }
-    if (log.type === 'question_response') {
-      return (
-        <div className="text-zinc-200 font-sans text-xs flex items-center gap-1.5 truncate">
-          <span className="text-purple-400 font-mono font-medium text-[11px]">User Answer:</span>
-          <span className="truncate">{d.answer || JSON.stringify(d)}</span>
-        </div>
-      );
-    }
-    if (log.type === 'plan_response') {
-      return (
-        <div className="text-zinc-200 font-sans text-xs flex items-center gap-2">
-          <span className="text-purple-400 font-mono font-medium text-[11px]">Plan Action:</span>
-          <span className="px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800/80 font-mono text-[10px] font-bold">{d.action}</span>
-        </div>
-      );
-    }
-    if (log.type === 'system_error' || log.type === 'chat_response_error') {
-      return (
-        <div className="text-rose-300 font-sans text-xs flex items-center gap-1.5 truncate font-medium">
-          <AlertTriangle className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
-          <span className="truncate">{d.message || d.error || 'Unknown system error'}</span>
-        </div>
-      );
-    }
-    if (log.type === 'system') {
-      return (
-        <div className="text-zinc-300 font-sans text-xs flex items-center gap-1.5 truncate">
-          <span>{d.message || 'System operation'}</span>
-          {d.workspacePath && <span className="text-zinc-500 text-[10px] font-mono">({d.workspacePath})</span>}
-        </div>
-      );
-    }
-    if (log.type === 'agent_event') {
-      const evtType = d.type || d.event || 'event';
-      return (
-        <div className="text-zinc-300 font-sans text-xs flex items-center gap-2 truncate">
-          <span className="text-amber-400 font-mono text-[11px]">{evtType}</span>
-          <span className="text-zinc-400 truncate text-[11px]">{d.name || d.tool || d.model || (typeof d === 'string' ? d : JSON.stringify(d))}</span>
-        </div>
-      );
-    }
-    return (
-      <div className="text-zinc-300 font-mono text-xs truncate">
-        {typeof d === 'string' ? d : JSON.stringify(d)}
-      </div>
-    );
-  };
+  const startRecordNum = filteredLogs.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endRecordNum = Math.min(currentPage * pageSize, filteredLogs.length);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#07090e] h-full text-zinc-200 select-none">
@@ -372,108 +486,81 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
             </p>
           </div>
         ) : (
-          filteredLogs.map((log, index) => {
-            const meta = getLogMeta(log);
-            const Icon = meta.icon;
-            const isExpanded = expandedIndex === index;
-            const viewMode = viewModeMap[index] || 'pretty';
-
-            return (
-              <div 
-                key={index}
-                className={`bg-[#0d111a] rounded-xl border border-zinc-800/90 shadow-sm transition hover:border-zinc-700/80 border-l-4 ${meta.borderStyle} overflow-hidden`}
-              >
-                {/* Header Row */}
-                <div 
-                  onClick={() => setExpandedIndex(isExpanded ? null : index)}
-                  className="p-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-zinc-900/40 transition"
-                >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <button className="text-zinc-500 hover:text-zinc-300">
-                      {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                    </button>
-
-                    <div className={`p-1.5 rounded-lg border flex-shrink-0 ${meta.badgeStyle}`}>
-                      <Icon className="w-3.5 h-3.5" />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      {renderSummary(log)}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[10px] text-zinc-500 font-mono">
-                      {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold font-mono tracking-wider border ${meta.badgeStyle}`}>
-                      {meta.label}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Collapsible Details Body */}
-                {isExpanded && (
-                  <div className="border-t border-zinc-800/80 bg-[#06080e] p-3 flex flex-col gap-2.5">
-                    <div className="flex items-center justify-between text-[11px] text-zinc-400 font-mono pb-2 border-b border-zinc-800/60">
-                      <div className="flex items-center gap-2">
-                        <span>Timestamp: {new Date(log.timestamp).toLocaleString()}</span>
-                        <span className="text-zinc-600">•</span>
-                        <span>Type: <strong className="text-zinc-200">{log.type}</strong></span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex rounded-md bg-zinc-900 p-0.5 border border-zinc-800 text-[10px]">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setViewModeMap({ ...viewModeMap, [index]: 'pretty' }); }}
-                            className={`px-2 py-0.5 rounded transition ${viewMode === 'pretty' ? 'bg-indigo-600 text-white font-bold' : 'text-zinc-400 hover:text-zinc-200'}`}
-                          >
-                            Structured
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setViewModeMap({ ...viewModeMap, [index]: 'json' }); }}
-                            className={`px-2 py-0.5 rounded transition ${viewMode === 'json' ? 'bg-indigo-600 text-white font-bold' : 'text-zinc-400 hover:text-zinc-200'}`}
-                          >
-                            Raw JSON
-                          </button>
-                        </div>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleCopyJson(log, index); }}
-                          className="flex items-center gap-1 px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded text-[10px] transition font-medium cursor-pointer"
-                        >
-                          {copiedIndex === index ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                          {copiedIndex === index ? 'Copied' : 'Copy'}
-                        </button>
-                      </div>
-                    </div>
-
-                    {viewMode === 'json' ? (
-                      <pre className="text-zinc-300 overflow-x-auto max-h-72 overflow-y-auto p-3 bg-[#030407] border border-zinc-800/80 rounded-lg text-[11px] font-mono leading-relaxed select-text">
-                        {JSON.stringify(log.data, null, 2)}
-                      </pre>
-                    ) : (
-                      <div className="bg-[#0b0e17] border border-zinc-800/80 rounded-lg p-3 text-xs font-mono space-y-2">
-                        {typeof log.data === 'object' && log.data !== null ? (
-                          Object.entries(log.data).map(([k, v]) => (
-                            <div key={k} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 border-b border-zinc-800/40 last:border-0 pb-1.5 last:pb-0">
-                              <span className="text-zinc-400 font-semibold text-[11px] min-w-[120px] shrink-0 text-cyan-400">{k}:</span>
-                              <span className="text-zinc-200 break-all text-[11px] select-text">
-                                {typeof v === 'object' ? JSON.stringify(v) : String(v)}
-                              </span>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-zinc-300">{String(log.data)}</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })
+          paginatedLogs.map((log, index) => (
+            <AuditLogItem 
+              key={`${log.timestamp}-${log.type}-${index}`} 
+              log={log} 
+            />
+          ))
         )}
       </div>
+
+      {/* Pagination Footer */}
+      {filteredLogs.length > 0 && (
+        <div className="px-4 py-2.5 bg-[#0b0f19] border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-zinc-400 shadow-inner">
+          <div className="flex items-center gap-3">
+            <span>
+              Showing <strong className="text-zinc-200">{startRecordNum}</strong> - <strong className="text-zinc-200">{endRecordNum}</strong> of <strong className="text-zinc-200">{filteredLogs.length}</strong>
+            </span>
+            <div className="flex items-center gap-1.5 text-[11px]">
+              <span className="text-zinc-500">Rows:</span>
+              {[15, 25, 50, 100].map(sz => (
+                <button
+                  key={sz}
+                  onClick={() => setPageSize(sz)}
+                  className={`px-1.5 py-0.5 rounded transition cursor-pointer ${
+                    pageSize === sz ? 'bg-indigo-600 text-white font-bold' : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  {sz}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="p-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-30 border border-zinc-800 rounded text-zinc-300 transition cursor-pointer"
+              title="First Page"
+            >
+              <ChevronsLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="p-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-30 border border-zinc-800 rounded text-zinc-300 transition cursor-pointer"
+              title="Previous Page"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+
+            <span className="px-2 text-zinc-300 font-semibold text-xs">
+              Page {currentPage} of {totalPages}
+            </span>
+
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="p-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-30 border border-zinc-800 rounded text-zinc-300 transition cursor-pointer"
+              title="Next Page"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="p-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-30 border border-zinc-800 rounded text-zinc-300 transition cursor-pointer"
+              title="Last Page"
+            >
+              <ChevronsRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 

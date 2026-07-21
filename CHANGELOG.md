@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.596] - 2026-07-21
+
+### Performance & Optimization
+- **Pagination & Instant Item Click Optimization (`SuperAgentAuditLogs.tsx`)**:
+  - **Click Lag Optimization**: Extracted individual log cards into a memoized `AuditLogItem` (`React.memo`) with localized expansion and view state. Clicking to expand/collapse an item now re-renders **only** that specific item rather than triggering full DOM list reconciliation.
+  - **Pagination Control**: Added full pagination support (15, 25, 50, 100 rows per page) with page jump controls (`First`, `Prev`, `Next`, `Last`). Auto-resets page index on search query or category filter changes.
+
 ## [1.3.595] - 2026-07-21
 
 ### Features & Redesign
