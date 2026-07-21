@@ -79,7 +79,7 @@ export function ActiveTasksBar({
   if (items.length === 0) return null;
 
   return (
-    <div className="mb-1.5 font-mono text-[11px] leading-relaxed max-h-48 overflow-y-auto scrollbar-thin select-none pl-1 relative">
+    <div className="mb-1.5 font-mono text-[11px] leading-relaxed max-h-48 overflow-y-auto scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [::-webkit-scrollbar]:hidden select-none pl-1 relative">
       <div className="relative ml-2.5 pl-4 space-y-1 pt-0.5 pb-1">
         {/* Continuous Vector Timeline Line */}
         <div className="absolute left-[7px] top-[10px] bottom-[-6px] w-[1.5px] bg-indigo-500/50 rounded-full" />
