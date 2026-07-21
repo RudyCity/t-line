@@ -80,8 +80,8 @@ export function SuperAgentInputContainer({
         multiple
       />
 
-      {/* Unified High-Craft CLI Input Card */}
-      <div className="bg-[#0b0c10] border border-zinc-800/90 focus-within:border-indigo-500/70 rounded-xl shadow-2xl overflow-hidden transition-all duration-200">
+      {/* Unified High-Craft CLI Input Card (Frameless sides & bottom) */}
+      <div className="bg-[#0b0c10] border-t border-zinc-800/80 focus-within:border-t-indigo-500/70 rounded-t-xl transition-all duration-200">
         {/* Attachment Previews */}
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 px-3 pt-2 max-h-32 overflow-y-auto scrollbar-thin border-b border-zinc-800/60">
