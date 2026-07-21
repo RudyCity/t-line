@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { RefreshCw, Sparkles } from 'lucide-react';
+import { RefreshCw, Shield, Folder, Sparkles, Activity, Settings, History, Terminal } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { SuperAgentAuditLogs } from './SuperAgentAuditLogs';
@@ -9,7 +9,7 @@ import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSi
 import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
 import { ActiveTasksBar, ChecklistTaskItem } from './ActiveTasksBar';
 import { SuperAgentInputContainer } from './SuperAgentInputContainer';
-import { SuperAgentConsoleHeader } from './SuperAgentConsoleHeader';
+import { SuperAgentSettingsMenu } from './SuperAgentSettingsMenu';
 import { SuperAgentSettingsModal } from './SuperAgentSettingsModal';
 import { ProviderProfile } from './SuperAgentLoginManager';
 import { SuperAgentGroupedMessages } from './SuperAgentGroupedMessages';
@@ -755,34 +755,108 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
 
   return (
     <div className="flex flex-col h-full w-full bg-[#05070c] text-gray-200 overflow-hidden font-sans">
-      <SuperAgentConsoleHeader
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        showHistorySidebar={showHistorySidebar}
-        setShowHistorySidebar={setShowHistorySidebar}
-        showSidebar={showSidebar}
-        setShowSidebar={setShowSidebar}
-        showSettingsMenu={showSettingsMenu}
-        setShowSettingsMenu={setShowSettingsMenu}
-        workspaces={workspaces}
-        workspace={workspace}
-        setWorkspace={setWorkspace}
-        agentMode={agentMode}
-        setAgentMode={setAgentMode}
-        customArgs={customArgs}
-        setCustomArgs={setCustomArgs}
-        setConnectTrigger={setConnectTrigger}
-        presets={presets}
-        activePresetId={activePresetId}
-        onPresetChange={handlePresetChange}
-        activeProviderName={providers.find(p => p.id === activeProviderId)?.name || activeProviderId}
-        onOpenSettingsModal={handleOpenSettingsModal}
-        onRefreshMonitor={fetchMonitorData}
-        isLoadingMonitor={isLoadingMonitor}
-        onClearConsole={() => setMessages([{ role: 'system', text: 'Console output cleared.' }])}
-        onOpenSettings={onOpenSettings}
-        isConnected={Boolean(ws && ws.readyState === WebSocket.OPEN)}
-      />
+      <div className="flex flex-wrap items-center justify-between px-4 py-2 bg-[#090d16] border-b border-zinc-800/80 min-h-[48px] w-full shadow-md gap-3 select-none">
+        {/* Left Column: History Toggle & Active Workspace Pill */}
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            onClick={() => setShowHistorySidebar(!showHistorySidebar)}
+            className={`px-3 py-1.5 text-xs rounded-lg border transition flex items-center gap-1.5 cursor-pointer font-medium ${
+              showHistorySidebar 
+                ? 'bg-indigo-950/70 border-indigo-700/80 text-indigo-300 shadow-sm' 
+                : 'bg-[#121724] border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
+            }`}
+            title="Toggle Chat History Sidebar"
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>History</span>
+          </button>
+          {workspace && (
+            <span className="text-[11px] px-2.5 py-1 rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 font-mono flex items-center gap-1.5 max-w-[160px] sm:max-w-[220px] truncate shadow-xs">
+              <Folder className="w-3 h-3 text-indigo-400 flex-shrink-0" />
+              <span className="truncate">{workspace.split(/[/\\]/).pop()}</span>
+            </span>
+          )}
+        </div>
+
+        {/* Center Column: Segmented Tab Switcher */}
+        <div className="flex justify-center">
+          <div className="flex bg-[#121724] rounded-xl p-1 border border-zinc-800/90 shadow-inner gap-1">
+            <button
+              onClick={() => setActiveTab('console')}
+              className={`flex items-center gap-1.5 px-3.5 py-1 text-xs rounded-lg transition font-medium cursor-pointer ${
+                activeTab === 'console' 
+                  ? 'bg-indigo-600 text-white font-semibold shadow-md' 
+                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50'
+              }`}
+            >
+              <Terminal className="w-3.5 h-3.5" />
+              Console
+            </button>
+            <button
+              onClick={() => setActiveTab('audit')}
+              className={`flex items-center gap-1.5 px-3.5 py-1 text-xs rounded-lg transition font-medium cursor-pointer ${
+                activeTab === 'audit' 
+                  ? 'bg-indigo-600 text-white font-semibold shadow-md' 
+                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50'
+              }`}
+            >
+              <Shield className="w-3.5 h-3.5" />
+              Audit Trails
+            </button>
+          </div>
+        </div>
+
+        {/* Right Column: Monitor & Settings Actions */}
+        <div className="flex justify-end gap-2 items-center relative">
+          <button
+            onClick={() => setShowSidebar(!showSidebar)}
+            className={`px-3 py-1.5 text-xs rounded-lg border transition flex items-center gap-1.5 cursor-pointer font-medium ${
+              showSidebar 
+                ? 'bg-emerald-950/70 border-emerald-700/80 text-emerald-300 shadow-sm' 
+                : 'bg-[#121724] border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
+            }`}
+            title="Toggle Live Monitor Sidebar"
+          >
+            <Activity className={`w-3.5 h-3.5 ${showSidebar ? 'text-emerald-400' : ''}`} />
+            <span className="hidden sm:inline">Monitor</span>
+          </button>
+
+          <button
+            onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+            className={`px-3 py-1.5 text-xs rounded-lg border transition flex items-center gap-1.5 cursor-pointer font-medium ${
+              showSettingsMenu 
+                ? 'bg-indigo-950/70 border-indigo-700/80 text-indigo-300 shadow-sm' 
+                : 'bg-[#121724] border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
+            }`}
+            title="SuperAgent & App Settings"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Setting</span>
+          </button>
+
+
+
+          <SuperAgentSettingsMenu
+            isOpen={showSettingsMenu}
+            onClose={() => setShowSettingsMenu(false)}
+            workspaces={workspaces}
+            workspace={workspace}
+            setWorkspace={setWorkspace}
+            agentMode={agentMode}
+            setAgentMode={setAgentMode}
+            customArgs={customArgs}
+            setCustomArgs={setCustomArgs}
+            setConnectTrigger={setConnectTrigger}
+            showSidebar={showSidebar}
+            setShowSidebar={setShowSidebar}
+            onRefreshMonitor={fetchMonitorData}
+            isLoadingMonitor={isLoadingMonitor}
+            onClearConsole={() => setMessages([{ role: 'system', text: 'Console output cleared.' }])}
+            onOpenGlobalSettings={onOpenSettings}
+            onOpenSettingsModal={handleOpenSettingsModal}
+          />
+        </div>
+      </div>
 
       {activeTab === 'console' ? (
         <div ref={mainConsoleRef} className="flex-1 flex overflow-hidden relative w-full">

@@ -4,11 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ## [1.3.597] - 2026-07-21
 
-### Features & Redesign
-- **Redesign & Relayout SuperAgent Console Header (`SuperAgentConsoleHeader.tsx`)**:
-  - **Hallmark Design & Structure**: Redesigned header with multi-tiered command bar aesthetic, subtle dark palette (`#090d16`), active connection status indicator, and segmented tab pills.
-  - **Active Workspace Quick Switcher**: Added workspace dropdown right inside the header for instant switching between workspaces without opening deep menus.
-  - **Context Controls Toolbar**: Integrated quick controls bar for Model Presets, CLI Execution Mode toggle (`Single` | `Multi-Agent`), custom CLI Flags, and Provider credentials modal trigger.
+### UI/UX & Redesign
+- **Redesign & Relayout Top Console Header Bar (`SuperAgentConsole.tsx`)**:
+  - **Segmented Tab Control**: Transformed `Console` and `Audit Trails` into a modern, rounded segmented control with `Terminal` & `Shield` icons and glowing active indicator states.
+  - **Balanced 3-Column Layout**: Improved alignment and spacing across History toggle, Active Workspace pill badge, Tab Switcher, Live Monitor, and Setting buttons.
+  - **Hallmark Aesthetic Polish**: Applied sleek dark theme accents (`bg-[#090d16]`, subtle borders, micro-interactions, responsive flex wrapping).
 
 ## [1.3.596] - 2026-07-21
 
