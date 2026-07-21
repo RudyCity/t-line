@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.603] - 2026-07-21
+
+### UI/UX & Style Optimization
+- **Remove Shadow from User Chat Message Header & Card (`SuperAgentGroupedMessages.tsx`, `SuperAgentMessageItem.tsx`)**:
+  - **Flat Minimalist Styling**: Removed drop shadow effects (`shadow-lg` and `shadow-sm`) from user chat prompt cards and sticky turn headers in SuperAgent console for a cleaner, flat UI integration.
+
 ## [1.3.602] - 2026-07-21
 
 ### Theme & Light Mode Optimization

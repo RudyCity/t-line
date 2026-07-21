@@ -159,7 +159,7 @@ export const SuperAgentGroupedMessages: React.FC<SuperAgentGroupedMessagesProps>
           <div key={turn.id || turnIdx} className="relative space-y-2">
             {/* Sticky Floating User Prompt Header */}
             {turn.userMsg && (
-              <div className="sticky -top-4 z-30 -mx-4 -mt-4 mb-3 px-4 py-2.5 bg-[var(--bg-card)]/95 backdrop-blur-md shadow-lg transition-all border-none">
+              <div className="sticky -top-4 z-30 -mx-4 -mt-4 mb-3 px-4 py-2.5 bg-[var(--bg-card)]/95 backdrop-blur-md transition-all border-b border-[var(--border-color)]">
                 <div className="flex items-center gap-2.5">
                   <span className="text-[10px] uppercase font-bold font-mono text-[var(--color-primary)] shrink-0 select-none bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/60 px-1.5 py-0.2 rounded">
                     ❯ USER
