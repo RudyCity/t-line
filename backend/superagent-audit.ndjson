@@ -1051,3 +1051,30 @@
 {"timestamp":"2026-07-21T04:33:11.697Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}
 {"timestamp":"2026-07-21T04:33:11.697Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}
 {"timestamp":"2026-07-21T04:33:11.713Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}
+{"timestamp":"2026-07-21T04:36:54.607Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:36:55.639Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:36:55.639Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:36:55.639Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:36:55.640Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:36:55.640Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:36:55.652Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:37:02.214Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:37:02.220Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:37:02.220Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:37:02.220Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:37:02.221Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:37:03.577Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:37:03.578Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:37:03.583Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:37:03.584Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:37:03.584Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:37:06.302Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:37:06.306Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:37:06.307Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:37:06.311Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:37:06.311Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:37:21.353Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}
+{"timestamp":"2026-07-21T04:37:21.354Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}
+{"timestamp":"2026-07-21T04:37:21.537Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}
+{"timestamp":"2026-07-21T04:37:21.540Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}
+{"timestamp":"2026-07-21T04:37:21.646Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}

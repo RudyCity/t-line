@@ -23,9 +23,18 @@ interface SuperAgentConsoleProps {
   workspaces?: WorkspaceInfo[];
   onOpenSettings?: () => void;
   onLoadingChange?: (isLoading: boolean) => void;
+  onOpenFile?: (filePath: string, fileName?: string) => void;
+  onOpenDiffTab?: (commitHash: string, filePath: string, worktreePath?: string) => void;
 }
 
-export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpenSettings, onLoadingChange }: SuperAgentConsoleProps) {
+export function SuperAgentConsole({
+  activeWorkspacePath,
+  workspaces = [],
+  onOpenSettings,
+  onLoadingChange,
+  onOpenFile,
+  onOpenDiffTab
+}: SuperAgentConsoleProps) {
   // Workspace & Config state
   const [workspace, setWorkspace] = useState(() => activeWorkspacePath || localStorage.getItem('currentWorkspace') || '');
 
@@ -1037,6 +1046,8 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
                 onSelectSubAgent={(sa) => setSelectedSubagent(sa)}
                 onRefreshData={fetchMonitorData}
                 isLoadingData={isLoadingMonitor}
+                onOpenFile={onOpenFile}
+                onOpenDiffTab={onOpenDiffTab}
               />
             </div>
           )}

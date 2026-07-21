@@ -2341,6 +2341,11 @@ export default function App() {
                     workspaces={workspaces}
                     onOpenSettings={() => setShowSettingsModal(true)}
                     onLoadingChange={setIsAgentLoading}
+                    onOpenFile={(filePath, fileName) => openFileTab(filePath, fileName || filePath.split(/[/\\]/).pop() || filePath)}
+                    onOpenDiffTab={(commitHash, filePath, worktreePath) => {
+                      const wsId = panelWorkspace?.id || workspaces[0]?.id || '';
+                      openDiffTab(commitHash, filePath, wsId, worktreePath || panelWorkspace?.path);
+                    }}
                   />
                 </div>
               ))}

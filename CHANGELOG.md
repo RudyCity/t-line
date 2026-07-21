@@ -4,10 +4,11 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ## [1.3.599] - 2026-07-21
 
-### Agent Skills & Customization
-- **Feature Gap & Bottleneck Analysis Skill (`.agents/skills/feature-gap-bottleneck-analysis/SKILL.md`)**:
-  - Added new workspace skill designed for systematic scanning and detection of missing features, functional gaps, performance bottlenecks, technical debt, and security flaws across codebases.
-  - Implemented 4-phase audit workflow (Scope Discovery, 5-Vector Audit Matrix, Impact vs Effort Scoring, and Structured Action Plan with concrete before/after diff solutions).
+### Features & Integration
+- **Interactive Recent Changes Item Click with Diff Tab (`SuperAgentSidebar.tsx`, `SuperAgentConsole.tsx`, `App.tsx`)**:
+  - **Click-to-Open Diff**: Clicking any item row in the "Recent Changes" panel of SuperAgent's Live Monitor now opens the file's Diff Tab (`Δ filename (changes)`).
+  - **Quick File Open**: Added a hover action button (`ExternalLink`) to quickly open the raw file tab alongside the primary diff view action.
+  - **Prop Propagation**: Wire `onOpenFile` and `onOpenDiffTab` through `App.tsx` → `SuperAgentConsole` → `SuperAgentSidebar`.
 
 ## [1.3.598] - 2026-07-21
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GitBranch, Activity, Cpu, RefreshCw, ChevronDown, ChevronRight, Terminal as TerminalIcon, FileCode } from 'lucide-react';
+import { GitBranch, Activity, Cpu, RefreshCw, ChevronDown, ChevronRight, Terminal as TerminalIcon, FileCode, ExternalLink } from 'lucide-react';
 import { SubAgentItem } from './SubAgentTerminalModal';
 
 export interface RecentChangeItem {
@@ -24,15 +24,20 @@ interface SuperAgentSidebarProps {
   onSelectSubAgent: (subagent: SubAgentItem) => void;
   onRefreshData?: () => void;
   isLoadingData?: boolean;
+  onOpenFile?: (filePath: string, fileName?: string) => void;
+  onOpenDiffTab?: (commitHash: string, filePath: string, worktreePath?: string) => void;
 }
 
 export function SuperAgentSidebar({
+  workspacePath,
   subagents = [],
   procs = [],
   recentChanges = [],
   onSelectSubAgent,
   onRefreshData,
-  isLoadingData = false
+  isLoadingData = false,
+  onOpenFile,
+  onOpenDiffTab
 }: SuperAgentSidebarProps) {
   const [openSections, setOpenSections] = useState<{
     changes: boolean;
@@ -193,19 +198,49 @@ export function SuperAgentSidebar({
               {recentChanges.length > 0 ? (
                 recentChanges.map((item, idx) => {
                   const filename = item.path.split(/[/\\]/).pop() || item.path;
+                  const fullPath = workspacePath ? (item.path.startsWith('/') || item.path.includes(':') ? item.path : `${workspacePath}/${item.path}`) : item.path;
+
+                  const handleClickItem = (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    if (onOpenDiffTab) {
+                      onOpenDiffTab('WORKTREE', item.path, workspacePath);
+                    } else if (onOpenFile) {
+                      onOpenFile(fullPath, filename);
+                    }
+                  };
+
+                  const handleOpenFileOnly = (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    if (onOpenFile) {
+                      onOpenFile(fullPath, filename);
+                    }
+                  };
+
                   return (
                     <div
                       key={idx}
-                      className="p-1.5 bg-[var(--bg-sidebar)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)] rounded-md flex items-center justify-between text-xs"
-                      title={item.path}
+                      onClick={handleClickItem}
+                      className="group p-1.5 bg-[var(--bg-sidebar)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)] hover:border-[var(--color-primary)] rounded-md flex items-center justify-between text-xs transition cursor-pointer"
+                      title={`Click to open diff for ${item.path}`}
                     >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <FileCode className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
-                        <span className="font-mono text-[11px] text-[var(--text-main)] truncate">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <FileCode className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--color-primary)] shrink-0 transition-colors" />
+                        <span className="font-mono text-[11px] text-[var(--text-main)] group-hover:text-[var(--color-primary)] truncate transition-colors">
                           {filename}
                         </span>
                       </div>
-                      {getChangeBadge(item.type)}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {onOpenFile && (
+                          <button
+                            onClick={handleOpenFileOnly}
+                            className="opacity-0 group-hover:opacity-100 p-0.5 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded transition cursor-pointer"
+                            title="Open file tab"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        )}
+                        {getChangeBadge(item.type)}
+                      </div>
                     </div>
                   );
                 })
