@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.595] - 2026-07-21
+
+### Features & Redesign
+- **Redesign SuperAgent Audit Logs (`SuperAgentAuditLogs.tsx`)**:
+  - **Hallmark Aesthetics & Anti-AI-Slop**: Implemented sleek dark theme palette with distinct visual hierarchy, color-coded status borders, and category badges for Prompts, Decisions, Agent events, System operations, and Errors.
+  - **Pragmatic Minimalism**: Built clean, structured, and fast viewer without adding extra third-party dependencies.
+  - **Cognitive Scaleup Trace & Decision Intelligence**: Added categorized filter pills, real-time auto-polling toggle, full text search, human-readable log summaries, collapsible detail view with togglable Structured vs Raw JSON display, and 1-click JSON export/copy.
+
 ## [1.3.594] - 2026-07-21
 
 ### Fixed
