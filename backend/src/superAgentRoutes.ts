@@ -71,61 +71,61 @@ router.post('/history', async (req, res) => {
 });
 
 // Config & preset routes
-router.get('/config', (req, res) => {
+router.get('/config', async (_req, res) => {
   try {
-    const data = loadMergedPresets();
+    const data = await loadMergedPresets();
     res.json(data);
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to read preset config: ' + err.message });
   }
 });
 
-router.post('/config/active-preset', (req, res) => {
+router.post('/config/active-preset', async (req, res) => {
   const { mode, presetId } = req.body;
   if (!mode || !presetId) {
     return res.status(400).json({ error: 'Mode and presetId are required' });
   }
   try {
-    const result = setActivePreset(mode, presetId);
+    const result = await setActivePreset(mode, presetId);
     res.json({ success: true, ...result });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to update active preset: ' + err.message });
   }
 });
 
-router.post('/config/provider', (req, res) => {
+router.post('/config/provider', async (req, res) => {
   const { provider } = req.body;
   if (!provider || !provider.id || !provider.name || !provider.type) {
     return res.status(400).json({ error: 'Provider ID, name, and type are required' });
   }
   try {
-    const result = saveProviderProfile(provider);
+    const result = await saveProviderProfile(provider);
     res.json({ success: true, ...result });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to save provider profile: ' + err.message });
   }
 });
 
-router.delete('/config/provider/:id', (req, res) => {
+router.delete('/config/provider/:id', async (req, res) => {
   const providerId = req.params.id;
   if (!providerId) {
     return res.status(400).json({ error: 'Provider ID is required' });
   }
   try {
-    const result = deleteProviderProfile(providerId);
+    const result = await deleteProviderProfile(providerId);
     res.json({ success: true, ...result });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to delete provider profile: ' + err.message });
   }
 });
 
-router.post('/config/active-provider', (req, res) => {
+router.post('/config/active-provider', async (req, res) => {
   const { providerId } = req.body;
   if (!providerId) {
     return res.status(400).json({ error: 'Provider ID is required' });
   }
   try {
-    const result = setActiveProviderProfile(providerId);
+    const result = await setActiveProviderProfile(providerId);
     res.json({ success: true, ...result });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to update active provider: ' + err.message });
@@ -142,26 +142,26 @@ router.get('/config/provider-models', async (req, res) => {
   }
 });
 
-router.post('/config/preset', (req, res) => {
+router.post('/config/preset', async (req, res) => {
   const { mode, preset } = req.body;
   if (!mode || !preset || !preset.name) {
     return res.status(400).json({ error: 'Mode and preset name are required' });
   }
   try {
-    const data = saveCustomPreset(mode as 'single' | 'multi', preset);
+    const data = await saveCustomPreset(mode as 'single' | 'multi', preset);
     res.json({ success: true, ...data });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to save custom preset: ' + err.message });
   }
 });
 
-router.delete('/config/preset/:mode/:id', (req, res) => {
+router.delete('/config/preset/:mode/:id', async (req, res) => {
   const { mode, id } = req.params;
   if (!mode || !id) {
     return res.status(400).json({ error: 'Mode and preset ID are required' });
   }
   try {
-    const data = deleteCustomPreset(mode as 'single' | 'multi', id);
+    const data = await deleteCustomPreset(mode as 'single' | 'multi', id);
     res.json({ success: true, ...data });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to delete custom preset: ' + err.message });
