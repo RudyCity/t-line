@@ -266,7 +266,12 @@ export function SuperAgentConsole({
       method: 'DELETE',
       headers: getAuthHeader()
     });
-    if (res.ok) fetchConfig();
+    if (res.ok) {
+      await fetchConfig();
+    } else {
+      const err = await res.json().catch(() => ({ error: 'Failed to delete preset' }));
+      throw new Error(err.error || 'Failed to delete preset');
+    }
   };
 
   const handleOpenSettingsModal = (tab: 'login' | 'presets' | 'execution' | 'monitor' = 'login') => {

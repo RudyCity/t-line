@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.617] - 2026-07-21
+
+### Feature & Bug Fix — Fast Delete Preset & Toast Notifications with Name (`SuperAgentPresetManager.tsx` & `SuperAgentConsole.tsx`)
+- **Fast Responsive Deletion State**: Added `deletingPresetId` state and `handleDeletePreset` wrapper in [SuperAgentPresetManager.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentPresetManager.tsx#L230) that disables double-clicks and renders an inline spinning indicator (`Deleting...`) for immediate feedback.
+- **Global & Inline Toast Notifications**: Dispatches system `tline-toast` events and renders an in-manager alert banner showing the exact preset name and ID (e.g. `Model preset "opencode" (opencode) deleted successfully`).
+- **Error Propagation on Deletion**: Updated `handleDeleteCustomPreset` in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx#L264) to await `fetchConfig()` and throw errors if the server returns non-200 status, rendering clear error feedback toasts.
+
 ## [1.3.616] - 2026-07-21
 
 ### UI Fix — Select Dropdown Option High Contrast Styling & Empty Parenthetical Type (`SuperAgentPresetManager.tsx`)

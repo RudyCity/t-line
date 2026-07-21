@@ -76,6 +76,8 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
   const [providerModelsCache, setProviderModelsCache] = useState<Record<string, string[]>>({});
   const [loadingModelsMap, setLoadingModelsMap] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingPresetId, setDeletingPresetId] = useState<string | null>(null);
+  const [toastNotification, setToastNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const currentPresets = presets[selectedMode] || [];
   const currentActiveId = activePresetId[selectedMode] || '';
@@ -229,6 +231,27 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
     setSubagentOverrides(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleDeletePreset = async (preset: ModelPreset) => {
+    if (deletingPresetId) return;
+    setDeletingPresetId(preset.id);
+    try {
+      await onDeleteCustomPreset(selectedMode, preset.id);
+
+      const msg = `Model preset "${preset.name}" (${preset.id}) deleted successfully`;
+      window.dispatchEvent(new CustomEvent('tline-toast', { detail: { message: msg } }));
+      setToastNotification({ text: msg, type: 'success' });
+      setTimeout(() => setToastNotification(null), 4000);
+    } catch (e: any) {
+      console.error('Failed to delete preset:', e);
+      const errMsg = e.message || `Failed to delete preset "${preset.name}"`;
+      window.dispatchEvent(new CustomEvent('tline-toast', { detail: { message: errMsg } }));
+      setToastNotification({ text: errMsg, type: 'error' });
+      setTimeout(() => setToastNotification(null), 4000);
+    } finally {
+      setDeletingPresetId(null);
+    }
+  };
+
   const handleSavePreset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!presetName.trim()) return;
@@ -280,6 +303,12 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
         models: structuredModels
       });
       setShowAddModal(false);
+      
+      const savedMsg = `Model preset "${presetName.trim()}" saved successfully`;
+      window.dispatchEvent(new CustomEvent('tline-toast', { detail: { message: savedMsg } }));
+      setToastNotification({ text: savedMsg, type: 'success' });
+      setTimeout(() => setToastNotification(null), 4000);
+
       setPresetName('');
       setPresetDesc('');
       setSubagentOverrides([]);
@@ -350,6 +379,21 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
           </button>
         </div>
       </div>
+
+      {/* Toast Notification Banner */}
+      {toastNotification && (
+        <div className={`p-3 rounded-xl border flex items-center justify-between text-xs font-medium transition-all animate-in fade-in zoom-in-95 duration-150 ${
+          toastNotification.type === 'success'
+            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+            : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+        }`}>
+          <div className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-400" />
+            <span>{toastNotification.text}</span>
+          </div>
+          <button onClick={() => setToastNotification(null)} className="text-[11px] opacity-70 hover:opacity-100 cursor-pointer">✕</button>
+        </div>
+      )}
 
       {/* Search Bar */}
       <div className="flex items-center gap-2 bg-[var(--bg-sidebar)] p-2 rounded-xl border border-[var(--border-color)]">
@@ -480,11 +524,19 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                   <span>Preset ID: {p.id}</span>
                   {!['fast', 'standard', 'superagent-standard', 'superagent-master'].includes(p.id) && (
                     <button
-                      onClick={() => onDeleteCustomPreset(selectedMode, p.id)}
-                      className="text-rose-400 hover:text-rose-300 p-1 transition"
-                      title="Delete preset"
+                      disabled={deletingPresetId === p.id}
+                      onClick={() => handleDeletePreset(p)}
+                      className="text-rose-400 hover:text-rose-300 px-2 py-1 rounded-md hover:bg-rose-500/10 transition disabled:opacity-50 cursor-pointer flex items-center gap-1 font-medium"
+                      title={`Delete preset "${p.name}"`}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      {deletingPresetId === p.id ? (
+                        <>
+                          <RefreshCw className="w-3 h-3 animate-spin text-rose-400" />
+                          <span className="text-[10px] text-rose-400">Deleting...</span>
+                        </>
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
                     </button>
                   )}
                 </div>
