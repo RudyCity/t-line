@@ -1718,5 +1718,485 @@
       "type": "subagents_update",
       "subagents": []
     }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:40.739Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:40.752Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:40.765Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:40.777Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:40.792Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:40.807Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:40.819Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:40.832Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:40.845Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:40.861Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:43.126Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:43.137Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:43.147Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:43.160Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:43.177Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:43.196Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:43.208Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:43.222Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:43.236Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:43.252Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:50.552Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:50.564Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:50.580Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:50.595Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:50.605Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:50.616Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:50.627Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:50.638Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:50.650Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:50.662Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:54.281Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:54.298Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:54.312Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:54.325Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:54.342Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:54.366Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:54.378Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:54.389Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:54.402Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:54.415Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:59.034Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:59.048Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:59.060Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:59.077Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:59.093Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:59.105Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:59.118Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:59.134Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:59.145Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:53:59.160Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:54:01.338Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:54:01.351Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:54:01.368Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:54:01.382Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:54:01.395Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:54:01.405Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:54:01.415Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:54:01.430Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:54:01.440Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
+  },
+  {
+    "timestamp": "2026-07-21T03:54:01.453Z",
+    "type": "agent_event",
+    "data": {
+      "type": "subagents_update",
+      "subagents": []
+    }
   }
 ]

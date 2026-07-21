@@ -2,6 +2,20 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.590] - 2026-07-21
+
+### Performance
+- **Fix streaming latency: t-line sekarang secepat CLI (`superAgentBridge.ts`)**:
+  - **Root cause #1 (kritis)**: `logSuperAgentEvent()` sebelumnya melakukan `fs.readFileSync` seluruh file → `JSON.parse` semua entries → `JSON.stringify(null, 2)` → `fs.writeFileSync` seluruh file **pada setiap SSE event** (termasuk setiap token streaming). Ini memblokir Node.js event loop puluhan kali per detik.
+    - **Fix**: Ganti ke format **NDJSON append-only** (`fs.appendFileSync` 1 baris JSON per event). File read-write penuh hanya terjadi saat rotasi (>2MB). File audit berganti dari `superagent-audit.json` → `superagent-audit.ndjson`.
+    - `getAuditLogs()` diperbarui untuk membaca NDJSON, dengan fallback ke format lama `.json` untuk backward compatibility.
+  - **Root cause #2**: SSE relay melakukan `JSON.parse(dataStr)` lalu `JSON.stringify(event)` tanpa perlu — data sudah berupa JSON string valid dari SuperAgent.
+    - **Fix**: Kirim `dataStr` langsung ke WebSocket (`ws.send(dataStr)`). Parse hanya dilakukan untuk audit logging dan `LOG_STREAM_RESPONSE` mode.
+  - **Root cause #3**: High-frequency streaming events (`text_delta`, `thought`, `reasoning`, `tool_start`, `tool_progress`) tidak perlu masuk audit log — hanya noise.
+    - **Fix**: Skip `logSuperAgentEvent()` untuk event types tersebut via `AUDIT_SKIP_INNER_TYPES` set.
+  - **Root cause #4**: Nagle algorithm TCP buffering pada koneksi loopback `127.0.0.1:7888` menambah latensi ~200ms untuk setiap packet token kecil.
+    - **Fix**: Tambah `socket.setNoDelay(true)` setelah koneksi SSE berhasil.
+
 ## [1.3.589] - 2026-07-21
 
 ### Fixed

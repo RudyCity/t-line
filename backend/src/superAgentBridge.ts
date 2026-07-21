@@ -6,7 +6,16 @@ import { spawn, execSync } from 'child_process';
 import WebSocket from 'ws';
 import { getInputHistory, saveInputHistory } from './sessionManager';
 
-const AUDIT_FILE = path.join(process.cwd(), 'superagent-audit.json');
+const AUDIT_FILE = path.join(process.cwd(), 'superagent-audit.ndjson');
+const AUDIT_MAX_BYTES = 2 * 1024 * 1024; // 2MB rotate threshold
+
+/**
+ * High-frequency event types emitted on every streaming token — not useful in
+ * the audit trail and would add huge I/O overhead if logged individually.
+ */
+const AUDIT_SKIP_INNER_TYPES = new Set([
+  'text_delta', 'thought', 'reasoning', 'tool_start', 'tool_progress'
+]);
 
 /** Delegates to SuperAgent server-based input history in sessionManager */
 export async function getCliPromptHistory(workspace?: string): Promise<string[]> {
@@ -18,42 +27,56 @@ export async function saveCliPromptHistory(prompt: string, workspace?: string): 
   await saveInputHistory(workspace || process.cwd(), prompt);
 }
 
+/**
+ * Append a single NDJSON line to the audit log.
+ * This replaces the old read-entire-file → parse → push → stringify-all → write-entire-file
+ * pattern which was blocking the Node.js event loop on every streaming token.
+ * Rotates by truncating to the last 500 lines when file exceeds AUDIT_MAX_BYTES.
+ */
 export function logSuperAgentEvent(type: string, data: any) {
   try {
-    let logs: any[] = [];
-    if (fs.existsSync(AUDIT_FILE)) {
-      const content = fs.readFileSync(AUDIT_FILE, 'utf8');
-      logs = JSON.parse(content || '[]');
-    }
-    logs.push({
-      timestamp: new Date().toISOString(),
-      type,
-      data
-    });
-    if (logs.length > 1000) {
-      logs = logs.slice(logs.length - 1000);
-    }
-    fs.writeFileSync(AUDIT_FILE, JSON.stringify(logs, null, 2), 'utf8');
+    const entry = JSON.stringify({ timestamp: new Date().toISOString(), type, data }) + '\n';
+    fs.appendFileSync(AUDIT_FILE, entry, 'utf8');
+
+    // Rotate when file gets too large — read is rare (only on overflow)
+    try {
+      if (fs.statSync(AUDIT_FILE).size > AUDIT_MAX_BYTES) {
+        const lines = fs.readFileSync(AUDIT_FILE, 'utf8').split('\n').filter(Boolean);
+        fs.writeFileSync(AUDIT_FILE, lines.slice(-500).join('\n') + '\n', 'utf8');
+      }
+    } catch { /* statSync/readFileSync can fail if file is being written concurrently */ }
   } catch (e) {
     console.error('[WS-Agent] Audit log error:', e);
   }
 }
 
+/**
+ * Read audit logs from NDJSON format (one JSON object per line).
+ * Falls back gracefully if the file still has the old JSON-array format.
+ */
 export function getAuditLogs(): any[] {
-  if (fs.existsSync(AUDIT_FILE)) {
-    try {
-      const content = fs.readFileSync(AUDIT_FILE, 'utf8');
-      return JSON.parse(content || '[]');
-    } catch {
-      return [];
+  if (!fs.existsSync(AUDIT_FILE)) {
+    // Try old .json file for backward compatibility during migration
+    const oldFile = AUDIT_FILE.replace('.ndjson', '.json');
+    if (fs.existsSync(oldFile)) {
+      try { return JSON.parse(fs.readFileSync(oldFile, 'utf8') || '[]'); } catch { return []; }
     }
+    return [];
   }
-  return [];
+  try {
+    const content = fs.readFileSync(AUDIT_FILE, 'utf8');
+    // Parse NDJSON: each non-empty line is a JSON object
+    return content.split('\n').filter(Boolean).map(line => {
+      try { return JSON.parse(line); } catch { return null; }
+    }).filter(Boolean);
+  } catch {
+    return [];
+  }
 }
 
 export function clearAuditLogs() {
   try {
-    fs.writeFileSync(AUDIT_FILE, '[]', 'utf8');
+    fs.writeFileSync(AUDIT_FILE, '', 'utf8');
   } catch (e) {
     console.error('[WS-Agent] Failed to clear audit log:', e);
   }
@@ -576,6 +599,11 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
       ws.send(JSON.stringify({ type: 'status', text: `Connected to SuperAgent server (${path.basename(workspacePath)})` }));
       logSuperAgentEvent('system', { message: 'Connected to local SuperAgent SSE events', workspace: workspacePath });
 
+      // Disable Nagle algorithm on the SSE loopback socket.
+      // Without this, TCP buffers small token packets for ~200ms before flushing,
+      // adding visible latency to every streaming token sent over 127.0.0.1.
+      try { (res.socket as any)?.setNoDelay(true); } catch {}
+
       res.setEncoding('utf8');
       let buffer = '';
       res.on('data', (chunk) => {
@@ -583,34 +611,45 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const dataStr = line.slice(6).trim();
-              const event = JSON.parse(dataStr);
-              ws.send(JSON.stringify(event));
-              logSuperAgentEvent('agent_event', event);
+          if (!line.startsWith('data: ')) continue;
+          const dataStr = line.slice(6).trim();
+          if (!dataStr || dataStr === '[DONE]') continue;
 
-              if (process.env.LOG_STREAM_RESPONSE === 'true') {
-                if (event.type === 'agent_event' && event.event) {
-                  const sub = event.event;
-                  if (sub.type === 'text_delta') {
-                    process.stdout.write(sub.text || sub.delta || sub.content || '');
-                  } else if (sub.type === 'message') {
-                    const contentStr = typeof sub.content === 'string' ? sub.content : JSON.stringify(sub.content);
-                    console.log(`\n[WS-Agent][Stream Message] [${sub.role || 'assistant'}]: ${contentStr}`);
-                  } else if (sub.type === 'tool_call') {
-                    console.log(`\n[WS-Agent][Stream ToolCall] ${sub.name || sub.tool}: ${JSON.stringify(sub.input || sub.args || {})}`);
-                  } else if (sub.type === 'tool_result') {
-                    console.log(`\n[WS-Agent][Stream ToolResult] ${sub.name || sub.tool}: ${JSON.stringify(sub.result || sub.output || '')}`);
-                  } else {
-                    console.log(`\n[WS-Agent][Stream Event] [${sub.type}]`, JSON.stringify(sub));
-                  }
+          // Fast-path: forward raw JSON string directly to WebSocket client
+          // without parse → re-stringify round-trip to eliminate CPU overhead
+          // on every streaming token.
+          ws.send(dataStr);
+
+          // Audit log: parse lazily only for non-noise events to avoid
+          // disk I/O on every text_delta / thought / tool_start token.
+          try {
+            const event = JSON.parse(dataStr);
+            const innerType = event?.event?.type as string | undefined;
+            const isStreamingNoise = innerType !== undefined && AUDIT_SKIP_INNER_TYPES.has(innerType);
+            if (!isStreamingNoise) {
+              logSuperAgentEvent('agent_event', event);
+            }
+
+            if (process.env.LOG_STREAM_RESPONSE === 'true') {
+              if (event.type === 'agent_event' && event.event) {
+                const sub = event.event;
+                if (sub.type === 'text_delta') {
+                  process.stdout.write(sub.text || sub.delta || sub.content || '');
+                } else if (sub.type === 'message') {
+                  const contentStr = typeof sub.content === 'string' ? sub.content : JSON.stringify(sub.content);
+                  console.log(`\n[WS-Agent][Stream Message] [${sub.role || 'assistant'}]: ${contentStr}`);
+                } else if (sub.type === 'tool_call') {
+                  console.log(`\n[WS-Agent][Stream ToolCall] ${sub.name || sub.tool}: ${JSON.stringify(sub.input || sub.args || {})}`);
+                } else if (sub.type === 'tool_result') {
+                  console.log(`\n[WS-Agent][Stream ToolResult] ${sub.name || sub.tool}: ${JSON.stringify(sub.result || sub.output || '')}`);
                 } else {
-                  console.log(`\n[WS-Agent][Stream Event]`, JSON.stringify(event));
+                  console.log(`\n[WS-Agent][Stream Event] [${sub.type}]`, JSON.stringify(sub));
                 }
+              } else {
+                console.log(`\n[WS-Agent][Stream Event]`, JSON.stringify(event));
               }
-            } catch {}
-          }
+            }
+          } catch {}
         }
       });
 
