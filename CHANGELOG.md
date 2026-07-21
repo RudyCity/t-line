@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.625] - 2026-07-21
+
+### Bug Fix — Resolve Historical Session Titles Automatically (`historyDb.ts`, `sessionManager.ts`)
+- **Native SQL First User Message Resolution (SuperAgent)**:
+  - Updated `listSessionsFromDb` and `loadSessionFromDb` SQL queries in SuperAgent's [historyDb.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/storage/historyDb.ts) to auto-derive `firstChat` and `lastChat` from the `messages` table via `COALESCE(s.first_chat, (SELECT m.content FROM messages ...))` if `first_chat` is NULL or empty in SQLite `sessions` table.
+  - Updated `saveSessionToDb` to auto-calculate `firstChat` and `lastChat` directly from user messages array on save.
+- **Enhanced Title Extraction Fallback (t-line)**:
+  - Updated `getWorkspaceSessions` in [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) to fallback to `s.preview` (with `"User:"` prefix cleaning) whenever `s.firstChat` is absent.
+  - All historical chat items in the History sidebar now immediately display their actual title generated from user prompts on initial load without requiring a click.
+
 ## [1.3.624] - 2026-07-21
 
 ### Bug Fix — Synchronous Session Registration on Direct Input Prompt Send (`SuperAgentConsole.tsx`, `useSuperAgentSessions.ts`)

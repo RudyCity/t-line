@@ -131,16 +131,16 @@ export async function getWorkspaceSessions(
 
       for (const s of response.sessions) {
         let title = 'New Chat';
-        const first = (s.firstChat || '').trim();
-        const last = (s.lastChat || '').trim();
+        const rawFirst = (s.firstChat || s.preview || '').replace(/^(User|Assistant|System):\s*/i, '').trim();
+        const rawLast = (s.lastChat || '').replace(/^(User|Assistant|System):\s*/i, '').trim();
 
-        const cleanFirst = extractCleanUserText(first).split('\n')[0];
-        const cleanLast = extractCleanUserText(last).split('\n')[0];
+        const cleanFirst = extractCleanUserText(rawFirst).split('\n')[0];
+        const cleanLast = extractCleanUserText(rawLast).split('\n')[0];
 
-        if (cleanFirst && cleanLast) {
+        if (cleanFirst && cleanLast && cleanFirst !== cleanLast) {
           const firstShort = cleanFirst.length > 22 ? cleanFirst.slice(0, 22) + '...' : cleanFirst;
           const lastShort = cleanLast.length > 22 ? cleanLast.slice(0, 22) + '...' : cleanLast;
-          title = firstShort === lastShort ? firstShort : `${firstShort} ➔ ${lastShort}`;
+          title = `${firstShort} ➔ ${lastShort}`;
         } else if (cleanFirst) {
           title = cleanFirst.length > 30 ? cleanFirst.slice(0, 30) + '...' : cleanFirst;
         } else if (
