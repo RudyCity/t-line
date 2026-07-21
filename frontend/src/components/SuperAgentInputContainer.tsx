@@ -91,10 +91,10 @@ export function SuperAgentInputContainer({
         multiple
       />
 
-      {/* Hallmark Minimalist Slash Command Autocomplete Popover */}
+      {/* Hallmark Minimalist Slash Command Autocomplete Popover (Unified with input) */}
       {showSuggestions && suggestions.length > 0 && handleSelectSuggestion && (
-        <div className="absolute bottom-full left-0 right-0 mb-2 bg-[#0d0e14]/95 backdrop-blur-xl border border-zinc-800/90 rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto scrollbar-thin font-mono text-xs divide-y divide-zinc-800/60 select-none">
-          <div className="px-3 py-1.5 bg-[#12141e]/90 text-[10px] text-indigo-400 font-bold uppercase tracking-wider flex items-center justify-between sticky top-0 backdrop-blur-md border-b border-zinc-800/80">
+        <div className="absolute bottom-full left-0 right-0 mb-0 bg-[#0b0c10] border border-b-0 border-zinc-800/90 rounded-t-xl rounded-b-none shadow-2xl z-50 max-h-64 overflow-y-auto scrollbar-thin font-mono text-xs divide-y divide-zinc-800/60 select-none">
+          <div className="px-3 py-1.5 bg-[#0e0f15] text-[10px] text-indigo-400 font-bold uppercase tracking-wider flex items-center justify-between sticky top-0 backdrop-blur-md border-b border-zinc-800/80">
             <span className="flex items-center gap-1.5">
               <Terminal className="w-3.5 h-3.5 text-indigo-400" />
               <span>COMMANDS</span>
@@ -137,8 +137,10 @@ export function SuperAgentInputContainer({
         </div>
       )}
 
-      {/* Unified High-Craft CLI Input Card (Frameless sides & bottom) */}
-      <div className="bg-[#0b0c10] border-t border-zinc-800/80 focus-within:border-t-indigo-500/70 rounded-t-xl transition-all duration-200">
+      {/* Unified High-Craft CLI Input Card */}
+      <div className={`bg-[#0b0c10] border-t border-zinc-800/80 focus-within:border-t-indigo-500/70 transition-all duration-200 ${
+        showSuggestions && suggestions.length > 0 ? 'rounded-t-none' : 'rounded-t-xl'
+      }`}>
         {/* Attachment Previews */}
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 px-3 pt-2 max-h-32 overflow-y-auto scrollbar-thin border-b border-zinc-800/60">
