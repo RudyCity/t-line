@@ -590,22 +590,24 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
               ws.send(JSON.stringify(event));
               logSuperAgentEvent('agent_event', event);
 
-              if (event.type === 'agent_event' && event.event) {
-                const sub = event.event;
-                if (sub.type === 'text_delta') {
-                  process.stdout.write(sub.text || sub.delta || sub.content || '');
-                } else if (sub.type === 'message') {
-                  const contentStr = typeof sub.content === 'string' ? sub.content : JSON.stringify(sub.content);
-                  console.log(`\n[WS-Agent][Stream Message] [${sub.role || 'assistant'}]: ${contentStr}`);
-                } else if (sub.type === 'tool_call') {
-                  console.log(`\n[WS-Agent][Stream ToolCall] ${sub.name || sub.tool}: ${JSON.stringify(sub.input || sub.args || {})}`);
-                } else if (sub.type === 'tool_result') {
-                  console.log(`\n[WS-Agent][Stream ToolResult] ${sub.name || sub.tool}: ${JSON.stringify(sub.result || sub.output || '')}`);
+              if (process.env.LOG_STREAM_RESPONSE === 'true') {
+                if (event.type === 'agent_event' && event.event) {
+                  const sub = event.event;
+                  if (sub.type === 'text_delta') {
+                    process.stdout.write(sub.text || sub.delta || sub.content || '');
+                  } else if (sub.type === 'message') {
+                    const contentStr = typeof sub.content === 'string' ? sub.content : JSON.stringify(sub.content);
+                    console.log(`\n[WS-Agent][Stream Message] [${sub.role || 'assistant'}]: ${contentStr}`);
+                  } else if (sub.type === 'tool_call') {
+                    console.log(`\n[WS-Agent][Stream ToolCall] ${sub.name || sub.tool}: ${JSON.stringify(sub.input || sub.args || {})}`);
+                  } else if (sub.type === 'tool_result') {
+                    console.log(`\n[WS-Agent][Stream ToolResult] ${sub.name || sub.tool}: ${JSON.stringify(sub.result || sub.output || '')}`);
+                  } else {
+                    console.log(`\n[WS-Agent][Stream Event] [${sub.type}]`, JSON.stringify(sub));
+                  }
                 } else {
-                  console.log(`\n[WS-Agent][Stream Event] [${sub.type}]`, JSON.stringify(sub));
+                  console.log(`\n[WS-Agent][Stream Event]`, JSON.stringify(event));
                 }
-              } else {
-                console.log(`\n[WS-Agent][Stream Event]`, JSON.stringify(event));
               }
             } catch {}
           }

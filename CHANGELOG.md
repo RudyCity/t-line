@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.585] - 2026-07-21
+
+### Changed
+- **Default Terminal Stream Response Logging Disabled (`superAgentBridge.ts`)**:
+  - Wrapped terminal stream log output in a `process.env.LOG_STREAM_RESPONSE === 'true'` check.
+  - Stream response terminal logging is now disabled by default and can be enabled on-demand when `LOG_STREAM_RESPONSE=true`.
+
 ## [1.3.584] - 2026-07-21
 
 ### Added
