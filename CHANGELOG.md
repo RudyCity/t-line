@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.592] - 2026-07-21
+
+### UI/UX
+- **Remove left border from history chat items (`SuperAgentHistorySidebar.tsx`)**:
+  - Menghapus `border-l-2 border-indigo-500` / `border-l-2 border-transparent` pada item riwayat chat di sidebar kiri agar tampilan list item terlihat lebih bersih dan seamless.
+
 ## [1.3.591] - 2026-07-21
 
 ### Fixed

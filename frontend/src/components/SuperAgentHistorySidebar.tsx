@@ -183,8 +183,8 @@ export function SuperAgentHistorySidebar({
                 onClick={() => onSelectSession(session.id)}
                 className={`group relative flex items-center justify-between p-2 rounded-lg cursor-pointer transition ${
                   isActive
-                    ? 'bg-indigo-950/50 border-l-2 border-indigo-500 text-indigo-100 font-medium shadow-sm'
-                    : 'text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200 border-l-2 border-transparent'
+                    ? 'bg-indigo-950/50 text-indigo-100 font-medium shadow-sm'
+                    : 'text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200'
                 } ${isActive && isProcessing ? 'ring-1 ring-indigo-500/30 shadow-[0_0_8px_rgba(99,102,241,0.15)]' : ''}`}
               >
                 {isEditing ? (
