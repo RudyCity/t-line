@@ -581,28 +581,10 @@ registerFileChangeCallback((filename: string) => {
   handleFileChange(filename);
 });
 
-// Watch ~/.superagent-r directory recursively for real-time CLI chat history sync
-const superAgentRDir = path.join(os.homedir(), '.superagent-r');
-if (fs.existsSync(superAgentRDir)) {
-  try {
-    let debounceTimer: NodeJS.Timeout | null = null;
-    fs.watch(superAgentRDir, { recursive: true }, (event, filename) => {
-      if (filename && (filename.includes('history') || filename.includes('sessions'))) {
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          const payload = JSON.stringify({ id: 'global', type: 'superagent-sessions-changed', filename });
-          for (const ws of activeWebSockets) {
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(payload);
-            }
-          }
-        }, 300);
-      }
-    });
-  } catch (err) {
-    console.error('Failed to start watcher on ~/.superagent-r:', err);
-  }
-}
+// Session change events (superagent-sessions-changed) are broadcast by SuperAgent
+// via its SSE stream and relayed to all WebSocket clients by superAgentBridge.ts.
+// No direct fs.watch on ~/.superagent-r needed.
+
 
 wss.on('connection', (ws: WebSocket) => {
   activeWebSockets.add(ws);

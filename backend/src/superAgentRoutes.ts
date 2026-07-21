@@ -15,7 +15,16 @@ import {
   setActiveProviderProfile,
   getProviderModels,
   saveCustomPreset,
-  deleteCustomPreset
+  deleteCustomPreset,
+  updateSystemSettings,
+  getMcpServers,
+  saveMcpServer,
+  reloadMcpServers,
+  deleteMcpServer,
+  addTrustedDirectoryViaServer,
+  removeTrustedDirectory,
+  exportSessionContent,
+  importSessionData
 } from './presetUtils';
 import {
   getWorkspaceSessions,
@@ -261,6 +270,102 @@ router.delete('/sessions/:id', async (req, res) => {
 router.get('/skills', async (_req, res) => {
   const data = await proxyToSuperAgent('/api/skills', { skills: [], error: 'SuperAgent not running' }, undefined, 2000);
   res.json(data);
+});
+
+// System settings update
+router.post('/config/settings', async (req, res) => {
+  const { settings } = req.body;
+  if (!settings || typeof settings !== 'object') {
+    return res.status(400).json({ error: 'settings object is required' });
+  }
+  try {
+    const result = await updateSystemSettings(settings);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to update settings: ' + err.message });
+  }
+});
+
+// MCP Server CRUD
+router.get('/config/mcp', async (_req, res) => {
+  try {
+    res.json(await getMcpServers());
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to fetch MCP servers: ' + err.message });
+  }
+});
+
+router.post('/config/mcp/reload', async (_req, res) => {
+  try {
+    res.json({ success: true, ...(await reloadMcpServers()) });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to reload MCP servers: ' + err.message });
+  }
+});
+
+router.post('/config/mcp', async (req, res) => {
+  const { name, command, args, env } = req.body;
+  if (!name || !command) {
+    return res.status(400).json({ error: 'name and command are required' });
+  }
+  try {
+    res.json({ success: true, ...(await saveMcpServer({ name, command, args, env })) });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to save MCP server: ' + err.message });
+  }
+});
+
+router.delete('/config/mcp/:name', async (req, res) => {
+  try {
+    res.json({ success: true, ...(await deleteMcpServer(req.params.name)) });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to delete MCP server: ' + err.message });
+  }
+});
+
+// Session export / import
+router.get('/sessions/:id/export', async (req, res) => {
+  const format = (req.query.format as 'json' | 'markdown') || 'json';
+  try {
+    const content = await exportSessionContent(req.params.id, format);
+    res.setHeader('Content-Type', format === 'markdown' ? 'text/markdown; charset=utf-8' : 'application/json; charset=utf-8');
+    res.send(content);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to export session: ' + err.message });
+  }
+});
+
+router.post('/sessions/import', async (req, res) => {
+  const { session, messages } = req.body;
+  if (!session?.id) {
+    return res.status(400).json({ error: 'session.id is required' });
+  }
+  try {
+    res.json(await importSessionData(session, messages || []));
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to import session: ' + err.message });
+  }
+});
+
+// Trusted directory management
+router.post('/config/trusted-directory', async (req, res) => {
+  const { path: dirPath } = req.body;
+  if (!dirPath) return res.status(400).json({ error: 'path is required' });
+  try {
+    res.json({ success: true, ...(await addTrustedDirectoryViaServer(dirPath)) });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to add trusted directory: ' + err.message });
+  }
+});
+
+router.delete('/config/trusted-directory', async (req, res) => {
+  const { path: dirPath } = req.body;
+  if (!dirPath) return res.status(400).json({ error: 'path is required' });
+  try {
+    res.json({ success: true, ...(await removeTrustedDirectory(dirPath)) });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to remove trusted directory: ' + err.message });
+  }
 });
 
 export default router;

@@ -64,18 +64,32 @@ export interface MergedPresetsResult {
   activePresetId: { single: string; multi: string };
   providers: any[];
   activeProviderProfileId: string;
+  settings?: Record<string, any>;
+  trustedDirectories?: string[];
+}
+
+export interface McpServerEntry {
+  name: string;
+  command: string;
+  args: string[];
+  env?: Record<string, string>;
+  status?: string;
+  tools?: string[];
+  error?: string;
 }
 
 // ─── Config: Read ─────────────────────────────────────────────────────────
 
-/** Fetch the full config snapshot from SuperAgent (presets, providers, active ids). */
+/** Fetch the full config snapshot from SuperAgent (presets, providers, settings, active ids). */
 export async function loadMergedPresets(): Promise<MergedPresetsResult> {
   const data = await saRequest<any>('GET', '/api/config');
   return {
     presets: data.presets || { single: [], multi: [] },
     activePresetId: data.activePresetId || { single: '', multi: '' },
     providers: Array.isArray(data.providers) ? data.providers : [],
-    activeProviderProfileId: data.activeProviderProfileId || ''
+    activeProviderProfileId: data.activeProviderProfileId || '',
+    settings: data.settings || {},
+    trustedDirectories: Array.isArray(data.trustedDirectories) ? data.trustedDirectories : []
   };
 }
 
@@ -173,4 +187,86 @@ export async function getProviderModels(
     isRealFetched: !!data.isRealFetched,
     error: data.error
   };
+}
+
+// ─── Settings ──────────────────────────────────────────────────────────────
+
+/** Partial-update system settings (merge) via SuperAgent. */
+export async function updateSystemSettings(settings: Record<string, any>): Promise<{ success: boolean }> {
+  const data = await saRequest<any>('POST', '/api/config', { settings });
+  return { success: !!data.success };
+}
+
+// ─── MCP Server Config ─────────────────────────────────────────────────────
+
+/** List all configured MCP servers with live connection status. */
+export async function getMcpServers(): Promise<{ servers: McpServerEntry[] }> {
+  const data = await saRequest<any>('GET', '/api/config/mcp');
+  return { servers: Array.isArray(data.servers) ? data.servers : [] };
+}
+
+/** Add or update a MCP server entry. */
+export async function saveMcpServer(
+  server: { name: string; command: string; args?: string[]; env?: Record<string, string> }
+): Promise<{ mcpServers: Record<string, any> }> {
+  const data = await saRequest<any>('POST', '/api/config/mcp', server);
+  return { mcpServers: data.mcpServers || {} };
+}
+
+/** Disconnect and reinitialize all MCP servers from current config. */
+export async function reloadMcpServers(): Promise<{ servers: McpServerEntry[] }> {
+  const data = await saRequest<any>('POST', '/api/config/mcp/reload');
+  return { servers: Array.isArray(data.servers) ? data.servers : [] };
+}
+
+/** Remove a MCP server by name. */
+export async function deleteMcpServer(name: string): Promise<{ mcpServers: Record<string, any> }> {
+  const data = await saRequest<any>('DELETE', `/api/config/mcp/${encodeURIComponent(name)}`);
+  return { mcpServers: data.mcpServers || {} };
+}
+
+// ─── Trusted Directories ───────────────────────────────────────────────────
+
+/** Mark a directory as trusted in SuperAgent. */
+export async function addTrustedDirectoryViaServer(dirPath: string): Promise<{ trustedDirectories: string[] }> {
+  const data = await saRequest<any>('POST', '/api/config/trusted-directory', { path: dirPath });
+  return { trustedDirectories: Array.isArray(data.trustedDirectories) ? data.trustedDirectories : [] };
+}
+
+/** Remove trust from a directory. */
+export async function removeTrustedDirectory(dirPath: string): Promise<{ trustedDirectories: string[] }> {
+  const data = await saRequest<any>('DELETE', '/api/config/trusted-directory', { path: dirPath });
+  return { trustedDirectories: Array.isArray(data.trustedDirectories) ? data.trustedDirectories : [] };
+}
+
+// ─── Session Export / Import ───────────────────────────────────────────────
+
+/** Export a session as raw text (JSON string or Markdown). */
+export async function exportSessionContent(
+  sessionId: string,
+  format: 'json' | 'markdown' = 'json'
+): Promise<string> {
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), 8000);
+  try {
+    const url = `${SUPERAGENT_BASE}/api/history/session/${encodeURIComponent(sessionId)}/export?format=${format}`;
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) throw new Error(`SuperAgent HTTP ${res.status}`);
+    return await res.text();
+  } catch (err: any) {
+    if (err.name === 'AbortError') throw new Error('Session export timed out');
+    if (err.code === 'ECONNREFUSED' || err.cause?.code === 'ECONNREFUSED') throw new Error('SuperAgent server is not running');
+    throw err;
+  } finally {
+    clearTimeout(tid);
+  }
+}
+
+/** Import a session from a { session, messages } payload. */
+export async function importSessionData(
+  session: Record<string, any>,
+  messages: Record<string, any>[]
+): Promise<{ success: boolean; id: string }> {
+  const data = await saRequest<any>('POST', '/api/history/import', { session, messages });
+  return { success: !!data.success, id: data.id || '' };
 }
