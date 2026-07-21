@@ -253,7 +253,12 @@ export function SuperAgentConsole({
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
       body: JSON.stringify({ mode, preset })
     });
-    if (res.ok) fetchConfig();
+    if (res.ok) {
+      await fetchConfig();
+    } else {
+      const err = await res.json().catch(() => ({ error: 'Failed to save preset' }));
+      throw new Error(err.error || 'Failed to save preset');
+    }
   };
 
   const handleDeleteCustomPreset = async (mode: 'single' | 'multi', presetId: string) => {

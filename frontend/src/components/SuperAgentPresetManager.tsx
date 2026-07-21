@@ -57,6 +57,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
   // Custom Preset Form State
   const [presetName, setPresetName] = useState('');
   const [presetDesc, setPresetDesc] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
   
   // Main Agent Model Config
   const [mainProviderId, setMainProviderId] = useState('');
@@ -92,14 +93,6 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
   const totalPages = Math.max(1, Math.ceil(filteredPresets.length / ITEMS_PER_PAGE));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedPresets = filteredPresets.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE);
-
-  // Initialize form default provider IDs when providers load
-  useEffect(() => {
-    if (providers.length > 0) {
-      if (!mainProviderId) setMainProviderId(providers[0].id);
-      if (!subDefaultProviderId) setSubDefaultProviderId(providers[0].id);
-    }
-  }, [providers]);
 
   // Real Provider Models Fetch Status
   const [providerFetchStatus, setProviderFetchStatus] = useState<Record<string, { isRealFetched: boolean; error?: string; count?: number }>>({});
@@ -151,13 +144,8 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
 
   useEffect(() => {
     if (showAddModal && providers.length > 0) {
-      const defaultP = providers[0]?.id || '';
-      const mP = mainProviderId || defaultP;
-      const sP = subDefaultProviderId || defaultP;
-      if (!mainProviderId) setMainProviderId(mP);
-      if (!subDefaultProviderId) setSubDefaultProviderId(sP);
-      if (mP) fetchProviderModels(mP, true);
-      if (sP && sP !== mP) fetchProviderModels(sP, true);
+      if (mainProviderId) fetchProviderModels(mainProviderId, true);
+      if (subDefaultProviderId && subDefaultProviderId !== mainProviderId) fetchProviderModels(subDefaultProviderId, true);
     }
   }, [showAddModal, providers]);
 
@@ -165,6 +153,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
 
   const openAddPresetModal = () => {
     setEditingPresetId(null);
+    setSaveError(null);
     setPresetName('');
     setPresetDesc('');
     const defaultP = providers[0]?.id || '';
@@ -180,6 +169,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
 
   const openEditPresetModal = (p: ModelPreset) => {
     setEditingPresetId(p.id);
+    setSaveError(null);
     setPresetName(p.name);
     setPresetDesc(p.description || '');
 
@@ -190,14 +180,14 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
 
     const mProvider = typeof mainConfig === 'object' ? (mainConfig?.providerProfileId || '') : '';
     const mModelStr = typeof mainConfig === 'object' ? (mainConfig?.model || '') : (typeof mainConfig === 'string' ? mainConfig : '');
-    setMainProviderId(mProvider || providers[0]?.id || '');
-    setMainModel(mModelStr || 'gemini-2.5-flash');
+    setMainProviderId(mProvider);
+    setMainModel(mModelStr);
     setIsMainModelCustom(!!mModelStr && !['gemini-2.5-flash', 'gpt-4o', 'claude-3-5-sonnet-20241022'].includes(mModelStr));
 
     const sProvider = typeof subDefaultConfig === 'object' ? (subDefaultConfig?.providerProfileId || '') : '';
     const sModelStr = typeof subDefaultConfig === 'object' ? (subDefaultConfig?.model || '') : (typeof subDefaultConfig === 'string' ? subDefaultConfig : '');
-    setSubDefaultProviderId(sProvider || providers[0]?.id || '');
-    setSubDefaultModel(sModelStr || 'gemini-2.5-flash');
+    setSubDefaultProviderId(sProvider);
+    setSubDefaultModel(sModelStr);
     setIsSubDefaultModelCustom(!!sModelStr && !['gemini-2.5-flash', 'gpt-4o-mini', 'claude-3-5-haiku-20241022'].includes(sModelStr));
 
     const loadedOverrides: SubagentRoleOverride[] = [];
@@ -208,8 +198,8 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
         const rModelStr = typeof rc === 'object' ? (rc?.model || '') : (typeof rc === 'string' ? rc : '');
         loadedOverrides.push({
           role: roleName,
-          providerProfileId: rProvider || providers[0]?.id || '',
-          model: rModelStr || '',
+          providerProfileId: rProvider,
+          model: rModelStr,
           isCustomModel: true
         });
       }
@@ -244,10 +234,10 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
     if (!presetName.trim()) return;
 
     setIsSubmitting(true);
+    setSaveError(null);
     try {
-      const defaultP = providers[0]?.id || '';
-      const mProvider = mainProviderId || defaultP;
-      const sDefaultProvider = subDefaultProviderId || defaultP;
+      const mProvider = mainProviderId;
+      const sDefaultProvider = subDefaultProviderId;
 
       const structuredModels: any = {
         superagent: { providerProfileId: mProvider, model: mainModel.trim() },
@@ -255,14 +245,27 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
         subagentDetails: {}
       };
 
-      if (selectedMode === 'multi') {
+      if (selectedMode === 'single') {
+        if (mainModel.trim()) {
+          structuredModels.MODEL_SINGLE_SUPERAGENT = mProvider ? `${mProvider}@${mainModel.trim()}` : mainModel.trim();
+        }
+        if (subDefaultModel.trim()) {
+          structuredModels.MODEL_SINGLE_SUBAGENT = sDefaultProvider ? `${sDefaultProvider}@${subDefaultModel.trim()}` : subDefaultModel.trim();
+        }
+      } else {
         structuredModels.master = { providerProfileId: mProvider, model: mainModel.trim() };
+        if (mainModel.trim()) {
+          structuredModels.MODEL_MULTI_MASTER = mProvider ? `${mProvider}@${mainModel.trim()}` : mainModel.trim();
+        }
+        if (subDefaultModel.trim()) {
+          structuredModels.MODEL_MULTI_SUBAGENT = sDefaultProvider ? `${sDefaultProvider}@${subDefaultModel.trim()}` : subDefaultModel.trim();
+        }
       }
 
       subagentOverrides.forEach(ov => {
-        if (ov.role && ov.model.trim()) {
+        if (ov.role && (ov.model.trim() || ov.providerProfileId)) {
           structuredModels.subagentDetails[ov.role.toLowerCase()] = {
-            providerProfileId: ov.providerProfileId || defaultP,
+            providerProfileId: ov.providerProfileId || '',
             model: ov.model.trim()
           };
         }
@@ -281,24 +284,26 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
       setPresetDesc('');
       setSubagentOverrides([]);
       setEditingPresetId(null);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to save preset:', e);
+      setSaveError(e.message || 'Failed to save custom preset');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const getProviderName = (pId: string) => {
+    if (!pId) return 'Global Active Profile';
     const match = providers.find(p => p.id === pId);
-    return match ? match.name : (pId || 'Default');
+    return match ? match.name : pId;
   };
 
   const formatModelLabel = (modelConfig: any) => {
-    if (!modelConfig) return 'Default';
-    if (typeof modelConfig === 'string') return modelConfig;
-    const modelName = modelConfig.model || 'Default';
+    if (!modelConfig) return 'Not Set';
+    if (typeof modelConfig === 'string') return modelConfig || 'Not Set';
+    const modelName = modelConfig.model || 'Not Set';
     const providerName = getProviderName(modelConfig.providerProfileId);
-    return `${modelName} (${providerName})`;
+    return `${providerName} → ${modelName}`;
   };
 
   return (
@@ -541,6 +546,11 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
             </div>
 
             <form onSubmit={handleSavePreset} className="space-y-4 overflow-y-auto flex-1 pr-1">
+              {saveError && (
+                <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-2.5 rounded-lg text-xs font-medium">
+                  ⚠️ {saveError}
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[11px] font-medium text-[var(--text-muted)]">Preset Name</label>

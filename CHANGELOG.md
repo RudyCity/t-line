@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.615] - 2026-07-21
+
+### Bug Fix — SuperAgent Model Preset Modal "Not Set" Selection & Save Pipeline (`SuperAgentPresetManager.tsx` & `SuperAgentConsole.tsx`)
+- **Fix Auto-Overwriting Falsy "Not Set" State**: Removed aggressive `useEffect` hook in [SuperAgentPresetManager.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentPresetManager.tsx#L92) that forced empty `mainProviderId` and `subDefaultProviderId` back to `providers[0].id`.
+- **Preserve Empty Provider Profiles on Edit**: Fixed `openEditPresetModal` and `handleSavePreset` so that selecting `-- Not Set (Use Global Active Profile) --` or `-- Not Set (Use Default Model) --` is accurately preserved and saved without being forcibly overwritten with provider fallbacks.
+- **Error Propagation & Modal Error Alert**: Updated `handleSaveCustomPreset` in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx#L250) to check HTTP response status (`res.ok`) and throw errors so `SuperAgentPresetManager` can catch them, render a clear error alert banner, and keep the modal open instead of closing silently on failure.
+- **Enhanced Model Labels & Backward Compatibility**: Updated `formatModelLabel` to display `Global Active Profile → ModelName` for empty provider profile IDs, and added legacy string parameters (`MODEL_SINGLE_SUPERAGENT`, `MODEL_SINGLE_SUBAGENT`, etc.) into `structuredModels` for max SuperAgent CLI compatibility.
+
 ## [1.3.614] - 2026-07-21
 
 ### Feature — Model Preset Search & Pagination (`SuperAgentPresetManager.tsx` & `SuperAgentInputContainer.tsx`)
