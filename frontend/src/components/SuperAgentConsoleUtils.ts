@@ -316,6 +316,30 @@ export const handleAgentEventPayload = (
   } else if (payload.type === 'tool_progress') {
     if (isAbortedRef.current) return;
     setToolProgressMsg(payload.content || payload.message || '');
+  } else if (payload.type === 'subagents_update') {
+    if (Array.isArray(payload.subagents)) {
+      setSubagentList(prev => {
+        const merged = [...prev];
+        payload.subagents.forEach((sa: any) => {
+          const idx = merged.findIndex(m => m.id === sa.id);
+          if (idx >= 0) {
+            merged[idx] = { ...merged[idx], ...sa };
+          } else {
+            merged.push({
+              id: sa.id,
+              typeName: sa.typeName,
+              role: sa.role || sa.typeName,
+              status: sa.status || 'RUNNING',
+              result: sa.result,
+              logs: sa.logs || [],
+              prompt: sa.prompt,
+              completedAt: sa.completedAt
+            });
+          }
+        });
+        return merged;
+      });
+    }
   } else {
     // Unknown payload type — log warning to help debug missed events
     console.warn('[SuperAgent] Unhandled payload type:', payload.type, payload);

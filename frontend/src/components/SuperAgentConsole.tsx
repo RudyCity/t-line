@@ -1011,7 +1011,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
       {/* Subagent Live Terminal Output Modal */}
       {selectedSubagent && (
         <SubAgentTerminalModal
-          subagent={selectedSubagent}
+          subagent={subagentList.find(sa => sa.id === selectedSubagent.id) || selectedSubagent}
           onClose={() => setSelectedSubagent(null)}
         />
       )}
