@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.593] - 2026-07-21
+
+### Features
+- **Allow empty chat history list (`useSuperAgentSessions.ts`, `SuperAgentConsole.tsx`)**:
+  - Riwayat chat kini diperbolehkan kosong (0 items) tanpa otomatis memaksa membuat "New Chat" sintetis pada `loadWorkspaceSessions` maupun setelah semua chat dihapus.
+  - Sesi chat baru akan otomatis dibuat secara dinamis saat pengguna mengirimkan prompt atau menekan tombol `+` (New Chat).
+
 ## [1.3.592] - 2026-07-21
 
 ### UI/UX

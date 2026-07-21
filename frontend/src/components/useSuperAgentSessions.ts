@@ -59,10 +59,8 @@ export function loadWorkspaceSessions(wsPath: string): ChatSession[] {
     } catch (e) {
       console.error('Failed to parse superagent_sessions:', e);
     }
-  }
-
-  // Migration logic from single session storage key
-  if (loadedSessions.length === 0) {
+  } else {
+    // Migration logic from single session storage key ONLY if legacy messages exist
     const legacyKey = `superagent_messages_${wsKey}`;
     const legacySaved = localStorage.getItem(legacyKey);
     let legacyMsgs: SuperAgentMessage[] | null = null;
@@ -70,33 +68,29 @@ export function loadWorkspaceSessions(wsPath: string): ChatSession[] {
       try { legacyMsgs = JSON.parse(legacySaved); } catch (e) {}
     }
 
-    const initialSessionId = `session_${Date.now()}`;
-    let initialTitle = 'New Chat';
     if (Array.isArray(legacyMsgs) && legacyMsgs.length > 0) {
+      const initialSessionId = `session_${Date.now()}`;
+      let initialTitle = 'New Chat';
       const firstUserMsg = legacyMsgs.find(m => m.role === 'user');
       if (firstUserMsg && firstUserMsg.text) {
         const line = firstUserMsg.text.trim().split('\n')[0];
         initialTitle = line.length > 30 ? line.slice(0, 30) + '...' : line;
-      } else {
-        initialTitle = 'Chat 1';
       }
-    }
 
-    const defaultSession: ChatSession = {
-      id: initialSessionId,
-      title: initialTitle,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
+      const defaultSession: ChatSession = {
+        id: initialSessionId,
+        title: initialTitle,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
 
-    loadedSessions = [defaultSession];
-    try {
-      localStorage.setItem(sessionsKey, JSON.stringify(loadedSessions));
-      if (Array.isArray(legacyMsgs) && legacyMsgs.length > 0) {
+      loadedSessions = [defaultSession];
+      try {
+        localStorage.setItem(sessionsKey, JSON.stringify(loadedSessions));
         localStorage.setItem(`superagent_messages_${wsKey}_${initialSessionId}`, JSON.stringify(legacyMsgs));
         localStorage.removeItem(legacyKey);
-      }
-    } catch (e) {}
+      } catch (e) {}
+    }
   }
 
   return loadedSessions;
@@ -239,7 +233,7 @@ export function useSuperAgentSessions(workspace: string) {
   const [sessions, setSessions] = useState<ChatSession[]>(() => loadWorkspaceSessions(workspace));
   const [activeSessionId, setActiveSessionId] = useState<string>(() => {
     const loaded = loadWorkspaceSessions(workspace);
-    return loaded[0]?.id || `session_${Date.now()}`;
+    return loaded[0]?.id || '';
   });
 
   const [messages, setMessages] = useState<SuperAgentMessage[]>([]);
@@ -316,9 +310,11 @@ export function useSuperAgentSessions(workspace: string) {
     setHasMoreSessions(false);
     currentSessionOffsetRef.current = 0;
     
-    let localActiveId = localSessions[0]?.id || `session_${Date.now()}`;
+    let localActiveId = '';
     if (preserveActiveId && localSessions.some(s => s.id === preserveActiveId)) {
       localActiveId = preserveActiveId;
+    } else if (localSessions.length > 0) {
+      localActiveId = localSessions[0].id;
     }
     setActiveSessionId(localActiveId);
     
@@ -379,7 +375,20 @@ export function useSuperAgentSessions(workspace: string) {
 
       setSessions(prevSessions => {
         const targetIdx = prevSessions.findIndex(s => s.id === activeSessionId);
-        if (targetIdx < 0) return prevSessions;
+        if (targetIdx < 0) {
+          const newSession: ChatSession = {
+            id: activeSessionId,
+            title: newTitle,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          };
+          const updated = [newSession, ...prevSessions];
+          try {
+            localStorage.setItem(`superagent_sessions_${wsKey}`, JSON.stringify(updated));
+          } catch (e) {}
+          apiSaveSession(workspace, newSession, messages);
+          return updated;
+        }
 
         const currentSession = prevSessions[targetIdx];
 
@@ -573,7 +582,11 @@ export function useSuperAgentSessions(workspace: string) {
         setHasMore(false);
         loadedSessionIdRef.current = nextId;
       } else {
-        handleNewChat();
+        setActiveSessionId('');
+        setMessages([]);
+        setHasMore(false);
+        currentOffsetRef.current = 0;
+        loadedSessionIdRef.current = '';
       }
     }
   }, [handleNewChat, workspace]);

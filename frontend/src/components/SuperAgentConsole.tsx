@@ -532,10 +532,16 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
     }
     setHistoryIndex(-1);
 
+    let targetSessionId = activeSessionId;
+    if (!targetSessionId) {
+      targetSessionId = `session_${Date.now()}`;
+      handleSelectSessionWrapped(targetSessionId);
+    }
+
     ws.send(JSON.stringify({
       type: 'prompt',
       text: finalPrompt,
-      sessionId: activeSessionId
+      sessionId: targetSessionId
     }));
   };
 

@@ -377,3 +377,147 @@
 {"timestamp":"2026-07-21T04:13:32.588Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
 {"timestamp":"2026-07-21T04:13:32.593Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
 {"timestamp":"2026-07-21T04:13:32.593Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:13:52.513Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:13:52.514Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:13:52.514Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:13:52.515Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:13:56.528Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}
+{"timestamp":"2026-07-21T04:13:56.529Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:56.529Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}
+{"timestamp":"2026-07-21T04:13:56.530Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:56.530Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}
+{"timestamp":"2026-07-21T04:13:56.531Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:56.531Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}
+{"timestamp":"2026-07-21T04:13:56.532Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:56.532Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}
+{"timestamp":"2026-07-21T04:13:56.533Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:56.950Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:56.951Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:56.951Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:56.952Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:56.952Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:57.397Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:57.398Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:57.398Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:57.399Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:57.399Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:57.909Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:57.910Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:57.910Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:57.911Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:57.911Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:58.184Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:58.185Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:58.185Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:58.186Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:58.186Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:58.480Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:58.480Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:58.481Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:58.482Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:58.482Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:58.802Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:58.803Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:58.803Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:58.804Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:58.804Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:59.595Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:59.596Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:59.596Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:59.597Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:13:59.597Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:00.044Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:00.046Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:00.046Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:00.047Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:00.047Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:00.428Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:00.428Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:00.429Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:00.429Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:00.429Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:01.893Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:01.893Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:01.894Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:01.894Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:01.894Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:14.067Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:14.068Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:14.068Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:14.068Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:14:14.069Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:15:01.458Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:01.458Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:01.459Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:01.459Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:01.459Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:01.572Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:15:01.573Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:15:01.573Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:15:01.574Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:15:01.574Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:15:03.108Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:03.108Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:03.109Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:03.109Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:03.109Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:03.206Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:15:03.206Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:15:03.206Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:15:03.207Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:15:03.207Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:15:04.542Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:04.543Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:04.543Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:04.543Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:04.544Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:04.662Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:15:04.662Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:15:04.663Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:15:04.663Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:15:04.663Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T04:15:05.565Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:05.565Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:05.566Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:05.567Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:05.568Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:47.345Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}
+{"timestamp":"2026-07-21T04:15:47.346Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:47.346Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}
+{"timestamp":"2026-07-21T04:15:47.347Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:47.347Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}
+{"timestamp":"2026-07-21T04:15:47.347Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:47.348Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}
+{"timestamp":"2026-07-21T04:15:47.348Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:47.348Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\RamuToken"}}
+{"timestamp":"2026-07-21T04:15:47.349Z","type":"agent_event","data":{"type":"superagent-sessions-changed"}}
+{"timestamp":"2026-07-21T04:15:55.101Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:15:55.108Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:15:55.108Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:15:55.108Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:15:55.109Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:15:56.865Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:15:56.871Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:15:56.871Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:15:56.872Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:15:56.873Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:15:58.988Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:15:58.988Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:15:58.993Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:15:58.993Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:15:58.994Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:16:02.469Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:16:02.475Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:16:02.475Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:16:02.476Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:16:02.478Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:16:05.579Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:16:05.579Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:16:05.583Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:16:05.583Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:16:05.584Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:16:06.024Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:16:06.025Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:16:06.025Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:16:06.025Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T04:16:06.026Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
