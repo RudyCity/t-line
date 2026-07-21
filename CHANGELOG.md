@@ -2,7 +2,22 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
-## [1.3.619] - 2026-07-21
+## [1.3.620] - 2026-07-21
+
+### Refactor — Centralize All Config Access Through SuperAgent Server (`presetUtils.ts`, `superAgentRoutes.ts`, SuperAgent `serverRoutes.ts`)
+- **Zero Direct Filesystem Access**: Completely rewrote [presetUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/presetUtils.ts) (647 → ~170 lines). All `fs.readFileSync` / `fs.writeFileSync` calls to `~/.superagent-r/model-config.json` and `model-presets.json` removed. Every config operation now proxies through the SuperAgent HTTP server at port 7888 via a lean `saRequest()` helper.
+- **Expanded SuperAgent Config REST API**: Added 7 new endpoints to SuperAgent's [serverRoutes.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/serverRoutes.ts):
+  - `POST /api/config/active-preset` — set active preset for single/multi mode
+  - `POST /api/config/preset` — save/update a preset (writes both `model-config.json` and `model-presets.json` for CLI compat)
+  - `DELETE /api/config/preset/:mode/:id` — delete a preset from both stores
+  - `POST /api/config/provider` — save/update a provider profile
+  - `DELETE /api/config/provider/:id` — delete a provider profile
+  - `POST /api/config/active-provider` — switch active provider profile
+  - `GET /api/config/provider-models?providerId=` — live model fetch with provider-type-aware defaults (moved from t-line into SuperAgent)
+- **Async Route Handlers**: Updated all config route handlers in [superAgentRoutes.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentRoutes.ts) to `async/await` since `presetUtils` functions now return Promises.
+- **Error Resilience**: `saRequest()` produces clear user-facing errors for ECONNREFUSED, HTML error pages, non-JSON responses, and request timeouts.
+
+
 
 ### Bug Fix — SuperAgent & t-line Cross-System Preset Alignment & Storage Synchronization (`presetUtils.ts` & SuperAgent Server)
 - **Synchronized CLI Preset Storage**: Updated `saveCustomPreset` in [presetUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/presetUtils.ts#L234) to serialize and write canonical `MODEL_*` keys (`MODEL_MULTI_MASTER`, `MODEL_MULTI_SUPERAGENT`, `MODEL_MULTI_SUBAGENT`, `MODEL_SINGLE_SUPERAGENT`, etc.) with `providerId@model` string formats into `~/.superagent-r/model-presets.json` alongside `model-config.json`.
