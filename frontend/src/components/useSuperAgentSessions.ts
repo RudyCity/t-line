@@ -511,7 +511,7 @@ export function useSuperAgentSessions(workspace: string) {
     setHasMore(false);
   }, [workspace]);
 
-  const handleNewChat = useCallback(() => {
+  const handleNewChat = useCallback((): string => {
     const newId = `session_${Date.now()}`;
     const newSession: ChatSession = {
       id: newId,
@@ -541,6 +541,7 @@ export function useSuperAgentSessions(workspace: string) {
 
     // Register session on backend server
     apiSaveSession(workspace, newSession, []);
+    return newId;
   }, [workspace]);
 
   const handleDeleteSession = useCallback(async (id: string, e: React.MouseEvent) => {

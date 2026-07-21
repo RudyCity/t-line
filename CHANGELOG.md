@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.624] - 2026-07-21
+
+### Bug Fix — Synchronous Session Registration on Direct Input Prompt Send (`SuperAgentConsole.tsx`, `useSuperAgentSessions.ts`)
+- **Fix User Message Wipe & Async Abort Singularity**:
+  - Replaced legacy async `handleSelectSession` invocation inside `handleSend` in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx). Previously, sending a prompt without an un-indexed session ID triggered `handleSelectSession`, which called `apiGetSessionMessages` (clearing `messages` to `[]` and wiping out the user message) and sent a background `POST /api/init` that aborted the newly launched agent.
+  - Updated `handleNewChat` in [useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts) to return the new session ID string synchronously.
+  - Updated `handleSend` to invoke `handleNewChat()` synchronously *before* appending the user message when no valid active session is selected.
+  - User messages now display instantly, the new chat session is added to history, and the agent streams back responses without cancellation.
+
 ## [1.3.623] - 2026-07-21
 
 ### Keybinding & UI Update — Change Send Message Keybinding to Enter (`SuperAgentConsole.tsx`, `SuperAgentInputContainer.tsx`)

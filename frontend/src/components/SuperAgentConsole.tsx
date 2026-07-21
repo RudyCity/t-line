@@ -559,6 +559,11 @@ export function SuperAgentConsole({
     });
     setAttachments([]);
 
+    let targetSessionId = activeSessionId;
+    if (!targetSessionId || !sessions.some(s => s.id === targetSessionId)) {
+      targetSessionId = handleNewChat();
+    }
+
     setToolProgressMsg('');
     setMessages(prev => [...prev, { role: 'user', text: prompt || `Sent ${attachments.length} attachment(s)` }]);
 
@@ -569,12 +574,6 @@ export function SuperAgentConsole({
       localStorage.setItem('superagent_prompt_history', JSON.stringify(newHistory));
     }
     setHistoryIndex(-1);
-
-    let targetSessionId = activeSessionId;
-    if (!targetSessionId) {
-      targetSessionId = `session_${Date.now()}`;
-      handleSelectSession(targetSessionId);
-    }
 
     ws.send(JSON.stringify({
       type: 'prompt',
