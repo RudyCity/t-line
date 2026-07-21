@@ -2,6 +2,19 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.605] - 2026-07-21
+
+### Fix — Browser Tab URL Bar Not Updating on SPA Navigation
+- **Root cause**: YouTube (and all SPAs) use `history.pushState` / `history.replaceState` to change the URL when navigating between videos. The previous implementation only listened to `did-navigate-in-page` and a 500 ms polling loop — both missed or were delayed on SPA transitions.
+- **Electron/WebView2 (`BrowserTab.tsx`)**:
+  - Added `isMainFrame === false` guard to `handleElectronNavigate` so sub-frame navigations (YouTube's internal video-player iframes) no longer overwrite the URL bar with internal iframe URLs.
+  - Skip `blob:` and `about:blank` URLs that the media player emits internally.
+  - Added missing `onUpdateTabUrl` to `useEffect` dependency array — previously a stale closure meant the tab-name callback was never called with the latest version.
+- **Tauri (`browserUrlUtils.ts`)**:
+  - Patched `history.pushState` and `history.replaceState` inside the injected polling script so URL changes are emitted via `tline-url-changed` instantly on SPA navigation (no more 500 ms lag).
+  - Added `popstate` listener to catch browser Back/Forward navigation inside SPAs.
+  - Skip `blob:` and `about:blank` URLs from being emitted as URL-changed events.
+
 ## [1.3.604] - 2026-07-21
 
 ### Performance & Memory — Browser Tab RAM Fix

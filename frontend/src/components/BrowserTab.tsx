@@ -410,8 +410,14 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     };
 
     const handleElectronNavigate = (e: any) => {
+      // Only update the URL bar for main-frame navigations.
+      // Sub-frame navigations (e.g. YouTube's embedded iframes) would otherwise
+      // overwrite the URL bar with internal iframe URLs.
+      if (e.isMainFrame === false) return;
       if (e.url) {
         const cleanUrl = getCleanUrl(e.url);
+        // Skip blob: / about: URLs generated internally by YouTube player
+        if (cleanUrl.startsWith('blob:') || cleanUrl === 'about:blank') return;
         setUrlInput(cleanUrl);
         setActiveUrl(cleanUrl);
         onUpdateTabUrl?.(cleanUrl);
@@ -426,7 +432,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       webview.removeEventListener('did-navigate', handleElectronNavigate);
       webview.removeEventListener('did-navigate-in-page', handleElectronNavigate);
     };
-  }, [useElectronWebview, iframeKey, webviewEl, renderMode]);
+  }, [useElectronWebview, iframeKey, webviewEl, renderMode, onUpdateTabUrl]);
 
   // Listen to load and new-window events in Electron webview
   useEffect(() => {

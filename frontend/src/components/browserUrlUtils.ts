@@ -157,12 +157,15 @@ export const getPollWebviewJs = (tabId: string, zoomFactor: number): string => {
 
       if (window.__last_checked_url !== realUrl) {
         window.__last_checked_url = realUrl;
-        if (window.__TAURI__ && window.__TAURI__.event && typeof window.__TAURI__.event.emit === 'function') {
-          window.__TAURI__.event.emit('tline-webview-event', {
-            type: 'tline-url-changed',
-            payload: { url: realUrl },
-            tabId: "${tabId}"
-          });
+        // Skip blob: URLs used internally by media players (e.g. YouTube's video stream)
+        if (!realUrl.startsWith('blob:') && realUrl !== 'about:blank') {
+          if (window.__TAURI__ && window.__TAURI__.event && typeof window.__TAURI__.event.emit === 'function') {
+            window.__TAURI__.event.emit('tline-webview-event', {
+              type: 'tline-url-changed',
+              payload: { url: realUrl },
+              tabId: "${tabId}"
+            });
+          }
         }
       }
 
@@ -219,6 +222,38 @@ export const getPollWebviewJs = (tabId: string, zoomFactor: number): string => {
           }
           return _origOpen.call(window, url, target, features);
         };
+
+        // Intercept SPA history navigation (pushState / replaceState) for instant URL bar updates.
+        // Without this, navigating within YouTube, GitHub, etc. only shows the updated URL
+        // after the next 500 ms poll cycle.
+        function emitUrlChanged(url) {
+          try {
+            var newUrl = new URL(url, window.location.href).href;
+            if (newUrl.startsWith('blob:') || newUrl === 'about:blank') return;
+            if (window.__last_checked_url === newUrl) return;
+            window.__last_checked_url = newUrl;
+            if (window.__TAURI__ && window.__TAURI__.event && typeof window.__TAURI__.event.emit === 'function') {
+              window.__TAURI__.event.emit('tline-webview-event', {
+                type: 'tline-url-changed',
+                payload: { url: newUrl },
+                tabId: "${tabId}"
+              });
+            }
+          } catch (e) {}
+        }
+        var _origPush = history.pushState;
+        history.pushState = function(state, title, url) {
+          _origPush.apply(this, arguments);
+          if (url) emitUrlChanged(String(url));
+        };
+        var _origReplace = history.replaceState;
+        history.replaceState = function(state, title, url) {
+          _origReplace.apply(this, arguments);
+          if (url) emitUrlChanged(String(url));
+        };
+        window.addEventListener('popstate', function() {
+          emitUrlChanged(window.location.href);
+        });
       }
     } catch (e) {}
   `;
