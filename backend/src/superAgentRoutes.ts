@@ -214,7 +214,10 @@ router.get('/tasks', (req, res) => {
   };
 
   const url = `http://127.0.0.1:7888/api/tasks?workspace=${encodeURIComponent(workspace)}`;
-  const request = http.get(url, { timeout: 1500 }, (resp) => {
+  const request = http.get(url, {
+    headers: { 'x-workspace-path': workspace },
+    timeout: 1500
+  }, (resp) => {
     let body = '';
     resp.on('data', chunk => { body += chunk; });
     resp.on('end', () => {

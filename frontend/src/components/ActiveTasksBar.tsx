@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Cpu, Terminal, ListTodo, ChevronUp, ChevronDown, Wrench, Activity } from 'lucide-react';
+import { Cpu, Terminal, ListTodo, ChevronUp, ChevronDown, Wrench, Activity, Clock } from 'lucide-react';
 import { SubAgentItem } from './SubAgentTerminalModal';
 
 export interface ChecklistTaskItem {
   id?: string;
   text: string;
-  status: 'completed' | 'in_progress' | 'pending' | string;
+  status: 'completed' | 'in_progress' | 'pending' | 'x' | '/' | ' ' | string;
   depth?: number;
 }
 
@@ -39,9 +39,10 @@ export function ActiveTasksBar({
     return s === 'RUNNING' || s === 'ACTIVE';
   });
 
+  // Checklist tasks that are not yet finished (status is '/' for in_progress or ' '/'' for pending)
   const activeChecklistTasks = checklistTasks.filter(t => {
-    const s = (t.status || '').toLowerCase();
-    return s === 'in_progress' || s === 'running' || s === '[/]';
+    const s = (t.status || '').trim().toLowerCase();
+    return s !== 'x' && s !== 'completed';
   });
 
   const activeProcs = procs.filter(p => {
@@ -69,7 +70,7 @@ export function ActiveTasksBar({
             Active Tasks
           </span>
           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-indigo-950/80 text-indigo-300 border border-indigo-800/60">
-            {totalActiveCount} RUNNING
+            {totalActiveCount} ACTIVE
           </span>
         </div>
 
@@ -131,26 +132,37 @@ export function ActiveTasksBar({
             </div>
           ))}
 
-          {activeChecklistTasks.map((t, idx) => (
-            <div
-              key={t.id || idx}
-              className="flex items-center justify-between p-2 bg-[#17171f] border border-[#272733] rounded-lg text-xs"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="p-1.5 bg-amber-950/60 border border-amber-800/40 rounded-md text-amber-400 shrink-0">
-                  <ListTodo className="w-3.5 h-3.5" />
-                </div>
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-[10px] font-bold font-mono bg-amber-950/80 text-amber-300 border border-amber-800/60 px-1.5 py-0.5 rounded-full shrink-0">
-                    IN PROGRESS
-                  </span>
-                  <span className="text-zinc-200 font-mono text-xs truncate">
-                    {t.text}
-                  </span>
+          {activeChecklistTasks.map((t, idx) => {
+            const isInProgress = t.status === '/' || (t.status || '').toLowerCase() === 'in_progress';
+            return (
+              <div
+                key={t.id || idx}
+                className="flex items-center justify-between p-2 bg-[#17171f] border border-[#272733] rounded-lg text-xs"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={`p-1.5 border rounded-md shrink-0 ${
+                    isInProgress
+                      ? 'bg-amber-950/60 border-amber-800/40 text-amber-400'
+                      : 'bg-zinc-900 border-zinc-800 text-zinc-400'
+                  }`}>
+                    {isInProgress ? <ListTodo className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
+                  </div>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`text-[10px] font-bold font-mono border px-1.5 py-0.5 rounded-full shrink-0 ${
+                      isInProgress
+                        ? 'bg-amber-950/80 text-amber-300 border-amber-800/60'
+                        : 'bg-zinc-900 text-zinc-400 border-zinc-700/60'
+                    }`}>
+                      {isInProgress ? 'IN PROGRESS' : 'PENDING'}
+                    </span>
+                    <span className="text-zinc-200 font-mono text-xs truncate">
+                      {t.text}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {activeProcs.map(p => (
             <div
@@ -187,15 +199,22 @@ export function ActiveTasksBar({
             </button>
           ))}
 
-          {activeChecklistTasks.map((t, idx) => (
-            <div
-              key={t.id || idx}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-950/40 border border-amber-800/40 rounded-full text-xs font-mono text-amber-300 shrink-0"
-            >
-              <ListTodo className="w-3 h-3 text-amber-400" />
-              <span className="truncate max-w-xs">{t.text}</span>
-            </div>
-          ))}
+          {activeChecklistTasks.map((t, idx) => {
+            const isInProgress = t.status === '/' || (t.status || '').toLowerCase() === 'in_progress';
+            return (
+              <div
+                key={t.id || idx}
+                className={`flex items-center gap-1.5 px-2.5 py-1 border rounded-full text-xs font-mono shrink-0 ${
+                  isInProgress
+                    ? 'bg-amber-950/40 border-amber-800/40 text-amber-300'
+                    : 'bg-zinc-900/60 border-zinc-800 text-zinc-400'
+                }`}
+              >
+                <ListTodo className={`w-3 h-3 ${isInProgress ? 'text-amber-400' : 'text-zinc-500'}`} />
+                <span className="truncate max-w-xs">{t.text}</span>
+              </div>
+            );
+          })}
 
           {hasActiveTool && (
             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-950/40 border border-indigo-800/40 rounded-full text-xs font-mono text-indigo-300 shrink-0">

@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.586] - 2026-07-21
+
+### Improved
+- **SubAgent Terminal Modal Status Badge (`SubAgentTerminalModal.tsx`)**:
+  - Added explicit red badge styling for `ERROR` and `FAILED` subagent execution statuses in the SubAgent terminal modal header.
+
 ## [1.3.585] - 2026-07-21
 
 ### Changed
