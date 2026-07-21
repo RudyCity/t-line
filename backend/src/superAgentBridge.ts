@@ -34,20 +34,19 @@ export async function saveCliPromptHistory(prompt: string, workspace?: string): 
  * Rotates by truncating to the last 500 lines when file exceeds AUDIT_MAX_BYTES.
  */
 export function logSuperAgentEvent(type: string, data: any) {
-  try {
-    const entry = JSON.stringify({ timestamp: new Date().toISOString(), type, data }) + '\n';
-    fs.appendFileSync(AUDIT_FILE, entry, 'utf8');
-
-    // Rotate when file gets too large — read is rare (only on overflow)
-    try {
-      if (fs.statSync(AUDIT_FILE).size > AUDIT_MAX_BYTES) {
-        const lines = fs.readFileSync(AUDIT_FILE, 'utf8').split('\n').filter(Boolean);
-        fs.writeFileSync(AUDIT_FILE, lines.slice(-500).join('\n') + '\n', 'utf8');
+  const entry = JSON.stringify({ timestamp: new Date().toISOString(), type, data }) + '\n';
+  fs.appendFile(AUDIT_FILE, entry, 'utf8', (err) => {
+    if (err) return;
+    fs.stat(AUDIT_FILE, (statErr, stats) => {
+      if (!statErr && stats.size > AUDIT_MAX_BYTES) {
+        fs.readFile(AUDIT_FILE, 'utf8', (readErr, content) => {
+          if (readErr) return;
+          const lines = content.split('\n').filter(Boolean);
+          fs.writeFile(AUDIT_FILE, lines.slice(-500).join('\n') + '\n', 'utf8', () => {});
+        });
       }
-    } catch { /* statSync/readFileSync can fail if file is being written concurrently */ }
-  } catch (e) {
-    console.error('[WS-Agent] Audit log error:', e);
-  }
+    });
+  });
 }
 
 /**

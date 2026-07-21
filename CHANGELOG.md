@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.608] - 2026-07-21
+
+### Refactor — SuperAgent Monolith Decomposition & Audit Optimizations (`backend` & `superagent`)
+- **SuperAgent Server Decomposition (`server.ts` & `serverRoutes.ts`)**: Decomposed monolithic `server.ts` (1,643 lines) into `serverRoutes.ts` module, reducing `server.ts` file length to 568 lines in full compliance with project strict line limits (<1000 lines).
+- **Backend Route Consolidation (`superAgentRoutes.ts`)**: Added `proxyToSuperAgent` helper to collapse duplicated inline `http.get` logic for `/instances`, `/tasks`, and `/skills` endpoints, eliminating redundant dynamic imports.
+- **Async Audit Log I/O (`superAgentBridge.ts`)**: Converted synchronous file I/O operations (`appendFileSync` / `statSync` / `readFileSync`) in `logSuperAgentEvent` to non-blocking async callbacks to prevent Node.js event-loop delays under heavy streaming token loads.
+- **DRY Preset & Session Helpers (`sessionManager.ts` & `presetUtils.ts`)**: Unified string noise filter arrays (`NOISE_PREFIXES`, `NOISE_SUBSTRINGS`) and refactored model config path resolution helpers.
+
 ## [1.3.607] - 2026-07-21
 
 ### Fix — Native Webview Live URL Synchronization (`desktop-tauri` & `BrowserTab.tsx`)

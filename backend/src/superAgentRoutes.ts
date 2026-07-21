@@ -168,69 +168,38 @@ router.delete('/config/preset/:mode/:id', (req, res) => {
   }
 });
 
-// Running instances monitor
-router.get('/instances', (req, res) => {
-  const emptyResult = { subagents: [], superagents: [] };
-  let responded = false;
+// Helper for forwarding GET requests to SuperAgent HTTP Server (port 7888)
+function proxyToSuperAgent(pathName: string, fallback: any, workspace?: string, timeoutMs: number = 1500): Promise<any> {
+  return new Promise((resolve) => {
+    const url = workspace
+      ? `http://127.0.0.1:7888${pathName}?workspace=${encodeURIComponent(workspace)}`
+      : `http://127.0.0.1:7888${pathName}`;
+    const headers: Record<string, string> = {};
+    if (workspace) headers['x-workspace-path'] = workspace;
 
-  const safeSend = (data: any) => {
-    if (responded) return;
-    responded = true;
-    res.json(data);
-  };
-
-  const request = http.get('http://127.0.0.1:7888/api/instances', { timeout: 1500 }, (resp) => {
-    let body = '';
-    resp.on('data', chunk => { body += chunk; });
-    resp.on('end', () => {
-      try {
-        safeSend(JSON.parse(body));
-      } catch {
-        safeSend(emptyResult);
-      }
+    const req = http.get(url, { headers, timeout: timeoutMs }, (resp) => {
+      let body = '';
+      resp.on('data', chunk => { body += chunk; });
+      resp.on('end', () => {
+        try { resolve(JSON.parse(body)); } catch { resolve(fallback); }
+      });
     });
+    req.on('error', () => resolve(fallback));
+    req.on('timeout', () => { req.destroy(); resolve(fallback); });
   });
+}
 
-  request.on('error', () => {
-    safeSend(emptyResult);
-  });
-
-  request.on('timeout', () => {
-    request.destroy();
-    safeSend(emptyResult);
-  });
+// Running instances monitor
+router.get('/instances', async (_req, res) => {
+  const data = await proxyToSuperAgent('/api/instances', { subagents: [], superagents: [] });
+  res.json(data);
 });
 
 // Checklist tasks monitor (task.md)
-router.get('/tasks', (req, res) => {
+router.get('/tasks', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';
-  const emptyResult = { tasks: [], missing: true };
-  let responded = false;
-
-  const safeSend = (data: any) => {
-    if (responded) return;
-    responded = true;
-    res.json(data);
-  };
-
-  const url = `http://127.0.0.1:7888/api/tasks?workspace=${encodeURIComponent(workspace)}`;
-  const request = http.get(url, {
-    headers: { 'x-workspace-path': workspace },
-    timeout: 1500
-  }, (resp) => {
-    let body = '';
-    resp.on('data', chunk => { body += chunk; });
-    resp.on('end', () => {
-      try {
-        safeSend(JSON.parse(body));
-      } catch {
-        safeSend(emptyResult);
-      }
-    });
-  });
-
-  request.on('error', () => { safeSend(emptyResult); });
-  request.on('timeout', () => { request.destroy(); safeSend(emptyResult); });
+  const data = await proxyToSuperAgent('/api/tasks', { tasks: [], missing: true }, workspace);
+  res.json(data);
 });
 
 // Chat Session history sync endpoints (100% SuperAgent HTTP Server)
@@ -289,38 +258,9 @@ router.delete('/sessions/:id', async (req, res) => {
 });
 
 // Proxy: Get installed skills from SuperAgent for autocomplete
-router.get('/skills', async (req, res) => {
-  try {
-    const http = await import('http');
-    const options = {
-      hostname: '127.0.0.1',
-      port: 7888,
-      path: '/api/skills',
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    };
-    const proxyReq = http.request(options, (proxyRes) => {
-      let body = '';
-      proxyRes.on('data', (chunk) => { body += chunk; });
-      proxyRes.on('end', () => {
-        try {
-          res.json(JSON.parse(body));
-        } catch {
-          res.status(500).json({ error: 'Invalid response from SuperAgent' });
-        }
-      });
-    });
-    proxyReq.on('error', () => {
-      res.status(503).json({ skills: [], error: 'SuperAgent not running' });
-    });
-    proxyReq.setTimeout(2000, () => {
-      proxyReq.destroy();
-      res.status(503).json({ skills: [], error: 'SuperAgent timeout' });
-    });
-    proxyReq.end();
-  } catch (e: any) {
-    res.status(500).json({ error: 'Failed to fetch skills: ' + e.message });
-  }
+router.get('/skills', async (_req, res) => {
+  const data = await proxyToSuperAgent('/api/skills', { skills: [], error: 'SuperAgent not running' }, undefined, 2000);
+  res.json(data);
 });
 
 export default router;

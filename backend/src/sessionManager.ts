@@ -18,59 +18,28 @@ export interface SuperAgentMessage {
   callId?: string;
 }
 
-/** Graceful no-op for closing DB connection on process exit */
-export function closeSessionDb() {
-  // No direct DB connection kept open
-}
-
 // ─── Helpers ──────────────────────────────────────────────────
 
-function extractCleanUserText(content: string): string {
-  if (!content) return '';
-  let text = content.trim();
+export function closeSessionDb() {}
 
-  // If pure system noise header/context, return empty string
-  if (
-    text.startsWith('[RMemory') ||
-    text.startsWith('[TencentDB') ||
-    text.startsWith('[Emergency') ||
-    text.startsWith('[Context') ||
-    text.startsWith('[SYS]') ||
-    text.startsWith('[System') ||
-    text.startsWith('<relevant-memories>') ||
-    text.includes('Agent Memory Context') ||
-    text.includes('Emergency Summary') ||
-    text.includes('Context Restoration')
-  ) {
-    return '';
-  }
-
-  // Strip <USER_REQUEST> wrappers to keep the real prompt
-  if (text.includes('<USER_REQUEST>')) {
-    text = text.replace(/<\/?USER_REQUEST>/gi, '').trim();
-  }
-  if (text.includes('<user_request>')) {
-    text = text.replace(/<\/?user_request>/gi, '').trim();
-  }
-
-  return text;
-}
+const NOISE_PREFIXES = ['[RMemory', '[TencentDB', '[Emergency', '[Context', '[SYS]', '[System', '<relevant-memories>'];
+const NOISE_SUBSTRINGS = ['Agent Memory Context', 'Emergency Summary', 'Context Restoration'];
 
 function isNoiseMessageContent(content: string): boolean {
   if (!content) return true;
   const c = content.trim();
-  return (
-    c.startsWith('[RMemory') ||
-    c.startsWith('[TencentDB') ||
-    c.startsWith('[Emergency') ||
-    c.startsWith('[Context') ||
-    c.startsWith('[SYS]') ||
-    c.startsWith('[System') ||
-    c.startsWith('<relevant-memories>') ||
-    c.includes('Agent Memory Context') ||
-    c.includes('Emergency Summary') ||
-    c.includes('Context Restoration')
-  );
+  return NOISE_PREFIXES.some(p => c.startsWith(p)) || NOISE_SUBSTRINGS.some(s => c.includes(s));
+}
+
+function extractCleanUserText(content: string): string {
+  if (!content || isNoiseMessageContent(content)) return '';
+  let text = content.trim();
+
+  if (text.includes('<USER_REQUEST>') || text.includes('<user_request>')) {
+    text = text.replace(/<\/?user_request>/gi, '').trim();
+  }
+
+  return text;
 }
 
 function truncateResult(result: any): any {

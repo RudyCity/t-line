@@ -2,31 +2,26 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-export function getModelConfigPath(): string {
+function getConfigFilePath(filename: string): string {
   const override = process.env.SUPERAGENT_CONFIG_DIR?.trim();
-  if (override) {
-    return path.resolve(override, 'model-config.json');
-  }
-  return path.join(os.homedir(), '.superagent-r', 'model-config.json');
+  return override
+    ? path.resolve(override, filename)
+    : path.join(os.homedir(), '.superagent-r', filename);
+}
+
+export function getModelConfigPath(): string {
+  return getConfigFilePath('model-config.json');
 }
 
 export function getModelPresetsPath(): string {
-  const override = process.env.SUPERAGENT_CONFIG_DIR?.trim();
-  if (override) {
-    return path.resolve(override, 'model-presets.json');
-  }
-  return path.join(os.homedir(), '.superagent-r', 'model-presets.json');
+  return getConfigFilePath('model-presets.json');
 }
 
 function parseModelString(val: string): { providerProfileId: string; model: string } | undefined {
   if (!val || typeof val !== 'string') return undefined;
-  const atIdx = val.indexOf('@');
-  if (atIdx > 0) {
-    return { providerProfileId: val.substring(0, atIdx), model: val.substring(atIdx + 1) };
-  }
-  const colonIdx = val.indexOf(':');
-  if (colonIdx > 0 && !val.substring(0, colonIdx).includes('/')) {
-    return { providerProfileId: val.substring(0, colonIdx), model: val.substring(colonIdx + 1) };
+  const match = val.match(/^([^@:]+)[@:](.+)$/);
+  if (match && !match[1].includes('/')) {
+    return { providerProfileId: match[1], model: match[2] };
   }
   return { providerProfileId: '', model: val };
 }
