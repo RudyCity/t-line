@@ -340,9 +340,14 @@ export class TerminalManager {
       activeSess.outputBufferChunks.push(data);
       activeSess.outputBufferLength += data.length;
 
-      // Merge chunks occasionally to prevent array size explosion and slow shifts
+      // Merge chunks occasionally to prevent array size explosion and trim to max bytes
       if (activeSess.outputBufferChunks.length > 100) {
-        activeSess.outputBufferChunks = [activeSess.outputBufferChunks.join('')];
+        let merged = activeSess.outputBufferChunks.join('');
+        if (merged.length > OUTPUT_BUFFER_MAX_BYTES) {
+          merged = merged.slice(-OUTPUT_BUFFER_MAX_BYTES);
+        }
+        activeSess.outputBufferChunks = [merged];
+        activeSess.outputBufferLength = merged.length;
       }
 
       // Trim buffer chunks if they exceed maximum bytes

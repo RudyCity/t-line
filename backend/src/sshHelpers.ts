@@ -65,7 +65,7 @@ export function runSSHCommand(host: string, port: number, user: string, cmd: str
   });
 }
 
-function escapeShellArg(arg: string): string {
+export function escapeShellArg(arg: string): string {
   return `'${arg.replace(/'/g, "'\\''")}'`;
 }
 

@@ -69,19 +69,18 @@ export async function getCheckpoints(repoPath: string): Promise<Checkpoint[]> {
 
     const existingHashes = new Set(existingRefs.map(line => line.split(' ')[0]));
 
-    const validCheckpoints: Checkpoint[] = [];
-    for (const cp of checkpoints) {
-      if (existingHashes.has(cp.commitHash)) {
-        validCheckpoints.push(cp);
-      } else {
+    const validFlags = await Promise.all(
+      checkpoints.map(async (cp) => {
+        if (existingHashes.has(cp.commitHash)) return cp;
         try {
           await runGit(['cat-file', '-t', cp.commitHash], normalizedRepo);
-          validCheckpoints.push(cp);
-        } catch (e) {
-          // Commit is missing; ignore/auto-prune
+          return cp;
+        } catch {
+          return null;
         }
-      }
-    }
+      })
+    );
+    const validCheckpoints: Checkpoint[] = validFlags.filter((cp): cp is Checkpoint => cp !== null);
 
     // If some invalid checkpoints were removed, update the metadata file
     if (validCheckpoints.length !== checkpoints.length) {

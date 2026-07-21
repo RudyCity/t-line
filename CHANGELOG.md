@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.601] - 2026-07-21
+
+### Performance & Concurrency Optimizations (Round 2)
+- **SSH Command Parameter Escaping (`gitManager.ts`, `sshHelpers.ts`)**:
+  - Exported and integrated `escapeShellArg` with single-quote escaping into `runGit` SSH execution paths to ensure safety and parameter precision on remote paths with spaces or quotes.
+- **Parallel Checkpoint Hash Verification (`checkpointManager.ts`)**:
+  - Replaced sequential `for...of` loop with `Promise.all` concurrency when verifying unvalidated checkpoint commit hashes.
+- **Terminal Buffer Consolidation & Sliding Window (`terminalManager.ts`)**:
+  - Optimized buffer consolidation to slice merged output strings to `OUTPUT_BUFFER_MAX_BYTES` (256 KB) without dropping retained buffer context.
+
 ## [1.3.600] - 2026-07-21
 
 ### Performance & Security Optimizations (Quick Wins)

@@ -9,7 +9,8 @@ import {
   remoteExists,
   remoteRead,
   remoteWrite,
-  normalizeSSHPath
+  normalizeSSHPath,
+  escapeShellArg
 } from './sshHelpers';
 
 export function normalizePath(p: string): string {
@@ -64,8 +65,8 @@ export function runGit(args: string[], cwd: string): Promise<string> {
   if (cwd && cwd.startsWith('ssh://')) {
     const ssh = parseSSHPath(cwd);
     if (!ssh) throw new Error('Invalid SSH Path');
-    const gitArgs = args.map(a => `"${a.replace(/"/g, '\\"')}"`).join(' ');
-    const cmd = `cd "${ssh.remotePath.replace(/"/g, '\\"')}" && git ${gitArgs}`;
+    const gitArgs = args.map(a => escapeShellArg(a)).join(' ');
+    const cmd = `cd ${escapeShellArg(ssh.remotePath)} && git ${gitArgs}`;
     return runSSHCommand(ssh.host, ssh.port, ssh.user, cmd);
   }
   return new Promise((resolve, reject) => {
