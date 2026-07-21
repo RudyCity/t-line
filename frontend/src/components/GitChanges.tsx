@@ -14,6 +14,7 @@ import {
   GitBranch
 } from 'lucide-react';
 import { GitHistory } from './GitHistory';
+import { ConfirmModal } from './Modals';
 
 export interface GitFileStatus {
   path: string;
@@ -102,6 +103,15 @@ export function GitChanges({
   const [commitMessage, setCommitMessage] = useState('');
   const [stageAllBeforeCommit, setStageAllBeforeCommit] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    variant?: 'primary' | 'secondary' | 'danger';
+    onConfirm: () => void;
+  } | null>(null);
 
   const handleFileSelect = useCallback(async (file: GitFileStatus) => {
     // Priority 1: open working-tree diff in a tab for modified/renamed files
@@ -210,15 +220,7 @@ export function GitChanges({
     }
   }, [workspaceId, token, worktreePath, onRefresh, selectedFile]);
 
-  const handleDiscard = useCallback(async (filePath?: string, all = false) => {
-    const confirmMessage = all 
-      ? 'Are you sure you want to discard ALL changes? This action cannot be undone.'
-      : `Are you sure you want to discard changes in ${filePath}? Untracked files will be deleted. This action cannot be undone.`;
-      
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
-    
+  const executeDiscard = useCallback(async (filePath?: string, all = false) => {
     setActionLoading(true);
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/git/discard`, {
@@ -246,25 +248,29 @@ export function GitChanges({
     }
   }, [workspaceId, token, worktreePath, onRefresh, selectedFile]);
 
-  const handleCommit = useCallback(async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!commitMessage.trim()) {
-      alert('Please enter a commit message.');
-      return;
-    }
+  const handleDiscard = useCallback((filePath?: string, all = false) => {
+    const isSingleFile = !all && Boolean(filePath) && filePath !== 'nul';
+    const title = all ? 'Discard All Changes' : 'Discard Changes';
+    const message = all 
+      ? 'Are you sure you want to discard ALL changes? This action cannot be undone.'
+      : isSingleFile
+      ? `Are you sure you want to discard changes in ${filePath}? Untracked files will be deleted. This action cannot be undone.`
+      : 'Are you sure you want to discard changes? Untracked files will be deleted. This action cannot be undone.';
 
-    const hasStaged = files.some(f => f.staged);
-    let commitAll = stageAllBeforeCommit;
-
-    if (!hasStaged && !commitAll) {
-      const confirmAll = window.confirm('There are no staged changes. Do you want to stage all changes and commit them?');
-      if (confirmAll) {
-        commitAll = true;
-      } else {
-        return;
+    setConfirmModal({
+      show: true,
+      title,
+      message,
+      confirmLabel: 'Discard',
+      variant: 'danger',
+      onConfirm: () => {
+        setConfirmModal(null);
+        executeDiscard(filePath, all);
       }
-    }
+    });
+  }, [executeDiscard]);
 
+  const executeCommit = useCallback(async (commitAll: boolean) => {
     setActionLoading(true);
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/git/commit`, {
@@ -289,7 +295,35 @@ export function GitChanges({
     } finally {
       setActionLoading(false);
     }
-  }, [workspaceId, token, worktreePath, commitMessage, files, stageAllBeforeCommit, onRefresh]);
+  }, [workspaceId, token, worktreePath, commitMessage, onRefresh]);
+
+  const handleCommit = useCallback((e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!commitMessage.trim()) {
+      alert('Please enter a commit message.');
+      return;
+    }
+
+    const hasStaged = files.some(f => f.staged);
+    let commitAll = stageAllBeforeCommit;
+
+    if (!hasStaged && !commitAll) {
+      setConfirmModal({
+        show: true,
+        title: 'Stage and Commit All',
+        message: 'There are no staged changes. Do you want to stage all changes and commit them?',
+        confirmLabel: 'Stage & Commit',
+        variant: 'primary',
+        onConfirm: () => {
+          setConfirmModal(null);
+          executeCommit(true);
+        }
+      });
+      return;
+    }
+
+    executeCommit(commitAll);
+  }, [commitMessage, files, stageAllBeforeCommit, executeCommit]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -763,6 +797,18 @@ export function GitChanges({
         </div>
       ) : (
         <GitHistory workspaceId={workspaceId} token={token} worktreePath={worktreePath} onOpenDiffTab={onOpenDiffTab} />
+      )}
+      {confirmModal && (
+        <ConfirmModal
+          show={confirmModal.show}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          confirmLabel={confirmModal.confirmLabel || 'Confirm'}
+          cancelLabel={confirmModal.cancelLabel || 'Cancel'}
+          variant={confirmModal.variant || 'primary'}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
       )}
     </div>
   );

@@ -212,12 +212,11 @@ describe('GitChanges - Tabs and File Actions', () => {
     });
   });
 
-  it('calls discard API when clicking discard button and user confirms', async () => {
+  it('calls discard API when clicking discard button and user confirms in modal', async () => {
     const onRefresh = vi.fn();
     const fetchSpy = vi.spyOn(window, 'fetch').mockImplementation(() =>
       Promise.resolve({ ok: true } as Response)
     );
-    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => true);
 
     render(
       <GitChanges
@@ -233,9 +232,12 @@ describe('GitChanges - Tabs and File Actions', () => {
     const discardButtons = screen.getAllByTitle('Discard Changes');
     fireEvent.click(discardButtons[0]);
 
-    expect(confirmSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Are you sure you want to discard changes in src/App.tsx?')
-    );
+    // Check modal prompt content
+    expect(screen.getByText(/Are you sure you want to discard changes in src\/App\.tsx\?/)).toBeInTheDocument();
+
+    // Click confirm in the modal
+    const modalConfirmBtn = screen.getByRole('button', { name: 'Discard' });
+    fireEvent.click(modalConfirmBtn);
 
     expect(fetchSpy).toHaveBeenCalledWith(
       `/api/workspaces/${workspaceId}/git/discard`,
