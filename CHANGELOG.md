@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.611] - 2026-07-21
+
+### Bug Fix — SuperAgent Thinking Latency & Double Checkpoint Events (`serverRoutes.ts`, `superAgentBridge.ts`, `checkpoints.ts`)
+- **SSE Socket Nagle Optimization**: Added `(res.socket as any)?.setNoDelay(true);` to the `/api/events` SSE endpoint in SuperAgent's [serverRoutes.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/serverRoutes.ts#L81) to eliminate TCP buffer delay on high-frequency reasoning/thinking tokens.
+- **Prevent Duplicate SSE Socket Requests**: Added explicit socket cleanup (`sseReq.destroy()`) in [superAgentBridge.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentBridge.ts#L585) before reconnecting to prevent duplicate SSE listeners from broadcasting doubled `checkpoint_auto` and `agent_event` messages over WebSocket.
+- **High-Frequency Token Fast-Path**: Skipped redundant `JSON.parse()` calls on streaming reasoning/text delta tokens in [superAgentBridge.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentBridge.ts#L623) to reduce event-loop CPU overhead during high-speed model responses.
+- **Non-blocking Git SHA Resolution**: Converted `getGitSha` in [checkpoints.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/checkpoints.ts#L37) from synchronous `execSync` to non-blocking async `execa` execution.
+
 ## [1.3.610] - 2026-07-21
 
 ### Bug Fix — SuperAgent Session Execution on Empty History (`useSuperAgentSessions.ts` & `SuperAgentConsole.tsx`)

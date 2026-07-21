@@ -582,6 +582,10 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
 
   function connectToSuperAgentSSE() {
     if (isClosed || ws.readyState !== WebSocket.OPEN) return;
+    if (sseReq) {
+      try { sseReq.destroy(); } catch {}
+      sseReq = null;
+    }
 
     sseReq = http.request({
       hostname: '127.0.0.1',
@@ -621,6 +625,11 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
 
           // Audit log: parse lazily only for non-noise events to avoid
           // disk I/O on every text_delta / thought / tool_start token.
+          const isHighFreqToken = dataStr.includes('"text_delta"') || dataStr.includes('"reasoning"') || dataStr.includes('"thought"') || dataStr.includes('"tool_progress"');
+          if (isHighFreqToken && process.env.LOG_STREAM_RESPONSE !== 'true') {
+            continue;
+          }
+
           try {
             const event = JSON.parse(dataStr);
             const innerType = event?.event?.type as string | undefined;
