@@ -69,35 +69,35 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
 
   return (
     <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-      <div className="bg-[#0d111c] border border-zinc-800 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-xs font-sans">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-xs font-sans">
         
         {/* Modal Header */}
-        <div className="px-6 py-4 bg-[#090c14] border-b border-zinc-800/80 flex items-center justify-between">
+        <div className="px-6 py-4 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-indigo-950/80 border border-indigo-700/50 text-indigo-400">
+            <div className="p-2 rounded-xl bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/50 text-[var(--color-primary)]">
               <Sliders className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-zinc-100 text-sm tracking-wide">SuperAgent Configuration & Settings</h2>
-              <p className="text-[11px] text-zinc-400">Manage LLM Login credentials, Model Presets, Execution mode & Live Monitor</p>
+              <h2 className="font-bold text-[var(--text-main)] text-sm tracking-wide">SuperAgent Configuration & Settings</h2>
+              <p className="text-[11px] text-[var(--text-muted)]">Manage LLM Login credentials, Model Presets, Execution mode & Live Monitor</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 transition"
+            className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] transition"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Modal Navigation Tabs */}
-        <div className="px-6 bg-[#090c14] border-b border-zinc-800/80 flex items-center gap-2 overflow-x-auto">
+        <div className="px-6 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] flex items-center gap-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab('login')}
             className={`px-4 py-2.5 font-medium border-b-2 transition flex items-center gap-2 text-xs ${
               activeTab === 'login'
                 ? 'font-semibold'
-                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
             style={activeTab === 'login' ? {
               borderColor: 'var(--color-primary)',
@@ -114,7 +114,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
             className={`px-4 py-2.5 font-medium border-b-2 transition flex items-center gap-2 text-xs ${
               activeTab === 'presets'
                 ? 'font-semibold'
-                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
             style={activeTab === 'presets' ? {
               borderColor: 'var(--color-primary)',
@@ -131,7 +131,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
             className={`px-4 py-2.5 font-medium border-b-2 transition flex items-center gap-2 text-xs ${
               activeTab === 'execution'
                 ? 'font-semibold'
-                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
             style={activeTab === 'execution' ? {
               borderColor: 'var(--color-primary)',
@@ -148,7 +148,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
             className={`px-4 py-2.5 font-medium border-b-2 transition flex items-center gap-2 text-xs ${
               activeTab === 'monitor'
                 ? 'font-semibold'
-                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
             style={activeTab === 'monitor' ? {
               borderColor: 'var(--color-primary)',
@@ -162,7 +162,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-4 bg-[#0d111c]">
+        <div className="p-6 overflow-y-auto flex-1 space-y-4 bg-[var(--bg-card)]">
           {activeTab === 'login' && (
             <SuperAgentLoginManager
               providers={providers}
@@ -188,9 +188,9 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
 
           {activeTab === 'execution' && (
             <div className="space-y-4">
-              <div className="bg-[#121622] p-4 rounded-xl border border-zinc-800/80 space-y-3">
-                <div className="flex items-center gap-2 font-semibold text-zinc-100 text-xs">
-                  <Folder className="w-4 h-4 text-indigo-400" />
+              <div className="bg-[var(--bg-sidebar)] p-4 rounded-xl border border-[var(--border-color)] space-y-3">
+                <div className="flex items-center gap-2 font-semibold text-[var(--text-main)] text-xs">
+                  <Folder className="w-4 h-4 text-[var(--color-primary)]" />
                   <span>Active Workspace Directory</span>
                 </div>
                 {workspaces.length > 0 ? (
@@ -200,7 +200,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
                       setWorkspace(e.target.value);
                       localStorage.setItem('currentWorkspace', e.target.value);
                     }}
-                    className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-200 font-mono outline-none focus:border-indigo-500 text-xs"
+                    className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[var(--text-main)] font-mono outline-none focus:border-[var(--color-primary)] text-xs"
                   >
                     {workspaces.map(w => (
                       <option key={w.id} value={w.path}>{w.name} ({w.path})</option>
@@ -217,24 +217,24 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
                       setWorkspace(e.target.value);
                       localStorage.setItem('currentWorkspace', e.target.value);
                     }}
-                    className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-200 font-mono outline-none focus:border-indigo-500 text-xs"
+                    className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[var(--text-main)] font-mono outline-none focus:border-[var(--color-primary)] text-xs"
                     placeholder="Workspace directory path"
                   />
                 )}
               </div>
 
-              <div className="bg-[#121622] p-4 rounded-xl border border-zinc-800/80 space-y-3">
-                <div className="flex items-center gap-2 font-semibold text-zinc-100 text-xs">
-                  <Sliders className="w-4 h-4 text-indigo-400" />
+              <div className="bg-[var(--bg-sidebar)] p-4 rounded-xl border border-[var(--border-color)] space-y-3">
+                <div className="flex items-center gap-2 font-semibold text-[var(--text-main)] text-xs">
+                  <Sliders className="w-4 h-4 text-[var(--color-primary)]" />
                   <span>Execution Mode & Custom CLI Flags</span>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] text-zinc-400">Agent Mode</label>
+                  <label className="text-[11px] text-[var(--text-muted)]">Agent Mode</label>
                   <select
                     value={agentMode}
                     onChange={(e) => setAgentMode(e.target.value as 'single' | 'multi')}
-                    className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-200 outline-none focus:border-indigo-500 text-xs"
+                    className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[var(--text-main)] outline-none focus:border-[var(--color-primary)] text-xs"
                   >
                     <option value="single">Single Agent Mode</option>
                     <option value="multi">Multi-Agent Master Mode (--multi)</option>
@@ -242,12 +242,12 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] text-zinc-400">Custom CLI Arguments</label>
+                  <label className="text-[11px] text-[var(--text-muted)]">Custom CLI Arguments</label>
                   <input
                     type="text"
                     value={customArgs}
                     onChange={(e) => setCustomArgs(e.target.value)}
-                    className="w-full bg-[#090c14] border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-200 font-mono outline-none focus:border-indigo-500 text-xs"
+                    className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[var(--text-main)] font-mono outline-none focus:border-[var(--color-primary)] text-xs"
                     placeholder="e.g. --resume --verbose"
                   />
                 </div>
@@ -257,7 +257,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
                     setConnectTrigger(prev => prev + 1);
                     onClose();
                   }}
-                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 text-xs shadow-sm"
+                  className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 text-xs shadow-sm"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   Apply Settings & Restart SuperAgent Bridge
@@ -268,16 +268,16 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
 
           {activeTab === 'monitor' && (
             <div className="space-y-4">
-              <div className="bg-[#121622] p-4 rounded-xl border border-zinc-800/80 space-y-3">
+              <div className="bg-[var(--bg-sidebar)] p-4 rounded-xl border border-[var(--border-color)] space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-semibold text-zinc-100 text-xs">Live Process & Change Monitor Sidebar</h4>
-                    <p className="text-[11px] text-zinc-400">Display running subagents, system processes, and git status</p>
+                    <h4 className="font-semibold text-[var(--text-main)] text-xs">Live Process & Change Monitor Sidebar</h4>
+                    <p className="text-[11px] text-[var(--text-muted)]">Display running subagents, system processes, and git status</p>
                   </div>
                   <button
                     onClick={() => setShowSidebar(!showSidebar)}
                     className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      showSidebar ? 'bg-indigo-600' : 'bg-zinc-700'
+                      showSidebar ? 'bg-[var(--color-primary)]' : 'bg-[var(--bg-main)]'
                     }`}
                   >
                     <span
@@ -292,7 +292,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
                   <button
                     onClick={onRefreshMonitor}
                     disabled={isLoadingMonitor}
-                    className="w-full bg-[#090c14] hover:bg-zinc-800 text-zinc-300 border border-zinc-700/60 font-medium py-2 px-3 rounded-lg transition flex items-center justify-center gap-2 text-xs disabled:opacity-50"
+                    className="w-full bg-[var(--bg-card)] hover:bg-[var(--surface-overlay-hover)] text-[var(--text-main)] border border-[var(--border-color)] font-medium py-2 px-3 rounded-lg transition flex items-center justify-center gap-2 text-xs disabled:opacity-50"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isLoadingMonitor ? 'animate-spin' : ''}`} />
                     {isLoadingMonitor ? 'Refreshing...' : 'Refresh Monitor Data Now'}
@@ -301,9 +301,9 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
               </div>
 
               {onClearConsole && (
-                <div className="bg-[#121622] p-4 rounded-xl border border-zinc-800/80 space-y-2">
-                  <h4 className="font-semibold text-zinc-100 text-xs flex items-center gap-2">
-                    <Terminal className="w-4 h-4 text-indigo-400" />
+                <div className="bg-[var(--bg-sidebar)] p-4 rounded-xl border border-[var(--border-color)] space-y-2">
+                  <h4 className="font-semibold text-[var(--text-main)] text-xs flex items-center gap-2">
+                    <Terminal className="w-4 h-4 text-[var(--color-primary)]" />
                     Console Output Tools
                   </h4>
                   <button
@@ -311,7 +311,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
                       onClearConsole();
                       onClose();
                     }}
-                    className="w-full bg-zinc-800/70 hover:bg-zinc-800 text-zinc-200 font-medium py-2 px-3 rounded-lg border border-zinc-700/50 transition flex items-center justify-center gap-2 text-xs"
+                    className="w-full bg-[var(--bg-card)] hover:bg-[var(--surface-overlay-hover)] text-[var(--text-main)] font-medium py-2 px-3 rounded-lg border border-[var(--border-color)] transition flex items-center justify-center gap-2 text-xs"
                   >
                     <Trash2 className="w-3.5 h-3.5 text-rose-400" />
                     Clear Current Console Log Output
@@ -323,10 +323,10 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3 bg-[#090c14] border-t border-zinc-800/80 flex items-center justify-end">
+        <div className="px-6 py-3 bg-[var(--panel-header-bg)] border-t border-[var(--border-color)] flex items-center justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition"
+            className="px-4 py-1.5 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium text-xs transition"
           >
             Done
           </button>

@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.598] - 2026-07-21
+
+### UI/UX & Theme Customization
+- **Full SuperAgent Theme Variable Integration (`SuperAgentConsole.tsx`, `SuperAgentInputContainer.tsx`, `SuperAgentMessageItem.tsx`, `SuperAgentGroupedMessages.tsx`, `SuperAgentToolItem.tsx`, `SuperAgentInteractiveCards.tsx`, `SuperAgentHistorySidebar.tsx`, `SuperAgentSidebar.tsx`, `ActiveTasksBar.tsx`, `SubAgentTerminalModal.tsx`, `SuperAgentSettingsModal.tsx`, `SuperAgentSettingsMenu.tsx`, `SuperAgentPresetManager.tsx`, `SuperAgentLoginManager.tsx`, `SuperAgentAuditLogs.tsx`, `components.css`)**:
+  - **Dynamic Theme Palette**: Replaced all hardcoded hex (`#090c14`, `#05070c`, `#121622`) and static Tailwind color classes (`bg-indigo-600`, `text-indigo-400`, `border-zinc-800`) with root design CSS variables (`var(--bg-main)`, `var(--bg-sidebar)`, `var(--bg-card)`, `var(--panel-header-bg)`, `var(--border-color)`, `var(--color-primary)`, `var(--color-primary-hover)`, `var(--color-primary-glow)`, `var(--text-main)`, `var(--text-muted)`).
+  - **Visual Consistency**: SuperAgent UI elements (headers, popovers, chat prompt boxes, message cards, tool execution items, live monitor sidebar, settings modals, and audit logs) now inherit and automatically adapt to any active application theme (Default Dark, Dracula, Cyberpunk, Forest, Nord, Light Mode).
+
 ## [1.3.597] - 2026-07-21
 
 ### UI/UX & Redesign

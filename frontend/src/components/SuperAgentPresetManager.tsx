@@ -285,23 +285,23 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
   return (
     <div className="space-y-4 text-xs font-sans">
       {/* Header & Mode Switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-[#121622] p-3.5 rounded-xl border border-zinc-800/80">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-[var(--bg-card)] p-3.5 rounded-xl border border-[var(--border-color)]">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-lg bg-indigo-950/80 border border-indigo-700/50 text-indigo-400">
+          <div className="p-2 rounded-lg bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/50 text-[var(--color-primary)]">
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="font-semibold text-zinc-100 text-xs">Model Presets & Cross-Provider Config</h3>
-            <p className="text-[11px] text-zinc-400">Configure independent LLM providers and models per SuperAgent and Subagent role</p>
+            <h3 className="font-semibold text-[var(--text-main)] text-xs">Model Presets & Cross-Provider Config</h3>
+            <p className="text-[11px] text-[var(--text-muted)]">Configure independent LLM providers and models per SuperAgent and Subagent role</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="bg-[#090c14] p-1 rounded-lg border border-zinc-800 flex items-center gap-1">
+          <div className="bg-[var(--bg-sidebar)] p-1 rounded-lg border border-[var(--border-color)] flex items-center gap-1">
             <button
               onClick={() => setSelectedMode('single')}
               className={`px-3 py-1 rounded-md text-[11px] font-medium transition ${
-                selectedMode === 'single' ? 'text-white shadow-xs' : 'text-zinc-400 hover:text-zinc-200'
+                selectedMode === 'single' ? 'text-white shadow-xs' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
               style={selectedMode === 'single' ? { backgroundColor: 'var(--color-primary)' } : undefined}
             >
@@ -310,7 +310,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
             <button
               onClick={() => setSelectedMode('multi')}
               className={`px-3 py-1 rounded-md text-[11px] font-medium transition ${
-                selectedMode === 'multi' ? 'text-white shadow-xs' : 'text-zinc-400 hover:text-zinc-200'
+                selectedMode === 'multi' ? 'text-white shadow-xs' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
               style={selectedMode === 'multi' ? { backgroundColor: 'var(--color-primary)' } : undefined}
             >
@@ -320,7 +320,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
 
           <button
             onClick={openAddPresetModal}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-1.5 px-3 rounded-lg transition flex items-center gap-1 text-xs shadow-xs cursor-pointer"
+            className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium py-1.5 px-3 rounded-lg transition flex items-center gap-1 text-xs shadow-xs cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" /> Create Preset
           </button>
@@ -339,23 +339,23 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
           return (
             <div
               key={p.id}
-              className={`bg-[#090c14] border rounded-xl p-3.5 flex flex-col justify-between gap-3 transition-all ${
-                isActive ? 'border-indigo-500/80 ring-1 ring-indigo-500/30 bg-[#0c101d]' : 'border-zinc-800/80 hover:border-zinc-700/80'
+              className={`bg-[var(--bg-card)] border rounded-xl p-3.5 flex flex-col justify-between gap-3 transition-all ${
+                isActive ? 'border-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/30 bg-[var(--color-primary-glow)]' : 'border-[var(--border-color)] hover:border-[var(--border-color)]'
               }`}
             >
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Cpu className={`w-4 h-4 ${isActive ? 'text-indigo-400' : 'text-zinc-500'}`} />
-                    <span className="font-semibold text-zinc-100 text-xs">{p.name}</span>
+                    <Cpu className={`w-4 h-4 ${isActive ? 'text-[var(--color-primary)]' : 'text-[var(--text-muted)]'}`} />
+                    <span className="font-semibold text-[var(--text-main)] text-xs">{p.name}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => openEditPresetModal(p)}
-                      className="px-2 py-1 rounded-md bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 font-medium text-[11px] transition flex items-center gap-1 cursor-pointer"
+                      className="px-2 py-1 rounded-md bg-[var(--bg-sidebar)] hover:bg-[var(--surface-overlay-hover)] text-[var(--text-main)] border border-[var(--border-color)] font-medium text-[11px] transition flex items-center gap-1 cursor-pointer"
                       title="Edit model preset configuration"
                     >
-                      <Edit3 className="w-3 h-3 text-indigo-400" />
+                      <Edit3 className="w-3 h-3 text-[var(--color-primary)]" />
                       <span>Edit</span>
                     </button>
                     {isActive ? (
@@ -365,7 +365,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                     ) : (
                       <button
                         onClick={() => onSelectPreset(p.id)}
-                        className="px-2.5 py-1 rounded-md bg-zinc-800 hover:bg-indigo-600 hover:text-white text-zinc-300 font-medium text-[11px] transition cursor-pointer"
+                        className="px-2.5 py-1 rounded-md bg-[var(--bg-sidebar)] hover:bg-[var(--color-primary)] hover:text-white text-[var(--text-muted)] font-medium text-[11px] transition cursor-pointer border border-[var(--border-color)]"
                       >
                         Activate
                       </button>
@@ -373,25 +373,25 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                   </div>
                 </div>
 
-                <p className="text-[11px] text-zinc-400">{p.description}</p>
+                <p className="text-[11px] text-[var(--text-muted)]">{p.description}</p>
 
                 {/* Structured Model Breakdown */}
-                <div className="bg-[#121622] p-2.5 rounded-lg border border-zinc-800/60 font-mono text-[10px] space-y-1.5 text-zinc-300">
+                <div className="bg-[var(--bg-sidebar)] p-2.5 rounded-lg border border-[var(--border-color)] font-mono text-[10px] space-y-1.5 text-[var(--text-main)]">
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-400 font-sans font-medium">Main Agent:</span>
-                    <span className="text-indigo-300 font-semibold">{formatModelLabel(mainConfig)}</span>
+                    <span className="text-[var(--text-muted)] font-sans font-medium">Main Agent:</span>
+                    <span className="text-[var(--color-primary)] font-semibold">{formatModelLabel(mainConfig)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-400 font-sans font-medium">Subagent Default:</span>
-                    <span className="text-indigo-200">{formatModelLabel(subDefaultConfig)}</span>
+                    <span className="text-[var(--text-muted)] font-sans font-medium">Subagent Default:</span>
+                    <span className="text-[var(--text-main)]">{formatModelLabel(subDefaultConfig)}</span>
                   </div>
 
                   {Object.keys(details).length > 0 && (
-                    <div className="pt-1.5 border-t border-zinc-800/80 space-y-1">
-                      <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-sans font-semibold">Subagent Roles Overrides:</span>
+                    <div className="pt-1.5 border-t border-[var(--border-color)] space-y-1">
+                      <span className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider font-sans font-semibold">Subagent Roles Overrides:</span>
                       {Object.entries(details).map(([roleName, roleConfig]) => (
                         <div key={roleName} className="flex items-center justify-between text-[10px] pl-1">
-                          <span className="text-zinc-400 capitalize font-sans">{roleName}:</span>
+                          <span className="text-[var(--text-muted)] capitalize font-sans">{roleName}:</span>
                           <span className="text-emerald-400 font-semibold">{formatModelLabel(roleConfig)}</span>
                         </div>
                       ))}
@@ -400,7 +400,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-zinc-800/60 text-[10px] text-zinc-500">
+              <div className="flex items-center justify-between pt-2 border-t border-[var(--border-color)] text-[10px] text-[var(--text-muted)]">
                 <span>Preset ID: {p.id}</span>
                 {!['fast', 'standard', 'superagent-standard', 'superagent-master'].includes(p.id) && (
                   <button

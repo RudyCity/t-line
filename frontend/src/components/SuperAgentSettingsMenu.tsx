@@ -62,22 +62,22 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="absolute right-0 top-11 w-84 sm:w-96 bg-[#0d111c] border border-zinc-800 rounded-xl shadow-2xl z-50 p-4 text-xs font-sans animate-in fade-in zoom-in-95 duration-150"
+      className="absolute right-0 top-11 w-84 sm:w-96 bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-xl shadow-2xl z-50 p-4 text-xs font-sans animate-in fade-in zoom-in-95 duration-150"
     >
       {/* Menu Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80 mb-3">
+      <div className="flex items-center justify-between pb-3 border-b border-[var(--border-color)] mb-3">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-indigo-950/80 border border-indigo-700/50 text-indigo-400">
+          <div className="p-1.5 rounded-lg bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/50 text-[var(--color-primary)]">
             <Settings className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="font-semibold text-zinc-100 text-xs">SuperAgent Quick Settings</h4>
-            <p className="text-[10px] text-zinc-400">Manage workspace, login, presets & monitor</p>
+            <h4 className="font-semibold text-[var(--text-main)] text-xs">SuperAgent Quick Settings</h4>
+            <p className="text-[10px] text-[var(--text-muted)]">Manage workspace, login, presets & monitor</p>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="p-1 rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 transition"
+          className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] transition"
           title="Close menu"
         >
           <X className="w-3.5 h-3.5" />
@@ -92,33 +92,33 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
               onOpenSettingsModal('login');
               onClose();
             }}
-            className="w-full p-2.5 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/50 text-indigo-200 transition flex items-center justify-between cursor-pointer shadow-xs"
+            className="w-full p-2.5 rounded-lg bg-[var(--color-primary-glow)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--color-primary)]/50 text-[var(--color-primary)] transition flex items-center justify-between cursor-pointer shadow-xs"
           >
             <div className="flex items-center gap-2.5 text-left">
-              <div className="p-1.5 rounded-md bg-indigo-900/50 border border-indigo-700/50 text-indigo-400">
+              <div className="p-1.5 rounded-md bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--color-primary)]">
                 <Key className="w-4 h-4" />
               </div>
               <div>
-                <div className="font-semibold text-xs text-indigo-300 flex items-center gap-1.5">
+                <div className="font-semibold text-xs text-[var(--color-primary)] flex items-center gap-1.5">
                   <span>Manage Login & Model Presets</span>
                 </div>
-                <p className="text-[10px] text-zinc-400">Configure API Keys, LLM logins, and model presets</p>
+                <p className="text-[10px] text-[var(--text-muted)]">Configure API Keys, LLM logins, and model presets</p>
               </div>
             </div>
-            <ExternalLink className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            <ExternalLink className="w-3.5 h-3.5 text-[var(--color-primary)] shrink-0" />
           </button>
         )}
         {/* Section 1: Agent & Workspace Config */}
-        <div className="bg-[#121622] p-3 rounded-lg border border-zinc-800/60 space-y-2.5">
-          <div className="flex items-center gap-1.5 text-zinc-300 font-medium text-[11px]">
-            <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+        <div className="bg-[var(--bg-card)] p-3 rounded-lg border border-[var(--border-color)] space-y-2.5">
+          <div className="flex items-center gap-1.5 text-[var(--text-main)] font-medium text-[11px]">
+            <Sliders className="w-3.5 h-3.5 text-[var(--color-primary)]" />
             <span>Workspace & Agent Configuration</span>
           </div>
 
           {setWorkspace && (
             <div className="space-y-1.5">
-              <label className="text-[10px] text-zinc-400 flex items-center gap-1">
-                <Folder className="w-3 h-3 text-indigo-400" />
+              <label className="text-[10px] text-[var(--text-muted)] flex items-center gap-1">
+                <Folder className="w-3 h-3 text-[var(--color-primary)]" />
                 Active Workspace
               </label>
               {workspaces.length > 0 ? (
@@ -128,7 +128,7 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
                     setWorkspace(e.target.value);
                     localStorage.setItem('currentWorkspace', e.target.value);
                   }}
-                  className="w-full bg-[#090c14] border border-zinc-700/60 rounded-md px-2.5 py-1.5 text-zinc-200 font-mono outline-none focus:border-indigo-500 text-xs transition truncate"
+                  className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md px-2.5 py-1.5 text-[var(--text-main)] font-mono outline-none focus:border-[var(--color-primary)] text-xs transition truncate"
                 >
                   {workspaces.map(w => (
                     <option key={w.id} value={w.path}>{w.name} ({w.path})</option>
@@ -145,7 +145,7 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
                     setWorkspace(e.target.value);
                     localStorage.setItem('currentWorkspace', e.target.value);
                   }}
-                  className="w-full bg-[#090c14] border border-zinc-700/60 rounded-md px-2.5 py-1.5 text-zinc-200 font-mono outline-none focus:border-indigo-500 text-xs transition"
+                  className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md px-2.5 py-1.5 text-[var(--text-main)] font-mono outline-none focus:border-[var(--color-primary)] text-xs transition"
                   placeholder="Workspace directory path"
                 />
               )}
@@ -153,11 +153,11 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
           )}
 
           <div className="space-y-1.5">
-            <label className="text-[10px] text-zinc-400">Execution Mode</label>
+            <label className="text-[10px] text-[var(--text-muted)]">Execution Mode</label>
             <select
               value={agentMode}
               onChange={(e) => setAgentMode(e.target.value as 'single' | 'multi')}
-              className="w-full bg-[#090c14] border border-zinc-700/60 rounded-md px-2.5 py-1.5 text-zinc-200 outline-none focus:border-indigo-500 text-xs transition"
+              className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md px-2.5 py-1.5 text-[var(--text-main)] outline-none focus:border-[var(--color-primary)] text-xs transition"
             >
               <option value="single">Single Agent Mode</option>
               <option value="multi">Multi-Agent Master (--multi)</option>
@@ -165,12 +165,12 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] text-zinc-400">Custom CLI Arguments</label>
+            <label className="text-[10px] text-[var(--text-muted)]">Custom CLI Arguments</label>
             <input
               type="text"
               value={customArgs}
               onChange={(e) => setCustomArgs(e.target.value)}
-              className="w-full bg-[#090c14] border border-zinc-700/60 rounded-md px-2.5 py-1.5 text-zinc-200 font-mono outline-none focus:border-indigo-500 text-xs transition"
+              className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md px-2.5 py-1.5 text-[var(--text-main)] font-mono outline-none focus:border-[var(--color-primary)] text-xs transition"
               placeholder="e.g. --resume"
             />
           </div>
@@ -180,7 +180,7 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
               setConnectTrigger(prev => prev + 1);
               onClose();
             }}
-            className="w-full mt-1 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-1.5 px-3 rounded-md transition flex items-center justify-center gap-1.5 text-xs shadow-sm"
+            className="w-full mt-1 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium py-1.5 px-3 rounded-md transition flex items-center justify-center gap-1.5 text-xs shadow-sm"
           >
             <RefreshCw className="w-3 h-3" />
             Apply & Restart Bridge
@@ -188,18 +188,18 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
         </div>
 
         {/* Section 2: Live Monitor Options */}
-        <div className="bg-[#121622] p-3 rounded-lg border border-zinc-800/60 space-y-2.5">
-          <div className="flex items-center gap-1.5 text-zinc-300 font-medium text-[11px]">
-            <Activity className="w-3.5 h-3.5 text-indigo-400" />
+        <div className="bg-[var(--bg-card)] p-3 rounded-lg border border-[var(--border-color)] space-y-2.5">
+          <div className="flex items-center gap-1.5 text-[var(--text-main)] font-medium text-[11px]">
+            <Activity className="w-3.5 h-3.5 text-[var(--color-primary)]" />
             <span>Monitor Panel</span>
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-zinc-300 text-[11px]">Show Live Monitor Sidebar</span>
+            <span className="text-[var(--text-main)] text-[11px]">Show Live Monitor Sidebar</span>
             <button
               onClick={() => setShowSidebar(!showSidebar)}
               className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                showSidebar ? 'bg-indigo-600' : 'bg-zinc-700'
+                showSidebar ? 'bg-[var(--color-primary)]' : 'bg-[var(--bg-main)]'
               }`}
             >
               <span
@@ -216,7 +216,7 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
                 onRefreshMonitor();
               }}
               disabled={isLoadingMonitor}
-              className="w-full bg-[#090c14] hover:bg-zinc-800/80 text-zinc-300 border border-zinc-700/60 font-medium py-1.5 px-3 rounded-md transition flex items-center justify-center gap-1.5 text-xs disabled:opacity-50"
+              className="w-full bg-[var(--bg-sidebar)] hover:bg-[var(--surface-overlay-hover)] text-[var(--text-main)] border border-[var(--border-color)] font-medium py-1.5 px-3 rounded-md transition flex items-center justify-center gap-1.5 text-xs disabled:opacity-50"
             >
               <RefreshCw className={`w-3 h-3 ${isLoadingMonitor ? 'animate-spin' : ''}`} />
               {isLoadingMonitor ? 'Refreshing Data...' : 'Refresh Monitor Data'}
@@ -226,9 +226,9 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
 
         {/* Section 3: Console Tools */}
         {onClearConsole && (
-          <div className="bg-[#121622] p-3 rounded-lg border border-zinc-800/60 space-y-2">
-            <div className="flex items-center gap-1.5 text-zinc-300 font-medium text-[11px]">
-              <Terminal className="w-3.5 h-3.5 text-indigo-400" />
+          <div className="bg-[var(--bg-card)] p-3 rounded-lg border border-[var(--border-color)] space-y-2">
+            <div className="flex items-center gap-1.5 text-[var(--text-main)] font-medium text-[11px]">
+              <Terminal className="w-3.5 h-3.5 text-[var(--color-primary)]" />
               <span>Console Tools</span>
             </div>
             <button
@@ -236,7 +236,7 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
                 onClearConsole();
                 onClose();
               }}
-              className="w-full bg-zinc-800/70 hover:bg-zinc-800 text-zinc-200 font-medium py-1.5 px-3 rounded-md border border-zinc-700/50 transition flex items-center justify-center gap-1.5 text-xs"
+              className="w-full bg-[var(--bg-sidebar)] hover:bg-[var(--surface-overlay-hover)] text-[var(--text-main)] font-medium py-1.5 px-3 rounded-md border border-[var(--border-color)] transition flex items-center justify-center gap-1.5 text-xs"
             >
               <Trash2 className="w-3 h-3 text-rose-400" />
               Clear Console Output
@@ -251,13 +251,13 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
               onOpenGlobalSettings();
               onClose();
             }}
-            className="w-full bg-indigo-950/40 hover:bg-indigo-950/80 text-indigo-300 border border-indigo-800/50 font-medium py-2 px-3 rounded-lg transition flex items-center justify-between text-xs"
+            className="w-full bg-[var(--color-primary-glow)] hover:bg-[var(--surface-overlay-hover)] text-[var(--color-primary)] border border-[var(--color-primary)]/50 font-medium py-2 px-3 rounded-lg transition flex items-center justify-between text-xs"
           >
             <div className="flex items-center gap-2">
-              <Settings className="w-3.5 h-3.5 text-indigo-400" />
+              <Settings className="w-3.5 h-3.5 text-[var(--color-primary)]" />
               <span>Global App Settings</span>
             </div>
-            <ExternalLink className="w-3.5 h-3.5 text-indigo-400" />
+            <ExternalLink className="w-3.5 h-3.5 text-[var(--color-primary)]" />
           </button>
         )}
       </div>

@@ -23,7 +23,7 @@ function renderInlineMarkdown(text: string): React.ReactNode {
       tokens.push(
         <code
           key={keyIdx++}
-          className="font-mono bg-zinc-800/80 text-indigo-300 px-1 py-0.5 rounded text-[11px] border border-zinc-700/50"
+          className="font-mono bg-[var(--bg-card)] text-[var(--color-primary)] px-1 py-0.5 rounded text-[11px] border border-[var(--border-color)]"
         >
           {codeMatch[1]}
         </code>
@@ -36,7 +36,7 @@ function renderInlineMarkdown(text: string): React.ReactNode {
     const boldMatch = remaining.match(/^(\*\*|__)(.*?)\1/);
     if (boldMatch) {
       tokens.push(
-        <strong key={keyIdx++} className="font-semibold text-zinc-100">
+        <strong key={keyIdx++} className="font-semibold text-[var(--text-main)]">
           {renderInlineMarkdown(boldMatch[2])}
         </strong>
       );
@@ -48,7 +48,7 @@ function renderInlineMarkdown(text: string): React.ReactNode {
     const italicMatch = remaining.match(/^(\*|_)(.*?)\1/);
     if (italicMatch) {
       tokens.push(
-        <em key={keyIdx++} className="italic text-zinc-300">
+        <em key={keyIdx++} className="italic text-[var(--text-muted)]">
           {renderInlineMarkdown(italicMatch[2])}
         </em>
       );
@@ -65,7 +65,7 @@ function renderInlineMarkdown(text: string): React.ReactNode {
           href={linkMatch[2]}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-indigo-400 hover:text-indigo-300 underline font-medium transition-colors"
+          className="text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] underline font-medium transition-colors"
         >
           {linkMatch[1]}
         </a>
@@ -105,7 +105,7 @@ export function renderMessageContent(text: string) {
     // 1. [SYS] System Noise Line
     if (trimmed.startsWith('[SYS]')) {
       blocks.push(
-        <div key={i} className="text-[10px] text-zinc-500 font-mono tracking-tight leading-normal my-0.5">
+        <div key={i} className="text-[10px] text-[var(--text-muted)] font-mono tracking-tight leading-normal my-0.5 opacity-80">
           {line}
         </div>
       );
@@ -125,17 +125,17 @@ export function renderMessageContent(text: string) {
       if (i < rawLines.length) i++;
       const codeText = codeLines.join('\n');
       blocks.push(
-        <div key={`code-${i}`} className="my-2 rounded-lg border border-zinc-800 bg-[#0d111a] overflow-hidden font-mono text-xs shadow-sm">
-          <div className="flex items-center justify-between px-3 py-1 bg-[#141824] border-b border-zinc-800/80 text-[10px] text-zinc-400">
-            <span className="font-semibold text-indigo-300 uppercase tracking-wider">{lang || 'code'}</span>
+        <div key={`code-${i}`} className="my-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)] overflow-hidden font-mono text-xs shadow-sm">
+          <div className="flex items-center justify-between px-3 py-1 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] text-[10px] text-[var(--text-muted)]">
+            <span className="font-semibold text-[var(--color-primary)] uppercase tracking-wider">{lang || 'code'}</span>
             <button
               onClick={() => navigator.clipboard.writeText(codeText)}
-              className="hover:text-zinc-200 transition text-[10px] px-2 py-0.5 rounded bg-zinc-800/60 hover:bg-zinc-700 font-sans"
+              className="hover:text-[var(--text-main)] transition text-[10px] px-2 py-0.5 rounded bg-[var(--bg-sidebar)] hover:bg-[var(--surface-overlay-hover)] font-sans border border-[var(--border-color)]"
             >
               Copy
             </button>
           </div>
-          <pre className="p-3 overflow-x-auto text-zinc-200 text-[11px] leading-relaxed font-mono whitespace-pre custom-scrollbar">
+          <pre className="p-3 overflow-x-auto text-[var(--text-main)] text-[11px] leading-relaxed font-mono whitespace-pre custom-scrollbar">
             {codeText}
           </pre>
         </div>
@@ -157,22 +157,22 @@ export function renderMessageContent(text: string) {
         const dataRows = tableLines.slice(2).map(parseRow);
 
         blocks.push(
-          <div key={`table-${i}`} className="my-2.5 overflow-x-auto rounded-lg border border-zinc-800/90 shadow-sm">
+          <div key={`table-${i}`} className="my-2.5 overflow-x-auto rounded-lg border border-[var(--border-color)] shadow-sm">
             <table className="w-full text-left text-xs border-collapse font-sans">
-              <thead className="bg-[#121623] border-b border-zinc-800 text-zinc-300">
+              <thead className="bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] text-[var(--text-main)]">
                 <tr>
                   {headers.map((h, hIdx) => (
-                    <th key={hIdx} className="px-3 py-2 border-r border-zinc-800/60 last:border-r-0 font-semibold text-indigo-300 text-[11px]">
+                    <th key={hIdx} className="px-3 py-2 border-r border-[var(--border-color)] last:border-r-0 font-semibold text-[var(--color-primary)] text-[11px]">
                       {renderInlineMarkdown(h)}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800/60 bg-[#0b0e17]">
+              <tbody className="divide-y divide-[var(--border-color)] bg-[var(--bg-sidebar)]">
                 {dataRows.map((row, rIdx) => (
-                  <tr key={rIdx} className="hover:bg-zinc-800/40 transition-colors even:bg-zinc-900/30">
+                  <tr key={rIdx} className="hover:bg-[var(--surface-overlay-hover)] transition-colors even:bg-[var(--surface-overlay)]">
                     {row.map((cell, cIdx) => (
-                      <td key={cIdx} className="px-3 py-2 border-r border-zinc-800/40 last:border-r-0 text-zinc-300 text-[11px] leading-snug">
+                      <td key={cIdx} className="px-3 py-2 border-r border-[var(--border-color)]/60 last:border-r-0 text-[var(--text-main)] text-[11px] leading-snug">
                         {renderInlineMarkdown(cell)}
                       </td>
                     ))}
@@ -195,25 +195,25 @@ export function renderMessageContent(text: string) {
         i++;
         if (level === 1) {
           blocks.push(
-            <h1 key={`h1-${i}`} className="text-sm font-bold text-indigo-300 mt-3 mb-1.5 pb-1 border-b border-zinc-800/80 tracking-wide">
+            <h1 key={`h1-${i}`} className="text-sm font-bold text-[var(--color-primary)] mt-3 mb-1.5 pb-1 border-b border-[var(--border-color)] tracking-wide">
               {renderInlineMarkdown(headingText)}
             </h1>
           );
         } else if (level === 2) {
           blocks.push(
-            <h2 key={`h2-${i}`} className="text-xs font-bold text-indigo-200 mt-2.5 mb-1 pb-0.5 border-b border-zinc-800/50">
+            <h2 key={`h2-${i}`} className="text-xs font-bold text-[var(--color-primary)] mt-2.5 mb-1 pb-0.5 border-b border-[var(--border-color)]/60">
               {renderInlineMarkdown(headingText)}
             </h2>
           );
         } else if (level === 3) {
           blocks.push(
-            <h3 key={`h3-${i}`} className="text-xs font-semibold text-zinc-200 mt-2 mb-1">
+            <h3 key={`h3-${i}`} className="text-xs font-semibold text-[var(--text-main)] mt-2 mb-1">
               {renderInlineMarkdown(headingText)}
             </h3>
           );
         } else {
           blocks.push(
-            <h4 key={`h4-${i}`} className="text-[11px] font-semibold text-zinc-300 mt-1.5 mb-0.5">
+            <h4 key={`h4-${i}`} className="text-[11px] font-semibold text-[var(--text-muted)] mt-1.5 mb-0.5">
               {renderInlineMarkdown(headingText)}
             </h4>
           );
@@ -224,7 +224,7 @@ export function renderMessageContent(text: string) {
 
     // 5. Horizontal Rule: ---, ***, ___
     if (trimmed === '---' || trimmed === '***' || trimmed === '___') {
-      blocks.push(<hr key={`hr-${i}`} className="my-3 border-t border-zinc-800/80" />);
+      blocks.push(<hr key={`hr-${i}`} className="my-3 border-t border-[var(--border-color)]" />);
       i++;
       continue;
     }
@@ -233,7 +233,7 @@ export function renderMessageContent(text: string) {
     if (trimmed.startsWith('>')) {
       const quoteText = trimmed.replace(/^>\s*/, '');
       blocks.push(
-        <blockquote key={`quote-${i}`} className="my-2 border-l-2 border-indigo-500/80 bg-indigo-950/20 px-3 py-1.5 rounded-r text-zinc-300 italic text-[11px]">
+        <blockquote key={`quote-${i}`} className="my-2 border-l-2 border-[var(--color-primary)] bg-[var(--color-primary-glow)] px-3 py-1.5 rounded-r text-[var(--text-main)] italic text-[11px]">
           {renderInlineMarkdown(quoteText)}
         </blockquote>
       );
@@ -247,8 +247,8 @@ export function renderMessageContent(text: string) {
       const prefix = listMatch[1];
       const itemText = listMatch[2];
       blocks.push(
-        <div key={`list-${i}`} className="flex items-start gap-2 my-0.5 pl-2 text-zinc-200 text-xs">
-          <span className="text-indigo-400 font-mono text-[11px] shrink-0 font-semibold">{prefix}</span>
+        <div key={`list-${i}`} className="flex items-start gap-2 my-0.5 pl-2 text-[var(--text-main)] text-xs">
+          <span className="text-[var(--color-primary)] font-mono text-[11px] shrink-0 font-semibold">{prefix}</span>
           <span className="flex-1 leading-normal">{renderInlineMarkdown(itemText)}</span>
         </div>
       );
@@ -261,7 +261,7 @@ export function renderMessageContent(text: string) {
       blocks.push(<div key={`empty-${i}`} className="h-1.5" />);
     } else {
       blocks.push(
-        <div key={`p-${i}`} className="leading-relaxed text-zinc-200 text-xs my-0.5">
+        <div key={`p-${i}`} className="leading-relaxed text-[var(--text-main)] text-xs my-0.5">
           {renderInlineMarkdown(line)}
         </div>
       );
@@ -301,10 +301,10 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
     return (
       <div key={index} className="flex items-center justify-start py-1 select-text">
         <div className={`text-[11px] font-mono tracking-tight text-left flex items-center justify-start gap-2 select-text ${
-          isError ? 'text-rose-400' : 'text-zinc-400'
+          isError ? 'text-rose-400' : 'text-[var(--text-muted)]'
         }`}>
           <span className={`w-1.5 h-1.5 rounded-full inline-block shrink-0 ${
-            isError ? 'bg-rose-500 animate-pulse' : 'bg-indigo-400'
+            isError ? 'bg-rose-500 animate-pulse' : 'bg-[var(--color-primary)]'
           }`}></span>
           <span className="break-all whitespace-pre-wrap select-text">{msg.text}</span>
         </div>
@@ -318,8 +318,8 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
 
   if (msg.role === 'user') {
     return (
-      <div key={index} className="my-2 py-2 px-3 bg-[#16192e] text-xs font-sans text-zinc-100 select-text rounded-lg border border-indigo-500/40 shadow-sm">
-        <div className="flex items-center gap-1.5 mb-1 select-none text-[10px] font-bold font-mono text-indigo-300 uppercase">
+      <div key={index} className="my-2 py-2 px-3 bg-[var(--color-primary-glow)] text-xs font-sans text-[var(--text-main)] select-text rounded-lg border border-[var(--color-primary)]/40 shadow-sm">
+        <div className="flex items-center gap-1.5 mb-1 select-none text-[10px] font-bold font-mono text-[var(--color-primary)] uppercase">
           <span>❯ USER</span>
         </div>
         <div className="leading-relaxed">
@@ -334,7 +334,7 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
       <div className="flex items-center gap-2 mb-1">
         <span className={`text-[10px] uppercase tracking-wider font-bold font-mono ${
           msg.role === 'thought'
-            ? 'text-purple-400'
+            ? 'text-[var(--color-primary)]'
             : 'text-emerald-400'
         }`}>
           {msg.role === 'thought' ? 'Thought' : 'Assistant'}
@@ -343,8 +343,8 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
 
       <div className={`text-xs leading-relaxed ${
         msg.role === 'thought'
-          ? 'text-zinc-400 italic font-mono pl-3 border-l-2 border-indigo-500/50'
-          : 'text-zinc-200 font-sans'
+          ? 'text-[var(--text-muted)] italic font-mono pl-3 border-l-2 border-[var(--color-primary)]/50'
+          : 'text-[var(--text-main)] font-sans'
       }`}>
         {renderMessageContent(msg.text)}
       </div>

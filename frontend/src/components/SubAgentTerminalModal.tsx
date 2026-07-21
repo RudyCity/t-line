@@ -80,21 +80,21 @@ export function SubAgentTerminalModal({ subagent, onClose }: SubAgentTerminalMod
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-      <div className="flex flex-col w-full max-w-4xl h-[80vh] bg-[#0d0d10] border border-[#2d2d35] rounded-xl shadow-2xl overflow-hidden font-sans">
+      <div className="flex flex-col w-full max-w-4xl h-[80vh] bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl shadow-2xl overflow-hidden font-sans">
         {/* Terminal Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-[#141418] border-b border-[#25252c] shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="p-1.5 bg-indigo-950/60 border border-indigo-800/40 rounded-lg text-indigo-400 shrink-0">
+            <div className="p-1.5 bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/40 rounded-lg text-[var(--color-primary)] shrink-0">
               <Cpu className="w-4 h-4" />
             </div>
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-sm text-zinc-100 font-mono truncate">
+                <span className="font-bold text-sm text-[var(--text-main)] font-mono truncate">
                   {subagent.role || subagent.typeName || `SubAgent-${subagent.id}`}
                 </span>
                 {getStatusBadge()}
               </div>
-              <span className="text-[10px] text-zinc-500 font-mono truncate">
+              <span className="text-[10px] text-[var(--text-muted)] font-mono truncate">
                 ID: {subagent.id} {subagent.model ? `• Model: ${subagent.model}` : ''}
               </span>
             </div>
@@ -104,7 +104,7 @@ export function SubAgentTerminalModal({ subagent, onClose }: SubAgentTerminalMod
             <button
               onClick={handleCopy}
               disabled={!hasContent}
-              className="p-1.5 text-zinc-400 hover:text-zinc-200 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-xs transition flex items-center gap-1 cursor-pointer disabled:opacity-40"
+              className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] bg-[var(--bg-sidebar)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)] rounded-lg text-xs transition flex items-center gap-1 cursor-pointer disabled:opacity-40"
               title="Copy Output Logs"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -114,7 +114,7 @@ export function SubAgentTerminalModal({ subagent, onClose }: SubAgentTerminalMod
             <button
               onClick={() => setAutoScroll(!autoScroll)}
               className={`p-1.5 border rounded-lg text-xs transition flex items-center gap-1 cursor-pointer ${
-                autoScroll ? 'bg-indigo-950/60 text-indigo-300 border-indigo-800/60' : 'bg-zinc-900 text-zinc-400 border-zinc-800'
+                autoScroll ? 'bg-[var(--color-primary-glow)] text-[var(--color-primary)] border-[var(--color-primary)]/60' : 'bg-[var(--bg-sidebar)] text-[var(--text-muted)] border-[var(--border-color)]'
               }`}
               title="Toggle Auto Scroll"
             >
@@ -123,7 +123,7 @@ export function SubAgentTerminalModal({ subagent, onClose }: SubAgentTerminalMod
 
             <button
               onClick={onClose}
-              className="p-1.5 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-red-950/80 hover:border-red-800/60 border border-zinc-800 rounded-lg transition cursor-pointer"
+              className="p-1.5 text-[var(--text-muted)] hover:text-white bg-[var(--bg-sidebar)] hover:bg-red-950/80 hover:border-red-800/60 border border-[var(--border-color)] rounded-lg transition cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -131,13 +131,13 @@ export function SubAgentTerminalModal({ subagent, onClose }: SubAgentTerminalMod
         </div>
 
         {/* Live Terminal Content */}
-        <div className="flex-1 p-4 bg-[#09090b] overflow-y-auto font-mono text-xs leading-relaxed text-zinc-300 select-text scrollbar-thin">
+        <div className="flex-1 p-4 bg-[var(--bg-main)] overflow-y-auto font-mono text-xs leading-relaxed text-[var(--text-main)] select-text scrollbar-thin">
           {subagent.prompt && (
-            <div className="mb-4 p-3 bg-indigo-950/20 border border-indigo-900/30 rounded-lg">
-              <span className="text-[10px] text-indigo-400 uppercase tracking-wider font-bold block mb-1">
+            <div className="mb-4 p-3 bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/30 rounded-lg">
+              <span className="text-[10px] text-[var(--color-primary)] uppercase tracking-wider font-bold block mb-1">
                 Input Prompt / Task
               </span>
-              <p className="whitespace-pre-wrap text-zinc-300">{subagent.prompt}</p>
+              <p className="whitespace-pre-wrap text-[var(--text-main)]">{subagent.prompt}</p>
             </div>
           )}
 
@@ -158,10 +158,10 @@ export function SubAgentTerminalModal({ subagent, onClose }: SubAgentTerminalMod
                         ? 'text-emerald-400'
                         : isTool
                         ? 'text-amber-300'
-                        : 'text-zinc-300'
+                        : 'text-[var(--text-main)]'
                     }`}
                   >
-                    <span className="text-zinc-600 select-none mr-2 font-mono text-[10px]">
+                    <span className="text-[var(--text-muted)] select-none mr-2 font-mono text-[10px]">
                       [{index + 1}]
                     </span>
                     {logLine}
@@ -171,8 +171,8 @@ export function SubAgentTerminalModal({ subagent, onClose }: SubAgentTerminalMod
             </div>
           ) : (
             !subagent.result && (
-              <div className="flex flex-col items-center justify-center h-48 text-zinc-600 gap-2">
-                <Sparkles className="w-6 h-6 animate-pulse text-zinc-500" />
+              <div className="flex flex-col items-center justify-center h-48 text-[var(--text-muted)] gap-2">
+                <Sparkles className="w-6 h-6 animate-pulse text-[var(--color-primary)]" />
                 <span className="text-xs">Streaming subagent terminal output...</span>
               </div>
             )
@@ -191,7 +191,7 @@ export function SubAgentTerminalModal({ subagent, onClose }: SubAgentTerminalMod
         </div>
 
         {/* Status Bar Footer */}
-        <div className="px-4 py-2 bg-[#121215] border-t border-[#222228] text-[11px] text-zinc-500 flex justify-between items-center shrink-0">
+        <div className="px-4 py-2 bg-[var(--panel-header-bg)] border-t border-[var(--border-color)] text-[11px] text-[var(--text-muted)] flex justify-between items-center shrink-0">
           <span>Subagent ID: {subagent.id}</span>
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />

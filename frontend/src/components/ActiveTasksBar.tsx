@@ -82,20 +82,20 @@ export function ActiveTasksBar({
     <div className="mb-1.5 font-mono text-[11px] leading-relaxed max-h-48 overflow-y-auto scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [::-webkit-scrollbar]:hidden select-none pl-1 relative">
       <div className="relative ml-2.5 pl-4 space-y-1 pt-0.5 pb-1">
         {/* Continuous Vector Timeline Line */}
-        <div className="absolute left-[7px] top-[10px] bottom-[-6px] w-[1.5px] bg-indigo-500/50 rounded-full" />
+        <div className="absolute left-[7px] top-[10px] bottom-[-6px] w-[1.5px] bg-[var(--color-primary)]/50 rounded-full" />
 
         {/* Timeline Root Header / Toggle */}
         <div
           onClick={() => setIsExpanded(!isExpanded)}
-          className="relative flex items-center justify-between group cursor-pointer py-0.5 text-zinc-400 hover:text-zinc-200 transition pl-1"
+          className="relative flex items-center justify-between group cursor-pointer py-0.5 text-[var(--text-muted)] hover:text-[var(--text-main)] transition pl-1"
         >
           {/* Top Node Indicator */}
-          <div className="absolute -left-[13px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-indigo-500 shadow-sm shadow-indigo-500/50" />
+          <div className="absolute -left-[13px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[var(--color-primary)] shadow-sm shadow-[var(--color-primary-glow)]" />
 
-          <div className="flex items-center gap-1.5 font-bold uppercase text-[10px] tracking-wide text-zinc-300">
-            <span className="text-indigo-400 font-mono">TASKS</span>
-            <span className="text-zinc-400 font-mono font-normal">({items.length})</span>
-            <span className="text-zinc-500 font-normal group-hover:text-indigo-300 text-[9px] bg-zinc-900/90 border border-zinc-800 px-1.5 py-0.2 rounded transition">
+          <div className="flex items-center gap-1.5 font-bold uppercase text-[10px] tracking-wide text-[var(--text-main)]">
+            <span className="text-[var(--color-primary)] font-mono">TASKS</span>
+            <span className="text-[var(--text-muted)] font-mono font-normal">({items.length})</span>
+            <span className="text-[var(--text-muted)] font-normal group-hover:text-[var(--color-primary)] text-[9px] bg-[var(--bg-card)] border border-[var(--border-color)] px-1.5 py-0.2 rounded transition">
               {isExpanded ? '[-] collapse' : '[+] expand'}
             </span>
           </div>
@@ -106,33 +106,33 @@ export function ActiveTasksBar({
           items.map(item => (
             <div key={item.key} className="relative flex items-center justify-between group py-0.5 pl-1">
               {/* Horizontal Branch Connector */}
-              <div className="absolute -left-[9px] top-1/2 -translate-y-1/2 w-2.5 h-[1.5px] bg-indigo-500/50" />
+              <div className="absolute -left-[9px] top-1/2 -translate-y-1/2 w-2.5 h-[1.5px] bg-[var(--color-primary)]/50" />
 
               {item.kind === 'tool' && (
-                <div className="flex items-center gap-1.5 text-indigo-300 min-w-0 pr-2">
-                  <Wrench className="w-3 h-3 text-indigo-400 animate-spin shrink-0" />
-                  <span className="text-indigo-400 font-bold shrink-0">[TOOL]:</span>
-                  <span className="text-zinc-300 truncate">{item.msg}</span>
+                <div className="flex items-center gap-1.5 text-[var(--color-primary)] min-w-0 pr-2">
+                  <Wrench className="w-3 h-3 text-[var(--color-primary)] animate-spin shrink-0" />
+                  <span className="text-[var(--color-primary)] font-bold shrink-0">[TOOL]:</span>
+                  <span className="text-[var(--text-main)] truncate">{item.msg}</span>
                 </div>
               )}
 
               {item.kind === 'subagent' && (
                 <div
                   onClick={() => onSelectSubAgent(item.data)}
-                  className="flex items-center justify-between w-full hover:text-indigo-300 cursor-pointer transition"
+                  className="flex items-center justify-between w-full hover:text-[var(--color-primary)] cursor-pointer transition"
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="text-emerald-400 font-bold shrink-0">[SUBAGENT]:</span>
-                    <span className="text-zinc-200 font-semibold truncate">
+                    <span className="text-[var(--text-main)] font-semibold truncate">
                       {item.data.role || item.data.typeName || `SubAgent-${item.data.id.slice(0, 6)}`}
                     </span>
                     {item.data.prompt && (
-                      <span className="text-zinc-500 text-[10px] truncate max-w-xs font-sans">
+                      <span className="text-[var(--text-muted)] text-[10px] truncate max-w-xs font-sans">
                         — {item.data.prompt}
                       </span>
                     )}
                   </div>
-                  <span className="flex items-center gap-1 text-[10px] text-indigo-400 group-hover:text-indigo-300 bg-indigo-950/60 px-1.5 py-0.2 rounded border border-indigo-900/50 shrink-0 ml-2 transition">
+                  <span className="flex items-center gap-1 text-[10px] text-[var(--color-primary)] group-hover:text-[var(--color-primary-hover)] bg-[var(--color-primary-glow)] px-1.5 py-0.2 rounded border border-[var(--color-primary)]/40 shrink-0 ml-2 transition">
                     <Terminal className="w-2.5 h-2.5" />
                     Terminal
                   </span>
@@ -144,9 +144,9 @@ export function ActiveTasksBar({
                   {item.isInProgress ? (
                     <span className="text-amber-400 font-bold shrink-0">[RUNNING]:</span>
                   ) : (
-                    <span className="text-zinc-500 font-bold shrink-0">[QUEUED]:</span>
+                    <span className="text-[var(--text-muted)] font-bold shrink-0">[QUEUED]:</span>
                   )}
-                  <span className={item.isInProgress ? 'text-zinc-200 font-medium truncate' : 'text-zinc-400 truncate'}>
+                  <span className={item.isInProgress ? 'text-[var(--text-main)] font-medium truncate' : 'text-[var(--text-muted)] truncate'}>
                     {item.data.text}
                   </span>
                 </div>
@@ -155,7 +155,7 @@ export function ActiveTasksBar({
               {item.kind === 'proc' && (
                 <div className="flex items-center gap-1.5 text-sky-300 min-w-0 pr-2">
                   <span className="text-sky-400 font-bold shrink-0">[PROC:{item.data.pid}]:</span>
-                  <span className="text-zinc-300 truncate">
+                  <span className="text-[var(--text-main)] truncate">
                     {item.data.name || item.data.commandLine || `Process #${item.data.pid}`}
                   </span>
                 </div>

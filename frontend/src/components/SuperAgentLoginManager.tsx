@@ -119,19 +119,19 @@ export const SuperAgentLoginManager: React.FC<SuperAgentLoginManagerProps> = ({
   return (
     <div className="space-y-4 text-xs font-sans">
       {/* Top Banner */}
-      <div className="flex items-center justify-between bg-[#121622] p-3.5 rounded-xl border border-zinc-800/80 shadow-sm">
+      <div className="flex items-center justify-between bg-[var(--bg-card)] p-3.5 rounded-xl border border-[var(--border-color)] shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-indigo-950/80 border border-indigo-700/50 text-indigo-400">
+          <div className="p-2 rounded-lg bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/50 text-[var(--color-primary)]">
             <Key className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="font-semibold text-zinc-100 text-xs">LLM Provider Credentials & Management Login</h3>
-            <p className="text-[11px] text-zinc-400">Manage API Keys and authentication profiles for SuperAgent models</p>
+            <h3 className="font-semibold text-[var(--text-main)] text-xs">LLM Provider Credentials & Management Login</h3>
+            <p className="text-[11px] text-[var(--text-muted)]">Manage API Keys and authentication profiles for SuperAgent models</p>
           </div>
         </div>
         <button
           onClick={openAddForm}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-1.5 px-3 rounded-lg transition flex items-center gap-1.5 text-xs shadow-sm"
+          className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium py-1.5 px-3 rounded-lg transition flex items-center gap-1.5 text-xs shadow-sm"
         >
           <Plus className="w-3.5 h-3.5" />
           Add Provider Profile
@@ -141,15 +141,15 @@ export const SuperAgentLoginManager: React.FC<SuperAgentLoginManagerProps> = ({
       {/* Provider Profiles List */}
       <div className="space-y-2.5">
         {providers.length === 0 ? (
-          <div className="bg-[#090c14] border border-dashed border-zinc-800 rounded-xl p-6 text-center space-y-2">
-            <Server className="w-8 h-8 text-zinc-600 mx-auto" />
-            <p className="text-zinc-300 font-medium text-xs">No Provider Profiles Configured</p>
-            <p className="text-[11px] text-zinc-500 max-w-md mx-auto">
+          <div className="bg-[var(--bg-sidebar)] border border-dashed border-[var(--border-color)] rounded-xl p-6 text-center space-y-2">
+            <Server className="w-8 h-8 text-[var(--text-muted)] mx-auto" />
+            <p className="text-[var(--text-main)] font-medium text-xs">No Provider Profiles Configured</p>
+            <p className="text-[11px] text-[var(--text-muted)] max-w-md mx-auto">
               Add your API credentials (OpenAI, Anthropic, Gemini, DeepSeek, Ollama, etc.) to enable SuperAgent to communicate with your AI models.
             </p>
             <button
               onClick={openAddForm}
-              className="mt-2 inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-md text-xs font-medium transition"
+              className="mt-2 inline-flex items-center gap-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white px-3 py-1.5 rounded-md text-xs font-medium transition"
             >
               <Plus className="w-3.5 h-3.5" />
               Configure First Provider
@@ -164,19 +164,19 @@ export const SuperAgentLoginManager: React.FC<SuperAgentLoginManagerProps> = ({
             return (
               <div
                 key={p.id}
-                className={`bg-[#090c14] border rounded-xl p-3.5 transition-all flex flex-col gap-2.5 ${
-                  isActive ? 'border-indigo-500/80 ring-1 ring-indigo-500/30 bg-[#0c101d]' : 'border-zinc-800/80 hover:border-zinc-700/80'
+                className={`bg-[var(--bg-card)] border rounded-xl p-3.5 transition-all flex flex-col gap-2.5 ${
+                  isActive ? 'border-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/30 bg-[var(--color-primary-glow)]' : 'border-[var(--border-color)] hover:border-[var(--border-color)]'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className={`p-1.5 rounded-md ${isActive ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/40' : 'bg-zinc-800/60 text-zinc-400'}`}>
+                    <div className={`p-1.5 rounded-md ${isActive ? 'bg-[var(--color-primary-glow)] text-[var(--color-primary)] border border-[var(--color-primary)]/40' : 'bg-[var(--bg-sidebar)] text-[var(--text-muted)]'}`}>
                       <Cpu className="w-4 h-4" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-zinc-100 text-xs">{p.name}</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700/50 uppercase font-mono tracking-wider">
+                        <span className="font-semibold text-[var(--text-main)] text-xs">{p.name}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--bg-sidebar)] text-[var(--text-muted)] border border-[var(--border-color)] uppercase font-mono tracking-wider">
                           {meta?.name || p.type}
                         </span>
                         {isActive && (
@@ -185,7 +185,7 @@ export const SuperAgentLoginManager: React.FC<SuperAgentLoginManagerProps> = ({
                           </span>
                         )}
                       </div>
-                      <p className="text-[10px] text-zinc-400 font-mono truncate max-w-md mt-0.5">
+                      <p className="text-[10px] text-[var(--text-muted)] font-mono truncate max-w-md mt-0.5">
                         Base URL: {p.baseUrl || meta?.defaultBaseUrl || 'Default'}
                       </p>
                     </div>
@@ -195,19 +195,19 @@ export const SuperAgentLoginManager: React.FC<SuperAgentLoginManagerProps> = ({
                     {!isActive && (
                       <button
                         onClick={() => onSetActiveProvider(p.id)}
-                        className="px-2.5 py-1 rounded-md bg-zinc-800 hover:bg-indigo-600 hover:text-white text-zinc-300 font-medium text-[11px] transition flex items-center gap-1"
+                        className="px-2.5 py-1 rounded-md bg-[var(--bg-sidebar)] hover:bg-[var(--color-primary)] hover:text-white text-[var(--text-muted)] font-medium text-[11px] transition flex items-center gap-1 border border-[var(--border-color)]"
                         title="Set as Active Provider Profile"
                       >
-                        <ShieldCheck className="w-3.5 h-3.5 text-indigo-400 group-hover:text-white" />
+                        <ShieldCheck className="w-3.5 h-3.5 text-[var(--color-primary)] group-hover:text-white" />
                         Set Active
                       </button>
                     )}
                     <button
                       onClick={() => openEditForm(p)}
-                      className="px-2.5 py-1 rounded-md bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 font-medium text-[11px] transition flex items-center gap-1 cursor-pointer"
+                      className="px-2.5 py-1 rounded-md bg-[var(--bg-sidebar)] hover:bg-[var(--surface-overlay-hover)] text-[var(--text-main)] font-medium text-[11px] transition flex items-center gap-1 cursor-pointer border border-[var(--border-color)]"
                       title="Edit provider profile & credentials"
                     >
-                      <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
+                      <Edit3 className="w-3.5 h-3.5 text-[var(--color-primary)]" />
                       <span>Edit</span>
                     </button>
                     <button
@@ -221,18 +221,18 @@ export const SuperAgentLoginManager: React.FC<SuperAgentLoginManagerProps> = ({
                 </div>
 
                 {/* API Key Details bar */}
-                <div className="flex items-center justify-between bg-[#121622] px-3 py-1.5 rounded-lg border border-zinc-800/60 font-mono text-[11px]">
-                  <div className="flex items-center gap-2 text-zinc-400 truncate">
-                    <Key className="w-3 h-3 text-zinc-500 shrink-0" />
+                <div className="flex items-center justify-between bg-[var(--bg-sidebar)] px-3 py-1.5 rounded-lg border border-[var(--border-color)] font-mono text-[11px]">
+                  <div className="flex items-center gap-2 text-[var(--text-muted)] truncate">
+                    <Key className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
                     <span>API Key:</span>
-                    <span className="text-zinc-200 select-all">
+                    <span className="text-[var(--text-main)] select-all">
                       {isVisible ? (p.apiKey || 'None configured') : maskApiKey(p.apiKey)}
                     </span>
                   </div>
                   {p.apiKey && (
                     <button
                       onClick={() => toggleShowApiKey(p.id)}
-                      className="text-zinc-400 hover:text-zinc-200 text-[10px] flex items-center gap-1 font-sans shrink-0 ml-2"
+                      className="text-[var(--text-muted)] hover:text-[var(--text-main)] text-[10px] flex items-center gap-1 font-sans shrink-0 ml-2"
                     >
                       {isVisible ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                       {isVisible ? 'Hide' : 'Show'}

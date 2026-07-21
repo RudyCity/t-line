@@ -121,7 +121,7 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
       return {
         action: 'Subagent',
         target: (role && role.toLowerCase() !== 'subagent' ? role : 'agent'),
-        icon: <Cpu className="w-3 h-3 text-indigo-400 shrink-0" />
+        icon: <Cpu className="w-3 h-3 text-[var(--color-primary)] shrink-0" />
       };
     }
 
@@ -160,7 +160,7 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
     return {
       action: actionName,
       target: (fallbackTarget && fallbackTarget.toLowerCase() !== rawToolName ? fallbackTarget : 'step'),
-      icon: <Wrench className="w-3 h-3 text-zinc-400 shrink-0" />
+      icon: <Wrench className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
     };
   };
 
@@ -189,28 +189,28 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
       {/* Clickable Compact Log Line */}
       <div
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 cursor-pointer transition-colors py-0.5 select-none"
+        className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer transition-colors py-0.5 select-none"
       >
         {info.icon}
-        <span className="font-sans font-medium text-zinc-400">{info.action}</span>
-        <span className="font-mono text-zinc-300 truncate max-w-md" title={displayTarget}>{displayTarget}</span>
+        <span className="font-sans font-medium text-[var(--text-muted)]">{info.action}</span>
+        <span className="font-mono text-[var(--text-main)] truncate max-w-md" title={displayTarget}>{displayTarget}</span>
         <span className="shrink-0">
           {expanded ? (
-            <ChevronDown className="w-3 h-3 text-zinc-400" />
+            <ChevronDown className="w-3 h-3 text-[var(--text-muted)]" />
           ) : (
-            <ChevronRight className="w-3 h-3 text-zinc-600" />
+            <ChevronRight className="w-3 h-3 text-[var(--text-muted)]" />
           )}
         </span>
       </div>
 
       {/* Expanded Details */}
       {expanded && (
-        <div className="mt-1 ml-4 pl-2.5 border-l border-zinc-800 text-zinc-400 font-mono text-[11px] space-y-1.5 select-text">
-          <div className="flex items-center justify-between py-0.5 text-[10px] text-zinc-500 border-b border-zinc-800/60 pb-1">
+        <div className="mt-1 ml-4 pl-2.5 border-l border-[var(--border-color)] text-[var(--text-muted)] font-mono text-[11px] space-y-1.5 select-text">
+          <div className="flex items-center justify-between py-0.5 text-[10px] text-[var(--text-muted)] border-b border-[var(--border-color)] pb-1">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-zinc-300 uppercase tracking-wider">{rawToolName || 'tool'} details</span>
+              <span className="font-semibold text-[var(--text-main)] uppercase tracking-wider">{rawToolName || 'tool'} details</span>
               {msg.callId && (
-                <span className="text-[9px] text-zinc-500 font-mono bg-zinc-800/60 px-1 py-0.2 rounded">
+                <span className="text-[9px] text-[var(--text-muted)] font-mono bg-[var(--bg-card)] px-1 py-0.2 rounded border border-[var(--border-color)]">
                   {msg.callId}
                 </span>
               )}
@@ -223,7 +223,7 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
             <div className="flex items-center gap-2">
               <button
                 onClick={(e) => { e.stopPropagation(); setFullHeight(!fullHeight); }}
-                className="flex items-center gap-1 text-zinc-400 hover:text-white transition px-1.5 py-0.5 rounded bg-zinc-800/40 hover:bg-zinc-800"
+                className="flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-main)] transition px-1.5 py-0.5 rounded bg-[var(--bg-card)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]"
                 title={fullHeight ? "Collapse View" : "Expand Full View"}
               >
                 {fullHeight ? <Minimize2 className="w-2.5 h-2.5" /> : <Maximize2 className="w-2.5 h-2.5" />}
@@ -231,7 +231,7 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
               </button>
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-1 text-zinc-400 hover:text-white transition px-1.5 py-0.5 rounded bg-zinc-800/40 hover:bg-zinc-800"
+                className="flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-main)] transition px-1.5 py-0.5 rounded bg-[var(--bg-card)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]"
                 title="Copy"
               >
                 {copied ? <Check className="w-2.5 h-2.5 text-emerald-400" /> : <Copy className="w-2.5 h-2.5" />}
@@ -242,8 +242,8 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
 
           {hasArgs && (
             <div>
-              <span className="text-[10px] text-indigo-400 font-semibold uppercase block mb-0.5">Arguments:</span>
-              <pre className={`p-1.5 rounded bg-[#0d111a] border border-zinc-800 text-[10px] text-indigo-200/90 overflow-x-auto font-mono custom-scrollbar ${
+              <span className="text-[10px] text-[var(--color-primary)] font-semibold uppercase block mb-0.5">Arguments:</span>
+              <pre className={`p-1.5 rounded bg-[var(--bg-card)] border border-[var(--border-color)] text-[10px] text-[var(--text-main)] overflow-x-auto font-mono custom-scrollbar ${
                 fullHeight ? 'max-h-none' : 'max-h-48'
               }`}>
                 {typeof args === 'string' ? args : JSON.stringify(args, null, 2)}
@@ -254,7 +254,7 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
           {hasResult && (
             <div>
               <span className="text-[10px] text-amber-400 font-semibold uppercase block mb-0.5">Output:</span>
-              <pre className={`p-1.5 rounded bg-[#0d111a] border border-zinc-800 text-[10px] text-zinc-200 overflow-x-auto font-mono whitespace-pre-wrap custom-scrollbar ${
+              <pre className={`p-1.5 rounded bg-[var(--bg-card)] border border-[var(--border-color)] text-[10px] text-[var(--text-main)] overflow-x-auto font-mono whitespace-pre-wrap custom-scrollbar ${
                 fullHeight ? 'max-h-none' : 'max-h-96'
               }`}>
                 {typeof result === 'string' ? (result || '(empty output)') : JSON.stringify(result, null, 2)}
@@ -264,8 +264,8 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
 
           {!hasArgs && !hasResult && (
             <div>
-              <span className="text-[10px] text-zinc-500 font-semibold uppercase block mb-0.5">Status / Log:</span>
-              <pre className={`p-1.5 rounded bg-[#0d111a] border border-zinc-800 text-[10px] text-zinc-400 overflow-x-auto font-mono whitespace-pre-wrap custom-scrollbar ${
+              <span className="text-[10px] text-[var(--text-muted)] font-semibold uppercase block mb-0.5">Status / Log:</span>
+              <pre className={`p-1.5 rounded bg-[var(--bg-card)] border border-[var(--border-color)] text-[10px] text-[var(--text-muted)] overflow-x-auto font-mono whitespace-pre-wrap custom-scrollbar ${
                 fullHeight ? 'max-h-none' : 'max-h-32'
               }`}>
                 {msg.text || 'Tool invocation completed.'}

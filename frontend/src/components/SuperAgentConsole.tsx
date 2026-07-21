@@ -754,16 +754,16 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#05070c] text-gray-200 overflow-hidden font-sans">
-      <div className="flex flex-wrap items-center justify-between px-4 py-2 bg-[#090d16] border-b border-zinc-800/80 min-h-[48px] w-full shadow-md gap-3 select-none">
+    <div className="flex flex-col h-full w-full bg-[var(--bg-main)] text-[var(--text-main)] overflow-hidden font-sans">
+      <div className="flex flex-wrap items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)] border-b border-[var(--border-color)] min-h-[48px] w-full shadow-md gap-3 select-none">
         {/* Left Column: History Toggle & Active Workspace Pill */}
         <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={() => setShowHistorySidebar(!showHistorySidebar)}
             className={`px-3 py-1.5 text-xs rounded-lg border transition flex items-center gap-1.5 cursor-pointer font-medium ${
               showHistorySidebar 
-                ? 'bg-indigo-950/70 border-indigo-700/80 text-indigo-300 shadow-sm' 
-                : 'bg-[#121724] border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
+                ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)] text-[var(--color-primary)] shadow-sm' 
+                : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-color)]'
             }`}
             title="Toggle Chat History Sidebar"
           >
@@ -771,8 +771,8 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
             <span>History</span>
           </button>
           {workspace && (
-            <span className="text-[11px] px-2.5 py-1 rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 font-mono flex items-center gap-1.5 max-w-[160px] sm:max-w-[220px] truncate shadow-xs">
-              <Folder className="w-3 h-3 text-indigo-400 flex-shrink-0" />
+            <span className="text-[11px] px-2.5 py-1 rounded-lg border border-[var(--color-primary)]/30 bg-[var(--color-primary-glow)] text-[var(--color-primary)] font-mono flex items-center gap-1.5 max-w-[160px] sm:max-w-[220px] truncate shadow-xs">
+              <Folder className="w-3 h-3 text-[var(--color-primary)] flex-shrink-0" />
               <span className="truncate">{workspace.split(/[/\\]/).pop()}</span>
             </span>
           )}
@@ -780,13 +780,13 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
 
         {/* Center Column: Segmented Tab Switcher */}
         <div className="flex justify-center">
-          <div className="flex bg-[#121724] rounded-xl p-1 border border-zinc-800/90 shadow-inner gap-1">
+          <div className="flex bg-[var(--bg-card)] rounded-xl p-1 border border-[var(--border-color)] shadow-inner gap-1">
             <button
               onClick={() => setActiveTab('console')}
               className={`flex items-center gap-1.5 px-3.5 py-1 text-xs rounded-lg transition font-medium cursor-pointer ${
                 activeTab === 'console' 
-                  ? 'bg-indigo-600 text-white font-semibold shadow-md' 
-                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50'
+                  ? 'bg-[var(--color-primary)] text-white font-semibold shadow-md' 
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
               }`}
             >
               <Terminal className="w-3.5 h-3.5" />
@@ -796,8 +796,8 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
               onClick={() => setActiveTab('audit')}
               className={`flex items-center gap-1.5 px-3.5 py-1 text-xs rounded-lg transition font-medium cursor-pointer ${
                 activeTab === 'audit' 
-                  ? 'bg-indigo-600 text-white font-semibold shadow-md' 
-                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50'
+                  ? 'bg-[var(--color-primary)] text-white font-semibold shadow-md' 
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
               }`}
             >
               <Shield className="w-3.5 h-3.5" />
@@ -813,7 +813,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
             className={`px-3 py-1.5 text-xs rounded-lg border transition flex items-center gap-1.5 cursor-pointer font-medium ${
               showSidebar 
                 ? 'bg-emerald-950/70 border-emerald-700/80 text-emerald-300 shadow-sm' 
-                : 'bg-[#121724] border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
+                : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-color)]'
             }`}
             title="Toggle Live Monitor Sidebar"
           >
@@ -825,8 +825,8 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
             onClick={() => setShowSettingsMenu(!showSettingsMenu)}
             className={`px-3 py-1.5 text-xs rounded-lg border transition flex items-center gap-1.5 cursor-pointer font-medium ${
               showSettingsMenu 
-                ? 'bg-indigo-950/70 border-indigo-700/80 text-indigo-300 shadow-sm' 
-                : 'bg-[#121724] border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
+                ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)] text-[var(--color-primary)] shadow-sm' 
+                : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-color)]'
             }`}
             title="SuperAgent & App Settings"
           >
@@ -882,7 +882,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
           {showHistorySidebar && (
             <div
               onMouseDown={startResizingLeft}
-              className="w-[2px] hover:w-[4px] bg-zinc-800/80 hover:bg-indigo-500/90 cursor-col-resize select-none transition-all duration-150 h-full shrink-0 z-20 active:bg-indigo-600"
+              className="w-[2px] hover:w-[4px] bg-[var(--border-color)] hover:bg-[var(--color-primary)] cursor-col-resize select-none transition-all duration-150 h-full shrink-0 z-20 active:bg-[var(--color-primary)]"
               title="Drag to resize History panel"
             />
           )}
@@ -900,26 +900,26 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
             >
             {/* Infinite scroll: loading older messages indicator */}
             {hasMore ? (
-              <div className="flex items-center justify-center py-2 gap-2 text-zinc-500 text-xs select-none">
+              <div className="flex items-center justify-center py-2 gap-2 text-[var(--text-muted)] text-xs select-none">
                 {loadingMore ? (
                   <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[var(--color-primary)]" />
                     <span>Loading older messages...</span>
                   </>
                 ) : (
                   <button
                     onClick={handleLoadMoreMessagesWithScroll}
-                    className="text-indigo-400 hover:text-indigo-300 transition-colors px-3 py-1 rounded border border-zinc-700/50 hover:border-indigo-500/50 bg-zinc-800/40 text-[11px]"
+                    className="text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] transition-colors px-3 py-1 rounded border border-[var(--border-color)] hover:border-[var(--color-primary)] bg-[var(--bg-card)] text-[11px]"
                   >
                     ↑ Load older messages
                   </button>
                 )}
               </div>
             ) : messages.length > 0 ? (
-              <div className="flex items-center justify-center py-2 gap-2 text-zinc-500/70 text-[10px] font-sans select-none">
-                <span className="w-1 h-1 rounded-full bg-zinc-700" />
+              <div className="flex items-center justify-center py-2 gap-2 text-[var(--text-muted)]/70 text-[10px] font-sans select-none">
+                <span className="w-1 h-1 rounded-full bg-[var(--border-color)]" />
                 <span>Beginning of conversation history</span>
-                <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                <span className="w-1 h-1 rounded-full bg-[var(--border-color)]" />
               </div>
             ) : null}
             <SuperAgentGroupedMessages
@@ -966,13 +966,13 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
 
             {/* Simple Thinking Indicator */}
             {loading && (
-              <div className="flex items-center gap-2 text-zinc-500 text-xs font-sans pl-1 py-1">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+              <div className="flex items-center gap-2 text-[var(--text-muted)] text-xs font-sans pl-1 py-1">
+                <Sparkles className="w-3.5 h-3.5 text-[var(--color-primary)] animate-pulse" />
                 <span>SuperAgent is thinking...</span>
                 <span className="flex gap-0.5 items-center">
-                  <span className="w-1 h-1 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1 h-1 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1 h-1 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="w-1 h-1 bg-[var(--text-muted)] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1 h-1 bg-[var(--text-muted)] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1 h-1 bg-[var(--text-muted)] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                 </span>
               </div>
             )}
@@ -1020,7 +1020,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
           {showSidebar && (
             <div
               onMouseDown={startResizingRight}
-              className="w-[2px] hover:w-[4px] bg-zinc-800/80 hover:bg-indigo-500/90 cursor-col-resize select-none transition-all duration-150 h-full shrink-0 z-20 active:bg-indigo-600"
+              className="w-[2px] hover:w-[4px] bg-[var(--border-color)] hover:bg-[var(--color-primary)] cursor-col-resize select-none transition-all duration-150 h-full shrink-0 z-20 active:bg-[var(--color-primary)]"
               title="Drag to resize Monitor panel"
             />
           )}

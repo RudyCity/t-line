@@ -91,13 +91,13 @@ export function SuperAgentHistorySidebar({
   };
 
   return (
-    <div className="w-full bg-[#090c14] border-r border-zinc-800/80 flex flex-col h-full shrink-0 select-none font-sans text-xs">
+    <div className="w-full bg-[var(--bg-sidebar)] border-r border-[var(--border-color)] flex flex-col h-full shrink-0 select-none font-sans text-xs">
       {/* Sidebar Header with History Title & Action Icon Buttons */}
-      <div className="p-2.5 px-3 border-b border-zinc-800/80 flex items-center justify-between min-h-[44px]">
-        <div className="flex items-center gap-2 font-semibold text-xs text-zinc-200 tracking-wide">
-          <History className="w-4 h-4 text-indigo-400 shrink-0" />
+      <div className="p-2.5 px-3 border-b border-[var(--border-color)] flex items-center justify-between min-h-[44px]">
+        <div className="flex items-center gap-2 font-semibold text-xs text-[var(--text-main)] tracking-wide">
+          <History className="w-4 h-4 text-[var(--color-primary)] shrink-0" />
           <span>History</span>
-          <span className="text-[10px] text-indigo-300 bg-indigo-950/80 px-1.5 py-0.5 rounded-full border border-indigo-800/60 font-mono">
+          <span className="text-[10px] text-[var(--color-primary)] bg-[var(--color-primary-glow)] px-1.5 py-0.5 rounded-full border border-[var(--color-primary)]/40 font-mono">
             {sessions.length}
           </span>
         </div>
@@ -108,8 +108,8 @@ export function SuperAgentHistorySidebar({
             onClick={() => setShowSearchDropdown(prev => !prev)}
             className={`p-1.5 rounded-md border transition cursor-pointer ${
               showSearchDropdown || searchQuery
-                ? 'bg-indigo-950/80 border-indigo-700 text-indigo-300 shadow-sm'
-                : 'bg-[#121622] border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)] text-[var(--color-primary)] shadow-sm'
+                : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
             title={showSearchDropdown ? "Close search" : "Search history"}
           >
@@ -118,7 +118,7 @@ export function SuperAgentHistorySidebar({
 
           <button
             onClick={onNewChat}
-            className="p-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 border border-indigo-500 text-white shadow-sm hover:shadow transition cursor-pointer flex items-center gap-1 font-medium text-[11px]"
+            className="p-1.5 rounded-md bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] border border-[var(--color-primary)] text-white shadow-sm hover:shadow transition cursor-pointer flex items-center gap-1 font-medium text-[11px]"
             title="New Chat"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -128,21 +128,21 @@ export function SuperAgentHistorySidebar({
 
       {/* Search Input Dropdown Panel */}
       {showSearchDropdown && (
-        <div className="p-2 border-b border-zinc-800/80 bg-[#0c0f1a] transition-all duration-150">
+        <div className="p-2 border-b border-[var(--border-color)] bg-[var(--panel-header-bg)] transition-all duration-150">
           <div className="relative flex items-center">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 text-zinc-500 pointer-events-none" />
+            <Search className="w-3.5 h-3.5 absolute left-2.5 text-[var(--text-muted)] pointer-events-none" />
             <input
               type="text"
               placeholder="Filter chats..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus
-              className="w-full bg-[#121622] border border-zinc-800 rounded-md pl-8 pr-7 py-1 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500/80 transition"
+              className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-md pl-8 pr-7 py-1 text-xs text-[var(--text-main)] placeholder:[var(--text-muted)] focus:outline-none focus:border-[var(--color-primary)] transition"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 text-zinc-500 hover:text-zinc-300 p-0.5"
+                className="absolute right-2 text-[var(--text-muted)] hover:text-[var(--text-main)] p-0.5"
                 title="Clear search filter"
               >
                 <X className="w-3 h-3" />
@@ -169,7 +169,7 @@ export function SuperAgentHistorySidebar({
         }}
       >
         {filteredSessions.length === 0 ? (
-          <div className="p-4 text-center text-zinc-500 text-xs italic">
+          <div className="p-4 text-center text-[var(--text-muted)] text-xs italic">
             {searchQuery ? 'No matching chats' : 'No chat history'}
           </div>
         ) : (
@@ -183,9 +183,9 @@ export function SuperAgentHistorySidebar({
                 onClick={() => onSelectSession(session.id)}
                 className={`group relative flex items-center justify-between p-2 rounded-lg cursor-pointer transition ${
                   isActive
-                    ? 'bg-indigo-950/50 text-indigo-100 font-medium shadow-sm'
-                    : 'text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200'
-                } ${isActive && isProcessing ? 'ring-1 ring-indigo-500/30 shadow-[0_0_8px_rgba(99,102,241,0.15)]' : ''}`}
+                    ? 'bg-[var(--color-primary-glow)] text-[var(--text-main)] font-medium shadow-sm'
+                    : 'text-[var(--text-muted)] hover:bg-[var(--surface-overlay-hover)] hover:text-[var(--text-main)]'
+                } ${isActive && isProcessing ? 'ring-1 ring-[var(--color-primary)]/30 shadow-[0_0_8px_rgba(99,102,241,0.15)]' : ''}`}
               >
                 {isEditing ? (
                   <form
@@ -198,7 +198,7 @@ export function SuperAgentHistorySidebar({
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
                       autoFocus
-                      className="flex-1 bg-[#161b26] border border-indigo-500 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none"
+                      className="flex-1 bg-[var(--bg-card)] border border-[var(--color-primary)] rounded px-1.5 py-0.5 text-xs text-[var(--text-main)] focus:outline-none"
                     />
                     <button
                       type="submit"
@@ -210,7 +210,7 @@ export function SuperAgentHistorySidebar({
                     <button
                       type="button"
                       onClick={handleCancelRename}
-                      className="p-1 text-zinc-400 hover:text-zinc-300 rounded"
+                      className="p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] rounded"
                       title="Cancel"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -229,7 +229,7 @@ export function SuperAgentHistorySidebar({
                       </button>
                       <button
                         onClick={handleCancelDelete}
-                        className="px-1.5 py-0.5 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded text-[10px] transition"
+                        className="px-1.5 py-0.5 bg-[var(--bg-card)] hover:bg-[var(--surface-overlay-hover)] text-[var(--text-main)] rounded text-[10px] transition"
                         title="Batal"
                       >
                         Batal
@@ -239,10 +239,10 @@ export function SuperAgentHistorySidebar({
                 ) : (
                   <>
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-indigo-400' : 'text-zinc-500 group-hover:text-zinc-400'}`} />
+                      <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[var(--color-primary)]' : 'text-[var(--text-muted)] group-hover:text-[var(--text-main)]'}`} />
                       <div className="flex flex-col min-w-0">
                         <span className="truncate text-xs leading-tight">{session.title}</span>
-                        <span className="text-[10px] text-zinc-500 font-mono mt-0.5">{formatTimestamp(session.updatedAt)}</span>
+                        <span className="text-[10px] text-[var(--text-muted)] font-mono mt-0.5">{formatTimestamp(session.updatedAt)}</span>
                       </div>
                     </div>
 
