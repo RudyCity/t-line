@@ -4,9 +4,10 @@ All notable changes to the **t-line** workspace manager project will be document
 
 ## [1.3.613] - 2026-07-21
 
-### Bug Fix — SuperAgent Settings Modal Tab Vertical Clipping (`SuperAgentSettingsModal.tsx`)
-- **Unclipped Segmented Pill Switcher**: Converted modal tab navigation in [SuperAgentSettingsModal.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentSettingsModal.tsx#L94) to a segmented pill switcher with explicit container padding (`py-2.5`) and `shrink-0`, eliminating overflow clipping issues caused by negative margin tab borders (`-mb-px`) inside `overflow-x-auto`.
-- **Full Text & Icon Visibility**: Guaranteed 100% text and icon vertical visibility across all modal tab buttons.
+### Bug Fix — SuperAgent Preset Dropup Popover Visibility & Settings Modal (`SuperAgentInputContainer.tsx` & `SuperAgentSettingsModal.tsx`)
+- **Fix Overflow Clipping on Preset Dropup**: Replaced `overflow-x-auto` with `overflow-visible` on the input console footer toolbar in [SuperAgentInputContainer.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentInputContainer.tsx#L207) so the preset selection dropup menu is no longer clipped by the container boundary.
+- **Enhanced Popover UI & Case-Insensitive Matching**: Upgraded dropup menu z-index (`z-[100]`), rounded corners (`rounded-xl`), backdrop blur, active state indicator (`● Active`), and case-insensitive preset ID/name matching.
+- **Unclipped Segmented Pill Switcher**: Converted modal tab navigation in [SuperAgentSettingsModal.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentSettingsModal.tsx#L94) to a segmented pill switcher with explicit container padding (`py-2.5`) and `shrink-0`, eliminating overflow clipping issues.
 
 ## [1.3.612] - 2026-07-21
 

@@ -204,7 +204,7 @@ export function SuperAgentInputContainer({
         </div>
 
         {/* Control Footer Toolbar with Presets & Model */}
-        <div className="flex items-center justify-between gap-2 px-2 py-1.5 bg-[var(--panel-header-bg)] border-t border-[var(--border-color)] overflow-x-auto scrollbar-none">
+        <div className="flex items-center justify-between gap-2 px-2 py-1.5 bg-[var(--panel-header-bg)] border-t border-[var(--border-color)] overflow-visible">
           <div className="flex items-center gap-1.5 min-w-0">
             <button
               type="button"
@@ -227,18 +227,18 @@ export function SuperAgentInputContainer({
                 >
                   <span className="text-[var(--text-muted)] font-normal">preset:</span>
                   <span className="font-semibold text-[var(--color-primary)]">
-                    {(presets[agentMode] || []).find(p => p.id === activePresetId[agentMode])?.name || activePresetId[agentMode] || 'default'}
+                    {(presets[agentMode] || []).find(p => p.id?.toLowerCase() === (activePresetId[agentMode] || '').toLowerCase() || p.name?.toLowerCase() === (activePresetId[agentMode] || '').toLowerCase())?.name || activePresetId[agentMode] || 'default'}
                   </span>
                   <ChevronDown className="w-3 h-3 text-[var(--text-muted)] ml-0.5" />
                 </button>
 
                 {showPresetMenu && (
-                  <div className="sa-command-popover absolute bottom-full left-0 mb-1 w-52 py-1 z-50 overflow-hidden font-mono bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-lg shadow-2xl">
+                  <div className="sa-command-popover absolute bottom-full left-0 mb-1.5 w-60 py-1 z-[100] overflow-hidden font-mono bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-xl shadow-2xl backdrop-blur-md">
                     <div className="px-2.5 py-1 text-[9px] font-bold text-[var(--color-primary)] uppercase tracking-wider border-b border-[var(--border-color)] mb-1">
                       Select Preset
                     </div>
                     {(presets[agentMode] || []).map(p => {
-                      const isActive = p.id === activePresetId[agentMode];
+                      const isActive = p.id?.toLowerCase() === (activePresetId[agentMode] || '').toLowerCase() || p.name?.toLowerCase() === (activePresetId[agentMode] || '').toLowerCase();
                       return (
                         <button
                           key={p.id}
@@ -247,13 +247,16 @@ export function SuperAgentInputContainer({
                             handlePresetChange(p.id);
                             setShowPresetMenu(false);
                           }}
-                          className={`w-full text-left px-2.5 py-1 text-[10px] transition flex flex-col ${
+                          className={`w-full text-left px-2.5 py-1.5 text-[10px] transition flex flex-col cursor-pointer ${
                             isActive
                               ? 'bg-[var(--color-primary-glow)] text-[var(--color-primary)] font-bold border-l-2 border-[var(--color-primary)]'
                               : 'text-[var(--text-muted)] hover:bg-[var(--surface-overlay-hover)] hover:text-[var(--text-main)]'
                           }`}
                         >
-                          <span>{p.name}</span>
+                          <span className="flex items-center justify-between">
+                            <span>{p.name}</span>
+                            {isActive && <span className="text-[9px] text-[var(--color-primary)] font-semibold">● Active</span>}
+                          </span>
                           {p.description && p.description !== '/model' && (
                             <span className="text-[9px] text-[var(--text-muted)] font-sans truncate mt-0.5">
                               {p.description}
