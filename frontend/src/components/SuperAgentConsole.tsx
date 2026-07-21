@@ -330,7 +330,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   useEffect(() => {
     const fetchSkills = async () => {
       try {
-        const res = await fetch('/api/superagent/skills');
+        const res = await fetch('/api/superagent/skills', { headers: getAuthHeader() });
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data.skills)) {
@@ -341,6 +341,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
     };
     fetchSkills();
   }, [connectTrigger]);
+
 
   // Attachment States & Helpers
   const [attachments, setAttachments] = useState<Array<{
