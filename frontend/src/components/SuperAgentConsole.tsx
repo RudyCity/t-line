@@ -583,7 +583,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
     }
 
     if (e.key === 'Enter') {
-      if (!e.shiftKey) {
+      if (e.shiftKey) {
         e.preventDefault();
         handleSend();
       }

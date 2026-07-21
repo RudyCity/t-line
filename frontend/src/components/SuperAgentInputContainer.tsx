@@ -220,7 +220,7 @@ export function SuperAgentInputContainer({
 
           <div className="flex items-center gap-3">
             <span className="text-[10px] text-zinc-500 font-mono hidden md:inline">
-              Shift+↵ newline • / commands
+              Shift+↵ send • ↵ newline • / commands
             </span>
             <span className="text-[10px] text-zinc-600 font-mono">
               {input.length} chars
@@ -244,7 +244,7 @@ export function SuperAgentInputContainer({
                 title="Send Message"
               >
                 <Send className="w-3 h-3" />
-                <span>RUN [↵]</span>
+                <span>RUN [Shift+↵]</span>
               </button>
             )}
           </div>
