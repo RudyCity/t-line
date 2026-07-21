@@ -295,8 +295,8 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
 
   if (msg.role === 'user') {
     return (
-      <div key={index} className="my-2 py-2 px-3 border-l-2 border-indigo-500 bg-indigo-950/20 text-xs font-mono text-zinc-100 select-text rounded-r-md">
-        <div className="flex items-center gap-1.5 mb-1 select-none text-[10px] font-bold text-indigo-400 uppercase">
+      <div key={index} className="my-2 py-2 px-3 bg-[#16192e] text-xs font-sans text-zinc-100 select-text rounded-lg border border-indigo-500/40 shadow-sm">
+        <div className="flex items-center gap-1.5 mb-1 select-none text-[10px] font-bold font-mono text-indigo-300 uppercase">
           <span>❯ USER</span>
         </div>
         <div className="leading-relaxed">
