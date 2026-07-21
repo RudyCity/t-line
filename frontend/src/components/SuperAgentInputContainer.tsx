@@ -204,17 +204,16 @@ export function SuperAgentInputContainer({
         </div>
 
         {/* Control Footer Toolbar with Presets & Model */}
-        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-[#090a0e]/60 border-t border-zinc-800/50">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center justify-between gap-2 px-2 py-1.5 bg-[#090a0e]/60 border-t border-zinc-800/50 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-1.5 min-w-0">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
-              className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 hover:text-zinc-200 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800/90 hover:border-zinc-700 rounded-md px-2.5 py-1 transition cursor-pointer disabled:opacity-40"
+              className="flex items-center justify-center text-[10px] font-mono text-zinc-400 hover:text-zinc-200 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800/90 hover:border-zinc-700 rounded-md p-1.5 transition cursor-pointer disabled:opacity-40 shrink-0"
               title="Attach Files"
             >
-              <Paperclip className="w-3 h-3 text-zinc-400" />
-              <span>[+] Attach</span>
+              <Paperclip className="w-3.5 h-3.5 text-zinc-400" />
             </button>
 
             {/* Preset Switcher Pill */}
@@ -277,9 +276,9 @@ export function SuperAgentInputContainer({
             )}
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] text-zinc-500 font-mono hidden md:inline">
-              Shift+↵ send • ↵ newline • / commands
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] text-zinc-500 font-mono hidden lg:inline">
+              Shift+↵ • / cmds
             </span>
             <span className="text-[10px] text-zinc-600 font-mono">
               {input.length} chars
@@ -299,11 +298,10 @@ export function SuperAgentInputContainer({
               <button
                 onClick={() => handleSend()}
                 disabled={(!input.trim() && attachments.length === 0) || !ws || ws.readyState !== WebSocket.OPEN}
-                className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 disabled:bg-zinc-900 disabled:text-zinc-600 disabled:border-zinc-800 border border-indigo-500 text-white text-[10px] font-mono font-bold px-3.5 py-1 rounded-md shadow-md shadow-indigo-600/20 transition-all cursor-pointer shrink-0 focus:outline-none"
-                title="Send Message"
+                className="flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 active:scale-95 disabled:bg-zinc-900 disabled:text-zinc-600 disabled:border-zinc-800 border border-indigo-500 text-white rounded-md p-1.5 shadow-md shadow-indigo-600/20 transition-all cursor-pointer shrink-0 focus:outline-none"
+                title="Send Message (Shift+↵)"
               >
-                <Send className="w-3 h-3" />
-                <span>RUN [Shift+↵]</span>
+                <Send className="w-3.5 h-3.5" />
               </button>
             )}
           </div>

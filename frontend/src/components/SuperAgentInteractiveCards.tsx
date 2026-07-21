@@ -1,4 +1,4 @@
-import { Check, X, AlertTriangle, HelpCircle } from 'lucide-react';
+import { Check, X, AlertTriangle } from 'lucide-react';
 
 export interface PendingPermission {
   permissionId: string;
@@ -80,58 +80,93 @@ export function QuestionCard({
     }
   };
 
+  const hasOptions = pendingQuestion.options && pendingQuestion.options.length > 0;
+  const isSubmitDisabled = hasOptions
+    ? selectedQuestionAnswers.length === 0
+    : !customQuestionInput.trim();
+
   return (
-    <div className="p-4 rounded-xl bg-indigo-950/30 border border-indigo-500/50 text-indigo-100 space-y-3 shadow-lg backdrop-filter backdrop-blur-md">
-      <div className="flex items-center gap-2 text-indigo-300 font-bold text-xs tracking-wide uppercase font-mono select-none">
-        <HelpCircle className="w-4 h-4 text-indigo-400" />
-        <span>Agent Question</span>
+    <div className="group relative p-4 rounded-xl bg-[#090d16]/95 border border-zinc-800/90 hover:border-zinc-700/80 text-zinc-100 space-y-3.5 shadow-xl backdrop-blur-md transition-all duration-200">
+      {/* Top Header Badge */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+          </span>
+          <span className="text-[10px] font-mono uppercase tracking-widest text-indigo-400 font-semibold">
+            Agent Question
+          </span>
+        </div>
+        {pendingQuestion.isMultiSelect && (
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-950/60 border border-indigo-800/40 text-indigo-300">
+            Select Multiple
+          </span>
+        )}
       </div>
-      <p className="text-xs text-zinc-200 font-medium leading-relaxed select-none">
+
+      {/* Question Text */}
+      <p className="text-xs sm:text-sm font-medium text-zinc-100 leading-snug tracking-tight">
         {pendingQuestion.question}
       </p>
 
-      {pendingQuestion.options && pendingQuestion.options.length > 0 ? (
-        <div className="space-y-2 pt-1">
-          {pendingQuestion.options.map(opt => (
-            <label
-              key={opt}
-              className={`flex items-center gap-2.5 p-2.5 rounded-md border transition cursor-pointer text-xs ${
-                isSelected(opt)
-                  ? 'bg-indigo-900/40 border-indigo-500 text-white shadow-sm'
-                  : 'bg-[#121622] border-zinc-800 text-zinc-300 hover:bg-zinc-800/60 hover:border-zinc-700'
-              }`}
-              onClick={() => handleToggle(opt)}
-            >
-              <input
-                type={pendingQuestion.isMultiSelect ? 'checkbox' : 'radio'}
-                checked={isSelected(opt)}
-                readOnly
-                className="accent-indigo-500 rounded"
-              />
-              <span className="leading-snug">{opt}</span>
-            </label>
-          ))}
+      {/* Options List or Input Area */}
+      {hasOptions ? (
+        <div className="space-y-1.5 pt-0.5">
+          {pendingQuestion.options!.map(opt => {
+            const active = isSelected(opt);
+            return (
+              <div
+                key={opt}
+                onClick={() => handleToggle(opt)}
+                className={`flex items-start gap-2.5 p-2.5 rounded-lg border transition-all duration-150 cursor-pointer select-none text-xs ${
+                  active
+                    ? 'bg-indigo-950/40 border-indigo-500/60 text-white shadow-sm ring-1 ring-indigo-500/20'
+                    : 'bg-[#101522]/60 border-zinc-800/80 text-zinc-300 hover:bg-[#151c2e] hover:border-zinc-700 hover:text-zinc-100'
+                }`}
+              >
+                <div
+                  className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded flex items-center justify-center transition-all duration-150 ${
+                    pendingQuestion.isMultiSelect ? 'rounded' : 'rounded-full'
+                  } ${
+                    active
+                      ? 'bg-indigo-600 border-indigo-500 text-white'
+                      : 'border border-zinc-700 bg-zinc-900/50 text-transparent'
+                  }`}
+                >
+                  {pendingQuestion.isMultiSelect ? (
+                    <Check className="w-3 h-3 stroke-[3]" />
+                  ) : (
+                    <span className={`w-1.5 h-1.5 rounded-full bg-white transition-opacity ${active ? 'opacity-100' : 'opacity-0'}`} />
+                  )}
+                </div>
+                <span className="leading-snug pt-0.5">{opt}</span>
+              </div>
+            );
+          })}
         </div>
       ) : (
-        <textarea
-          value={customQuestionInput}
-          onChange={(e) => setCustomQuestionInput(e.target.value)}
-          placeholder="Type your response..."
-          className="w-full bg-[#121622] border border-zinc-700/60 rounded-md p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 font-sans resize-none h-20 transition-colors"
-        />
+        <div className="pt-0.5">
+          <textarea
+            value={customQuestionInput}
+            onChange={(e) => setCustomQuestionInput(e.target.value)}
+            placeholder="Type your response..."
+            className="w-full bg-[#101522]/80 border border-zinc-800 rounded-lg p-3 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/80 focus:ring-1 focus:ring-indigo-500/30 font-sans resize-none h-20 transition-all duration-150"
+          />
+        </div>
       )}
 
-      <div className="flex justify-end pt-1">
+      {/* Action Footer */}
+      <div className="flex items-center justify-between pt-1 border-t border-zinc-800/50">
+        <span className="text-[10px] text-zinc-500 font-mono">
+          {hasOptions ? `${selectedQuestionAnswers.length} selected` : ''}
+        </span>
         <button
           onClick={handleQuestionSubmit}
-          disabled={
-            (!pendingQuestion.options || pendingQuestion.options.length === 0)
-              ? !customQuestionInput.trim()
-              : selectedQuestionAnswers.length === 0
-          }
-          className="bg-indigo-600 hover:bg-indigo-500 active:translate-y-0.5 disabled:bg-zinc-800 disabled:text-zinc-600 disabled:translate-y-0 text-white font-medium text-xs px-4 py-1.5 rounded-md transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          disabled={isSubmitDisabled}
+          className="bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] disabled:opacity-40 disabled:hover:bg-indigo-600 disabled:cursor-not-allowed disabled:active:scale-100 text-white font-medium text-xs px-4 py-1.5 rounded-lg shadow-sm hover:shadow-indigo-500/20 transition-all duration-150 flex items-center gap-1.5 cursor-pointer"
         >
-          Submit Answer
+          <span>Submit Answer</span>
         </button>
       </div>
     </div>

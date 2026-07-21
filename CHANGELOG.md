@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.587] - 2026-07-21
+
+### Changed
+- **SuperAgent Question Card Redesign (`SuperAgentInteractiveCards.tsx`)**:
+  - Redesigned the agent question-answering card to adhere to Hallmark minimalist design guidelines.
+  - Added modern, styled custom checkboxes and radio buttons with smooth transition states.
+  - Replaced native inputs with a custom flex-aligned layout containing active ring borders and dot/checkmark indicators.
+  - Integrated status indicator animations (pulsing green/indigo dot) and proper spacing.
+
 ## [1.3.586] - 2026-07-21
 
 ### Improved
