@@ -7,6 +7,7 @@ import { PermissionCard, QuestionCard, PlanCard, PendingPermission, PendingQuest
 import { getSlashCommands, SlashCommand } from './SuperAgentCommands';
 import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSidebar';
 import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
+import { ActiveTasksBar, ChecklistTaskItem } from './ActiveTasksBar';
 import { SuperAgentInputContainer } from './SuperAgentInputContainer';
 import { SuperAgentSettingsMenu } from './SuperAgentSettingsMenu';
 import { SuperAgentSettingsModal } from './SuperAgentSettingsModal';
@@ -107,6 +108,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   const [subagentList, setSubagentList] = useState<SubAgentItem[]>([]);
   const [procList] = useState<ProcessItem[]>([]);
   const [recentChangeList, setRecentChangeList] = useState<RecentChangeItem[]>([]);
+  const [checklistTasks, setChecklistTasks] = useState<ChecklistTaskItem[]>([]);
   const [selectedSubagent, setSelectedSubagent] = useState<SubAgentItem | null>(null);
   const [showSidebar, setShowSidebar] = useState<boolean>(true);
   const [showSettingsMenu, setShowSettingsMenu] = useState<boolean>(false);
@@ -160,6 +162,16 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
             });
             return merged;
           });
+        }
+      }
+
+      const tasksRes = await fetch(`/api/superagent/tasks?workspace=${encodeURIComponent(workspace)}`, {
+        headers: getAuthHeader()
+      });
+      if (tasksRes.ok) {
+        const tasksData = await tasksRes.json();
+        if (Array.isArray(tasksData.tasks)) {
+          setChecklistTasks(tasksData.tasks);
         }
       }
     } catch (e) {
@@ -950,7 +962,14 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
                   </div>
                 ))}
               </div>
-            )}
+            {/* Active Tasks Widget (Subagents, Checklist Tasks, Processes, Tool Progress) */}
+            <ActiveTasksBar
+              subagents={subagentList}
+              procs={procList}
+              checklistTasks={checklistTasks}
+              toolProgressMsg={toolProgressMsg}
+              onSelectSubAgent={(sa) => setSelectedSubagent(sa)}
+            />
 
             <SuperAgentInputContainer
               input={input}

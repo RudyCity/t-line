@@ -201,6 +201,35 @@ router.get('/instances', (req, res) => {
   });
 });
 
+// Checklist tasks monitor (task.md)
+router.get('/tasks', (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const emptyResult = { tasks: [], missing: true };
+  let responded = false;
+
+  const safeSend = (data: any) => {
+    if (responded) return;
+    responded = true;
+    res.json(data);
+  };
+
+  const url = `http://127.0.0.1:7888/api/tasks?workspace=${encodeURIComponent(workspace)}`;
+  const request = http.get(url, { timeout: 1500 }, (resp) => {
+    let body = '';
+    resp.on('data', chunk => { body += chunk; });
+    resp.on('end', () => {
+      try {
+        safeSend(JSON.parse(body));
+      } catch {
+        safeSend(emptyResult);
+      }
+    });
+  });
+
+  request.on('error', () => { safeSend(emptyResult); });
+  request.on('timeout', () => { request.destroy(); safeSend(emptyResult); });
+});
+
 // Chat Session history sync endpoints (100% SuperAgent HTTP Server)
 router.get('/sessions', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';
