@@ -18,6 +18,7 @@ interface SuperAgentHistorySidebarProps {
   hasMoreSessions?: boolean;
   loadingMoreSessions?: boolean;
   onLoadMoreSessions?: () => void;
+  isProcessing?: boolean;
 }
 
 export function SuperAgentHistorySidebar({
@@ -29,7 +30,8 @@ export function SuperAgentHistorySidebar({
   onRenameSession,
   hasMoreSessions,
   loadingMoreSessions,
-  onLoadMoreSessions
+  onLoadMoreSessions,
+  isProcessing = false,
 }: SuperAgentHistorySidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
@@ -183,7 +185,7 @@ export function SuperAgentHistorySidebar({
                   isActive
                     ? 'bg-indigo-950/50 border-l-2 border-indigo-500 text-indigo-100 font-medium shadow-sm'
                     : 'text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200 border-l-2 border-transparent'
-                }`}
+                } ${isActive && isProcessing ? 'ring-1 ring-indigo-500/30 shadow-[0_0_8px_rgba(99,102,241,0.15)]' : ''}`}
               >
                 {isEditing ? (
                   <form
@@ -236,7 +238,7 @@ export function SuperAgentHistorySidebar({
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
                       <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-indigo-400' : 'text-zinc-500 group-hover:text-zinc-400'}`} />
                       <div className="flex flex-col min-w-0">
                         <span className="truncate text-xs leading-tight">{session.title}</span>
@@ -244,25 +246,33 @@ export function SuperAgentHistorySidebar({
                       </div>
                     </div>
 
-                    {/* Action Buttons on Hover */}
-                    <div className="hidden group-hover:flex items-center gap-1 shrink-0">
-                      {onRenameSession && (
+                    {/* Loading dots (right side) or Action Buttons on Hover */}
+                    {isActive && isProcessing ? (
+                      <span className="flex items-center gap-0.5 shrink-0 ml-1">
+                        <span className="w-1 h-1 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-1 h-1 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-1 h-1 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </span>
+                    ) : (
+                      <div className="hidden group-hover:flex items-center gap-1 shrink-0">
+                        {onRenameSession && (
+                          <button
+                            onClick={(e) => handleStartRename(session, e)}
+                            className="p-1 text-zinc-400 hover:text-indigo-300 rounded transition"
+                            title="Rename chat"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </button>
+                        )}
                         <button
-                          onClick={(e) => handleStartRename(session, e)}
-                          className="p-1 text-zinc-400 hover:text-indigo-300 rounded transition"
-                          title="Rename chat"
+                          onClick={(e) => handleStartDelete(session.id, e)}
+                          className="p-1 text-zinc-400 hover:text-rose-400 rounded transition"
+                          title="Delete chat"
                         >
-                          <Edit2 className="w-3 h-3" />
+                          <Trash2 className="w-3 h-3" />
                         </button>
-                      )}
-                      <button
-                        onClick={(e) => handleStartDelete(session.id, e)}
-                        className="p-1 text-zinc-400 hover:text-rose-400 rounded transition"
-                        title="Delete chat"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

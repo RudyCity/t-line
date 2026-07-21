@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.589] - 2026-07-21
+
+### Fixed
+- **`ActiveTasksBar` tidak muncul di atas input (`SuperAgentConsole.tsx`)**:
+  - Bug: `ActiveTasksBar` ditempatkan **di dalam** `div ref={messagesContainerRef}` yang punya `overflow-y-auto`, sehingga bar ikut tergulir bersama chat messages dan tidak terlihat di atas input.
+  - Fix: Dipindahkan ke luar scroll container, di antara `messagesContainerRef` dan `SuperAgentInputContainer`, sehingga selalu tampil pinned di atas area input.
+- **`PlanCard` bisa auto-approve / `handlePlanApproval` terpanggil tanpa state valid (`SuperAgentConsole.tsx`)**:
+  - Bug: `handlePlanApproval` hanya mengecek `!ws` sebelum mengirim `approve_plan` ke server, sehingga bisa terpanggil meskipun `pendingPlanApproval` sudah `false` (race condition / stale closure).
+  - Fix: Ditambahkan guard `if (!pendingPlanApproval || !ws) return` agar approve/reject hanya bisa dikirim saat plan card memang sedang aktif ditampilkan.
+
 ## [1.3.588] - 2026-07-21
 
 ### Changed

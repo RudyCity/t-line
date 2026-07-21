@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { RefreshCw, Shield, Square, Folder, Sparkles, Activity, Settings, History } from 'lucide-react';
+import { RefreshCw, Shield, Folder, Sparkles, Activity, Settings, History } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { SuperAgentAuditLogs } from './SuperAgentAuditLogs';
@@ -741,7 +741,8 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
   };
 
   const handlePlanApproval = (action: 'approve' | 'reject') => {
-    if (!ws) return;
+    // Guard: only allow if the plan card is actually visible and pending
+    if (!pendingPlanApproval || !ws) return;
     ws.send(JSON.stringify({ type: 'approve_plan', action }));
     setPendingPlanApproval(false);
   };
@@ -842,16 +843,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
             <span className="hidden sm:inline">Setting</span>
           </button>
 
-          {loading && (
-            <button
-              onClick={handleAbort}
-              className="bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-medium px-2.5 py-1 rounded-md transition flex items-center gap-1 animate-pulse focus:outline-none focus:ring-2 focus:ring-rose-400"
-              title="Stop current agent execution"
-            >
-              <Square className="w-2.5 h-2.5 fill-current" />
-              Stop Agent
-            </button>
-          )}
+
 
           <SuperAgentSettingsMenu
             isOpen={showSettingsMenu}
@@ -890,6 +882,7 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
                 hasMoreSessions={hasMoreSessions}
                 loadingMoreSessions={loadingMoreSessions}
                 onLoadMoreSessions={loadMoreSessions}
+                isProcessing={loading}
               />
             </div>
           )}
@@ -995,14 +988,15 @@ export function SuperAgentConsole({ activeWorkspacePath, workspaces = [], onOpen
             <div ref={chatEndRef} />
           </div>
 
-            {/* Active Tasks Widget (Subagents, Checklist Tasks, Processes, Tool Progress) */}
-            <ActiveTasksBar
-              subagents={subagentList}
-              procs={procList}
-              checklistTasks={checklistTasks}
-              toolProgressMsg={toolProgressMsg}
-              onSelectSubAgent={(sa) => setSelectedSubagent(sa)}
-            />
+          {/* Active Tasks Widget — pinned above input, outside scroll area */}
+          <ActiveTasksBar
+            subagents={subagentList}
+            procs={procList}
+            checklistTasks={checklistTasks}
+            toolProgressMsg={toolProgressMsg}
+            onSelectSubAgent={(sa) => setSelectedSubagent(sa)}
+          />
+
 
             <SuperAgentInputContainer
               input={input}
