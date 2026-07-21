@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Paperclip, Square, Send, ChevronUp, X } from 'lucide-react';
+import { Paperclip, Square, Send, ChevronUp, X, Sparkles, Cpu, Command, CornerDownLeft } from 'lucide-react';
 
 interface SuperAgentInputContainerProps {
   input: string;
@@ -48,6 +48,7 @@ export function SuperAgentInputContainer({
   getMainModelLabel
 }: SuperAgentInputContainerProps) {
   const [showPresetMenu, setShowPresetMenu] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const presetMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -65,9 +66,13 @@ export function SuperAgentInputContainer({
   const activePreset = (presets[agentMode] || []).find(p => p.id === activePresetId[agentMode]);
   const mainModel = activePreset ? getMainModelLabel(activePreset) : '';
   const modelName = mainModel.includes('/') ? mainModel.substring(mainModel.lastIndexOf('/') + 1) : mainModel;
+  const isReady = ws && ws.readyState === WebSocket.OPEN;
 
   return (
-    <div ref={consoleContainerRef} className="p-3.5 bg-[#090c14] border-t border-zinc-800/80 flex flex-col gap-2 relative w-full shadow-md">
+    <div
+      ref={consoleContainerRef}
+      className="p-3 bg-[#0a0d16]/95 border-t border-[#1e2335] flex flex-col gap-2 relative w-full shadow-2xl backdrop-blur-lg select-none font-sans"
+    >
       {/* Hidden File Input */}
       <input
         type="file"
@@ -83,7 +88,7 @@ export function SuperAgentInputContainer({
           {attachments.map(att => (
             <div
               key={att.id}
-              className="relative group flex items-center gap-2 p-1.5 bg-[#121622] border border-zinc-700/60 rounded-md shadow-sm max-w-xs transition-colors hover:border-zinc-500"
+              className="relative group flex items-center gap-2 p-1.5 bg-[#121624] border border-indigo-900/40 rounded-lg shadow-sm max-w-xs transition-colors hover:border-indigo-600/60"
             >
               {att.type === 'image' && att.previewUrl ? (
                 <img
@@ -92,8 +97,8 @@ export function SuperAgentInputContainer({
                   className="w-8 h-8 rounded object-cover border border-zinc-800"
                 />
               ) : (
-                <div className="w-8 h-8 bg-zinc-900 border border-zinc-800 rounded flex items-center justify-center text-zinc-400">
-                  <Paperclip className="w-4 h-4" />
+                <div className="w-8 h-8 bg-zinc-900/80 border border-zinc-800 rounded flex items-center justify-center text-zinc-400">
+                  <Paperclip className="w-4 h-4 text-indigo-400" />
                 </div>
               )}
               <div className="flex flex-col min-w-0 pr-6">
@@ -107,7 +112,7 @@ export function SuperAgentInputContainer({
               <button
                 type="button"
                 onClick={() => removeAttachment(att.id)}
-                className="absolute top-1 right-1 bg-red-950/90 border border-red-800 hover:bg-red-900 text-red-200 p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center focus:outline-none"
+                className="absolute top-1.5 right-1.5 bg-red-950/90 border border-red-800 hover:bg-red-900 text-red-200 p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center focus:outline-none"
               >
                 <X className="w-2.5 h-2.5" />
               </button>
@@ -117,12 +122,18 @@ export function SuperAgentInputContainer({
       )}
 
       {/* Main Unified Input Card */}
-      <div className="sa-input-area flex p-2 items-end gap-2 shadow-inner">
+      <div
+        className={`relative flex items-end gap-2.5 p-2.5 bg-[#111522]/90 border rounded-xl transition-all duration-200 ${
+          isFocused
+            ? 'border-indigo-500/70 shadow-[0_0_20px_rgba(99,102,241,0.15)] bg-[#131828]'
+            : 'border-[#22283a] hover:border-[#2e3752]'
+        }`}
+      >
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
-          className="p-2 text-zinc-400 hover:text-zinc-200 active:translate-y-0.5 transition rounded-lg hover:bg-zinc-800/50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0 shrink-0 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          disabled={loading || !isReady}
+          className="p-2 text-zinc-400 hover:text-indigo-300 active:scale-95 transition-all rounded-lg hover:bg-indigo-950/50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100 shrink-0 focus:outline-none"
           title="Attach Files"
         >
           <Paperclip className="w-4 h-4" />
@@ -133,18 +144,20 @@ export function SuperAgentInputContainer({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={ws?.readyState === WebSocket.OPEN ? "Ask SuperAgent to perform tasks or type / to execute commands..." : "Connecting to SuperAgent bridge..."}
-          className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 text-xs text-zinc-100 placeholder-zinc-500 font-sans py-1.5 px-1 resize-none overflow-y-auto max-h-[240px] leading-relaxed"
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          placeholder={isReady ? "Ask SuperAgent to perform tasks or type / for commands..." : "Connecting to SuperAgent server..."}
+          className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 text-xs text-zinc-100 placeholder-zinc-500 font-sans py-1 px-1 resize-none overflow-y-auto max-h-[240px] leading-relaxed"
           rows={1}
-          disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
+          disabled={loading || !isReady}
           style={{ height: 'auto', minHeight: '32px' }}
         />
 
         {loading ? (
           <button
             onClick={handleAbort}
-            disabled={!ws || ws.readyState !== WebSocket.OPEN}
-            className="bg-rose-600 hover:bg-rose-500 active:translate-y-0.5 disabled:bg-zinc-800 disabled:text-zinc-600 transition rounded-md text-white flex items-center justify-center h-8 w-8 cursor-pointer shrink-0 focus:outline-none focus:ring-2 focus:ring-rose-400"
+            disabled={!isReady}
+            className="bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 active:scale-95 disabled:opacity-50 transition-all rounded-lg text-white flex items-center justify-center h-8 w-8 cursor-pointer shrink-0 shadow-lg shadow-rose-900/30 focus:outline-none"
             title="Stop Execution"
           >
             <Square className="w-3.5 h-3.5 fill-current" />
@@ -152,8 +165,8 @@ export function SuperAgentInputContainer({
         ) : (
           <button
             onClick={() => handleSend()}
-            disabled={(!input.trim() && attachments.length === 0) || !ws || ws.readyState !== WebSocket.OPEN}
-            className="bg-indigo-600 hover:bg-indigo-500 active:translate-y-0.5 disabled:bg-zinc-800/60 disabled:text-zinc-600 disabled:translate-y-0 transition rounded-md text-white flex items-center justify-center h-8 w-8 cursor-pointer shrink-0 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            disabled={(!input.trim() && attachments.length === 0) || !isReady}
+            className="bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 active:scale-95 disabled:bg-none disabled:bg-zinc-800/60 disabled:text-zinc-600 disabled:scale-100 transition-all rounded-lg text-white flex items-center justify-center h-8 w-8 cursor-pointer shrink-0 shadow-lg shadow-indigo-600/30 focus:outline-none"
             title="Send Message"
           >
             <Send className="w-3.5 h-3.5" />
@@ -161,28 +174,31 @@ export function SuperAgentInputContainer({
         )}
       </div>
 
-      {/* Input Helpers Row & Preset Switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-[10px] text-zinc-400 select-none font-sans pt-1">
+      {/* Footer Helper Row & Preset Switcher */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-[10px] text-zinc-400 font-sans">
+        {/* Preset & Model Selector */}
         <div className="flex items-center gap-2">
-          <span className="text-zinc-500 font-medium">Preset:</span>
+          <span className="text-zinc-500 font-medium text-[10px]">Preset:</span>
           {(presets[agentMode] || []).length > 0 ? (
             <div className="relative inline-block" ref={presetMenuRef}>
               <button
                 type="button"
                 onClick={() => setShowPresetMenu(!showPresetMenu)}
-                disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
-                className="flex items-center gap-1.5 bg-[#121622] text-zinc-300 hover:text-white border border-zinc-700/60 hover:border-zinc-600 rounded px-2 py-0.5 outline-none text-[10px] font-medium transition cursor-pointer select-none focus:ring-1 focus:ring-indigo-500"
+                disabled={loading || !isReady}
+                className="flex items-center gap-1.5 bg-[#121624] text-indigo-300 hover:text-white border border-indigo-900/50 hover:border-indigo-600/70 rounded-full px-2.5 py-0.5 outline-none text-[10px] font-mono font-medium transition cursor-pointer select-none shadow-sm"
               >
+                <Sparkles className="w-3 h-3 text-indigo-400" />
                 <span>
                   {(presets[agentMode] || []).find(p => p.id === activePresetId[agentMode])?.name || activePresetId[agentMode] || 'Select Preset'}
                 </span>
-                <ChevronUp className="w-3 h-3 text-zinc-400" />
+                <ChevronUp className={`w-3 h-3 text-zinc-400 transition-transform ${showPresetMenu ? 'rotate-180' : ''}`} />
               </button>
 
               {showPresetMenu && (
-                <div className="sa-command-popover absolute bottom-full left-0 mb-1 w-48 py-1 z-50 overflow-hidden">
-                  <div className="px-2.5 py-1 text-[9px] font-semibold text-zinc-500 uppercase tracking-wider border-b border-zinc-800/60 mb-1">
-                    Select Preset
+                <div className="sa-command-popover absolute bottom-full left-0 mb-1.5 w-52 py-1 z-50 rounded-xl bg-[#121624] border border-indigo-900/60 shadow-2xl overflow-hidden backdrop-blur-xl">
+                  <div className="px-3 py-1.5 text-[9px] font-bold text-indigo-400 uppercase tracking-wider border-b border-zinc-800/80 mb-1 flex items-center justify-between">
+                    <span>Select Preset</span>
+                    <span className="text-[9px] text-zinc-500 font-normal">{agentMode.toUpperCase()}</span>
                   </div>
                   {(presets[agentMode] || []).map(p => {
                     const isActive = p.id === activePresetId[agentMode];
@@ -194,10 +210,10 @@ export function SuperAgentInputContainer({
                           handlePresetChange(p.id);
                           setShowPresetMenu(false);
                         }}
-                        className={`w-full text-left px-2.5 py-1 text-[11px] transition flex flex-col ${
+                        className={`w-full text-left px-3 py-1.5 text-[11px] transition flex flex-col cursor-pointer ${
                           isActive
-                            ? 'bg-indigo-600/20 text-indigo-300 font-semibold'
-                            : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200'
+                            ? 'bg-indigo-600/20 text-indigo-300 font-semibold border-l-2 border-indigo-500'
+                            : 'text-zinc-300 hover:bg-zinc-800/50 hover:text-white'
                         }`}
                       >
                         <span>{p.name}</span>
@@ -217,15 +233,28 @@ export function SuperAgentInputContainer({
           )}
 
           {modelName && (
-            <span className="text-[10px] text-zinc-400 font-mono border border-zinc-800 px-1.5 py-0.5 rounded bg-[#121622]">
+            <span className="flex items-center gap-1 text-[10px] text-zinc-300 font-mono border border-zinc-800 px-2 py-0.5 rounded-full bg-[#121624]">
+              <Cpu className="w-2.5 h-2.5 text-zinc-400" />
               {modelName}
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="text-zinc-500">⏎ send • Shift+⏎ newline • / commands</span>
-          <span className="text-zinc-600 font-mono">{input.length} chars</span>
+        {/* Keyboard Hints & Character Counter */}
+        <div className="flex items-center gap-3 text-[10px] text-zinc-500">
+          <div className="flex items-center gap-1.5">
+            <span className="flex items-center gap-0.5 bg-zinc-900 border border-zinc-800 px-1 rounded text-zinc-400 font-mono text-[9px]">
+              <CornerDownLeft className="w-2.5 h-2.5" /> send
+            </span>
+            <span className="flex items-center gap-0.5 bg-zinc-900 border border-zinc-800 px-1 rounded text-zinc-400 font-mono text-[9px]">
+              Shift+⏎ newline
+            </span>
+            <span className="flex items-center gap-0.5 bg-zinc-900 border border-zinc-800 px-1 rounded text-zinc-400 font-mono text-[9px]">
+              <Command className="w-2.5 h-2.5" />/ commands
+            </span>
+          </div>
+
+          <span className="text-zinc-500 font-mono text-[10px]">{input.length} chars</span>
         </div>
       </div>
     </div>
