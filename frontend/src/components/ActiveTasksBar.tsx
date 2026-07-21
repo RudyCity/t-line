@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Cpu, Terminal, ListTodo, ChevronUp, ChevronDown, Wrench } from 'lucide-react';
+import { Terminal, ChevronUp, ChevronDown, Wrench } from 'lucide-react';
 import { SubAgentItem } from './SubAgentTerminalModal';
 
 export interface ChecklistTaskItem {
@@ -39,6 +39,7 @@ export function ActiveTasksBar({
     return s === 'RUNNING' || s === 'ACTIVE';
   });
 
+  // Checklist tasks that are not yet finished
   const activeChecklistTasks = checklistTasks.filter(t => {
     const s = (t.status || '').trim().toLowerCase();
     return s !== 'x' && s !== 'completed';
@@ -50,119 +51,119 @@ export function ActiveTasksBar({
   });
 
   const hasActiveTool = Boolean(toolProgressMsg && toolProgressMsg.trim().length > 0);
+
   const totalActiveCount = activeSubagents.length + activeChecklistTasks.length + activeProcs.length + (hasActiveTool ? 1 : 0);
 
   if (totalActiveCount === 0) return null;
 
   return (
-    <div className="mb-2 bg-[#0e0e12]/90 border border-zinc-800/70 rounded-lg shadow-md backdrop-blur-md overflow-hidden font-mono text-[11px] transition-all">
-      {/* Minimal Header Bar */}
-      <div className="flex items-center justify-between px-2.5 py-1 bg-[#14141a] border-b border-zinc-800/60 select-none">
-        <div className="flex items-center gap-1.5">
-          <span className="relative flex items-center justify-center w-2 h-2">
+    <div className="mb-2 bg-[#101014]/90 border border-zinc-800/80 rounded-lg shadow-lg backdrop-blur-sm overflow-hidden font-sans text-xs transition-all">
+      {/* Header Bar */}
+      <div className="flex items-center justify-between px-2.5 py-1.5 bg-[#141419] border-b border-zinc-800/60 select-none">
+        <div className="flex items-center gap-2">
+          <span className="relative flex items-center justify-center">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping absolute" />
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 relative" />
+            <span className="w-2 h-2 rounded-full bg-emerald-500 relative" />
           </span>
-          <span className="font-bold text-zinc-300 tracking-tight uppercase">
-            Active Tasks
-          </span>
-          <span className="text-[10px] text-indigo-400 bg-indigo-950/70 border border-indigo-800/50 px-1.5 py-0.2 rounded font-semibold">
-            {totalActiveCount}
+          <span className="text-[11px] font-bold text-zinc-300 font-mono tracking-tight uppercase">
+            Tasks ({totalActiveCount})
           </span>
         </div>
 
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-zinc-500 hover:text-zinc-300 p-0.5 rounded transition cursor-pointer flex items-center gap-0.5 text-[10px]"
-          title={isExpanded ? 'Collapse active tasks' : 'Expand active tasks'}
+          className="p-0.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 rounded transition cursor-pointer"
+          title={isExpanded ? 'Collapse' : 'Expand'}
         >
-          <span>{isExpanded ? 'hide' : 'show'}</span>
-          {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
       </div>
 
-      {/* Compact Content */}
+      {/* Main Body */}
       {isExpanded ? (
-        <div className="p-1.5 space-y-1 max-h-40 overflow-y-auto scrollbar-thin">
-          {/* Active Tool */}
+        <div className="p-1.5 space-y-1 max-h-44 overflow-y-auto scrollbar-thin">
           {hasActiveTool && (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-indigo-950/30 border border-indigo-900/40 rounded text-indigo-300 truncate">
+            <div className="flex items-center gap-2 px-2 py-1 bg-indigo-950/40 border border-indigo-900/50 rounded font-mono text-[11px] text-indigo-300">
               <Wrench className="w-3 h-3 text-indigo-400 animate-spin shrink-0" />
               <span className="text-indigo-400 font-semibold shrink-0">[Tool]:</span>
-              <span className="truncate text-zinc-300">{toolProgressMsg}</span>
+              <span className="text-zinc-300 truncate">{toolProgressMsg}</span>
             </div>
           )}
 
-          {/* Active Subagents */}
           {activeSubagents.map(sa => (
             <div
               key={sa.id}
               onClick={() => onSelectSubAgent(sa)}
-              className="flex items-center justify-between px-2 py-1 bg-[#121217] hover:bg-indigo-950/40 border border-zinc-800/60 hover:border-indigo-800/60 rounded transition cursor-pointer group"
+              className="group flex items-center justify-between px-2 py-1 bg-[#16161c] hover:bg-indigo-950/40 border border-zinc-800/80 hover:border-indigo-800/60 rounded font-mono text-[11px] transition cursor-pointer"
             >
-              <div className="flex items-center gap-1.5 min-w-0 truncate">
-                <Cpu className="w-3 h-3 text-emerald-400 shrink-0" />
-                <span className="font-bold text-zinc-200 group-hover:text-indigo-300 shrink-0">
-                  {sa.role || sa.typeName || `SubAgent-${sa.id.slice(0, 5)}`}
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="font-semibold text-zinc-200 group-hover:text-indigo-300 truncate">
+                  {sa.role || sa.typeName || `SubAgent-${sa.id.slice(0, 6)}`}
                 </span>
                 {sa.prompt && (
-                  <span className="text-[10px] text-zinc-500 truncate">
+                  <span className="text-[10px] text-zinc-500 font-sans truncate max-w-xs">
                     — {sa.prompt}
                   </span>
                 )}
               </div>
 
-              <div className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-1.5 py-0.2 rounded shrink-0 ml-1">
+              <span className="flex items-center gap-1 text-[10px] text-indigo-400 group-hover:text-indigo-300 bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-900/50 shrink-0 ml-2">
                 <Terminal className="w-2.5 h-2.5" />
-                <span>Live</span>
-              </div>
+                Terminal
+              </span>
             </div>
           ))}
 
-          {/* Active Checklist Tasks (task.md) */}
           {activeChecklistTasks.map((t, idx) => {
             const isInProgress = t.status === '/' || (t.status || '').toLowerCase() === 'in_progress';
             return (
               <div
                 key={t.id || idx}
-                className="flex items-center gap-1.5 px-2 py-0.5 bg-[#121217] border border-zinc-800/60 rounded text-zinc-300 truncate"
+                className="flex items-center justify-between px-2 py-1 bg-[#16161c] border border-zinc-800/80 rounded font-mono text-[11px]"
               >
-                <ListTodo className={`w-3 h-3 shrink-0 ${isInProgress ? 'text-amber-400 animate-pulse' : 'text-zinc-500'}`} />
-                <span className={`text-[9px] font-bold px-1 rounded shrink-0 ${
-                  isInProgress ? 'bg-amber-950 text-amber-300 border border-amber-800/50' : 'bg-zinc-800 text-zinc-400'
-                }`}>
-                  {isInProgress ? '[/]' : '[ ]'}
-                </span>
-                <span className="truncate">{t.text}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`text-[9px] font-bold px-1 py-0.2 rounded shrink-0 ${
+                    isInProgress
+                      ? 'bg-amber-950/80 text-amber-300 border border-amber-800/60'
+                      : 'bg-zinc-900 text-zinc-500 border border-zinc-800'
+                  }`}>
+                    {isInProgress ? 'RUNNING' : 'QUEUED'}
+                  </span>
+                  <span className="text-zinc-300 truncate">
+                    {t.text}
+                  </span>
+                </div>
               </div>
             );
           })}
 
-          {/* Active Background Processes */}
           {activeProcs.map(p => (
             <div
               key={p.pid}
-              className="flex items-center gap-1.5 px-2 py-0.5 bg-[#121217] border border-zinc-800/60 rounded text-zinc-300 truncate"
+              className="flex items-center justify-between px-2 py-1 bg-[#16161c] border border-zinc-800/80 rounded font-mono text-[11px]"
             >
-              <Terminal className="w-3 h-3 text-sky-400 shrink-0" />
-              <span className="text-[9px] font-bold bg-sky-950 text-sky-300 border border-sky-800/50 px-1 rounded shrink-0">
-                PID {p.pid}
-              </span>
-              <span className="truncate">{p.name || p.commandLine || `Process #${p.pid}`}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-[9px] font-bold bg-sky-950/80 text-sky-300 border border-sky-800/60 px-1 py-0.2 rounded shrink-0">
+                  PID {p.pid}
+                </span>
+                <span className="text-zinc-300 truncate">
+                  {p.name || p.commandLine || `Process #${p.pid}`}
+                </span>
+              </div>
             </div>
           ))}
         </div>
       ) : (
-        /* Single-line Collapsed Pills */
-        <div className="px-2 py-1 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+        <div className="px-2.5 py-1 flex items-center gap-1.5 overflow-x-auto scrollbar-none text-[11px] font-mono">
           {activeSubagents.map(sa => (
             <button
               key={sa.id}
               onClick={() => onSelectSubAgent(sa)}
-              className="flex items-center gap-1 px-2 py-0.5 bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-800/50 rounded text-[10px] text-indigo-300 transition cursor-pointer shrink-0"
+              className="flex items-center gap-1 px-2 py-0.5 bg-indigo-950/60 hover:bg-indigo-900/80 border border-indigo-800/60 rounded text-indigo-300 transition cursor-pointer shrink-0"
             >
-              <Cpu className="w-2.5 h-2.5 text-emerald-400" />
-              <span className="font-semibold">{sa.role || sa.typeName}</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span>{sa.role || sa.typeName}</span>
             </button>
           ))}
 
@@ -171,15 +172,23 @@ export function ActiveTasksBar({
             return (
               <div
                 key={t.id || idx}
-                className="flex items-center gap-1 px-2 py-0.5 bg-zinc-900 border border-zinc-800 rounded text-[10px] text-zinc-300 shrink-0"
+                className={`flex items-center gap-1 px-2 py-0.5 border rounded shrink-0 ${
+                  isInProgress
+                    ? 'bg-amber-950/50 border-amber-800/60 text-amber-300'
+                    : 'bg-zinc-900 border-zinc-800 text-zinc-400'
+                }`}
               >
-                <span className={isInProgress ? 'text-amber-400 font-bold' : 'text-zinc-500'}>
-                  {isInProgress ? '[/]' : '[ ]'}
-                </span>
                 <span className="truncate max-w-xs">{t.text}</span>
               </div>
             );
           })}
+
+          {hasActiveTool && (
+            <div className="flex items-center gap-1 px-2 py-0.5 bg-indigo-950/40 border border-indigo-900/50 rounded text-indigo-300 shrink-0">
+              <Wrench className="w-3 h-3 text-indigo-400 animate-spin" />
+              <span className="truncate max-w-xs">{toolProgressMsg}</span>
+            </div>
+          )}
         </div>
       )}
     </div>
