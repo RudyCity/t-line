@@ -85,10 +85,13 @@ router.get('/list', authMiddleware, async (req, res) => {
       .sort((a, b) => a.name.localeCompare(b.name));
 
     const parentPath = path.dirname(resolvedPath);
+    // On Windows, a drive root (e.g. C:\) is its own parent.
+    // Return '' so the frontend can navigate back to the drives list.
+    const resolvedParent = parentPath !== resolvedPath ? parentPath : '';
     
     res.json({
       currentPath: resolvedPath,
-      parentPath: parentPath !== resolvedPath ? parentPath : null,
+      parentPath: resolvedParent,
       directories
     });
   } catch (e: any) {
@@ -142,10 +145,11 @@ router.get('/explore', authMiddleware, async (req, res) => {
       });
 
     const parentPath = path.dirname(resolvedPath);
+    const resolvedParent = parentPath !== resolvedPath ? parentPath : '';
 
     res.json({
       currentPath: resolvedPath,
-      parentPath: parentPath !== resolvedPath ? parentPath : null,
+      parentPath: resolvedParent,
       contents
     });
   } catch (e: any) {

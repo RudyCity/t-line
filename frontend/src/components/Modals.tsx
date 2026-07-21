@@ -141,16 +141,16 @@ export const WorkspaceAddModal: React.FC<WorkspaceAddModalProps> = ({
                   Path: {explorerPath || 'Drives'}
                 </span>
                 <div style={{ display: 'flex', gap: '6px' }}>
-                  {explorerParent && (
+                  {explorerParent !== null && (
                     <button 
                       type="button" 
                       className="action-btn" 
                       onClick={() => fetchDirectoryList(explorerParent)}
                       style={{ fontSize: '0.75rem', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                      title="Go back to parent folder"
+                      title={explorerParent === '' ? 'Go back to drives list' : 'Go back to parent folder'}
                     >
                       <ArrowLeft size={12} />
-                      Back
+                      {explorerParent === '' ? 'Drives' : 'Back'}
                     </button>
                   )}
                   <button 
