@@ -124,13 +124,25 @@ export const handleAgentEventPayload = (
         setLoading(false);
         setToolProgressMsg('');
       }
-      const isConnNoise = statusLower.includes('websocket') ||
-                          statusLower.includes('connected to superagent') ||
-                          statusLower.includes('starting superagent') ||
-                          statusLower.includes('restarting superagent');
-      if (!isConnNoise) {
+      // Connection/lifecycle events (restart, reconnect, auto-start) → show in chat as 'connection' role
+      const isConnLifecycle = statusLower.includes('auto-starting superagent') ||
+                              statusLower.includes('auto-restart') ||
+                              statusLower.includes('restarting superagent') ||
+                              statusLower.includes('superagent server') ||
+                              statusLower.includes('sse connection') ||
+                              statusLower.includes('reconnecting') ||
+                              statusLower.includes('unreachable') ||
+                              statusLower.includes('respawning') ||
+                              statusLower.includes('starting superagent');
+      const isQuietNoise = statusLower.includes('websocket') ||
+                           statusLower.includes('connected to superagent server') ||
+                           statusLower.includes('starting superagent server on port');
+      if (isConnLifecycle && !isQuietNoise) {
+        setMessages(prev => [...prev, { role: 'connection' as any, text: payload.text }]);
+      } else if (!isQuietNoise) {
         setMessages(prev => [...prev, { role: 'system', text: payload.text }]);
       }
+
     }
   } else if (payload.type === 'agent_event') {
     const innerEvent = payload.event;
@@ -221,7 +233,6 @@ export const handleAgentEventPayload = (
           });
         }
       }
-
       setMessages(prev => {
         let idx = -1;
         // Priority 1: match exact callId if available
@@ -233,8 +244,10 @@ export const handleAgentEventPayload = (
             }
           }
         }
-        // Priority 2: fallback match last tool item without result if toolName matches or is generic
-        if (idx === -1) {
+        // Priority 2: fallback match last tool item without result if toolName matches or is generic.
+        // Skip Priority 2 fallback for start events (tool_start, tool_call, tool_use) so new tool invocations never overwrite prior tools.
+        const isStartEvent = innerEvent.type === 'tool_start' || innerEvent.type === 'tool_call' || innerEvent.type === 'tool_use';
+        if (idx === -1 && !isStartEvent) {
           for (let i = prev.length - 1; i >= 0; i--) {
             const m = prev[i];
             if (m && m.role === 'tool' && m.result === undefined) {

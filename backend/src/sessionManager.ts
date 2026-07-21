@@ -237,7 +237,7 @@ export async function getSessionMessages(
         const role = rawMsg.role || 'assistant';
         const content = rawMsg.content || rawMsg.text || '';
 
-        if (isNoiseMessageContent(content)) continue;
+        if (role !== 'tool' && role !== 'thought' && isNoiseMessageContent(content)) continue;
 
         if (role === 'thought' || rawMsg.reasoning) {
           if (rawMsg.reasoning) {

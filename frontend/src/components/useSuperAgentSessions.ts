@@ -3,7 +3,7 @@ import { ChatSession } from './SuperAgentHistorySidebar';
 import { getAuthHeader } from './SuperAgentConsoleUtils';
 
 export interface SuperAgentMessage {
-  role: 'user' | 'assistant' | 'system' | 'tool' | 'thought';
+  role: 'user' | 'assistant' | 'system' | 'tool' | 'thought' | 'connection';
   text: string;
   toolName?: string;
   args?: any;
@@ -12,6 +12,8 @@ export interface SuperAgentMessage {
 
 export function isSystemNoiseMsg(msg: { role: string; text?: string }): boolean {
   if (!msg || !msg.text) return false;
+  // Tool and thought messages are process steps and MUST NEVER be filtered as system noise
+  if (msg.role === 'tool' || msg.role === 'thought') return false;
   const text = msg.text.trim();
 
   // Filter out injected memory context, emergency summaries & prompt headers
@@ -34,8 +36,8 @@ export function isSystemNoiseMsg(msg: { role: string; text?: string }): boolean 
   const textLower = text.toLowerCase();
   return (
     textLower.includes('websocket') ||
-    textLower.includes('connected to superagent') ||
-    textLower.includes('starting superagent') ||
+    textLower.includes('connected to superagent server') ||
+    textLower.includes('starting superagent server on port') ||
     textLower.includes('superagent ready') ||
     textLower.includes('restarting bridge') ||
     textLower.includes('model preset changed') ||

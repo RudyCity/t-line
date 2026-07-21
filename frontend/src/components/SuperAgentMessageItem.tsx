@@ -2,7 +2,7 @@ import React from 'react';
 import { SuperAgentToolItem } from './SuperAgentToolItem';
 
 export interface ConsoleMessage {
-  role: 'user' | 'assistant' | 'system' | 'tool' | 'thought';
+  role: 'user' | 'assistant' | 'system' | 'tool' | 'thought' | 'connection';
   text: string;
   toolName?: string;
   args?: any;
@@ -273,6 +273,29 @@ export function renderMessageContent(text: string) {
 }
 
 export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: number }> = ({ msg, index }) => {
+  if (msg.role === 'connection') {
+    const isError = /error|failed|unreachable|refused/i.test(msg.text);
+    const isRestart = /restart|respawn|auto-start|starting/i.test(msg.text);
+    const isReady = /ready|connected|up|available/i.test(msg.text);
+
+    let dotClass = 'bg-sky-400 animate-pulse';
+    let textClass = 'text-sky-400';
+    let icon = '⟳';
+    if (isError) { dotClass = 'bg-rose-500 animate-pulse'; textClass = 'text-rose-400'; icon = '✕'; }
+    else if (isReady) { dotClass = 'bg-emerald-400'; textClass = 'text-emerald-400'; icon = '✓'; }
+    else if (isRestart) { dotClass = 'bg-amber-400 animate-ping'; textClass = 'text-amber-400'; icon = '↺'; }
+
+    return (
+      <div key={index} className="flex items-center justify-start py-0.5 select-text">
+        <div className={`text-[11px] font-mono tracking-tight flex items-center gap-2 select-text ${textClass}`}>
+          <span className={`w-1.5 h-1.5 rounded-full inline-block shrink-0 ${dotClass}`}></span>
+          <span className="opacity-60 text-[10px]">{icon}</span>
+          <span className="break-all whitespace-pre-wrap select-text opacity-90">{msg.text}</span>
+        </div>
+      </div>
+    );
+  }
+
   if (msg.role === 'system') {
     const isError = /error|failed|econnrefused|exception|stopped|denied|cannot|invalid/i.test(msg.text);
     return (

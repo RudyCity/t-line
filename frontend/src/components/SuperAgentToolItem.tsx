@@ -3,7 +3,7 @@ import { ChevronRight, ChevronDown, FileCode, Search, Terminal, Wrench, Cpu, Che
 
 interface SuperAgentToolItemProps {
   msg: {
-    role: 'user' | 'assistant' | 'system' | 'tool' | 'thought';
+    role: 'user' | 'assistant' | 'system' | 'tool' | 'thought' | 'connection';
     text: string;
     toolName?: string;
     args?: any;

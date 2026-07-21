@@ -51,7 +51,7 @@ export function groupMessagesIntoTurns(
           messages: [msg]
         });
       }
-    } else if (msg.role === 'thought' || msg.role === 'tool' || msg.role === 'system') {
+    } else if (msg.role === 'thought' || msg.role === 'tool' || msg.role === 'system' || msg.role === 'connection') {
       const lastBlock = currentTurn.blocks[currentTurn.blocks.length - 1];
       if (lastBlock && lastBlock.type === 'process') {
         lastBlock.messages.push(msg);

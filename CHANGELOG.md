@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.591] - 2026-07-21
+
+### Fixed
+- **Process Step wajib semua tools tampil (`SuperAgentConsoleUtils.ts`, `sessionManager.ts`, `useSuperAgentSessions.ts`)**:
+  - **Live streaming tool start matching**: Perbaiki logika `setMessages` pada `handleAgentEventPayload` di `SuperAgentConsoleUtils.ts` agar event `tool_start` / `tool_call` / `tool_use` tidak menggunakan Priority 2 fallback yang dapat menimpa tool yang sedang berjalan sebelumnya. Setiap tool call baru kini di-append dengan aman sehingga semua tool steps tampil lengkap di Process Steps.
+  - **History reload tool retention**: Perbaiki `sessionManager.ts` di backend agar `isNoiseMessageContent` tidak membuang message ber-role `'tool'` atau `'thought'` saat memuat histori dari SuperAgent HTTP Server.
+  - **System noise guard**: Tambahkan pengecualian eksplisit untuk role `'tool'` dan `'thought'` pada `isSystemNoiseMsg` di `useSuperAgentSessions.ts` agar tidak ada tool step yang tersaring sebagai system noise.
+  - **TypeScript interface fix**: Perbarui `SuperAgentToolItemProps` pada `SuperAgentToolItem.tsx` untuk menyertakan role `'connection'`.
+
 ## [1.3.590] - 2026-07-21
 
 ### Performance
