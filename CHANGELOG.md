@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.613] - 2026-07-21
+
+### Bug Fix — SuperAgent Settings Modal Tab Vertical Clipping (`SuperAgentSettingsModal.tsx`)
+- **Unclipped Segmented Pill Switcher**: Converted modal tab navigation in [SuperAgentSettingsModal.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentSettingsModal.tsx#L94) to a segmented pill switcher with explicit container padding (`py-2.5`) and `shrink-0`, eliminating overflow clipping issues caused by negative margin tab borders (`-mb-px`) inside `overflow-x-auto`.
+- **Full Text & Icon Visibility**: Guaranteed 100% text and icon vertical visibility across all modal tab buttons.
+
 ## [1.3.612] - 2026-07-21
 
 ### UI Alignment Fix — SuperAgent Settings Modal Tab Height (`SuperAgentSettingsModal.tsx`)

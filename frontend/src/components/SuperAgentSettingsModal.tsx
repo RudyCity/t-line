@@ -91,7 +91,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
         </div>
 
         {/* Modal Navigation Tabs */}
-        <div className="px-6 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] flex items-end gap-1 overflow-x-auto pt-2">
+        <div className="px-6 py-2.5 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] flex items-center gap-1.5 overflow-x-auto shrink-0">
           {[
             { id: 'login' as const, label: `Management Login (${providers.length})`, icon: Key },
             { id: 'presets' as const, label: 'Model Presets', icon: Sparkles },
@@ -104,9 +104,9 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2.5 font-medium border-b-2 transition flex items-center gap-2 text-xs rounded-t-lg -mb-px cursor-pointer whitespace-nowrap ${
+                className={`px-3.5 py-1.5 rounded-lg font-medium transition-all flex items-center gap-2 text-xs cursor-pointer whitespace-nowrap border ${
                   isActive
-                    ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary)]/10 font-semibold'
+                    ? 'border-[var(--color-primary)]/40 text-[var(--color-primary)] bg-[var(--color-primary)]/15 font-semibold shadow-xs'
                     : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
                 }`}
               >

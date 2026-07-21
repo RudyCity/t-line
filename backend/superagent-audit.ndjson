@@ -1138,3 +1138,22 @@ lumn\n","│       22: import androidx.compose.foundation.lazy.grid.GridCells\n"
 {"timestamp":"2026-07-21T06:52:23.901Z","type":"agent_event","data":{"type":"agent_event","event":{"type":"done"},"sessionId":"session_1784616174822","workspace":"D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"}}
 {"timestamp":"2026-07-21T06:52:23.902Z","type":"agent_event","data":{"type":"agent_event","event":{"type":"done"},"sessionId":"session_1784616174822","workspace":"D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"}}
 {"timestamp":"2026-07-21T06:54:35.865Z","type":"system","data":{"message":"Eager SuperAgent server ready"}}
+{"timestamp":"2026-07-21T06:54:45.707Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T06:54:45.709Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T06:54:45.960Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T06:54:45.960Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T06:54:45.962Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T06:54:45.962Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T06:54:45.962Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T06:54:46.043Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T06:54:46.044Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-21T06:54:46.314Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"}}
+{"timestamp":"2026-07-21T06:54:46.315Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T06:54:46.315Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"}}
+{"timestamp":"2026-07-21T06:54:46.316Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"}}
+{"timestamp":"2026-07-21T06:54:46.316Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T06:54:46.316Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T06:54:46.316Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"}}
+{"timestamp":"2026-07-21T06:54:46.316Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"}}
+{"timestamp":"2026-07-21T06:54:46.316Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
+{"timestamp":"2026-07-21T06:54:46.317Z","type":"agent_event","data":{"type":"subagents_update","subagents":[]}}
