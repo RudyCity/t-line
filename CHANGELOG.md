@@ -2,6 +2,18 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.621] - 2026-07-21
+
+### Bug Fix — Prevent Prompt Execution & Enforce Guard When No Preset is Active (`SuperAgentInputContainer.tsx`, `SuperAgentConsole.tsx`, `superAgentBridge.ts`, SuperAgent `serverRoutes.ts`)
+- **Frontend Guarding**:
+  - Disabled textarea input, paperclip attachment, and send button in [SuperAgentInputContainer.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentInputContainer.tsx) when no active model preset is selected for the current mode.
+  - Set explicit placeholder `"No active model preset selected. Please select a preset first..."` and styled preset indicator when unselected.
+  - Intercepted `handleSend` in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) to display a clear system error if a user attempts to send a prompt without an active preset.
+- **Backend Bridge Guarding**:
+  - Added preset validation check in `actionType === 'prompt'` handler in [superAgentBridge.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentBridge.ts). Prompts sent over WebSocket without a valid active preset return a `chat_response` error and do not reach the SuperAgent server process.
+- **SuperAgent HTTP Validation**:
+  - Added preset validation guard in `POST /api/chat` in SuperAgent's [serverRoutes.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/serverRoutes.ts) to ensure `getActivePresetId` matches a valid preset before passing messages to `agent.sendMessage()`.
+
 ## [1.3.620] - 2026-07-21
 
 ### Refactor — Centralize All Config Access Through SuperAgent Server (`presetUtils.ts`, `superAgentRoutes.ts`, SuperAgent `serverRoutes.ts`)

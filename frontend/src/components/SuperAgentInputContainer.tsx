@@ -74,7 +74,11 @@ export function SuperAgentInputContainer({
     };
   }, []);
 
-  const activePreset = (presets[agentMode] || []).find(p => p.id === activePresetId[agentMode]);
+  const currentPresetId = activePresetId[agentMode] || '';
+  const activePreset = (presets[agentMode] || []).find(
+    p => p.id?.toLowerCase() === currentPresetId.toLowerCase() || p.name?.toLowerCase() === currentPresetId.toLowerCase()
+  );
+  const hasActivePreset = Boolean(activePreset);
   const mainModel = activePreset ? getMainModelLabel(activePreset) : '';
   const modelName = mainModel.includes('/') ? mainModel.substring(mainModel.lastIndexOf('/') + 1) : mainModel;
 
@@ -193,13 +197,15 @@ export function SuperAgentInputContainer({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={
-              ws?.readyState === WebSocket.OPEN
-                ? "Enter prompt or command (e.g. /schedule, /goal, /grill-me)..."
-                : "Connecting to SuperAgent bridge..."
+              !hasActivePreset
+                ? "No active model preset selected. Please select a preset first..."
+                : ws?.readyState === WebSocket.OPEN
+                  ? "Enter prompt or command (e.g. /schedule, /goal, /grill-me)..."
+                  : "Connecting to SuperAgent bridge..."
             }
             className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 text-xs text-[var(--text-main)] placeholder-[var(--text-muted)] font-mono py-0.5 px-0 resize-none overflow-y-auto max-h-[220px] leading-relaxed"
             rows={1}
-            disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
+            disabled={loading || !ws || ws.readyState !== WebSocket.OPEN || !hasActivePreset}
             style={{ minHeight: '36px' }}
           />
         </div>
@@ -210,7 +216,7 @@ export function SuperAgentInputContainer({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
+              disabled={loading || !ws || ws.readyState !== WebSocket.OPEN || !hasActivePreset}
               className="flex items-center justify-center text-[10px] font-mono text-[var(--text-muted)] hover:text-[var(--text-main)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] rounded-md p-1.5 transition cursor-pointer disabled:opacity-40 shrink-0"
               title="Attach Files"
             >
@@ -227,8 +233,8 @@ export function SuperAgentInputContainer({
                   className="flex items-center gap-1 bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] border border-[var(--border-color)] rounded-md px-2 py-1 text-[10px] font-mono transition cursor-pointer"
                 >
                   <span className="text-[var(--text-muted)] font-normal">preset:</span>
-                  <span className="font-semibold text-[var(--color-primary)]">
-                    {(presets[agentMode] || []).find(p => p.id?.toLowerCase() === (activePresetId[agentMode] || '').toLowerCase() || p.name?.toLowerCase() === (activePresetId[agentMode] || '').toLowerCase())?.name || activePresetId[agentMode] || 'default'}
+                  <span className={`font-semibold ${hasActivePreset ? 'text-[var(--color-primary)]' : 'text-amber-400'}`}>
+                    {activePreset ? activePreset.name : (currentPresetId || 'Select Preset...')}
                   </span>
                   <ChevronDown className="w-3 h-3 text-[var(--text-muted)] ml-0.5" />
                 </button>
@@ -348,7 +354,7 @@ export function SuperAgentInputContainer({
             ) : (
               <button
                 onClick={() => handleSend()}
-                disabled={(!input.trim() && attachments.length === 0) || !ws || ws.readyState !== WebSocket.OPEN}
+                disabled={(!input.trim() && attachments.length === 0) || !ws || ws.readyState !== WebSocket.OPEN || !hasActivePreset}
                 className="flex items-center justify-center bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] active:scale-95 disabled:bg-[var(--bg-card)] disabled:text-[var(--text-muted)] disabled:border-[var(--border-color)] border border-[var(--color-primary)] text-white rounded-md p-1.5 shadow-md shadow-[var(--color-primary-glow)] transition-all cursor-pointer shrink-0 focus:outline-none"
                 title="Send Message (Shift+↵)"
               >

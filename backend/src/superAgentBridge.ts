@@ -5,6 +5,7 @@ import os from 'os';
 import { spawn, execSync } from 'child_process';
 import WebSocket from 'ws';
 import { getInputHistory, saveInputHistory } from './sessionManager';
+import { loadMergedPresets } from './presetUtils';
 
 const AUDIT_FILE = path.join(process.cwd(), 'superagent-audit.ndjson');
 const AUDIT_MAX_BYTES = 2 * 1024 * 1024; // 2MB rotate threshold
@@ -709,6 +710,26 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
         await new Promise<void>((resolve) => {
           ensureSuperAgentServer(workspacePath, agentMode, customArgs, ws, resolve);
         });
+
+        // Validate active preset is configured before sending prompt
+        try {
+          const configSnapshot = await loadMergedPresets();
+          const modeKey: 'single' | 'multi' = agentMode === 'multi' ? 'multi' : 'single';
+          const activePresetId = configSnapshot.activePresetId?.[modeKey];
+          const activePresetsList = configSnapshot.presets?.[modeKey] || [];
+          const hasActivePreset = Boolean(
+            activePresetId &&
+            activePresetsList.some((p: any) => p.id?.toLowerCase() === activePresetId.toLowerCase() || p.name?.toLowerCase() === activePresetId.toLowerCase())
+          );
+          if (!hasActivePreset) {
+            const errMsg = `No active model preset selected for ${agentMode} mode. Please select an active preset.`;
+            ws.send(JSON.stringify({ type: 'chat_response', success: false, result: { error: errMsg } }));
+            logSuperAgentEvent('chat_response_error', { error: errMsg });
+            return;
+          }
+        } catch (presetCheckErr: any) {
+          console.warn('[WS-Agent] Active preset check warning:', presetCheckErr?.message);
+        }
 
         try {
           const chatPayload: any = { message: text };

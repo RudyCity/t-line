@@ -514,6 +514,18 @@ export function SuperAgentConsole({
 
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
+    const currentActivePresetId = activePresetId[agentMode] || '';
+    const activePresetObj = (presets[agentMode] || []).find(
+      p => p.id?.toLowerCase() === currentActivePresetId.toLowerCase() || p.name?.toLowerCase() === currentActivePresetId.toLowerCase()
+    );
+    if (!currentActivePresetId || !activePresetObj) {
+      setMessages(prev => [...prev, {
+        role: 'system',
+        text: `⚠️ Cannot send prompt: No active model preset selected for ${agentMode.toUpperCase()} mode. Please select a preset first.`
+      }]);
+      return;
+    }
+
     setInput('');
     setLoading(true);
     setToolProgressMsg('Reading attachments...');
