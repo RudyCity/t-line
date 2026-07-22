@@ -434,6 +434,7 @@ export function SuperAgentConsole({
 
   const activeSessionIdRef = useRef(activeSessionId);
   const activeWsUrlRef = useRef<string>('');
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
@@ -454,7 +455,7 @@ export function SuperAgentConsole({
     const token = localStorage.getItem('token') || '';
     const wsUrl = `${protocol}//${host}/api/superagent?workspace=${encodeURIComponent(workspace)}&agentMode=${agentMode}&customArgs=${encodeURIComponent(customArgs)}&token=${encodeURIComponent(token)}`;
 
-    if (ws && activeWsUrlRef.current === wsUrl && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+    if (wsRef.current && activeWsUrlRef.current === wsUrl && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
       return;
     }
 
@@ -486,10 +487,12 @@ export function SuperAgentConsole({
       setLoading(false);
     };
 
+    wsRef.current = socket;
     setWs(socket);
 
     return () => {
       activeWsUrlRef.current = '';
+      wsRef.current = null;
       if (socket.readyState === WebSocket.CONNECTING) {
         socket.onopen = () => {
           try { socket.close(); } catch {}
@@ -498,7 +501,7 @@ export function SuperAgentConsole({
         try { socket.close(); } catch {}
       }
     };
-  }, [workspace, agentMode, customArgs, connectTrigger, ws]);
+  }, [workspace, agentMode, customArgs, connectTrigger]);
 
   useEffect(() => {
     if (isPrependingRef.current) {

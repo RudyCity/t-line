@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.637] - 2026-07-22
+
+### Bug Fix — Fix Infinite WebSocket Reconnection Loop & `Insufficient resources` Error (`SuperAgentConsole.tsx`)
+- **Fixed Infinite WebSocket Loop**: Resolved React render loop caused by including `ws` state in `useEffect`'s dependency array. When `setWs(socket)` executed inside the effect, React re-rendered and ran the previous effect's cleanup, which closed the WebSocket and immediately opened a new one in the next render pass.
+- **Added `wsRef` Reference Guard**: Added `wsRef = useRef<WebSocket | null>(null)` to maintain active socket state across component renders without triggering effect dependency re-runs.
+- **Cleaned Dependency Array**: Removed `ws` state from the connection `useEffect` dependency array (`[workspace, agentMode, customArgs, connectTrigger]`), stabilizing the connection lifecycle.
+
 ## [1.3.636] - 2026-07-22
 
 ### Bug Fix — Duplicate SuperAgent WebSocket Connections & React Hook Order Error (`SuperAgentConsole.tsx`)
