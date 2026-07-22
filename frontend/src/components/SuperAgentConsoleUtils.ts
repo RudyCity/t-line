@@ -387,6 +387,9 @@ export const handleAgentEventPayload = (
   }
 };
 
+export const GENERIC_GREETINGS_REGEX = /^(hallo|hai|hello|hi|hey|p|ping|test|halo|selamat\s+(pagi|siang|sore|malam)|bro|gan|min)$/i;
+export const GENERIC_STOP_CMDS_REGEX = /^(stop|stop\s+semua|clear|exit|quit|cancel|batal|selesai|done|ok|sip|mantap|terima\s+kasih|thanks|thx)$/i;
+
 export const cleanSessionTitle = (title: string): string => {
   if (!title) return 'New Chat';
   let t = title.trim();
@@ -396,22 +399,31 @@ export const cleanSessionTitle = (title: string): string => {
 
   // Strip [Last: ...] or [First: ...] headers
   t = t.replace(/^.*?\[Last:\s*/gi, '');
-  t = t.replace(/^\[First:.*?\]\s*(→|->)?\s*/gi, '');
+  t = t.replace(/^\[First:.*?\]\s*(→|->|➔)?\s*/gi, '');
+
+  // Handle legacy "Prompt Awal → Prompt Akhir" titles
+  if (t.includes('→') || t.includes('➔') || t.includes('->')) {
+    const parts = t.split(/\s*(?:→|➔|->)\s*/).map(p => p.trim()).filter(Boolean);
+    if (parts.length > 1) {
+      const nonGreeting = parts.find(p => !GENERIC_GREETINGS_REGEX.test(p) && !GENERIC_STOP_CMDS_REGEX.test(p));
+      t = nonGreeting || parts[0];
+    }
+  }
 
   // Remove memory/system bracketed tags
   t = t.replace(/(?:-\s*)?\[(?:memory|sys|system|context|rmemory|tencentdb|emergency)[^\]]*\]/gi, '');
 
   // Remove CLI prompt headers, role prefixes
   t = t.replace(/^(PS\s+)?[a-zA-Z]:\\[^>\n]+>\s*/gi, '');
-  t = t.replace(/^PS\s+[a-zA-Z]:\\[^\s]+\s*(➔|->)?\s*/gi, '');
+  t = t.replace(/^PS\s+[a-zA-Z]:\\[^\s]+\s*(➔|->|→)?\s*/gi, '');
   t = t.replace(/^(User|Assistant|System):\s*/gi, '');
 
   // Remove leading slash commands
   t = t.replace(/^(\/[a-zA-Z0-9_-]+\s*)+/gi, '');
 
-  // Clean leading/trailing hyphens, colons, pipes, dots, brackets, and whitespace
-  t = t.replace(/^[\[\]\s\-:_|→>]+/, '');
-  t = t.replace(/[\[\]\s\-:_|]+$/, '');
+  // Clean leading/trailing hyphens, colons, pipes, dots, brackets, arrows, and whitespace
+  t = t.replace(/^[\[\]\s\-:_|→➔>]+/, '');
+  t = t.replace(/[\[\]\s\-:_|→➔>]+$/, '');
 
   // Convert raw path keys (e.g. D__backup_from_pc_asus...) into clean workspace names
   if (/^[a-zA-Z]:?__/i.test(t) || t.includes('__Documents_Development_')) {

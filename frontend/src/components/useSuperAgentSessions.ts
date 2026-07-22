@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChatSession } from './SuperAgentHistorySidebar';
-import { getAuthHeader, cleanSessionTitle } from './SuperAgentConsoleUtils';
+import { getAuthHeader, cleanSessionTitle, GENERIC_GREETINGS_REGEX, GENERIC_STOP_CMDS_REGEX } from './SuperAgentConsoleUtils';
 
 export interface SuperAgentMessage {
   role: 'user' | 'assistant' | 'system' | 'tool' | 'thought' | 'connection';
@@ -262,16 +262,16 @@ export function generateSessionTitle(messages: SuperAgentMessage[]): string {
 
   if (cleanPrompts.length === 0) return 'New Chat';
 
-  const first = cleanPrompts[0];
-  const last = cleanPrompts[cleanPrompts.length - 1];
+  // Find the first substantive prompt (not a generic greeting or generic stop command)
+  const substantivePrompt = cleanPrompts.find(p => {
+    const cleaned = cleanSessionTitle(p);
+    return cleaned && !GENERIC_GREETINGS_REGEX.test(cleaned) && !GENERIC_STOP_CMDS_REGEX.test(cleaned);
+  });
 
-  if (cleanPrompts.length > 1 && first.toLowerCase() !== last.toLowerCase()) {
-    const truncFirst = first.length > 25 ? first.slice(0, 25).trim() + '...' : first;
-    const truncLast = last.length > 25 ? last.slice(0, 25).trim() + '...' : last;
-    return `${truncFirst} → ${truncLast}`;
-  }
+  const selected = substantivePrompt || cleanPrompts[0];
+  const finalTitle = cleanSessionTitle(selected);
 
-  return first.length > 45 ? first.slice(0, 45).trim() + '...' : first;
+  return finalTitle.length > 45 ? finalTitle.slice(0, 45).trim() + '...' : finalTitle;
 }
 
 export function useSuperAgentSessions(workspace: string) {

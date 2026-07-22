@@ -31,6 +31,9 @@ function isNoiseMessageContent(content: string): boolean {
   return NOISE_PREFIXES.some(p => c.startsWith(p)) || NOISE_SUBSTRINGS.some(s => c.includes(s));
 }
 
+const GENERIC_GREETINGS_REGEX = /^(hallo|hai|hello|hi|hey|p|ping|test|halo|selamat\s+(pagi|siang|sore|malam)|bro|gan|min)$/i;
+const GENERIC_STOP_CMDS_REGEX = /^(stop|stop\s+semua|clear|exit|quit|cancel|batal|selesai|done|ok|sip|mantap|terima\s+kasih|thanks|thx)$/i;
+
 export function cleanSessionTitle(title: string): string {
   if (!title) return 'New Chat';
   let t = title.trim();
@@ -40,22 +43,31 @@ export function cleanSessionTitle(title: string): string {
 
   // Strip [Last: ...] or [First: ...] headers
   t = t.replace(/^.*?\[Last:\s*/gi, '');
-  t = t.replace(/^\[First:.*?\]\s*(→|->)?\s*/gi, '');
+  t = t.replace(/^\[First:.*?\]\s*(→|->|➔)?\s*/gi, '');
+
+  // Handle legacy "Prompt Awal → Prompt Akhir" titles
+  if (t.includes('→') || t.includes('➔') || t.includes('->')) {
+    const parts = t.split(/\s*(?:→|➔|->)\s*/).map(p => p.trim()).filter(Boolean);
+    if (parts.length > 1) {
+      const nonGreeting = parts.find(p => !GENERIC_GREETINGS_REGEX.test(p) && !GENERIC_STOP_CMDS_REGEX.test(p));
+      t = nonGreeting || parts[0];
+    }
+  }
 
   // Remove memory/system bracketed tags
   t = t.replace(/(?:-\s*)?\[(?:memory|sys|system|context|rmemory|tencentdb|emergency)[^\]]*\]/gi, '');
 
   // Remove CLI prompt headers, role prefixes
   t = t.replace(/^(PS\s+)?[a-zA-Z]:\\[^>\n]+>\s*/gi, '');
-  t = t.replace(/^PS\s+[a-zA-Z]:\\[^\s]+\s*(➔|->)?\s*/gi, '');
+  t = t.replace(/^PS\s+[a-zA-Z]:\\[^\s]+\s*(➔|->|→)?\s*/gi, '');
   t = t.replace(/^(User|Assistant|System):\s*/gi, '');
 
   // Remove leading slash commands
   t = t.replace(/^(\/[a-zA-Z0-9_-]+\s*)+/gi, '');
 
-  // Clean leading/trailing hyphens, colons, pipes, dots, brackets, and whitespace
-  t = t.replace(/^[\[\]\s\-:_|→>]+/, '');
-  t = t.replace(/[\[\]\s\-:_|]+$/, '');
+  // Clean leading/trailing hyphens, colons, pipes, dots, brackets, arrows, and whitespace
+  t = t.replace(/^[\[\]\s\-:_|→➔>]+/, '');
+  t = t.replace(/[\[\]\s\-:_|→➔>]+$/, '');
 
   // Convert raw path keys (e.g. D__backup_from_pc_asus...) into clean workspace names
   if (/^[a-zA-Z]:?__/i.test(t) || t.includes('__Documents_Development_')) {
@@ -203,24 +215,21 @@ export async function getWorkspaceSessions(
         const cleanFirst = extractCleanUserText(rawFirst).split('\n')[0].trim();
         const cleanLast = extractCleanUserText(rawLast).split('\n')[0].trim();
 
-        if (cleanFirst && cleanLast && cleanFirst.toLowerCase() !== cleanLast.toLowerCase()) {
-          const truncFirst = cleanFirst.length > 25 ? cleanFirst.slice(0, 25).trim() + '...' : cleanFirst;
-          const truncLast = cleanLast.length > 25 ? cleanLast.slice(0, 25).trim() + '...' : cleanLast;
-          title = `${truncFirst} → ${truncLast}`;
-        } else if (cleanFirst) {
-          title = cleanFirst.length > 45 ? cleanFirst.slice(0, 45).trim() + '...' : cleanFirst;
-        } else if (cleanLast) {
-          title = cleanLast.length > 45 ? cleanLast.slice(0, 45).trim() + '...' : cleanLast;
-        } else if (
+        const firstSubstantive = cleanFirst && !GENERIC_GREETINGS_REGEX.test(cleanFirst) ? cleanFirst : null;
+        const lastSubstantive = cleanLast && !GENERIC_GREETINGS_REGEX.test(cleanLast) && !GENERIC_STOP_CMDS_REGEX.test(cleanLast) ? cleanLast : null;
+
+        const candidate = firstSubstantive || cleanFirst || lastSubstantive || cleanLast || (
           s.displayName && 
           !isNoiseMessageContent(s.displayName) && 
           s.displayName !== s.id && 
           !s.displayName.startsWith('sess/') && 
           !s.displayName.startsWith('sess_') && 
-          !s.displayName.startsWith('session_')
-        ) {
-          const cleanDisplay = cleanSessionTitle(s.displayName);
-          title = cleanDisplay.length > 45 ? cleanDisplay.slice(0, 45).trim() + '...' : (cleanDisplay || 'New Chat');
+          !s.displayName.startsWith('session_') ? s.displayName : ''
+        );
+
+        title = cleanSessionTitle(candidate);
+        if (title.length > 45) {
+          title = title.slice(0, 45).trim() + '...';
         }
 
         title = cleanSessionTitle(title);

@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.643] - 2026-07-22
+
+### Bug Fix & UX — Clean First-Substantive Prompt Title Generation (`useSuperAgentSessions.ts`, `SuperAgentConsoleUtils.ts`, `sessionManager.ts`)
+- **Eliminated `Prompt Awal → Prompt Akhir` Title Repetition**:
+  - Replaced `first → last` prompt concatenation in `generateSessionTitle()` ([useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts)) and `getWorkspaceSessions()` ([sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts)) with a smart, first-substantive prompt extractor.
+  - Automatically filters out generic greetings (`hallo`, `hai`, `hello`, `hi`, `hey`, `ping`, `test`, `selamat pagi`) and generic stop commands (`stop`, `stop semua`, `clear`, `exit`, `done`) when selecting the chat title.
+- **Sanitized Legacy Session Titles**:
+  - Updated `cleanSessionTitle()` helper across [SuperAgentConsoleUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsoleUtils.ts) and [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) to automatically clean existing legacy titles with `→`, `➔`, `[First: ...]`, or `[Last: ...]` markers into clean, concise titles.
+
 ## [1.3.642] - 2026-07-22
 
 ### UX & Scroll Enhancement — Instant Session Jump & Smart Auto-Scroll (`SuperAgentConsole.tsx`)
