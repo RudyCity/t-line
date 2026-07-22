@@ -249,17 +249,29 @@ export function generateSessionTitle(messages: SuperAgentMessage[]): string {
   const userMsgs = messages.filter(m => m.role === 'user' && m.text && !isSystemNoiseMsg(m));
   if (userMsgs.length === 0) return 'New Chat';
 
+  const cleanPrompts: string[] = [];
   for (const msg of userMsgs) {
     const cleanText = getCleanUserText(msg.text);
     if (cleanText) {
       const firstLine = cleanText.split('\n')[0].trim();
-      if (firstLine) {
-        return firstLine.length > 45 ? firstLine.slice(0, 45).trim() + '...' : firstLine;
+      if (firstLine && !cleanPrompts.includes(firstLine)) {
+        cleanPrompts.push(firstLine);
       }
     }
   }
 
-  return 'New Chat';
+  if (cleanPrompts.length === 0) return 'New Chat';
+
+  const first = cleanPrompts[0];
+  const last = cleanPrompts[cleanPrompts.length - 1];
+
+  if (cleanPrompts.length > 1 && first.toLowerCase() !== last.toLowerCase()) {
+    const truncFirst = first.length > 25 ? first.slice(0, 25).trim() + '...' : first;
+    const truncLast = last.length > 25 ? last.slice(0, 25).trim() + '...' : last;
+    return `${truncFirst} → ${truncLast}`;
+  }
+
+  return first.length > 45 ? first.slice(0, 45).trim() + '...' : first;
 }
 
 export function useSuperAgentSessions(workspace: string) {

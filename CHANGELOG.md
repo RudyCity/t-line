@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.640] - 2026-07-22
+
+### Feature & Title Enhancement — Automatic 'Prompt Awal → Prompt Akhir' Title Generation (`useSuperAgentSessions.ts`, `sessionManager.ts`)
+- **Automatic Multi-Prompt Session Title Formatting**:
+  - Updated `generateSessionTitle()` in [useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts) to automatically extract the first and last non-empty user prompts. If multiple unique prompts exist, title is formatted as `Prompt Awal → Prompt Akhir`.
+  - Updated `getWorkspaceSessions()` in [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) to join `firstChat` and `lastChat` from SuperAgent database into clean `Prompt Awal → Prompt Akhir` session titles.
+
 ## [1.3.639] - 2026-07-22
 
 ### UI & Formatting Enhancement — Enhanced Session Title Sanitization (`SuperAgentConsoleUtils.ts`, `sessionManager.ts`)

@@ -197,11 +197,20 @@ export async function getWorkspaceSessions(
 
       for (const s of response.sessions) {
         let title = 'New Chat';
-        const rawFirst = (s.firstChat || s.preview || '').replace(/^(User|Assistant|System):\s*/i, '').trim();
-        const cleanFirst = extractCleanUserText(rawFirst).split('\n')[0].trim();
+        const rawFirst = (s.firstChat || '').replace(/^(User|Assistant|System):\s*/i, '').trim();
+        const rawLast = (s.lastChat || '').replace(/^(User|Assistant|System):\s*/i, '').trim();
 
-        if (cleanFirst) {
+        const cleanFirst = extractCleanUserText(rawFirst).split('\n')[0].trim();
+        const cleanLast = extractCleanUserText(rawLast).split('\n')[0].trim();
+
+        if (cleanFirst && cleanLast && cleanFirst.toLowerCase() !== cleanLast.toLowerCase()) {
+          const truncFirst = cleanFirst.length > 25 ? cleanFirst.slice(0, 25).trim() + '...' : cleanFirst;
+          const truncLast = cleanLast.length > 25 ? cleanLast.slice(0, 25).trim() + '...' : cleanLast;
+          title = `${truncFirst} → ${truncLast}`;
+        } else if (cleanFirst) {
           title = cleanFirst.length > 45 ? cleanFirst.slice(0, 45).trim() + '...' : cleanFirst;
+        } else if (cleanLast) {
+          title = cleanLast.length > 45 ? cleanLast.slice(0, 45).trim() + '...' : cleanLast;
         } else if (
           s.displayName && 
           !isNoiseMessageContent(s.displayName) && 
@@ -210,7 +219,7 @@ export async function getWorkspaceSessions(
           !s.displayName.startsWith('sess_') && 
           !s.displayName.startsWith('session_')
         ) {
-          const cleanDisplay = extractCleanUserText(s.displayName).replace(/^\[First:.*?\]\s*(→|➔)\s*\[Last:\s*/i, '').replace(/^(User|Assistant|System):\s*/i, '').trim();
+          const cleanDisplay = cleanSessionTitle(s.displayName);
           title = cleanDisplay.length > 45 ? cleanDisplay.slice(0, 45).trim() + '...' : (cleanDisplay || 'New Chat');
         }
 
