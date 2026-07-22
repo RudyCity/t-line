@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.629] - 2026-07-22
+
+### UI Enhancement — Icon-Only Header Buttons for Monitor & Settings (`SuperAgentConsole.tsx`)
+- **Icon-Only Header Buttons**:
+  - Removed text labels from the top-right **Live Monitor** and **Settings** header action buttons in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx).
+  - Streamlined header layout to clean, compact square-rounded icon buttons with tooltip descriptions.
+
 ## [1.3.628] - 2026-07-22
 
 ### Feature — Expose & Display SuperAgent Package Version (`paths.ts`, `server.ts`, `serverRoutes.ts`, `presetUtils.ts`, `SuperAgentConsole.tsx`, `SuperAgentSettingsMenu.tsx`, `SuperAgentSettingsModal.tsx`)

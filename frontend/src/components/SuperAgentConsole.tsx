@@ -868,28 +868,26 @@ export function SuperAgentConsole({
         <div className="flex justify-end gap-2 items-center relative">
           <button
             onClick={() => setShowSidebar(!showSidebar)}
-            className={`px-3 py-1.5 text-xs rounded-lg border transition flex items-center gap-1.5 cursor-pointer font-medium ${
+            className={`p-2 rounded-lg border transition flex items-center justify-center cursor-pointer ${
               showSidebar 
                 ? 'bg-emerald-950/70 border-emerald-700/80 text-emerald-300 shadow-sm' 
                 : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-color)]'
             }`}
             title="Toggle Live Monitor Sidebar"
           >
-            <Activity className={`w-3.5 h-3.5 ${showSidebar ? 'text-emerald-400' : ''}`} />
-            <span className="hidden sm:inline">Monitor</span>
+            <Activity className={`w-4 h-4 ${showSidebar ? 'text-emerald-400' : ''}`} />
           </button>
 
           <button
             onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-            className={`px-3 py-1.5 text-xs rounded-lg border transition flex items-center gap-1.5 cursor-pointer font-medium ${
+            className={`p-2 rounded-lg border transition flex items-center justify-center cursor-pointer ${
               showSettingsMenu 
                 ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)] text-[var(--color-primary)] shadow-sm' 
                 : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-color)]'
             }`}
             title="SuperAgent v1.2.520 & App Settings"
           >
-            <Settings className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">v1.2.520 Settings</span>
+            <Settings className="w-4 h-4" />
           </button>
 
           <SuperAgentSettingsMenu
