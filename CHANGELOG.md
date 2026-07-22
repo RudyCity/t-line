@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.638] - 2026-07-22
+
+### Bug Fix — Fix Session Selection & Message Retrieval (`useSuperAgentSessions.ts`, SuperAgent `serverRoutes.ts`)
+- **Fixed Cross-Project Session Message Retrieval (SuperAgent `serverRoutes.ts`)**:
+  - Recompiled SuperAgent project (`dist/serverRoutes.js`) to ensure `loadSessionFromDb(targetSessionId)` fallback logic is present.
+  - Updated `GET /api/history` handler in SuperAgent to verify that in-memory messages are only used if active session ID matches requested `targetSessionId`; otherwise, messages are loaded directly from SQLite database.
+- **Fixed Frontend Session Selection (`useSuperAgentSessions.ts`)**:
+  - Allowed clicking active session card to trigger a fresh message load when current message state is empty (`messages.length === 0`).
+  - Fixed empty API response handling so `[]` messages from server do not overwrite valid messages loaded from local storage cache.
+
 ## [1.3.637] - 2026-07-22
 
 ### Bug Fix — Fix Infinite WebSocket Reconnection Loop & `Insufficient resources` Error (`SuperAgentConsole.tsx`)

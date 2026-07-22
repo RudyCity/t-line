@@ -554,7 +554,7 @@ export function useSuperAgentSessions(workspace: string) {
 
   const handleSelectSession = useCallback(async (id: string) => {
     if (!id) return;
-    if (id === activeSessionIdRef.current && loadedSessionIdRef.current === id) return;
+    if (id === activeSessionIdRef.current && loadedSessionIdRef.current === id && messages.length > 0) return;
     setActiveSessionId(id);
     loadedSessionIdRef.current = id;
     currentOffsetRef.current = 0;
@@ -562,6 +562,7 @@ export function useSuperAgentSessions(workspace: string) {
     // Fast-path: Immediately load local cached messages for 0ms UI render latency
     const wsKey = workspace || 'default';
     const saved = localStorage.getItem(`superagent_messages_${wsKey}_${id}`);
+    let loadedFromLocal = false;
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -569,23 +570,24 @@ export function useSuperAgentSessions(workspace: string) {
           setMessages(parsed);
           setHasMore(false);
           lastSeenMessageCountRef.current[id] = parsed.length;
+          loadedFromLocal = true;
         }
       } catch (e) {}
     }
 
     // Asynchronously fetch fresh session messages from backend server
     const result = await apiGetSessionMessages(workspace, id, PAGE_SIZE, 0);
-    if (result && result.messages) {
+    if (result && Array.isArray(result.messages) && result.messages.length > 0) {
       setMessages(result.messages);
       setHasMore(result.hasMore);
       currentOffsetRef.current = PAGE_SIZE;
       lastSeenMessageCountRef.current[id] = result.messages.length;
-    } else if (!saved) {
-      setMessages([]);
+    } else if (!loadedFromLocal) {
+      setMessages(result?.messages || []);
       setHasMore(false);
       lastSeenMessageCountRef.current[id] = 0;
     }
-  }, [workspace]);
+  }, [workspace, messages.length]);
 
   const handleNewChat = useCallback((): string => {
     const newId = `session_${Date.now()}`;
