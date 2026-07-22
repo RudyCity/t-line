@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.639] - 2026-07-22
+
+### UI & Formatting Enhancement — Enhanced Session Title Sanitization (`SuperAgentConsoleUtils.ts`, `sessionManager.ts`)
+- **Cleaned Chat Session Titles**:
+  - Enhanced `cleanSessionTitle()` helper across frontend ([SuperAgentConsoleUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsoleUtils.ts)) and backend ([sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts)).
+  - Stripped stray `[First: ...]`, `[Last: ...]`, and `→` markers that previously left trailing brackets in titles.
+  - Automatically converted raw directory key strings (e.g. `D__backup_from_pc_asus_...`) into clean, human-readable workspace titles (e.g. `UB-surat-bebas-tanggungan`).
+
 ## [1.3.638] - 2026-07-22
 
 ### Bug Fix — Fix Session Selection & Message Retrieval (`useSuperAgentSessions.ts`, SuperAgent `serverRoutes.ts`)
