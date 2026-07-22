@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.636] - 2026-07-22
+
+### Bug Fix — Duplicate SuperAgent WebSocket Connections & React Hook Order Error (`SuperAgentConsole.tsx`)
+- **Prevented duplicate WS connections**: Added `activeWsUrlRef` guard — if a WebSocket with the same URL is already `OPEN` or `CONNECTING`, a new socket is not created. This eliminates the flood of 10+ duplicate `[SuperAgent WS] Connection established` / `Connection closed` log entries.
+- **Fixed React "change in order of Hooks" error**: The `activeWsUrlRef = useRef('')` is now declared in the top-level scope (before all `useEffect` calls), correcting the conditional hook violation that caused `Error: Should have a queue. This is likely a bug in React.` and crashed `SuperAgentConsole`.
+- **Cleanup**: `activeWsUrlRef.current` is cleared in the `useEffect` cleanup function so reconnections are always permitted after the component unmounts or deps change.
+
 ## [1.3.635] - 2026-07-22
 
 ### Bug Fix — Preserve Session `updatedAt` Timestamp & Prevent Moving to 'Hari Ini' On Selection (`useSuperAgentSessions.ts`)

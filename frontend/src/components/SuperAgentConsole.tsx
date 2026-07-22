@@ -433,6 +433,8 @@ export function SuperAgentConsole({
   }, [activeWorkspacePath]);
 
   const activeSessionIdRef = useRef(activeSessionId);
+  const activeWsUrlRef = useRef<string>('');
+
   useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
   }, [activeSessionId]);
@@ -452,6 +454,11 @@ export function SuperAgentConsole({
     const token = localStorage.getItem('token') || '';
     const wsUrl = `${protocol}//${host}/api/superagent?workspace=${encodeURIComponent(workspace)}&agentMode=${agentMode}&customArgs=${encodeURIComponent(customArgs)}&token=${encodeURIComponent(token)}`;
 
+    if (ws && activeWsUrlRef.current === wsUrl && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+
+    activeWsUrlRef.current = wsUrl;
     console.log('[SuperAgent] Connecting to bridge:', wsUrl);
     const socket = new WebSocket(wsUrl);
 
@@ -482,6 +489,7 @@ export function SuperAgentConsole({
     setWs(socket);
 
     return () => {
+      activeWsUrlRef.current = '';
       if (socket.readyState === WebSocket.CONNECTING) {
         socket.onopen = () => {
           try { socket.close(); } catch {}
@@ -490,7 +498,7 @@ export function SuperAgentConsole({
         try { socket.close(); } catch {}
       }
     };
-  }, [workspace, agentMode, customArgs, connectTrigger]);
+  }, [workspace, agentMode, customArgs, connectTrigger, ws]);
 
   useEffect(() => {
     if (isPrependingRef.current) {
