@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.641] - 2026-07-22
+
+### Integration & Feature Enhancement — SuperAgent Core 'Prompt Awal → Prompt Akhir' Title Support (`conversation.ts`)
+- **SuperAgent Core Title Generation (`conversation.ts`)**:
+  - Updated SuperAgent session persistence logic in [conversation.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/conversation.ts) to automatically calculate `displayName` as `Prompt Awal → Prompt Akhir` when saving conversation history.
+  - Recompiled SuperAgent project (`bun run build`) and committed changes to SuperAgent repository.
+
 ## [1.3.640] - 2026-07-22
 
 ### Feature & Title Enhancement — Automatic 'Prompt Awal → Prompt Akhir' Title Generation (`useSuperAgentSessions.ts`, `sessionManager.ts`)
