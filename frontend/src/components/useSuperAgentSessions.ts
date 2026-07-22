@@ -307,6 +307,7 @@ export function useSuperAgentSessions(workspace: string) {
   const activeSessionIdRef = useRef(activeSessionId);
   const loadedSessionIdRef = useRef<string | null>(activeSessionId || null);
   const deletedSessionIdsRef = useRef<Set<string>>(new Set());
+  const lastSeenMessageCountRef = useRef<Record<string, number>>({});
 
   // Keep activeSessionIdRef up to date
   useEffect(() => {
@@ -458,15 +459,20 @@ export function useSuperAgentSessions(workspace: string) {
       } catch (e) {}
 
       const newTitle = generateSessionTitle(messages);
+      const prevCount = lastSeenMessageCountRef.current[activeSessionId];
+      const isNewMessageAdded = prevCount !== undefined && messages.length > prevCount;
+      lastSeenMessageCountRef.current[activeSessionId] = messages.length;
 
       setSessions(prevSessions => {
         const targetIdx = prevSessions.findIndex(s => s.id === activeSessionId);
         if (targetIdx < 0) {
+          const lastMsgTime = (messages[messages.length - 1] as any)?.timestamp;
+          const inferredTime = lastMsgTime ? new Date(lastMsgTime).getTime() : Date.now();
           const newSession: ChatSession = {
             id: activeSessionId,
             title: newTitle,
-            createdAt: Date.now(),
-            updatedAt: Date.now()
+            createdAt: inferredTime,
+            updatedAt: isNewMessageAdded ? Date.now() : inferredTime
           };
           const updated = [newSession, ...prevSessions];
           try {
@@ -477,9 +483,10 @@ export function useSuperAgentSessions(workspace: string) {
         }
 
         const currentSession = prevSessions[targetIdx];
+        const isTitleChanged = currentSession.title !== newTitle;
 
-        // Skip if title is unchanged
-        if (currentSession.title === newTitle) {
+        // Skip if title is unchanged AND no new message was added
+        if (!isTitleChanged && !isNewMessageAdded) {
           return prevSessions;
         }
 
@@ -487,7 +494,7 @@ export function useSuperAgentSessions(workspace: string) {
         const updatedSession = {
           ...currentSession,
           title: newTitle,
-          updatedAt: Date.now()
+          updatedAt: isNewMessageAdded ? Date.now() : currentSession.updatedAt
         };
         updated[targetIdx] = updatedSession;
         
@@ -561,6 +568,7 @@ export function useSuperAgentSessions(workspace: string) {
         if (Array.isArray(parsed) && parsed.length > 0) {
           setMessages(parsed);
           setHasMore(false);
+          lastSeenMessageCountRef.current[id] = parsed.length;
         }
       } catch (e) {}
     }
@@ -571,9 +579,11 @@ export function useSuperAgentSessions(workspace: string) {
       setMessages(result.messages);
       setHasMore(result.hasMore);
       currentOffsetRef.current = PAGE_SIZE;
+      lastSeenMessageCountRef.current[id] = result.messages.length;
     } else if (!saved) {
       setMessages([]);
       setHasMore(false);
+      lastSeenMessageCountRef.current[id] = 0;
     }
   }, [workspace]);
 

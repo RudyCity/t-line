@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.635] - 2026-07-22
+
+### Bug Fix — Preserve Session `updatedAt` Timestamp & Prevent Moving to 'Hari Ini' On Selection (`useSuperAgentSessions.ts`)
+- **Preserved Selection Timestamp (`useSuperAgentSessions.ts`)**:
+  - Added message count tracking (`lastSeenMessageCountRef`) when selecting chat sessions.
+  - Fixed bug where merely clicking an older session in the sidebar overwrote its `updatedAt` timestamp with `Date.now()`, which incorrectly moved it to the **Hari Ini** (Today) category without user editing.
+  - `updatedAt` is now preserved when selecting/viewing chats or cleaning titles, and is updated to `Date.now()` strictly when a new message is submitted or generated.
+
 ## [1.3.634] - 2026-07-22
 
 ### UI & Sanitization Fix — Automatic Cleaning & Stripping of `[memory]` / `[SYS]` Tags from Chat Session Titles (`sessionManager.ts`, `SuperAgentConsoleUtils.ts`, `useSuperAgentSessions.ts`, `SuperAgentHistorySidebar.tsx`)
