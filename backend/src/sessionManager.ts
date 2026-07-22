@@ -22,8 +22,8 @@ export interface SuperAgentMessage {
 
 export function closeSessionDb() {}
 
-const NOISE_PREFIXES = ['[RMemory', '[TencentDB', '[Emergency', '[Context', '[SYS]', '[System', '<relevant-memories>'];
-const NOISE_SUBSTRINGS = ['Agent Memory Context', 'Emergency Summary', 'Context Restoration'];
+const NOISE_PREFIXES = ['[RMemory', '[TencentDB', '[Emergency', '[Context', '[SYS]', '[System', '[memory]', '[memory', '- [memory]', '-[memory]', '<relevant-memories>'];
+const NOISE_SUBSTRINGS = ['Agent Memory Context', 'Emergency Summary', 'Context Restoration', '[memory]', '[SYS]'];
 
 function isNoiseMessageContent(content: string): boolean {
   if (!content) return true;
@@ -31,14 +31,71 @@ function isNoiseMessageContent(content: string): boolean {
   return NOISE_PREFIXES.some(p => c.startsWith(p)) || NOISE_SUBSTRINGS.some(s => c.includes(s));
 }
 
+export function cleanSessionTitle(title: string): string {
+  if (!title) return 'New Chat';
+  let t = title.trim();
+
+  // Remove XML-like tags
+  t = t.replace(/<[^>]+>/g, '');
+
+  // Remove memory/system bracketed tags
+  t = t.replace(/(?:-\s*)?\[(?:memory|sys|system|context|rmemory|tencentdb|emergency)[^\]]*\]/gi, '');
+
+  // Remove CLI prompt headers, First/Last markers, role prefixes
+  t = t.replace(/^(PS\s+)?[a-zA-Z]:\\[^>\n]+>\s*/gi, '');
+  t = t.replace(/^PS\s+[a-zA-Z]:\\[^\s]+\s*(➔|->)?\s*/gi, '');
+  t = t.replace(/^\[First:.*?\]\s*(→|➔)\s*\[Last:\s*/gi, '');
+  t = t.replace(/^(User|Assistant|System):\s*/gi, '');
+
+  // Remove leading slash commands
+  t = t.replace(/^(\/[a-zA-Z0-9_-]+\s*)+/gi, '');
+
+  // Clean leading/trailing hyphens, colons, pipes, dots, and whitespace
+  t = t.replace(/^[\s\-:_|.]+/, '');
+  t = t.replace(/[\s\-:_|.]+$|\.\.\.$/, '');
+
+  // Deduplicate trailing fragments separated by ' - '
+  if (t.includes(' - ')) {
+    const parts = t.split(/\s+-\s+/).map(p => p.trim()).filter(Boolean);
+    if (parts.length > 1) {
+      const [first, second] = parts;
+      if (second && (first.toLowerCase().includes(second.toLowerCase()) || second.length <= 3 || /^[a-z0-9]$/i.test(second))) {
+        t = first;
+      } else if (first) {
+        t = first;
+      }
+    }
+  }
+
+  t = t.replace(/\s{2,}/g, ' ').trim();
+  if (!t || t.toLowerCase() === 'new chat') return 'New Chat';
+  return t;
+}
+
 function extractCleanUserText(content: string): string {
-  if (!content || isNoiseMessageContent(content)) return '';
+  if (!content) return '';
   let text = content.trim();
+
+  // If text starts with injected memory/context noise, extract the actual prompt lines
+  const lines = text.split('\n');
+  const cleanLines = lines.filter(line => {
+    const l = line.trim();
+    if (!l) return false;
+    if (NOISE_PREFIXES.some(p => l.startsWith(p))) return false;
+    if (NOISE_SUBSTRINGS.some(s => l.includes(s))) return false;
+    return true;
+  });
+
+  if (cleanLines.length > 0) {
+    text = cleanLines.join(' ').trim();
+  }
 
   if (text.includes('<USER_REQUEST>') || text.includes('<user_request>')) {
     text = text.replace(/<\/?user_request>/gi, '').trim();
   }
 
+  text = cleanSessionTitle(text);
+  if (isNoiseMessageContent(text)) return '';
   return text;
 }
 
@@ -132,17 +189,10 @@ export async function getWorkspaceSessions(
       for (const s of response.sessions) {
         let title = 'New Chat';
         const rawFirst = (s.firstChat || s.preview || '').replace(/^(User|Assistant|System):\s*/i, '').trim();
-        const rawLast = (s.lastChat || '').replace(/^(User|Assistant|System):\s*/i, '').trim();
+        const cleanFirst = extractCleanUserText(rawFirst).split('\n')[0].trim();
 
-        const cleanFirst = extractCleanUserText(rawFirst).split('\n')[0];
-        const cleanLast = extractCleanUserText(rawLast).split('\n')[0];
-
-        if (cleanFirst && cleanLast && cleanFirst !== cleanLast) {
-          const firstShort = cleanFirst.length > 22 ? cleanFirst.slice(0, 22) + '...' : cleanFirst;
-          const lastShort = cleanLast.length > 22 ? cleanLast.slice(0, 22) + '...' : cleanLast;
-          title = `${firstShort} ➔ ${lastShort}`;
-        } else if (cleanFirst) {
-          title = cleanFirst.length > 30 ? cleanFirst.slice(0, 30) + '...' : cleanFirst;
+        if (cleanFirst) {
+          title = cleanFirst.length > 45 ? cleanFirst.slice(0, 45).trim() + '...' : cleanFirst;
         } else if (
           s.displayName && 
           !isNoiseMessageContent(s.displayName) && 
@@ -151,9 +201,11 @@ export async function getWorkspaceSessions(
           !s.displayName.startsWith('sess_') && 
           !s.displayName.startsWith('session_')
         ) {
-          title = s.displayName;
+          const cleanDisplay = extractCleanUserText(s.displayName).replace(/^\[First:.*?\]\s*(→|➔)\s*\[Last:\s*/i, '').replace(/^(User|Assistant|System):\s*/i, '').trim();
+          title = cleanDisplay.length > 45 ? cleanDisplay.slice(0, 45).trim() + '...' : (cleanDisplay || 'New Chat');
         }
 
+        title = cleanSessionTitle(title);
         const lastMod = s.lastModified ? new Date(s.lastModified).getTime() : Date.now();
 
         cleanedSessions.push({
@@ -193,10 +245,7 @@ export async function getSessionMessages(
   }
 
   try {
-    // 1. Resume session on SuperAgent server to populate agent memory
-    await requestSuperAgentServer('/api/init', 'POST', { workspace, resume: actualId }, workspace);
-
-    // 2. Fetch history messages from SuperAgent server
+    // Fetch history messages directly from SuperAgent server (FAST lookup without blocking init)
     const response = await requestSuperAgentServer(`/api/history?sessionId=${encodeURIComponent(actualId)}`, 'GET', undefined, workspace);
 
     if (response && response.success && Array.isArray(response.messages)) {
@@ -298,19 +347,29 @@ export async function getSessionMessages(
   return { messages: [], totalCount: 0, hasMore: false };
 }
 
-/** Save a session (handled automatically by SuperAgent Server on prompt completion) */
+/** Save a session and sync title & messages to SuperAgent Server SQLite database */
 export async function saveWorkspaceSession(
   workspace: string,
   session: ChatSession,
-  _messages: SuperAgentMessage[]
+  messages: SuperAgentMessage[]
 ) {
   try {
     let sessionId = session.id;
     if (sessionId.includes('::')) {
       sessionId = sessionId.split('::')[1];
     }
-    // Ping SuperAgent server to register/resume session ID
-    await requestSuperAgentServer('/api/init', 'POST', { workspace, sessionId, resume: sessionId, clientMode: 'tline' }, workspace);
+    // Persist session title & messages metadata directly to SuperAgent SQLite database
+    const cleanTitle = extractCleanUserText(session.title);
+    const titleToSave = cleanTitle && cleanTitle !== 'New Chat' ? cleanTitle : session.title;
+    
+    await requestSuperAgentServer('/api/history/session', 'POST', {
+      session: {
+        id: sessionId,
+        title: titleToSave,
+        updatedAt: session.updatedAt || Date.now()
+      },
+      messages: Array.isArray(messages) ? messages : []
+    }, workspace);
   } catch (e) {
     console.error('[SessionManager] saveWorkspaceSession error:', e);
   }

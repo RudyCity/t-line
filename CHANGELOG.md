@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.634] - 2026-07-22
+
+### UI & Sanitization Fix — Automatic Cleaning & Stripping of `[memory]` / `[SYS]` Tags from Chat Session Titles (`sessionManager.ts`, `SuperAgentConsoleUtils.ts`, `useSuperAgentSessions.ts`, `SuperAgentHistorySidebar.tsx`)
+- **Backend Title Sanitization (`sessionManager.ts`)**:
+  - Implemented `cleanSessionTitle()` to strip bracketed memory tags (`[memory]`, `- [memory]`, `[SYS]`, `[system]`, `[Context]`, `[RMemory]`, etc.), CLI headers, role prefixes, and leading slash commands when fetching or saving sessions.
+  - Added trailing fragment deduplication (e.g. `kamu model apa? - kam...` $\to$ `kamu model apa?`).
+- **Frontend Title Sanitization (`SuperAgentConsoleUtils.ts`, `useSuperAgentSessions.ts`, `SuperAgentHistorySidebar.tsx`)**:
+  - Exported `cleanSessionTitle()` helper to automatically sanitize session titles on API load and when rendering sidebar session cards.
+
 ## [1.3.633] - 2026-07-22
 
 ### Fix — Resolve Version Fetch SyntaxError & Prevent SuperAgent WebSocket Connection Teardown Loop (`server.ts`, `useUpdateChecker.ts`, `SuperAgentConsole.tsx`)

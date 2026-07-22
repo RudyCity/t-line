@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChatSession } from './SuperAgentHistorySidebar';
-import { getAuthHeader } from './SuperAgentConsoleUtils';
+import { getAuthHeader, cleanSessionTitle } from './SuperAgentConsoleUtils';
 
 export interface SuperAgentMessage {
   role: 'user' | 'assistant' | 'system' | 'tool' | 'thought' | 'connection';
@@ -118,7 +118,7 @@ interface PaginatedSessionsResponse {
   hasMore: boolean;
 }
 
-const SESSION_PAGE_SIZE = 30;
+const SESSION_PAGE_SIZE = 200;
 
 // API Sync Helpers
 async function apiGetSessions(
@@ -135,7 +135,10 @@ async function apiGetSessions(
       const data = await res.json();
       if (Array.isArray(data.sessions)) {
         return {
-          sessions: data.sessions,
+          sessions: data.sessions.map((s: ChatSession) => ({
+            ...s,
+            title: cleanSessionTitle(s.title)
+          })),
           totalCount: data.totalCount ?? data.sessions.length,
           hasMore: data.hasMore ?? false
         };
@@ -213,12 +216,32 @@ async function apiDeleteSession(workspace: string, sessionId: string): Promise<b
 export function getCleanUserText(rawText: string): string {
   if (!rawText) return '';
   let text = rawText.trim();
-  if (text.includes('<USER_REQUEST>')) {
-    text = text.replace(/<\/?USER_REQUEST>/gi, '').trim();
+
+  // Strip noise lines (e.g. [Context Restoration], [RMemory...], [SYS])
+  const lines = text.split('\n');
+  const cleanLines = lines.filter(line => {
+    const l = line.trim();
+    if (!l) return false;
+    if (l.startsWith('[RMemory') || l.startsWith('[TencentDB') || l.startsWith('[Emergency') || l.startsWith('[Context') || l.startsWith('[SYS]') || l.startsWith('[System') || l.startsWith('<relevant-memories>')) return false;
+    if (l.includes('Agent Memory Context') || l.includes('Emergency Summary') || l.includes('Context Restoration')) return false;
+    return true;
+  });
+
+  if (cleanLines.length > 0) {
+    text = cleanLines.join(' ').trim();
   }
-  if (text.includes('<user_request>')) {
-    text = text.replace(/<\/?user_request>/gi, '').trim();
-  }
+
+  // Strip XML tags like <USER_REQUEST>, <user_request>, etc.
+  text = text.replace(/<\/?user_request>/gi, '').replace(/<\/?USER_REQUEST>/gi, '').replace(/<[^>]+>/g, '').trim();
+
+  // Strip leading CLI prompt headers (e.g. PS D:\path... > or PS C:\...)
+  text = text.replace(/^(PS\s+)?[a-zA-Z]:\\[^>\n]+>\s*/gi, '').trim();
+  text = text.replace(/^PS\s+[a-zA-Z]:\\[^\s]+\s*(➔|->)?\s*/gi, '').trim();
+  text = text.replace(/^\[First:.*?\]\s*(→|➔)\s*\[Last:\s*/gi, '').trim();
+
+  // Strip slash commands at the start of prompt (e.g. /non-linear-debugging /pragmatic-minimalism)
+  text = text.replace(/^(\/[a-zA-Z0-9_-]+\s*)+/g, '').trim();
+
   return text;
 }
 
@@ -226,21 +249,17 @@ export function generateSessionTitle(messages: SuperAgentMessage[]): string {
   const userMsgs = messages.filter(m => m.role === 'user' && m.text && !isSystemNoiseMsg(m));
   if (userMsgs.length === 0) return 'New Chat';
 
-  const cleanFirst = getCleanUserText(userMsgs[0].text).split('\n')[0];
-  const firstShort = cleanFirst.length > 22 ? cleanFirst.slice(0, 22) + '...' : cleanFirst;
-
-  if (userMsgs.length === 1) {
-    return firstShort || 'New Chat';
+  for (const msg of userMsgs) {
+    const cleanText = getCleanUserText(msg.text);
+    if (cleanText) {
+      const firstLine = cleanText.split('\n')[0].trim();
+      if (firstLine) {
+        return firstLine.length > 45 ? firstLine.slice(0, 45).trim() + '...' : firstLine;
+      }
+    }
   }
 
-  const cleanLast = getCleanUserText(userMsgs[userMsgs.length - 1].text).split('\n')[0];
-  const lastShort = cleanLast.length > 22 ? cleanLast.slice(0, 22) + '...' : cleanLast;
-
-  if (firstShort === lastShort) {
-    return firstShort || 'New Chat';
-  }
-
-  return `${firstShort} ➔ ${lastShort}`;
+  return 'New Chat';
 }
 
 export function useSuperAgentSessions(workspace: string) {
@@ -249,6 +268,31 @@ export function useSuperAgentSessions(workspace: string) {
     const loaded = loadWorkspaceSessions(workspace);
     return loaded[0]?.id || `session_${Date.now()}`;
   });
+
+  const [pinnedSessionIds, setPinnedSessionIds] = useState<string[]>(() => {
+    const wsKey = workspace || 'default';
+    const saved = localStorage.getItem(`superagent_pinned_sessions_${wsKey}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  const handleTogglePinSession = useCallback((id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const wsKey = workspace || 'default';
+    setPinnedSessionIds(prev => {
+      const isPinned = prev.includes(id);
+      const next = isPinned ? prev.filter(pId => pId !== id) : [id, ...prev];
+      try {
+        localStorage.setItem(`superagent_pinned_sessions_${wsKey}`, JSON.stringify(next));
+      } catch (err) {}
+      return next;
+    });
+  }, [workspace]);
 
   const [messages, setMessages] = useState<SuperAgentMessage[]>([]);
   const [hasMore, setHasMore] = useState(false);
@@ -303,12 +347,33 @@ export function useSuperAgentSessions(workspace: string) {
       if (targetActiveId && validServerSessions.some(s => s.id === targetActiveId)) {
         setActiveSessionId(targetActiveId);
         const result = await apiGetSessionMessages(wsPath, targetActiveId, PAGE_SIZE, 0);
-        if (result) {
+        if (result && result.messages.length > 0) {
           setMessages(result.messages);
           setHasMore(result.hasMore);
           currentOffsetRef.current = PAGE_SIZE;
           loadedSessionIdRef.current = targetActiveId;
           return;
+        } else {
+          const wsKey = wsPath || 'default';
+          const saved = localStorage.getItem(`superagent_messages_${wsKey}_${targetActiveId}`);
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setMessages(parsed);
+                setHasMore(false);
+                loadedSessionIdRef.current = targetActiveId;
+                return;
+              }
+            } catch (e) {}
+          }
+          if (result) {
+            setMessages(result.messages);
+            setHasMore(result.hasMore);
+            currentOffsetRef.current = PAGE_SIZE;
+            loadedSessionIdRef.current = targetActiveId;
+            return;
+          }
         }
       } else if (targetActiveId && !deletedSessionIdsRef.current.has(targetActiveId)) {
         // Target active ID is a local-only session (e.g., brand new chat)
@@ -487,14 +552,7 @@ export function useSuperAgentSessions(workspace: string) {
     loadedSessionIdRef.current = id;
     currentOffsetRef.current = 0;
 
-    const result = await apiGetSessionMessages(workspace, id, PAGE_SIZE, 0);
-    if (result) {
-      setMessages(result.messages);
-      setHasMore(result.hasMore);
-      currentOffsetRef.current = PAGE_SIZE;
-      return;
-    }
-
+    // Fast-path: Immediately load local cached messages for 0ms UI render latency
     const wsKey = workspace || 'default';
     const saved = localStorage.getItem(`superagent_messages_${wsKey}_${id}`);
     if (saved) {
@@ -503,12 +561,20 @@ export function useSuperAgentSessions(workspace: string) {
         if (Array.isArray(parsed) && parsed.length > 0) {
           setMessages(parsed);
           setHasMore(false);
-          return;
         }
       } catch (e) {}
     }
-    setMessages([]);
-    setHasMore(false);
+
+    // Asynchronously fetch fresh session messages from backend server
+    const result = await apiGetSessionMessages(workspace, id, PAGE_SIZE, 0);
+    if (result && result.messages) {
+      setMessages(result.messages);
+      setHasMore(result.hasMore);
+      currentOffsetRef.current = PAGE_SIZE;
+    } else if (!saved) {
+      setMessages([]);
+      setHasMore(false);
+    }
   }, [workspace]);
 
   const handleNewChat = useCallback((): string => {
@@ -674,6 +740,8 @@ export function useSuperAgentSessions(workspace: string) {
     handleSelectSession,
     handleNewChat,
     handleDeleteSession,
-    handleRenameSession
+    handleRenameSession,
+    pinnedSessionIds,
+    handleTogglePinSession
   };
 }

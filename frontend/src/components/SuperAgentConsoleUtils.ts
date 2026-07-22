@@ -387,3 +387,44 @@ export const handleAgentEventPayload = (
   }
 };
 
+export const cleanSessionTitle = (title: string): string => {
+  if (!title) return 'New Chat';
+  let t = title.trim();
+
+  // Remove XML-like tags
+  t = t.replace(/<[^>]+>/g, '');
+
+  // Remove memory/system bracketed tags
+  t = t.replace(/(?:-\s*)?\[(?:memory|sys|system|context|rmemory|tencentdb|emergency)[^\]]*\]/gi, '');
+
+  // Remove CLI prompt headers, First/Last markers, role prefixes
+  t = t.replace(/^(PS\s+)?[a-zA-Z]:\\[^>\n]+>\s*/gi, '');
+  t = t.replace(/^PS\s+[a-zA-Z]:\\[^\s]+\s*(➔|->)?\s*/gi, '');
+  t = t.replace(/^\[First:.*?\]\s*(→|➔)\s*\[Last:\s*/gi, '');
+  t = t.replace(/^(User|Assistant|System):\s*/gi, '');
+
+  // Remove leading slash commands
+  t = t.replace(/^(\/[a-zA-Z0-9_-]+\s*)+/gi, '');
+
+  // Clean leading/trailing hyphens, colons, pipes, dots, and whitespace
+  t = t.replace(/^[\s\-:_|.]+/, '');
+  t = t.replace(/[\s\-:_|.]+$|\.\.\.$/, '');
+
+  // Deduplicate trailing fragments separated by ' - '
+  if (t.includes(' - ')) {
+    const parts = t.split(/\s+-\s+/).map(p => p.trim()).filter(Boolean);
+    if (parts.length > 1) {
+      const [first, second] = parts;
+      if (second && (first.toLowerCase().includes(second.toLowerCase()) || second.length <= 3 || /^[a-z0-9]$/i.test(second))) {
+        t = first;
+      } else if (first) {
+        t = first;
+      }
+    }
+  }
+
+  t = t.replace(/\s{2,}/g, ' ').trim();
+  if (!t || t.toLowerCase() === 'new chat') return 'New Chat';
+  return t;
+};
+
