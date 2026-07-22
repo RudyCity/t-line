@@ -71,7 +71,12 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
             <Settings className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="font-semibold text-[var(--text-main)] text-xs">SuperAgent Quick Settings</h4>
+            <div className="flex items-center gap-1.5">
+              <h4 className="font-semibold text-[var(--text-main)] text-xs">SuperAgent Quick Settings</h4>
+              <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-[var(--color-primary-glow)] text-[var(--color-primary)] border border-[var(--color-primary)]/40">
+                v1.2.520
+              </span>
+            </div>
             <p className="text-[10px] text-[var(--text-muted)]">Manage workspace, login, presets & monitor</p>
           </div>
         </div>

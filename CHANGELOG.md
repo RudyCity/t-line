@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.628] - 2026-07-22
+
+### Feature — Expose & Display SuperAgent Package Version (`paths.ts`, `server.ts`, `serverRoutes.ts`, `presetUtils.ts`, `SuperAgentConsole.tsx`, `SuperAgentSettingsMenu.tsx`, `SuperAgentSettingsModal.tsx`)
+- **SuperAgent Version Exporter (`paths.ts`, `server.ts`, `serverRoutes.ts`)**:
+  - Exported `getSuperAgentVersion()` helper in SuperAgent's [paths.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/config/paths.ts) to dynamically read package version (`v1.2.520`).
+  - Added version tag in `server.ts` startup logs and included `version: getSuperAgentVersion()` in `GET /api/status` and `GET /api/config` HTTP endpoints.
+- **t-line Proxy & UI Version Display (`presetUtils.ts`, `SuperAgentConsole.tsx`, `SuperAgentSettingsMenu.tsx`, `SuperAgentSettingsModal.tsx`)**:
+  - Added `superagentVersion` field to `MergedPresetsResult` in [presetUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/presetUtils.ts).
+  - Prominently displayed SuperAgent version badges in the main Console Settings button (`v1.2.520 Settings`), Quick Settings Menu header (`v1.2.520`), and SuperAgent Settings Modal header.
+
 ## [1.3.627] - 2026-07-22
 
 ### Feature — Interactive Clickable Processes (Procs) & Log Terminal Viewer (`serverRoutes.ts`, `ActiveTasksBar.tsx`, `SuperAgentSidebar.tsx`, `SubAgentTerminalModal.tsx`, `SuperAgentConsole.tsx`)

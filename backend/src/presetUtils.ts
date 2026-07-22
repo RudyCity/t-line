@@ -66,6 +66,7 @@ export interface MergedPresetsResult {
   activeProviderProfileId: string;
   settings?: Record<string, any>;
   trustedDirectories?: string[];
+  superagentVersion?: string;
 }
 
 export interface McpServerEntry {
@@ -89,7 +90,8 @@ export async function loadMergedPresets(): Promise<MergedPresetsResult> {
     providers: Array.isArray(data.providers) ? data.providers : [],
     activeProviderProfileId: data.activeProviderProfileId || '',
     settings: data.settings || {},
-    trustedDirectories: Array.isArray(data.trustedDirectories) ? data.trustedDirectories : []
+    trustedDirectories: Array.isArray(data.trustedDirectories) ? data.trustedDirectories : [],
+    superagentVersion: data.superagentVersion || data.version || '1.2.520'
   };
 }
 

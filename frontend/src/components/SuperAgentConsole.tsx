@@ -886,10 +886,10 @@ export function SuperAgentConsole({
                 ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)] text-[var(--color-primary)] shadow-sm' 
                 : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-color)]'
             }`}
-            title="SuperAgent & App Settings"
+            title="SuperAgent v1.2.520 & App Settings"
           >
             <Settings className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Setting</span>
+            <span className="hidden sm:inline">v1.2.520 Settings</span>
           </button>
 
           <SuperAgentSettingsMenu

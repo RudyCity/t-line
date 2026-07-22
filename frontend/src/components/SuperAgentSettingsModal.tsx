@@ -134,7 +134,12 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
               <Sliders className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-[var(--text-main)] text-sm tracking-wide">SuperAgent Configuration & Settings</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-bold text-[var(--text-main)] text-sm tracking-wide">SuperAgent Configuration & Settings</h2>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--color-primary-glow)] text-[var(--color-primary)] border border-[var(--color-primary)]/40 shadow-xs">
+                  v1.2.520
+                </span>
+              </div>
               <p className="text-[11px] text-[var(--text-muted)]">Manage LLM Login credentials, Model Presets, Execution mode & Live Monitor</p>
             </div>
           </div>
