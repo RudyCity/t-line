@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.642] - 2026-07-22
+
+### UX & Scroll Enhancement — Instant Session Jump & Smart Auto-Scroll (`SuperAgentConsole.tsx`)
+- **Instant Session Jump on Session Load**:
+  - Replaced smooth auto-scrolling on session switch with `behavior: 'instant'` in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx#L506-L520), eliminating the fast motion-blur scroll sweep when opening long chat histories.
+- **Smart Scroll Lock & Floating Jump Button**:
+  - Added detection of user scroll position (`isUserScrolledUpRef`). If user scrolls up to inspect history, auto-scroll is temporarily paused during streaming.
+  - Added a floating `↓ Ke Bawah` button in the bottom-right corner of the console to allow one-click instant navigation to the latest messages.
+
 ## [1.3.641] - 2026-07-22
 
 ### Integration & Feature Enhancement — SuperAgent Core 'Prompt Awal → Prompt Akhir' Title Support (`conversation.ts`)

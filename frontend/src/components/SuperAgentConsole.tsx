@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { RefreshCw, Shield, Folder, Sparkles, Activity, Settings, History, Terminal } from 'lucide-react';
+import { RefreshCw, Shield, Folder, Sparkles, Activity, Settings, History, Terminal, ArrowDown } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { SuperAgentAuditLogs } from './SuperAgentAuditLogs';
@@ -71,6 +71,10 @@ export function SuperAgentConsole({
   const [connectTrigger, setConnectTrigger] = useState(0);
   const isAbortedRef = useRef<boolean>(false);
   const isPrependingRef = useRef<boolean>(false);
+  const [showScrollBottomBtn, setShowScrollBottomBtn] = useState<boolean>(false);
+  const isSessionSwitchRef = useRef<boolean>(true);
+  const prevSessionIdRef = useRef<string>(activeSessionId);
+  const isUserScrolledUpRef = useRef<boolean>(false);
 
   const handleLoadMoreMessagesWithScroll = () => {
     if (!hasMore || loadingMore) return;
@@ -437,6 +441,12 @@ export function SuperAgentConsole({
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
+    if (activeSessionId !== prevSessionIdRef.current) {
+      prevSessionIdRef.current = activeSessionId;
+      isSessionSwitchRef.current = true;
+      isUserScrolledUpRef.current = false;
+      setShowScrollBottomBtn(false);
+    }
     activeSessionIdRef.current = activeSessionId;
   }, [activeSessionId]);
 
@@ -506,6 +516,16 @@ export function SuperAgentConsole({
   useEffect(() => {
     if (isPrependingRef.current) {
       isPrependingRef.current = false;
+      return;
+    }
+    // On initial load or switching session: jump instantly without dizzying smooth scroll animation
+    if (isSessionSwitchRef.current) {
+      isSessionSwitchRef.current = false;
+      chatEndRef.current?.scrollIntoView({ behavior: 'instant' as ScrollBehavior });
+      return;
+    }
+    // If user scrolled up to read history, don't interrupt them unless user sent a message or session loading
+    if (isUserScrolledUpRef.current && !loading) {
       return;
     }
     const behavior = loading ? 'auto' : 'smooth';
@@ -962,7 +982,7 @@ export function SuperAgentConsole({
             />
           )}
 
-          <div className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0">
+          <div className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0 relative">
             <div
               ref={messagesContainerRef}
               className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-xs leading-relaxed w-full"
@@ -971,6 +991,10 @@ export function SuperAgentConsole({
                 if (el.scrollTop < 80 && hasMore && !loadingMore) {
                   handleLoadMoreMessagesWithScroll();
                 }
+                const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+                const scrolledUp = distanceToBottom > 150;
+                isUserScrolledUpRef.current = scrolledUp;
+                setShowScrollBottomBtn(scrolledUp);
               }}
             >
             {/* Infinite scroll: loading older messages indicator */}
@@ -1053,6 +1077,22 @@ export function SuperAgentConsole({
             )}
             <div ref={chatEndRef} />
           </div>
+
+          {/* Floating Jump-to-Bottom button */}
+          {showScrollBottomBtn && (
+            <button
+              onClick={() => {
+                isUserScrolledUpRef.current = false;
+                setShowScrollBottomBtn(false);
+                chatEndRef.current?.scrollIntoView({ behavior: 'instant' as ScrollBehavior });
+              }}
+              className="absolute bottom-16 right-6 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--color-primary)] text-white shadow-lg text-xs font-sans hover:opacity-90 transition-all select-none cursor-pointer"
+              title="Jump to latest message"
+            >
+              <ArrowDown className="w-3.5 h-3.5" />
+              <span>Ke Bawah</span>
+            </button>
+          )}
 
           {/* Active Tasks Widget — pinned above input, outside scroll area */}
           <ActiveTasksBar
