@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.644] - 2026-07-22
+
+### Bug Fix & UX — Correct First/Last Chat Session Title Generation & SQLite Sync (`serverRoutes.ts`, `sessionManager.ts`)
+- **Fixed Overwritten First/Last User Chat Messages (SuperAgent `serverRoutes.ts`)**:
+  - Replaced the incorrect assignment of `firstChat: title` and `lastChat: title` in SuperAgent's `POST /api/history/session` route with dynamically extracted first and last user message content.
+  - This prevents generic session titles from getting locked permanently in the SQLite database and preserves the actual user prompts.
+- **Enhanced Session Title Candidates Priority (`sessionManager.ts`)**:
+  - Prioritized `firstSubstantive` and `lastSubstantive` messages over fallback `cleanFirst` values in backend `sessionManager.ts`.
+  - Automatically skips generic greetings like "hallo" and favors substantive prompts for session title generation.
+
 ## [1.3.643] - 2026-07-22
 
 ### Bug Fix & UX — Clean First-Substantive Prompt Title Generation (`useSuperAgentSessions.ts`, `SuperAgentConsoleUtils.ts`, `sessionManager.ts`)

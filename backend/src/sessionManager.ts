@@ -218,7 +218,7 @@ export async function getWorkspaceSessions(
         const firstSubstantive = cleanFirst && !GENERIC_GREETINGS_REGEX.test(cleanFirst) ? cleanFirst : null;
         const lastSubstantive = cleanLast && !GENERIC_GREETINGS_REGEX.test(cleanLast) && !GENERIC_STOP_CMDS_REGEX.test(cleanLast) ? cleanLast : null;
 
-        const candidate = firstSubstantive || cleanFirst || lastSubstantive || cleanLast || (
+        const candidate = firstSubstantive || lastSubstantive || cleanFirst || cleanLast || (
           s.displayName && 
           !isNoiseMessageContent(s.displayName) && 
           s.displayName !== s.id && 
