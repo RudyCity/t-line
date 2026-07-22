@@ -55,10 +55,21 @@ export function useUpdateChecker() {
   const fetchLocalVersion = useCallback(async () => {
     try {
       const res = await fetch('/api/system/version');
+      if (!res.ok) {
+        checkUpdates(DEFAULT_VERSION);
+        return;
+      }
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        checkUpdates(DEFAULT_VERSION);
+        return;
+      }
       const data = await res.json();
-      if (data.version) {
+      if (data && data.version) {
         setAppVersion(data.version);
         checkUpdates(data.version);
+      } else {
+        checkUpdates(DEFAULT_VERSION);
       }
     } catch (e) {
       logFetchError('Failed to fetch local version', e);

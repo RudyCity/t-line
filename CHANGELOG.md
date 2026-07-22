@@ -2,6 +2,52 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.633] - 2026-07-22
+
+### Fix — Resolve Version Fetch SyntaxError & Prevent SuperAgent WebSocket Connection Teardown Loop (`server.ts`, `useUpdateChecker.ts`, `SuperAgentConsole.tsx`)
+- **Backend Version Route (`server.ts`)**:
+  - Added `GET /api/system/version` endpoint to serve application version from `package.json`, resolving Vite dev server fallback returning `index.html` (`<!doctype html>...`).
+- **Update Checker Robustness (`useUpdateChecker.ts`)**:
+  - Added HTTP `res.ok` status check and `Content-Type` validation (`application/json`) before attempting `res.json()`, preventing `SyntaxError: Unexpected token '<'` when fetching local version.
+- **SuperAgent WebSocket Lifecycle (`SuperAgentConsole.tsx`)**:
+  - Added safe cleanup for WebSockets in `WebSocket.CONNECTING` state (`socket.onopen = () => socket.close()`), eliminating Chrome/Edge `WebSocket is closed before the connection is established` console errors.
+  - Added missing dependencies (`workspace`, `agentMode`, `customArgs`) to `useEffect` dependency array for stable connection state management.
+
+## [1.3.632] - 2026-07-22
+
+### UI Enhancement — Per-Category Limit 5 & Removal of Global Infinite Scroll (`SuperAgentHistorySidebar.tsx`, `useSuperAgentSessions.ts`)
+- **Removed Global Infinite Scroll**:
+  - Removed container `onScroll` pagination and bottom global "Load more chats..." button.
+- **Per-Category Limit 5 & Interactive Expand Link**:
+  - Set default display limit to **5 sessions per time category** (**Hari Ini**, **Kemarin**, **7 Hari Terakhir**, **Lebih Lama**).
+  - Added clickable per-category text link: `+ Muat 5 lagi (N tersisa)` to expand chat sessions incrementally within that specific time category.
+
+## [1.3.631] - 2026-07-22
+
+### Feature Enhancement — Chat History Temporal Grouping, Pinned Chats & One-Click Export (`SuperAgentHistorySidebar.tsx`, `useSuperAgentSessions.ts`, `serverRoutes.ts`)
+- **Temporal Grouping (`SuperAgentHistorySidebar.tsx`)**:
+  - Organized sidebar session list into temporal section headers: **Hari Ini** (Today), **Kemarin** (Yesterday), **7 Hari Terakhir** (Last 7 Days), and **Lebih Lama** (Older).
+- **Pinned / Favorite Sessions (`useSuperAgentSessions.ts`, `SuperAgentHistorySidebar.tsx`)**:
+  - Added Pin/Unpin action to sidebar chat cards with persistent `localStorage` storage. Pinned chats automatically dock at the very top under a dedicated **Pinned** section header with an amber pin badge.
+- **Real-Time Instant Search (`SuperAgentHistorySidebar.tsx`)**:
+  - Enhanced search bar filter to instantly filter through titles across both pinned and temporal groups.
+- **One-Click Transkrip Export (`SuperAgentHistorySidebar.tsx`)**:
+  - Added one-click `.md` (Markdown) and `.json` transkrip exports with toast feedback upon download.
+- **Real-Time SuperAgent Session Persistence (`serverRoutes.ts`, `sessionManager.ts`)**:
+  - Added `POST /api/history/session` REST endpoint to SuperAgent Server to immediately persist session title & message metadata to SQLite `history.db` upon prompt creation without requiring a manual click.
+
+## [1.3.630] - 2026-07-22
+
+### Bug Fix — Resolve Chat History Session Titles & Message Intermittency (`sessionManager.ts`, `useSuperAgentSessions.ts`, `serverRoutes.ts`, `history.ts`)
+- **Noise-Aware User Prompt Title Extraction (`sessionManager.ts`)**:
+  - Updated `extractCleanUserText` in [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) to filter out injected memory/context noise headers (`[RMemory]`, `[Context Restoration]`, `[SYS]`, `<relevant-memories>`) and extract the actual user prompt lines instead of immediately returning an empty string. Prevents session titles from defaulting to `"New Chat"`.
+- **SQLite History DB Direct Fallback (`serverRoutes.ts`)**:
+  - Updated `GET /api/history` endpoint handler in SuperAgent's [serverRoutes.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/serverRoutes.ts) to accept explicit `sessionId` lookups and query SQLite `history.db` directly if the session is not currently loaded in active memory (`activeSessions` RAM).
+- **Windows Path Normalization for Workspace Session Listing (`history.ts`)**:
+  - Updated `normalizeAndCheckSubpath` in SuperAgent's [history.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/config/history.ts) to compare slash-normalized paths (`/` vs `\`), ensuring workspace directory lookups match consistently across Windows path variations.
+- **Frontend Message State Protection (`useSuperAgentSessions.ts`)**:
+  - Added local storage fallback retention in `syncSessions` within [useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts) when server responses are delayed or empty, preventing chat messages from being wiped out from the UI.
+
 ## [1.3.629] - 2026-07-22
 
 ### UI Enhancement — Icon-Only Header Buttons for Monitor & Settings (`SuperAgentConsole.tsx`)

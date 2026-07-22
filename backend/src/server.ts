@@ -358,6 +358,17 @@ app.get('/api/system/stats', authMiddleware, (_req, res) => {
   });
 });
 
+app.get('/api/system/version', (_req, res) => {
+  try {
+    const pkgPath = path.join(__dirname, '../package.json');
+    if (fs.existsSync(pkgPath)) {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+      return res.json({ version: pkg.version || '1.3.632' });
+    }
+  } catch (e) {}
+  res.json({ version: '1.3.632' });
+});
+
 // Centralized tab and quick-launch state sync
 const SYNC_FILE = path.join(os.homedir(), '.tline-sync.json');
 

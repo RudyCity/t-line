@@ -54,7 +54,9 @@ export function SuperAgentConsole({
     handleSelectSession,
     handleNewChat,
     handleDeleteSession,
-    handleRenameSession
+    handleRenameSession,
+    pinnedSessionIds,
+    handleTogglePinSession
   } = useSuperAgentSessions(workspace);
 
   const [input, setInput] = useState('');
@@ -480,9 +482,15 @@ export function SuperAgentConsole({
     setWs(socket);
 
     return () => {
-      socket.close();
+      if (socket.readyState === WebSocket.CONNECTING) {
+        socket.onopen = () => {
+          try { socket.close(); } catch {}
+        };
+      } else {
+        try { socket.close(); } catch {}
+      }
     };
-  }, [connectTrigger]);
+  }, [workspace, agentMode, customArgs, connectTrigger]);
 
   useEffect(() => {
     if (isPrependingRef.current) {
@@ -920,6 +928,8 @@ export function SuperAgentConsole({
               <SuperAgentHistorySidebar
                 sessions={sessions}
                 activeSessionId={activeSessionId}
+                pinnedSessionIds={pinnedSessionIds}
+                onTogglePinSession={handleTogglePinSession}
                 onSelectSession={handleSelectSessionWrapped}
                 onNewChat={handleNewChatWrapped}
                 onDeleteSession={handleDeleteSession}
