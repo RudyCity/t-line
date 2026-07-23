@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.645] - 2026-07-23
+
+### Feature & UX — Disable Automatic Terminal Creation on Workspace/Worktree Click (`useWorkspaceHandlers.ts`)
+- **Disabled Automatic Terminal Spawning**:
+  - Modified `handleWorkspaceClick` and `handleWorktreeClick` in [useWorkspaceHandlers.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useWorkspaceHandlers.ts) to prevent the application from opening a new terminal tab when a workspace or worktree is clicked and no active matching tab is currently open.
+  - Instead of calling `openTerminal`, the active tab selection is cleared by setting `activeTabId` to an empty string, allowing the user to view the empty workspace dashboard or manually select what tab/file/terminal to open.
+- **Dependency Clean Up**:
+  - Removed unused `openTerminal` parameter, interface declaration, and useCallback dependency in `useWorkspaceHandlers.ts` and updated its call site in `App.tsx`.
+
 ## [1.3.644] - 2026-07-22
 
 ### Bug Fix & UX — Correct First/Last Chat Session Title Generation & SQLite Sync (`serverRoutes.ts`, `sessionManager.ts`)

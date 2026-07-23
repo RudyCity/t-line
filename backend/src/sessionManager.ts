@@ -218,14 +218,17 @@ export async function getWorkspaceSessions(
         const firstSubstantive = cleanFirst && !GENERIC_GREETINGS_REGEX.test(cleanFirst) ? cleanFirst : null;
         const lastSubstantive = cleanLast && !GENERIC_GREETINGS_REGEX.test(cleanLast) && !GENERIC_STOP_CMDS_REGEX.test(cleanLast) ? cleanLast : null;
 
-        const candidate = firstSubstantive || lastSubstantive || cleanFirst || cleanLast || (
-          s.displayName && 
+        const hasValidDisplayName = s.displayName && 
           !isNoiseMessageContent(s.displayName) && 
           s.displayName !== s.id && 
+          s.displayName !== 'New Chat' &&
           !s.displayName.startsWith('sess/') && 
           !s.displayName.startsWith('sess_') && 
-          !s.displayName.startsWith('session_') ? s.displayName : ''
-        );
+          !s.displayName.startsWith('session_');
+
+        const candidate = hasValidDisplayName 
+          ? s.displayName 
+          : (firstSubstantive || lastSubstantive || cleanFirst || cleanLast || s.displayName || 'New Chat');
 
         title = cleanSessionTitle(candidate);
         if (title.length > 45) {

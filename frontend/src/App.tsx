@@ -847,7 +847,6 @@ export default function App() {
     setActiveTabId,
     workspaceActiveTab,
     setWorkspaceActiveTab,
-    openTerminal,
     closeTerminal,
     setPanelWorkspace,
     showConfirm,

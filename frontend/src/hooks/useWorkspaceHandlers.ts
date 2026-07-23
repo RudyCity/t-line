@@ -61,7 +61,6 @@ interface WorkspaceHandlersProps {
   setActiveTabId: (id: string) => void;
   workspaceActiveTab: Record<string, string>;
   setWorkspaceActiveTab: (workspaceId: string, tabId: string) => void;
-  openTerminal: (title: string, cwd: string, shell?: string) => void;
   closeTerminal: (tabId: string) => void;
   setPanelWorkspace: React.Dispatch<React.SetStateAction<WorkspaceInfo | null>>;
   showConfirm: (
@@ -91,7 +90,6 @@ export function useWorkspaceHandlers({
   activeTabId,
   setActiveTabId,
   setWorkspaceActiveTab,
-  openTerminal,
   closeTerminal,
   setPanelWorkspace,
   showConfirm,
@@ -351,10 +349,10 @@ export function useWorkspaceHandlers({
     if (matchedTab) {
       setActiveTabId(matchedTab.id);
     } else {
-      openTerminal(ws.name, ws.path, ws.defaultShell);
+      setActiveTabId('');
     }
     setSidebarOpen(false);
-  }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);
+  }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);
 
   const handleWorktreeClick = useCallback((workspaceId: string, wtPath: string) => {
     const ws = workspaces.find(w => w.id === workspaceId);
@@ -386,10 +384,10 @@ export function useWorkspaceHandlers({
     if (matchedTab) {
       setActiveTabId(matchedTab.id);
     } else {
-      openTerminal(ws.name, wtPath, ws.defaultShell);
+      setActiveTabId('');
     }
     setSidebarOpen(false);
-  }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, openTerminal, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);
+  }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);
 
   const handleBranchCheckoutClick = useCallback((workspaceId: string, branchName: string) => {
     const ws = workspaces.find(w => w.id === workspaceId);

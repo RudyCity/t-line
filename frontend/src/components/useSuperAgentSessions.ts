@@ -318,6 +318,7 @@ export function useSuperAgentSessions(workspace: string) {
   const prevWorkspaceRef = useRef(workspace);
   const activeSessionIdRef = useRef(activeSessionId);
   const loadedSessionIdRef = useRef<string | null>(activeSessionId || null);
+  const loadedMessagesSessionIdRef = useRef<string | null>(activeSessionId || null);
   const deletedSessionIdsRef = useRef<Set<string>>(new Set());
   const lastSeenMessageCountRef = useRef<Record<string, number>>({});
 
@@ -326,15 +327,23 @@ export function useSuperAgentSessions(workspace: string) {
     activeSessionIdRef.current = activeSessionId;
   }, [activeSessionId]);
 
+  const setMessagesWithRef = useCallback((val: React.SetStateAction<SuperAgentMessage[]>) => {
+    loadedMessagesSessionIdRef.current = activeSessionIdRef.current;
+    setMessages(val);
+  }, []);
+
   // Initial Sync from Backend on switch/mount
   const syncSessions = useCallback(async (wsPath: string, preserveActiveId?: string) => {
+    const workspaceChanged = prevWorkspaceRef.current !== wsPath;
+    const localSessions = loadWorkspaceSessions(wsPath);
     const res = await apiGetSessions(wsPath, SESSION_PAGE_SIZE, 0);
     if (res && res.sessions.length > 0) {
       const validServerSessions = res.sessions.filter(s => !deletedSessionIdsRef.current.has(s.id));
       setSessions(prev => {
-        const prevMap = new Map(prev.map(s => [s.id, s]));
+        const baseSessions = workspaceChanged ? localSessions : prev;
+        const prevMap = new Map(baseSessions.map(s => [s.id, s]));
         const serverIds = new Set(validServerSessions.map(s => s.id));
-        const localOnly = prev.filter(s => !serverIds.has(s.id) && !deletedSessionIdsRef.current.has(s.id));
+        const localOnly = baseSessions.filter(s => !serverIds.has(s.id) && !deletedSessionIdsRef.current.has(s.id));
 
         const mergedServerSessions = validServerSessions.map(serverSession => {
           const localSession = prevMap.get(serverSession.id);
@@ -355,13 +364,17 @@ export function useSuperAgentSessions(workspace: string) {
       setHasMoreSessions(res.hasMore);
       currentSessionOffsetRef.current = SESSION_PAGE_SIZE;
       
-      const targetActiveId = preserveActiveId || activeSessionIdRef.current || (validServerSessions[0]?.id);
+      const targetActiveId = preserveActiveId || 
+        (!workspaceChanged ? activeSessionIdRef.current : undefined) || 
+        (validServerSessions[0]?.id) ||
+        (localSessions[0]?.id);
       
       if (targetActiveId && validServerSessions.some(s => s.id === targetActiveId)) {
         setActiveSessionId(targetActiveId);
         const result = await apiGetSessionMessages(wsPath, targetActiveId, PAGE_SIZE, 0);
         if (result && result.messages.length > 0) {
           setMessages(result.messages);
+          loadedMessagesSessionIdRef.current = targetActiveId;
           setHasMore(result.hasMore);
           currentOffsetRef.current = PAGE_SIZE;
           loadedSessionIdRef.current = targetActiveId;
@@ -374,6 +387,7 @@ export function useSuperAgentSessions(workspace: string) {
               const parsed = JSON.parse(saved);
               if (Array.isArray(parsed) && parsed.length > 0) {
                 setMessages(parsed);
+                loadedMessagesSessionIdRef.current = targetActiveId;
                 setHasMore(false);
                 loadedSessionIdRef.current = targetActiveId;
                 return;
@@ -382,6 +396,7 @@ export function useSuperAgentSessions(workspace: string) {
           }
           if (result) {
             setMessages(result.messages);
+            loadedMessagesSessionIdRef.current = targetActiveId;
             setHasMore(result.hasMore);
             currentOffsetRef.current = PAGE_SIZE;
             loadedSessionIdRef.current = targetActiveId;
@@ -391,24 +406,43 @@ export function useSuperAgentSessions(workspace: string) {
       } else if (targetActiveId && !deletedSessionIdsRef.current.has(targetActiveId)) {
         // Target active ID is a local-only session (e.g., brand new chat)
         setActiveSessionId(targetActiveId);
+        const wsKey = wsPath || 'default';
+        const saved = localStorage.getItem(`superagent_messages_${wsKey}_${targetActiveId}`);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) {
+              setMessages(parsed);
+              loadedMessagesSessionIdRef.current = targetActiveId;
+              setHasMore(false);
+              currentOffsetRef.current = 0;
+              loadedSessionIdRef.current = targetActiveId;
+              return;
+            }
+          } catch (e) {}
+        }
+        setMessages([]);
+        loadedMessagesSessionIdRef.current = targetActiveId;
+        setHasMore(false);
+        currentOffsetRef.current = 0;
         loadedSessionIdRef.current = targetActiveId;
         return;
       }
     }
 
     // Fallback to localStorage
-    const localSessions = loadWorkspaceSessions(wsPath);
-    setSessions(localSessions);
+    const fallbackSessions = workspaceChanged ? localSessions : loadWorkspaceSessions(wsPath);
+    setSessions(fallbackSessions);
     setHasMoreSessions(false);
     currentSessionOffsetRef.current = 0;
     
     let localActiveId = '';
-    if (preserveActiveId && localSessions.some(s => s.id === preserveActiveId)) {
+    if (preserveActiveId && fallbackSessions.some(s => s.id === preserveActiveId)) {
       localActiveId = preserveActiveId;
-    } else if (localSessions.length > 0) {
-      localActiveId = localSessions[0].id;
-    } else if (activeSessionIdRef.current) {
+    } else if (!workspaceChanged && activeSessionIdRef.current && fallbackSessions.some(s => s.id === activeSessionIdRef.current)) {
       localActiveId = activeSessionIdRef.current;
+    } else if (fallbackSessions.length > 0) {
+      localActiveId = fallbackSessions[0].id;
     } else {
       localActiveId = `session_${Date.now()}`;
     }
@@ -421,6 +455,7 @@ export function useSuperAgentSessions(workspace: string) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
           setMessages(parsed);
+          loadedMessagesSessionIdRef.current = localActiveId;
           setHasMore(false);
           currentOffsetRef.current = 0;
           loadedSessionIdRef.current = localActiveId;
@@ -431,6 +466,7 @@ export function useSuperAgentSessions(workspace: string) {
     // Only reset messages if we switched away to a different session
     if (loadedSessionIdRef.current !== localActiveId) {
       setMessages([]);
+      loadedMessagesSessionIdRef.current = localActiveId;
     }
     setHasMore(false);
     currentOffsetRef.current = 0;
@@ -439,8 +475,8 @@ export function useSuperAgentSessions(workspace: string) {
 
   // Sync on workspace changes
   useEffect(() => {
-    prevWorkspaceRef.current = workspace;
     syncSessions(workspace);
+    prevWorkspaceRef.current = workspace;
   }, [workspace, syncSessions]);
 
   // Listen for real-time history file updates from server (e.g. from CLI execution)
@@ -456,10 +492,10 @@ export function useSuperAgentSessions(workspace: string) {
     };
   }, [workspace, syncSessions]);
 
-  // Persist messages & update title ONLY when loadedSessionIdRef matches activeSessionId
+  // Persist messages & update title ONLY when loadedMessagesSessionIdRef matches activeSessionId
   useEffect(() => {
     if (!activeSessionId) return;
-    if (loadedSessionIdRef.current !== activeSessionId) return; // Isolated check!
+    if (loadedMessagesSessionIdRef.current !== activeSessionId) return; // Isolated check!
 
     const wsKey = workspace || 'default';
     const msgKey = `superagent_messages_${wsKey}_${activeSessionId}`;
@@ -580,6 +616,7 @@ export function useSuperAgentSessions(workspace: string) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setMessages(parsed);
+          loadedMessagesSessionIdRef.current = id;
           setHasMore(false);
           lastSeenMessageCountRef.current[id] = parsed.length;
           loadedFromLocal = true;
@@ -591,11 +628,13 @@ export function useSuperAgentSessions(workspace: string) {
     const result = await apiGetSessionMessages(workspace, id, PAGE_SIZE, 0);
     if (result && Array.isArray(result.messages) && result.messages.length > 0) {
       setMessages(result.messages);
+      loadedMessagesSessionIdRef.current = id;
       setHasMore(result.hasMore);
       currentOffsetRef.current = PAGE_SIZE;
       lastSeenMessageCountRef.current[id] = result.messages.length;
     } else if (!loadedFromLocal) {
       setMessages(result?.messages || []);
+      loadedMessagesSessionIdRef.current = id;
       setHasMore(false);
       lastSeenMessageCountRef.current[id] = 0;
     }
@@ -621,6 +660,7 @@ export function useSuperAgentSessions(workspace: string) {
 
     setActiveSessionId(newId);
     setMessages([]);
+    loadedMessagesSessionIdRef.current = newId;
     setHasMore(false);
     currentOffsetRef.current = 0;
     loadedSessionIdRef.current = newId;
@@ -671,6 +711,7 @@ export function useSuperAgentSessions(workspace: string) {
         const result = await apiGetSessionMessages(workspace, nextId, PAGE_SIZE, 0);
         if (result) {
           setMessages(result.messages);
+          loadedMessagesSessionIdRef.current = nextId;
           setHasMore(result.hasMore);
           currentOffsetRef.current = PAGE_SIZE;
           loadedSessionIdRef.current = nextId;
@@ -683,6 +724,7 @@ export function useSuperAgentSessions(workspace: string) {
             const parsed = JSON.parse(saved);
             if (Array.isArray(parsed) && parsed.length > 0) {
               setMessages(parsed);
+              loadedMessagesSessionIdRef.current = nextId;
               setHasMore(false);
               loadedSessionIdRef.current = nextId;
               return;
@@ -690,11 +732,13 @@ export function useSuperAgentSessions(workspace: string) {
           } catch (err) {}
         }
         setMessages([]);
+        loadedMessagesSessionIdRef.current = nextId;
         setHasMore(false);
         loadedSessionIdRef.current = nextId;
       } else {
         setActiveSessionId('');
         setMessages([]);
+        loadedMessagesSessionIdRef.current = '';
         setHasMore(false);
         currentOffsetRef.current = 0;
         loadedSessionIdRef.current = '';
@@ -754,7 +798,7 @@ export function useSuperAgentSessions(workspace: string) {
     sessions,
     activeSessionId,
     messages,
-    setMessages,
+    setMessages: setMessagesWithRef,
     hasMore,
     loadingMore,
     loadMoreMessages,

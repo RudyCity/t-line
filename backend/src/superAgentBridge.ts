@@ -611,6 +611,7 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
       res.setEncoding('utf8');
       let buffer = '';
       res.on('data', (chunk) => {
+        console.log(`[BRIDGE DEBUG] Received chunk at ${new Date().toISOString()}, length: ${chunk.length}`);
         buffer += chunk;
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
