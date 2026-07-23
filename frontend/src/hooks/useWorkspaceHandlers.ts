@@ -331,19 +331,10 @@ export function useWorkspaceHandlers({
       setPanelWorktreePath(null);
     }
 
-    // Find any open tab that matches the main branch/workspace path
+    // Find the first open tab that belongs to this workspace
     const matchedTab = tabs.find(tab => {
-      if (tab.type === 'file' && tab.filePath) {
-        return isPathInWorktree(tab.filePath, ws.path);
-      }
-      if (tab.type === 'terminal' && tab.layout) {
-        const termIds = getTerminalIds(tab.layout);
-        return termIds.some(id => {
-          const inst = terminalInstances[id];
-          return inst && isPathInWorktree(inst.cwd, ws.path);
-        });
-      }
-      return false;
+      const tabWs = getWorkspaceForTab(tab.id);
+      return tabWs && tabWs.id === ws.id;
     });
 
     if (matchedTab) {
@@ -352,7 +343,7 @@ export function useWorkspaceHandlers({
       setActiveTabId('');
     }
     setSidebarOpen(false);
-  }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);
+  }, [workspaces, panelWorkspace, panelWorktreePath, tabs, terminalInstances, getWorkspaceForTab, setActiveTabId, setPanelWorkspace, setPanelWorktreePath, setSidebarOpen]);
 
   const handleWorktreeClick = useCallback((workspaceId: string, wtPath: string) => {
     const ws = workspaces.find(w => w.id === workspaceId);

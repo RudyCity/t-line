@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.646] - 2026-07-23
+
+### Feature & UX — Prioritize First Workspace Tab on Click (`useWorkspaceHandlers.ts`)
+- **Activate First Tab on Workspace Click**:
+   - Modified `handleWorkspaceClick` in [useWorkspaceHandlers.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useWorkspaceHandlers.ts) to find the first open tab that belongs to the clicked workspace (including any of its git worktrees) using the `getWorkspaceForTab` helper.
+   - If one or more tabs belonging to the clicked workspace are open, the app automatically switches focus to the first tab (instead of only checking the main worktree path).
+
 ## [1.3.645] - 2026-07-23
 
 ### Feature & UX — Disable Automatic Terminal Creation on Workspace/Worktree Click (`useWorkspaceHandlers.ts`)
