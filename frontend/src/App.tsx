@@ -283,7 +283,8 @@ export default function App() {
     fetchTunnelStatus,
     handleStartTunnel,
     handleStartTokenTunnel,
-    handleStopTunnel
+    handleStopTunnel,
+    tunnelTarget
   } = useTunnel(isAuthenticated, showAlert);
 
   // System statistics hook
@@ -2548,7 +2549,7 @@ export default function App() {
           onSubmit={handleStartTokenTunnel}
           tunnelToken={tunnelToken}
           setTunnelToken={setTunnelToken}
-          loading={tunnelLoading}
+          loading={tunnelLoading[tunnelTarget]}
         />
 
         <SettingsModal

@@ -1,89 +1,77 @@
 import { spawn, ChildProcess } from 'child_process';
 import { execSync } from 'child_process';
 
-interface TunnelStatus {
+export interface TunnelItemStatus {
   active: boolean;
   url: string | null;
   type: 'quick' | 'token' | 'none';
   error: string | null;
+  port?: number;
 }
 
-class TunnelManager {
+export interface MultiTunnelStatus {
+  tline: TunnelItemStatus;
+  custom: TunnelItemStatus;
+}
+
+class ActiveTunnel {
   private tunnelProcess: ChildProcess | null = null;
   private activeUrl: string | null = null;
   private tunnelType: 'quick' | 'token' | 'none' = 'none';
   private lastError: string | null = null;
+  private localPort: number | null = null;
 
-  // Check if cloudflared binary is installed and accessible in the system PATH
-  isCloudflaredInstalled(): boolean {
-    try {
-      execSync('cloudflared --version', { stdio: 'ignore' });
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // Start Cloudflare quick tunnel (trycloudflare.com)
-  startQuickTunnel(localPort: number, onStatusChange: () => void): void {
-    if (this.tunnelProcess) {
-      this.stopTunnel();
-    }
+  startQuick(port: number, onStatusChange: () => void): void {
+    this.stop();
 
     this.tunnelType = 'quick';
     this.lastError = null;
     this.activeUrl = null;
+    this.localPort = port;
 
-    console.log(`Starting Cloudflare Quick Tunnel for port ${localPort}...`);
-    
-    // Quick tunnel command
-    this.tunnelProcess = spawn('cloudflared', ['tunnel', '--url', `http://localhost:${localPort}`]);
+    console.log(`Starting Cloudflare Quick Tunnel for port ${port}...`);
+    this.tunnelProcess = spawn('cloudflared', ['tunnel', '--url', `http://localhost:${port}`]);
 
-    // Cloudflared output is usually piped to stderr
     this.tunnelProcess.stderr?.on('data', (data: Buffer) => {
       const output = data.toString();
-      console.log(`[cloudflared-logs] ${output.trim()}`);
+      console.log(`[cloudflared-${port}-logs] ${output.trim()}`);
 
-      // Look for trycloudflare.com URL
       const match = output.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
       if (match) {
         this.activeUrl = match[0];
-        console.log(`Cloudflare Quick Tunnel active at: ${this.activeUrl}`);
+        console.log(`Cloudflare Quick Tunnel for port ${port} active at: ${this.activeUrl}`);
         onStatusChange();
       }
     });
 
     this.tunnelProcess.on('close', (code) => {
-      console.log(`Cloudflare tunnel process exited with code ${code}`);
+      console.log(`Cloudflare tunnel process for port ${port} exited with code ${code}`);
       this.resetStatus();
       onStatusChange();
     });
 
     this.tunnelProcess.on('error', (err) => {
-      console.error('Failed to start cloudflared process:', err);
+      console.error(`Failed to start cloudflared process for port ${port}:`, err);
       this.lastError = err.message;
       this.resetStatus();
       onStatusChange();
     });
   }
 
-  // Start Cloudflare tunnel using user token
-  startTokenTunnel(token: string, onStatusChange: () => void): void {
-    if (this.tunnelProcess) {
-      this.stopTunnel();
-    }
+  startToken(token: string, onStatusChange: () => void): void {
+    this.stop();
 
     this.tunnelType = 'token';
     this.lastError = null;
     this.activeUrl = 'Managed by Cloudflare Panel (Token Tunnel)';
+    this.localPort = null;
 
     console.log(`Starting Cloudflare Named Tunnel with token...`);
-
     this.tunnelProcess = spawn('cloudflared', ['tunnel', 'run', '--token', token]);
 
     this.tunnelProcess.stderr?.on('data', (data: Buffer) => {
       const output = data.toString();
-      console.log(`[cloudflared-logs] ${output.trim()}`);
+      console.log(`[cloudflared-token-logs] ${output.trim()}`);
       if (output.includes('Error')) {
         this.lastError = output.trim();
         onStatusChange();
@@ -91,21 +79,20 @@ class TunnelManager {
     });
 
     this.tunnelProcess.on('close', (code) => {
-      console.log(`Cloudflare tunnel process exited with code ${code}`);
+      console.log(`Cloudflare token tunnel process exited with code ${code}`);
       this.resetStatus();
       onStatusChange();
     });
 
     this.tunnelProcess.on('error', (err) => {
-      console.error('Failed to start cloudflared process:', err);
+      console.error('Failed to start cloudflared process for token tunnel:', err);
       this.lastError = err.message;
       this.resetStatus();
       onStatusChange();
     });
   }
 
-  // Stop the running tunnel
-  stopTunnel(): void {
+  stop(): void {
     if (this.tunnelProcess) {
       try {
         this.tunnelProcess.kill();
@@ -122,12 +109,50 @@ class TunnelManager {
     this.tunnelType = 'none';
   }
 
-  getStatus(): TunnelStatus {
+  getStatus(): TunnelItemStatus {
     return {
       active: this.tunnelProcess !== null,
       url: this.activeUrl,
       type: this.tunnelType,
-      error: this.lastError
+      error: this.lastError,
+      port: this.localPort || undefined
+    };
+  }
+}
+
+class TunnelManager {
+  private tlineTunnel = new ActiveTunnel();
+  private customTunnel = new ActiveTunnel();
+
+  constructor() {
+    // Ensure all processes are cleaned up on application exit
+    process.on('exit', () => {
+      this.tlineTunnel.stop();
+      this.customTunnel.stop();
+    });
+  }
+
+  isCloudflaredInstalled(): boolean {
+    try {
+      execSync('cloudflared --version', { stdio: 'ignore' });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  getTlineTunnel(): ActiveTunnel {
+    return this.tlineTunnel;
+  }
+
+  getCustomTunnel(): ActiveTunnel {
+    return this.customTunnel;
+  }
+
+  getStatus(): MultiTunnelStatus {
+    return {
+      tline: this.tlineTunnel.getStatus(),
+      custom: this.customTunnel.getStatus()
     };
   }
 }

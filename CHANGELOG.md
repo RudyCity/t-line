@@ -2,6 +2,19 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.647] - 2026-07-23
+
+### Feature & UX — Concurrent Specific Port Tunneling Support
+- **Concurrent Dual Cloudflare Tunnels**:
+  - Refactored `TunnelManager` in [tunnelManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/tunnelManager.ts) to manage two concurrent `ActiveTunnel` instances: one for the `t-line` dashboard itself (`tline`), and one for a custom user-defined local port (`custom`).
+  - Added exit safety listeners to ensure both active tunnels are gracefully killed when the backend exits, avoiding orphaned `cloudflared` processes.
+- **REST API Multi-Tunnel Endpoints**:
+  - Updated `/api/tunnel/status`, `/api/tunnel/start`, and `/api/tunnel/stop` endpoints in [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) to accept a `target` parameter (`tline` | `custom`) and support custom port forwarding.
+- **Obsidian-themed UI Controls**:
+  - Upgraded the `useTunnel` React hook in [useTunnel.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useTunnel.ts) to manage independent statuses, copy flags, and loading indicators.
+  - Redesigned the right section of the footer in [Footer.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/Footer.tsx) to feature two parallel tunnel controls: the main `tline` dashboard control and a `Port` tunnel control complete with an Obsidian-styled numeric input box.
+  - Updated the mobile overlay menu in [RightSidebar.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/RightSidebar.tsx) to support updated multi-tunnel structures.
+
 ## [1.3.646] - 2026-07-23
 
 ### Feature & UX — Prioritize First Workspace Tab on Click (`useWorkspaceHandlers.ts`)

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { TabData, TerminalInstanceData, WorkspaceInfo } from '../hooks/useTerminals';
 import { Select } from './Form';
+import { MultiTunnelStatus } from '../hooks/useTunnel';
 
 interface SavedPrompt {
   id: string;
@@ -26,7 +27,7 @@ interface RightSidebarProps {
   workspaces: WorkspaceInfo[];
   panelWorkspace: WorkspaceInfo | null;
   terminalInstances: Record<string, TerminalInstanceData>;
-  setShowSettingsModal: (show: boolean) => void;
+  setShowSettingsModal: (val: boolean) => void;
   handleLogout: () => void;
   // Terminal controls (from footer center section)
   terminalFontSize: number;
@@ -37,15 +38,10 @@ interface RightSidebarProps {
   activeTabType?: 'terminal' | 'file' | 'diff' | 'grid' | 'browser' | 'agent' | null;
   onRefreshTerminal?: () => void;
   // Tunnel (from footer right section)
-  tunnelStatus: {
-    active: boolean;
-    url: string | null;
-    type: 'quick' | 'token' | 'none';
-    error: string | null;
-  };
-  tunnelLoading: boolean;
-  handleStartTunnel: (type: 'quick' | 'token') => void;
-  handleStopTunnel: () => void;
+  tunnelStatus: MultiTunnelStatus;
+  tunnelLoading: { tline: boolean; custom: boolean };
+  handleStartTunnel: (target: 'tline' | 'custom', type: 'quick' | 'token', customPort?: number) => void;
+  handleStopTunnel: (target: 'tline' | 'custom') => void;
   // Saved Prompts (Quick Launch)
   savedPrompts?: SavedPrompt[];
   onRunSavedPrompt?: (prompt: SavedPrompt) => void;
@@ -88,9 +84,9 @@ export function RightSidebar({
   const [copied, setCopied] = React.useState(false);
 
   const handleCopy = async () => {
-    if (!tunnelStatus.url) return;
+    if (!tunnelStatus.tline.url) return;
     try {
-      await navigator.clipboard.writeText(tunnelStatus.url);
+      await navigator.clipboard.writeText(tunnelStatus.tline.url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -307,37 +303,37 @@ export function RightSidebar({
             <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] font-bold">Cloudflare Tunnel</span>
             {/* Status badge */}
             <span className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono border ${
-              tunnelLoading
+              tunnelLoading.tline
                 ? 'bg-sky-500/5 border-sky-500/20 text-sky-400'
-                : (tunnelStatus.active
+                : (tunnelStatus.tline.active
                     ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'
                     : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)]')
             }`}>
-              {tunnelLoading ? (
+              {tunnelLoading.tline ? (
                 <span className="h-1.5 w-1.5 rounded-full border border-sky-400/30 border-t-sky-400 animate-spin" />
               ) : (
                 <span className={`h-1.5 w-1.5 rounded-full ${
-                  tunnelStatus.active ? 'bg-emerald-400 animate-pulse shadow-[0_0_6px_#10b981]' : 'bg-[var(--text-dark)]'
+                  tunnelStatus.tline.active ? 'bg-emerald-400 animate-pulse shadow-[0_0_6px_#10b981]' : 'bg-[var(--text-dark)]'
                 }`} />
               )}
               <span className="font-semibold">
-                {tunnelLoading
-                  ? (tunnelStatus.active ? 'Stopping...' : 'Starting...')
-                  : (tunnelStatus.active ? 'Active' : 'Inactive')}
+                {tunnelLoading.tline
+                  ? (tunnelStatus.tline.active ? 'Stopping...' : 'Starting...')
+                  : (tunnelStatus.tline.active ? 'Active' : 'Inactive')}
               </span>
             </span>
           </div>
 
           {/* Active URL */}
-          {tunnelStatus.active && tunnelStatus.url && (
+          {tunnelStatus.tline.active && tunnelStatus.tline.url && (
             <div className="flex items-center gap-2 bg-sky-950/20 border border-sky-500/20 px-3 py-2 rounded-lg text-[11px] font-mono text-sky-400">
               <Globe size={12} className="text-sky-400 animate-pulse shrink-0" />
-              <span className="flex-1 truncate" title={tunnelStatus.url}>
-                {tunnelStatus.url.replace(/^https?:\/\//, '')}
+              <span className="flex-1 truncate" title={tunnelStatus.tline.url}>
+                {tunnelStatus.tline.url.replace(/^https?:\/\//, '')}
               </span>
               <div className="flex items-center gap-1 shrink-0">
                 <a
-                  href={tunnelStatus.url}
+                  href={tunnelStatus.tline.url}
                   target="_blank"
                   rel="noreferrer"
                   className="text-slate-400 hover:text-sky-300 p-1 rounded transition-colors flex items-center"
@@ -352,7 +348,7 @@ export function RightSidebar({
                 >
                   {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
                 </button>
-                {tunnelStatus.type === 'quick' && (
+                {tunnelStatus.tline.type === 'quick' && (
                   <span
                     className="text-slate-500 hover:text-slate-300 transition-colors cursor-help p-1"
                     title="Newly created trycloudflare URLs can take 5-15 seconds for DNS to propagate."
@@ -366,12 +362,12 @@ export function RightSidebar({
 
           {/* Action buttons */}
           <div className="flex gap-2">
-            {tunnelStatus.active ? (
+            {tunnelStatus.tline.active ? (
               <button
-                onClick={() => { handleStopTunnel(); onClose(); }}
-                disabled={tunnelLoading}
+                onClick={() => { handleStopTunnel('tline'); onClose(); }}
+                disabled={tunnelLoading.tline}
                 className={`flex-1 py-2 rounded-lg border border-red-500/25 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-xs font-medium transition-all ${
-                  tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                  tunnelLoading.tline ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                 }`}
               >
                 Stop Tunnel
@@ -379,19 +375,19 @@ export function RightSidebar({
             ) : (
               <>
                 <button
-                  onClick={() => handleStartTunnel('quick')}
-                  disabled={tunnelLoading}
+                  onClick={() => handleStartTunnel('tline', 'quick')}
+                  disabled={tunnelLoading.tline}
                   className={`flex-1 py-2 rounded-lg border border-[var(--color-primary)]/25 bg-[var(--color-primary)]/10 hover:bg-[var(--color-primary)]/20 text-[var(--color-primary)] text-xs font-medium transition-all ${
-                    tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                    tunnelLoading.tline ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                   }`}
                 >
                   Quick URL
                 </button>
                 <button
-                  onClick={() => handleStartTunnel('token')}
-                  disabled={tunnelLoading}
+                  onClick={() => handleStartTunnel('tline', 'token')}
+                  disabled={tunnelLoading.tline}
                   className={`flex-1 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] text-xs font-medium transition-all ${
-                    tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                    tunnelLoading.tline ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                   }`}
                 >
                   Custom

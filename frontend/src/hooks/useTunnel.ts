@@ -1,26 +1,35 @@
 import { useState, useEffect } from 'react';
 import { logFetchError } from '../utils/network';
 
-export interface TunnelStatus {
+export interface TunnelItemStatus {
   active: boolean;
   url: string | null;
   type: 'quick' | 'token' | 'none';
   error: string | null;
+  port?: number;
+}
+
+export interface MultiTunnelStatus {
+  tline: TunnelItemStatus;
+  custom: TunnelItemStatus;
 }
 
 export function useTunnel(
   isAuthenticated: boolean,
   showAlert: (title: string, message: string) => void
 ) {
-  const [tunnelStatus, setTunnelStatus] = useState<TunnelStatus>({
-    active: false,
-    url: null,
-    type: 'none',
-    error: null
+  const [tunnelStatus, setTunnelStatus] = useState<MultiTunnelStatus>({
+    tline: { active: false, url: null, type: 'none', error: null },
+    custom: { active: false, url: null, type: 'none', error: null }
   });
   const [showTunnelModal, setShowTunnelModal] = useState<boolean>(false);
   const [tunnelToken, setTunnelToken] = useState<string>('');
-  const [tunnelLoading, setTunnelLoading] = useState<boolean>(false);
+  const [tunnelLoading, setTunnelLoading] = useState<{ tline: boolean; custom: boolean }>({
+    tline: false,
+    custom: false
+  });
+  const [tunnelTarget, setTunnelTarget] = useState<'tline' | 'custom'>('tline');
+  const [customTunnelPort, setCustomTunnelPort] = useState<number>(80);
 
   const fetchTunnelStatus = async () => {
     try {
@@ -42,13 +51,17 @@ export function useTunnel(
     }
   }, [isAuthenticated]);
 
-  const handleStartTunnel = async (type: 'quick' | 'token') => {
+  const handleStartTunnel = async (target: 'tline' | 'custom', type: 'quick' | 'token', customPort?: number) => {
     if (type === 'token') {
+      setTunnelTarget(target);
+      if (target === 'custom' && customPort) {
+        setCustomTunnelPort(customPort);
+      }
       setShowTunnelModal(true);
       return;
     }
     
-    setTunnelLoading(true);
+    setTunnelLoading(prev => ({ ...prev, [target]: true }));
     try {
       const res = await fetch('/api/tunnel/start', {
         method: 'POST',
@@ -56,7 +69,7 @@ export function useTunnel(
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ type: 'quick' })
+        body: JSON.stringify({ type: 'quick', target, port: customPort })
       });
       const data = await res.json();
       if (data.success) {
@@ -67,7 +80,7 @@ export function useTunnel(
     } catch (e) {
       showAlert('Tunnel Error', 'Failed to start quick tunnel.');
     } finally {
-      setTunnelLoading(false);
+      setTunnelLoading(prev => ({ ...prev, [target]: false }));
     }
   };
 
@@ -75,7 +88,8 @@ export function useTunnel(
     e.preventDefault();
     if (!tunnelToken) return;
 
-    setTunnelLoading(true);
+    const target = tunnelTarget;
+    setTunnelLoading(prev => ({ ...prev, [target]: true }));
     try {
       const res = await fetch('/api/tunnel/start', {
         method: 'POST',
@@ -83,7 +97,12 @@ export function useTunnel(
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ type: 'token', token: tunnelToken })
+        body: JSON.stringify({ 
+          type: 'token', 
+          token: tunnelToken, 
+          target,
+          port: target === 'custom' ? customTunnelPort : undefined
+        })
       });
       const data = await res.json();
       if (data.success) {
@@ -96,16 +115,20 @@ export function useTunnel(
     } catch (e) {
       showAlert('Tunnel Error', 'Failed to start named tunnel.');
     } finally {
-      setTunnelLoading(false);
+      setTunnelLoading(prev => ({ ...prev, [target]: false }));
     }
   };
 
-  const handleStopTunnel = async () => {
-    setTunnelLoading(true);
+  const handleStopTunnel = async (target: 'tline' | 'custom') => {
+    setTunnelLoading(prev => ({ ...prev, [target]: true }));
     try {
       const res = await fetch('/api/tunnel/stop', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ target })
       });
       const data = await res.json();
       if (data.success) {
@@ -114,7 +137,7 @@ export function useTunnel(
     } catch (e) {
       logFetchError('Failed to stop tunnel', e);
     } finally {
-      setTunnelLoading(false);
+      setTunnelLoading(prev => ({ ...prev, [target]: false }));
     }
   };
 
@@ -128,6 +151,10 @@ export function useTunnel(
     fetchTunnelStatus,
     handleStartTunnel,
     handleStartTokenTunnel,
-    handleStopTunnel
+    handleStopTunnel,
+    tunnelTarget,
+    setTunnelTarget,
+    customTunnelPort,
+    setCustomTunnelPort
   };
 }

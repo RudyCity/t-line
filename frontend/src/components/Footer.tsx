@@ -3,6 +3,7 @@ import { GitBranch, ExternalLink, Copy, Check, Info, Folder, Globe, Cpu } from '
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { Toast } from './Toast';
 import { SystemStats } from '../hooks/useSystemStats';
+import { MultiTunnelStatus } from '../hooks/useTunnel';
 
 // Helper function to format bytes into readable units
 function formatBytes(bytes: number, decimals: number = 1): string {
@@ -17,15 +18,10 @@ function formatBytes(bytes: number, decimals: number = 1): string {
 export interface FooterProps {
   panelWorkspace: WorkspaceInfo | null;
   panelWorktreePath?: string | null;
-  tunnelStatus: {
-    active: boolean;
-    url: string | null;
-    type: 'quick' | 'token' | 'none';
-    error: string | null;
-  };
-  tunnelLoading: boolean;
-  handleStartTunnel: (type: 'quick' | 'token') => void;
-  handleStopTunnel: () => void;
+  tunnelStatus: MultiTunnelStatus;
+  tunnelLoading: { tline: boolean; custom: boolean };
+  handleStartTunnel: (target: 'tline' | 'custom', type: 'quick' | 'token', customPort?: number) => void;
+  handleStopTunnel: (target: 'tline' | 'custom') => void;
   activeTabType?: 'terminal' | 'file' | 'diff' | 'grid' | 'browser' | 'agent' | null;
   activeTabPath?: string;
   appVersion?: string;
@@ -50,14 +46,27 @@ export function Footer({
   systemStats,
   onBranchClick
 }: FooterProps): React.JSX.Element {
-  const [copied, setCopied] = React.useState(false);
+  const [tlineCopied, setTlineCopied] = React.useState(false);
+  const [customCopied, setCustomCopied] = React.useState(false);
+  const [customPortVal, setCustomPortVal] = React.useState<string>('8000');
 
-  const handleCopy = async () => {
-    if (!tunnelStatus.url) return;
+  const handleCopyTline = async (url: string | null) => {
+    if (!url) return;
     try {
-      await navigator.clipboard.writeText(tunnelStatus.url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(url);
+      setTlineCopied(true);
+      setTimeout(() => setTlineCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
+  const handleCopyCustom = async (url: string | null) => {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCustomCopied(true);
+      setTimeout(() => setCustomCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy text: ', err);
     }
@@ -341,158 +350,308 @@ export function Footer({
 
 
       {/* Right Section: Cloudflare Tunnel & Status — hidden on mobile & tablet */}
-      <div className="hidden lg:flex items-center gap-2.5">
-        {/* Cloudflare Tunnel status */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] hidden md:inline-block" style={{ color: 'var(--text-muted)' }}>Cloudflare Tunnel:</span>
-          
-          <span 
-            className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono border"
-            style={{
-              backgroundColor: tunnelLoading 
-                ? 'rgba(14, 165, 233, 0.08)' 
-                : (tunnelStatus.active 
-                    ? 'rgba(16, 185, 129, 0.08)' 
-                    : 'color-mix(in srgb, var(--bg-main) 60%, transparent)'),
-              borderColor: tunnelLoading 
-                ? 'rgba(14, 165, 233, 0.25)' 
-                : (tunnelStatus.active 
-                    ? 'rgba(16, 185, 129, 0.25)' 
-                    : 'var(--border-color)'),
-              color: tunnelLoading 
-                ? '#38bdf8' 
-                : (tunnelStatus.active 
-                    ? '#10b981' 
-                    : 'var(--text-muted)')
-            }}
-          >
-            {tunnelLoading ? (
-              <span className="h-1.5 w-1.5 rounded-full border border-sky-400/30 border-t-sky-400 animate-spin" />
-            ) : (
-              <span 
-                className="h-1.5 w-1.5 rounded-full" 
-                style={{
-                  backgroundColor: tunnelStatus.active ? '#10b981' : 'var(--text-muted)',
-                  boxShadow: tunnelStatus.active ? '0 0 6px #10b981' : 'none'
-                }}
-              />
-            )}
-            <span className="font-semibold">
-              {tunnelLoading 
-                ? (tunnelStatus.active ? 'Stopping...' : 'Starting...') 
-                : (tunnelStatus.active ? 'Active' : 'Inactive')}
+      <div className="hidden lg:flex items-center gap-3">
+        {/* --- TLine Tunnel Section --- */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] hidden md:inline-block font-semibold" style={{ color: 'var(--text-muted)' }}>TLine:</span>
+            
+            <span 
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-mono border"
+              style={{
+                backgroundColor: tunnelLoading.tline 
+                  ? 'rgba(14, 165, 233, 0.08)' 
+                  : (tunnelStatus.tline.active 
+                      ? 'rgba(16, 185, 129, 0.08)' 
+                      : 'color-mix(in srgb, var(--bg-main) 60%, transparent)'),
+                borderColor: tunnelLoading.tline 
+                  ? 'rgba(14, 165, 233, 0.25)' 
+                  : (tunnelStatus.tline.active 
+                      ? 'rgba(16, 185, 129, 0.25)' 
+                      : 'var(--border-color)'),
+                color: tunnelLoading.tline 
+                  ? '#38bdf8' 
+                  : (tunnelStatus.tline.active 
+                      ? '#10b981' 
+                      : 'var(--text-muted)')
+              }}
+            >
+              {tunnelLoading.tline ? (
+                <span className="h-1 w-1 rounded-full border border-sky-400/30 border-t-sky-400 animate-spin" />
+              ) : (
+                <span 
+                  className="h-1 w-1 rounded-full" 
+                  style={{
+                    backgroundColor: tunnelStatus.tline.active ? '#10b981' : 'var(--text-muted)',
+                    boxShadow: tunnelStatus.tline.active ? '0 0 6px #10b981' : 'none'
+                  }}
+                />
+              )}
+              <span className="font-semibold text-[9px]">
+                {tunnelLoading.tline 
+                  ? (tunnelStatus.tline.active ? 'Stopping...' : 'Starting...') 
+                  : (tunnelStatus.tline.active ? 'Active' : 'Inactive')}
+              </span>
             </span>
-          </span>
+          </div>
+
+          {/* Active Tunnel URL Info */}
+          {tunnelStatus.tline.active && tunnelStatus.tline.url && (
+            <div 
+              className="flex items-center gap-1 border px-1.5 py-0.5 rounded text-[9px] font-mono shadow-[0_0_8px_rgba(14,165,233,0.05)]"
+              style={{
+                backgroundColor: 'rgba(14, 165, 233, 0.08)',
+                borderColor: 'rgba(14, 165, 233, 0.25)',
+                color: '#38bdf8'
+              }}
+            >
+              <Globe size={9} className="animate-pulse" style={{ color: '#38bdf8' }} />
+              <span className="max-w-[100px] truncate" title={tunnelStatus.tline.url}>
+                {tunnelStatus.tline.url.replace(/^https?:\/\//, '')}
+              </span>
+              
+              <div className="w-px h-2" style={{ backgroundColor: 'rgba(14, 165, 233, 0.25)' }} />
+              
+              <div className="flex items-center gap-0.5">
+                <a 
+                  href={tunnelStatus.tline.url} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="p-0.5 rounded transition-colors duration-150 flex items-center justify-center"
+                  style={{ color: 'var(--text-muted)' }}
+                  onMouseOver={(e) => e.currentTarget.style.color = '#38bdf8'}
+                  onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                  title="Open Tunnel URL"
+                >
+                  <ExternalLink size={9} />
+                </a>
+                <button 
+                  onClick={() => handleCopyTline(tunnelStatus.tline.url)}
+                  className="p-0.5 rounded transition-colors duration-150 flex items-center justify-center cursor-pointer"
+                  style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
+                  onMouseOver={(e) => e.currentTarget.style.color = 'var(--color-primary)'}
+                  onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                  title="Copy Tunnel URL"
+                >
+                  {tlineCopied ? (
+                    <Check size={9} className="text-emerald-400" />
+                  ) : (
+                    <Copy size={9} />
+                  )}
+                </button>
+                {tunnelStatus.tline.type === 'quick' && (
+                  <span 
+                    className="transition-colors cursor-help flex items-center p-0.5" 
+                    style={{ color: 'var(--text-muted)' }}
+                    onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
+                    onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                    title="Tip: Newly created trycloudflare URLs can take 5-15 seconds for DNS to propagate. If you see 'Site can't be reached', wait a few seconds and reload."
+                  >
+                    <Info size={9} />
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-1">
+            {tunnelStatus.tline.active ? (
+              <button 
+                onClick={() => handleStopTunnel('tline')}
+                disabled={tunnelLoading.tline}
+                className={`px-1.5 py-0.5 rounded border border-red-500/25 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-[9px] font-medium transition-all duration-150 ${
+                  tunnelLoading.tline ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                }`}
+              >
+                Stop
+              </button>
+            ) : (
+              <>
+                <button 
+                  onClick={() => handleStartTunnel('tline', 'quick')}
+                  disabled={tunnelLoading.tline}
+                  className={`px-1.5 py-0.5 rounded border border-purple-500/25 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 hover:text-purple-200 text-[9px] font-medium transition-all duration-150 ${
+                    tunnelLoading.tline ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
+                >
+                  Quick
+                </button>
+                <button 
+                  onClick={() => handleStartTunnel('tline', 'token')}
+                  disabled={tunnelLoading.tline}
+                  className={`px-1.5 py-0.5 rounded border text-[9px] font-medium transition-all duration-150 ${
+                    tunnelLoading.tline ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--bg-main) 30%, transparent)',
+                    borderColor: 'var(--border-color)',
+                    color: 'var(--text-main)'
+                  }}
+                >
+                  Custom
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Active Tunnel URL Info */}
-        {tunnelStatus.active && tunnelStatus.url && (
-          <div 
-            className="flex items-center gap-1.5 border px-2 py-0.5 rounded-md text-[10px] font-mono shadow-[0_0_8px_rgba(14,165,233,0.05)]"
-            style={{
-              backgroundColor: 'rgba(14, 165, 233, 0.08)',
-              borderColor: 'rgba(14, 165, 233, 0.25)',
-              color: '#38bdf8'
-            }}
-          >
-            <Globe size={11} className="animate-pulse" style={{ color: '#38bdf8' }} />
-            <span className="max-w-[140px] md:max-w-[200px] truncate" title={tunnelStatus.url}>
-              {tunnelStatus.url.replace(/^https?:\/\//, '')}
-            </span>
-            
-            <div className="w-px h-2.5" style={{ backgroundColor: 'rgba(14, 165, 233, 0.25)' }} />
-            
-            <div className="flex items-center gap-1">
-              <a 
-                href={tunnelStatus.url} 
-                target="_blank" 
-                rel="noreferrer" 
-                className="p-0.5 rounded transition-colors duration-150 flex items-center justify-center"
-                style={{ color: 'var(--text-muted)' }}
-                onMouseOver={(e) => e.currentTarget.style.color = '#38bdf8'}
-                onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                title="Open Tunnel URL"
-              >
-                <ExternalLink size={10} />
-              </a>
-              <button 
-                onClick={handleCopy}
-                className="p-0.5 rounded transition-colors duration-150 flex items-center justify-center cursor-pointer"
-                style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
-                onMouseOver={(e) => e.currentTarget.style.color = 'var(--color-primary)'}
-                onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                title="Copy Tunnel URL"
-              >
-                {copied ? (
-                  <Check size={10} className="text-emerald-400" />
-                ) : (
-                  <Copy size={10} />
-                )}
-              </button>
-              {tunnelStatus.type === 'quick' && (
-                <span 
-                  className="transition-colors cursor-help flex items-center p-0.5" 
-                  style={{ color: 'var(--text-muted)' }}
-                  onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'}
-                  onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                  title="Tip: Newly created trycloudflare URLs can take 5-15 seconds for DNS to propagate. If you see 'Site can't be reached', wait a few seconds and reload."
-                >
-                  <Info size={11} />
-                </span>
-              )}
-            </div>
-          </div>
-        )}
+        {/* Divider */}
+        <div className="w-px h-3.5 bg-neutral-800 self-center" />
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-1.5">
-          {tunnelStatus.active ? (
-            <button 
-              onClick={handleStopTunnel}
-              disabled={tunnelLoading}
-              className={`px-2.5 py-0.5 rounded-full border border-red-500/25 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-[10px] font-medium transition-all duration-150 hover:-translate-y-[0.5px] active:translate-y-0 ${
-                tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-              }`}
+        {/* --- Port Tunnel Section --- */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] hidden md:inline-block font-semibold" style={{ color: 'var(--text-muted)' }}>Port:</span>
+            <input
+              type="number"
+              placeholder="8000"
+              value={customPortVal}
+              onChange={(e) => setCustomPortVal(e.target.value)}
+              disabled={tunnelStatus.custom.active || tunnelLoading.custom}
+              className="w-11 px-1 py-0.5 text-[9px] font-semibold text-center border rounded transition-all duration-150 focus:outline-none focus:border-purple-500"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--bg-main) 60%, transparent)',
+                borderColor: 'var(--border-color)',
+                color: 'var(--text-main)'
+              }}
+            />
+          </div>
+
+          <div className="flex items-center gap-1">
+            <span 
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-mono border"
+              style={{
+                backgroundColor: tunnelLoading.custom 
+                  ? 'rgba(14, 165, 233, 0.08)' 
+                  : (tunnelStatus.custom.active 
+                      ? 'rgba(16, 185, 129, 0.08)' 
+                      : 'color-mix(in srgb, var(--bg-main) 60%, transparent)'),
+                borderColor: tunnelLoading.custom 
+                  ? 'rgba(14, 165, 233, 0.25)' 
+                  : (tunnelStatus.custom.active 
+                      ? 'rgba(16, 185, 129, 0.25)' 
+                      : 'var(--border-color)'),
+                color: tunnelLoading.custom 
+                  ? '#38bdf8' 
+                  : (tunnelStatus.custom.active 
+                      ? '#10b981' 
+                      : 'var(--text-muted)')
+              }}
             >
-              Stop
-            </button>
-          ) : (
-            <>
-              <button 
-                onClick={() => handleStartTunnel('quick')}
-                disabled={tunnelLoading}
-                className={`px-2.5 py-0.5 rounded-full border border-purple-500/25 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 hover:text-purple-200 text-[10px] font-medium transition-all duration-150 hover:-translate-y-[0.5px] active:translate-y-0 ${
-                  tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                }`}
-              >
-                Quick URL
-              </button>
-              <button 
-                onClick={() => handleStartTunnel('token')}
-                disabled={tunnelLoading}
-                className={`px-2.5 py-0.5 rounded-full border text-[10px] font-medium transition-all duration-150 hover:-translate-y-[0.5px] active:translate-y-0 ${
-                  tunnelLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                }`}
-                style={{
-                  backgroundColor: 'color-mix(in srgb, var(--bg-main) 30%, transparent)',
-                  borderColor: 'var(--border-color)',
-                  color: 'var(--text-main)'
-                }}
-                onMouseOver={(e) => {
-                  if (!tunnelLoading) {
-                    e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--bg-main) 50%, transparent)';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (!tunnelLoading) {
-                    e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--bg-main) 30%, transparent)';
-                  }
-                }}
-              >
-                Custom
-              </button>
-            </>
+              {tunnelLoading.custom ? (
+                <span className="h-1 w-1 rounded-full border border-sky-400/30 border-t-sky-400 animate-spin" />
+              ) : (
+                <span 
+                  className="h-1 w-1 rounded-full" 
+                  style={{
+                    backgroundColor: tunnelStatus.custom.active ? '#10b981' : 'var(--text-muted)',
+                    boxShadow: tunnelStatus.custom.active ? '0 0 6px #10b981' : 'none'
+                  }}
+                />
+              )}
+              <span className="font-semibold text-[9px]">
+                {tunnelLoading.custom 
+                  ? (tunnelStatus.custom.active ? 'Stopping...' : 'Starting...') 
+                  : (tunnelStatus.custom.active ? 'Active' : 'Inactive')}
+              </span>
+            </span>
+          </div>
+
+          {/* Active Tunnel URL Info */}
+          {tunnelStatus.custom.active && tunnelStatus.custom.url && (
+            <div 
+              className="flex items-center gap-1 border px-1.5 py-0.5 rounded text-[9px] font-mono shadow-[0_0_8px_rgba(14,165,233,0.05)]"
+              style={{
+                backgroundColor: 'rgba(14, 165, 233, 0.08)',
+                borderColor: 'rgba(14, 165, 233, 0.25)',
+                color: '#38bdf8'
+              }}
+            >
+              <Globe size={9} className="animate-pulse" style={{ color: '#38bdf8' }} />
+              <span className="max-w-[100px] truncate" title={tunnelStatus.custom.url}>
+                {tunnelStatus.custom.url.replace(/^https?:\/\//, '')}
+              </span>
+              
+              <div className="w-px h-2" style={{ backgroundColor: 'rgba(14, 165, 233, 0.25)' }} />
+              
+              <div className="flex items-center gap-0.5">
+                <a 
+                  href={tunnelStatus.custom.url} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="p-0.5 rounded transition-colors duration-150 flex items-center justify-center"
+                  style={{ color: 'var(--text-muted)' }}
+                  onMouseOver={(e) => e.currentTarget.style.color = '#38bdf8'}
+                  onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                  title="Open Tunnel URL"
+                >
+                  <ExternalLink size={9} />
+                </a>
+                <button 
+                  onClick={() => handleCopyCustom(tunnelStatus.custom.url)}
+                  className="p-0.5 rounded transition-colors duration-150 flex items-center justify-center cursor-pointer"
+                  style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
+                  onMouseOver={(e) => e.currentTarget.style.color = 'var(--color-primary)'}
+                  onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                  title="Copy Tunnel URL"
+                >
+                  {customCopied ? (
+                    <Check size={9} className="text-emerald-400" />
+                  ) : (
+                    <Copy size={9} />
+                  )}
+                </button>
+              </div>
+            </div>
           )}
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-1">
+            {tunnelStatus.custom.active ? (
+              <button 
+                onClick={() => handleStopTunnel('custom')}
+                disabled={tunnelLoading.custom}
+                className={`px-1.5 py-0.5 rounded border border-red-500/25 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-[9px] font-medium transition-all duration-150 ${
+                  tunnelLoading.custom ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                }`}
+              >
+                Stop
+              </button>
+            ) : (
+              <>
+                <button 
+                  onClick={() => {
+                    const p = parseInt(customPortVal) || 8000;
+                    handleStartTunnel('custom', 'quick', p);
+                  }}
+                  disabled={tunnelLoading.custom || !customPortVal}
+                  className={`px-1.5 py-0.5 rounded border border-purple-500/25 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 hover:text-purple-200 text-[9px] font-medium transition-all duration-150 ${
+                    tunnelLoading.custom || !customPortVal ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
+                >
+                  Quick
+                </button>
+                <button 
+                  onClick={() => {
+                    const p = parseInt(customPortVal) || 8000;
+                    handleStartTunnel('custom', 'token', p);
+                  }}
+                  disabled={tunnelLoading.custom || !customPortVal}
+                  className={`px-1.5 py-0.5 rounded border text-[9px] font-medium transition-all duration-150 ${
+                    tunnelLoading.custom || !customPortVal ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--bg-main) 30%, transparent)',
+                    borderColor: 'var(--border-color)',
+                    color: 'var(--text-main)'
+                  }}
+                >
+                  Custom
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </footer>

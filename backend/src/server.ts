@@ -306,7 +306,7 @@ app.get('/api/tunnel/status', authMiddleware, (req, res) => {
 });
 
 app.post('/api/tunnel/start', authMiddleware, (req, res) => {
-  const { type, token } = req.body;
+  const { type, token, target, port: customPort } = req.body;
   
   if (!tunnelManager.isCloudflaredInstalled()) {
     return res.status(400).json({ 
@@ -318,23 +318,35 @@ app.post('/api/tunnel/start', authMiddleware, (req, res) => {
     // Optional WebSocket status broadcast, here we let status API handle queries
   };
 
+  const activeTarget = target === 'custom' ? tunnelManager.getCustomTunnel() : tunnelManager.getTlineTunnel();
+  const portToUse = target === 'custom' ? Number(customPort) : Number(port);
+
+  if (target === 'custom' && !customPort && type === 'quick') {
+    return res.status(400).json({ error: 'Port is required for custom port tunnel.' });
+  }
+
   if (type === 'quick') {
-    tunnelManager.startQuickTunnel(Number(port), broadcastStatus);
-    res.json({ success: true, message: 'Quick tunnel starting...' });
+    activeTarget.startQuick(portToUse, broadcastStatus);
+    res.json({ success: true, message: `Quick tunnel starting for ${target || 'tline'}...` });
   } else if (type === 'token') {
     if (!token) {
       return res.status(400).json({ error: 'Token is required for named tunnels.' });
     }
-    tunnelManager.startTokenTunnel(token, broadcastStatus);
-    res.json({ success: true, message: 'Token-based tunnel starting...' });
+    activeTarget.startToken(token, broadcastStatus);
+    res.json({ success: true, message: `Token-based tunnel starting for ${target || 'tline'}...` });
   } else {
     res.status(400).json({ error: 'Invalid tunnel type.' });
   }
 });
 
 app.post('/api/tunnel/stop', authMiddleware, (req, res) => {
-  tunnelManager.stopTunnel();
-  res.json({ success: true, message: 'Tunnel stopped.' });
+  const { target } = req.body;
+  if (target === 'custom') {
+    tunnelManager.getCustomTunnel().stop();
+  } else {
+    tunnelManager.getTlineTunnel().stop();
+  }
+  res.json({ success: true, message: `Tunnel for ${target || 'tline'} stopped.` });
 });
 
 // Active terminals listing endpoint for remote sync
