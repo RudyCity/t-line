@@ -11,7 +11,7 @@ export interface TunnelItemStatus {
 
 export interface MultiTunnelStatus {
   tline: TunnelItemStatus;
-  custom: TunnelItemStatus;
+  customs: TunnelItemStatus[];
 }
 
 class ActiveTunnel {
@@ -122,13 +122,15 @@ class ActiveTunnel {
 
 class TunnelManager {
   private tlineTunnel = new ActiveTunnel();
-  private customTunnel = new ActiveTunnel();
+  private customTunnels = new Map<number, ActiveTunnel>();
 
   constructor() {
     // Ensure all processes are cleaned up on application exit
     process.on('exit', () => {
       this.tlineTunnel.stop();
-      this.customTunnel.stop();
+      for (const tunnel of this.customTunnels.values()) {
+        tunnel.stop();
+      }
     });
   }
 
@@ -145,14 +147,27 @@ class TunnelManager {
     return this.tlineTunnel;
   }
 
-  getCustomTunnel(): ActiveTunnel {
-    return this.customTunnel;
+  getOrCreateCustomTunnel(port: number): ActiveTunnel {
+    let tunnel = this.customTunnels.get(port);
+    if (!tunnel) {
+      tunnel = new ActiveTunnel();
+      this.customTunnels.set(port, tunnel);
+    }
+    return tunnel;
+  }
+
+  stopCustomTunnel(port: number): void {
+    const tunnel = this.customTunnels.get(port);
+    if (tunnel) {
+      tunnel.stop();
+      this.customTunnels.delete(port);
+    }
   }
 
   getStatus(): MultiTunnelStatus {
     return {
       tline: this.tlineTunnel.getStatus(),
-      custom: this.customTunnel.getStatus()
+      customs: Array.from(this.customTunnels.values()).map(t => t.getStatus())
     };
   }
 }

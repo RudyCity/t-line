@@ -318,35 +318,54 @@ app.post('/api/tunnel/start', authMiddleware, (req, res) => {
     // Optional WebSocket status broadcast, here we let status API handle queries
   };
 
-  const activeTarget = target === 'custom' ? tunnelManager.getCustomTunnel() : tunnelManager.getTlineTunnel();
-  const portToUse = target === 'custom' ? Number(customPort) : Number(port);
-
-  if (target === 'custom' && !customPort && type === 'quick') {
-    return res.status(400).json({ error: 'Port is required for custom port tunnel.' });
-  }
-
-  if (type === 'quick') {
-    activeTarget.startQuick(portToUse, broadcastStatus);
-    res.json({ success: true, message: `Quick tunnel starting for ${target || 'tline'}...` });
-  } else if (type === 'token') {
-    if (!token) {
-      return res.status(400).json({ error: 'Token is required for named tunnels.' });
+  if (target === 'custom') {
+    if (!customPort) {
+      return res.status(400).json({ error: 'Port is required for custom port tunnel.' });
     }
-    activeTarget.startToken(token, broadcastStatus);
-    res.json({ success: true, message: `Token-based tunnel starting for ${target || 'tline'}...` });
+    const portNum = Number(customPort);
+    const activeTarget = tunnelManager.getOrCreateCustomTunnel(portNum);
+    if (type === 'quick') {
+      activeTarget.startQuick(portNum, broadcastStatus);
+      res.json({ success: true, message: `Quick tunnel starting for port ${portNum}...` });
+    } else if (type === 'token') {
+      if (!token) {
+        return res.status(400).json({ error: 'Token is required for named tunnels.' });
+      }
+      activeTarget.startToken(token, broadcastStatus);
+      res.json({ success: true, message: `Token-based tunnel starting for port ${portNum}...` });
+    } else {
+      res.status(400).json({ error: 'Invalid tunnel type.' });
+    }
   } else {
-    res.status(400).json({ error: 'Invalid tunnel type.' });
+    const activeTarget = tunnelManager.getTlineTunnel();
+    const portToUse = Number(port);
+    if (type === 'quick') {
+      activeTarget.startQuick(portToUse, broadcastStatus);
+      res.json({ success: true, message: `Quick tunnel starting for t-line...` });
+    } else if (type === 'token') {
+      if (!token) {
+        return res.status(400).json({ error: 'Token is required for named tunnels.' });
+      }
+      activeTarget.startToken(token, broadcastStatus);
+      res.json({ success: true, message: `Token-based tunnel starting for t-line...` });
+    } else {
+      res.status(400).json({ error: 'Invalid tunnel type.' });
+    }
   }
 });
 
 app.post('/api/tunnel/stop', authMiddleware, (req, res) => {
-  const { target } = req.body;
+  const { target, port: customPort } = req.body;
   if (target === 'custom') {
-    tunnelManager.getCustomTunnel().stop();
+    if (!customPort) {
+      return res.status(400).json({ error: 'Port is required to stop custom tunnel.' });
+    }
+    tunnelManager.stopCustomTunnel(Number(customPort));
+    res.json({ success: true, message: `Tunnel for port ${customPort} stopped.` });
   } else {
     tunnelManager.getTlineTunnel().stop();
+    res.json({ success: true, message: 'Tunnel for t-line stopped.' });
   }
-  res.json({ success: true, message: `Tunnel for ${target || 'tline'} stopped.` });
 });
 
 // Active terminals listing endpoint for remote sync

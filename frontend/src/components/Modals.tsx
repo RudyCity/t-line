@@ -1,7 +1,8 @@
 import React from 'react';
-import { Folder, Loader2, ArrowLeft } from 'lucide-react';
+import { Folder, Loader2, ArrowLeft, Globe, Copy, Check, ExternalLink, X } from 'lucide-react';
 import { FormField, Input, Select, TextArea, Button } from './Form';
 import { WorkspaceInfo } from '../hooks/useWorkspaces';
+import { MultiTunnelStatus, TunnelItemStatus } from '../hooks/useTunnel';
 
 interface WorkspaceAddModalProps {
   show: boolean;
@@ -391,6 +392,178 @@ export const TunnelSetupModal: React.FC<TunnelSetupModalProps> = ({
           </Button>
         </div>
       </form>
+    </div>
+  );
+};
+
+interface PortTunnelsManagerModalProps {
+  show: boolean;
+  onClose: () => void;
+  tunnelStatus: MultiTunnelStatus;
+  tunnelLoading: { tline: boolean; custom: boolean };
+  handleStartTunnel: (target: 'tline' | 'custom', type: 'quick' | 'token', customPort?: number) => void;
+  handleStopTunnel: (target: 'tline' | 'custom', port?: number) => void;
+}
+
+export const PortTunnelsManagerModal: React.FC<PortTunnelsManagerModalProps> = ({
+  show,
+  onClose,
+  tunnelStatus,
+  tunnelLoading,
+  handleStartTunnel,
+  handleStopTunnel
+}) => {
+  const [portInput, setPortInput] = React.useState<string>('8000');
+  const [copiedPorts, setCopiedPorts] = React.useState<{ [port: number]: boolean }>({});
+
+  if (!show) return null;
+
+  const handleCopy = async (port: number, url: string | null) => {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedPorts(prev => ({ ...prev, [port]: true }));
+      setTimeout(() => {
+        setCopiedPorts(prev => ({ ...prev, [port]: false }));
+      }, 2000);
+    } catch (e) {
+      console.error('Failed to copy', e);
+    }
+  };
+
+  const handleStartQuick = () => {
+    const p = parseInt(portInput);
+    if (!p) return;
+    handleStartTunnel('custom', 'quick', p);
+  };
+
+  const handleStartToken = () => {
+    const p = parseInt(portInput);
+    if (!p) return;
+    handleStartTunnel('custom', 'token', p);
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content glass-panel" style={{ maxWidth: '560px', width: '90%' }}>
+        <div className="modal-header">
+          <h3 className="modal-title">Port Tunnels Manager</h3>
+          <button type="button" className="action-btn" onClick={onClose}>×</button>
+        </div>
+
+        {/* Add Port Tunnel Form */}
+        <div className="flex flex-col gap-3 pb-4 mb-4 border-b border-[var(--border-color)]">
+          <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Expose a New Local Port</h4>
+          <div className="flex items-center gap-3">
+            <div style={{ flex: 1 }}>
+              <Input
+                type="number"
+                placeholder="e.g. 8000, 3000, 5173"
+                value={portInput}
+                onChange={(e) => setPortInput(e.target.value)}
+                disabled={tunnelLoading.custom}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleStartQuick}
+                disabled={tunnelLoading.custom || !portInput}
+                variant="secondary"
+                style={{
+                  borderColor: 'rgba(168, 85, 247, 0.4)',
+                  backgroundColor: 'rgba(168, 85, 247, 0.08)',
+                  color: '#c084fc'
+                }}
+              >
+                + Quick Tunnel
+              </Button>
+              <Button 
+                onClick={handleStartToken}
+                disabled={tunnelLoading.custom || !portInput}
+              >
+                + Named Token
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Active Tunnels list */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Globe size={11} className="text-purple-400" />
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Active Custom Tunnels</h4>
+          </div>
+          {tunnelStatus.customs.length === 0 ? (
+            <div className="text-center py-6 text-xs text-[var(--text-muted)] italic border border-dashed border-[var(--border-color)] rounded-lg">
+              No active port tunnels. Expose a port above to create one.
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+              {tunnelStatus.customs.map((cust: TunnelItemStatus) => (
+                <div 
+                  key={cust.port} 
+                  className="flex items-center justify-between p-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] transition-all font-mono text-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-purple-300">Port {cust.port}</span>
+                    <span className="text-[9px] uppercase px-1.5 py-0.5 rounded font-sans border" style={{
+                      backgroundColor: cust.type === 'quick' ? 'rgba(168,85,247,0.08)' : 'rgba(236,72,153,0.08)',
+                      borderColor: cust.type === 'quick' ? 'rgba(168,85,247,0.25)' : 'rgba(236,72,153,0.25)',
+                      color: cust.type === 'quick' ? '#c084fc' : '#f472b6'
+                    }}>
+                      {cust.type}
+                    </span>
+                  </div>
+
+                  <div className="flex-1 px-4 truncate max-w-[240px] text-slate-400">
+                    {cust.url ? cust.url.replace(/^https?:\/\//, '') : (
+                      <span className="italic text-sky-400 animate-pulse">Starting...</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {cust.url && (
+                      <>
+                        <a 
+                          href={cust.url} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="p-1 rounded text-slate-400 hover:text-sky-300 transition-colors flex items-center"
+                          title="Open Tunnel URL"
+                        >
+                          <ExternalLink size={12} />
+                        </a>
+                        <button 
+                          onClick={() => handleCopy(cust.port || 0, cust.url)}
+                          className="p-1 rounded text-slate-400 hover:text-[var(--color-primary)] transition-colors flex items-center bg-none border-none cursor-pointer"
+                          title="Copy Tunnel URL"
+                        >
+                          {copiedPorts[cust.port || 0] ? (
+                            <Check size={12} className="text-emerald-400" />
+                          ) : (
+                            <Copy size={12} />
+                          )}
+                        </button>
+                      </>
+                    )}
+                    <button 
+                      onClick={() => handleStopTunnel('custom', cust.port)}
+                      className="p-1 rounded text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors flex items-center bg-none border-none cursor-pointer"
+                      title="Stop Tunnel"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+          <Button variant="secondary" onClick={onClose}>Close</Button>
+        </div>
+      </div>
     </div>
   );
 };

@@ -11,7 +11,7 @@ export interface TunnelItemStatus {
 
 export interface MultiTunnelStatus {
   tline: TunnelItemStatus;
-  custom: TunnelItemStatus;
+  customs: TunnelItemStatus[];
 }
 
 export function useTunnel(
@@ -20,9 +20,10 @@ export function useTunnel(
 ) {
   const [tunnelStatus, setTunnelStatus] = useState<MultiTunnelStatus>({
     tline: { active: false, url: null, type: 'none', error: null },
-    custom: { active: false, url: null, type: 'none', error: null }
+    customs: []
   });
   const [showTunnelModal, setShowTunnelModal] = useState<boolean>(false);
+  const [showManagerModal, setShowManagerModal] = useState<boolean>(false);
   const [tunnelToken, setTunnelToken] = useState<string>('');
   const [tunnelLoading, setTunnelLoading] = useState<{ tline: boolean; custom: boolean }>({
     tline: false,
@@ -37,7 +38,10 @@ export function useTunnel(
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
-      setTunnelStatus(data);
+      setTunnelStatus({
+        tline: data.tline || { active: false, url: null, type: 'none', error: null },
+        customs: data.customs || []
+      });
     } catch (e) {
       logFetchError('Failed to fetch tunnel status', e);
     }
@@ -119,7 +123,7 @@ export function useTunnel(
     }
   };
 
-  const handleStopTunnel = async (target: 'tline' | 'custom') => {
+  const handleStopTunnel = async (target: 'tline' | 'custom', port?: number) => {
     setTunnelLoading(prev => ({ ...prev, [target]: true }));
     try {
       const res = await fetch('/api/tunnel/stop', {
@@ -128,7 +132,7 @@ export function useTunnel(
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ target })
+        body: JSON.stringify({ target, port })
       });
       const data = await res.json();
       if (data.success) {
@@ -145,6 +149,8 @@ export function useTunnel(
     tunnelStatus,
     showTunnelModal,
     setShowTunnelModal,
+    showManagerModal,
+    setShowManagerModal,
     tunnelToken,
     setTunnelToken,
     tunnelLoading,

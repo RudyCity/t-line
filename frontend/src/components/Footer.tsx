@@ -21,7 +21,8 @@ export interface FooterProps {
   tunnelStatus: MultiTunnelStatus;
   tunnelLoading: { tline: boolean; custom: boolean };
   handleStartTunnel: (target: 'tline' | 'custom', type: 'quick' | 'token', customPort?: number) => void;
-  handleStopTunnel: (target: 'tline' | 'custom') => void;
+  handleStopTunnel: (target: 'tline' | 'custom', port?: number) => void;
+  onManagePortsClick: () => void;
   activeTabType?: 'terminal' | 'file' | 'diff' | 'grid' | 'browser' | 'agent' | null;
   activeTabPath?: string;
   appVersion?: string;
@@ -37,6 +38,7 @@ export function Footer({
   tunnelStatus,
   handleStartTunnel,
   handleStopTunnel,
+  onManagePortsClick,
   tunnelLoading,
   activeTabType,
   activeTabPath,
@@ -46,27 +48,14 @@ export function Footer({
   systemStats,
   onBranchClick
 }: FooterProps): React.JSX.Element {
-  const [tlineCopied, setTlineCopied] = React.useState(false);
-  const [customCopied, setCustomCopied] = React.useState(false);
-  const [customPortVal, setCustomPortVal] = React.useState<string>('8000');
+  const [copied, setCopied] = React.useState(false);
 
-  const handleCopyTline = async (url: string | null) => {
+  const handleCopy = async (url: string | null) => {
     if (!url) return;
     try {
       await navigator.clipboard.writeText(url);
-      setTlineCopied(true);
-      setTimeout(() => setTlineCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
-    }
-  };
-
-  const handleCopyCustom = async (url: string | null) => {
-    if (!url) return;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCustomCopied(true);
-      setTimeout(() => setCustomCopied(false), 2000);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy text: ', err);
     }
@@ -426,14 +415,14 @@ export function Footer({
                   <ExternalLink size={9} />
                 </a>
                 <button 
-                  onClick={() => handleCopyTline(tunnelStatus.tline.url)}
+                  onClick={() => handleCopy(tunnelStatus.tline.url)}
                   className="p-0.5 rounded transition-colors duration-150 flex items-center justify-center cursor-pointer"
                   style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
                   onMouseOver={(e) => e.currentTarget.style.color = 'var(--color-primary)'}
                   onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
                   title="Copy Tunnel URL"
                 >
-                  {tlineCopied ? (
+                  {copied ? (
                     <Check size={9} className="text-emerald-400" />
                   ) : (
                     <Copy size={9} />
@@ -499,160 +488,33 @@ export function Footer({
         {/* Divider */}
         <div className="w-px h-3.5 bg-neutral-800 self-center" />
 
-        {/* --- Port Tunnel Section --- */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            <span className="text-[10px] hidden md:inline-block font-semibold" style={{ color: 'var(--text-muted)' }}>Port:</span>
-            <input
-              type="number"
-              placeholder="8000"
-              value={customPortVal}
-              onChange={(e) => setCustomPortVal(e.target.value)}
-              disabled={tunnelStatus.custom.active || tunnelLoading.custom}
-              className="w-11 px-1 py-0.5 text-[9px] font-semibold text-center border rounded transition-all duration-150 focus:outline-none focus:border-purple-500"
-              style={{
-                backgroundColor: 'color-mix(in srgb, var(--bg-main) 60%, transparent)',
-                borderColor: 'var(--border-color)',
-                color: 'var(--text-main)'
-              }}
-            />
-          </div>
-
-          <div className="flex items-center gap-1">
+        {/* Port Tunnels Modal Trigger */}
+        <button
+          onClick={onManagePortsClick}
+          className="flex items-center gap-1.5 px-2 py-0.5 rounded border text-[10px] font-medium transition-all duration-150 hover:-translate-y-[0.5px] active:translate-y-0 cursor-pointer"
+          style={{
+            backgroundColor: tunnelStatus.customs && tunnelStatus.customs.length > 0 
+              ? 'rgba(168, 85, 247, 0.08)' 
+              : 'color-mix(in srgb, var(--bg-main) 30%, transparent)',
+            borderColor: tunnelStatus.customs && tunnelStatus.customs.length > 0 
+              ? 'rgba(168, 85, 247, 0.25)' 
+              : 'var(--border-color)',
+            color: tunnelStatus.customs && tunnelStatus.customs.length > 0 
+              ? '#c084fc' 
+              : 'var(--text-main)'
+          }}
+        >
+          <Globe size={10} style={{ color: tunnelStatus.customs && tunnelStatus.customs.length > 0 ? '#c084fc' : 'var(--text-muted)' }} />
+          <span>Port Tunnels</span>
+          {tunnelStatus.customs && tunnelStatus.customs.length > 0 && (
             <span 
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-mono border"
-              style={{
-                backgroundColor: tunnelLoading.custom 
-                  ? 'rgba(14, 165, 233, 0.08)' 
-                  : (tunnelStatus.custom.active 
-                      ? 'rgba(16, 185, 129, 0.08)' 
-                      : 'color-mix(in srgb, var(--bg-main) 60%, transparent)'),
-                borderColor: tunnelLoading.custom 
-                  ? 'rgba(14, 165, 233, 0.25)' 
-                  : (tunnelStatus.custom.active 
-                      ? 'rgba(16, 185, 129, 0.25)' 
-                      : 'var(--border-color)'),
-                color: tunnelLoading.custom 
-                  ? '#38bdf8' 
-                  : (tunnelStatus.custom.active 
-                      ? '#10b981' 
-                      : 'var(--text-muted)')
-              }}
+              className="ml-0.5 px-1 py-0.1 text-[8px] font-bold rounded-full bg-purple-500 text-white font-mono leading-none flex items-center justify-center"
+              style={{ fontSize: '8px', minWidth: '12px', height: '12px' }}
             >
-              {tunnelLoading.custom ? (
-                <span className="h-1 w-1 rounded-full border border-sky-400/30 border-t-sky-400 animate-spin" />
-              ) : (
-                <span 
-                  className="h-1 w-1 rounded-full" 
-                  style={{
-                    backgroundColor: tunnelStatus.custom.active ? '#10b981' : 'var(--text-muted)',
-                    boxShadow: tunnelStatus.custom.active ? '0 0 6px #10b981' : 'none'
-                  }}
-                />
-              )}
-              <span className="font-semibold text-[9px]">
-                {tunnelLoading.custom 
-                  ? (tunnelStatus.custom.active ? 'Stopping...' : 'Starting...') 
-                  : (tunnelStatus.custom.active ? 'Active' : 'Inactive')}
-              </span>
+              {tunnelStatus.customs.length}
             </span>
-          </div>
-
-          {/* Active Tunnel URL Info */}
-          {tunnelStatus.custom.active && tunnelStatus.custom.url && (
-            <div 
-              className="flex items-center gap-1 border px-1.5 py-0.5 rounded text-[9px] font-mono shadow-[0_0_8px_rgba(14,165,233,0.05)]"
-              style={{
-                backgroundColor: 'rgba(14, 165, 233, 0.08)',
-                borderColor: 'rgba(14, 165, 233, 0.25)',
-                color: '#38bdf8'
-              }}
-            >
-              <Globe size={9} className="animate-pulse" style={{ color: '#38bdf8' }} />
-              <span className="max-w-[100px] truncate" title={tunnelStatus.custom.url}>
-                {tunnelStatus.custom.url.replace(/^https?:\/\//, '')}
-              </span>
-              
-              <div className="w-px h-2" style={{ backgroundColor: 'rgba(14, 165, 233, 0.25)' }} />
-              
-              <div className="flex items-center gap-0.5">
-                <a 
-                  href={tunnelStatus.custom.url} 
-                  target="_blank" 
-                  rel="noreferrer" 
-                  className="p-0.5 rounded transition-colors duration-150 flex items-center justify-center"
-                  style={{ color: 'var(--text-muted)' }}
-                  onMouseOver={(e) => e.currentTarget.style.color = '#38bdf8'}
-                  onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                  title="Open Tunnel URL"
-                >
-                  <ExternalLink size={9} />
-                </a>
-                <button 
-                  onClick={() => handleCopyCustom(tunnelStatus.custom.url)}
-                  className="p-0.5 rounded transition-colors duration-150 flex items-center justify-center cursor-pointer"
-                  style={{ color: 'var(--text-muted)', background: 'none', border: 'none' }}
-                  onMouseOver={(e) => e.currentTarget.style.color = 'var(--color-primary)'}
-                  onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                  title="Copy Tunnel URL"
-                >
-                  {customCopied ? (
-                    <Check size={9} className="text-emerald-400" />
-                  ) : (
-                    <Copy size={9} />
-                  )}
-                </button>
-              </div>
-            </div>
           )}
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-1">
-            {tunnelStatus.custom.active ? (
-              <button 
-                onClick={() => handleStopTunnel('custom')}
-                disabled={tunnelLoading.custom}
-                className={`px-1.5 py-0.5 rounded border border-red-500/25 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-[9px] font-medium transition-all duration-150 ${
-                  tunnelLoading.custom ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                }`}
-              >
-                Stop
-              </button>
-            ) : (
-              <>
-                <button 
-                  onClick={() => {
-                    const p = parseInt(customPortVal) || 8000;
-                    handleStartTunnel('custom', 'quick', p);
-                  }}
-                  disabled={tunnelLoading.custom || !customPortVal}
-                  className={`px-1.5 py-0.5 rounded border border-purple-500/25 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 hover:text-purple-200 text-[9px] font-medium transition-all duration-150 ${
-                    tunnelLoading.custom || !customPortVal ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                  }`}
-                >
-                  Quick
-                </button>
-                <button 
-                  onClick={() => {
-                    const p = parseInt(customPortVal) || 8000;
-                    handleStartTunnel('custom', 'token', p);
-                  }}
-                  disabled={tunnelLoading.custom || !customPortVal}
-                  className={`px-1.5 py-0.5 rounded border text-[9px] font-medium transition-all duration-150 ${
-                    tunnelLoading.custom || !customPortVal ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                  }`}
-                  style={{
-                    backgroundColor: 'color-mix(in srgb, var(--bg-main) 30%, transparent)',
-                    borderColor: 'var(--border-color)',
-                    color: 'var(--text-main)'
-                  }}
-                >
-                  Custom
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+        </button>
       </div>
     </footer>
     <Toast />

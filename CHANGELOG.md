@@ -2,6 +2,18 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.648] - 2026-07-24
+
+### Feature & UX — Multiple Concurrent Port Tunneling with Management Modal
+- **Multiple Custom Port Tunnels**:
+  - Replaced the single custom port tunnel implementation in [tunnelManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/tunnelManager.ts) with a `Map<number, ActiveTunnel>` structure, enabling developers to expose multiple concurrent ports (e.g. `3000`, `8080`, `5000` etc.) to the internet simultaneously.
+  - Expose independent lifecycles for each port tunnel via `/api/tunnel/start` and `/api/tunnel/stop` endpoints.
+- **Port Tunnels Manager Modal**:
+  - Introduced `PortTunnelsManagerModal` in [Modals.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/Modals.tsx) that shows all active custom tunnels in a clean, scrollable layout with individual Open, Copy, and Stop controls.
+  - Exposed starting controls in the modal for both quick temporary tunnels and named Cloudflare tokens.
+- **Footer Count Badge indicator**:
+  - Replaced the wide inline custom port form in [Footer.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/Footer.tsx) with a single, space-efficient `Port Tunnels` button that displays a reactive active count badge (e.g. `Port Tunnels [2]`).
+
 ## [1.3.647] - 2026-07-23
 
 ### Feature & UX — Concurrent Specific Port Tunneling Support

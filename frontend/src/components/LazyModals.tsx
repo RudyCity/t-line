@@ -39,3 +39,7 @@ export const LazySelectGridModal = lazy(() =>
 export const LazyBranchModal = lazy(() =>
   import('./BranchModal').then((module) => ({ default: module.BranchModal }))
 );
+
+export const LazyPortTunnelsManagerModal = lazy(() =>
+  import('./Modals').then((module) => ({ default: module.PortTunnelsManagerModal }))
+);

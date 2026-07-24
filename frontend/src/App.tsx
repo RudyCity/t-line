@@ -29,7 +29,7 @@ import { DiffViewerTab } from './components/DiffViewerTab';
 import { TerminalGridTab } from './components/TerminalGridTab';
 import BrowserTab from './components/BrowserTab';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
-import { LazyWorkspaceAddModal as WorkspaceAddModal, LazyWorktreeAddModal as WorktreeAddModal, LazyTunnelSetupModal as TunnelSetupModal, LazySettingsModal as SettingsModal, LazyShortcutHelpModal as ShortcutHelpModal, LazyConfirmModal as ConfirmModal, LazyWorkspaceEditModal as WorkspaceEditModal, LazySavePromptModal as SavePromptModal, LazySelectGridModal as SelectGridModal } from './components/LazyModals';
+import { LazyWorkspaceAddModal as WorkspaceAddModal, LazyWorktreeAddModal as WorktreeAddModal, LazyTunnelSetupModal as TunnelSetupModal, LazySettingsModal as SettingsModal, LazyShortcutHelpModal as ShortcutHelpModal, LazyConfirmModal as ConfirmModal, LazyWorkspaceEditModal as WorkspaceEditModal, LazySavePromptModal as SavePromptModal, LazySelectGridModal as SelectGridModal, LazyPortTunnelsManagerModal as PortTunnelsManagerModal } from './components/LazyModals';
 import { SuperAgentConsole } from './components/SuperAgentConsole';
 
 interface SavedPrompt {
@@ -277,6 +277,8 @@ export default function App() {
     tunnelStatus,
     showTunnelModal,
     setShowTunnelModal,
+    showManagerModal,
+    setShowManagerModal,
     tunnelToken,
     setTunnelToken,
     tunnelLoading,
@@ -2552,6 +2554,15 @@ export default function App() {
           loading={tunnelLoading[tunnelTarget]}
         />
 
+        <PortTunnelsManagerModal
+          show={showManagerModal}
+          onClose={() => setShowManagerModal(false)}
+          tunnelStatus={tunnelStatus}
+          tunnelLoading={tunnelLoading}
+          handleStartTunnel={handleStartTunnel}
+          handleStopTunnel={handleStopTunnel}
+        />
+
         <SettingsModal
           show={showSettingsModal}
           onClose={() => setShowSettingsModal(false)}
@@ -2646,6 +2657,7 @@ export default function App() {
         tunnelLoading={tunnelLoading}
         handleStartTunnel={handleStartTunnel}
         handleStopTunnel={handleStopTunnel}
+        onManagePortsClick={() => setShowManagerModal(true)}
         activeTabType={tabs.find(t => t.id === activeTabId)?.type || null}
         activeTabPath={getActiveTabPath()}
         appVersion={appVersion}

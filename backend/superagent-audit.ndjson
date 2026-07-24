@@ -7018,3 +7018,27 @@
 {"timestamp":"2026-07-23T06:49:35.436Z","type":"agent_event","data":{"type":"agent_event","event":{"type":"done"},"sessionId":"session_1784786153906","workspace":"D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"}}
 {"timestamp":"2026-07-23T06:49:35.437Z","type":"agent_event","data":{"type":"agent_event","event":{"type":"done"},"sessionId":"session_1784786153906","workspace":"D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"}}
 {"timestamp":"2026-07-23T06:49:35.437Z","type":"agent_event","data":{"type":"agent_event","event":{"type":"done"},"sessionId":"session_1784786153906","workspace":"D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"}}
+{"timestamp":"2026-07-24T03:17:21.237Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:21.244Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:21.244Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:21.371Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:21.404Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:21.488Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:21.882Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:21.886Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:21.888Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:21.891Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:21.891Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:21.891Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:22.232Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:22.289Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:22.321Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:22.321Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:22.369Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:22.369Z","type":"system_error","data":{"message":"Failed to connect to SuperAgent server","error":"socket hang up"}}
+{"timestamp":"2026-07-24T03:17:37.352Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"}}
+{"timestamp":"2026-07-24T03:17:37.381Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"}}
+{"timestamp":"2026-07-24T03:17:37.395Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"}}
+{"timestamp":"2026-07-24T03:17:37.396Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"}}
+{"timestamp":"2026-07-24T03:17:37.440Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"}}
+{"timestamp":"2026-07-24T03:17:37.443Z","type":"system","data":{"message":"Connected to local SuperAgent SSE events","workspace":"D:\\backup from pc asus\\Documents Development\\UB\\system-penilaian-terpadu"}}
