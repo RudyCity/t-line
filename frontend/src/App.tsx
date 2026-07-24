@@ -1519,9 +1519,16 @@ export default function App() {
       <div className={`app-container theme-${theme} h-screen w-screen flex flex-col overflow-hidden`}>
         {/* Custom Header for Detached Window */}
         <div 
-          className="top-bar flex items-center justify-between shrink-0 select-none" 
+          className={`top-bar flex items-center justify-between shrink-0 select-none ${((window as any).electron || (window as any).__TAURI__) ? 'has-window-controls' : ''}`}
           data-tauri-drag-region 
-          style={{ height: '36px', minHeight: '36px', borderBottom: '1px solid var(--border-color)', padding: '0 12px', background: 'var(--bg-sidebar)' }}
+          style={{ 
+            height: '36px', 
+            minHeight: '36px', 
+            borderBottom: '1px solid var(--border-color)', 
+            padding: ((window as any).electron || (window as any).__TAURI__) ? '0 138px 0 12px' : '0 12px', 
+            background: 'var(--bg-sidebar)',
+            position: 'relative'
+          }}
         >
           <div className="flex items-center gap-2">
             {detachedTab.type === 'file' ? (
@@ -1923,7 +1930,10 @@ export default function App() {
       <div className="main-panel">
         
         {/* Topbar */}
-        <div className="top-bar flex items-center justify-between" data-tauri-drag-region>
+        <div 
+          className={`top-bar flex items-center justify-between ${((window as any).electron || (window as any).__TAURI__) ? 'has-window-controls' : ''}`} 
+          data-tauri-drag-region
+        >
           <div className="top-bar-info flex items-center gap-4 shrink-0">
             <button 
               className="action-btn" 

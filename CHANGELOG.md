@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.649] - 2026-07-24
+
+### UI/UX — Absolute Alignment for Top-Right Window Controls
+- **Snapping Window Controls to Corner**:
+  - Updated window control buttons (minimize, maximize, close) in [layout.css](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/layout.css) to snap perfectly to the absolute top-right corner of the application window, extending them to the full height of the header for better desktop integration.
+  - Adjusted button dimensions to standard 46px width, removed border-radius, and centered the icons inside.
+  - Added dynamic `has-window-controls` layout class to top-bars in [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx) to dynamically adjust padding when window controls are present, avoiding overlaps.
+  - Refactored the titlebar buttons in [error.html](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/public/error.html) to also snap and stretch for a seamless offline status layout.
+
 ## [1.3.648] - 2026-07-24
 
 ### Feature & UX — Multiple Concurrent Port Tunneling with Management Modal
