@@ -1,6 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
-import { RefreshCw, Shield, Folder, Sparkles, Activity, Settings, History, Terminal, ArrowDown } from 'lucide-react';
-import { getRuntimeSearchParams } from '../utils/runtimeQuery';
+import React, { useState, useEffect, useRef } from 'react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { SuperAgentAuditLogs } from './SuperAgentAuditLogs';
 import { PermissionCard, QuestionCard, PlanCard, PendingPermission, PendingQuestion } from './SuperAgentInteractiveCards';
@@ -17,6 +15,10 @@ import { SuperAgentHistorySidebar } from './SuperAgentHistorySidebar';
 import { useSuperAgentSessions, isSystemNoiseMsg } from './useSuperAgentSessions';
 import { useSidebarResize } from './useSidebarResize';
 import { getAuthHeader, readFileAsText, readFileAsDataURL, getMainModelLabel as getModelLabelUtil, handleAgentEventPayload, fetchCliPromptHistory } from './SuperAgentConsoleUtils';
+import { SuperAgentMemoryInspector } from './SuperAgentMemoryInspector';
+import { SkillMarketplaceInspector } from './SkillMarketplaceInspector';
+import { History, Folder, Terminal, Shield, Activity, Sparkles, Settings, RefreshCw, ArrowDown } from 'lucide-react';
+import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 
 interface SuperAgentConsoleProps {
   activeWorkspacePath?: string;
@@ -62,7 +64,7 @@ export function SuperAgentConsole({
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [ws, setWs] = useState<WebSocket | null>(null);
-  const [activeTab, setActiveTab] = useState<'console' | 'audit'>('console');
+  const [activeTab, setActiveTab] = useState<'console' | 'audit' | 'memory' | 'skills'>('console');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -852,14 +854,14 @@ export function SuperAgentConsole({
 
   return (
     <div className="flex flex-col h-full w-full bg-[var(--bg-main)] text-[var(--text-main)] overflow-hidden font-sans">
-      <div className="flex flex-wrap items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)] border-b border-[var(--border-color)] min-h-[48px] w-full shadow-md gap-3 select-none">
+      <div className="flex flex-wrap items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)] border-b border-[var(--border-color)] min-h-[48px] w-full  gap-3 select-none">
         {/* Left Column: History Toggle & Active Workspace Pill */}
         <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={() => setShowHistorySidebar(!showHistorySidebar)}
             className={`px-3 py-1.5 text-xs rounded-lg border transition flex items-center gap-1.5 cursor-pointer font-medium ${
               showHistorySidebar 
-                ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)] text-[var(--color-primary)] shadow-sm' 
+                ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)] text-[var(--color-primary)] ' 
                 : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-color)]'
             }`}
             title="Toggle Chat History Sidebar"
@@ -868,7 +870,7 @@ export function SuperAgentConsole({
             <span>History</span>
           </button>
           {workspace && (
-            <span className="text-[11px] px-2.5 py-1 rounded-lg border border-[var(--color-primary)]/30 bg-[var(--color-primary-glow)] text-[var(--color-primary)] font-mono flex items-center gap-1.5 max-w-[160px] sm:max-w-[220px] truncate shadow-xs">
+            <span className="text-[11px] px-2.5 py-1 rounded-lg border border-[var(--color-primary)]/30 bg-[var(--color-primary-glow)] text-[var(--color-primary)] font-mono flex items-center gap-1.5 max-w-[160px] sm:max-w-[220px] truncate ">
               <Folder className="w-3 h-3 text-[var(--color-primary)] flex-shrink-0" />
               <span className="truncate">{workspace.split(/[/\\]/).pop()}</span>
             </span>
@@ -877,12 +879,12 @@ export function SuperAgentConsole({
 
         {/* Center Column: Segmented Tab Switcher */}
         <div className="flex justify-center">
-          <div className="flex bg-[var(--bg-card)] rounded-xl p-1 border border-[var(--border-color)] shadow-inner gap-1">
+          <div className="flex bg-[var(--bg-card)] rounded-xl p-1 border border-[var(--border-color)]  gap-1">
             <button
               onClick={() => setActiveTab('console')}
               className={`flex items-center gap-1.5 px-3.5 py-1 text-xs rounded-lg transition font-medium cursor-pointer ${
                 activeTab === 'console' 
-                  ? 'bg-[var(--color-primary)] text-white font-semibold shadow-md' 
+                  ? 'bg-[var(--color-primary)] text-white font-semibold ' 
                   : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
               }`}
             >
@@ -893,12 +895,34 @@ export function SuperAgentConsole({
               onClick={() => setActiveTab('audit')}
               className={`flex items-center gap-1.5 px-3.5 py-1 text-xs rounded-lg transition font-medium cursor-pointer ${
                 activeTab === 'audit' 
-                  ? 'bg-[var(--color-primary)] text-white font-semibold shadow-md' 
+                  ? 'bg-[var(--color-primary)] text-white font-semibold ' 
                   : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
               }`}
             >
               <Shield className="w-3.5 h-3.5" />
               Audit Trails
+            </button>
+            <button
+              onClick={() => setActiveTab('memory')}
+              className={`flex items-center gap-1.5 px-3.5 py-1 text-xs rounded-lg transition font-medium cursor-pointer ${
+                activeTab === 'memory' 
+                  ? 'bg-[var(--color-primary)] text-white font-semibold ' 
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
+              }`}
+            >
+              <Activity className="w-3.5 h-3.5" />
+              Memory Inspector
+            </button>
+            <button
+              onClick={() => setActiveTab('skills')}
+              className={`flex items-center gap-1.5 px-3.5 py-1 text-xs rounded-lg transition font-medium cursor-pointer ${
+                activeTab === 'skills' 
+                  ? 'bg-[var(--color-primary)] text-white font-semibold ' 
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Skills
             </button>
           </div>
         </div>
@@ -909,7 +933,7 @@ export function SuperAgentConsole({
             onClick={() => setShowSidebar(!showSidebar)}
             className={`p-2 rounded-lg border transition flex items-center justify-center cursor-pointer ${
               showSidebar 
-                ? 'bg-emerald-950/70 border-emerald-700/80 text-emerald-300 shadow-sm' 
+                ? 'bg-emerald-950/70 border-emerald-700/80 text-emerald-300 ' 
                 : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-color)]'
             }`}
             title="Toggle Live Monitor Sidebar"
@@ -921,7 +945,7 @@ export function SuperAgentConsole({
             onClick={() => setShowSettingsMenu(!showSettingsMenu)}
             className={`p-2 rounded-lg border transition flex items-center justify-center cursor-pointer ${
               showSettingsMenu 
-                ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)] text-[var(--color-primary)] shadow-sm' 
+                ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)] text-[var(--color-primary)] ' 
                 : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-color)]'
             }`}
             title="SuperAgent v1.2.520 & App Settings"
@@ -1086,7 +1110,7 @@ export function SuperAgentConsole({
                 setShowScrollBottomBtn(false);
                 chatEndRef.current?.scrollIntoView({ behavior: 'instant' as ScrollBehavior });
               }}
-              className="absolute bottom-16 right-6 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--color-primary)] text-white shadow-lg text-xs font-sans hover:opacity-90 transition-all select-none cursor-pointer"
+              className="absolute bottom-16 right-6 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--color-primary)] text-white  text-xs font-sans hover:opacity-90 transition-all select-none cursor-pointer"
               title="Jump to latest message"
             >
               <ArrowDown className="w-3.5 h-3.5" />
@@ -1164,8 +1188,16 @@ export function SuperAgentConsole({
             <div className="fixed inset-0 z-50 cursor-col-resize select-none bg-transparent" />
           )}
         </div>
-      ) : (
+      ) : activeTab === 'audit' ? (
         <SuperAgentAuditLogs getAuthHeader={getAuthHeader} />
+      ) : activeTab === 'memory' ? (
+        <div className="flex-1 p-4 overflow-hidden">
+          <SuperAgentMemoryInspector workspacePath={workspace} />
+        </div>
+      ) : (
+        <div className="flex-1 p-4 overflow-hidden">
+          <SkillMarketplaceInspector workspacePath={workspace} />
+        </div>
       )}
 
       {/* Subagent / Process Live Terminal Output Modal */}

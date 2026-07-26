@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.650] - 2026-07-26
+
+### Fix & Refactoring — SuperAgent Console Hook & Icon Imports
+- **React Hooks Import**: Fixed a runtime `ReferenceError` where `useState` was not defined in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) by properly importing `React, { useState, useEffect, useRef }` from `'react'`.
+- **Lucide Icons & Query Utils**: Fixed missing icon imports (`History`, `Folder`, `Terminal`, `Shield`, `Activity`, `Sparkles`, `Settings`, `RefreshCw`, `ArrowDown`) and missing `getRuntimeSearchParams` utility import in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx).
+- **TypeScript Type Cleanup**: Cleaned up unused props in [SuperAgentMessageList.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentMessageList.tsx) and unused imports in [SkillMarketplaceInspector.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SkillMarketplaceInspector.tsx) and [SuperAgentMemoryInspector.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentMemoryInspector.tsx) to achieve a clean production build.
+
 ## [1.3.649] - 2026-07-24
 
 ### UI/UX — Absolute Alignment for Top-Right Window Controls
