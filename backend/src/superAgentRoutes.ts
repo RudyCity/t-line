@@ -1,219 +1,103 @@
 import { Router } from 'express';
 import http from 'http';
 import { authMiddleware } from './auth';
-import { 
-  getAuditLogs, 
-  getAuditStats,
-  clearAuditLogs, 
-  getCliPromptHistory, 
-  saveCliPromptHistory,
-  sendSuperAgentRequest
-} from './superAgentBridge';
-import {
-  loadMergedPresets,
-  setActivePreset,
-  saveProviderProfile,
-  deleteProviderProfile,
-  setActiveProviderProfile,
-  getProviderModels,
-  saveCustomPreset,
-  deleteCustomPreset,
-  updateSystemSettings,
-  getMcpServers,
-  saveMcpServer,
-  reloadMcpServers,
-  deleteMcpServer,
-  addTrustedDirectoryViaServer,
-  removeTrustedDirectory,
-  exportSessionContent,
-  importSessionData
-} from './presetUtils';
-import {
-  getWorkspaceSessions,
-  getSessionMessages,
-  saveWorkspaceSession,
-  deleteWorkspaceSession
-} from './sessionManager';
+import { sendSuperAgentRequest } from './superAgentBridge';
 
 const router = Router();
 
 // Apply authMiddleware globally to all routes in this router
 router.use(authMiddleware);
 
-// Audit logs routes
-router.get('/audit-logs', (req, res) => {
-  try {
-    const type = req.query.type as string | undefined;
-    const search = req.query.search as string | undefined;
-    const workspace = req.query.workspace as string | undefined;
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
-    const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
-
-    const result = getAuditLogs({ type, search, workspace, limit, offset });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: 'Failed to read audit logs' });
-  }
-});
-
-router.get('/audit-logs/stats', (_req, res) => {
-  try {
-    res.json(getAuditStats());
-  } catch (e) {
-    res.status(500).json({ error: 'Failed to compute audit stats' });
-  }
-});
-
-router.delete('/audit-logs', (req, res) => {
-  try {
-    clearAuditLogs();
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: 'Failed to clear audit logs' });
-  }
-});
-
-// History routes
-router.get('/history', async (req, res) => {
-  try {
-    const history = await getCliPromptHistory();
-    res.json({ history });
-  } catch (e: any) {
-    res.status(500).json({ error: 'Failed to read CLI history: ' + e.message });
-  }
-});
-
-router.post('/history', async (req, res) => {
-  const { text } = req.body;
-  if (!text) {
-    return res.status(400).json({ error: 'Prompt text is required' });
-  }
-  try {
-    await saveCliPromptHistory(text);
-    res.json({ success: true });
-  } catch (e: any) {
-    res.status(500).json({ error: 'Failed to save CLI history: ' + e.message });
-  }
-});
-
-// Config & preset routes
-router.get('/config', async (_req, res) => {
-  try {
-    const data = await loadMergedPresets();
-    res.json(data);
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to read preset config: ' + err.message });
-  }
-});
-
-router.post('/config/active-preset', async (req, res) => {
-  const { mode, presetId } = req.body;
-  if (!mode || !presetId) {
-    return res.status(400).json({ error: 'Mode and presetId are required' });
-  }
-  try {
-    const result = await setActivePreset(mode, presetId);
-    res.json({ success: true, ...result });
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to update active preset: ' + err.message });
-  }
-});
-
-router.post('/config/provider', async (req, res) => {
-  const { provider } = req.body;
-  if (!provider || !provider.id || !provider.name || !provider.type) {
-    return res.status(400).json({ error: 'Provider ID, name, and type are required' });
-  }
-  try {
-    const result = await saveProviderProfile(provider);
-    res.json({ success: true, ...result });
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to save provider profile: ' + err.message });
-  }
-});
-
-router.delete('/config/provider/:id', async (req, res) => {
-  const providerId = req.params.id;
-  if (!providerId) {
-    return res.status(400).json({ error: 'Provider ID is required' });
-  }
-  try {
-    const result = await deleteProviderProfile(providerId);
-    res.json({ success: true, ...result });
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to delete provider profile: ' + err.message });
-  }
-});
-
-router.post('/config/active-provider', async (req, res) => {
-  const { providerId } = req.body;
-  if (!providerId) {
-    return res.status(400).json({ error: 'Provider ID is required' });
-  }
-  try {
-    const result = await setActiveProviderProfile(providerId);
-    res.json({ success: true, ...result });
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to update active provider: ' + err.message });
-  }
-});
-
-router.get('/config/provider-models', async (req, res) => {
-  const providerId = (req.query.providerId as string) || '';
-  try {
-    const data = await getProviderModels(providerId);
-    res.json(data);
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to fetch provider models: ' + err.message });
-  }
-});
-
-router.post('/config/preset', async (req, res) => {
-  const { mode, preset } = req.body;
-  if (!mode || !preset || !preset.name) {
-    return res.status(400).json({ error: 'Mode and preset name are required' });
-  }
-  try {
-    const data = await saveCustomPreset(mode as 'single' | 'multi', preset);
-    res.json({ success: true, ...data });
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to save custom preset: ' + err.message });
-  }
-});
-
-router.delete('/config/preset/:mode/:id', async (req, res) => {
-  const { mode, id } = req.params;
-  if (!mode || !id) {
-    return res.status(400).json({ error: 'Mode and preset ID are required' });
-  }
-  try {
-    const data = await deleteCustomPreset(mode as 'single' | 'multi', id);
-    res.json({ success: true, ...data });
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to delete custom preset: ' + err.message });
-  }
-});
-
-// Helper for forwarding GET requests to SuperAgent HTTP Server (port 7888)
-function proxyToSuperAgent(pathName: string, fallback: any, workspace?: string, timeoutMs: number = 1500): Promise<any> {
+// Helper for forwarding requests to SuperAgent HTTP Server (port 7888)
+function proxyToSuperAgent(pathName: string, fallback: any, workspace?: string, timeoutMs: number = 1500, method: string = 'GET', body?: any): Promise<any> {
   return new Promise((resolve) => {
+    const separator = pathName.includes('?') ? '&' : '?';
     const url = workspace
-      ? `http://127.0.0.1:7888${pathName}?workspace=${encodeURIComponent(workspace)}`
+      ? `http://127.0.0.1:7888${pathName}${separator}workspace=${encodeURIComponent(workspace)}`
       : `http://127.0.0.1:7888${pathName}`;
     const headers: Record<string, string> = {};
     if (workspace) headers['x-workspace-path'] = workspace;
+    if (body) headers['Content-Type'] = 'application/json';
 
-    const req = http.get(url, { headers, timeout: timeoutMs }, (resp) => {
-      let body = '';
-      resp.on('data', chunk => { body += chunk; });
+    const postData = body ? JSON.stringify(body) : undefined;
+    if (postData) headers['Content-Length'] = String(Buffer.byteLength(postData));
+
+    const req = http.request(url, { method, headers, timeout: timeoutMs }, (resp) => {
+      let responseBody = '';
+      resp.on('data', chunk => { responseBody += chunk; });
       resp.on('end', () => {
-        try { resolve(JSON.parse(body)); } catch { resolve(fallback); }
+        try { resolve(JSON.parse(responseBody)); } catch { resolve(fallback); }
       });
     });
     req.on('error', () => resolve(fallback));
     req.on('timeout', () => { req.destroy(); resolve(fallback); });
+    if (postData) req.write(postData);
+    req.end();
   });
 }
+
+// History routes → proxy to SA
+router.get('/history', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/history', { history: [] }, workspace, 3000);
+  res.json(data);
+});
+
+router.post('/history', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/history', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+// Config & preset routes → proxy to SA
+router.get('/config', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/config', { error: 'SuperAgent config unavailable' }, workspace, 3000);
+  res.json(data);
+});
+
+router.post('/config/active-preset', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/config/active-preset', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+router.post('/config/provider', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/config/provider', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+router.delete('/config/provider/:id', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent(`/api/config/provider/${encodeURIComponent(req.params.id)}`, { success: false }, workspace, 3000, 'DELETE');
+  res.json(data);
+});
+
+router.post('/config/active-provider', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/config/active-provider', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+router.get('/config/provider-models', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const providerId = (req.query.providerId as string) || '';
+  const data = await proxyToSuperAgent(`/api/config/provider-models?providerId=${encodeURIComponent(providerId)}`, { models: [] }, workspace, 3000);
+  res.json(data);
+});
+
+router.post('/config/preset', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/config/preset', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+router.delete('/config/preset/:mode/:id', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent(`/api/config/preset/${encodeURIComponent(req.params.mode)}/${encodeURIComponent(req.params.id)}`, { success: false }, workspace, 3000, 'DELETE');
+  res.json(data);
+});
 
 // Running instances monitor
 router.get('/instances', async (_req, res) => {
@@ -246,178 +130,25 @@ router.post('/memory/save', async (req, res) => {
   }
 });
 
-// Installed Skills REST Proxy
-router.get('/skills', async (_req, res) => {
-  const data = await proxyToSuperAgent('/api/skills', { skills: [] });
-  res.json(data);
-});
-
-// Chat Session history sync endpoints (100% SuperAgent HTTP Server)
-router.get('/sessions', async (req, res) => {
-  const workspace = (req.query.workspace as string) || '';
-  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
-  const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
+router.delete('/memory/delete', async (req, res) => {
   try {
-    const result = await getWorkspaceSessions(workspace, limit, offset);
-    res.json(result);
+    const workspace = (req.headers['x-workspace-path'] as string) || (req.query.workspace as string) || '';
+    const data = await sendSuperAgentRequest('/api/memory/delete', req.body, workspace);
+    res.json(data);
   } catch (e: any) {
-    res.status(500).json({ error: 'Failed to read workspace sessions: ' + e.message });
+    res.status(500).json({ error: e.message || 'Failed to delete memory' });
   }
 });
 
-router.get('/sessions/:id', async (req, res) => {
-  const workspace = (req.query.workspace as string) || '';
-  const sessionId = req.params.id;
-  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
-  const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
-  try {
-    const result = await getSessionMessages(workspace, sessionId, limit, offset);
-    res.json(result);
-  } catch (e: any) {
-    res.status(500).json({ error: 'Failed to read session messages: ' + e.message });
-  }
-});
-
-router.post('/sessions', async (req, res) => {
-  const workspace = (req.query.workspace as string) || '';
-  const { session, messages } = req.body;
-  if (!session || !session.id || !Array.isArray(messages)) {
-    return res.status(400).json({ error: 'Session metadata and messages array are required' });
-  }
-  try {
-    await saveWorkspaceSession(workspace, session, messages);
-    res.json({ success: true });
-  } catch (e: any) {
-    res.status(500).json({ error: 'Failed to save workspace session: ' + e.message });
-  }
-});
-
-router.delete('/sessions/:id', async (req, res) => {
-  const workspace = (req.query.workspace as string) || '';
-  const sessionId = req.params.id;
-  try {
-    const success = await deleteWorkspaceSession(workspace, sessionId);
-    if (success) {
-      res.json({ success: true });
-    } else {
-      res.status(500).json({ error: 'Failed to delete workspace session' });
-    }
-  } catch (e: any) {
-    res.status(500).json({ error: 'Failed to delete workspace session: ' + e.message });
-  }
-});
-
-// Proxy: Get installed skills from SuperAgent for autocomplete
-router.get('/skills', async (_req, res) => {
-  const data = await proxyToSuperAgent('/api/skills', { skills: [], error: 'SuperAgent not running' }, undefined, 2000);
-  res.json(data);
-});
-
-// System settings update
-router.post('/config/settings', async (req, res) => {
-  const { settings } = req.body;
-  if (!settings || typeof settings !== 'object') {
-    return res.status(400).json({ error: 'settings object is required' });
-  }
-  try {
-    const result = await updateSystemSettings(settings);
-    res.json(result);
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to update settings: ' + err.message });
-  }
-});
-
-// MCP Server CRUD
-router.get('/config/mcp', async (_req, res) => {
-  try {
-    res.json(await getMcpServers());
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to fetch MCP servers: ' + err.message });
-  }
-});
-
-router.post('/config/mcp/reload', async (_req, res) => {
-  try {
-    res.json({ success: true, ...(await reloadMcpServers()) });
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to reload MCP servers: ' + err.message });
-  }
-});
-
-router.post('/config/mcp', async (req, res) => {
-  const { name, command, args, env } = req.body;
-  if (!name || !command) {
-    return res.status(400).json({ error: 'name and command are required' });
-  }
-  try {
-    res.json({ success: true, ...(await saveMcpServer({ name, command, args, env })) });
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to save MCP server: ' + err.message });
-  }
-});
-
-router.delete('/config/mcp/:name', async (req, res) => {
-  try {
-    res.json({ success: true, ...(await deleteMcpServer(req.params.name)) });
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to delete MCP server: ' + err.message });
-  }
-});
-
-// Session export / import
-router.get('/sessions/:id/export', async (req, res) => {
-  const format = (req.query.format as 'json' | 'markdown') || 'json';
-  try {
-    const content = await exportSessionContent(req.params.id, format);
-    res.setHeader('Content-Type', format === 'markdown' ? 'text/markdown; charset=utf-8' : 'application/json; charset=utf-8');
-    res.send(content);
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to export session: ' + err.message });
-  }
-});
-
-router.post('/sessions/import', async (req, res) => {
-  const { session, messages } = req.body;
-  if (!session?.id) {
-    return res.status(400).json({ error: 'session.id is required' });
-  }
-  try {
-    res.json(await importSessionData(session, messages || []));
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to import session: ' + err.message });
-  }
-});
-
-// Trusted directory management
-router.post('/config/trusted-directory', async (req, res) => {
-  const { path: dirPath } = req.body;
-  if (!dirPath) return res.status(400).json({ error: 'path is required' });
-  try {
-    res.json({ success: true, ...(await addTrustedDirectoryViaServer(dirPath)) });
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to add trusted directory: ' + err.message });
-  }
-});
-
-router.delete('/config/trusted-directory', async (req, res) => {
-  const { path: dirPath } = req.body;
-  if (!dirPath) return res.status(400).json({ error: 'path is required' });
-  try {
-    res.json({ success: true, ...(await removeTrustedDirectory(dirPath)) });
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to remove trusted directory: ' + err.message });
-  }
-});
-
-// Memory & Shared Memory Proxy
+// Memory generic get/post
 router.get('/memory', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';
   const query = (req.query.query as string) || '';
   const scope = (req.query.scope as string) || 'all';
   const data = await proxyToSuperAgent(
-    `/api/memory?workspace=${encodeURIComponent(workspace)}&query=${encodeURIComponent(query)}&scope=${encodeURIComponent(scope)}`,
+    `/api/memory?query=${encodeURIComponent(query)}&scope=${encodeURIComponent(scope)}`,
     { memory: [], sharedMemory: [], error: 'SuperAgent memory unavailable' },
-    (req.headers.authorization as string) || '',
+    workspace,
     3000
   );
   res.json(data);
@@ -426,25 +157,260 @@ router.get('/memory', async (req, res) => {
 router.post('/memory', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';
   const data = await proxyToSuperAgent(
-    `/api/memory?workspace=${encodeURIComponent(workspace)}`,
+    `/api/memory`,
     { success: false, error: 'SuperAgent memory unavailable' },
-    (req.headers.authorization as string) || '',
-    3000
+    workspace,
+    3000,
+    'POST',
+    req.body
   );
+  res.json(data);
+});
+
+// Installed Skills REST Proxy
+router.get('/skills', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/skills', { skills: [] }, workspace, 3000);
   res.json(data);
 });
 
 // Detailed Skills Proxy
 router.get('/skills/detail', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';
-  const data = await proxyToSuperAgent(
-    `/api/skills/detail?workspace=${encodeURIComponent(workspace)}`,
-    { skills: [], error: 'SuperAgent skills unavailable' },
-    (req.headers.authorization as string) || '',
-    3000
-  );
+  const data = await proxyToSuperAgent('/api/skills', { skills: [] }, workspace, 3000);
+  res.json(data);
+});
+
+// Session history → proxy to SA
+router.get('/sessions', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+  const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
+  let path = '/api/history/sessions';
+  const params: string[] = [];
+  if (limit) params.push(`limit=${limit}`);
+  if (offset) params.push(`offset=${offset}`);
+  if (params.length) path += '?' + params.join('&');
+  const data = await proxyToSuperAgent(path, { sessions: [] }, workspace, 3000);
+  res.json(data);
+});
+
+router.get('/sessions/:id', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const sessionId = encodeURIComponent(req.params.id);
+  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+  const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
+  let path = `/api/history/session/${sessionId}`;
+  const params: string[] = [];
+  if (limit) params.push(`limit=${limit}`);
+  if (offset) params.push(`offset=${offset}`);
+  if (params.length) path += '?' + params.join('&');
+  const data = await proxyToSuperAgent(path, { messages: [] }, workspace, 3000);
+  res.json(data);
+});
+
+router.post('/sessions', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/history/session', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+router.delete('/sessions/:id', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent(`/api/history/session/${encodeURIComponent(req.params.id)}`, { success: false }, workspace, 3000, 'DELETE');
+  res.json(data);
+});
+
+// Session export / import → proxy to SA
+router.get('/sessions/:id/export', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const format = (req.query.format as string) || 'json';
+  const data = await proxyToSuperAgent(`/api/history/session/${encodeURIComponent(req.params.id)}/export?format=${format}`, { error: 'Export unavailable' }, workspace, 5000);
+  res.json(data);
+});
+
+router.post('/sessions/import', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/history/import', { success: false }, workspace, 5000, 'POST', req.body);
+  res.json(data);
+});
+
+// System settings → proxy to SA (POST /api/config with settings)
+router.post('/config/settings', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/config', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+// MCP Server CRUD → proxy to SA
+router.get('/config/mcp', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/config/mcp', { servers: [] }, workspace, 3000);
+  res.json(data);
+});
+
+router.post('/config/mcp/reload', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/config/mcp/reload', { success: false }, workspace, 3000, 'POST', req.body || {});
+  res.json(data);
+});
+
+router.post('/config/mcp', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/config/mcp', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+router.delete('/config/mcp/:name', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent(`/api/config/mcp/${encodeURIComponent(req.params.name)}`, { success: false }, workspace, 3000, 'DELETE');
+  res.json(data);
+});
+
+// Trusted directory management → proxy to SA
+router.post('/config/trusted-directory', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/config/trusted-directory', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+router.delete('/config/trusted-directory', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/config/trusted-directory', { success: false }, workspace, 3000, 'DELETE', req.body);
+  res.json(data);
+});
+
+// System & Server Status → proxy to SA
+router.get('/status', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/status', { status: 'offline' }, workspace, 3000);
+  res.json(data);
+});
+
+// Workspaces List → proxy to SA
+router.get('/workspaces', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/workspaces', { workspaces: [] }, workspace, 3000);
+  res.json(data);
+});
+
+// Documents Management → proxy to SA
+router.get('/documents', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/documents', { documents: [] }, workspace, 3000);
+  res.json(data);
+});
+
+router.post('/documents', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/documents', { success: false }, workspace, 5000, 'POST', req.body);
+  res.json(data);
+});
+
+router.delete('/documents', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/documents', { success: false }, workspace, 5000, 'DELETE', req.body);
+  res.json(data);
+});
+
+// Git Changes / Diff Monitor → proxy to SA
+router.get('/git/changes', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/git/changes', { changes: [] }, workspace, 3000);
+  res.json(data);
+});
+
+// Prompt / Input History → proxy to SA
+router.get('/input-history', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/input-history', { history: [] }, workspace, 3000);
+  res.json(data);
+});
+
+router.post('/input-history', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/input-history', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+// Background Tasks Monitor & Kill → proxy to SA
+router.get('/background-tasks', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/background-tasks', { tasks: [] }, workspace, 3000);
+  res.json(data);
+});
+
+router.post('/background-tasks/kill', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/background-tasks/kill', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+// Workspace File Operations → proxy to SA
+router.get('/workspace/files', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/workspace/files', { files: [] }, workspace, 3000);
+  res.json(data);
+});
+
+router.get('/workspace/file/read', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const filePath = (req.query.path as string) || '';
+  const data = await proxyToSuperAgent(`/api/workspace/file/read?path=${encodeURIComponent(filePath)}`, { content: '' }, workspace, 5000);
+  res.json(data);
+});
+
+router.post('/workspace/file/open', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/workspace/file/open', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+// Advisor Status → proxy to SA
+router.get('/advisor/status', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/advisor/status', { active: false }, workspace, 3000);
+  res.json(data);
+});
+
+// Browser Automation: Macros → proxy to SA
+router.get('/browser/macros', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/browser/macros', { macros: [] }, workspace, 3000);
+  res.json(data);
+});
+
+router.post('/browser/macros', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/browser/macros', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+router.delete('/browser/macros', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/browser/macros', { success: false }, workspace, 3000, 'DELETE', req.body);
+  res.json(data);
+});
+
+// Browser Automation: Detect UI (UI-DETR-1) → proxy to SA
+router.post('/browser/detect-ui', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/browser/detect-ui', { detections: [] }, workspace, 10000, 'POST', req.body);
+  res.json(data);
+});
+
+// Browser Automation: Step Execution Result → proxy to SA
+router.post('/browser/result', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/browser/result', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+// Browser Automation: Update Chrome Instance State → proxy to SA
+router.post('/browser/update-instance', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/browser/update-instance', { success: false }, workspace, 3000, 'POST', req.body);
   res.json(data);
 });
 
 export default router;
-

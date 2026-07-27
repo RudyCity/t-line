@@ -49,17 +49,18 @@ SuperAgent HTTP Server (port 7888)
 ### Key Integration Files (t-line side)
 | File | Responsibility |
 |------|---------------|
-| `backend/src/superAgentBridge.ts` | Process lifecycle (auto-start/restart), SSE relay, WebSocket message dispatch, audit logging |
-| `backend/src/superAgentRoutes.ts` | REST endpoints: sessions, config/presets, provider profiles, history, audit logs, instances monitor |
-| `backend/src/sessionManager.ts` | Session persistence: workspace sessions, messages, input history |
-| `backend/src/presetUtils.ts` | Preset and provider profile CRUD — reads/writes `~/.superagent-r/model-config.json` |
+| `backend/src/superAgentBridge.ts` | Process lifecycle (auto-start/restart), SSE relay, WebSocket message dispatch |
+| `backend/src/superAgentRoutes.ts` | 100% Proxy REST API bridge to SuperAgent port 7888 (all 45 endpoints) |
+| `backend/src/sessionManager.ts` | Server-based prompt history fallback helpers |
+| `backend/src/presetUtils.ts` | Deprecated direct file access — all config CRUD is proxied via `superAgentRoutes.ts` |
 
 ### Key Integration Files (SuperAgent side)
 | File | Responsibility |
 |------|---------------|
-| `src/server.ts` | HTTP server: all `/api/*` endpoint handlers, session lifecycle (`activeSessions` map) |
+| `src/serverRoutes.ts` | HTTP server: all `/api/*` REST endpoint handlers (config, presets, memory, history, workspaces, browser, etc.) |
+| `src/server.ts` | HTTP server entrypoint, WebSocket real-time engine, session lifecycle (`activeSessions` map) |
 | `src/core/tools/state.ts` | Subagent/Superagent instance registry, event emitters |
-| `src/core/config.js` | Config helpers: `getSettings()`, `getConfiguredProviders()`, `getPresets()` etc. |
+| `src/core/config.js` | Config helpers: `loadModelConfig()`, `saveModelConfig()`, `getSettings()`, `getPresets()` etc. |
 
 ### Port & Process Convention
 - SuperAgent always runs its HTTP server on **port 7888** (hardcoded in both projects — do NOT change).
@@ -78,24 +79,25 @@ SuperAgent HTTP Server (port 7888)
 - **ECONNREFUSED on port 7888**: Reset `autoSuperAgentProcess` + `isStartingSuperAgent` to `null`/`false`, call `ensureSuperAgentServer()` to restart, re-initialize session, then retry the request. Do NOT propagate a raw `ECONNREFUSED` error to the frontend.
 - **HTML error pages**: Detect `<!doctype` / `<html>` in response body and convert to a descriptive JSON error. Never forward raw HTML to the frontend.
 - **Timeouts**: Wrap all HTTP proxy calls in try/catch with `timeoutMs`. Default 30s for chat, 2s for abort. On timeout, surface a clear user-facing message.
-- **Audit log**: All significant events (prompt sent, chat response, errors, permission responses, system start/stop) must be logged via `logSuperAgentEvent(type, data)`.
 
-### Config & Preset Rules (Cross-Project)
-- All model configs, presets, and provider profiles live in `~/.superagent-r/model-config.json` (owned by SuperAgent).
-- The t-line backend reads/writes this file **only** through `presetUtils.ts` helpers. Never access the file directly from routes.
-- When adding a new config field to SuperAgent's `model-config.json`, update `presetUtils.ts` on the t-line side to expose it via the REST API.
+
+### Config & Preset Rules (100% Server Proxy Architecture)
+- All model configs, presets, provider profiles, memory, history, and workspace files live in and are managed **exclusively by SuperAgent**.
+- The t-line backend **MUST NOT** read or write `~/.superagent-r/model-config.json` or session files directly from disk in route handlers.
+- All REST requests in `superAgentRoutes.ts` MUST be proxied to SuperAgent on port 7888 using `proxyToSuperAgent()` or `sendSuperAgentRequest()`.
+- SuperAgent HTTP server is the **Single Source of Truth** for all application state.
 
 ### Adding New SuperAgent API Endpoints (Cross-Project Workflow)
 When a new feature requires a new SuperAgent HTTP endpoint:
-1. **SuperAgent first**: Add the endpoint handler in `D:\backup from pc asus\Documents Development\superagent\src\server.ts`.
-2. **Bridge second**: Add the proxy call in `backend/src/superAgentBridge.ts` (use `sendSuperAgentRequest()`).
-3. **Route third**: Expose it via a new route in `backend/src/superAgentRoutes.ts` if REST access is needed, or dispatch it from the WebSocket `ws.on('message')` handler in `superAgentBridge.ts` if it is a real-time action.
-4. **Frontend last**: Update the frontend stores/hooks to call the new t-line REST or WebSocket endpoint.
-5. Run `bun run build` in **both** the t-line backend and the SuperAgent project after changes.
+1. **SuperAgent first**: Add the endpoint handler in `D:\backup from pc asus\Documents Development\superagent\src\serverRoutes.ts`.
+2. **Proxy in t-line**: Add the corresponding proxy handler in `backend/src/superAgentRoutes.ts` using `proxyToSuperAgent('/api/...', fallback, workspace, timeout, method, body)`.
+3. **Frontend last**: Call the `/api/superagent/...` route from frontend stores/hooks.
+4. Run `bun run build` in **both** `backend` and `superagent` to verify zero TypeScript errors.
 
 ### Forbidden Patterns
+- ❌ Do NOT read or write `~/.superagent-r/*` files directly inside `superAgentRoutes.ts`. Always proxy to SuperAgent port 7888.
 - ❌ Do NOT hardcode any SuperAgent HTTP calls outside of `superAgentBridge.ts` or `superAgentRoutes.ts`.
-- ❌ Do NOT use `process.env` to configure the SuperAgent port, model, or provider. Use `~/.superagent-r/model-config.json` helpers.
+- ❌ Do NOT use `process.env` to configure the SuperAgent port, model, or provider. Use SuperAgent's HTTP config endpoints.
 - ❌ Do NOT swallow ECONNREFUSED silently — always attempt one auto-restart before surfacing an error.
-- ❌ Do NOT add SuperAgent HTTP logic directly to `server.ts` of t-line; keep it isolated in the bridge/routes files.
+- ❌ Do NOT add SuperAgent HTTP logic directly to `server.ts` of t-line; keep it isolated in `superAgentRoutes.ts` and `superAgentBridge.ts`.
 - ❌ Do NOT modify SuperAgent's `activeSessions` map behavior without updating the session resolution logic in `superAgentBridge.ts` accordingly.

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
-import { SuperAgentAuditLogs } from './SuperAgentAuditLogs';
+
 import { PermissionCard, QuestionCard, PlanCard, PendingPermission, PendingQuestion } from './SuperAgentInteractiveCards';
 import { getSlashCommands, getSubCommands, SlashCommand } from './SuperAgentCommands';
 import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSidebar';
@@ -17,7 +17,7 @@ import { useSidebarResize } from './useSidebarResize';
 import { getAuthHeader, readFileAsText, readFileAsDataURL, getMainModelLabel as getModelLabelUtil, handleAgentEventPayload, fetchCliPromptHistory } from './SuperAgentConsoleUtils';
 import { SuperAgentMemoryInspector } from './SuperAgentMemoryInspector';
 import { SkillMarketplaceInspector } from './SkillMarketplaceInspector';
-import { History, Folder, Terminal, Shield, Activity, Sparkles, Settings, RefreshCw, ArrowDown } from 'lucide-react';
+import { History, Folder, Terminal, Activity, Sparkles, Settings, RefreshCw, ArrowDown } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 
 interface SuperAgentConsoleProps {
@@ -64,7 +64,7 @@ export function SuperAgentConsole({
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [ws, setWs] = useState<WebSocket | null>(null);
-  const [activeTab, setActiveTab] = useState<'console' | 'audit' | 'memory' | 'skills'>('console');
+  const [activeTab, setActiveTab] = useState<'console' | 'memory' | 'skills'>('console');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -891,17 +891,7 @@ export function SuperAgentConsole({
               <Terminal className="w-3.5 h-3.5" />
               Console
             </button>
-            <button
-              onClick={() => setActiveTab('audit')}
-              className={`flex items-center gap-1.5 px-3.5 py-1 text-xs rounded-lg transition font-medium cursor-pointer ${
-                activeTab === 'audit' 
-                  ? 'bg-[var(--color-primary)] text-white font-semibold ' 
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
-              }`}
-            >
-              <Shield className="w-3.5 h-3.5" />
-              Audit Trails
-            </button>
+
             <button
               onClick={() => setActiveTab('memory')}
               className={`flex items-center gap-1.5 px-3.5 py-1 text-xs rounded-lg transition font-medium cursor-pointer ${
@@ -975,8 +965,7 @@ export function SuperAgentConsole({
         </div>
       </div>
 
-      {activeTab === 'console' ? (
-        <div ref={mainConsoleRef} className="flex-1 flex overflow-hidden relative w-full">
+      <div className={`flex-1 flex overflow-hidden relative w-full ${activeTab === 'console' ? '' : 'hidden'}`} ref={mainConsoleRef}>
           {/* Left Resizable Chat History Sidebar */}
           {showHistorySidebar && (
             <div style={{ width: `${historyWidth}px` }} className="h-full shrink-0 relative min-w-[160px] max-w-[500px]">
@@ -1188,17 +1177,20 @@ export function SuperAgentConsole({
             <div className="fixed inset-0 z-50 cursor-col-resize select-none bg-transparent" />
           )}
         </div>
-      ) : activeTab === 'audit' ? (
-        <SuperAgentAuditLogs getAuthHeader={getAuthHeader} />
-      ) : activeTab === 'memory' ? (
-        <div className="flex-1 p-4 overflow-hidden">
-          <SuperAgentMemoryInspector workspacePath={workspace} />
+
+
+
+        <div className={`flex-1 flex flex-col overflow-hidden relative w-full ${activeTab === 'memory' ? '' : 'hidden'}`}>
+          <div className="flex-1 p-4 overflow-hidden">
+            <SuperAgentMemoryInspector workspacePath={workspace} getAuthHeader={getAuthHeader} />
+          </div>
         </div>
-      ) : (
-        <div className="flex-1 p-4 overflow-hidden">
-          <SkillMarketplaceInspector workspacePath={workspace} />
+
+        <div className={`flex-1 flex flex-col overflow-hidden relative w-full ${activeTab === 'skills' ? '' : 'hidden'}`}>
+          <div className="flex-1 p-4 overflow-hidden">
+            <SkillMarketplaceInspector workspacePath={workspace} getAuthHeader={getAuthHeader} />
+          </div>
         </div>
-      )}
 
       {/* Subagent / Process Live Terminal Output Modal */}
       {selectedSubagent && (

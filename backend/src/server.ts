@@ -36,7 +36,7 @@ import { closeSessionDb } from './sessionManager';
 
 dotenv.config();
 
-const AUDIT_FILE = path.join(process.cwd(), 'superagent-audit.json');
+
 
 // Override console methods to write logs to a file in os.homedir()
 const BACKEND_LOG_FILE = path.join(os.homedir(), '.tline-backend.log');
@@ -594,7 +594,7 @@ async function updateWorkspaceWatchers() {
             if (filename) {
               const normalizedFilename = filename.replace(/\\/g, '/');
               const parts = normalizedFilename.split('/');
-              if (['node_modules', 'dist', 'dist-exe', '.agents', 'superagent-audit.json'].some(p => parts.includes(p))) return;
+              if (['node_modules', 'dist', 'dist-exe', '.agents'].some(p => parts.includes(p))) return;
               if (parts.includes('.git')) {
                 const isGitTrigger = parts.includes('index') || parts.includes('HEAD') || parts.includes('refs');
                 if (!isGitTrigger) return;

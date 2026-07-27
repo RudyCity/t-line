@@ -223,6 +223,7 @@ export function getCleanUserText(rawText: string): string {
     const l = line.trim();
     if (!l) return false;
     if (l.startsWith('[RMemory') || l.startsWith('[TencentDB') || l.startsWith('[Emergency') || l.startsWith('[Context') || l.startsWith('[SYS]') || l.startsWith('[System') || l.startsWith('<relevant-memories>')) return false;
+    if (l.startsWith('IMPORTANT:') || l.startsWith('USER_REQUEST') || l.startsWith('<USER_REQUEST>') || l.startsWith('<user_request>')) return false;
     if (l.includes('Agent Memory Context') || l.includes('Emergency Summary') || l.includes('Context Restoration')) return false;
     return true;
   });
@@ -628,6 +629,9 @@ export function useSuperAgentSessions(workspace: string) {
 
     // Asynchronously fetch fresh session messages from backend server
     const result = await apiGetSessionMessages(workspace, id, PAGE_SIZE, 0);
+    // Guard against race condition: user switched session while network request was in-flight
+    if (activeSessionIdRef.current !== id) return;
+
     if (result && Array.isArray(result.messages) && result.messages.length > 0) {
       setMessages(result.messages);
       loadedMessagesSessionIdRef.current = id;

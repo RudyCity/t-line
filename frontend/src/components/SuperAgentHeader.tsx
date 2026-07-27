@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, Shield, Folder, Sparkles, Activity, Settings, History } from 'lucide-react';
+import { RefreshCw, Shield, Folder, Sparkles, Settings, History } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 
 interface SuperAgentHeaderProps {
@@ -14,7 +14,6 @@ interface SuperAgentHeaderProps {
   getMainModelLabel: (preset: any) => string;
   onOpenSettings: (tab?: 'login' | 'presets' | 'execution' | 'monitor') => void;
   onOpenHistory: () => void;
-  onOpenAuditLogs: () => void;
   onReconnect: () => void;
 }
 
@@ -30,7 +29,6 @@ export const SuperAgentHeader: React.FC<SuperAgentHeaderProps> = ({
   getMainModelLabel,
   onOpenSettings,
   onOpenHistory,
-  onOpenAuditLogs,
   onReconnect
 }) => {
   const currentPreset = (presets[agentMode] || []).find(
@@ -115,13 +113,7 @@ export const SuperAgentHeader: React.FC<SuperAgentHeaderProps> = ({
         >
           <History className="w-4 h-4" />
         </button>
-        <button
-          onClick={onOpenAuditLogs}
-          title="Audit Logs"
-          className="p-1.5 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-md transition-all"
-        >
-          <Activity className="w-4 h-4" />
-        </button>
+
         <button
           onClick={() => onOpenSettings('execution')}
           title="Execution Settings"

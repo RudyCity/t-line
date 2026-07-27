@@ -11,9 +11,10 @@ interface SkillItem {
 interface SkillMarketplaceInspectorProps {
   workspacePath: string;
   token?: string;
+  getAuthHeader?: () => Record<string, string>;
 }
 
-export const SkillMarketplaceInspector: React.FC<SkillMarketplaceInspectorProps> = ({ workspacePath, token }) => {
+export const SkillMarketplaceInspector: React.FC<SkillMarketplaceInspectorProps> = ({ workspacePath, token, getAuthHeader }) => {
   const [skills, setSkills] = useState<SkillItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,13 +23,20 @@ export const SkillMarketplaceInspector: React.FC<SkillMarketplaceInspectorProps>
     setLoading(true);
     setError(null);
     try {
-      const headers: Record<string, string> = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const headers: Record<string, string> = {
+        ...(getAuthHeader ? getAuthHeader() : {})
+      };
+      if (token && !headers['Authorization']) headers['Authorization'] = `Bearer ${token}`;
 
       const res = await fetch(`/api/superagent/skills/detail?workspace=${encodeURIComponent(workspacePath)}`, { headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setSkills(data.skills || []);
+      if (data.error && (!data.skills || data.skills.length === 0)) {
+        setError(data.error);
+        setSkills([]);
+      } else {
+        setSkills(Array.isArray(data.skills) ? data.skills : (Array.isArray(data) ? data : []));
+      }
     } catch (err: any) {
       setError(err.message || 'Gagal memuat daftar skill SuperAgent');
     } finally {

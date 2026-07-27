@@ -7,16 +7,11 @@ import WebSocket from 'ws';
 import { getInputHistory, saveInputHistory } from './sessionManager';
 import { loadMergedPresets } from './presetUtils';
 
-const AUDIT_FILE = path.join(process.cwd(), 'superagent-audit.ndjson');
-const AUDIT_MAX_BYTES = 2 * 1024 * 1024; // 2MB rotate threshold
-
-/**
- * High-frequency event types emitted on every streaming token — not useful in
- * the audit trail and would add huge I/O overhead if logged individually.
- */
-const AUDIT_SKIP_INNER_TYPES = new Set([
-  'text_delta', 'thought', 'reasoning', 'tool_start', 'tool_progress'
-]);
+// Logging helper for SuperAgent events
+function logSuperAgentEvent(type: string, data: any) {
+  const ts = new Date().toISOString();
+  console.log(`[SA:${type}] ${ts}`, JSON.stringify(data).slice(0, 500));
+}
 
 /** Delegates to SuperAgent server-based input history in sessionManager */
 export async function getCliPromptHistory(workspace?: string): Promise<string[]> {
@@ -28,136 +23,7 @@ export async function saveCliPromptHistory(prompt: string, workspace?: string): 
   await saveInputHistory(workspace || process.cwd(), prompt);
 }
 
-/**
- * Append a single NDJSON line to the audit log.
- * This replaces the old read-entire-file → parse → push → stringify-all → write-entire-file
- * pattern which was blocking the Node.js event loop on every streaming token.
- * Rotates by truncating to the last 500 lines when file exceeds AUDIT_MAX_BYTES.
- */
-export function logSuperAgentEvent(type: string, data: any) {
-  const entry = JSON.stringify({ timestamp: new Date().toISOString(), type, data }) + '\n';
-  fs.appendFile(AUDIT_FILE, entry, 'utf8', (err) => {
-    if (err) return;
-    fs.stat(AUDIT_FILE, (statErr, stats) => {
-      if (!statErr && stats.size > AUDIT_MAX_BYTES) {
-        fs.readFile(AUDIT_FILE, 'utf8', (readErr, content) => {
-          if (readErr) return;
-          const lines = content.split('\n').filter(Boolean);
-          fs.writeFile(AUDIT_FILE, lines.slice(-500).join('\n') + '\n', 'utf8', () => {});
-        });
-      }
-    });
-  });
-}
 
-/**
- * Read audit logs from NDJSON format with optional filtering, search, and pagination.
- */
-export function getAuditLogs(options?: {
-  type?: string;
-  search?: string;
-  workspace?: string;
-  limit?: number;
-  offset?: number;
-}): { logs: any[]; total: number } {
-  let logs: any[] = [];
-
-  if (!fs.existsSync(AUDIT_FILE)) {
-    const oldFile = AUDIT_FILE.replace('.ndjson', '.json');
-    if (fs.existsSync(oldFile)) {
-      try { logs = JSON.parse(fs.readFileSync(oldFile, 'utf8') || '[]'); } catch { logs = []; }
-    }
-  } else {
-    try {
-      const content = fs.readFileSync(AUDIT_FILE, 'utf8');
-      logs = content.split('\n').filter(Boolean).map(line => {
-        try { return JSON.parse(line); } catch { return null; }
-      }).filter(Boolean);
-    } catch {
-      logs = [];
-    }
-  }
-
-  // Reverse chronological order (latest first)
-  logs.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
-
-  if (options) {
-    if (options.type && options.type !== 'all') {
-      logs = logs.filter(item => item.type === options.type || (options.type === 'errors' && item.type.includes('error')));
-    }
-    if (options.workspace) {
-      logs = logs.filter(item => item.workspace === options.workspace || (item.data && item.data.workspace === options.workspace));
-    }
-    if (options.search) {
-      const query = options.search.toLowerCase();
-      logs = logs.filter(item => 
-        (item.type && item.type.toLowerCase().includes(query)) ||
-        JSON.stringify(item.data || {}).toLowerCase().includes(query)
-      );
-    }
-  }
-
-  const total = logs.length;
-  const offset = options?.offset || 0;
-  const limit = options?.limit && options.limit > 0 ? options.limit : total;
-
-  return {
-    logs: logs.slice(offset, offset + limit),
-    total
-  };
-}
-
-export function getAuditStats(): {
-  totalLogs: number;
-  byType: Record<string, number>;
-  totalErrors: number;
-  workspaces: string[];
-  last24hCount: number;
-} {
-  const { logs } = getAuditLogs();
-  const now = Date.now();
-  const oneDayMs = 24 * 60 * 60 * 1000;
-
-  const byType: Record<string, number> = {};
-  const workspacesSet = new Set<string>();
-  let totalErrors = 0;
-  let last24hCount = 0;
-
-  for (const item of logs) {
-    const type = item.type || 'unknown';
-    byType[type] = (byType[type] || 0) + 1;
-
-    if (type.includes('error')) {
-      totalErrors++;
-    }
-
-    const ws = item.workspace || (item.data && item.data.workspace);
-    if (ws && typeof ws === 'string') {
-      workspacesSet.add(ws);
-    }
-
-    const ts = new Date(item.timestamp || 0).getTime();
-    if (now - ts <= oneDayMs) {
-      last24hCount++;
-    }
-  }
-
-  return {
-    totalLogs: logs.length,
-    byType,
-    totalErrors,
-    workspaces: Array.from(workspacesSet),
-    last24hCount
-  };
-}
-
-export function clearAuditLogs() {
-  try {
-    fs.writeFileSync(AUDIT_FILE, '', 'utf8');
-  } catch (e) {
-    console.error('[WS-Agent] Failed to clear audit log:', e);
-  }
-}
 
 let autoSuperAgentProcess: any = null;
 let isStartingSuperAgent = false;
@@ -360,7 +226,6 @@ function spawnSuperAgentProcess(opts: {
       if (resolved) {
         // Post-startup crash — clear ref so next prompt triggers respawn
         autoSuperAgentProcess = null;
-        logSuperAgentEvent('system_error', { message: 'SuperAgent crashed post-startup', code, signal });
         return;
       }
       setTimeout(() => {
@@ -480,7 +345,6 @@ function ensureSuperAgentServer(
     }
 
     ws.send(JSON.stringify({ type: 'status', text: 'Auto-starting SuperAgent server on port 7888...' }));
-    logSuperAgentEvent('system', { message: 'Auto-starting SuperAgent server process', workspacePath, agentMode, customArgs });
 
     currentWorkspacePath = workspacePath;
     currentAgentMode = agentMode;
@@ -678,7 +542,6 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
       // Reset connectionAttempts on successful connection
       connectionAttempts = 0;
       ws.send(JSON.stringify({ type: 'status', text: `Connected to SuperAgent server (${path.basename(workspacePath)})` }));
-      logSuperAgentEvent('system', { message: 'Connected to local SuperAgent SSE events', workspace: workspacePath });
 
       // Disable Nagle algorithm on the SSE loopback socket.
       // Without this, TCP buffers small token packets for ~200ms before flushing,
@@ -702,22 +565,9 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
           // on every streaming token.
           ws.send(dataStr);
 
-          // Audit log: parse lazily only for non-noise events to avoid
-          // disk I/O on every text_delta / thought / tool_start token.
-          const isHighFreqToken = dataStr.includes('"text_delta"') || dataStr.includes('"reasoning"') || dataStr.includes('"thought"') || dataStr.includes('"tool_progress"');
-          if (isHighFreqToken && process.env.LOG_STREAM_RESPONSE !== 'true') {
-            continue;
-          }
-
-          try {
-            const event = JSON.parse(dataStr);
-            const innerType = event?.event?.type as string | undefined;
-            const isStreamingNoise = innerType !== undefined && AUDIT_SKIP_INNER_TYPES.has(innerType);
-            if (!isStreamingNoise) {
-              logSuperAgentEvent('agent_event', event);
-            }
-
-            if (process.env.LOG_STREAM_RESPONSE === 'true') {
+          if (process.env.LOG_STREAM_RESPONSE === 'true') {
+            try {
+              const event = JSON.parse(dataStr);
               if (event.type === 'agent_event' && event.event) {
                 const sub = event.event;
                 if (sub.type === 'text_delta') {
@@ -735,8 +585,8 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
               } else {
                 console.log(`\n[WS-Agent][Stream Event]`, JSON.stringify(event));
               }
-            }
-          } catch {}
+            } catch {}
+          }
         }
       });
 
@@ -750,7 +600,6 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
     });
 
     sseReq.on('error', (err: any) => {
-      logSuperAgentEvent('system_error', { message: 'Failed to connect to SuperAgent server', error: err.message });
       connectionAttempts++;
 
       if (connectionAttempts === 1 && !isClosed && ws.readyState === WebSocket.OPEN) {
