@@ -62,10 +62,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: t-line-v__VERSION__
+          tagName: v__VERSION__
           releaseName: 't-line v__VERSION__'
           releaseBody: 'Release version v__VERSION__'
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           projectPath: './desktop-tauri'
           args: --verbose
