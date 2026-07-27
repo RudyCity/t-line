@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.652] - 2026-07-26
+
+### Feature Expansion — SuperAgent Audit Intelligence & Telemetry Analytics
+- **Backend Audit Bridge**: Enhanced `getAuditLogs()` in `backend/src/superAgentBridge.ts` with multi-criteria filtering (`type`, `search`, `workspace`), pagination, and added `getAuditStats()` for telemetry aggregation.
+- **REST Proxy Routes**: Updated `GET /api/superagent/audit-logs` in `backend/src/superAgentRoutes.ts` with query parameter filtering and exposed `GET /api/superagent/audit-logs/stats` for real-time audit metrics.
+- **Frontend Audit Inspector**: Overhauled `SuperAgentAuditLogs.tsx` with top metric cards, date range filtering (`Today`, `24h`, `7d`), configurable live auto-poll intervals (`3s`, `5s`, `10s`), multi-format exports (`JSON` & `NDJSON`), and row pagination controls.
+
 ## [1.3.651] - 2026-07-26
 
 ### Fix & Refactoring — SuperAgent Memory POST Handler & Integration Proxy

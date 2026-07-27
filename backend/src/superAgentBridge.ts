@@ -51,27 +51,104 @@ export function logSuperAgentEvent(type: string, data: any) {
 }
 
 /**
- * Read audit logs from NDJSON format (one JSON object per line).
- * Falls back gracefully if the file still has the old JSON-array format.
+ * Read audit logs from NDJSON format with optional filtering, search, and pagination.
  */
-export function getAuditLogs(): any[] {
+export function getAuditLogs(options?: {
+  type?: string;
+  search?: string;
+  workspace?: string;
+  limit?: number;
+  offset?: number;
+}): { logs: any[]; total: number } {
+  let logs: any[] = [];
+
   if (!fs.existsSync(AUDIT_FILE)) {
-    // Try old .json file for backward compatibility during migration
     const oldFile = AUDIT_FILE.replace('.ndjson', '.json');
     if (fs.existsSync(oldFile)) {
-      try { return JSON.parse(fs.readFileSync(oldFile, 'utf8') || '[]'); } catch { return []; }
+      try { logs = JSON.parse(fs.readFileSync(oldFile, 'utf8') || '[]'); } catch { logs = []; }
     }
-    return [];
+  } else {
+    try {
+      const content = fs.readFileSync(AUDIT_FILE, 'utf8');
+      logs = content.split('\n').filter(Boolean).map(line => {
+        try { return JSON.parse(line); } catch { return null; }
+      }).filter(Boolean);
+    } catch {
+      logs = [];
+    }
   }
-  try {
-    const content = fs.readFileSync(AUDIT_FILE, 'utf8');
-    // Parse NDJSON: each non-empty line is a JSON object
-    return content.split('\n').filter(Boolean).map(line => {
-      try { return JSON.parse(line); } catch { return null; }
-    }).filter(Boolean);
-  } catch {
-    return [];
+
+  // Reverse chronological order (latest first)
+  logs.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+
+  if (options) {
+    if (options.type && options.type !== 'all') {
+      logs = logs.filter(item => item.type === options.type || (options.type === 'errors' && item.type.includes('error')));
+    }
+    if (options.workspace) {
+      logs = logs.filter(item => item.workspace === options.workspace || (item.data && item.data.workspace === options.workspace));
+    }
+    if (options.search) {
+      const query = options.search.toLowerCase();
+      logs = logs.filter(item => 
+        (item.type && item.type.toLowerCase().includes(query)) ||
+        JSON.stringify(item.data || {}).toLowerCase().includes(query)
+      );
+    }
   }
+
+  const total = logs.length;
+  const offset = options?.offset || 0;
+  const limit = options?.limit && options.limit > 0 ? options.limit : total;
+
+  return {
+    logs: logs.slice(offset, offset + limit),
+    total
+  };
+}
+
+export function getAuditStats(): {
+  totalLogs: number;
+  byType: Record<string, number>;
+  totalErrors: number;
+  workspaces: string[];
+  last24hCount: number;
+} {
+  const { logs } = getAuditLogs();
+  const now = Date.now();
+  const oneDayMs = 24 * 60 * 60 * 1000;
+
+  const byType: Record<string, number> = {};
+  const workspacesSet = new Set<string>();
+  let totalErrors = 0;
+  let last24hCount = 0;
+
+  for (const item of logs) {
+    const type = item.type || 'unknown';
+    byType[type] = (byType[type] || 0) + 1;
+
+    if (type.includes('error')) {
+      totalErrors++;
+    }
+
+    const ws = item.workspace || (item.data && item.data.workspace);
+    if (ws && typeof ws === 'string') {
+      workspacesSet.add(ws);
+    }
+
+    const ts = new Date(item.timestamp || 0).getTime();
+    if (now - ts <= oneDayMs) {
+      last24hCount++;
+    }
+  }
+
+  return {
+    totalLogs: logs.length,
+    byType,
+    totalErrors,
+    workspaces: Array.from(workspacesSet),
+    last24hCount
+  };
 }
 
 export function clearAuditLogs() {

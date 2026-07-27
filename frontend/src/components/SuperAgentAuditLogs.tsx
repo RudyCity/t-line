@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   RefreshCw, Trash2, Search, Download, Copy, Check, ChevronDown, ChevronRight,
   ChevronLeft, ChevronsLeft, ChevronsRight,
-  MessageSquare, ShieldCheck, Cpu, Bot, AlertTriangle, XCircle, FileText, Activity
+  MessageSquare, ShieldCheck, Cpu, Bot, AlertTriangle, XCircle, FileText, Activity,
+  Calendar, Layers, Clock, TrendingUp
 } from 'lucide-react';
 import { ConfirmModal } from './Modals';
 
@@ -10,6 +11,15 @@ interface AuditLog {
   timestamp: string;
   type: string;
   data: any;
+  workspace?: string;
+}
+
+interface AuditStats {
+  totalLogs: number;
+  byType: Record<string, number>;
+  totalErrors: number;
+  workspaces: string[];
+  last24hCount: number;
 }
 
 interface SuperAgentAuditLogsProps {
@@ -17,6 +27,8 @@ interface SuperAgentAuditLogsProps {
 }
 
 type FilterCategory = 'all' | 'prompts' | 'decisions' | 'agent' | 'system' | 'errors';
+type DateRangeOption = 'all' | 'today' | '24h' | '7d';
+type PollInterval = 0 | 3000 | 5000 | 10000;
 
 // Helper logic for log categorization & metadata
 const isDecisionLog = (type: string) => 
@@ -251,10 +263,13 @@ const AuditLogItem = React.memo(({ log }: { log: AuditLog }) => {
 
 export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps) {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [stats, setStats] = useState<AuditStats | null>(null);
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [filterQuery, setFilterQuery] = useState('');
   const [category, setCategory] = useState<FilterCategory>('all');
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRangeOption>('all');
+  const [pollInterval, setPollInterval] = useState<PollInterval>(0);
+  const [selectedWorkspace] = useState<string>('all');
   const [showClearLogsModal, setShowClearLogsModal] = useState(false);
 
   // Pagination states
@@ -264,15 +279,22 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
   const fetchAuditLogs = useCallback(async () => {
     setLoadingAudit(true);
     try {
-      const response = await fetch('/api/superagent/audit-logs', {
-        headers: getAuthHeader()
-      });
-      if (response.ok) {
-        const data: AuditLog[] = await response.json();
-        setAuditLogs(Array.isArray(data) ? data : []);
+      const [logsRes, statsRes] = await Promise.all([
+        fetch('/api/superagent/audit-logs', { headers: getAuthHeader() }),
+        fetch('/api/superagent/audit-logs/stats', { headers: getAuthHeader() })
+      ]);
+
+      if (logsRes.ok) {
+        const raw = await logsRes.json();
+        const logsData: AuditLog[] = Array.isArray(raw) ? raw : (raw?.logs || []);
+        setAuditLogs(logsData);
+      }
+      if (statsRes.ok) {
+        const statsData: AuditStats = await statsRes.json();
+        setStats(statsData);
       }
     } catch (e) {
-      console.error('Failed to fetch audit logs:', e);
+      console.error('Failed to fetch audit logs or stats:', e);
     } finally {
       setLoadingAudit(false);
     }
@@ -286,6 +308,7 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
       });
       if (response.ok) {
         setAuditLogs([]);
+        setStats(null);
         setCurrentPage(1);
       }
     } catch (e) {
@@ -297,11 +320,25 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
     setShowClearLogsModal(true);
   };
 
-  const exportAuditLogs = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(auditLogs, null, 2));
+  const exportAuditLogs = (format: 'json' | 'ndjson') => {
+    let content = '';
+    let filename = '';
+    let mimeType = '';
+
+    if (format === 'json') {
+      content = JSON.stringify(auditLogs, null, 2);
+      filename = `superagent-audit-${new Date().toISOString().slice(0, 10)}.json`;
+      mimeType = 'application/json';
+    } else {
+      content = auditLogs.map(l => JSON.stringify(l)).join('\n');
+      filename = `superagent-audit-${new Date().toISOString().slice(0, 10)}.ndjson`;
+      mimeType = 'application/x-ndjson';
+    }
+
+    const dataStr = `data:${mimeType};charset=utf-8,` + encodeURIComponent(content);
     const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `superagent-audit-${new Date().toISOString().slice(0, 10)}.json`);
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', filename);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -312,17 +349,17 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
   }, [fetchAuditLogs]);
 
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (!pollInterval) return;
     const timer = setInterval(() => {
       fetchAuditLogs();
-    }, 3000);
+    }, pollInterval);
     return () => clearInterval(timer);
-  }, [autoRefresh, fetchAuditLogs]);
+  }, [pollInterval, fetchAuditLogs]);
 
-  // Reset page when category or search changes
+  // Reset page when criteria changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [category, filterQuery, pageSize]);
+  }, [category, dateRange, selectedWorkspace, filterQuery, pageSize]);
 
   const categoryCounts = useMemo(() => {
     let prompts = 0, decisions = 0, agent = 0, system = 0, errors = 0;
@@ -337,6 +374,10 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
   }, [auditLogs]);
 
   const filteredLogs = useMemo(() => {
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000;
+    const sevenDays = 7 * oneDay;
+
     return auditLogs.filter(log => {
       if (category === 'prompts' && !isPromptLog(log.type)) return false;
       if (category === 'decisions' && !isDecisionLog(log.type)) return false;
@@ -344,13 +385,29 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
       if (category === 'system' && !isSystemLog(log.type)) return false;
       if (category === 'errors' && !isErrorLog(log.type)) return false;
 
+      if (selectedWorkspace !== 'all') {
+        const ws = log.workspace || log.data?.workspace || log.data?.workspacePath;
+        if (ws !== selectedWorkspace) return false;
+      }
+
+      if (dateRange !== 'all') {
+        const ts = new Date(log.timestamp).getTime();
+        if (dateRange === '24h' && now - ts > oneDay) return false;
+        if (dateRange === '7d' && now - ts > sevenDays) return false;
+        if (dateRange === 'today') {
+          const logDate = new Date(log.timestamp).toDateString();
+          const todayDate = new Date().toDateString();
+          if (logDate !== todayDate) return false;
+        }
+      }
+
       if (!filterQuery.trim()) return true;
       const q = filterQuery.toLowerCase();
       return log.type.toLowerCase().includes(q) || 
         JSON.stringify(log.data).toLowerCase().includes(q) ||
         new Date(log.timestamp).toLocaleString().toLowerCase().includes(q);
-    }).reverse(); // Most recent first
-  }, [auditLogs, category, filterQuery]);
+    });
+  }, [auditLogs, category, dateRange, selectedWorkspace, filterQuery]);
 
   // Paginated Slice
   const totalPages = useMemo(() => Math.ceil(filteredLogs.length / pageSize) || 1, [filteredLogs.length, pageSize]);
@@ -366,7 +423,7 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[var(--bg-main)] h-full text-[var(--text-main)] select-none">
       {/* Top Header Bar */}
-      <div className="p-3.5 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] flex flex-col gap-3 ">
+      <div className="p-3.5 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/20 rounded-lg text-[var(--color-primary)]">
@@ -375,30 +432,34 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
             <div>
               <h2 className="text-xs font-bold text-[var(--text-main)] tracking-wide flex items-center gap-2">
                 SuperAgent Audit & Trace Intelligence
-                {autoRefresh && (
+                {pollInterval > 0 && (
                   <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-1.5 py-0.5 rounded-full animate-pulse">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Live
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Live ({pollInterval / 1000}s)
                   </span>
                 )}
               </h2>
               <p className="text-[10px] text-[var(--text-muted)] font-mono">
-                Decisions, commands, SSE streams & server events audit trail
+                Decisions, prompts, security permissions & telemetry audit trail
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`px-2.5 py-1 text-xs rounded-md border font-mono transition flex items-center gap-1.5 cursor-pointer ${
-                autoRefresh
-                  ? 'bg-emerald-950/70 border-emerald-700/80 text-emerald-300 '
-                  : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
-              }`}
-            >
-              <RefreshCw className={`w-3 h-3 ${autoRefresh ? 'animate-spin' : ''}`} />
-              Auto-poll
-            </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Auto Poll Dropdown */}
+            <div className="flex items-center gap-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-md px-2 py-1 text-xs">
+              <Clock className="w-3 h-3 text-[var(--text-muted)]" />
+              <select
+                value={pollInterval}
+                onChange={(e) => setPollInterval(Number(e.target.value) as PollInterval)}
+                className="bg-transparent text-[var(--text-main)] text-xs font-mono focus:outline-none cursor-pointer"
+              >
+                <option value={0}>Poll: Off</option>
+                <option value={3000}>Poll: 3s</option>
+                <option value={5000}>Poll: 5s</option>
+                <option value={10000}>Poll: 10s</option>
+              </select>
+            </div>
+
             <button
               onClick={fetchAuditLogs}
               disabled={loadingAudit}
@@ -407,14 +468,25 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
               <RefreshCw className={`w-3.5 h-3.5 ${loadingAudit ? 'animate-spin' : ''}`} />
               Refresh
             </button>
-            <button
-              onClick={exportAuditLogs}
-              disabled={auditLogs.length === 0}
-              className="flex items-center gap-1.5 px-3 py-1 bg-[var(--color-primary-glow)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--color-primary)]/60 text-xs rounded-md text-[var(--color-primary)] transition font-medium cursor-pointer disabled:opacity-40"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Export JSON
-            </button>
+
+            <div className="flex items-center rounded-md border border-[var(--color-primary)]/60 bg-[var(--color-primary-glow)] overflow-hidden">
+              <button
+                onClick={() => exportAuditLogs('json')}
+                disabled={auditLogs.length === 0}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs text-[var(--color-primary)] hover:bg-[var(--surface-overlay-hover)] transition font-medium cursor-pointer disabled:opacity-40"
+              >
+                <Download className="w-3.5 h-3.5" />
+                JSON
+              </button>
+              <button
+                onClick={() => exportAuditLogs('ndjson')}
+                disabled={auditLogs.length === 0}
+                className="px-2 py-1 text-[11px] font-mono text-[var(--color-primary)] hover:bg-[var(--surface-overlay-hover)] border-l border-[var(--color-primary)]/30 transition cursor-pointer disabled:opacity-40"
+              >
+                NDJSON
+              </button>
+            </div>
+
             <button
               onClick={clearAuditLogs}
               disabled={auditLogs.length === 0}
@@ -426,7 +498,50 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
           </div>
         </div>
 
-        {/* Filter Pills & Search */}
+        {/* Analytics Metric Bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1 border-t border-[var(--border-color)]">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg p-2 flex items-center justify-between">
+            <div>
+              <div className="text-[10px] text-[var(--text-muted)] font-mono uppercase">Total Logs</div>
+              <div className="text-sm font-bold font-mono text-[var(--text-main)]">{stats?.totalLogs ?? auditLogs.length}</div>
+            </div>
+            <Layers className="w-4 h-4 text-cyan-500 opacity-60" />
+          </div>
+
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg p-2 flex items-center justify-between">
+            <div>
+              <div className="text-[10px] text-[var(--text-muted)] font-mono uppercase">Last 24 Hours</div>
+              <div className="text-sm font-bold font-mono text-emerald-400">{stats?.last24hCount ?? categoryCounts.all}</div>
+            </div>
+            <TrendingUp className="w-4 h-4 text-emerald-400 opacity-60" />
+          </div>
+
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg p-2 flex items-center justify-between">
+            <div>
+              <div className="text-[10px] text-[var(--text-muted)] font-mono uppercase">Prompts</div>
+              <div className="text-sm font-bold font-mono text-cyan-400">{categoryCounts.prompts}</div>
+            </div>
+            <MessageSquare className="w-4 h-4 text-cyan-400 opacity-60" />
+          </div>
+
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg p-2 flex items-center justify-between">
+            <div>
+              <div className="text-[10px] text-[var(--text-muted)] font-mono uppercase">Decisions</div>
+              <div className="text-sm font-bold font-mono text-purple-400">{categoryCounts.decisions}</div>
+            </div>
+            <ShieldCheck className="w-4 h-4 text-purple-400 opacity-60" />
+          </div>
+
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg p-2 flex items-center justify-between col-span-2 sm:col-span-1">
+            <div>
+              <div className="text-[10px] text-[var(--text-muted)] font-mono uppercase">Errors</div>
+              <div className="text-sm font-bold font-mono text-rose-400">{stats?.totalErrors ?? categoryCounts.errors}</div>
+            </div>
+            <XCircle className="w-4 h-4 text-rose-400 opacity-60" />
+          </div>
+        </div>
+
+        {/* Filter Pills, Date Range & Search */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-[var(--border-color)]">
           <div className="flex items-center gap-1 overflow-x-auto py-0.5">
             {(['all', 'prompts', 'decisions', 'agent', 'system', 'errors'] as FilterCategory[]).map(cat => {
@@ -438,7 +553,7 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
                   onClick={() => setCategory(cat)}
                   className={`px-2.5 py-1 rounded-md text-xs font-mono capitalize transition flex items-center gap-1.5 cursor-pointer ${
                     isActive
-                      ? 'bg-[var(--color-primary)] text-white font-semibold '
+                      ? 'bg-[var(--color-primary)] text-white font-semibold'
                       : 'bg-[var(--bg-card)] hover:bg-[var(--surface-overlay-hover)] text-[var(--text-muted)] border border-[var(--border-color)]'
                   }`}
                 >
@@ -453,23 +568,41 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
             })}
           </div>
 
-          <div className="relative w-64">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-2 text-[var(--text-muted)] pointer-events-none" />
-            <input
-              type="text"
-              value={filterQuery}
-              onChange={(e) => setFilterQuery(e.target.value)}
-              placeholder="Search audit trail..."
-              className="bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md pl-8 pr-3 py-1 text-xs text-[var(--text-main)] placeholder:[var(--text-muted)] focus:outline-none focus:border-[var(--color-primary)] font-mono w-full transition"
-            />
-            {filterQuery && (
-              <button 
-                onClick={() => setFilterQuery('')}
-                className="absolute right-2 top-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] text-xs font-bold"
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Date Range Selector */}
+            <div className="flex items-center gap-1.5 bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md px-2 py-1 text-xs">
+              <Calendar className="w-3 h-3 text-[var(--text-muted)]" />
+              <select
+                value={dateRange}
+                onChange={(e) => setDateRange(e.target.value as DateRangeOption)}
+                className="bg-transparent text-[var(--text-main)] text-xs font-mono focus:outline-none cursor-pointer"
               >
-                ✕
-              </button>
-            )}
+                <option value="all">Time: All</option>
+                <option value="today">Time: Today</option>
+                <option value="24h">Time: 24 Hours</option>
+                <option value="7d">Time: 7 Days</option>
+              </select>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative w-56">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2 text-[var(--text-muted)] pointer-events-none" />
+              <input
+                type="text"
+                value={filterQuery}
+                onChange={(e) => setFilterQuery(e.target.value)}
+                placeholder="Search audit trail..."
+                className="bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md pl-8 pr-3 py-1 text-xs text-[var(--text-main)] placeholder:[var(--text-muted)] focus:outline-none focus:border-[var(--color-primary)] font-mono w-full transition"
+              />
+              {filterQuery && (
+                <button 
+                  onClick={() => setFilterQuery('')}
+                  className="absolute right-2 top-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] text-xs font-bold"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -502,7 +635,7 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
 
       {/* Pagination Footer */}
       {filteredLogs.length > 0 && (
-        <div className="px-4 py-2.5 bg-[var(--panel-header-bg)] border-t border-[var(--border-color)] flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-[var(--text-muted)] ">
+        <div className="px-4 py-2.5 bg-[var(--panel-header-bg)] border-t border-[var(--border-color)] flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-[var(--text-muted)]">
           <div className="flex items-center gap-3">
             <span>
               Showing <strong className="text-[var(--text-main)]">{startRecordNum}</strong> - <strong className="text-[var(--text-main)]">{endRecordNum}</strong> of <strong className="text-[var(--text-main)]">{filteredLogs.length}</strong>

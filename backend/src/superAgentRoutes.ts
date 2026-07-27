@@ -3,6 +3,7 @@ import http from 'http';
 import { authMiddleware } from './auth';
 import { 
   getAuditLogs, 
+  getAuditStats,
   clearAuditLogs, 
   getCliPromptHistory, 
   saveCliPromptHistory,
@@ -42,9 +43,24 @@ router.use(authMiddleware);
 // Audit logs routes
 router.get('/audit-logs', (req, res) => {
   try {
-    res.json(getAuditLogs());
+    const type = req.query.type as string | undefined;
+    const search = req.query.search as string | undefined;
+    const workspace = req.query.workspace as string | undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
+
+    const result = getAuditLogs({ type, search, workspace, limit, offset });
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Failed to read audit logs' });
+  }
+});
+
+router.get('/audit-logs/stats', (_req, res) => {
+  try {
+    res.json(getAuditStats());
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to compute audit stats' });
   }
 });
 
