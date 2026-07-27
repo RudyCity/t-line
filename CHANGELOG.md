@@ -2,9 +2,10 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
-# Changelog
+## [1.3.654] - 2026-07-26
 
-All notable changes to the **t-line** workspace manager project will be documented in this file.
+### Fix & Integration — SuperAgent Sessions API Abort Signal Support
+- **Session Message Proxying (`useSuperAgentSessions.ts`)**: Added `AbortSignal` parameter to `apiGetSessionMessages` to support clean request cancellation during workspace tab switches and session reloads.
 
 ## [1.3.653] - 2026-07-26
 

@@ -162,13 +162,14 @@ async function apiGetSessionMessages(
   workspace: string,
   sessionId: string,
   limit?: number,
-  offset?: number
+  offset?: number,
+  signal?: AbortSignal
 ): Promise<PaginatedMessagesResponse | null> {
   try {
     let url = `/api/superagent/sessions/${encodeURIComponent(sessionId)}?workspace=${encodeURIComponent(workspace)}`;
     if (limit !== undefined) url += `&limit=${limit}`;
     if (offset !== undefined) url += `&offset=${offset}`;
-    const res = await fetch(url, { headers: getAuthHeader() });
+    const res = await fetch(url, { headers: getAuthHeader(), signal });
     if (res.ok) {
       const data = await res.json();
       // Handle both old format (just {messages}) and new format ({messages, totalCount, hasMore})
@@ -180,8 +181,10 @@ async function apiGetSessionMessages(
         };
       }
     }
-  } catch (e) {
-    console.error('[SessionsAPI] GET messages failed:', e);
+  } catch (e: any) {
+    if (e?.name !== 'AbortError') {
+      console.error('[SessionsAPI] GET messages failed:', e);
+    }
   }
   return null;
 }
@@ -275,6 +278,25 @@ export function generateSessionTitle(messages: SuperAgentMessage[]): string {
   return finalTitle.length > 45 ? finalTitle.slice(0, 45).trim() + '...' : finalTitle;
 }
 
+/** Helper to prune old cached session messages from localStorage (LRU strategy, keeping max 25 sessions) */
+function pruneOldSessionCaches(wsKey: string, activeSessionIds: string[], maxKeep = 25) {
+  try {
+    const keepSet = new Set(activeSessionIds.slice(0, maxKeep));
+    const prefix = `superagent_messages_${wsKey}_`;
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(prefix)) {
+        const sessId = key.replace(prefix, '');
+        if (!keepSet.has(sessId)) {
+          keysToRemove.push(key);
+        }
+      }
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+  } catch (e) {}
+}
+
 export function useSuperAgentSessions(workspace: string) {
   const [sessions, setSessions] = useState<ChatSession[]>(() => loadWorkspaceSessions(workspace));
   const [activeSessionId, setActiveSessionId] = useState<string>(() => {
@@ -322,6 +344,8 @@ export function useSuperAgentSessions(workspace: string) {
   const loadedMessagesSessionIdRef = useRef<string | null>(activeSessionId || null);
   const deletedSessionIdsRef = useRef<Set<string>>(new Set());
   const lastSeenMessageCountRef = useRef<Record<string, number>>({});
+  const selectSessionAbortControllerRef = useRef<AbortController | null>(null);
+  const saveDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Keep activeSessionIdRef up to date
   useEffect(() => {
@@ -355,6 +379,8 @@ export function useSuperAgentSessions(workspace: string) {
             localSession.title !== 'New Chat' &&
             (!serverSession.title || serverSession.title === 'New Chat')
           ) {
+            // Push local clean title to backend so server stays synced
+            apiSaveSession(wsPath, { ...serverSession, title: localSession.title }, []);
             return { ...serverSession, title: localSession.title };
           }
           return serverSession;
@@ -494,70 +520,87 @@ export function useSuperAgentSessions(workspace: string) {
     };
   }, [workspace, syncSessions]);
 
-  // Persist messages & update title ONLY when loadedMessagesSessionIdRef matches activeSessionId
+  // Persist messages & update title ONLY when loadedMessagesSessionIdRef matches activeSessionId (Debounced)
   useEffect(() => {
     if (!activeSessionId) return;
     if (loadedMessagesSessionIdRef.current !== activeSessionId) return; // Isolated check!
 
     const wsKey = workspace || 'default';
-    const msgKey = `superagent_messages_${wsKey}_${activeSessionId}`;
+    const msgKey = `superagent_messages_${wsKey}__${activeSessionId}`;
+
+    if (saveDebounceTimerRef.current) {
+      clearTimeout(saveDebounceTimerRef.current);
+    }
 
     if (messages && messages.length > 0) {
-      // Local backup (only last 300 messages)
-      try {
-        localStorage.setItem(msgKey, JSON.stringify(messages.slice(-300)));
-      } catch (e) {}
+      saveDebounceTimerRef.current = setTimeout(() => {
+        // Local backup (only last 300 messages)
+        try {
+          localStorage.setItem(msgKey, JSON.stringify(messages.slice(-300)));
+        } catch (e) {}
 
-      const newTitle = generateSessionTitle(messages);
-      const prevCount = lastSeenMessageCountRef.current[activeSessionId];
-      const isNewMessageAdded = prevCount !== undefined && messages.length > prevCount;
-      lastSeenMessageCountRef.current[activeSessionId] = messages.length;
+        const newTitle = generateSessionTitle(messages);
+        const prevCount = lastSeenMessageCountRef.current[activeSessionId];
+        const isNewMessageAdded = prevCount !== undefined && messages.length > prevCount;
+        lastSeenMessageCountRef.current[activeSessionId] = messages.length;
 
-      setSessions(prevSessions => {
-        const targetIdx = prevSessions.findIndex(s => s.id === activeSessionId);
-        if (targetIdx < 0) {
-          const lastMsgTime = (messages[messages.length - 1] as any)?.timestamp;
-          const inferredTime = lastMsgTime ? new Date(lastMsgTime).getTime() : Date.now();
-          const newSession: ChatSession = {
-            id: activeSessionId,
-            title: newTitle,
-            createdAt: inferredTime,
-            updatedAt: isNewMessageAdded ? Date.now() : inferredTime
+        setSessions(prevSessions => {
+          const targetIdx = prevSessions.findIndex(s => s.id === activeSessionId);
+          if (targetIdx < 0) {
+            const lastMsgTime = (messages[messages.length - 1] as any)?.timestamp;
+            const inferredTime = lastMsgTime ? new Date(lastMsgTime).getTime() : Date.now();
+            const newSession: ChatSession = {
+              id: activeSessionId,
+              title: newTitle,
+              createdAt: inferredTime,
+              updatedAt: isNewMessageAdded ? Date.now() : inferredTime
+            };
+            const updated = [newSession, ...prevSessions];
+            try {
+              localStorage.setItem(`superagent_sessions_${wsKey}`, JSON.stringify(updated));
+            } catch (e) {}
+            apiSaveSession(workspace, newSession, messages);
+            pruneOldSessionCaches(wsKey, updated.map(s => s.id));
+            return updated;
+          }
+
+          const currentSession = prevSessions[targetIdx];
+          // Only update title automatically if existing title is generic ("New Chat" or missing)
+          const isDefaultTitle = !currentSession.title || currentSession.title === 'New Chat';
+          const effectiveTitle = (isDefaultTitle && newTitle !== 'New Chat') ? newTitle : currentSession.title;
+          const isTitleChanged = currentSession.title !== effectiveTitle;
+
+          // Skip if title is unchanged AND no new message was added
+          if (!isTitleChanged && !isNewMessageAdded) {
+            return prevSessions;
+          }
+
+          const updated = [...prevSessions];
+          const updatedSession = {
+            ...currentSession,
+            title: effectiveTitle,
+            updatedAt: isNewMessageAdded ? Date.now() : currentSession.updatedAt
           };
-          const updated = [newSession, ...prevSessions];
+          updated[targetIdx] = updatedSession;
+
           try {
             localStorage.setItem(`superagent_sessions_${wsKey}`, JSON.stringify(updated));
           } catch (e) {}
-          apiSaveSession(workspace, newSession, messages);
+
+          // Save to backend disk
+          apiSaveSession(workspace, updatedSession, messages);
+          pruneOldSessionCaches(wsKey, updated.map(s => s.id));
+
           return updated;
-        }
-
-        const currentSession = prevSessions[targetIdx];
-        const isTitleChanged = currentSession.title !== newTitle;
-
-        // Skip if title is unchanged AND no new message was added
-        if (!isTitleChanged && !isNewMessageAdded) {
-          return prevSessions;
-        }
-
-        const updated = [...prevSessions];
-        const updatedSession = {
-          ...currentSession,
-          title: newTitle,
-          updatedAt: isNewMessageAdded ? Date.now() : currentSession.updatedAt
-        };
-        updated[targetIdx] = updatedSession;
-        
-        try {
-          localStorage.setItem(`superagent_sessions_${wsKey}`, JSON.stringify(updated));
-        } catch (e) {}
-
-        // Save to backend disk
-        apiSaveSession(workspace, updatedSession, messages);
-
-        return updated;
-      });
+        });
+      }, 400); // 400ms debounce
     }
+
+    return () => {
+      if (saveDebounceTimerRef.current) {
+        clearTimeout(saveDebounceTimerRef.current);
+      }
+    };
   }, [messages, activeSessionId, workspace]);
 
   /** Load older messages (prepend to current list) */
@@ -605,6 +648,14 @@ export function useSuperAgentSessions(workspace: string) {
   const handleSelectSession = useCallback(async (id: string) => {
     if (!id) return;
     if (id === activeSessionIdRef.current && loadedSessionIdRef.current === id && messages.length > 0) return;
+
+    // Abort previous session fetch in-flight if user switches session quickly
+    if (selectSessionAbortControllerRef.current) {
+      selectSessionAbortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    selectSessionAbortControllerRef.current = abortController;
+
     setActiveSessionId(id);
     loadedSessionIdRef.current = id;
     loadedMessagesSessionIdRef.current = id;
@@ -628,16 +679,25 @@ export function useSuperAgentSessions(workspace: string) {
     }
 
     // Asynchronously fetch fresh session messages from backend server
-    const result = await apiGetSessionMessages(workspace, id, PAGE_SIZE, 0);
+    const result = await apiGetSessionMessages(workspace, id, PAGE_SIZE, 0, abortController.signal);
     // Guard against race condition: user switched session while network request was in-flight
-    if (activeSessionIdRef.current !== id) return;
+    if (activeSessionIdRef.current !== id || abortController.signal.aborted) return;
 
     if (result && Array.isArray(result.messages) && result.messages.length > 0) {
-      setMessages(result.messages);
+      setMessages(prev => {
+        // Incremental merge check: avoid re-rendering if arrays match exactly
+        if (prev.length === result.messages.length && JSON.stringify(prev) === JSON.stringify(result.messages)) {
+          return prev;
+        }
+        return result.messages;
+      });
       loadedMessagesSessionIdRef.current = id;
       setHasMore(result.hasMore);
       currentOffsetRef.current = PAGE_SIZE;
       lastSeenMessageCountRef.current[id] = result.messages.length;
+      try {
+        localStorage.setItem(`superagent_messages_${wsKey}_${id}`, JSON.stringify(result.messages.slice(-300)));
+      } catch (e) {}
     } else if (!loadedFromLocal) {
       setMessages(result?.messages || []);
       loadedMessagesSessionIdRef.current = id;
