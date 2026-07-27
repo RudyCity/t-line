@@ -925,8 +925,8 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
               deviceMode === 'desktop'
                 ? 'absolute inset-0 w-full h-full border-none bg-[var(--bg-main)]'
                 : deviceMode === 'tablet'
-                ? 'relative w-[768px] h-[1024px] max-w-full max-h-full border-[12px] border-[#1e1e24] rounded-[24px] shadow-2xl bg-[var(--bg-main)] flex flex-col transition-all duration-300'
-                : 'relative w-[375px] h-[812px] max-w-full max-h-full border-[12px] border-[#1e1e24] rounded-[36px] shadow-2xl bg-[var(--bg-main)] flex flex-col transition-all duration-300'
+                ? 'relative w-[768px] h-[1024px] max-w-full max-h-full border-[12px] border-[#1e1e24] rounded-[24px]  bg-[var(--bg-main)] flex flex-col transition-all duration-300'
+                : 'relative w-[375px] h-[812px] max-w-full max-h-full border-[12px] border-[#1e1e24] rounded-[36px]  bg-[var(--bg-main)] flex flex-col transition-all duration-300'
             }
             style={deviceMode !== 'desktop' ? { 
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)',
@@ -996,7 +996,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
                   <div className="flex flex-col gap-3 w-full max-w-sm">
                     <button
                       onClick={() => openInSystemBrowser(activeUrl)}
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-md cursor-pointer"
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-lg transition-colors  cursor-pointer"
                     >
                       <ExternalLink size={15} />
                       Open in System Browser

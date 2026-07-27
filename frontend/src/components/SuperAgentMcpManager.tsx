@@ -114,7 +114,7 @@ export const SuperAgentMcpManager: React.FC<Props> = ({ getAuthHeader }) => {
             </span>
           </h3>
           <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
-            Model Context Protocol — extend SuperAgent with external tool servers
+            Model Context Protocol ï¿½ extend SuperAgent with external tool servers
           </p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
@@ -124,7 +124,7 @@ export const SuperAgentMcpManager: React.FC<Props> = ({ getAuthHeader }) => {
             Reload All
           </button>
           <button onClick={() => setShowForm(v => !v)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white rounded-lg transition shadow-sm">
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white rounded-lg transition ">
             <Plus className="w-3 h-3" />
             Add Server
           </button>
@@ -266,7 +266,7 @@ export const SuperAgentMcpManager: React.FC<Props> = ({ getAuthHeader }) => {
                             <div key={k}>
                               <span className="text-[var(--color-primary)]">{k}</span>=
                               <span className="text-[var(--text-main)]">
-                                {isSensitiveKey(k) ? '••••••' : v.length > 40 ? v.slice(0, 40) + '…' : v}
+                                {isSensitiveKey(k) ? 'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½' : v.length > 40 ? v.slice(0, 40) + 'ï¿½' : v}
                               </span>
                             </div>
                           ))}

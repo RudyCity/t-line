@@ -125,7 +125,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
 
   return (
     <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-xs font-sans">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col  overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-xs font-sans">
         
         {/* Modal Header */}
         <div className="px-6 py-4 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] flex items-center justify-between">
@@ -136,7 +136,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="font-bold text-[var(--text-main)] text-sm tracking-wide">SuperAgent Configuration & Settings</h2>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--color-primary-glow)] text-[var(--color-primary)] border border-[var(--color-primary)]/40 shadow-xs">
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--color-primary-glow)] text-[var(--color-primary)] border border-[var(--color-primary)]/40 ">
                   v1.2.520
                 </span>
               </div>
@@ -168,7 +168,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-3.5 py-1.5 rounded-lg font-medium transition-all flex items-center gap-2 text-xs cursor-pointer whitespace-nowrap border ${
                   isActive
-                    ? 'border-[var(--color-primary)]/40 text-[var(--color-primary)] bg-[var(--color-primary)]/15 font-semibold shadow-xs'
+                    ? 'border-[var(--color-primary)]/40 text-[var(--color-primary)] bg-[var(--color-primary)]/15 font-semibold '
                     : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
                 }`}
               >
@@ -275,7 +275,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
                     setConnectTrigger(prev => prev + 1);
                     onClose();
                   }}
-                  className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 text-xs shadow-sm"
+                  className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 text-xs "
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   Apply Settings & Restart SuperAgent Bridge
@@ -299,7 +299,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
                       execSettings?.disableStreaming ? 'bg-[var(--color-primary)]' : 'bg-[var(--bg-main)] border-[var(--border-color)]'
                     }`}
                   >
-                    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white  ring-0 transition duration-200 ease-in-out ${
                       execSettings?.disableStreaming ? 'translate-x-4' : 'translate-x-0'
                     }`} />
                   </button>
@@ -363,7 +363,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
                     }`}
                   >
                     <span
-                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white  ring-0 transition duration-200 ease-in-out ${
                         showSidebar ? 'translate-x-4' : 'translate-x-0'
                       }`}
                     />

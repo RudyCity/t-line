@@ -29,7 +29,7 @@
 
     /* Glassmorphism details */
     --blur-amount: 16px;
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    --glass-shadow: none;
 
     /* Sizes */
     --sidebar-width: 320px;

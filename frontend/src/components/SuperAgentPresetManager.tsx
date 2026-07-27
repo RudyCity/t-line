@@ -354,7 +354,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
             <button
               onClick={() => setSelectedMode('single')}
               className={`px-3 py-1 rounded-md text-[11px] font-medium transition ${
-                selectedMode === 'single' ? 'text-white shadow-xs' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                selectedMode === 'single' ? 'text-white ' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
               style={selectedMode === 'single' ? { backgroundColor: 'var(--color-primary)' } : undefined}
             >
@@ -363,7 +363,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
             <button
               onClick={() => setSelectedMode('multi')}
               className={`px-3 py-1 rounded-md text-[11px] font-medium transition ${
-                selectedMode === 'multi' ? 'text-white shadow-xs' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                selectedMode === 'multi' ? 'text-white ' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
               style={selectedMode === 'multi' ? { backgroundColor: 'var(--color-primary)' } : undefined}
             >
@@ -373,7 +373,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
 
           <button
             onClick={openAddPresetModal}
-            className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium py-1.5 px-3 rounded-lg transition flex items-center gap-1 text-xs shadow-xs cursor-pointer"
+            className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium py-1.5 px-3 rounded-lg transition flex items-center gap-1 text-xs  cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" /> Create Preset
           </button>
@@ -586,7 +586,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
       {/* Add Custom Preset Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150 text-[var(--text-main)]">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col p-5  space-y-4 animate-in fade-in zoom-in-95 duration-150 text-[var(--text-main)]">
             <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
               <h4 className="font-semibold text-[var(--text-main)] text-sm flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-[var(--color-primary)]" />
@@ -941,7 +941,7 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-1.5 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium text-xs flex items-center gap-1.5 cursor-pointer transition shadow-xs"
+                  className="px-4 py-1.5 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium text-xs flex items-center gap-1.5 cursor-pointer transition "
                 >
                   {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                   Save Preset

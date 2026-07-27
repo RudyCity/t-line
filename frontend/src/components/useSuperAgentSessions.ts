@@ -371,6 +371,7 @@ export function useSuperAgentSessions(workspace: string) {
       
       if (targetActiveId && validServerSessions.some(s => s.id === targetActiveId)) {
         setActiveSessionId(targetActiveId);
+        loadedMessagesSessionIdRef.current = targetActiveId;
         const result = await apiGetSessionMessages(wsPath, targetActiveId, PAGE_SIZE, 0);
         if (result && result.messages.length > 0) {
           setMessages(result.messages);
@@ -605,6 +606,7 @@ export function useSuperAgentSessions(workspace: string) {
     if (id === activeSessionIdRef.current && loadedSessionIdRef.current === id && messages.length > 0) return;
     setActiveSessionId(id);
     loadedSessionIdRef.current = id;
+    loadedMessagesSessionIdRef.current = id;
     currentOffsetRef.current = 0;
 
     // Fast-path: Immediately load local cached messages for 0ms UI render latency

@@ -142,7 +142,7 @@ export function RightSidebar({
                   }}
                   className={`flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)] shadow-sm'
+                      ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)] '
                       : 'bg-[var(--bg-card)]/50 border-[var(--border-color)] text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]'
                   }`}
                 >
@@ -313,7 +313,7 @@ export function RightSidebar({
                 <span className="h-1.5 w-1.5 rounded-full border border-sky-400/30 border-t-sky-400 animate-spin" />
               ) : (
                 <span className={`h-1.5 w-1.5 rounded-full ${
-                  tunnelStatus.tline.active ? 'bg-emerald-400 animate-pulse shadow-[0_0_6px_#10b981]' : 'bg-[var(--text-dark)]'
+                  tunnelStatus.tline.active ? 'bg-emerald-400 animate-pulse ' : 'bg-[var(--text-dark)]'
                 }`} />
               )}
               <span className="font-semibold">

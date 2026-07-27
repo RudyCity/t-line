@@ -201,9 +201,9 @@ export function SuperAgentHistorySidebar({
         onClick={() => onSelectSession(session.id)}
         className={`group relative flex items-center justify-between p-2 rounded-lg cursor-pointer transition ${
           isActive
-            ? 'bg-[var(--color-primary-glow)] text-[var(--text-main)] font-medium shadow-sm'
+            ? 'bg-[var(--color-primary-glow)] text-[var(--text-main)] font-medium '
             : 'text-[var(--text-muted)] hover:bg-[var(--surface-overlay-hover)] hover:text-[var(--text-main)]'
-        } ${isActive && isProcessing ? 'ring-1 ring-[var(--color-primary)]/30 shadow-[0_0_8px_rgba(99,102,241,0.15)]' : ''}`}
+        } ${isActive && isProcessing ? 'ring-1 ring-[var(--color-primary)]/30 ' : ''}`}
       >
         {isEditing ? (
           <form
@@ -299,7 +299,7 @@ export function SuperAgentHistorySidebar({
                     <Download className="w-3 h-3" />
                   </button>
                   {exportMenuId === session.id && (
-                    <div className="absolute right-0 bottom-full mb-1 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg shadow-lg z-50 overflow-hidden min-w-[110px]">
+                    <div className="absolute right-0 bottom-full mb-1 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg  z-50 overflow-hidden min-w-[110px]">
                       <button
                         onClick={e => handleExport(session.id, 'json', e)}
                         className="w-full text-left px-3 py-1.5 text-[11px] text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] transition flex items-center gap-1.5"
@@ -358,7 +358,7 @@ export function SuperAgentHistorySidebar({
             onClick={() => setShowSearchDropdown(prev => !prev)}
             className={`p-1.5 rounded-md border transition cursor-pointer ${
               showSearchDropdown || searchQuery
-                ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)] text-[var(--color-primary)] shadow-sm'
+                ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)] text-[var(--color-primary)] '
                 : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
             title={showSearchDropdown ? "Close search" : "Search history"}
@@ -368,7 +368,7 @@ export function SuperAgentHistorySidebar({
 
           <button
             onClick={onNewChat}
-            className="p-1.5 rounded-md bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] border border-[var(--color-primary)] text-white shadow-sm hover:shadow transition cursor-pointer flex items-center gap-1 font-medium text-[11px]"
+            className="p-1.5 rounded-md bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] border border-[var(--color-primary)] text-white  hover:shadow transition cursor-pointer flex items-center gap-1 font-medium text-[11px]"
             title="New Chat"
           >
             <Plus className="w-3.5 h-3.5" />

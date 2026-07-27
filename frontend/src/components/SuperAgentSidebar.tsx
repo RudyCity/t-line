@@ -135,7 +135,7 @@ export function SuperAgentSidebar({
                 })
               ) : (
                 <div className="p-3 text-center text-[11px] text-[var(--text-muted)] font-mono">
-                  No sub-agents active
+                  No sub-agents active (Single Mode)
                 </div>
               )}
             </div>

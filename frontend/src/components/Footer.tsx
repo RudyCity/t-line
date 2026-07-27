@@ -157,7 +157,7 @@ export function Footer({
             className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-sans text-[10px] font-semibold tracking-wider hover:bg-amber-500/25 hover:border-amber-500/45 transition-all duration-200 cursor-pointer animate-pulse"
             title={`New Update Available: v${latestVersion}! Click to download.`}
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_6px_#f59e0b]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-400 " />
             <span>t-line v{appVersion} (Update: v{latestVersion})</span>
           </a>
         ) : (
@@ -183,7 +183,7 @@ export function Footer({
         {/* System Resource Stats — visible on small screens and up */}
         {systemStats && (
           <div 
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all duration-200 shadow-inner cursor-default relative group"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all duration-200  cursor-default relative group"
             style={{
               backgroundColor: 'color-mix(in srgb, var(--bg-main) 60%, transparent)',
               borderColor: 'var(--border-color)',
@@ -205,7 +205,7 @@ export function Footer({
 
             {/* Hover Tooltip Dropup */}
             <div 
-              className="absolute bottom-full mb-2 left-0 hidden group-hover:flex flex-col w-56 border rounded-lg p-3 shadow-[0_10px_25px_rgba(0,0,0,0.5)] z-50 pointer-events-none font-sans"
+              className="absolute bottom-full mb-2 left-0 hidden group-hover:flex flex-col w-56 border rounded-lg p-3  z-50 pointer-events-none font-sans"
               style={{
                 backgroundColor: 'var(--bg-sidebar)',
                 borderColor: 'var(--border-color)',
@@ -387,7 +387,7 @@ export function Footer({
           {/* Active Tunnel URL Info */}
           {tunnelStatus.tline.active && tunnelStatus.tline.url && (
             <div 
-              className="flex items-center gap-1 border px-1.5 py-0.5 rounded text-[9px] font-mono shadow-[0_0_8px_rgba(14,165,233,0.05)]"
+              className="flex items-center gap-1 border px-1.5 py-0.5 rounded text-[9px] font-mono "
               style={{
                 backgroundColor: 'rgba(14, 165, 233, 0.08)',
                 borderColor: 'rgba(14, 165, 233, 0.25)',

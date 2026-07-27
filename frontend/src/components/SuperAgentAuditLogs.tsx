@@ -159,7 +159,7 @@ const AuditLogItem = React.memo(({ log }: { log: AuditLog }) => {
   const toggleExpand = () => setIsExpanded(prev => !prev);
 
   return (
-    <div className={`bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] shadow-sm transition hover:border-[var(--color-primary)]/40 border-l-4 ${meta.borderStyle} overflow-hidden`}>
+    <div className={`bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)]  transition hover:border-[var(--color-primary)]/40 border-l-4 ${meta.borderStyle} overflow-hidden`}>
       {/* Header Row */}
       <div 
         onClick={toggleExpand}
@@ -366,7 +366,7 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[var(--bg-main)] h-full text-[var(--text-main)] select-none">
       {/* Top Header Bar */}
-      <div className="p-3.5 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] flex flex-col gap-3 shadow-md">
+      <div className="p-3.5 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] flex flex-col gap-3 ">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/20 rounded-lg text-[var(--color-primary)]">
@@ -392,7 +392,7 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
               onClick={() => setAutoRefresh(!autoRefresh)}
               className={`px-2.5 py-1 text-xs rounded-md border font-mono transition flex items-center gap-1.5 cursor-pointer ${
                 autoRefresh
-                  ? 'bg-emerald-950/70 border-emerald-700/80 text-emerald-300 shadow-sm'
+                  ? 'bg-emerald-950/70 border-emerald-700/80 text-emerald-300 '
                   : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
             >
@@ -438,7 +438,7 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
                   onClick={() => setCategory(cat)}
                   className={`px-2.5 py-1 rounded-md text-xs font-mono capitalize transition flex items-center gap-1.5 cursor-pointer ${
                     isActive
-                      ? 'bg-[var(--color-primary)] text-white font-semibold shadow-sm'
+                      ? 'bg-[var(--color-primary)] text-white font-semibold '
                       : 'bg-[var(--bg-card)] hover:bg-[var(--surface-overlay-hover)] text-[var(--text-muted)] border border-[var(--border-color)]'
                   }`}
                 >
@@ -502,7 +502,7 @@ export function SuperAgentAuditLogs({ getAuthHeader }: SuperAgentAuditLogsProps)
 
       {/* Pagination Footer */}
       {filteredLogs.length > 0 && (
-        <div className="px-4 py-2.5 bg-[var(--panel-header-bg)] border-t border-[var(--border-color)] flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-[var(--text-muted)] shadow-inner">
+        <div className="px-4 py-2.5 bg-[var(--panel-header-bg)] border-t border-[var(--border-color)] flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-[var(--text-muted)] ">
           <div className="flex items-center gap-3">
             <span>
               Showing <strong className="text-[var(--text-main)]">{startRecordNum}</strong> - <strong className="text-[var(--text-main)]">{endRecordNum}</strong> of <strong className="text-[var(--text-main)]">{filteredLogs.length}</strong>

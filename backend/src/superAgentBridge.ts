@@ -511,7 +511,7 @@ async function initializeSuperAgentSession(workspacePath: string, mode: string, 
   });
 }
 
-function sendSuperAgentRequest(pathName: string, payload: any, workspacePath: string, timeoutMs: number = 30000): Promise<any> {
+export function sendSuperAgentRequest(pathName: string, payload: any, workspacePath: string, timeoutMs: number = 30000): Promise<any> {
   return new Promise((resolve, reject) => {
     const postData = JSON.stringify(payload);
     const req = http.request({

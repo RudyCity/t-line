@@ -18,7 +18,6 @@ import {
   Camera,
   LayoutGrid,
   Zap,
-  X,
   Globe,
   ExternalLink,
   Lock
@@ -1702,177 +1701,165 @@ export default function App() {
     return '';
   };
 
-  const showTabText = !sidebarCollapsed && sidebarWidth >= 280;
-
   return (
     <div className="app-container">
       <UpdateNotification />
       
       <div className="app-content-wrapper">
         
-        {/* Sidebar Panel */}
-        <div 
-          className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}
-          style={{
-            width: sidebarCollapsed ? '48px' : `${sidebarWidth}px`,
-            minWidth: sidebarCollapsed ? '48px' : `${sidebarWidth}px`
-          }}
-        >
-        
-        <div className="sidebar-header" data-tauri-drag-region style={{ padding: sidebarCollapsed ? '12px 0' : '12px 16px', gap: '8px', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <TPlusLogo size={28} />
-            {!sidebarCollapsed && (
-              <span className="logo-text" style={{ fontSize: '1.05rem', fontWeight: 600 }}>t-line</span>
-            )}
+        {/* Left Fixed Activity Bar & Collapsible Content Drawer */}
+        <div className="activity-bar-container">
+          {/* Permanent Left Activity Icon Bar */}
+          <div className="activity-bar">
+            <div className="activity-bar-top">
+              <div className="activity-bar-logo" style={{ padding: '8px 0', display: 'flex', justifyContent: 'center' }}>
+                <TPlusLogo size={22} />
+              </div>
+              <button
+                className={`activity-bar-item ${!sidebarCollapsed && activePanel === 'workspaces' ? 'active' : ''}`}
+                onClick={() => {
+                  if (!sidebarCollapsed && activePanel === 'workspaces') {
+                    setSidebarCollapsed(true);
+                    localStorage.setItem('tline-sidebar-collapsed', 'true');
+                  } else {
+                    setActivePanel('workspaces');
+                    setSidebarCollapsed(false);
+                    localStorage.setItem('tline-sidebar-collapsed', 'false');
+                  }
+                }}
+                title="Workspaces"
+              >
+                <Folder size={18} />
+              </button>
+              <button
+                className={`activity-bar-item ${!sidebarCollapsed && activePanel === 'explorer' ? 'active' : ''}`}
+                onClick={() => {
+                  if (!sidebarCollapsed && activePanel === 'explorer') {
+                    setSidebarCollapsed(true);
+                    localStorage.setItem('tline-sidebar-collapsed', 'true');
+                  } else {
+                    setActivePanel('explorer');
+                    setSidebarCollapsed(false);
+                    localStorage.setItem('tline-sidebar-collapsed', 'false');
+                  }
+                }}
+                title="File Explorer"
+              >
+                <FolderTree size={18} />
+              </button>
+              <button
+                className={`activity-bar-item ${!sidebarCollapsed && activePanel === 'changes' ? 'active' : ''}`}
+                onClick={() => {
+                  if (!sidebarCollapsed && activePanel === 'changes') {
+                    setSidebarCollapsed(true);
+                    localStorage.setItem('tline-sidebar-collapsed', 'true');
+                  } else {
+                    setActivePanel('changes');
+                    setSidebarCollapsed(false);
+                    localStorage.setItem('tline-sidebar-collapsed', 'false');
+                  }
+                }}
+                title="Git Changes"
+              >
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <GitCompare size={18} />
+                  {changedFiles.length > 0 && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '-4px',
+                        right: '-6px',
+                        background: 'var(--color-primary, #6366f1)',
+                        color: 'white',
+                        fontSize: '0.55rem',
+                        fontWeight: 700,
+                        borderRadius: '999px',
+                        padding: '0 4px',
+                        minWidth: '12px',
+                        height: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: 1,
+                        border: '1.5px solid #1e1e24'
+                      }}
+                    >
+                      {changedFiles.length}
+                    </span>
+                  )}
+                </div>
+              </button>
+              <button
+                className={`activity-bar-item ${!sidebarCollapsed && activePanel === 'checkpoints' ? 'active' : ''}`}
+                onClick={() => {
+                  if (!sidebarCollapsed && activePanel === 'checkpoints') {
+                    setSidebarCollapsed(true);
+                    localStorage.setItem('tline-sidebar-collapsed', 'true');
+                  } else {
+                    setActivePanel('checkpoints');
+                    setSidebarCollapsed(false);
+                    localStorage.setItem('tline-sidebar-collapsed', 'false');
+                  }
+                }}
+                title="Checkpoints & Snapshots"
+              >
+                <Camera size={18} />
+              </button>
+            </div>
+            <div className="activity-bar-bottom">
+              <button
+                className="activity-bar-item"
+                onClick={() => setShowSettingsModal(true)}
+                title="Settings"
+              >
+                <Settings size={18} />
+              </button>
+            </div>
           </div>
+
+          {/* Drawer Content Panel */}
           {!sidebarCollapsed && (
-            <button
-              type="button"
-              className="action-btn mobile-only"
-              onClick={() => setSidebarOpen(false)}
-              title="Close Sidebar"
-              style={{ padding: '4px', cursor: 'pointer' }}
-            >
-              <X size={18} />
-            </button>
+            <div className="sidebar-drawer-content" style={{ width: `${sidebarWidth - 48}px`, flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+              <SidebarContentPanel
+                activePanel={activePanel}
+                setActivePanel={setActivePanel}
+                workspaces={workspaces}
+                panelWorkspace={panelWorkspace}
+                setPanelWorkspace={setPanelWorkspace}
+                tabs={filteredTabs}
+                setActiveTabId={setActiveTabId}
+                activeTabId={activeTabId}
+                terminalInstances={terminalInstances}
+                setShowWorkspaceModal={setShowWorkspaceModal}
+                setSidebarOpen={setSidebarOpen}
+                handleOpenWorktreeModal={handleOpenWorktreeModal}
+                openTerminal={openTerminal}
+                handleRemoveWorkspace={handleRemoveWorkspace}
+                handleRemoveWorktree={handleRemoveWorktreeWrapped}
+                openFileTab={openFileTab}
+                closeTerminal={closeTerminal}
+                workspaceActiveTab={workspaceActiveTab}
+                onWorkspaceClick={handleWorkspaceClick}
+                onWorktreeClick={handleWorktreeClick}
+                onBranchCheckoutClick={handleBranchCheckoutClick}
+                changedFiles={changedFiles}
+                gitStatusLoading={gitStatusLoading}
+                refreshGitStatus={() => fetchGitStatus(true)}
+                onEditWorkspace={handleOpenEditWorkspaceModal}
+                deletingWorkspacePaths={deletingWorkspacePaths}
+                deletingWorktreePaths={deletingWorktreePaths}
+                panelWorktreePath={panelWorktreePath}
+                fsChangeTrigger={fsChangeTrigger}
+                onOpenBranchModal={() => setShowBranchModal(true)}
+                openDiffTab={openDiffTab}
+                onCheckpointChange={() => {
+                  fetchGitStatus(true);
+                  fetchWorkspaces();
+                }}
+              />
+            </div>
           )}
         </div>
-
-        {/* Sidebar Panel Tabs */}
-        <div className="sidebar-panel-tabs" style={{ flexDirection: sidebarCollapsed ? 'column' : 'row' }}>
-          <button
-            className={`sidebar-panel-tab ${activePanel === 'workspaces' ? 'active' : ''}`}
-            onClick={() => {
-              setActivePanel('workspaces');
-              if (sidebarCollapsed) {
-                setSidebarCollapsed(false);
-                localStorage.setItem('tline-sidebar-collapsed', 'false');
-              }
-            }}
-            title="Workspaces"
-          >
-            <Folder size={15} />
-            {showTabText && <span>Workspaces</span>}
-          </button>
-          <button
-            className={`sidebar-panel-tab ${activePanel === 'explorer' ? 'active' : ''}`}
-            onClick={() => {
-              setActivePanel('explorer');
-              if (sidebarCollapsed) {
-                setSidebarCollapsed(false);
-                localStorage.setItem('tline-sidebar-collapsed', 'false');
-              }
-            }}
-            title="File Explorer"
-          >
-            <FolderTree size={15} />
-            {showTabText && <span>Explorer</span>}
-          </button>
-          <button
-            className={`sidebar-panel-tab ${activePanel === 'changes' ? 'active' : ''}`}
-            onClick={() => {
-              setActivePanel('changes');
-              if (sidebarCollapsed) {
-                setSidebarCollapsed(false);
-                localStorage.setItem('tline-sidebar-collapsed', 'false');
-              }
-            }}
-            title="Git Changes"
-          >
-            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-              <GitCompare size={15} />
-              {!showTabText && changedFiles.length > 0 && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '-6px',
-                    right: '-8px',
-                    background: 'var(--color-primary)',
-                    color: 'white',
-                    fontSize: '0.55rem',
-                    fontWeight: 700,
-                    borderRadius: '999px',
-                    padding: '0 4px',
-                    minWidth: '12px',
-                    height: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    lineHeight: 1,
-                    border: '1.5px solid #1e1e24'
-                  }}
-                >
-                  {changedFiles.length}
-                </span>
-              )}
-            </div>
-            {showTabText && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                Changes
-                {changedFiles.length > 0 && (
-                  <span className="changes-badge">{changedFiles.length}</span>
-                )}
-              </span>
-            )}
-          </button>
-          <button
-            className={`sidebar-panel-tab ${activePanel === 'checkpoints' ? 'active' : ''}`}
-            onClick={() => {
-              setActivePanel('checkpoints');
-              if (sidebarCollapsed) {
-                setSidebarCollapsed(false);
-                localStorage.setItem('tline-sidebar-collapsed', 'false');
-              }
-            }}
-            title="Checkpoints & Snapshots"
-          >
-            <Camera size={15} />
-            {showTabText && <span>Snapshots</span>}
-          </button>
-        </div>
-
-
-        {!sidebarCollapsed && (
-          <SidebarContentPanel
-            activePanel={activePanel}
-            setActivePanel={setActivePanel}
-            workspaces={workspaces}
-            panelWorkspace={panelWorkspace}
-            setPanelWorkspace={setPanelWorkspace}
-            tabs={filteredTabs}
-            setActiveTabId={setActiveTabId}
-            activeTabId={activeTabId}
-            terminalInstances={terminalInstances}
-            setShowWorkspaceModal={setShowWorkspaceModal}
-            setSidebarOpen={setSidebarOpen}
-            handleOpenWorktreeModal={handleOpenWorktreeModal}
-            openTerminal={openTerminal}
-            handleRemoveWorkspace={handleRemoveWorkspace}
-            handleRemoveWorktree={handleRemoveWorktreeWrapped}
-            openFileTab={openFileTab}
-            closeTerminal={closeTerminal}
-            workspaceActiveTab={workspaceActiveTab}
-            onWorkspaceClick={handleWorkspaceClick}
-            onWorktreeClick={handleWorktreeClick}
-            onBranchCheckoutClick={handleBranchCheckoutClick}
-            changedFiles={changedFiles}
-            gitStatusLoading={gitStatusLoading}
-            refreshGitStatus={() => fetchGitStatus(true)}
-            onEditWorkspace={handleOpenEditWorkspaceModal}
-            deletingWorkspacePaths={deletingWorkspacePaths}
-            deletingWorktreePaths={deletingWorktreePaths}
-            panelWorktreePath={panelWorktreePath}
-            fsChangeTrigger={fsChangeTrigger}
-            onOpenBranchModal={() => setShowBranchModal(true)}
-            openDiffTab={openDiffTab}
-            onCheckpointChange={() => {
-              fetchGitStatus(true);
-              fetchWorkspaces();
-            }}
-          />
-        )}
-      </div>
 
       {/* Resize Handle */}
       {!sidebarCollapsed && (
@@ -2034,9 +2021,6 @@ export default function App() {
               )}
               <button type="button" className="action-btn" onClick={() => setShowShortcutModal(true)} title="Keyboard Shortcuts">
                 <HelpCircle size={14} />
-              </button>
-              <button type="button" className="action-btn" onClick={() => setShowSettingsModal(true)} title="Settings">
-                <Settings size={14} />
               </button>
               <button type="button" className="action-btn text-slate-400 hover:text-rose-400" onClick={triggerLogout} title="Log out">
                 <LogOut size={14} />
@@ -2475,7 +2459,7 @@ export default function App() {
 
                       {/* Frosted Glass Locked Overlay */}
                       <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 p-8 text-center bg-black/40 backdrop-blur-[3px] pointer-events-auto z-[90]">
-                        <div className="p-4 rounded-full bg-purple-500/10 border border-purple-500/25 mb-4 animate-pulse shadow-[0_0_15px_rgba(168,85,247,0.1)]">
+                        <div className="p-4 rounded-full bg-purple-500/10 border border-purple-500/25 mb-4 animate-pulse ">
                           <Lock size={28} className="text-purple-400" />
                         </div>
                         <p className="font-bold text-base text-purple-200 tracking-wide uppercase">Workspace Locked</p>
@@ -2493,7 +2477,7 @@ export default function App() {
                               }).catch((e: any) => console.error(e));
                             }
                           }}
-                          className="mt-5 px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 hover:text-purple-200 text-xs font-semibold rounded-full border border-purple-500/30 hover:border-purple-500/50 shadow-md transition-all duration-200 cursor-pointer flex items-center gap-2 hover:-translate-y-0.5 active:translate-y-0"
+                          className="mt-5 px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 hover:text-purple-200 text-xs font-semibold rounded-full border border-purple-500/30 hover:border-purple-500/50  transition-all duration-200 cursor-pointer flex items-center gap-2 hover:-translate-y-0.5 active:translate-y-0"
                         >
                           <Zap size={12} className="animate-bounce" />
                           <span>Re-attach Workspace</span>

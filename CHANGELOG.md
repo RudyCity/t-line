@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.651] - 2026-07-26
+
+### Fix & Refactoring — SuperAgent Memory POST Handler & Integration Proxy
+- **SuperAgent Routes**: Updated `router.post('/memory/save')` in `backend/src/superAgentRoutes.ts` to use `sendSuperAgentRequest` with JSON payload forwarding and correct parameters.
+- **SuperAgent Bridge**: Exported `sendSuperAgentRequest` from `backend/src/superAgentBridge.ts` to enable proper REST proxying for memory save requests.
+- **Build Verification**: Fixed TypeScript compilation issue in `backend` build target and verified clean build across all workspace projects.
+
 ## [1.3.650] - 2026-07-26
 
 ### Fix & Refactoring — SuperAgent Console Hook & Icon Imports

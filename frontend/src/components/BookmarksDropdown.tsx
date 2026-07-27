@@ -101,7 +101,7 @@ export default function BookmarksDropdown({
         onClick={() => setShowBookmarksDropdown(!showBookmarksDropdown)}
         className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
           showBookmarksDropdown
-            ? 'bg-purple-600/20 border-purple-500 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.25)]'
+            ? 'bg-purple-600/20 border-purple-500 text-purple-400 '
             : 'bg-[var(--bg-main)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
         }`}
         title="Saved URLs / Bookmarks"
@@ -112,7 +112,7 @@ export default function BookmarksDropdown({
       {/* Dropdown Panel */}
       {showBookmarksDropdown && (
         <div
-          className="absolute right-0 mt-2 w-72 border border-[var(--border-color)] rounded-xl shadow-2xl z-[9999] p-2 flex flex-col"
+          className="absolute right-0 mt-2 w-72 border border-[var(--border-color)] rounded-xl  z-[9999] p-2 flex flex-col"
           style={{ backgroundColor: 'rgb(17, 24, 39)' }}
         >
           {/* Header */}
@@ -136,7 +136,7 @@ export default function BookmarksDropdown({
               style={{ backgroundColor: 'rgba(10, 15, 28, 0.92)' }}
             >
               <div
-                className="mx-3 rounded-xl border border-[var(--border-color)] p-4 flex flex-col gap-3 shadow-xl"
+                className="mx-3 rounded-xl border border-[var(--border-color)] p-4 flex flex-col gap-3 "
                 style={{ backgroundColor: 'rgb(17, 24, 39)' }}
               >
                 {/* Icon + Message */}

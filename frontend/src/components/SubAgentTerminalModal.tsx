@@ -82,7 +82,7 @@ export function SubAgentTerminalModal({ subagent, onClose }: SubAgentTerminalMod
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-      <div className="flex flex-col w-full max-w-4xl h-[80vh] bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl shadow-2xl overflow-hidden font-sans">
+      <div className="flex flex-col w-full max-w-4xl h-[80vh] bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl  overflow-hidden font-sans">
         {/* Terminal Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">

@@ -386,7 +386,7 @@ export function GitHistory({ workspaceId, token, worktreePath, onOpenDiffTab }: 
           color: white;
           flex-shrink: 0;
           text-shadow: 0 1px 1px rgba(0,0,0,0.2);
-          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+          box-shadow: none;
         }
         .git-commit-text-block {
           display: flex;

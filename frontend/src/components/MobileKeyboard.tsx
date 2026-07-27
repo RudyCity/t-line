@@ -109,7 +109,7 @@ export function MobileKeyboard({ onKeyInput, onClose }: MobileKeyboardProps): Re
           onClick={() => setIsCtrlActive(v => !v)}
           className={`flex-1 py-1.5 border rounded text-[11px] font-semibold cursor-pointer transition-all ${
             isCtrlActive
-              ? 'bg-purple-600 border-purple-500 text-white shadow-md shadow-purple-600/25'
+              ? 'bg-purple-600 border-purple-500 text-white  '
               : 'bg-slate-900/60 border-white/5 text-slate-300 active:bg-slate-800'
           }`}
         >
@@ -119,7 +119,7 @@ export function MobileKeyboard({ onKeyInput, onClose }: MobileKeyboardProps): Re
           onClick={() => setIsAltActive(v => !v)}
           className={`flex-1 py-1.5 border rounded text-[11px] font-semibold cursor-pointer transition-all ${
             isAltActive
-              ? 'bg-purple-600 border-purple-500 text-white shadow-md shadow-purple-600/25'
+              ? 'bg-purple-600 border-purple-500 text-white  '
               : 'bg-slate-900/60 border-white/5 text-slate-300 active:bg-slate-800'
           }`}
         >
@@ -204,7 +204,7 @@ export function MobileKeyboard({ onKeyInput, onClose }: MobileKeyboardProps): Re
             onClick={() => setIsShiftActive(v => !v)}
             className={`w-[12%] py-2.5 border rounded text-[11px] font-semibold cursor-pointer transition-all flex items-center justify-center ${
               isShiftActive
-                ? 'bg-purple-600 border-purple-500 text-white shadow-md shadow-purple-600/25'
+                ? 'bg-purple-600 border-purple-500 text-white  '
                 : 'bg-slate-900/60 border-white/5 text-slate-400 active:bg-slate-800'
             }`}
           >

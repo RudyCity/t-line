@@ -125,7 +125,7 @@ export function renderMessageContent(text: string) {
       if (i < rawLines.length) i++;
       const codeText = codeLines.join('\n');
       blocks.push(
-        <div key={`code-${i}`} className="my-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)] overflow-hidden font-mono text-xs shadow-sm">
+        <div key={`code-${i}`} className="my-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)] overflow-hidden font-mono text-xs ">
           <div className="flex items-center justify-between px-3 py-1 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] text-[10px] text-[var(--text-muted)]">
             <span className="font-semibold text-[var(--color-primary)] uppercase tracking-wider">{lang || 'code'}</span>
             <button
@@ -157,7 +157,7 @@ export function renderMessageContent(text: string) {
         const dataRows = tableLines.slice(2).map(parseRow);
 
         blocks.push(
-          <div key={`table-${i}`} className="my-2.5 overflow-x-auto rounded-lg border border-[var(--border-color)] shadow-sm">
+          <div key={`table-${i}`} className="my-2.5 overflow-x-auto rounded-lg border border-[var(--border-color)] ">
             <table className="w-full text-left text-xs border-collapse font-sans">
               <thead className="bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] text-[var(--text-main)]">
                 <tr>
@@ -318,7 +318,7 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
 
   if (msg.role === 'user') {
     return (
-      <div key={index} className="my-2 py-2 px-3 bg-[var(--color-primary-glow)] text-xs font-sans text-[var(--text-main)] select-text rounded-lg border border-[var(--color-primary)]/40 shadow-none">
+      <div key={index} className="my-2 py-2 px-3 bg-[var(--color-primary-glow)] text-xs font-sans text-[var(--text-main)] select-text rounded-lg border border-[var(--color-primary)]/40 ">
         <div className="flex items-center gap-1.5 mb-1 select-none text-[10px] font-bold font-mono text-[var(--color-primary)] uppercase">
           <span>❯ USER</span>
         </div>

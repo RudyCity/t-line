@@ -25,7 +25,7 @@ export function EmptyDashboard({
     <div className="welcome-card-outer">
       <div className="welcome-card-inner max-w-md w-full rounded-2xl">
         <div 
-          className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border flex items-center justify-center mb-5 shadow-inner"
+          className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border flex items-center justify-center mb-5 "
           style={{
             backgroundColor: 'color-mix(in srgb, var(--color-primary) 10%, transparent)',
             borderColor: 'color-mix(in srgb, var(--color-primary) 20%, transparent)',
@@ -42,7 +42,7 @@ export function EmptyDashboard({
         </p>
         <div className="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto">
           <button 
-            className="px-4 py-2 rounded-lg text-white font-semibold text-xs transition-all duration-150 active:scale-98 shadow-sm cursor-pointer" 
+            className="px-4 py-2 rounded-lg text-white font-semibold text-xs transition-all duration-150 active:scale-98  cursor-pointer" 
             onClick={() => setShowWorkspaceModal(true)}
             style={{
               backgroundColor: 'var(--color-primary)',

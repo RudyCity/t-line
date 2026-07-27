@@ -119,7 +119,7 @@ export const SuperAgentLoginManager: React.FC<SuperAgentLoginManagerProps> = ({
   return (
     <div className="space-y-4 text-xs font-sans">
       {/* Top Banner */}
-      <div className="flex items-center justify-between bg-[var(--bg-card)] p-3.5 rounded-xl border border-[var(--border-color)] shadow-sm">
+      <div className="flex items-center justify-between bg-[var(--bg-card)] p-3.5 rounded-xl border border-[var(--border-color)] ">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/50 text-[var(--color-primary)]">
             <Key className="w-4 h-4" />
@@ -131,7 +131,7 @@ export const SuperAgentLoginManager: React.FC<SuperAgentLoginManagerProps> = ({
         </div>
         <button
           onClick={openAddForm}
-          className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium py-1.5 px-3 rounded-lg transition flex items-center gap-1.5 text-xs shadow-sm"
+          className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium py-1.5 px-3 rounded-lg transition flex items-center gap-1.5 text-xs "
         >
           <Plus className="w-3.5 h-3.5" />
           Add Provider Profile
@@ -248,7 +248,7 @@ export const SuperAgentLoginManager: React.FC<SuperAgentLoginManagerProps> = ({
       {/* Add / Edit Provider Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150 text-[var(--text-main)]">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl w-full max-w-md p-5  space-y-4 animate-in fade-in zoom-in-95 duration-150 text-[var(--text-main)]">
             <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
               <h4 className="font-semibold text-[var(--text-main)] text-sm flex items-center gap-2">
                 <Key className="w-4 h-4 text-[var(--color-primary)]" />

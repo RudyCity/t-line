@@ -356,7 +356,7 @@ export function CheckpointsPanel({
         }
         .cp-card:hover {
           border-color: color-mix(in srgb, var(--color-primary) 30%, var(--border-color));
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          box-shadow: none;
         }
         .cp-card-autosave {
           background: rgba(245, 158, 11, 0.03);
@@ -364,7 +364,7 @@ export function CheckpointsPanel({
         }
         .cp-card-autosave:hover {
           border-color: rgba(245, 158, 11, 0.4);
-          box-shadow: 0 4px 12px rgba(245, 158, 11, 0.05);
+          box-shadow: none;
         }
         .cp-badge-dirty {
           background: rgba(245, 158, 11, 0.1);

@@ -94,7 +94,7 @@ export function ActiveTasksBar({
           className="relative flex items-center justify-between group cursor-pointer py-0.5 text-[var(--text-muted)] hover:text-[var(--text-main)] transition pl-1"
         >
           {/* Top Node Indicator */}
-          <div className="absolute -left-[13px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[var(--color-primary)] shadow-sm shadow-[var(--color-primary-glow)]" />
+          <div className="absolute -left-[13px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[var(--color-primary)]  " />
 
           <div className="flex items-center gap-1.5 font-bold uppercase text-[10px] tracking-wide text-[var(--text-main)]">
             <span className="text-[var(--color-primary)] font-mono">TASKS</span>

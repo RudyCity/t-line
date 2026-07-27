@@ -5,7 +5,8 @@ import {
   getAuditLogs, 
   clearAuditLogs, 
   getCliPromptHistory, 
-  saveCliPromptHistory 
+  saveCliPromptHistory,
+  sendSuperAgentRequest
 } from './superAgentBridge';
 import {
   loadMergedPresets,
@@ -211,6 +212,30 @@ router.get('/tasks', async (req, res) => {
   res.json(data);
 });
 
+// RMemory & Long-term Memory REST Proxy
+router.get('/memory/search', async (req, res) => {
+  const query = (req.query.query as string) || '';
+  const scope = (req.query.scope as string) || 'all';
+  const data = await proxyToSuperAgent(`/api/memory/search?query=${encodeURIComponent(query)}&scope=${encodeURIComponent(scope)}`, { memories: [] });
+  res.json(data);
+});
+
+router.post('/memory/save', async (req, res) => {
+  try {
+    const workspace = (req.headers['x-workspace-path'] as string) || (req.query.workspace as string) || '';
+    const data = await sendSuperAgentRequest('/api/memory/save', req.body, workspace);
+    res.json(data);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message || 'Failed to save memory' });
+  }
+});
+
+// Installed Skills REST Proxy
+router.get('/skills', async (_req, res) => {
+  const data = await proxyToSuperAgent('/api/skills', { skills: [] });
+  res.json(data);
+});
+
 // Chat Session history sync endpoints (100% SuperAgent HTTP Server)
 router.get('/sessions', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';
@@ -366,6 +391,43 @@ router.delete('/config/trusted-directory', async (req, res) => {
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to remove trusted directory: ' + err.message });
   }
+});
+
+// Memory & Shared Memory Proxy
+router.get('/memory', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const query = (req.query.query as string) || '';
+  const scope = (req.query.scope as string) || 'all';
+  const data = await proxyToSuperAgent(
+    `/api/memory?workspace=${encodeURIComponent(workspace)}&query=${encodeURIComponent(query)}&scope=${encodeURIComponent(scope)}`,
+    { memory: [], sharedMemory: [], error: 'SuperAgent memory unavailable' },
+    (req.headers.authorization as string) || '',
+    3000
+  );
+  res.json(data);
+});
+
+router.post('/memory', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent(
+    `/api/memory?workspace=${encodeURIComponent(workspace)}`,
+    { success: false, error: 'SuperAgent memory unavailable' },
+    (req.headers.authorization as string) || '',
+    3000
+  );
+  res.json(data);
+});
+
+// Detailed Skills Proxy
+router.get('/skills/detail', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent(
+    `/api/skills/detail?workspace=${encodeURIComponent(workspace)}`,
+    { skills: [], error: 'SuperAgent skills unavailable' },
+    (req.headers.authorization as string) || '',
+    3000
+  );
+  res.json(data);
 });
 
 export default router;

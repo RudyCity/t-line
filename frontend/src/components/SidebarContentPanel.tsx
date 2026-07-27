@@ -250,7 +250,7 @@ export function SidebarContentPanel({
                   }}
                   className={`flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-purple-600/10 border-purple-500/30 text-purple-200 shadow-sm'
+                      ? 'bg-purple-600/10 border-purple-500/30 text-purple-200 '
                       : 'bg-slate-900/40 border-white/5 text-slate-400 hover:bg-slate-800/40'
                   }`}
                 >

@@ -53,7 +53,7 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
   return (
     <div
       ref={historyDropdownRef}
-      className="absolute right-0 top-full mt-2 w-80 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[380px]"
+      className="absolute right-0 top-full mt-2 w-80 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl  z-50 overflow-hidden flex flex-col max-h-[380px]"
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-color)] bg-[var(--bg-main)]/40">

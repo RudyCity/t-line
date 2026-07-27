@@ -72,7 +72,7 @@
 .grid-config-btn:hover {
   background: var(--surface-overlay-hover);
   border-color: var(--color-primary);
-  box-shadow: 0 0 8px rgba(168, 85, 247, 0.15);
+  box-shadow: none;
 }
 .grid-config-dropdown {
   position: absolute;
@@ -83,7 +83,7 @@
   background: var(--bg-main);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -270,7 +270,7 @@
   padding: 20px;
   width: 90%;
   max-width: 400px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  box-shadow: none;
   animation: slideUp 0.15s ease-out;
 }
 .grid-modal-title {
@@ -326,7 +326,7 @@
 }
 .grid-terminal-card.focused {
   border-color: var(--color-primary);
-  box-shadow: 0 0 12px rgba(168, 85, 247, 0.18);
+  box-shadow: none;
 }
 .grid-card-header {
   display: flex;
@@ -450,7 +450,7 @@
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: none;
 }
 .grid-empty-icon-glow {
   position: relative;

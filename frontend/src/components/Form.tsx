@@ -68,11 +68,11 @@ export const Button: React.FC<ButtonProps> = ({
   let variantClass = '';
 
   if (variant === 'primary') {
-    variantClass = 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white shadow-lg shadow-[var(--color-primary-glow)]';
+    variantClass = 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white  ';
   } else if (variant === 'secondary') {
     variantClass = 'bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] border border-[var(--border-color)]';
   } else if (variant === 'danger') {
-    variantClass = 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/10 hover:shadow-red-500/30';
+    variantClass = 'bg-red-600 hover:bg-red-500 text-white   hover:';
   }
 
   return (

@@ -160,9 +160,9 @@ function LeafPane({
 
       {/* ── Desktop: hover action bar (top-right, hidden until hover) ── */}
       <div
-        className={`absolute top-2 right-2 hidden lg:flex items-center gap-1 opacity-0 group-hover/pane:opacity-100 transition-opacity duration-200 z-50 backdrop-blur-md border rounded-md p-1 shadow-lg ${
+        className={`absolute top-2 right-2 hidden lg:flex items-center gap-1 opacity-0 group-hover/pane:opacity-100 transition-opacity duration-200 z-50 backdrop-blur-md border rounded-md p-1  ${
           isLight
-            ? 'bg-white/85 border-purple-300/40 shadow-sm'
+            ? 'bg-white/85 border-purple-300/40 '
             : 'bg-[#0f111a]/85 border-purple-500/25'
         }`}
         onClick={(e) => e.stopPropagation()}
@@ -220,7 +220,7 @@ function LeafPane({
         {/* Expanded actions – slide in when toggled */}
         {mobileMenuOpen && (
           <div
-            className={`flex items-center gap-1 mr-1.5 backdrop-blur-md border rounded-md px-1.5 py-1 shadow-lg ${
+            className={`flex items-center gap-1 mr-1.5 backdrop-blur-md border rounded-md px-1.5 py-1  ${
               isLight
                 ? 'bg-white/90 border-purple-300/40'
                 : 'bg-[#0f111a]/90 border-purple-500/25'
@@ -276,7 +276,7 @@ function LeafPane({
           type="button"
           title={mobileMenuOpen ? 'Close menu' : 'Terminal actions'}
           onClick={() => setMobileMenuOpen((v) => !v)}
-          className={`w-7 h-7 rounded-md flex items-center justify-center shadow-md transition-all duration-150 cursor-pointer ${
+          className={`w-7 h-7 rounded-md flex items-center justify-center  transition-all duration-150 cursor-pointer ${
             mobileMenuOpen
               ? isLight
                 ? 'bg-purple-500/20 text-purple-700 border border-purple-400/40'

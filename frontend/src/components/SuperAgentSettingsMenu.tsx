@@ -62,7 +62,7 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="absolute right-0 top-11 w-84 sm:w-96 bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-xl shadow-2xl z-50 p-4 text-xs font-sans animate-in fade-in zoom-in-95 duration-150"
+      className="absolute right-0 top-11 w-84 sm:w-96 bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-xl  z-50 p-4 text-xs font-sans animate-in fade-in zoom-in-95 duration-150"
     >
       {/* Menu Header */}
       <div className="flex items-center justify-between pb-3 border-b border-[var(--border-color)] mb-3">
@@ -97,7 +97,7 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
               onOpenSettingsModal('login');
               onClose();
             }}
-            className="w-full p-2.5 rounded-lg bg-[var(--color-primary-glow)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--color-primary)]/50 text-[var(--color-primary)] transition flex items-center justify-between cursor-pointer shadow-xs"
+            className="w-full p-2.5 rounded-lg bg-[var(--color-primary-glow)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--color-primary)]/50 text-[var(--color-primary)] transition flex items-center justify-between cursor-pointer "
           >
             <div className="flex items-center gap-2.5 text-left">
               <div className="p-1.5 rounded-md bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--color-primary)]">
@@ -185,7 +185,7 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
               setConnectTrigger(prev => prev + 1);
               onClose();
             }}
-            className="w-full mt-1 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium py-1.5 px-3 rounded-md transition flex items-center justify-center gap-1.5 text-xs shadow-sm"
+            className="w-full mt-1 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium py-1.5 px-3 rounded-md transition flex items-center justify-center gap-1.5 text-xs "
           >
             <RefreshCw className="w-3 h-3" />
             Apply & Restart Bridge
@@ -208,7 +208,7 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
               }`}
             >
               <span
-                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white  ring-0 transition duration-200 ease-in-out ${
                   showSidebar ? 'translate-x-4' : 'translate-x-0'
                 }`}
               />

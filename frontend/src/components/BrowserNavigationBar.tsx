@@ -161,7 +161,7 @@ export default function BrowserNavigationBar({
                   {showAddBookmarkPopover && (
                     <div
                       ref={newBookmarkPopoverRef}
-                      className="absolute right-0 top-full mt-2 w-64 bg-gray-900 border border-[var(--border-color)] rounded-xl shadow-2xl p-3 z-[9999] flex flex-col gap-2"
+                      className="absolute right-0 top-full mt-2 w-64 bg-gray-900 border border-[var(--border-color)] rounded-xl  p-3 z-[9999] flex flex-col gap-2"
                       style={{ backgroundColor: 'rgb(17, 24, 39)' }}
                     >
                       <div className="text-[10px] font-semibold text-purple-400">
@@ -219,7 +219,7 @@ export default function BrowserNavigationBar({
                   onClick={() => setShowHistoryDropdown(!showHistoryDropdown)}
                   className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
                     showHistoryDropdown
-                      ? 'bg-purple-600/20 border-purple-500 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.25)]'
+                      ? 'bg-purple-600/20 border-purple-500 text-purple-400 '
                       : 'bg-[var(--bg-main)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
                   }`}
                   title="Riwayat Browser / History"
@@ -324,7 +324,7 @@ export default function BrowserNavigationBar({
             onClick={toggleInspect}
             className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
               isInspecting 
-                ? 'bg-purple-500/20 border-purple-500 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.2)]'
+                ? 'bg-purple-500/20 border-purple-500 text-purple-400 '
                 : 'bg-[var(--bg-main)]/50 border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
             }`}
             title="Inspect Element (Click and select items to inspect)"

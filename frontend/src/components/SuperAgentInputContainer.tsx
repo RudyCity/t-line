@@ -98,7 +98,7 @@ export function SuperAgentInputContainer({
 
       {/* Hallmark Minimalist Slash Command Autocomplete Popover (Unified with input) */}
       {showSuggestions && suggestions.length > 0 && handleSelectSuggestion && (
-        <div className="absolute bottom-full left-0 right-0 mb-0 bg-[var(--bg-sidebar)] border border-b-0 border-[var(--border-color)] rounded-t-xl rounded-b-none shadow-2xl z-50 max-h-64 overflow-y-auto scrollbar-thin font-mono text-xs divide-y divide-[var(--border-color)]/60 select-none">
+        <div className="absolute bottom-full left-0 right-0 mb-0 bg-[var(--bg-sidebar)] border border-b-0 border-[var(--border-color)] rounded-t-xl rounded-b-none  z-50 max-h-64 overflow-y-auto scrollbar-thin font-mono text-xs divide-y divide-[var(--border-color)]/60 select-none">
           <div className="px-3 py-1.5 bg-[var(--panel-header-bg)] text-[10px] text-[var(--color-primary)] font-bold uppercase tracking-wider flex items-center justify-between sticky top-0 backdrop-blur-md border-b border-[var(--border-color)]">
             <span className="flex items-center gap-1.5">
               <Terminal className="w-3.5 h-3.5 text-[var(--color-primary)]" />
@@ -152,7 +152,7 @@ export function SuperAgentInputContainer({
             {attachments.map(att => (
               <div
                 key={att.id}
-                className="relative group flex items-center gap-2 p-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg shadow-sm max-w-xs transition-colors hover:border-[var(--color-primary)]/50"
+                className="relative group flex items-center gap-2 p-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg  max-w-xs transition-colors hover:border-[var(--color-primary)]/50"
               >
                 {att.type === 'image' && att.previewUrl ? (
                   <img
@@ -240,7 +240,7 @@ export function SuperAgentInputContainer({
                 </button>
 
                 {showPresetMenu && (
-                  <div className="sa-command-popover absolute bottom-full left-0 mb-1.5 w-64 py-1 z-[100] overflow-hidden font-mono bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-xl shadow-2xl backdrop-blur-md">
+                  <div className="sa-command-popover absolute bottom-full left-0 mb-1.5 w-64 py-1 z-[100] overflow-hidden font-mono bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-xl  backdrop-blur-md">
                     <div className="px-2.5 py-1 text-[9px] font-bold text-[var(--color-primary)] uppercase tracking-wider border-b border-[var(--border-color)] flex items-center justify-between">
                       <span>Select Preset</span>
                       <span className="text-[var(--text-muted)] font-normal">
@@ -355,7 +355,7 @@ export function SuperAgentInputContainer({
               <button
                 onClick={() => handleSend()}
                 disabled={(!input.trim() && attachments.length === 0) || !ws || ws.readyState !== WebSocket.OPEN || !hasActivePreset}
-                className="flex items-center justify-center bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] active:scale-95 disabled:bg-[var(--bg-card)] disabled:text-[var(--text-muted)] disabled:border-[var(--border-color)] border border-[var(--color-primary)] text-white rounded-md p-1.5 shadow-md shadow-[var(--color-primary-glow)] transition-all cursor-pointer shrink-0 focus:outline-none"
+                className="flex items-center justify-center bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] active:scale-95 disabled:bg-[var(--bg-card)] disabled:text-[var(--text-muted)] disabled:border-[var(--border-color)] border border-[var(--color-primary)] text-white rounded-md p-1.5   transition-all cursor-pointer shrink-0 focus:outline-none"
                 title="Send Message (↵)"
               >
                 <Send className="w-3.5 h-3.5" />

@@ -221,7 +221,7 @@ export default function BrowserDevTools({
                         )}
                         <button
                           onClick={() => copyToClipboard(generateErrorPrompt(log), log.id)}
-                          className="flex items-center gap-1 px-2 py-1 rounded bg-purple-600/80 hover:bg-purple-600 text-white text-[10px] font-bold transition-all shadow-sm cursor-pointer"
+                          className="flex items-center gap-1 px-2 py-1 rounded bg-purple-600/80 hover:bg-purple-600 text-white text-[10px] font-bold transition-all  cursor-pointer"
                           title="Copy prompt for AI"
                         >
                           {copiedId === log.id ? <Check size={10} /> : <Sparkles size={10} />}
@@ -274,7 +274,7 @@ export default function BrowserDevTools({
 
                     <button
                       onClick={() => copyToClipboard(generateElementPrompt(inspectedElement), 'element')}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-sm cursor-pointer shrink-0"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all  cursor-pointer shrink-0"
                       title="Copy prompt for AI"
                     >
                       {copiedId === 'element' ? <Check size={11} /> : <Sparkles size={11} />}
