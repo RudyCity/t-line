@@ -1,5 +1,6 @@
 import React from 'react';
 import { SuperAgentToolItem } from './SuperAgentToolItem';
+import { AdvisorResultCard, AdvisorResultCardProps } from './SuperAgentInteractiveCards';
 
 export interface ConsoleMessage {
   role: 'user' | 'assistant' | 'system' | 'tool' | 'thought' | 'connection';
@@ -7,6 +8,62 @@ export interface ConsoleMessage {
   toolName?: string;
   args?: any;
   result?: any;
+}
+
+function tryParseAdvisorPayload(text: string): AdvisorResultCardProps | null {
+  if (!text) return null;
+
+  // Check if text starts or contains clear advisor markers
+  const isAdvisorText = /\[?(Execution Advisor|Advisor Result|Advisor|Advice|Advisor Warning|Advisor Block)\]?/i.test(text);
+  if (!isAdvisorText) return null;
+
+  let verdict: 'PASS' | 'WARN' | 'BLOCK' | 'SUGGESTION' | 'INFO' = 'INFO';
+  if (/PASS|APPROVED|SUCCESS/i.test(text)) verdict = 'PASS';
+  else if (/WARN|CAUTION/i.test(text)) verdict = 'WARN';
+  else if (/BLOCK|FAIL|ERROR|DENIED|HALT/i.test(text)) verdict = 'BLOCK';
+  else if (/SUGGESTION|RECOMMEND/i.test(text)) verdict = 'SUGGESTION';
+
+  // Extract confidence if present
+  let confidence: number | undefined = undefined;
+  const confMatch = text.match(/confidence:?\s*([\d.]+)/i);
+  if (confMatch) {
+    const parsed = parseFloat(confMatch[1]);
+    if (!isNaN(parsed)) confidence = parsed;
+  }
+
+  // Parse suggestions
+  const suggestions: string[] = [];
+  const lines = text.split('\n');
+  let summary = '';
+  let reasoning = '';
+  let inReasoning = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (/^[•\-\*]\s+/.test(trimmed)) {
+      suggestions.push(trimmed.replace(/^[•\-\*]\s+/, ''));
+    } else if (/^reasoning:?/i.test(trimmed)) {
+      inReasoning = true;
+    } else if (inReasoning) {
+      reasoning += line + '\n';
+    } else if (!summary && trimmed && !/^\[?(Execution Advisor|Advisor Result|Advisor)\]?/i.test(trimmed)) {
+      summary = trimmed;
+    }
+  }
+
+  if (!summary) {
+    summary = text.replace(/^\[?(Execution Advisor|Advisor Result|Advisor)\]?:?\s*/i, '').slice(0, 150);
+  }
+
+  return {
+    title: 'Real-Time Execution Advisor',
+    verdict,
+    confidence,
+    summary,
+    suggestions,
+    reasoning: reasoning.trim() || undefined,
+    rawText: text,
+  };
 }
 
 function renderInlineMarkdown(text: string): React.ReactNode {
@@ -273,6 +330,12 @@ export function renderMessageContent(text: string) {
 }
 
 export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: number }> = ({ msg, index }) => {
+  // Check if message is an Execution Advisor result
+  const advisorProps = tryParseAdvisorPayload(msg.text);
+  if (advisorProps) {
+    return <AdvisorResultCard key={index} {...advisorProps} />;
+  }
+
   if (msg.role === 'connection') {
     const isError = /error|failed|unreachable|refused/i.test(msg.text);
     const isRestart = /restart|respawn|auto-start|starting/i.test(msg.text);

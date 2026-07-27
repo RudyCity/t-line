@@ -2,7 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
-## [1.3.652] - 2026-07-26
+# Changelog
+
+All notable changes to the **t-line** workspace manager project will be documented in this file.
+
+## [1.3.653] - 2026-07-26
+
+### UI & Execution Intelligence — Real-Time Execution Advisor Card & Formatting
+- **Interactive Advisor Result Card (`SuperAgentInteractiveCards.tsx`)**: Introduced `AdvisorResultCard` component with distinct verdict styling (`PASS`, `WARN`, `BLOCK`, `SUGGESTION`, `INFO`), confidence percentage score meter, suggestion bullet lists, copy action button, and collapsible reasoning panel.
+- **Message Stream Detection (`SuperAgentMessageItem.tsx`)**: Integrated real-time parser to intercept Execution Advisor outputs and render interactive cards directly within the SuperAgent desktop chat.
+- **Tool Item Enhancement (`SuperAgentToolItem.tsx`)**: Added `Advisor` action icon (`Cpu`) and custom target labeling for advisor execution tools.
+
 
 ### Feature Expansion — SuperAgent Audit Intelligence & Telemetry Analytics
 - **Backend Audit Bridge**: Enhanced `getAuditLogs()` in `backend/src/superAgentBridge.ts` with multi-criteria filtering (`type`, `search`, `workspace`), pagination, and added `getAuditStats()` for telemetry aggregation.

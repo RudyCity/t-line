@@ -115,6 +115,16 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
       };
     }
 
+    // 5. Advisor / Execution Advice
+    if (rawToolName.includes('advisor') || rawToolName.includes('advice')) {
+      const query = args.Query || args.query || args.prompt || args.target || '';
+      return {
+        action: 'Advisor',
+        target: query ? `"${query}"` : 'Execution check',
+        icon: <Cpu className="w-3 h-3 text-cyan-400 shrink-0" />
+      };
+    }
+
     // 5. Subagent Operations
     if (rawToolName.includes('subagent')) {
       const role = args.name || args.Role || args.role || args.Subagents?.[0]?.Role || args.Action || '';

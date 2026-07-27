@@ -1,3 +1,4 @@
+import React from 'react';
 import { Check, X, AlertTriangle } from 'lucide-react';
 
 export interface PendingPermission {
@@ -231,3 +232,150 @@ export function PlanCard({ pendingPlanApproval, handlePlanApproval }: PlanCardPr
     </div>
   );
 }
+
+export interface AdvisorResultCardProps {
+  title?: string;
+  verdict?: 'PASS' | 'WARN' | 'BLOCK' | 'SUGGESTION' | 'INFO';
+  confidence?: number;
+  summary?: string;
+  reasoning?: string;
+  suggestions?: string[];
+  rawText?: string;
+}
+
+export function AdvisorResultCard({
+  title = 'Execution Advisor Result',
+  verdict = 'INFO',
+  confidence,
+  summary,
+  reasoning,
+  suggestions = [],
+  rawText,
+}: AdvisorResultCardProps) {
+  const [expanded, setExpanded] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
+
+  const getVerdictStyle = (v: string) => {
+    switch (v.toUpperCase()) {
+      case 'PASS':
+      case 'SUCCESS':
+      case 'APPROVED':
+        return {
+          bg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
+          badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+          icon: <Check className="w-4 h-4 text-emerald-400 shrink-0" />,
+        };
+      case 'WARN':
+      case 'WARNING':
+      case 'CAUTION':
+        return {
+          bg: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
+          badge: 'bg-amber-500/20 text-amber-200 border-amber-500/40',
+          icon: <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />,
+        };
+      case 'BLOCK':
+      case 'FAIL':
+      case 'ERROR':
+      case 'DENIED':
+        return {
+          bg: 'bg-rose-500/10 border-rose-500/30 text-rose-300',
+          badge: 'bg-rose-500/20 text-rose-200 border-rose-500/40',
+          icon: <X className="w-4 h-4 text-rose-400 shrink-0" />,
+        };
+      case 'SUGGESTION':
+      case 'RECOMMENDATION':
+        return {
+          bg: 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300',
+          badge: 'bg-cyan-500/20 text-cyan-200 border-cyan-500/40',
+          icon: <AlertTriangle className="w-4 h-4 text-cyan-400 shrink-0" />,
+        };
+      default:
+        return {
+          bg: 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300',
+          badge: 'bg-indigo-500/20 text-indigo-200 border-indigo-500/40',
+          icon: <AlertTriangle className="w-4 h-4 text-indigo-400 shrink-0" />,
+        };
+    }
+  };
+
+  const style = getVerdictStyle(verdict);
+
+  const handleCopy = () => {
+    const textToCopy = rawText || `${title} [${verdict}]: ${summary || reasoning || ''}`;
+    navigator.clipboard.writeText(textToCopy);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className={`my-2 p-3.5 rounded-xl border backdrop-blur-md transition-all duration-200 ${style.bg} space-y-2.5`}>
+      {/* Header Bar */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          {style.icon}
+          <span className="font-semibold text-xs text-[var(--text-main)] truncate">{title}</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {confidence !== undefined && (
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[var(--bg-card)]/60 text-[var(--text-secondary)] border border-[var(--border-color)]">
+              Confidence: {Math.round(confidence * (confidence <= 1 ? 100 : 1))}%
+            </span>
+          )}
+          <span className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${style.badge}`}>
+            {verdict}
+          </span>
+        </div>
+      </div>
+
+      {/* Primary Summary */}
+      {summary && (
+        <p className="text-xs text-[var(--text-main)] leading-relaxed font-medium">
+          {summary}
+        </p>
+      )}
+
+      {/* Suggestions List */}
+      {suggestions.length > 0 && (
+        <div className="space-y-1 pt-1 border-t border-white/5">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)] font-semibold">
+            Suggested Actions:
+          </span>
+          <ul className="space-y-1">
+            {suggestions.map((item, idx) => (
+              <li key={idx} className="text-xs flex items-start gap-1.5 text-[var(--text-main)]">
+                <span className="text-[var(--color-primary)] font-bold">•</span>
+                <span className="flex-1">{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Reasoning or Raw Text Toggle */}
+      {(reasoning || rawText) && (
+        <div className="pt-1.5 border-t border-white/5 flex items-center justify-between text-[11px]">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-[var(--color-primary)] hover:underline flex items-center gap-1 font-mono font-medium cursor-pointer"
+          >
+            {expanded ? 'Hide Details' : 'View Details & Reasoning'}
+          </button>
+          <button
+            onClick={handleCopy}
+            className="text-[var(--text-secondary)] hover:text-[var(--text-main)] transition-colors px-2 py-0.5 rounded bg-[var(--bg-card)]/40 border border-[var(--border-color)] text-[10px] cursor-pointer flex items-center gap-1"
+          >
+            {copied ? 'Copied!' : 'Copy'}
+          </button>
+        </div>
+      )}
+
+      {/* Expanded Content */}
+      {expanded && (reasoning || rawText) && (
+        <div className="p-2.5 rounded-lg bg-black/20 border border-white/5 font-mono text-[11px] text-[var(--text-main)] whitespace-pre-wrap leading-relaxed overflow-x-auto max-h-48">
+          {reasoning || rawText}
+        </div>
+      )}
+    </div>
+  );
+}
+
