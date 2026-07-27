@@ -138,7 +138,8 @@ export function SuperAgentHistorySidebar({
     const older: ChatSession[] = [];
 
     for (const s of unpinned) {
-      const time = s.updatedAt || s.createdAt || Date.now();
+      const rawTime = s.updatedAt || s.createdAt || Date.now();
+      const time = typeof rawTime === 'number' && !isNaN(rawTime) ? rawTime : (new Date(rawTime).getTime() || Date.now());
       if (time >= todayStart) {
         today.push(s);
       } else if (time >= yesterdayStart) {
@@ -180,8 +181,10 @@ export function SuperAgentHistorySidebar({
     setEditingId(null);
   };
 
-  const formatTimestamp = (timestamp: number) => {
-    const date = new Date(timestamp);
+  const formatTimestamp = (timestamp?: number | string) => {
+    if (!timestamp) return '';
+    const date = typeof timestamp === 'number' ? new Date(timestamp) : new Date(timestamp);
+    if (isNaN(date.getTime())) return '';
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
 

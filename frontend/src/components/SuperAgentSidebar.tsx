@@ -1,6 +1,22 @@
 import { useState } from 'react';
-import { GitBranch, Activity, Cpu, RefreshCw, ChevronDown, ChevronRight, Terminal as TerminalIcon, FileCode, ExternalLink } from 'lucide-react';
+import { GitBranch, Activity, Cpu, RefreshCw, ChevronDown, ChevronRight, Terminal as TerminalIcon, FileCode, ExternalLink, Globe, Clock, Trash2 } from 'lucide-react';
 import { SubAgentItem } from './SubAgentTerminalModal';
+
+export interface BgTaskItem {
+  id: string;
+  name: string;
+  type?: string;
+  status: string;
+  prompt?: string;
+  createdAt?: string | number;
+}
+
+export interface BrowserInstanceItem {
+  id: string;
+  url?: string;
+  title?: string;
+  connectedAt?: string | number;
+}
 
 export interface RecentChangeItem {
   path: string;
@@ -24,8 +40,11 @@ interface SuperAgentSidebarProps {
   subagents: SubAgentItem[];
   procs: ProcessItem[];
   recentChanges: RecentChangeItem[];
+  bgTasks?: BgTaskItem[];
+  browserInstances?: BrowserInstanceItem[];
   onSelectSubAgent: (subagent: SubAgentItem) => void;
   onSelectProc?: (proc: ProcessItem) => void;
+  onKillBgTask?: (taskId: string) => void;
   onRefreshData?: () => void;
   isLoadingData?: boolean;
   onOpenFile?: (filePath: string, fileName?: string) => void;
@@ -37,8 +56,11 @@ export function SuperAgentSidebar({
   subagents = [],
   procs = [],
   recentChanges = [],
+  bgTasks = [],
+  browserInstances = [],
   onSelectSubAgent,
   onSelectProc,
+  onKillBgTask,
   onRefreshData,
   isLoadingData = false,
   onOpenFile,
@@ -48,13 +70,17 @@ export function SuperAgentSidebar({
     changes: boolean;
     procs: boolean;
     subagents: boolean;
+    bgTasks: boolean;
+    browserInstances: boolean;
   }>({
     changes: true,
     procs: true,
-    subagents: true
+    subagents: true,
+    bgTasks: true,
+    browserInstances: true
   });
 
-  const toggleSection = (section: 'changes' | 'procs' | 'subagents') => {
+  const toggleSection = (section: 'changes' | 'procs' | 'subagents' | 'bgTasks' | 'browserInstances') => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
@@ -277,6 +303,111 @@ export function SuperAgentSidebar({
               ) : (
                 <div className="p-3 text-center text-[11px] text-[var(--text-muted)] font-mono">
                   Clean working tree (No changes)
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Section 4: Background Tasks */}
+        <div className="border-b border-[var(--border-color)]">
+          <button
+            onClick={() => toggleSection('bgTasks')}
+            className="w-full px-3 py-2 flex items-center justify-between bg-[var(--panel-header-bg)] hover:bg-[var(--surface-overlay-hover)] transition cursor-pointer select-none"
+          >
+            <div className="flex items-center gap-2">
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span className="font-semibold text-xs text-[var(--text-main)]">Background Tasks</span>
+              {bgTasks.length > 0 && (
+                <span className="px-1.5 py-0.2 text-[10px] bg-amber-500/20 text-amber-300 rounded-full font-mono">
+                  {bgTasks.length}
+                </span>
+              )}
+            </div>
+            {openSections.bgTasks ? <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" /> : <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
+          </button>
+
+          {openSections.bgTasks && (
+            <div className="p-1.5 space-y-1">
+              {bgTasks.length > 0 ? (
+                bgTasks.map(task => (
+                  <div
+                    key={task.id}
+                    className="p-2 bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                        <span className="text-xs font-semibold truncate text-[var(--text-main)]">
+                          {task.name || task.id}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-[var(--text-muted)] font-mono truncate block mt-0.5">
+                        {task.prompt || task.status || 'Active Task'}
+                      </span>
+                    </div>
+                    {onKillBgTask && (
+                      <button
+                        onClick={() => onKillBgTask(task.id)}
+                        className="p-1 hover:bg-red-500/20 text-red-400 rounded transition cursor-pointer shrink-0"
+                        title="Kill Task"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="p-3 text-center text-[11px] text-[var(--text-muted)] font-mono">
+                  No active background tasks
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Section 5: Browser Instances (Extension Tabs) */}
+        <div className="border-b border-[var(--border-color)]">
+          <button
+            onClick={() => toggleSection('browserInstances')}
+            className="w-full px-3 py-2 flex items-center justify-between bg-[var(--panel-header-bg)] hover:bg-[var(--surface-overlay-hover)] transition cursor-pointer select-none"
+          >
+            <div className="flex items-center gap-2">
+              <Globe className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="font-semibold text-xs text-[var(--text-main)]">Browser Tabs</span>
+              {browserInstances.length > 0 && (
+                <span className="px-1.5 py-0.2 text-[10px] bg-emerald-500/20 text-emerald-300 rounded-full font-mono">
+                  {browserInstances.length}
+                </span>
+              )}
+            </div>
+            {openSections.browserInstances ? <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" /> : <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
+          </button>
+
+          {openSections.browserInstances && (
+            <div className="p-1.5 space-y-1">
+              {browserInstances.length > 0 ? (
+                browserInstances.map(inst => (
+                  <div
+                    key={inst.id}
+                    className="p-2 bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md flex flex-col gap-1"
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                      <span className="text-xs font-semibold truncate text-[var(--text-main)]">
+                        {inst.title || inst.id}
+                      </span>
+                    </div>
+                    {inst.url && (
+                      <span className="text-[10px] text-[var(--text-muted)] font-mono truncate">
+                        {inst.url}
+                      </span>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="p-3 text-center text-[11px] text-[var(--text-muted)] font-mono">
+                  No Chrome extension connected
                 </div>
               )}
             </div>

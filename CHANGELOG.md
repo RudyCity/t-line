@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.655] - 2026-07-26
+
+### Feature & Refactoring — SuperAgent UI Layout & Session Integration Overhaul
+- **SuperAgent Layout & Sidebar Adjustments (`SuperAgentSidebar.tsx`, `SuperAgentConsole.tsx`, `useLayoutHelpers.ts`, `layout.css`)**: Enhanced responsive sidebar layout, console dimensions, session history panel positioning, and drag-resize handler stability (`useSidebarResize.ts`).
+- **Backend & REST Bridge Synchronization (`superAgentBridge.ts`, `superAgentRoutes.ts`, `sessionManager.ts`)**: Refactored backend session lifecycle handlers and REST endpoints to ensure consistent workspace session proxying and clean error handling.
+
 ## [1.3.654] - 2026-07-26
 
 ### Fix & Integration — SuperAgent Sessions API Abort Signal Support

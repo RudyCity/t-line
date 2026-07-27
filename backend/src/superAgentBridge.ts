@@ -418,7 +418,6 @@ async function initializeSuperAgentSession(workspacePath: string, mode: string, 
     };
     if (sessionId) {
       initPayload.sessionId = sessionId;
-      initPayload.resume = sessionId;
     }
     const postData = JSON.stringify(initPayload);
 
@@ -517,6 +516,7 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
   const workspacePath = parsedUrl.searchParams.get('workspace') || process.cwd();
   const agentMode = parsedUrl.searchParams.get('agentMode') || 'single';
   const customArgs = parsedUrl.searchParams.get('customArgs') || '';
+  const initialSessionId = parsedUrl.searchParams.get('sessionId') || undefined;
 
   let sseReq: http.ClientRequest | null = null;
   let connectionAttempts = 0;
@@ -529,10 +529,12 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
       sseReq = null;
     }
 
+    const ssePath = `/api/events?workspace=${encodeURIComponent(workspacePath)}${initialSessionId ? `&sessionId=${encodeURIComponent(initialSessionId)}` : ''}`;
+
     sseReq = http.request({
       hostname: '127.0.0.1',
       port: 7888,
-      path: `/api/events?workspace=${encodeURIComponent(workspacePath)}`,
+      path: ssePath,
       method: 'GET',
       headers: {
         'Accept': 'text/event-stream',
@@ -621,6 +623,11 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
   }
 
   connectToSuperAgentSSE();
+
+  // Eagerly initialize SuperAgent session on WS connection so first prompt won't fail
+  initializeSuperAgentSession(workspacePath, agentMode, initialSessionId).catch((err) => {
+    console.warn('[WS-Agent] Eager session init warning:', err?.message || err);
+  });
 
   ws.on('message', async (message: string) => {
     try {

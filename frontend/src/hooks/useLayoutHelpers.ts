@@ -14,15 +14,37 @@ export function useLayoutHelpers(
     const startWidth = sidebarWidth;
     const startX = mouseDownEvent.clientX;
 
+    document.body.classList.add('is-resizing');
+
+    let animationFrameId: number | null = null;
+    let latestWidth = startWidth;
+
+    // Direct DOM manipulation during drag for zero-lag CSS variable sizing
+    const drawerEl = document.querySelector('.sidebar-drawer-content') as HTMLElement | null;
+
     const doDrag = (mouseMoveEvent: MouseEvent) => {
       const newWidth = startWidth + (mouseMoveEvent.clientX - startX);
       if (newWidth >= 200 && newWidth <= 600) {
-        setSidebarWidth(newWidth);
-        localStorage.setItem('tline-sidebar-width', newWidth.toString());
+        latestWidth = newWidth;
+        if (drawerEl) {
+          drawerEl.style.width = `${newWidth - 48}px`;
+        }
+        if (animationFrameId === null) {
+          animationFrameId = requestAnimationFrame(() => {
+            animationFrameId = null;
+          });
+        }
       }
     };
 
     const stopDrag = () => {
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      document.body.classList.remove('is-resizing');
+      setSidebarWidth(latestWidth);
+      localStorage.setItem('tline-sidebar-width', latestWidth.toString());
       document.removeEventListener('mousemove', doDrag);
       document.removeEventListener('mouseup', stopDrag);
     };

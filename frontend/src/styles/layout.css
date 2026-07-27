@@ -248,6 +248,26 @@
   box-shadow: none;
 }
 
+/* Global Resizing Performance & Event Guard Rules */
+body.is-resizing {
+  cursor: col-resize !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+body.is-resizing iframe,
+body.is-resizing canvas,
+body.is-resizing .xterm,
+body.is-resizing video {
+  pointer-events: none !important;
+}
+
+body.is-resizing .sidebar-drawer-content,
+body.is-resizing .sidebar-resizer {
+  transition: none !important;
+}
+
+
 /* Collapsed Sidebar */
 .sidebar.sidebar-collapsed {
   width: 48px !important;

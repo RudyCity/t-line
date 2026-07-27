@@ -2,6 +2,7 @@ import { Router } from 'express';
 import http from 'http';
 import { authMiddleware } from './auth';
 import { sendSuperAgentRequest } from './superAgentBridge';
+import { getWorkspaceSessions, getSessionMessages } from './sessionManager';
 
 const router = Router();
 
@@ -181,31 +182,20 @@ router.get('/skills/detail', async (req, res) => {
   res.json(data);
 });
 
-// Session history → proxy to SA
+// Session history → fetch cleaned & formatted sessions from sessionManager
 router.get('/sessions', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
   const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
-  let path = '/api/history/sessions';
-  const params: string[] = [];
-  if (limit) params.push(`limit=${limit}`);
-  if (offset) params.push(`offset=${offset}`);
-  if (params.length) path += '?' + params.join('&');
-  const data = await proxyToSuperAgent(path, { sessions: [] }, workspace, 3000);
+  const data = await getWorkspaceSessions(workspace, limit, offset);
   res.json(data);
 });
 
 router.get('/sessions/:id', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';
-  const sessionId = encodeURIComponent(req.params.id);
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
   const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
-  let path = `/api/history/session/${sessionId}`;
-  const params: string[] = [];
-  if (limit) params.push(`limit=${limit}`);
-  if (offset) params.push(`offset=${offset}`);
-  if (params.length) path += '?' + params.join('&');
-  const data = await proxyToSuperAgent(path, { messages: [] }, workspace, 3000);
+  const data = await getSessionMessages(workspace, req.params.id, limit, offset);
   res.json(data);
 });
 
@@ -403,6 +393,27 @@ router.post('/browser/detect-ui', async (req, res) => {
 router.post('/browser/result', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';
   const data = await proxyToSuperAgent('/api/browser/result', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+// Server Shutdown → proxy to SA
+router.post('/shutdown', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/shutdown', { success: true }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+// Workspace Switch → proxy to SA
+router.post('/switch-workspace', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/switch-workspace', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+// Advisor Events SSE / status proxy
+router.get('/advisor/events', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/advisor/events', { events: [] }, workspace, 3000);
   res.json(data);
 });
 

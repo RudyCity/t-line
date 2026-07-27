@@ -226,9 +226,19 @@ export async function getWorkspaceSessions(
           !s.displayName.startsWith('sess_') && 
           !s.displayName.startsWith('session_');
 
+        const hasValidTitle = s.title &&
+          !isNoiseMessageContent(s.title) &&
+          s.title !== s.id &&
+          s.title !== 'New Chat' &&
+          !s.title.startsWith('sess/') &&
+          !s.title.startsWith('sess_') &&
+          !s.title.startsWith('session_');
+
         const candidate = hasValidDisplayName 
           ? s.displayName 
-          : (firstSubstantive || lastSubstantive || cleanFirst || cleanLast || s.displayName || 'New Chat');
+          : (hasValidTitle
+              ? s.title
+              : (firstSubstantive || lastSubstantive || cleanFirst || cleanLast || s.displayName || s.title || 'New Chat'));
 
         title = cleanSessionTitle(candidate);
         if (title.length > 45) {
@@ -236,13 +246,29 @@ export async function getWorkspaceSessions(
         }
 
         title = cleanSessionTitle(title);
-        const lastMod = s.lastModified ? new Date(s.lastModified).getTime() : Date.now();
+        
+        let lastMod = Date.now();
+        if (s.updatedAt && !isNaN(new Date(s.updatedAt).getTime())) {
+          lastMod = new Date(s.updatedAt).getTime();
+        } else if (s.createdAt && !isNaN(new Date(s.createdAt).getTime())) {
+          lastMod = new Date(s.createdAt).getTime();
+        } else if (s.lastModified && !isNaN(new Date(s.lastModified).getTime())) {
+          lastMod = new Date(s.lastModified).getTime();
+        } else if (s.id) {
+          const match = String(s.id).match(/sess_(\d+)_/);
+          if (match && match[1]) {
+            lastMod = parseInt(match[1], 10);
+          }
+        }
+
+        const createdAt = (s.createdAt && !isNaN(new Date(s.createdAt).getTime())) ? new Date(s.createdAt).getTime() : lastMod;
+        const updatedAt = lastMod;
 
         cleanedSessions.push({
           id: s.id,
           title,
-          createdAt: lastMod,
-          updatedAt: lastMod
+          createdAt,
+          updatedAt
         });
       }
 

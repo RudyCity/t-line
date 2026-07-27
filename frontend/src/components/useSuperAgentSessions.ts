@@ -135,10 +135,18 @@ async function apiGetSessions(
       const data = await res.json();
       if (Array.isArray(data.sessions)) {
         return {
-          sessions: data.sessions.map((s: ChatSession) => ({
-            ...s,
-            title: cleanSessionTitle(s.title)
-          })),
+          sessions: data.sessions.map((s: any) => {
+            const rawTime = s.updatedAt || s.createdAt || s.lastModified || Date.now();
+            const parsedTime = typeof rawTime === 'number' && !isNaN(rawTime) ? rawTime : (new Date(rawTime).getTime() || Date.now());
+            const createdTime = typeof s.createdAt === 'number' && !isNaN(s.createdAt) ? s.createdAt : parsedTime;
+            const titleCandidate = s.title || s.displayName || 'New Chat';
+            return {
+              id: s.id,
+              title: cleanSessionTitle(titleCandidate),
+              createdAt: createdTime,
+              updatedAt: parsedTime
+            };
+          }),
           totalCount: data.totalCount ?? data.sessions.length,
           hasMore: data.hasMore ?? false
         };

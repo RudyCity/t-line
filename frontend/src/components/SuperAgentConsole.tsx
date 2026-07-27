@@ -17,7 +17,8 @@ import { useSidebarResize } from './useSidebarResize';
 import { getAuthHeader, readFileAsText, readFileAsDataURL, getMainModelLabel as getModelLabelUtil, handleAgentEventPayload, fetchCliPromptHistory } from './SuperAgentConsoleUtils';
 import { SuperAgentMemoryInspector } from './SuperAgentMemoryInspector';
 import { SkillMarketplaceInspector } from './SkillMarketplaceInspector';
-import { History, Folder, Terminal, Activity, Sparkles, Settings, RefreshCw, ArrowDown } from 'lucide-react';
+import { SuperAgentMcpManager } from './SuperAgentMcpManager';
+import { History, Folder, Terminal, Activity, Sparkles, Settings, RefreshCw, ArrowDown, Server } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 
 interface SuperAgentConsoleProps {
@@ -64,7 +65,7 @@ export function SuperAgentConsole({
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [ws, setWs] = useState<WebSocket | null>(null);
-  const [activeTab, setActiveTab] = useState<'console' | 'memory' | 'skills'>('console');
+  const [activeTab, setActiveTab] = useState<'console' | 'memory' | 'skills' | 'mcp'>('console');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -125,6 +126,8 @@ export function SuperAgentConsole({
   const [subagentList, setSubagentList] = useState<SubAgentItem[]>([]);
   const [procList, setProcList] = useState<ProcessItem[]>([]);
   const [recentChangeList, setRecentChangeList] = useState<RecentChangeItem[]>([]);
+  const [bgTaskList, setBgTaskList] = useState<any[]>([]);
+  const [browserInstanceList, setBrowserInstanceList] = useState<any[]>([]);
   const [checklistTasks, setChecklistTasks] = useState<ChecklistTaskItem[]>([]);
   const [selectedSubagent, setSelectedSubagent] = useState<SubAgentItem | null>(null);
   const [showSidebar, setShowSidebar] = useState<boolean>(true);
@@ -188,6 +191,12 @@ export function SuperAgentConsole({
 
         if (Array.isArray(instData.procs)) {
           setProcList(instData.procs);
+        }
+        if (Array.isArray(instData.bgTasks)) {
+          setBgTaskList(instData.bgTasks);
+        }
+        if (Array.isArray(instData.browserInstances)) {
+          setBrowserInstanceList(instData.browserInstances);
         }
       }
 
@@ -875,6 +884,27 @@ export function SuperAgentConsole({
               <span className="truncate">{workspace.split(/[/\\]/).pop()}</span>
             </span>
           )}
+
+          {/* Active Preset / Model Quick Dropdown */}
+          <div className="flex items-center gap-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2.5 py-1 text-xs shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+            <select
+              value={activePresetId[agentMode] || ''}
+              onChange={(e) => handlePresetChange(e.target.value)}
+              className="bg-transparent text-[11px] text-[var(--text-main)] outline-none cursor-pointer font-medium max-w-[140px] truncate"
+              title="Change active AI Model Preset"
+            >
+              {presets[agentMode]?.length ? (
+                presets[agentMode].map((p) => (
+                  <option key={p.id} value={p.id} className="bg-[var(--bg-card)] text-[var(--text-main)]">
+                    {p.name || p.id}
+                  </option>
+                ))
+              ) : (
+                <option value="" disabled>Default Preset</option>
+              )}
+            </select>
+          </div>
         </div>
 
         {/* Center Column: Segmented Tab Switcher */}
@@ -913,6 +943,17 @@ export function SuperAgentConsole({
             >
               <Sparkles className="w-3.5 h-3.5" />
               Skills
+            </button>
+            <button
+              onClick={() => setActiveTab('mcp')}
+              className={`flex items-center gap-1.5 px-3.5 py-1 text-xs rounded-lg transition font-medium cursor-pointer ${
+                activeTab === 'mcp' 
+                  ? 'bg-[var(--color-primary)] text-white font-semibold ' 
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
+              }`}
+            >
+              <Server className="w-3.5 h-3.5" />
+              MCP Tools
             </button>
           </div>
         </div>
@@ -1162,8 +1203,19 @@ export function SuperAgentConsole({
                 subagents={subagentList}
                 procs={procList}
                 recentChanges={recentChangeList}
+                bgTasks={bgTaskList}
+                browserInstances={browserInstanceList}
                 onSelectSubAgent={(sa) => setSelectedSubagent(sa)}
                 onSelectProc={handleSelectProc}
+                onKillBgTask={async (taskId) => {
+                  try {
+                    await fetch(`/api/superagent/background-tasks/${encodeURIComponent(taskId)}`, {
+                      method: 'DELETE',
+                      headers: getAuthHeader()
+                    });
+                    fetchMonitorData();
+                  } catch (e) {}
+                }}
                 onRefreshData={fetchMonitorData}
                 isLoadingData={isLoadingMonitor}
                 onOpenFile={onOpenFile}
@@ -1189,6 +1241,13 @@ export function SuperAgentConsole({
         <div className={`flex-1 flex flex-col overflow-hidden relative w-full ${activeTab === 'skills' ? '' : 'hidden'}`}>
           <div className="flex-1 p-4 overflow-hidden">
             <SkillMarketplaceInspector workspacePath={workspace} getAuthHeader={getAuthHeader} />
+          </div>
+        </div>
+
+        {/* MCP Management Tab View */}
+        <div className={`flex-1 flex flex-col overflow-hidden relative w-full p-4 ${activeTab === 'mcp' ? '' : 'hidden'}`}>
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-4 flex-1 flex flex-col overflow-hidden shadow-xs">
+            <SuperAgentMcpManager getAuthHeader={getAuthHeader} />
           </div>
         </div>
 
