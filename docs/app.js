@@ -1,206 +1,91 @@
-// t-line Landing Page Interactive Script
+// Hallmark Anti-AI-slop Interactive Script for t-line Landing Page
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 1. Scroll Effect for Header
+  // 1. Header scroll border threshold
   const header = document.querySelector('header');
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 50) {
-      header.classList.add('scrolled');
-    } else {
-      header.classList.remove('scrolled');
-    }
-  });
+  if (header) {
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 30) {
+        header.classList.add('scrolled');
+      } else {
+        header.classList.remove('scrolled');
+      }
+    });
+  }
 
-  // 2. Interactive Terminal Simulator
+  // 2. Interactive Console Simulator
   const simulatorContent = document.getElementById('simulator-content');
-  const controlButtons = document.querySelectorAll('.control-btn');
+  const simBtns = document.querySelectorAll('.sim-btn');
 
-  // Pre-configured simulated outputs
   const simulatedOutputs = {
     superagent: `
-<div class="terminal-line"><span class="terminal-prompt">PS D:\\Projects\\t-line-demo&gt;</span> superagent --server --port 7888</div>
-<div class="terminal-line"><span class="terminal-info">[SuperAgent]</span> Initializing Multi-Agent Engine on port 7888...</div>
-<div class="terminal-line"><span class="terminal-info">[SuperAgent Bridge]</span> WebSocket connected from t-line frontend workspace</div>
-<div class="terminal-line"><span class="terminal-info">[SuperAgent Proxy]</span> POST /api/init (Workspace: "D:/Projects/t-line-demo")</div>
-<div class="terminal-line"><span class="terminal-success">[SuperAgent Session] Session initialized (ID: sess_178522455)</span></div>
-<div class="terminal-line"><span class="terminal-info">[Subagent Orchestration]</span> Spawning parallel subagents: [researcher, coder, reviewer]</div>
-<div class="terminal-line"><span class="terminal-info">[RMemory L1]</span> Context memory loaded: 14 project invariants</div>
-<div class="terminal-line"><span class="terminal-line"><span class="terminal-success">  ➜  SuperAgent Proxy Bridge: http://localhost:7888/api</span></div>
-<div class="terminal-line"><span class="terminal-prompt">PS D:\\Projects\\t-line-demo&gt;</span> <span class="terminal-cursor"></span></div>
+<div class="term-line"><span class="term-prompt">PS D:\\Projects\\t-line&gt;</span> bunx superagent --server --multi</div>
+<div class="term-line"><span class="term-info">[SuperAgent]</span> Multi-Agent HTTP & SSE engine active on port 7888</div>
+<div class="term-line"><span class="term-info">[SuperAgent Bridge]</span> WebSocket client connected (Workspace: "D:/Projects/t-line")</div>
+<div class="term-line"><span class="term-info">[SuperAgent Proxy]</span> POST /api/init -&gt; 200 OK (Session: sess_178522455)</div>
+<div class="term-line"><span class="term-success">[SuperAgent Session] Session active. 45 REST proxy endpoints available</span></div>
+<div class="term-line"><span class="term-info">[RMemory L1]</span> Loaded 14 workspace invariants & agent rules</div>
+<div class="term-line"><span class="term-success">[Subagents] Spawning parallel workers: [researcher, coder, reviewer]</span></div>
+<div class="term-line"><span class="term-prompt">PS D:\\Projects\\t-line&gt;</span> <span class="term-muted">_</span></div>
     `,
     terminals: `
-<div class="terminal-line"><span class="terminal-prompt">PS D:\\Projects\\t-line-demo&gt;</span> t-line term spawn --shell powershell</div>
-<div class="terminal-line"><span class="terminal-info">[PTY Server]</span> Initializing native PTY shell process tree...</div>
-<div class="terminal-line"><span class="terminal-info">[PTY Server]</span> GPU Canvas Renderer initialized successfully via @xterm/addon-canvas</div>
-<div class="terminal-line">Windows PowerShell</div>
-<div class="terminal-line">Copyright (C) Microsoft Corporation. All rights reserved.</div>
-<div class="terminal-line"></div>
-<div class="terminal-line"><span class="terminal-prompt">PS D:\\Projects\\t-line-demo&gt;</span> npm run dev</div>
-<div class="terminal-line">&gt; t-line-demo@2.4.0 dev</div>
-<div class="terminal-line">&gt; vite</div>
-<div class="terminal-line"></div>
-<div class="terminal-line"><span class="terminal-success">  ➜  Local:   http://localhost:5173/</span></div>
-<div class="terminal-line"><span class="terminal-success">  ➜  Network: use --host to expose</span></div>
-<div class="terminal-line"></div>
-<div class="terminal-line"><span class="terminal-info">[PTY Server]</span> Auto-polled process name resolved: "vite.exe" (PID: 14208)</div>
-<div class="terminal-line"><span class="terminal-info">[PTY Server]</span> Synchronized tab title indicator: "vite" <span class="terminal-cursor"></span></div>
+<div class="term-line"><span class="term-prompt">PS D:\\Projects\\t-line&gt;</span> bun run dev</div>
+<div class="term-line"><span class="term-info">[PTY Backend]</span> Spawned WinPTY process (PID: 14292) [PowerShell 7.4.1]</div>
+<div class="term-line"><span class="term-info">[Express Server]</span> Listening on http://localhost:3999</div>
+<div class="term-line"><span class="term-info">[Vite DevServer]</span> Ready in 240ms at http://localhost:5773</div>
+<div class="term-line"><span class="term-success">[xterm.js WebGL] Canvas addon attached (GPU acceleration active)</span></div>
+<div class="term-line"><span class="term-prompt">PS D:\\Projects\\t-line&gt;</span> <span class="term-muted">_</span></div>
     `,
     worktrees: `
-<div class="terminal-line"><span class="terminal-prompt">PS D:\\Projects\\t-line-demo&gt;</span> t-line worktree list</div>
-<div class="terminal-line">Retrieving active Git Worktrees for repository...</div>
-<div class="terminal-line"></div>
-<div class="wt-list">
-  <div class="wt-item dirty">
-    <div>
-      <strong>🌿 feat-auth</strong> 
-      <span style="display:block; font-size:0.75rem; color:var(--text-muted)">D:/Projects/t-line-demo/feat-auth</span>
-    </div>
-    <span class="wt-badge amber">⚠️ Dirty (3 changes)</span>
-  </div>
-  
-  <div class="wt-item">
-    <div>
-      <strong>🌿 main</strong> 
-      <span style="display:block; font-size:0.75rem; color:var(--text-muted)">D:/Projects/t-line-demo/main</span>
-    </div>
-    <span class="wt-badge purple">✓ Clean</span>
-  </div>
-  
-  <div class="wt-item">
-    <div>
-      <strong>🌿 hotfix-cors</strong> 
-      <span style="display:block; font-size:0.75rem; color:var(--text-muted)">D:/Projects/t-line-demo/hotfix-cors</span>
-    </div>
-    <span class="wt-badge purple">✓ Clean</span>
-  </div>
-</div>
-<div class="terminal-line"></div>
-<div class="terminal-line"><span class="terminal-success">[Git Worktree]</span> Dirty-first sorting applied. Workspaces with changes floated to top.</div>
-<div class="terminal-line"><span class="terminal-prompt">PS D:\\Projects\\t-line-demo&gt;</span> <span class="terminal-cursor"></span></div>
+<div class="term-line"><span class="term-prompt">PS D:\\Projects\\t-line&gt;</span> git worktree list</div>
+<div class="term-line">D:/Projects/t-line         15a98b8 [main]</div>
+<div class="term-line">D:/Projects/t-line-feat    9715b5d [feature/superagent-ui] <span class="term-warn">* DIRTY (3 modified files)</span></div>
+<div class="term-line"><span class="term-info">[t-line Indexer]</span> Detected 1 dirty worktree. Updating sidebar weights...</div>
+<div class="term-line"><span class="term-success">[t-line Checkpoint] Snapshot taken at refs/tline/checkpoints/feat-178522</span></div>
+<div class="term-line"><span class="term-prompt">PS D:\\Projects\\t-line&gt;</span> <span class="term-muted">_</span></div>
     `,
     tunnels: `
-<div class="terminal-line"><span class="terminal-prompt">PS D:\\Projects\\t-line-demo&gt;</span> t-line tunnel share --port 3999</div>
-<div class="terminal-line"><span class="terminal-info">[Cloudflare]</span> Authenticating Cloudflare Tunnel session token...</div>
-<div class="terminal-line"><span class="terminal-info">[Cloudflare]</span> Spawning secure daemon listener...</div>
-<div class="terminal-line"><span class="terminal-success">[Cloudflare] Tunnel established successfully!</span></div>
-<div class="terminal-line"></div>
-<div class="terminal-line"><span class="terminal-info">🌐 Public URL:</span> <a href="#" style="color:var(--accent-purple); text-decoration:underline">https://tline-secure-share.trycloudflare.com</a></div>
-<div class="terminal-line"><span class="terminal-info">🛡️ Access ACL:</span> Active Protection Enabled</div>
-<div class="terminal-line"></div>
-<div class="terminal-line"><span class="terminal-success">[ACL Connection log]</span></div>
-<div class="terminal-line">16:01:05 [OK] WebSockets authorized for remote agent (IP: 182.253.12.8)</div>
-<div class="terminal-line">16:01:22 <span class="terminal-warn">[BLOCKED]</span> Connection rejected from unauthorized endpoint (IP: 45.138.89.2)</div>
-<div class="terminal-line"><span class="terminal-prompt">PS D:\\Projects\\t-line-demo&gt;</span> <span class="terminal-cursor"></span></div>
-    `,
-    tauri: `
-<div class="terminal-line"><span class="terminal-prompt">PS D:\\Projects\\t-line-demo&gt;</span> npm run tauri</div>
-<div class="terminal-line">&gt; t-line-desktop@2.0.0 tauri</div>
-<div class="terminal-line">&gt; tauri dev</div>
-<div class="terminal-line"></div>
-<div class="terminal-line"><span class="terminal-info">[Tauri]</span> Compiling Rust native desktop client...</div>
-<div class="terminal-line"><span class="terminal-info">[Tauri]</span> Initializing tauri-plugin-single-instance lock check...</div>
-<div class="terminal-line"><span class="terminal-success">[Tauri]</span> Single-instance acquired. Startup diagnostics OK (Node.js LTS detected).</div>
-<div class="terminal-line"><span class="terminal-info">[Tauri]</span> Spawning desktop wrapper windows...</div>
-<div class="terminal-line"><span class="terminal-success">[Tauri] Combined Memory Footprint: 88 MB RAM</span></div>
-<div class="terminal-line"><span class="terminal-info">[Tauri]</span> System tray dynamic context menu registered. Close-to-tray ready.</div>
-<div class="terminal-line"><span class="terminal-prompt">PS D:\\Projects\\t-line-demo&gt;</span> <span class="terminal-cursor"></span></div>
+<div class="term-line"><span class="term-prompt">PS D:\\Projects\\t-line&gt;</span> cloudflared tunnel --url http://localhost:3999</div>
+<div class="term-line"><span class="term-info">[Cloudflare Tunnel]</span> Connection registered (ID: 8a4c11b0-9f2e)</div>
+<div class="term-line"><span class="term-success">[Share URL] https://tline-dev-share.trycloudflare.com</span></div>
+<div class="term-line"><span class="term-info">[ACL Logger]</span> Incoming request from 182.253.11.4 -&gt; Granted</div>
+<div class="term-line"><span class="term-prompt">PS D:\\Projects\\t-line&gt;</span> <span class="term-muted">_</span></div>
     `
   };
 
-  // Change terminal output on click
-  controlButtons.forEach(button => {
-    button.addEventListener('click', () => {
-      // Remove active class from all buttons
-      controlButtons.forEach(btn => btn.classList.remove('active'));
-      
-      // Add active class to clicked button
-      button.classList.add('active');
-      
-      // Load corresponding simulated content
-      const category = button.getAttribute('data-category');
-      if (simulatedOutputs[category]) {
-        // Simple typing loader transition
-        simulatorContent.innerHTML = `<div class="terminal-line"><span class="terminal-info">Loading console state...</span> <span class="terminal-cursor"></span></div>`;
-        setTimeout(() => {
-          simulatorContent.innerHTML = simulatedOutputs[category].trim();
-        }, 150);
-      }
-    });
-  });
-
-  // Load initial content (superagent)
   if (simulatorContent) {
     simulatorContent.innerHTML = simulatedOutputs.superagent.trim();
   }
 
-  // 3. Quick Start Installation Code Tabs
-  const installTabBtns = document.querySelectorAll('.install-tab-btn');
-  const installPanels = document.querySelectorAll('.install-content-panel');
-
-  installTabBtns.forEach(btn => {
+  simBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      // Remove active classes
-      installTabBtns.forEach(b => b.classList.remove('active'));
-      installPanels.forEach(p => p.classList.remove('active'));
-      
-      // Add active classes
+      const category = btn.getAttribute('data-category');
+
+      simBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      const targetPanel = document.getElementById(btn.getAttribute('data-target'));
+
+      if (simulatorContent && simulatedOutputs[category]) {
+        simulatorContent.innerHTML = simulatedOutputs[category].trim();
+      }
+    });
+  });
+
+  // 3. Tab switching for installation code blocks
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const tabPanels = document.querySelectorAll('.tab-panel');
+
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-target');
+
+      tabBtns.forEach(b => b.classList.remove('active'));
+      tabPanels.forEach(p => p.classList.remove('active'));
+
+      btn.classList.add('active');
+      const targetPanel = document.getElementById(targetId);
       if (targetPanel) {
         targetPanel.classList.add('active');
       }
     });
   });
-
-  // 4. Copy-to-Clipboard Code Utility
-  const copyButtons = document.querySelectorAll('.code-copy-btn');
-  copyButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const codeBlock = btn.previousElementSibling;
-      if (codeBlock) {
-        const codeText = codeBlock.textContent.trim();
-        navigator.clipboard.writeText(codeText).then(() => {
-          // Visual copy feedback
-          const originalText = btn.textContent;
-          btn.textContent = 'Copied! ✓';
-          btn.style.background = 'var(--accent-green)';
-          btn.style.borderColor = 'var(--accent-green)';
-          btn.style.color = '#fff';
-          
-          setTimeout(() => {
-            btn.textContent = originalText;
-            btn.style.background = '';
-            btn.style.borderColor = '';
-            btn.style.color = '';
-          }, 2000);
-        }).catch(err => {
-          console.error('Failed to copy text: ', err);
-        });
-      }
-    });
-  });
-
-  // 5. 3D Card Hover Perspective Effect (Hero Image Container)
-  const previewContainer = document.querySelector('.hero-preview-container');
-  const previewImg = document.querySelector('.hero-preview');
-  
-  if (previewContainer && previewImg) {
-    previewContainer.addEventListener('mousemove', (e) => {
-      const rect = previewContainer.getBoundingClientRect();
-      const x = e.clientX - rect.left; // x position inside element
-      const y = e.clientY - rect.top;  // y position inside element
-      
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
-      
-      const rotateX = ((centerY - y) / centerY) * 4; // Max tilt: 4 degrees
-      const rotateY = ((x - centerX) / centerX) * 4;
-      
-      previewImg.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
-    });
-    
-    previewContainer.addEventListener('mouseleave', () => {
-      previewImg.style.transform = 'rotateX(0deg) rotateY(0deg) scale(1)';
-    });
-  }
 });

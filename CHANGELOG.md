@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.668] - 2026-07-28
+
+### Design & Landing Page — Hallmark Anti-AI-Slop Redesign (`docs/`)
+- **Anti-AI-Slop Brand Redesign**:
+  - Replaced generic glowing gradient blobs with an architectural grid overlay (`bg-grid-overlay`) and micro-textured dark obsidian system.
+  - Locked all color and font declarations to strict CSS custom properties (`var(--font-display)`, `var(--font-mono)`, `var(--accent-emerald)`).
+  - Enhanced contrast ratios across all text elements to pass WCAG AAA/AA standards.
+  - Redesigned feature cards with inline monospace tags (`HTTP/SSE Proxy`, `xterm.js WebGL`, `Git Ref Isolation`, `Zero Trust`, `Rust Engine`, `Local Refs`).
+  - Updated hero section with real-time metrics (<100MB RAM, 45+ endpoints, 0ms latency) and clear status indicator pill.
+
 ## [1.3.667] - 2026-07-28
 
 ### Documentation & GitHub Pages — Installation Section Enhancement
