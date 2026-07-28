@@ -364,65 +364,69 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
                     }
                 }
 
-                let add_tab_submenu = |app_handle: &tauri::AppHandle<R>, menu: &Menu<R>, tab: &serde_json::Value, emoji: &str| -> Result<(), tauri::Error> {
+                let build_tab_submenu = |app_handle: &tauri::AppHandle<R>, tab: &serde_json::Value, emoji: &str| -> Result<tauri::menu::Submenu<R>, tauri::Error> {
                     let id = tab.get("id").and_then(|v| v.as_str()).unwrap_or("");
                     let name = tab.get("name").and_then(|v| v.as_str()).unwrap_or("Unnamed Tab");
-                    if id.is_empty() {
-                        return Ok(());
-                    }
-
                     let submenu_title = format!("{} {}", emoji, name);
-                    let submenu = SubmenuBuilder::new(app_handle, submenu_title)
+                    
+                    SubmenuBuilder::new(app_handle, submenu_title)
                         .item(&MenuItemBuilder::with_id(format!("focus_tab_{}", id), "Focus Tab").build(app_handle)?)
                         .item(&MenuItemBuilder::with_id(format!("close_tab_{}", id), "Close Tab").build(app_handle)?)
-                        .build()?;
-                    menu.append(&submenu)?;
-                    Ok(())
+                        .build()
                 };
 
+                let active_tabs_submenu = SubmenuBuilder::new(app_handle, "📂 Active Tabs").build()?;
+
                 if !agent_tabs.is_empty() {
-                    menu.append(&PredefinedMenuItem::separator(app_handle)?)?;
-                    let header = MenuItemBuilder::with_id("header_agents", "🤖 Agents (Background):")
-                        .enabled(false)
-                        .build(app_handle)?;
-                    menu.append(&header)?;
+                    let mut cat_builder = SubmenuBuilder::new(app_handle, format!("🤖 Agents ({})", agent_tabs.len()));
                     for tab in agent_tabs {
-                        add_tab_submenu(app_handle, &menu, tab, "🤖")?;
+                        if let Ok(sub) = build_tab_submenu(app_handle, tab, "🤖") {
+                            cat_builder = cat_builder.item(&sub);
+                        }
+                    }
+                    if let Ok(cat_submenu) = cat_builder.build() {
+                        active_tabs_submenu.append(&cat_submenu)?;
                     }
                 }
 
                 if !browser_tabs.is_empty() {
-                    menu.append(&PredefinedMenuItem::separator(app_handle)?)?;
-                    let header = MenuItemBuilder::with_id("header_browsers", "🌐 Browser Tabs:")
-                        .enabled(false)
-                        .build(app_handle)?;
-                    menu.append(&header)?;
+                    let mut cat_builder = SubmenuBuilder::new(app_handle, format!("🌐 Browsers ({})", browser_tabs.len()));
                     for tab in browser_tabs {
-                        add_tab_submenu(app_handle, &menu, tab, "🌐")?;
+                        if let Ok(sub) = build_tab_submenu(app_handle, tab, "🌐") {
+                            cat_builder = cat_builder.item(&sub);
+                        }
+                    }
+                    if let Ok(cat_submenu) = cat_builder.build() {
+                        active_tabs_submenu.append(&cat_submenu)?;
                     }
                 }
 
                 if !terminal_tabs.is_empty() {
-                    menu.append(&PredefinedMenuItem::separator(app_handle)?)?;
-                    let header = MenuItemBuilder::with_id("header_terminals", "💻 Terminal Tabs:")
-                        .enabled(false)
-                        .build(app_handle)?;
-                    menu.append(&header)?;
+                    let mut cat_builder = SubmenuBuilder::new(app_handle, format!("💻 Terminals ({})", terminal_tabs.len()));
                     for tab in terminal_tabs {
-                        add_tab_submenu(app_handle, &menu, tab, "💻")?;
+                        if let Ok(sub) = build_tab_submenu(app_handle, tab, "💻") {
+                            cat_builder = cat_builder.item(&sub);
+                        }
+                    }
+                    if let Ok(cat_submenu) = cat_builder.build() {
+                        active_tabs_submenu.append(&cat_submenu)?;
                     }
                 }
 
                 if !other_tabs.is_empty() {
-                    menu.append(&PredefinedMenuItem::separator(app_handle)?)?;
-                    let header = MenuItemBuilder::with_id("header_others", "📄 File & Diff Tabs:")
-                        .enabled(false)
-                        .build(app_handle)?;
-                    menu.append(&header)?;
+                    let mut cat_builder = SubmenuBuilder::new(app_handle, format!("📄 Files & Diffs ({})", other_tabs.len()));
                     for tab in other_tabs {
-                        add_tab_submenu(app_handle, &menu, tab, "📄")?;
+                        if let Ok(sub) = build_tab_submenu(app_handle, tab, "📄") {
+                            cat_builder = cat_builder.item(&sub);
+                        }
+                    }
+                    if let Ok(cat_submenu) = cat_builder.build() {
+                        active_tabs_submenu.append(&cat_submenu)?;
                     }
                 }
+
+                menu.append(&PredefinedMenuItem::separator(app_handle)?)?;
+                menu.append(&active_tabs_submenu)?;
             }
         }
     }
