@@ -36,3 +36,7 @@ lerna-debug.log*
 
 # Local Monaco Editor assets
 frontend/public/vs/
+
+# Graphify outputs
+graphify-out/
+.graphifyignore
