@@ -354,13 +354,37 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
                 let mut terminal_tabs = Vec::new();
                 let mut other_tabs = Vec::new();
 
+                let mut agent_ids = Vec::new();
+                let mut browser_ids = Vec::new();
+                let mut terminal_ids = Vec::new();
+                let mut other_ids = Vec::new();
+                let mut all_ids = Vec::new();
+
                 for tab in tabs_arr {
+                    let id = tab.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                    if id.is_empty() {
+                        continue;
+                    }
+                    all_ids.push(id.to_string());
+
                     let tab_type = tab.get("type").and_then(|v| v.as_str()).unwrap_or("");
                     match tab_type {
-                        "agent" => agent_tabs.push(tab),
-                        "browser" => browser_tabs.push(tab),
-                        "terminal" | "grid" => terminal_tabs.push(tab),
-                        _ => other_tabs.push(tab),
+                        "agent" => {
+                            agent_ids.push(id.to_string());
+                            agent_tabs.push(tab);
+                        }
+                        "browser" => {
+                            browser_ids.push(id.to_string());
+                            browser_tabs.push(tab);
+                        }
+                        "terminal" | "grid" => {
+                            terminal_ids.push(id.to_string());
+                            terminal_tabs.push(tab);
+                        }
+                        _ => {
+                            other_ids.push(id.to_string());
+                            other_tabs.push(tab);
+                        }
                     }
                 }
 
@@ -379,9 +403,16 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
 
                 if !agent_tabs.is_empty() {
                     let mut cat_builder = SubmenuBuilder::new(app_handle, format!("🤖 Agents ({})", agent_tabs.len()));
-                    for tab in agent_tabs {
+                    for tab in &agent_tabs {
                         if let Ok(sub) = build_tab_submenu(app_handle, tab, "🤖") {
                             cat_builder = cat_builder.item(&sub);
+                        }
+                    }
+                    if agent_ids.len() > 1 {
+                        let bulk_id = format!("close_bulk_ids_{}", agent_ids.join(","));
+                        cat_builder = cat_builder.separator();
+                        if let Ok(bulk_item) = MenuItemBuilder::with_id(bulk_id, "❌ Close All Agents").build(app_handle) {
+                            cat_builder = cat_builder.item(&bulk_item);
                         }
                     }
                     if let Ok(cat_submenu) = cat_builder.build() {
@@ -391,9 +422,16 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
 
                 if !browser_tabs.is_empty() {
                     let mut cat_builder = SubmenuBuilder::new(app_handle, format!("🌐 Browsers ({})", browser_tabs.len()));
-                    for tab in browser_tabs {
+                    for tab in &browser_tabs {
                         if let Ok(sub) = build_tab_submenu(app_handle, tab, "🌐") {
                             cat_builder = cat_builder.item(&sub);
+                        }
+                    }
+                    if browser_ids.len() > 1 {
+                        let bulk_id = format!("close_bulk_ids_{}", browser_ids.join(","));
+                        cat_builder = cat_builder.separator();
+                        if let Ok(bulk_item) = MenuItemBuilder::with_id(bulk_id, "❌ Close All Browsers").build(app_handle) {
+                            cat_builder = cat_builder.item(&bulk_item);
                         }
                     }
                     if let Ok(cat_submenu) = cat_builder.build() {
@@ -403,9 +441,16 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
 
                 if !terminal_tabs.is_empty() {
                     let mut cat_builder = SubmenuBuilder::new(app_handle, format!("💻 Terminals ({})", terminal_tabs.len()));
-                    for tab in terminal_tabs {
+                    for tab in &terminal_tabs {
                         if let Ok(sub) = build_tab_submenu(app_handle, tab, "💻") {
                             cat_builder = cat_builder.item(&sub);
+                        }
+                    }
+                    if terminal_ids.len() > 1 {
+                        let bulk_id = format!("close_bulk_ids_{}", terminal_ids.join(","));
+                        cat_builder = cat_builder.separator();
+                        if let Ok(bulk_item) = MenuItemBuilder::with_id(bulk_id, "❌ Close All Terminals").build(app_handle) {
+                            cat_builder = cat_builder.item(&bulk_item);
                         }
                     }
                     if let Ok(cat_submenu) = cat_builder.build() {
@@ -415,14 +460,27 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
 
                 if !other_tabs.is_empty() {
                     let mut cat_builder = SubmenuBuilder::new(app_handle, format!("📄 Files & Diffs ({})", other_tabs.len()));
-                    for tab in other_tabs {
+                    for tab in &other_tabs {
                         if let Ok(sub) = build_tab_submenu(app_handle, tab, "📄") {
                             cat_builder = cat_builder.item(&sub);
+                        }
+                    }
+                    if other_ids.len() > 1 {
+                        let bulk_id = format!("close_bulk_ids_{}", other_ids.join(","));
+                        cat_builder = cat_builder.separator();
+                        if let Ok(bulk_item) = MenuItemBuilder::with_id(bulk_id, "❌ Close All Files").build(app_handle) {
+                            cat_builder = cat_builder.item(&bulk_item);
                         }
                     }
                     if let Ok(cat_submenu) = cat_builder.build() {
                         active_tabs_submenu.append(&cat_submenu)?;
                     }
+                }
+
+                if all_ids.len() > 1 {
+                    let bulk_id = format!("close_bulk_ids_{}", all_ids.join(","));
+                    active_tabs_submenu.append(&PredefinedMenuItem::separator(app_handle)?)?;
+                    active_tabs_submenu.append(&MenuItemBuilder::with_id(bulk_id, "❌ Close All Tabs").build(app_handle)?)?;
                 }
 
                 menu.append(&PredefinedMenuItem::separator(app_handle)?)?;
@@ -1758,6 +1816,16 @@ pub fn run() {
                                 tab_id: String,
                             }
                             app_handle.emit("close-tab", CloseTabPayload { tab_id: tab_id.to_string() }).ok();
+                        }
+                    } else if id_str.starts_with("close_bulk_ids_") {
+                        if let Some(ids_csv) = id_str.strip_prefix("close_bulk_ids_") {
+                            let tab_ids: Vec<String> = ids_csv.split(',').map(|s| s.to_string()).collect();
+                            #[derive(Clone, serde::Serialize)]
+                            struct CloseBulkPayload {
+                                #[serde(rename = "tabIds")]
+                                tab_ids: Vec<String>,
+                            }
+                            app_handle.emit("close-bulk-tabs", CloseBulkPayload { tab_ids }).ok();
                         }
                     }
                 })

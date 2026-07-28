@@ -538,6 +538,7 @@ export default function App() {
       let unlistenSelectTerminal: (() => void) | null = null;
       let unlistenSelectTab: (() => void) | null = null;
       let unlistenCloseTab: (() => void) | null = null;
+      let unlistenCloseBulkTabs: (() => void) | null = null;
 
       const setupListeners = async () => {
         try {
@@ -611,6 +612,18 @@ export default function App() {
               closeTerminalRef.current(tabId);
             }
           );
+
+          unlistenCloseBulkTabs = await (window as any).__TAURI__.event.listen(
+            'close-bulk-tabs',
+            async (event: any) => {
+              const { tabIds } = event.payload;
+              if (Array.isArray(tabIds)) {
+                for (const tabId of tabIds) {
+                  closeTerminalRef.current(tabId);
+                }
+              }
+            }
+          );
         } catch (err) {
           console.error('Failed to setup Tauri tray listeners:', err);
         }
@@ -622,6 +635,7 @@ export default function App() {
         if (unlistenSelectTerminal) unlistenSelectTerminal();
         if (unlistenSelectTab) unlistenSelectTab();
         if (unlistenCloseTab) unlistenCloseTab();
+        if (unlistenCloseBulkTabs) unlistenCloseBulkTabs();
       };
     }
   }, []);
