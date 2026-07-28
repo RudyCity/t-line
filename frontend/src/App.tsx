@@ -522,14 +522,26 @@ export default function App() {
     };
   }, [openFileTab, panelWorkspace]);
 
-  // Listen for terminal selection event from system tray
+  const closeTerminalRef = useRef(closeTerminal);
+  useEffect(() => {
+    closeTerminalRef.current = closeTerminal;
+  }, [closeTerminal]);
+
+  const setActiveTabIdRef = useRef(setActiveTabId);
+  useEffect(() => {
+    setActiveTabIdRef.current = setActiveTabId;
+  }, [setActiveTabId]);
+
+  // Listen for terminal selection and tab control events from system tray
   useEffect(() => {
     if ((window as any).__TAURI__?.event?.listen) {
-      let unlisten: (() => void) | null = null;
+      let unlistenSelectTerminal: (() => void) | null = null;
+      let unlistenSelectTab: (() => void) | null = null;
+      let unlistenCloseTab: (() => void) | null = null;
 
-      const setupListener = async () => {
+      const setupListeners = async () => {
         try {
-          const unsub = await (window as any).__TAURI__.event.listen(
+          unlistenSelectTerminal = await (window as any).__TAURI__.event.listen(
             'select-terminal',
             async (event: any) => {
               const { pid, terminalId } = event.payload;
@@ -557,7 +569,7 @@ export default function App() {
               });
 
               if (foundTab) {
-                setActiveTabId(foundTab.id);
+                setActiveTabIdRef.current(foundTab.id);
 
                 if (foundTab.type === 'terminal') {
                   setTabs((prev) =>
@@ -575,16 +587,41 @@ export default function App() {
               }
             }
           );
-          unlisten = unsub;
+
+          unlistenSelectTab = await (window as any).__TAURI__.event.listen(
+            'select-tab',
+            async (event: any) => {
+              const { tabId } = event.payload;
+              const foundTab = tabsRef.current.find(t => t.id === tabId);
+              if (foundTab) {
+                setActiveTabIdRef.current(foundTab.id);
+                if (foundTab.isDetached) {
+                  (window as any).__TAURI__.core.invoke('focus_window', {
+                    label: `browser-detached-${foundTab.id}`,
+                  }).catch(() => {});
+                }
+              }
+            }
+          );
+
+          unlistenCloseTab = await (window as any).__TAURI__.event.listen(
+            'close-tab',
+            async (event: any) => {
+              const { tabId } = event.payload;
+              closeTerminalRef.current(tabId);
+            }
+          );
         } catch (err) {
-          console.error('Failed to setup select-terminal listener:', err);
+          console.error('Failed to setup Tauri tray listeners:', err);
         }
       };
 
-      setupListener();
+      setupListeners();
 
       return () => {
-        if (unlisten) unlisten();
+        if (unlistenSelectTerminal) unlistenSelectTerminal();
+        if (unlistenSelectTab) unlistenSelectTab();
+        if (unlistenCloseTab) unlistenCloseTab();
       };
     }
   }, []);

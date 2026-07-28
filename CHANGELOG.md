@@ -2,6 +2,17 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.662] - 2026-07-28
+
+### Feature & Control — System Tray Tab Control & Focus/Close Actions
+- **Tauri Backend Wrapper (`lib.rs`)**:
+  - Added `sync_state` to `DesktopState` to store tab state, and updated `poll_backend` to fetch active tab states from `/api/sync/state` every 3 seconds.
+  - Redesigned `build_tray_menu` to display categorized tabs (🤖 Agents/Background, 🌐 Browser Tabs, 💻 Terminal Tabs, 📄 File & Diff Tabs) with emoji icons and submenus for each tab containing "Focus Tab" and "Close Tab" options.
+  - Implemented `on_menu_event` handlers for `focus_tab_` and `close_tab_` IDs to emit `select-tab` and `close-tab` Tauri events.
+- **Frontend React App (`App.tsx`)**:
+  - Implemented stable ref wrappers (`closeTerminalRef`, `setActiveTabIdRef`) to avoid stale closure references.
+  - Added Tauri event listeners for `select-tab` and `close-tab` events to focus/switch active tabs and close tabs dynamically from the system tray.
+
 ## [1.3.661] - 2026-07-28
 
 ### Performance Optimization — CPU Load Elimination & Instant Scroll Transitions

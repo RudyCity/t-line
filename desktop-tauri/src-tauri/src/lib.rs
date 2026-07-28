@@ -21,6 +21,7 @@ struct DesktopState {
     status: Arc<Mutex<String>>, // "stopped" | "starting" | "running"
     active_sessions: Arc<Mutex<serde_json::Value>>,
     workspaces: Arc<Mutex<serde_json::Value>>,
+    sync_state: Arc<Mutex<serde_json::Value>>,
     sys: Mutex<sysinfo::System>,
 }
 
@@ -340,6 +341,87 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
                     }
                     let submenu = submenu_builder.build()?;
                     menu.append(&submenu)?;
+                }
+            }
+        }
+
+        // Active Tabs Listing
+        let sync_state = state.sync_state.lock().unwrap().clone();
+        if let Some(tabs_arr) = sync_state.get("tabs").and_then(|v| v.as_array()) {
+            if !tabs_arr.is_empty() {
+                let mut agent_tabs = Vec::new();
+                let mut browser_tabs = Vec::new();
+                let mut terminal_tabs = Vec::new();
+                let mut other_tabs = Vec::new();
+
+                for tab in tabs_arr {
+                    let tab_type = tab.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                    match tab_type {
+                        "agent" => agent_tabs.push(tab),
+                        "browser" => browser_tabs.push(tab),
+                        "terminal" | "grid" => terminal_tabs.push(tab),
+                        _ => other_tabs.push(tab),
+                    }
+                }
+
+                let add_tab_submenu = |app_handle: &tauri::AppHandle<R>, menu: &Menu<R>, tab: &serde_json::Value, emoji: &str| -> Result<(), tauri::Error> {
+                    let id = tab.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                    let name = tab.get("name").and_then(|v| v.as_str()).unwrap_or("Unnamed Tab");
+                    if id.is_empty() {
+                        return Ok(());
+                    }
+
+                    let submenu_title = format!("{} {}", emoji, name);
+                    let submenu = SubmenuBuilder::new(app_handle, submenu_title)
+                        .item(&MenuItemBuilder::with_id(format!("focus_tab_{}", id), "Focus Tab").build(app_handle)?)
+                        .item(&MenuItemBuilder::with_id(format!("close_tab_{}", id), "Close Tab").build(app_handle)?)
+                        .build()?;
+                    menu.append(&submenu)?;
+                    Ok(())
+                };
+
+                if !agent_tabs.is_empty() {
+                    menu.append(&PredefinedMenuItem::separator(app_handle)?)?;
+                    let header = MenuItemBuilder::with_id("header_agents", "🤖 Agents (Background):")
+                        .enabled(false)
+                        .build(app_handle)?;
+                    menu.append(&header)?;
+                    for tab in agent_tabs {
+                        add_tab_submenu(app_handle, &menu, tab, "🤖")?;
+                    }
+                }
+
+                if !browser_tabs.is_empty() {
+                    menu.append(&PredefinedMenuItem::separator(app_handle)?)?;
+                    let header = MenuItemBuilder::with_id("header_browsers", "🌐 Browser Tabs:")
+                        .enabled(false)
+                        .build(app_handle)?;
+                    menu.append(&header)?;
+                    for tab in browser_tabs {
+                        add_tab_submenu(app_handle, &menu, tab, "🌐")?;
+                    }
+                }
+
+                if !terminal_tabs.is_empty() {
+                    menu.append(&PredefinedMenuItem::separator(app_handle)?)?;
+                    let header = MenuItemBuilder::with_id("header_terminals", "💻 Terminal Tabs:")
+                        .enabled(false)
+                        .build(app_handle)?;
+                    menu.append(&header)?;
+                    for tab in terminal_tabs {
+                        add_tab_submenu(app_handle, &menu, tab, "💻")?;
+                    }
+                }
+
+                if !other_tabs.is_empty() {
+                    menu.append(&PredefinedMenuItem::separator(app_handle)?)?;
+                    let header = MenuItemBuilder::with_id("header_others", "📄 File & Diff Tabs:")
+                        .enabled(false)
+                        .build(app_handle)?;
+                    menu.append(&header)?;
+                    for tab in other_tabs {
+                        add_tab_submenu(app_handle, &menu, tab, "📄")?;
+                    }
                 }
             }
         }
@@ -1315,11 +1397,15 @@ fn poll_backend(app_handle: tauri::AppHandle) {
                 let token_str = token.as_deref();
                 let sessions_res = http_get(port, "/api/terminals/active", token_str);
                 let workspaces_res = http_get(port, "/api/workspaces", token_str);
+                let sync_res = http_get(port, "/api/sync/state", token_str);
                 
-                if let (Ok(sessions_body), Ok(workspaces_body)) = (sessions_res, workspaces_res) {
-                    if let (Ok(sessions_json), Ok(workspaces_json)) = (serde_json::from_str::<serde_json::Value>(&sessions_body), serde_json::from_str::<serde_json::Value>(&workspaces_body)) {
-                        
-                        let current_state_str = format!("{}{}", sessions_body, workspaces_body);
+                if let (Ok(sessions_body), Ok(workspaces_body), Ok(sync_body)) = (sessions_res, workspaces_res, sync_res) {
+                    if let (Ok(sessions_json), Ok(workspaces_json), Ok(sync_json)) = (
+                        serde_json::from_str::<serde_json::Value>(&sessions_body),
+                        serde_json::from_str::<serde_json::Value>(&workspaces_body),
+                        serde_json::from_str::<serde_json::Value>(&sync_body)
+                    ) {
+                        let current_state_str = format!("{}{}{}", sessions_body, workspaces_body, sync_body);
                         if current_state_str != last_state_str {
                             last_state_str = current_state_str;
                             
@@ -1331,6 +1417,10 @@ fn poll_backend(app_handle: tauri::AppHandle) {
                                 let mut workspaces_guard = state.workspaces.lock().unwrap();
                                 *workspaces_guard = workspaces_json;
                             }
+                            {
+                                let mut sync_guard = state.sync_state.lock().unwrap();
+                                *sync_guard = sync_json;
+                            }
                             sessions_changed = true;
                         }
                     }
@@ -1338,9 +1428,13 @@ fn poll_backend(app_handle: tauri::AppHandle) {
             } else {
                 let mut sessions_guard = state.active_sessions.lock().unwrap();
                 let mut workspaces_guard = state.workspaces.lock().unwrap();
-                if !sessions_guard.as_array().map_or(true, |a| a.is_empty()) || !workspaces_guard.as_array().map_or(true, |a| a.is_empty()) {
+                let mut sync_guard = state.sync_state.lock().unwrap();
+                if !sessions_guard.as_array().map_or(true, |a| a.is_empty()) 
+                   || !workspaces_guard.as_array().map_or(true, |a| a.is_empty())
+                   || !sync_guard.get("tabs").and_then(|t| t.as_array()).map_or(true, |a| a.is_empty()) {
                     *sessions_guard = serde_json::json!([]);
                     *workspaces_guard = serde_json::json!([]);
+                    *sync_guard = serde_json::json!({ "tabs": [], "terminalInstances": {}, "savedPrompts": [] });
                     sessions_changed = true;
                 }
             }
@@ -1556,6 +1650,7 @@ pub fn run() {
         status: Arc::new(Mutex::new("stopped".to_string())),
         active_sessions: Arc::new(Mutex::new(serde_json::json!([]))),
         workspaces: Arc::new(Mutex::new(serde_json::json!([]))),
+        sync_state: Arc::new(Mutex::new(serde_json::json!({ "tabs": [], "terminalInstances": {}, "savedPrompts": [] }))),
         sys: Mutex::new(sysinfo::System::new()),
     };
 
@@ -1641,6 +1736,25 @@ pub fn run() {
                             }
                         }
                         show_dashboard_window(app_handle);
+                    } else if id_str.starts_with("focus_tab_") {
+                        if let Some(tab_id) = id_str.strip_prefix("focus_tab_") {
+                            #[derive(Clone, serde::Serialize)]
+                            struct SelectTabPayload {
+                                #[serde(rename = "tabId")]
+                                tab_id: String,
+                            }
+                            app_handle.emit("select-tab", SelectTabPayload { tab_id: tab_id.to_string() }).ok();
+                            show_dashboard_window(app_handle);
+                        }
+                    } else if id_str.starts_with("close_tab_") {
+                        if let Some(tab_id) = id_str.strip_prefix("close_tab_") {
+                            #[derive(Clone, serde::Serialize)]
+                            struct CloseTabPayload {
+                                #[serde(rename = "tabId")]
+                                tab_id: String,
+                            }
+                            app_handle.emit("close-tab", CloseTabPayload { tab_id: tab_id.to_string() }).ok();
+                        }
                     }
                 })
                 .show_menu_on_left_click(false)
