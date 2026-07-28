@@ -192,7 +192,7 @@ function TreeNodeItem({
 
   useEffect(() => {
     if (activeFilePath && node.path === activeFilePath && elementRef.current) {
-      elementRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      elementRef.current.scrollIntoView({ behavior: 'auto', block: 'nearest' });
     }
   }, [activeFilePath, node.path]);
 

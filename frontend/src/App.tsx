@@ -2364,6 +2364,7 @@ export default function App() {
                     }}
                     theme={theme}
                     themeBackground={THEMES[theme]?.bgMain}
+                    isActive={tab.id === activeTabId}
                   />
                 </div>
               ))}

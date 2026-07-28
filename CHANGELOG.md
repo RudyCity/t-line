@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.661] - 2026-07-28
+
+### Performance Optimization — CPU Load Elimination & Instant Scroll Transitions
+- **Monaco Editor CPU Optimization (`FileViewerTab.tsx`)**: Disabled Monaco's native background resize observations (`automaticLayout: false`) for all file tabs. Replaced it with a lightweight observer that manually calls `.layout()` *only* when the tab is currently active (`isActive`) and when the window receives a `resize` event. This completely eliminates layout recalculation cycles and observer overhead for background tabs, resolving UI sluggishness when multiple files are open.
+- **Instant Scroll Transition (`FileExplorer.tsx`)**: Switched the `scrollIntoView` behavior for the active file explorer node from `smooth` to `auto` (instant). This makes transitions feel snappier by eliminating the animation lag on file selection.
+
 ## [1.3.660] - 2026-07-28
 
 ### Performance Optimization — Persistent File Tabs & Explorer Caching

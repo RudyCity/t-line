@@ -11,6 +11,7 @@ interface FileViewerTabProps {
   onSave?: () => void;
   theme?: string;
   themeBackground?: string;
+  isActive?: boolean;
 }
 
 function getFileType(filePath: string): 'image' | 'pdf' | 'text' | 'binary' {
@@ -77,7 +78,7 @@ function getLanguageFromPath(filePath: string): string {
   }
 }
 
-export function FileViewerTab({ filePath, token, onSave, theme, themeBackground }: FileViewerTabProps) {
+export function FileViewerTab({ filePath, token, onSave, theme, themeBackground, isActive }: FileViewerTabProps) {
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   
@@ -295,6 +296,29 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
       (window as any).__PENDING_LINE_FOCUS__ = null;
     }
   };
+
+  // Trigger layout when tab becomes active to ensure correct sizing without continuous automaticLayout polling
+  useEffect(() => {
+    if (isActive && editorRef.current) {
+      setTimeout(() => {
+        editorRef.current?.layout();
+      }, 50);
+    }
+  }, [isActive]);
+
+  // Window resize observer only when tab is active
+  useEffect(() => {
+    if (!isActive || !editorRef.current) return;
+    
+    const handleResize = () => {
+      editorRef.current?.layout();
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [isActive]);
 
   useEffect(() => {
     const handleFocusLine = (e: Event) => {
@@ -660,7 +684,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground 
             minimap: { enabled: false },
             fontSize: window.innerWidth <= 768 ? 11 : 13,
             lineHeight: 20,
-            automaticLayout: true,
+            automaticLayout: false,
             wordWrap: 'on',
             wrappingStrategy: 'advanced',
             scrollbar: {
