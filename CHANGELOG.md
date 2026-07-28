@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.665] - 2026-07-28
+
+### Documentation & Branding
+- **Updated README Footer**: Added author credit (Rudy City `@RudyCity`), contact email (`hrudy715@gmail.com`), and MIT License distribution notice.
+
 ## [1.3.664] - 2026-07-28
 
 ### Documentation & Repository — Professional README Overhaul

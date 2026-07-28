@@ -144,6 +144,8 @@ Contributions are welcome! Please make sure to test your code and follow the gui
 
 ---
 
-## 📄 License
+## 📄 License & Author
 
-This project is licensed under the [MIT License](LICENSE).
+Developed by **Rudy City** ([@RudyCity](https://github.com/RudyCity)) • 📧 Contact: [hrudy715@gmail.com](mailto:hrudy715@gmail.com)
+
+Distributed under the [MIT License](LICENSE).
