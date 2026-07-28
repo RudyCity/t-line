@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.660] - 2026-07-28
+
+### Performance Optimization — Persistent File Tabs & Explorer Caching
+- **Persistent Tab State (`App.tsx`)**: Refactored the file editor tab rendering structure to persistently mount all opened file tabs inside the DOM using `display: none` style toggles. This prevents unmounting and remounting files when switching tabs, leading to instant tab switching and automatic preservation of scroll, selection, and dirty (unsaved) states.
+- **Directory Listing Caching (`FileExplorer.tsx`)**: Introduced a global caching map (`exploreCache`) for filesystem directory contents with a 15-second TTL. Auto-expansion transitions utilize the cache for instant directory loading, while manual refreshes, updates, renames, and file creations bypass the cache.
+
 ## [1.3.659] - 2026-07-28
 
 ### Feature & Sync — File Explorer Active File Selection & Auto-Expansion

@@ -2347,6 +2347,27 @@ export default function App() {
                 </div>
               ))}
 
+              {/* File viewer tabs stay mounted continuously so that edits are preserved and switching is instant */}
+              {tabs.filter(t => t.type === 'file').map(tab => (
+                <div
+                  key={tab.id}
+                  className="w-full h-full"
+                  style={{ display: tab.id === activeTabId ? 'block' : 'none' }}
+                >
+                  <FileViewerTab
+                    filePath={tab.filePath || ''}
+                    token={localStorage.getItem('token') || ''}
+                    onSave={() => {
+                      fetchGitStatus(false);
+                      fetchWorkspaces();
+                      setFsChangeTrigger(prev => prev + 1);
+                    }}
+                    theme={theme}
+                    themeBackground={THEMES[theme]?.bgMain}
+                  />
+                </div>
+              ))}
+
               {(() => {
                 const activeTab = tabs.find(t => t.id === activeTabId);
                 if (!activeTab) return null;
@@ -2359,19 +2380,7 @@ export default function App() {
                     </div>
                   ) : null;
                 } else if (activeTab.type === 'file') {
-                  tabElement = (
-                    <FileViewerTab
-                      filePath={activeTab.filePath || ''}
-                      token={localStorage.getItem('token') || ''}
-                      onSave={() => {
-                        fetchGitStatus(false);
-                        fetchWorkspaces();
-                        setFsChangeTrigger(prev => prev + 1);
-                      }}
-                      theme={theme}
-                      themeBackground={THEMES[theme]?.bgMain}
-                    />
-                  );
+                  tabElement = null;
                 } else if (activeTab.type === 'diff') {
                   tabElement = (
                     <DiffViewerTab

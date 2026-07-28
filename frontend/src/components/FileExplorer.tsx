@@ -40,12 +40,25 @@ interface ExplorerProps {
   activeFilePath?: string;
 }
 
-async function fetchExplore(dirPath: string, token: string): Promise<FsItem[]> {
+const exploreCache = new Map<string, { data: FsItem[]; timestamp: number }>();
+const CACHE_TTL = 15000; // 15 seconds Cache TTL
+
+export function clearExplorerCache() {
+  exploreCache.clear();
+}
+
+async function fetchExplore(dirPath: string, token: string, force = false): Promise<FsItem[]> {
+  const cacheKey = `${dirPath}`;
+  const cached = exploreCache.get(cacheKey);
+  if (!force && cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
   const res = await fetch(`/api/fs/explore?path=${encodeURIComponent(dirPath)}`, {
     headers: { Authorization: `Bearer ${token}` }
   });
   if (!res.ok) throw new Error('Failed to fetch directory');
   const data = await res.json();
+  exploreCache.set(cacheKey, { data: data.contents, timestamp: Date.now() });
   return data.contents as FsItem[];
 }
 
@@ -188,7 +201,7 @@ function TreeNodeItem({
       lastTriggerRef.current = refreshTrigger;
       const reloadChildren = async () => {
         try {
-          const items = await fetchExplore(node.path, token);
+          const items = await fetchExplore(node.path, token, true);
           setChildren(items.map(i => ({ ...i })));
         } catch {
           // ignore
@@ -583,8 +596,9 @@ export function FileExplorer({
 
   const load = useCallback(async () => {
     setLoading(true);
+    clearExplorerCache();
     try {
-      const items = await fetchExplore(rootPath, token);
+      const items = await fetchExplore(rootPath, token, true);
       setRoots(items.map(i => ({ ...i })));
       setLocalTrigger(prev => prev + 1);
       if (onRefreshRef.current) onRefreshRef.current();
