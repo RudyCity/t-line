@@ -7,10 +7,33 @@ import WebSocket from 'ws';
 import { getInputHistory, saveInputHistory } from './sessionManager';
 import { loadMergedPresets } from './presetUtils';
 
+const SUPERAGENT_LOG_FILE = path.join(os.homedir(), '.tline-superagent.log');
+
+// Log message to a dedicated file
+export function logToSuperAgentFile(message: string) {
+  const timestamp = new Date().toISOString();
+  const logLine = `[${timestamp}] ${message}\n`;
+  try {
+    // Rotate log file if it exceeds 5MB
+    if (fs.existsSync(SUPERAGENT_LOG_FILE) && fs.statSync(SUPERAGENT_LOG_FILE).size > 5 * 1024 * 1024) {
+      fs.writeFileSync(SUPERAGENT_LOG_FILE, `[${timestamp}] [INFO] Log file rotated (exceeded 5MB limit)\n`);
+    }
+    fs.appendFile(SUPERAGENT_LOG_FILE, logLine, () => {});
+  } catch (err) {
+    // Ignore logging errors
+  }
+}
+
+// Log once on load
+console.log(`[system] SuperAgent process logger initialized. Writing to: ${SUPERAGENT_LOG_FILE}`);
+logToSuperAgentFile(`Logger initialized. Log file path: ${SUPERAGENT_LOG_FILE}`);
+
 // Logging helper for SuperAgent events
 function logSuperAgentEvent(type: string, data: any) {
   const ts = new Date().toISOString();
+  const msg = `[SA:${type}] ${JSON.stringify(data).slice(0, 500)}`;
   console.log(`[SA:${type}] ${ts}`, JSON.stringify(data).slice(0, 500));
+  logToSuperAgentFile(msg);
 }
 
 /** Delegates to SuperAgent server-based input history in sessionManager */
@@ -95,40 +118,66 @@ function drainPendingCallbacks(err?: Error) {
 function resolveBunEnv(): { cmd: string; spawnEnv: NodeJS.ProcessEnv } {
   const isWin = os.platform() === 'win32';
 
-  console.log(`[WS-Agent][debug] resolveBunEnv() — platform=${os.platform()}`);
-  console.log(`[WS-Agent][debug] process.env.PATH = ${process.env.PATH}`);
+  const msgPlatform = `resolveBunEnv() — platform=${os.platform()}`;
+  console.log(`[WS-Agent][debug] ${msgPlatform}`);
+  logToSuperAgentFile(`[debug] ${msgPlatform}`);
+
+  const msgPath = `process.env.PATH = ${process.env.PATH}`;
+  console.log(`[WS-Agent][debug] ${msgPath}`);
+  logToSuperAgentFile(`[debug] ${msgPath}`);
 
   // 1. Try to find bun via where / which (uses inherited PATH)
   try {
     const whereCmd = isWin ? 'where bun 2>nul' : 'which bun 2>/dev/null';
     console.log(`[WS-Agent][debug] Trying: ${whereCmd}`);
+    logToSuperAgentFile(`[debug] Trying: ${whereCmd}`);
+
     const found = execSync(
       whereCmd,
       { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
     ).split(/\r?\n/)[0].trim();
-    console.log(`[WS-Agent][debug] where/which result: "${found}" — exists=${fs.existsSync(found)}`);
+
+    const msgResult = `where/which result: "${found}" — exists=${fs.existsSync(found)}`;
+    console.log(`[WS-Agent][debug] ${msgResult}`);
+    logToSuperAgentFile(`[debug] ${msgResult}`);
+
     if (found && fs.existsSync(found)) {
-      console.log(`[WS-Agent][debug] Resolved bun via PATH: ${found}`);
+      const msgResolved = `Resolved bun via PATH: ${found}`;
+      console.log(`[WS-Agent][debug] ${msgResolved}`);
+      logToSuperAgentFile(`[debug] ${msgResolved}`);
       return { cmd: found, spawnEnv: { ...process.env } };
     }
   } catch (e: any) {
-    console.log(`[WS-Agent][debug] where/which failed: ${e.message}`);
+    const msgFailed = `where/which failed: ${e.message}`;
+    console.log(`[WS-Agent][debug] ${msgFailed}`);
+    logToSuperAgentFile(`[debug] ${msgFailed}`);
   }
 
   // 2. Check the default bun install location: ~/.bun/bin/bun[.exe]
   const bunBinDir = path.join(os.homedir(), '.bun', 'bin');
   const bunExe = path.join(bunBinDir, isWin ? 'bun.exe' : 'bun');
-  console.log(`[WS-Agent][debug] Checking fallback path: ${bunExe} — exists=${fs.existsSync(bunExe)}`);
+  const msgChecking = `Checking fallback path: ${bunExe} — exists=${fs.existsSync(bunExe)}`;
+  console.log(`[WS-Agent][debug] ${msgChecking}`);
+  logToSuperAgentFile(`[debug] ${msgChecking}`);
+
   if (fs.existsSync(bunExe)) {
     const sep = isWin ? ';' : ':';
     const patchedPath = `${bunBinDir}${sep}${process.env.PATH || ''}`;
-    console.log(`[WS-Agent][debug] Resolved bun via fallback: ${bunExe}`);
-    console.log(`[WS-Agent][debug] Patched PATH = ${patchedPath}`);
+    const msgFallback = `Resolved bun via fallback: ${bunExe}`;
+    console.log(`[WS-Agent][debug] ${msgFallback}`);
+    logToSuperAgentFile(`[debug] ${msgFallback}`);
+
+    const msgPatchedPath = `Patched PATH = ${patchedPath}`;
+    console.log(`[WS-Agent][debug] ${msgPatchedPath}`);
+    logToSuperAgentFile(`[debug] ${msgPatchedPath}`);
+
     return { cmd: bunExe, spawnEnv: { ...process.env, PATH: patchedPath } };
   }
 
   // 3. Last resort — just use 'bun' and hope the OS can resolve it
-  console.warn('[WS-Agent][debug] Could not resolve bun path anywhere. Falling back to plain "bun".');
+  const msgLastResort = 'Could not resolve bun path anywhere. Falling back to plain "bun".';
+  console.warn(`[WS-Agent][debug] ${msgLastResort}`);
+  logToSuperAgentFile(`[warn] ${msgLastResort}`);
   return { cmd: 'bun', spawnEnv: { ...process.env } };
 }
 
@@ -161,7 +210,9 @@ function spawnSuperAgentProcess(opts: {
   if (customArgs && customArgs.trim()) spawnArgs.push(...customArgs.trim().split(/\s+/));
 
   const { cmd: bunCmd, spawnEnv } = getCachedBunEnv();
-  console.log(`[${label}] Spawning: ${bunCmd} ${spawnArgs.join(' ')} (cwd: ${cwd})`);
+  const msgSpawning = `Spawning: ${bunCmd} ${spawnArgs.join(' ')} (cwd: ${cwd})`;
+  console.log(`[${label}] ${msgSpawning}`);
+  logToSuperAgentFile(`[${label}] ${msgSpawning}`);
 
   // Sentinel: prevents double-resolve when both stdout marker and poll see ready
   let resolved = false;
@@ -171,7 +222,9 @@ function spawnSuperAgentProcess(opts: {
     if (resolved) return;
     resolved = true;
     isStartingSuperAgent = false;
-    console.log(`[${label}] SuperAgent server is ready on port 7888.`);
+    const msgReady = `SuperAgent server is ready on port 7888.`;
+    console.log(`[${label}] ${msgReady}`);
+    logToSuperAgentFile(`[${label}] ${msgReady}`);
     onReady();
     drainPendingCallbacks();
   }
@@ -181,7 +234,9 @@ function spawnSuperAgentProcess(opts: {
     resolved = true;
     isStartingSuperAgent = false;
     autoSuperAgentProcess = null;
-    console.error(`[${label}] Startup failed: ${reason}`);
+    const msgFailed = `Startup failed: ${reason}`;
+    console.error(`[${label}] ${msgFailed}`);
+    logToSuperAgentFile(`[${label}] ${msgFailed}`);
     onFail(reason);
     drainPendingCallbacks(new Error(reason));
   }
@@ -195,16 +250,23 @@ function spawnSuperAgentProcess(opts: {
       stdio: ['ignore', 'pipe', 'pipe']  // capture stdout + stderr
     });
 
-    console.log(`[${label}][debug] PID: ${autoSuperAgentProcess.pid}`);
+    const msgPid = `PID: ${autoSuperAgentProcess.pid}`;
+    console.log(`[${label}][debug] ${msgPid}`);
+    logToSuperAgentFile(`[${label}][debug] ${msgPid}`);
 
     // stdout: instant ready detection via server's startup banner
     const READY_MARKER = /running at http/i;
     if (autoSuperAgentProcess.stdout) {
       autoSuperAgentProcess.stdout.setEncoding('utf8');
       autoSuperAgentProcess.stdout.on('data', (chunk: string) => {
-        chunk.split(/\r?\n/).filter(Boolean).forEach(l => console.log(`[${label}][stdout] ${l}`));
+        chunk.split(/\r?\n/).filter(Boolean).forEach(l => {
+          console.log(`[${label}][stdout] ${l}`);
+          logToSuperAgentFile(`[${label}][stdout] ${l}`);
+        });
         if (!resolved && READY_MARKER.test(chunk)) {
-          console.log(`[${label}] Ready marker found in stdout.`);
+          const msgMarker = `Ready marker found in stdout.`;
+          console.log(`[${label}] ${msgMarker}`);
+          logToSuperAgentFile(`[${label}] ${msgMarker}`);
           resolveReady();
         }
       });
@@ -214,7 +276,10 @@ function spawnSuperAgentProcess(opts: {
     if (autoSuperAgentProcess.stderr) {
       autoSuperAgentProcess.stderr.setEncoding('utf8');
       autoSuperAgentProcess.stderr.on('data', (chunk: string) => {
-        chunk.split(/\r?\n/).filter(Boolean).forEach(l => console.log(`[${label}][stderr] ${l}`));
+        chunk.split(/\r?\n/).filter(Boolean).forEach(l => {
+          console.log(`[${label}][stderr] ${l}`);
+          logToSuperAgentFile(`[${label}][stderr] ${l}`);
+        });
         stderrOutput += chunk;
         if (stderrOutput.length > 2000) stderrOutput = stderrOutput.slice(-2000);
       });
@@ -222,7 +287,9 @@ function spawnSuperAgentProcess(opts: {
 
     // exit: deferred ping to distinguish real crash vs shell-wrapper early exit
     autoSuperAgentProcess.on('exit', (code: any, signal: any) => {
-      console.log(`[${label}] Process exited: code=${code}, signal=${signal}`);
+      const msgExit = `Process exited: code=${code}, signal=${signal}`;
+      console.log(`[${label}] ${msgExit}`);
+      logToSuperAgentFile(`[${label}] ${msgExit}`);
       if (resolved) {
         // Post-startup crash — clear ref so next prompt triggers respawn
         autoSuperAgentProcess = null;
@@ -233,6 +300,7 @@ function spawnSuperAgentProcess(opts: {
         pingPort7888().then((running) => {
           if (resolved) return;
           if (running) {
+            logToSuperAgentFile(`[${label}] Server is running on port 7888 after shell wrapper exited.`);
             resolveReady();  // shell wrapper exited but server is actually up
           } else {
             const detail = stderrOutput.trim()
@@ -246,6 +314,7 @@ function spawnSuperAgentProcess(opts: {
 
     autoSuperAgentProcess.on('error', (err: any) => {
       console.error(`[${label}] Spawn error:`, err);
+      logToSuperAgentFile(`[${label}][error] Spawn error: ${err.message}`);
       resolveFailure(err.message);
     });
 
@@ -258,7 +327,9 @@ function spawnSuperAgentProcess(opts: {
       pingPort7888().then((ready) => {
         if (resolved) return;
         const elapsed = Math.round((Date.now() - startedAt) / 100) * 100;
-        console.log(`[${label}][debug] ping 7888 → ${ready ? 'UP ✓' : 'not yet'} (${elapsed}ms)`);
+        const msgPing = `ping 7888 → ${ready ? 'UP ✓' : 'not yet'} (${elapsed}ms)`;
+        console.log(`[${label}][debug] ${msgPing}`);
+        logToSuperAgentFile(`[${label}][debug] ${msgPing}`);
         if (ready) {
           resolveReady();
         } else if (Date.now() - startedAt >= MAX_WAIT_MS) {
@@ -287,17 +358,25 @@ function ensureSuperAgentServer(
   const argsChanged = currentCustomArgs !== customArgs;
 
   if (autoSuperAgentProcess && (modeChanged || argsChanged)) {
-    console.log('[WS-Agent] Settings changed (mode/args). Restarting SuperAgent server process...');
+    const msgRestart = 'Settings changed (mode/args). Restarting SuperAgent server process...';
+    console.log(`[WS-Agent] ${msgRestart}`);
+    logToSuperAgentFile(`[WS-Agent] ${msgRestart}`);
     ws.send(JSON.stringify({ type: 'status', text: 'Settings changed. Restarting SuperAgent server...' }));
     try {
       if (isWin) {
         const pid = autoSuperAgentProcess.pid;
-        if (pid) execSync(`taskkill /pid ${pid} /T /F`, { stdio: 'ignore' });
+        if (pid) {
+          logToSuperAgentFile(`[WS-Agent] Killing process PID ${pid} via taskkill`);
+          execSync(`taskkill /pid ${pid} /T /F`, { stdio: 'ignore' });
+        }
       } else {
+        logToSuperAgentFile(`[WS-Agent] Killing process PID ${autoSuperAgentProcess.pid} via kill()`);
         autoSuperAgentProcess.kill();
       }
-    } catch (e) {
-      console.error('[WS-Agent] Failed to kill previous process:', e);
+    } catch (e: any) {
+      const msgKillFailed = `Failed to kill previous process: ${e.message}`;
+      console.error(`[WS-Agent] ${msgKillFailed}`);
+      logToSuperAgentFile(`[WS-Agent][error] ${msgKillFailed}`);
     }
     autoSuperAgentProcess = null;
     isStartingSuperAgent = false;
@@ -306,6 +385,7 @@ function ensureSuperAgentServer(
 
   // A spawn is already in flight — queue this callback to be resolved when it finishes
   if (isStartingSuperAgent) {
+    logToSuperAgentFile('[WS-Agent] SuperAgent server startup already in flight. Queuing callback.');
     ws.send(JSON.stringify({ type: 'status', text: 'SuperAgent server is starting up...' }));
     pendingStartCallbacks.push({
       resolve: callback,
@@ -334,7 +414,9 @@ function ensureSuperAgentServer(
   // Before spawning, ping port 7888 — it may already be running externally.
   pingPort7888().then((alreadyRunning) => {
     if (alreadyRunning) {
-      console.log('[WS-Agent] SuperAgent server already running on port 7888. Skipping spawn.');
+      const msgAlready = 'SuperAgent server already running on port 7888. Skipping spawn.';
+      console.log(`[WS-Agent] ${msgAlready}`);
+      logToSuperAgentFile(`[WS-Agent] ${msgAlready}`);
       isStartingSuperAgent = false;
       currentWorkspacePath = workspacePath;
       currentAgentMode = agentMode;
@@ -383,7 +465,9 @@ export function startSuperAgentEager(agentMode: string = 'single', customArgs: s
 
   pingPort7888().then((alreadyRunning) => {
     if (alreadyRunning) {
-      console.log('[WS-Agent] SuperAgent server already running on port 7888 (eager check). Skipping spawn.');
+      const msgEager = 'SuperAgent server already running on port 7888 (eager check). Skipping spawn.';
+      console.log(`[WS-Agent] ${msgEager}`);
+      logToSuperAgentFile(`[WS-Agent] ${msgEager}`);
       isStartingSuperAgent = false;
       currentAgentMode = agentMode;
       currentCustomArgs = customArgs;
@@ -636,7 +720,9 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
 
       if (actionType === 'prompt') {
         const text = parsed.text || '';
-        console.log(`[WS-Agent] Prompt (${workspacePath}): ${text}`);
+        const msgPrompt = `Prompt (${workspacePath}): ${text}`;
+        console.log(`[WS-Agent] ${msgPrompt}`);
+        logToSuperAgentFile(`[WS-Agent] ${msgPrompt}`);
         logSuperAgentEvent('prompt', { text, workspace: workspacePath });
         await saveCliPromptHistory(text);
 
@@ -769,7 +855,9 @@ process.on('exit', () => {
     const isWin = os.platform() === 'win32';
     const pid = autoSuperAgentProcess.pid;
     if (pid) {
-      console.log(`[WS-Agent] Cleaning up SuperAgent process (PID: ${pid}) on backend exit...`);
+      const msgCleanup = `Cleaning up SuperAgent process (PID: ${pid}) on backend exit...`;
+      console.log(`[WS-Agent] ${msgCleanup}`);
+      logToSuperAgentFile(`[WS-Agent] ${msgCleanup}`);
       try {
         if (isWin) {
           execSync(`taskkill /pid ${pid} /T /F`, { stdio: 'ignore' });

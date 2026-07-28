@@ -2,6 +2,16 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.663] - 2026-07-28
+
+### Feature & Logging — Dedicated Debug Log File for SuperAgent Process
+- **SuperAgent Process Logging (`superAgentBridge.ts`)**:
+  - Defined a dedicated log file path (`.tline-superagent.log` in user's home directory) with automated log rotation if the file size exceeds 5MB.
+  - Implemented `logToSuperAgentFile` helper function to append timestamps and log entries asynchronously.
+  - Instrumented the process lifecycle manager to log the full Bun command execution path, process PID, and environment resolution details.
+  - Redirected all raw stdout and stderr stream chunks from the spawned SuperAgent process directly into the dedicated log file.
+  - Added logging coverage for socket ping checks, socket connections/disconnections, settings changes/restarts, session initializations, and connection errors (e.g. ECONNREFUSED).
+
 ## [1.3.662] - 2026-07-28
 
 ### Feature & Control — System Tray Tab Control & Focus/Close Actions
