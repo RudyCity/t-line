@@ -209,6 +209,8 @@ export function SidebarContentPanel({
   onCheckpointChange
 }: SidebarContentPanelProps) {
   const [showSearch, setShowSearch] = useState(false);
+  const activeTab = tabs.find(t => t.id === activeTabId);
+  const activeFilePath = activeTab && activeTab.type === 'file' ? activeTab.filePath : undefined;
 
   return (
     <div
@@ -358,6 +360,7 @@ export function SidebarContentPanel({
               changedFiles={changedFiles}
               onRefresh={refreshGitStatus}
               refreshTrigger={fsChangeTrigger}
+              activeFilePath={activeFilePath}
             />
           ) : (
             <div className="panel-empty" style={{ flex: 1 }}>

@@ -37,6 +37,7 @@ interface ExplorerProps {
   changedFiles?: GitFileStatus[];
   onRefresh?: () => void;
   refreshTrigger?: number;
+  activeFilePath?: string;
 }
 
 async function fetchExplore(dirPath: string, token: string): Promise<FsItem[]> {
@@ -131,7 +132,8 @@ function TreeNodeItem({
   refreshTrigger = 0,
   onContextMenu,
   selectedPaths,
-  onItemClick
+  onItemClick,
+  activeFilePath
 }: {
   node: TreeNode;
   depth: number;
@@ -143,12 +145,43 @@ function TreeNodeItem({
   onContextMenu: (e: React.MouseEvent, node: TreeNode) => void;
   selectedPaths: string[];
   onItemClick: (node: TreeNode, e: React.MouseEvent) => void;
+  activeFilePath?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [children, setChildren] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(false);
 
   const lastTriggerRef = useRef(refreshTrigger);
+  const lastProcessedActivePathRef = useRef<string | null>(null);
+  const elementRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (activeFilePath && activeFilePath !== lastProcessedActivePathRef.current && node.isDirectory) {
+      const normNodePath = node.path.replace(/\\/g, '/').toLowerCase();
+      const normActivePath = activeFilePath.replace(/\\/g, '/').toLowerCase();
+      if (normActivePath.startsWith(normNodePath + '/')) {
+        if (!expanded) {
+          setExpanded(true);
+          if (children.length === 0 && !loading) {
+            setLoading(true);
+            fetchExplore(node.path, token)
+              .then(items => {
+                setChildren(items.map(i => ({ ...i })));
+              })
+              .catch(() => {})
+              .finally(() => setLoading(false));
+          }
+        }
+      }
+      lastProcessedActivePathRef.current = activeFilePath;
+    }
+  }, [activeFilePath, node.path, node.isDirectory, token, expanded, children.length, loading]);
+
+  useEffect(() => {
+    if (activeFilePath && node.path === activeFilePath && elementRef.current) {
+      elementRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [activeFilePath, node.path]);
 
   useEffect(() => {
     if (expanded && refreshTrigger !== lastTriggerRef.current) {
@@ -217,6 +250,7 @@ function TreeNodeItem({
   return (
     <div>
       <button
+        ref={elementRef}
         className={`explorer-item${isSelected ? ' explorer-item-active' : ''}${isDotFile ? ' explorer-item-muted' : ''}`}
         style={{ paddingLeft: `${8 + indent}px` }}
         onClick={handleItemClick}
@@ -303,6 +337,7 @@ function TreeNodeItem({
               onContextMenu={onContextMenu}
               selectedPaths={selectedPaths}
               onItemClick={onItemClick}
+              activeFilePath={activeFilePath}
             />
           ))}
         </div>
@@ -449,7 +484,8 @@ export function FileExplorer({
   onFileClick,
   changedFiles = [],
   onRefresh,
-  refreshTrigger = 0
+  refreshTrigger = 0,
+  activeFilePath
 }: ExplorerProps) {
   const [roots, setRoots] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(false);
@@ -476,6 +512,13 @@ export function FileExplorer({
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastClickedPathRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (activeFilePath) {
+      const name = activeFilePath.split(/[/\\]/).pop() || '';
+      setSelectedNodes([{ path: activeFilePath, name, isDirectory: false }]);
+    }
+  }, [activeFilePath]);
 
   const handleItemClick = useCallback((node: TreeNode, e: React.MouseEvent) => {
     const isCtrlOrCmd = e.ctrlKey || e.metaKey;
@@ -869,6 +912,7 @@ export function FileExplorer({
                    onContextMenu={handleContextMenu}
                    selectedPaths={selectedPaths}
                    onItemClick={handleItemClick}
+                   activeFilePath={activeFilePath}
                 />
               ))
             )}

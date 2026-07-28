@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.659] - 2026-07-28
+
+### Feature & Sync — File Explorer Active File Selection & Auto-Expansion
+- **State Synchronization (`SidebarContentPanel.tsx`)**: Extracted the `activeFilePath` from the currently active file tab and passed it down to the `FileExplorer` component.
+- **Auto-Selection & Scroll-to-View (`FileExplorer.tsx`)**:
+  - Implemented an effect in `FileExplorer` that automatically selects the active tab's file in `selectedNodes` when it changes.
+  - Implemented auto-expansion in `TreeNodeItem` so directories automatically expand and fetch their children when the active file is inside them. Used a reference to prevent forced re-expansion loops if the user manually collapses folders.
+  - Added smooth scroll-to-view alignment (`elementRef.current.scrollIntoView`) to automatically reveal the active file when it is opened or activated in the tabs.
+
 ## [1.3.658] - 2026-07-28
 
 ### Style, UI, & Capability — SuperAgent Skills and Memory Inspector Theme Integration & Skill Editing
