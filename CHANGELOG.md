@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.656] - 2026-07-28
+
+### Style & UI Optimization — SuperAgent Console Header Refinement
+- **Console Header Controls (`SuperAgentConsole.tsx`)**: Removed borders from workspace badge and history toggle button, made the history toggle button icon-only (removed text label), and removed the model preset selector dropdown as requested.
+
 ## [1.3.655] - 2026-07-26
 
 ### Feature & Refactoring — SuperAgent UI Layout & Session Integration Overhaul

@@ -868,43 +868,21 @@ export function SuperAgentConsole({
         <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={() => setShowHistorySidebar(!showHistorySidebar)}
-            className={`px-3 py-1.5 text-xs rounded-lg border transition flex items-center gap-1.5 cursor-pointer font-medium ${
+            className={`p-2 rounded-lg border border-transparent transition flex items-center justify-center cursor-pointer ${
               showHistorySidebar 
-                ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)] text-[var(--color-primary)] ' 
-                : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-color)]'
+                ? 'bg-[var(--color-primary-glow)] text-[var(--color-primary)]' 
+                : 'bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
             title="Toggle Chat History Sidebar"
           >
             <History className="w-3.5 h-3.5" />
-            <span>History</span>
           </button>
           {workspace && (
-            <span className="text-[11px] px-2.5 py-1 rounded-lg border border-[var(--color-primary)]/30 bg-[var(--color-primary-glow)] text-[var(--color-primary)] font-mono flex items-center gap-1.5 max-w-[160px] sm:max-w-[220px] truncate ">
+            <span className="text-[11px] px-2.5 py-1 rounded-lg border border-transparent bg-[var(--color-primary-glow)] text-[var(--color-primary)] font-mono flex items-center gap-1.5 max-w-[160px] sm:max-w-[220px] truncate ">
               <Folder className="w-3 h-3 text-[var(--color-primary)] flex-shrink-0" />
               <span className="truncate">{workspace.split(/[/\\]/).pop()}</span>
             </span>
           )}
-
-          {/* Active Preset / Model Quick Dropdown */}
-          <div className="flex items-center gap-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg px-2.5 py-1 text-xs shadow-xs">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-            <select
-              value={activePresetId[agentMode] || ''}
-              onChange={(e) => handlePresetChange(e.target.value)}
-              className="bg-transparent text-[11px] text-[var(--text-main)] outline-none cursor-pointer font-medium max-w-[140px] truncate"
-              title="Change active AI Model Preset"
-            >
-              {presets[agentMode]?.length ? (
-                presets[agentMode].map((p) => (
-                  <option key={p.id} value={p.id} className="bg-[var(--bg-card)] text-[var(--text-main)]">
-                    {p.name || p.id}
-                  </option>
-                ))
-              ) : (
-                <option value="" disabled>Default Preset</option>
-              )}
-            </select>
-          </div>
         </div>
 
         {/* Center Column: Segmented Tab Switcher */}
