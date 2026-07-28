@@ -878,7 +878,7 @@ export function SuperAgentConsole({
             <History className="w-3.5 h-3.5" />
           </button>
           {workspace && (
-            <span className="text-[11px] px-2.5 py-1 rounded-lg border border-transparent bg-[var(--color-primary-glow)] text-[var(--color-primary)] font-mono flex items-center gap-1.5 max-w-[160px] sm:max-w-[220px] truncate ">
+            <span className="text-[11px] py-1 text-[var(--color-primary)] font-mono flex items-center gap-1.5 max-w-[160px] sm:max-w-[220px] truncate">
               <Folder className="w-3 h-3 text-[var(--color-primary)] flex-shrink-0" />
               <span className="truncate">{workspace.split(/[/\\]/).pop()}</span>
             </span>

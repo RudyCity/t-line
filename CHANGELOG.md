@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.657] - 2026-07-28
+
+### Style & UI Optimization — Active Workspace Path Styling Refinement
+- **Active Workspace Badge (`SuperAgentConsole.tsx`)**: Removed border and background styling from the active workspace path pill in the header.
+
 ## [1.3.656] - 2026-07-28
 
 ### Style & UI Optimization — SuperAgent Console Header Refinement
