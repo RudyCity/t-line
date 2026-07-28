@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.658] - 2026-07-28
+
+### Style, UI, & Capability — SuperAgent Skills and Memory Inspector Theme Integration & Skill Editing
+- **SuperAgent Console Layout (`SuperAgentConsole.tsx`)**: Standardized container structures for both Skills and Memory tabs to match the MCP management view, including glassmorphic backgrounds and border definitions, and propagated the `onOpenFile` callback to the skills view.
+- **Skill Marketplace Inspector (`SkillMarketplaceInspector.tsx`)**: Removed hardcoded background/border rules, refactored elements to use standardized CSS theme variables, and added a quick "Edit Skill" button (`Edit3` icon) next to local/downloaded skills that opens the skill markdown document inside the IDE editor.
+- **Memory Inspector (`SuperAgentMemoryInspector.tsx`)**: Refactored the atomic and shared memory lists, badges, tags, buttons, search input, and popup modals to utilize system color tokens (`--color-primary`, `--bg-card`, `--border-color`, etc.), resolving dark theme rendering inconsistencies.
+
 ## [1.3.657] - 2026-07-28
 
 ### Style & UI Optimization — Active Workspace Path Styling Refinement

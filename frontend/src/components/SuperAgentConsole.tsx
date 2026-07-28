@@ -1210,15 +1210,15 @@ export function SuperAgentConsole({
 
 
 
-        <div className={`flex-1 flex flex-col overflow-hidden relative w-full ${activeTab === 'memory' ? '' : 'hidden'}`}>
-          <div className="flex-1 p-4 overflow-hidden">
+        <div className={`flex-1 flex flex-col overflow-hidden relative w-full p-4 ${activeTab === 'memory' ? '' : 'hidden'}`}>
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-4 flex-1 flex flex-col overflow-hidden shadow-xs">
             <SuperAgentMemoryInspector workspacePath={workspace} getAuthHeader={getAuthHeader} />
           </div>
         </div>
 
-        <div className={`flex-1 flex flex-col overflow-hidden relative w-full ${activeTab === 'skills' ? '' : 'hidden'}`}>
-          <div className="flex-1 p-4 overflow-hidden">
-            <SkillMarketplaceInspector workspacePath={workspace} getAuthHeader={getAuthHeader} />
+        <div className={`flex-1 flex flex-col overflow-hidden relative w-full p-4 ${activeTab === 'skills' ? '' : 'hidden'}`}>
+          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-4 flex-1 flex flex-col overflow-hidden shadow-xs">
+            <SkillMarketplaceInspector workspacePath={workspace} getAuthHeader={getAuthHeader} onOpenFile={onOpenFile} />
           </div>
         </div>
 
