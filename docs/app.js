@@ -17,6 +17,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Pre-configured simulated outputs
   const simulatedOutputs = {
+    superagent: `
+<div class="terminal-line"><span class="terminal-prompt">PS D:\\Projects\\t-line-demo&gt;</span> superagent --server --port 7888</div>
+<div class="terminal-line"><span class="terminal-info">[SuperAgent]</span> Initializing Multi-Agent Engine on port 7888...</div>
+<div class="terminal-line"><span class="terminal-info">[SuperAgent Bridge]</span> WebSocket connected from t-line frontend workspace</div>
+<div class="terminal-line"><span class="terminal-info">[SuperAgent Proxy]</span> POST /api/init (Workspace: "D:/Projects/t-line-demo")</div>
+<div class="terminal-line"><span class="terminal-success">[SuperAgent Session] Session initialized (ID: sess_178522455)</span></div>
+<div class="terminal-line"><span class="terminal-info">[Subagent Orchestration]</span> Spawning parallel subagents: [researcher, coder, reviewer]</div>
+<div class="terminal-line"><span class="terminal-info">[RMemory L1]</span> Context memory loaded: 14 project invariants</div>
+<div class="terminal-line"><span class="terminal-line"><span class="terminal-success">  ➜  SuperAgent Proxy Bridge: http://localhost:7888/api</span></div>
+<div class="terminal-line"><span class="terminal-prompt">PS D:\\Projects\\t-line-demo&gt;</span> <span class="terminal-cursor"></span></div>
+    `,
     terminals: `
 <div class="terminal-line"><span class="terminal-prompt">PS D:\\Projects\\t-line-demo&gt;</span> t-line term spawn --shell powershell</div>
 <div class="terminal-line"><span class="terminal-info">[PTY Server]</span> Initializing native PTY shell process tree...</div>
@@ -117,9 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Load initial content (terminals)
+  // Load initial content (superagent)
   if (simulatorContent) {
-    simulatorContent.innerHTML = simulatedOutputs.terminals.trim();
+    simulatorContent.innerHTML = simulatedOutputs.superagent.trim();
   }
 
   // 3. Quick Start Installation Code Tabs

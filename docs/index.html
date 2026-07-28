@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="t-line: A high-performance, developer-first workspace dashboard and Git Worktree orchestrator with multi-shell GPU terminal, remote share tunnel, and built-in editor.">
-  <meta name="keywords" content="t-line, git worktree, tauri, rust, terminal, developer dashboard, pty, cloudflare tunnel, workspaces, monaco editor">
-  <meta name="author" content="Rudy H.">
-  <title>t-line — Premium Workspace Manager & Git Worktree Orchestrator</title>
+  <meta name="description" content="t-line: A high-performance, developer-first workspace dashboard, Git Worktree orchestrator, and SuperAgent AI Orchestrator with GPU terminal, browser DevTools, and remote sharing.">
+  <meta name="keywords" content="t-line, git worktree, superagent, ai orchestrator, tauri v2, rust, terminal, developer dashboard, pty, cloudflare tunnel, workspaces">
+  <meta name="author" content="Rudy City">
+  <title>t-line — Developer Workspace & SuperAgent AI Orchestrator</title>
   
   <!-- CSS Stylesheet -->
   <link rel="stylesheet" href="style.css">
@@ -63,8 +63,8 @@
         </p>
         
         <div class="hero-ctas">
-          <a href="#installation" class="btn btn-primary">Get Started</a>
-          <a href="https://github.com/RudyCity/t-line" class="btn btn-secondary" target="_blank" rel="noopener">Explore Codebase</a>
+          <a href="https://github.com/RudyCity/t-line/releases/download/v1.3.665/t-line_1.3.665_x64-setup.exe" class="btn btn-primary">Download v1.3.665 (Windows .exe)</a>
+          <a href="https://github.com/RudyCity/t-line/releases/tag/v1.3.665" class="btn btn-secondary" target="_blank" rel="noopener">All Downloads (MSI / macOS / Linux)</a>
         </div>
         
         <div class="hero-preview-container">
@@ -83,6 +83,32 @@
         </div>
         
         <div class="features-grid">
+          
+          <!-- SuperAgent AI Integration -->
+          <div class="glass-panel feature-card">
+            <div class="feature-icon-wrapper green">
+              <!-- AI / Cpu Icon -->
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                <rect x="9" y="9" width="6" height="6"></rect>
+                <line x1="9" y1="1" x2="9" y2="4"></line>
+                <line x1="15" y1="1" x2="15" y2="4"></line>
+                <line x1="9" y1="20" x2="9" y2="23"></line>
+                <line x1="15" y1="20" x2="15" y2="23"></line>
+                <line x1="20" y1="9" x2="23" y2="9"></line>
+                <line x1="20" y1="15" x2="23" y2="15"></line>
+                <line x1="1" y1="9" x2="4" y2="9"></line>
+                <line x1="1" y1="15" x2="4" y2="15"></line>
+              </svg>
+            </div>
+            <h3>SuperAgent AI Orchestration</h3>
+            <p>100% server proxy integration with SuperAgent's HTTP & SSE engine (port 7888). Visualize multi-agent trees, inspect RMemory (L0/L1/L2), and approve tool requests.</p>
+            <ul class="feature-bullets">
+              <li><div class="feature-bullet-dot"></div> Real-time multi-agent execution DAGs</li>
+              <li><div class="feature-bullet-dot"></div> Live RMemory context & short-term chat logs</li>
+              <li><div class="feature-bullet-dot"></div> Interactive tool approval & plan validation</li>
+            </ul>
+          </div>
           
           <!-- PTY Terminals -->
           <div class="glass-panel feature-card">
@@ -211,8 +237,16 @@
         <div class="interactive-layout">
           <div class="simulator-controls">
             
-            <button class="control-btn active" data-category="terminals">
+            <button class="control-btn active" data-category="superagent">
               <span class="control-btn-num">01</span>
+              <div>
+                <div class="control-btn-title">SuperAgent AI Engine</div>
+                <div class="control-btn-desc">Connect HTTP/SSE proxy on port 7888, spawn subagent trees, and inspect RMemory.</div>
+              </div>
+            </button>
+
+            <button class="control-btn" data-category="terminals">
+              <span class="control-btn-num">02</span>
               <div>
                 <div class="control-btn-title">GPU Terminal Shells</div>
                 <div class="control-btn-desc">Initialize multi-shell processes, hook PTYs, and poll active processes (e.g. vite).</div>
@@ -220,7 +254,7 @@
             </button>
 
             <button class="control-btn" data-category="worktrees">
-              <span class="control-btn-num">02</span>
+              <span class="control-btn-num">03</span>
               <div>
                 <div class="control-btn-title">Git Worktree Syncing</div>
                 <div class="control-btn-desc">List workspaces, run dirty index monitoring, and view sorting weights.</div>
@@ -228,18 +262,10 @@
             </button>
 
             <button class="control-btn" data-category="tunnels">
-              <span class="control-btn-num">03</span>
+              <span class="control-btn-num">04</span>
               <div>
                 <div class="control-btn-title">Cloudflare Share Tunnel</div>
                 <div class="control-btn-desc">Spawn tunnels instantly and view the dynamic IP Access Control List (ACL).</div>
-              </div>
-            </button>
-
-            <button class="control-btn" data-category="tauri">
-              <span class="control-btn-num">04</span>
-              <div>
-                <div class="control-btn-title">Tauri v2 Desktop Wrap</div>
-                <div class="control-btn-desc">Perform boot diagnostics, single-instance checks, and monitor RAM usage.</div>
               </div>
             </button>
 
@@ -347,20 +373,20 @@
         <div class="install-content-panel active" id="panel-run">
           <div class="code-container">
             <button class="code-copy-btn">Copy</button>
-            <pre><code># Install dependencies
-npm install
+            <pre><code># Install workspace dependencies with Bun
+bun install
 
-# Run backend & frontend concurrently in dev mode
-npm run dev</code></pre>
+# Run backend Express & React UI concurrently
+bun dev</code></pre>
           </div>
           <div class="install-steps">
             <div class="install-step">
               <div class="install-step-num">1</div>
-              <div>Installs the workspace dependencies, setting up both Node packages and terminal configurations.</div>
+              <div>Installs all workspace packages using Bun for instant installation.</div>
             </div>
             <div class="install-step">
               <div class="install-step-num">2</div>
-              <div>Spawns the Express backend (Port 3999) and Vite server with hot module replacement, running concurrently.</div>
+              <div>Spawns Express backend (Port 3999) and Vite React client with auto-proxy to SuperAgent port 7888.</div>
             </div>
           </div>
         </div>
@@ -370,16 +396,16 @@ npm run dev</code></pre>
           <div class="code-container">
             <button class="code-copy-btn">Copy</button>
             <pre><code># Launch Tauri native client
-npm run tauri</code></pre>
+bun run tauri</code></pre>
           </div>
           <div class="install-steps">
             <div class="install-step">
               <div class="install-step-num">1</div>
-              <div>Compiles and loads the Rust native Tauri wrapper desktop application wrapper.</div>
+              <div>Compiles and loads the Rust native Tauri v2 desktop application.</div>
             </div>
             <div class="install-step">
               <div class="install-step-num">2</div>
-              <div>Locks system port 5779, registers tray menus, and connects Tauri's Webview container to the express PTY backend.</div>
+              <div>Registers system tray menus, locks port 5773, and hooks native PTY shells.</div>
             </div>
           </div>
         </div>
@@ -388,17 +414,17 @@ npm run tauri</code></pre>
         <div class="install-content-panel" id="panel-build">
           <div class="code-container">
             <button class="code-copy-btn">Copy</button>
-            <pre><code># Package Tauri standalone client
-npm run build:tauri</code></pre>
+            <pre><code># Package standalone desktop binaries (.exe, .msi, .dmg, .AppImage)
+bun run build:tauri</code></pre>
           </div>
           <div class="install-steps">
             <div class="install-step">
               <div class="install-step-num">1</div>
-              <div>Builds production assets for the React UI client and optimizes CSS bundles.</div>
+              <div>Builds production bundles for the React frontend and Express backend.</div>
             </div>
             <div class="install-step">
               <div class="install-step-num">2</div>
-              <div>Bundles all binaries, PTY dependencies, and icons into a single-file desktop executable installer.</div>
+              <div>Packages native desktop installers for Windows, macOS, and Linux.</div>
             </div>
           </div>
         </div>
@@ -412,10 +438,11 @@ npm run build:tauri</code></pre>
   <footer>
     <div class="container footer-layout">
       <div>
-        <p>&copy; 2026 t-line. Built for developers by <a href="mailto:hrudy715@gmail.com" class="footer-link">Rudy H.</a></p>
+        <p>Developed by <strong>Rudy City</strong> (<a href="https://github.com/RudyCity" class="footer-link" target="_blank" rel="noopener">@RudyCity</a>) • 📧 Contact: <a href="mailto:hrudy715@gmail.com" class="footer-link">hrudy715@gmail.com</a></p>
       </div>
       <ul class="footer-links">
         <li><a href="https://github.com/RudyCity/t-line" class="footer-link" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://github.com/RudyCity/t-line/releases/tag/v1.3.665" class="footer-link" target="_blank" rel="noopener">Releases (v1.3.665)</a></li>
         <li><a href="https://github.com/RudyCity/t-line/blob/main/LICENSE" class="footer-link" target="_blank" rel="noopener">MIT License</a></li>
       </ul>
     </div>

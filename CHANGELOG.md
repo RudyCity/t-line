@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.666] - 2026-07-28
+
+### Documentation & Web Landing Page — GitHub Pages Overhaul
+- **GitHub Pages Landing Site (`docs/`)**:
+  - Updated `docs/index.html` with new SuperAgent AI Orchestration showcase cards, interactive simulator tabs, and direct release download buttons.
+  - Linked installer downloads directly to GitHub Release `v1.3.665` assets (`.exe` setup installer, `.msi` package, macOS/Linux release bundles).
+  - Updated command snippets to Bun (`bun install`, `bun dev`, `bun run tauri`).
+  - Synced author contact info to Rudy City (`@RudyCity` • `hrudy715@gmail.com`).
+
 ## [1.3.665] - 2026-07-28
 
 ### Documentation & Branding
