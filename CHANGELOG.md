@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.667] - 2026-07-28
+
+### Documentation & GitHub Pages — Installation Section Enhancement
+- **Expanded Quick Start & Installation Section (`docs/index.html`)**:
+  - Added dedicated pre-built binary download cards for Windows (`.exe` / `.msi`), macOS (`.dmg`), and Linux (`.AppImage` / `.deb`).
+  - Added step-by-step developer tabs: Local Dev Run, SuperAgent Engine Integration, Desktop Tauri Run, and Production Installer Build.
+  - Clarified system prerequisites: Bun 1.1+, Git, and Rust for desktop binaries.
+
 ## [1.3.666] - 2026-07-28
 
 ### Documentation & Web Landing Page — GitHub Pages Overhaul

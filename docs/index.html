@@ -359,30 +359,70 @@
     <section id="installation" class="install-section">
       <div class="container">
         <div class="section-header">
-          <h2>Get Started with t-line</h2>
-          <p>Follow these quick commands to spin up the developer dashboard on your local machine.</p>
+          <h2>Installation & Quick Start</h2>
+          <p>Get started in seconds by downloading pre-built installers or building from source.</p>
         </div>
-        
+
+        <!-- Download Cards for Pre-built Binaries -->
+        <div class="features-grid" style="margin-bottom: 2.5rem;">
+          
+          <div class="glass-panel feature-card" style="border-top: 2px solid #10b981;">
+            <h3>🪟 Windows Setup (.exe / .msi)</h3>
+            <p>Native 64-bit installer with WebGL xterm.js PTY support and automatic desktop shortcuts.</p>
+            <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <a href="https://github.com/RudyCity/t-line/releases/download/v1.3.665/t-line_1.3.665_x64-setup.exe" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Download .exe Setup</a>
+              <a href="https://github.com/RudyCity/t-line/releases/download/v1.3.665/t-line_1.3.665_x64_en-US.msi" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Download .msi Package</a>
+            </div>
+          </div>
+
+          <div class="glass-panel feature-card" style="border-top: 2px solid #3b82f6;">
+            <h3>🍏 macOS (.dmg / .app)</h3>
+            <p>Universal binary for Apple Silicon (M1/M2/M3) and Intel Macs with native menu bar tray integration.</p>
+            <div style="margin-top: 1rem;">
+              <a href="https://github.com/RudyCity/t-line/releases/tag/v1.3.665" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" target="_blank" rel="noopener">Download macOS Bundle</a>
+            </div>
+          </div>
+
+          <div class="glass-panel feature-card" style="border-top: 2px solid #f59e0b;">
+            <h3>🐧 Linux (.AppImage / .deb)</h3>
+            <p>Self-contained AppImage and Debian package compatible with Ubuntu, Debian, Fedora, and Arch.</p>
+            <div style="margin-top: 1rem;">
+              <a href="https://github.com/RudyCity/t-line/releases/tag/v1.3.665" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" target="_blank" rel="noopener">Download Linux Package</a>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="section-header" style="margin-top: 3rem; margin-bottom: 1.5rem;">
+          <h3 style="font-size: 1.5rem;">Developer Setup & Build from Source</h3>
+          <p>Prerequisites: <code>Bun 1.1+</code> (or Node 20+), <code>Git</code>, and <code>Rust</code> (for Tauri desktop builds).</p>
+        </div>
+
         <div class="install-tabs-nav">
           <button class="install-tab-btn active" data-target="panel-run">1. Local Dev Run</button>
-          <button class="install-tab-btn" data-target="panel-tauri">2. Desktop Tauri Run</button>
-          <button class="install-tab-btn" data-target="panel-build">3. Build Installer</button>
+          <button class="install-tab-btn" data-target="panel-superagent">2. SuperAgent Integration</button>
+          <button class="install-tab-btn" data-target="panel-tauri">3. Desktop Tauri Run</button>
+          <button class="install-tab-btn" data-target="panel-build">4. Build Desktop Installers</button>
         </div>
         
         <!-- Tab 1: Local Run -->
         <div class="install-content-panel active" id="panel-run">
           <div class="code-container">
             <button class="code-copy-btn">Copy</button>
-            <pre><code># Install workspace dependencies with Bun
+            <pre><code># 1. Clone the repository
+git clone https://github.com/RudyCity/t-line.git
+cd t-line
+
+# 2. Install workspace dependencies with Bun
 bun install
 
-# Run backend Express & React UI concurrently
+# 3. Run backend Express (Port 3999) & React UI (Port 5773) concurrently
 bun dev</code></pre>
           </div>
           <div class="install-steps">
             <div class="install-step">
               <div class="install-step-num">1</div>
-              <div>Installs all workspace packages using Bun for instant installation.</div>
+              <div>Clones repository and installs all workspace packages using Bun for instant installation.</div>
             </div>
             <div class="install-step">
               <div class="install-step-num">2</div>
@@ -391,11 +431,33 @@ bun dev</code></pre>
           </div>
         </div>
 
-        <!-- Tab 2: Tauri Desktop Run -->
+        <!-- Tab 2: SuperAgent Integration -->
+        <div class="install-content-panel" id="panel-superagent">
+          <div class="code-container">
+            <button class="code-copy-btn">Copy</button>
+            <pre><code># 1. Launch SuperAgent server engine on port 7888
+bunx superagent --server --multi
+
+# 2. t-line auto-detects and connects via superAgentBridge.ts
+# Express REST proxy available at: http://localhost:3999/api/superagent/*</code></pre>
+          </div>
+          <div class="install-steps">
+            <div class="install-step">
+              <div class="install-step-num">1</div>
+              <div>Starts SuperAgent HTTP/SSE server engine on port 7888.</div>
+            </div>
+            <div class="install-step">
+              <div class="install-step-num">2</div>
+              <div>t-line automatically proxies all 45+ endpoints, syncs RMemory, and displays real-time agent execution trees.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Tauri Desktop Run -->
         <div class="install-content-panel" id="panel-tauri">
           <div class="code-container">
             <button class="code-copy-btn">Copy</button>
-            <pre><code># Launch Tauri native client
+            <pre><code># Launch Tauri native client in development mode
 bun run tauri</code></pre>
           </div>
           <div class="install-steps">
@@ -410,11 +472,11 @@ bun run tauri</code></pre>
           </div>
         </div>
 
-        <!-- Tab 3: Build Tauri exe -->
+        <!-- Tab 4: Build Tauri exe -->
         <div class="install-content-panel" id="panel-build">
           <div class="code-container">
             <button class="code-copy-btn">Copy</button>
-            <pre><code># Package standalone desktop binaries (.exe, .msi, .dmg, .AppImage)
+            <pre><code># Package standalone desktop installers (.exe, .msi, .dmg, .AppImage)
 bun run build:tauri</code></pre>
           </div>
           <div class="install-steps">
@@ -424,7 +486,7 @@ bun run build:tauri</code></pre>
             </div>
             <div class="install-step">
               <div class="install-step-num">2</div>
-              <div>Packages native desktop installers for Windows, macOS, and Linux.</div>
+              <div>Packages native desktop installers for Windows, macOS, and Linux. Output artifacts are placed in `desktop-tauri/src-tauri/target/release/bundle/`.</div>
             </div>
           </div>
         </div>
