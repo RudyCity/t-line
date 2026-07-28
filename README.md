@@ -1,151 +1,149 @@
-# t-line — Premium Workspace Manager & Git Worktree Orchestrator
+# t-line — Developer Workspace & SuperAgent AI Orchestrator
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Tauri v2](https://img.shields.io/badge/Tauri-v2-blueviolet.svg)](https://tauri.app)
+[![Bun](https://img.shields.io/badge/Bun-1.1+-black.svg)](https://bun.sh)
+[![React](https://img.shields.io/badge/React-18-blue.svg)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org)
 
-> A high-performance, developer-first workspace dashboard. Run GPU-accelerated multi-shell PTY terminals, visualize and manage Git Worktrees, browse and edit code, and securely share your workspace remotely via Cloudflare Tunnel. All inside a sleek Obsidian Dark interface.
+> **t-line** is a high-performance developer workspace manager, GPU-accelerated terminal dashboard, Git worktree orchestrator, and **SuperAgent AI Integration Platform**. Built with Tauri v2, Bun, Express, and React, t-line seamlessly bridges deep terminal execution with multi-agent AI workflows.
 
 ![t-line Interface Preview](preview.png)
 
-> [!IMPORTANT]
-> **Tauri v2 Native Desktop**: **t-line** uses **Tauri v2** as its primary desktop wrapper to drastically reduce resource consumption. This wrapper lowers memory usage to **under 100MB RAM** (combined frontend and backend), provides a dynamic system tray with terminal session control, and native OS integrations.
+---
+
+## ✨ Key Features
+
+### 🤖 SuperAgent AI Orchestration
+* **Full HTTP & WebSocket Proxy Bridge**: Seamlessly connects to SuperAgent's port 7888 REST & SSE APIs (45+ endpoints).
+* **Multi-Agent Tree Visualizer**: Real-time interactive visualization of subagents, superagent instances, process states, and execution DAGs.
+* **100% Server-Proxy Configuration**: Centralized management of provider models, API profiles, system prompts, presets, and MCP servers without direct file mutation.
+* **RMemory & Context Inspector**: Live browsing of short-term (L0), long-term (L1), and scene block (L2) AI agent memory.
+* **Interactive Tool Approvals**: Real-time permission handling, question-answering prompts, and plan approval gates embedded into the streaming chat UI.
+
+### 🖥️ High-Performance GPU Terminal
+* **xterm.js Engine**: Canvas & WebGL GPU rendering with WebSockets PTY support.
+* **Flexible Grid Layouts**: Split screen vertical/horizontal grids, tabbed terminals, and floating subagent console windows.
+* **Cross-Platform PTY**: Built-in support for PowerShell, Git Bash, zsh, bash, and custom developer environments.
+
+### 🌿 Git Worktree & Repository Orchestrator
+* **Parallel Worktree Management**: Create, list, switch, prune, and delete Git worktrees without context switching.
+* **Visual Diff & File Inspector**: Side-by-side git diff viewer, visual branch history graphs, stage/unstage controls, and fast commit actions.
+* **Workspace Checkpoints**: Instant workspace state save & restoration via lightweight git stash integration.
+
+### 🌐 Embedded Browser & DevTools
+* **Autonomous Web Scraping & Control**: Integrated Chrome extension listener, Network XHR logger, Console log inspector, and HTML/Markdown page extractor.
+* **Tab & Viewport Emulation**: Test mobile/tablet/desktop viewports and inspect storage/cookies directly from the t-line sidebar.
+
+### 🔐 Security & Remote Workspace Sharing
+* **Cloudflare Tunnel Integration**: Share your local dev server, terminal sessions, and workspace remotely with zero-trust access tokens and password protection.
+* **Tauri v2 Desktop Native**: Native C++/Rust desktop wrapper keeping RAM footprint under 100MB with system tray support.
 
 ---
 
-## ⚡ The Developer's Context-Switching Solution
+## 🏗️ Architecture Overview
 
-Modern software engineering requires juggling multiple branches, repositories, and terminals. **t-line** solves the cognitive load of context-switching by combining Git Worktree automation, terminal multiplexing, and remote workspace sharing into a unified, lightweight, local-first application. 
-
-### Why use t-line?
-* **Adopt Git Worktrees without CLI friction**: Work on multiple features concurrently in isolated directories without stashing or breaking your flow.
-* **Instant, Secure Remote Access**: Share your local environment with clients or team members in one click via built-in Cloudflare Tunnel support.
-* **Ultra-Fast Terminals**: Custom GPU-accelerated xterm.js terminals reduce lag and render smooth graphics.
-* **Beautiful Obsidian Dark Aesthetic**: Optimized for long coding sessions with an elegant, frameless UI.
-
----
-
-## 🚀 Key Features & Value Proposition
-
-### 🖥️ GPU-Accelerated Multi-Shell PTY Terminal
-* **Concurrent Terminals**: Spawn and manage multiple sessions across PowerShell, CMD, Git Bash, or WSL.
-* **GPU Canvas Renderer**: Built-in `@xterm/addon-canvas` rendering delivers lightning-fast scrolling and reduces CPU utilization.
-* **Dynamic Process Polling**: Automatically polls background process names to update tab titles dynamically, solving native WinPTY title resolution limits on Windows.
-* **Recursive Process Tree Cleanup**: Kills all descendant/child processes (like running AI agents) recursively on terminal close (`taskkill /F /T` on Windows) to prevent background process leaks.
-* **Global WS Process & Title Sync**: Automatically synchronizes active process statuses and tab title indicators globally in React state, even when terminal tabs are unmounted from the DOM.
-* **Independent Terminal Status Bars**: Relocated all terminal controls (zoom, font size indicators, shell selector, reload, and scroll-to-bottom) from the global app footer to individual terminal status bars/footers, featuring premium styling.
-* **Interactive Tooling & Images**: Support for `@xterm/addon-image` allows terminal previews and inline image rendering via sixel/iTerm2.
-* **Developer Safety Filters**: Smart paste warnings prevent accidental multi-line executions in active shells.
-* **Focus Ring Highlight**: Visually track active panes with a soft glowing purple focus ring.
-
-### 🌿 Visual Git Worktrees Management
-* **Real-time Dirty Indexing**: Instantly flags modified or untracked files with glowing amber indicators and uncommitted change badges.
-* **Dirty-First Auto-Sorting**: Workspaces with active modifications are automatically floated to the top of the sidebar.
-* **Advanced Branch Syncing**: Custom interactive search-to-filter branch selection panel, branch deletion (with force-delete prompts for unmerged changes), and a 3-column repository action layout (Fetch-all-prune, Pull, and Push).
-* **Safety Lock Pruning**: Automatically shuts down terminal tabs and file locks associated with a worktree before removal. Falls back to direct file-system removal and manual registry pruning if files are locked.
-
-### 📸 Workspace & Worktree Checkpoints (Snapshots)
-* **Zero-Stash Snapshots**: Take instant snapshots of staged/unstaged changes and untracked files saved under Git-isolated references (`refs/tline/checkpoints/*`) to avoid cluttering git stash or status.
-* **Visual Diff Comparisons**: View and expand snapshot contents, listing changed files and launching side-by-side Monaco diff viewer tabs directly.
-
-### 📁 Unified Workspace Explorer & Editor
-* **Full-Bleed UI**: Clean borderless sidebar layout maximizing screen real estate.
-* **Dynamic Sidebar Tab Text Collapse**: Hides tab text labels dynamically when the sidebar is resized under `280px`, keeping the sidebar clean and maximizing the workspace area.
-* **Built-in Monaco Editor**: View and modify codebase files directly in editor tabs alongside terminal panes, complete with copy shortcuts and clean formatting.
-* **Interactive File Operations**: Create new files, folders, or rename/move existing items inside the explorer pane via header action buttons or right-click context menus.
-* **Theme-Aware SVG & Binary Previews**: Live visual vector previews for SVGs using dynamic blob URL regeneration (rendering edits in real-time) and safe warning dialogs for binary files to prevent text-load crashes.
-* **Muted Hidden Files**: Automatically dims dot-files and folders (like `.gitignore`, `.env`, `.github`) to keep your primary codebase structure visible.
-* **Auto-Focus Selection**: Automatically selects the first active or Git-enabled workspace on switch.
-
-### 🔗 SSH/SFTP Remote Workspace Support
-* **Secure Remote Mounts**: Connect to remote workspaces using standard `ssh://user@host:port/path` directory schemes.
-* **Native OpenSSH Engine**: Runs directory listing (`ls -F -A`), remote file read/write operations (`cat`), and git commands on remote environments using system OpenSSH binaries.
-* **Integrated Interactive Terminals**: Automatically spawns remote SSH terminal sessions using `ssh -t` directly integrated into the tab bar layout when accessing remote paths.
-* **Remote Checkpoints**: Persists snapshot configuration metadata (`tline-checkpoints.json`) in the remote `.git` common directory to maintain working states across machines.
-
-### 🌐 Secure Cloudflare Tunneling & ACL
-* **One-Click Share**: Instantly expose the dashboard using Quick URL or a Custom Tunnel token.
-* **Access Control List (ACL)**: Detailed connection loggers let you monitor incoming requests, block specific IPs, or restrict WebSocket terminal access with built-in lockout protection.
-
-### 🪟 Desktop Integration (Tauri v2)
-* **Lightweight Tauri v2 Desktop Wrapper**: Dramatically optimizes system resources, reducing total idle RAM footprint (combined frontend and backend processes) to **under 100MB**.
-* **Premium Detached Tabs & Windows**: Detach terminal/browser workspace tabs into separate windows for multi-monitor workflows. Shows a blurred freeze-frame preview of the tab in the main window under a glassmorphic lock screen with a pulsing lock icon, custom capsule badges in the tab bar, and single-click re-attachment.
-* **Asynchronous Multi-Display Stability**: Backend window lifecycle operations are fully asynchronous, preventing main GUI thread deadlocks and resolving crashes on multi-monitor configurations.
-* **Clean Window Decorations**: Disables native OS window decorations on detached Tauri windows to prevent duplicate title bars, utilizing custom React-rendered headers and window control mechanisms.
-* **Tray State Preservation**: Reworked restore-from-tray logic to avoid app/dashboard reloads, preserving active terminal session processes, scrollback buffers, and unsaved file edits.
-* **Dynamic System Tray Menu**: Native system tray icon offering dashboard toggles, backend controls (Start, Stop, Restart), and active terminal session listings grouped by workspace.
-* **Close-to-Tray**: Runs background AI processes and terminal sessions continuously by hiding the main window on close.
-* **Single Instance Lock**: Powered by `tauri-plugin-single-instance` to prevent port binding and database conflicts.
-* **Startup Diagnostics**: Automatically checks for Node.js installation at startup with native dialog warnings.
-* **Frameless App**: Draggable borderless UI with custom window control systems (Minimize, Maximize, Close) and `data-tauri-drag-region` title bar areas.
+```text
+┌─────────────────────────────────────────────────────────┐
+│                    t-line Desktop                       │
+│        (Tauri v2 Native Wrapper / Web UI)               │
+└───────────────────────────┬─────────────────────────────┘
+                            │ WebSocket / REST API
+                            ▼
+┌─────────────────────────────────────────────────────────┐
+│                    t-line Backend                       │
+│                (Express.js + Bun Runtime)               │
+├───────────────────────────┬─────────────────────────────┤
+│ • Terminal Manager (PTY)  │ • superAgentBridge.ts       │
+│ • Git Worktree Manager    │ • superAgentRoutes.ts       │
+│ • Cloudflare Tunnel Proxy │ • File Explorer & Checkpoint│
+└───────────────────────────┴──────────────┬──────────────┘
+                                           │ HTTP/SSE (port 7888)
+                                           ▼
+                            ┌─────────────────────────────┐
+                            │    SuperAgent Engine        │
+                            │  (AI Agent & Subagent Core) │
+                            └─────────────────────────────┘
+```
 
 ---
 
-## 🛠️ Technology Stack
-
-| Layer | Technologies Used |
-| :--- | :--- |
-| **Frontend** | React (TS), Vite, Tailwind CSS v4, Monaco Editor, xterm.js + Canvas / WebLinks / Image addons |
-| **Backend** | Node.js, Express, WebSocket (`ws`), `node-pty`, `bcryptjs`, OpenSSH CLI |
-| **Desktop** | **Tauri v2 (Rust)** |
-
----
-
-## 🏃 Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
-* [Bun](https://bun.sh/) (v1.x recommended)
-* Git configured in your system PATH
-* Windows 10/11 (Primary target OS)
-* Rust & Cargo (Required for Tauri desktop build)
+* [Bun](https://bun.sh) `1.1+` (or Node.js `20+`)
+* [Rust](https://www.rust-lang.org/) (required only for building Tauri v2 desktop binaries)
+* [Git](https://git-scm.com/)
 
-### 1. Install Project Dependencies
-Run from the root directory:
-```powershell
-bun install
-```
+### Installation & Development Run
 
-### 2. Run in Development Mode
-Launches the Express backend and Vite frontend concurrently with hot reloading:
-```powershell
-bun run dev
-```
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/your-username/t-line.git
+   cd t-line
+   ```
 
-### 3. Launch Tauri Desktop Client
-Launches the app using the lightweight Tauri v2 wrapper:
-```powershell
-bun run tauri
-```
+2. **Install Dependencies**
+   ```bash
+   bun install
+   ```
 
-### 4. Build Standalone Tauri Installer
-Compiles assets and packages the app using Tauri:
-```powershell
-bun run build:tauri
-# Or using the alias:
-bun run build:exe
-```
+3. **Start Development Environment**
+   ```bash
+   bun dev
+   ```
+   *Starts backend Express server, Vite React frontend, and auto-connects to SuperAgent bridge.*
+
+4. **Launch Desktop App (Optional)**
+   ```bash
+   bun run tauri dev
+   ```
 
 ---
 
-## 📂 Architecture Directory
+## 📁 Repository Structure
 
-```
+```text
 t-line/
-├── backend/          # Express + WebSockets + node-pty server (Port 3999 / Tauri uses 5779)
-├── frontend/         # React + Vite SPA (Vite + Tailwind CSS v4)
-│   └── src/
-│       ├── hooks/    # Custom React hooks (useTerminals, useTunnel, useWorkspaces)
-│       └── components/
-├── desktop-tauri/    # Tauri v2 (Rust) desktop wrapper and configuration
-├── preview.png       # Desktop application preview image
-└── package.json      # Root monorepo workspace configuration
+├── backend/                  # Express.js backend server
+│   ├── src/
+│   │   ├── server.ts          # Backend entrypoint & API router
+│   │   ├── superAgentBridge.ts# SuperAgent lifecycle & SSE bridge
+│   │   ├── superAgentRoutes.ts# 100% REST proxy for SuperAgent port 7888
+│   │   ├── terminalManager.ts # xterm.js PTY process manager
+│   │   ├── gitManager.ts      # Git worktree & branch operations
+│   │   └── tunnelManager.ts   # Cloudflare Tunnel integration
+├── frontend/                 # React 18 + Vite frontend UI
+│   ├── src/
+│   │   ├── components/        # UI components (SuperAgent Console, Worktrees, Terminal Grid)
+│   │   ├── hooks/             # Custom React hooks (terminals, git, web sockets)
+│   │   └── services/          # WebSocket & HTTP API client modules
+├── src-tauri/                # Tauri v2 Rust desktop configuration
+├── CHANGELOG.md              # Project version & release history
+└── package.json              # Project workspace dependencies & scripts
 ```
-
-> [!IMPORTANT]
-> **Code Quality Constraint**: To maintain high maintainability, no source code file in this repository is allowed to exceed **1,000 lines**. Oversized files are refactored into modular hooks or sub-components.
 
 ---
 
-## 📄 License & Attribution
+## 📝 Configuration & Integration Rules
 
-Distributed under the MIT License. See [LICENSE](LICENSE) for details.
+* **Single Source of Truth**: All SuperAgent configurations, presets, memory, and model profiles are proxied via `superAgentRoutes.ts` to port 7888. The t-line backend never mutates user config files directly.
+* **Strict Code Quality**: Maximum file length limit is set to 1000 LOC per module to enforce modular architecture and maintainability.
 
-Copyright © 2026 [Rudy H.](mailto:hrudy715@gmail.com)
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please make sure to test your code and follow the guidelines specified in `AGENTS.md`.
+
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git checkout -b feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).

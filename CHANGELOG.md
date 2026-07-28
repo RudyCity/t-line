@@ -2,6 +2,15 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.664] - 2026-07-28
+
+### Documentation & Repository — Professional README Overhaul
+- **Comprehensive Project Overview (`README.md`)**:
+  - Rewrote project documentation into a highly professional, developer-first reference.
+  - Added feature breakdowns for SuperAgent multi-agent orchestration, GPU-accelerated terminals, Git Worktree management, embedded web browser DevTools, and Cloudflare Tunnel remote sharing.
+  - Included interactive architecture diagram showcasing native Tauri v2 wrapper, Bun/Express backend, terminal PTY, and 100% server-proxy SuperAgent bridge (port 7888).
+  - Standardized setup instructions, repository structure, and configuration rules.
+
 ## [1.3.663] - 2026-07-28
 
 ### Feature & Logging — Dedicated Debug Log File for SuperAgent Process
