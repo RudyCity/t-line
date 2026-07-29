@@ -202,7 +202,11 @@ export async function getWorkspaceSessions(
   offset?: number
 ): Promise<{ sessions: ChatSession[]; totalCount: number; hasMore: boolean }> {
   try {
-    const response = await requestSuperAgentServer('/api/history/sessions', 'GET', undefined, workspace);
+    let endpoint = '/api/history/sessions?mode=all';
+    if (limit !== undefined) endpoint += `&limit=${limit}`;
+    if (offset !== undefined) endpoint += `&offset=${offset}`;
+
+    const response = await requestSuperAgentServer(endpoint, 'GET', undefined, workspace);
     
     if (response && response.success && Array.isArray(response.sessions)) {
       const cleanedSessions: ChatSession[] = [];
@@ -216,7 +220,7 @@ export async function getWorkspaceSessions(
         const cleanLast = extractCleanUserText(rawLast).split('\n')[0].trim();
 
         const firstSubstantive = cleanFirst && !GENERIC_GREETINGS_REGEX.test(cleanFirst) ? cleanFirst : null;
-        const lastSubstantive = cleanLast && !GENERIC_GREETINGS_REGEX.test(cleanLast) && !GENERIC_STOP_CMDS_REGEX.test(cleanLast) ? cleanLast : null;
+        const lastSubstantive = cleanLast && !GENERIC_STOP_CMDS_REGEX.test(cleanLast) ? cleanLast : null;
 
         const hasValidDisplayName = s.displayName && 
           !isNoiseMessageContent(s.displayName) && 
@@ -275,9 +279,9 @@ export async function getWorkspaceSessions(
       cleanedSessions.sort((a, b) => b.updatedAt - a.updatedAt);
 
       const safeOffset = offset || 0;
-      const totalCount = cleanedSessions.length;
-      const paginated = limit && limit > 0 ? cleanedSessions.slice(safeOffset, safeOffset + limit) : cleanedSessions;
-      const hasMore = limit ? (safeOffset + limit) < totalCount : false;
+      const totalCount = response.totalCount !== undefined ? response.totalCount : cleanedSessions.length;
+      const paginated = limit && limit > 0 && response.totalCount === undefined ? cleanedSessions.slice(safeOffset, safeOffset + limit) : cleanedSessions;
+      const hasMore = response.hasMore !== undefined ? response.hasMore : (limit ? (safeOffset + limit) < totalCount : false);
 
       return { sessions: paginated, totalCount, hasMore };
     }

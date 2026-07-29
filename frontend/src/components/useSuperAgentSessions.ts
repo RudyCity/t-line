@@ -47,8 +47,17 @@ export function isSystemNoiseMsg(msg: { role: string; text?: string }): boolean 
   );
 }
 
+export function getNormalizedWsKey(wsPath: string): string {
+  if (!wsPath) return 'default';
+  let normalized = wsPath.trim();
+  if (/^\/[a-zA-Z]\//.test(normalized)) {
+    normalized = normalized[1] + ':' + normalized.slice(2);
+  }
+  return normalized.replace(/\\/g, '/').toLowerCase();
+}
+
 export function loadWorkspaceSessions(wsPath: string): ChatSession[] {
-  const wsKey = wsPath || 'default';
+  const wsKey = getNormalizedWsKey(wsPath);
   const sessionsKey = `superagent_sessions_${wsKey}`;
   const savedSessionsStr = localStorage.getItem(sessionsKey);
   
@@ -69,7 +78,7 @@ export function loadWorkspaceSessions(wsPath: string): ChatSession[] {
     }
 
     if (Array.isArray(legacyMsgs) && legacyMsgs.length > 0) {
-      const initialSessionId = `session_${Date.now()}`;
+      const initialSessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
       let initialTitle = 'New Chat';
       const firstUserMsg = legacyMsgs.find(m => m.role === 'user');
       if (firstUserMsg && firstUserMsg.text) {
@@ -94,7 +103,7 @@ export function loadWorkspaceSessions(wsPath: string): ChatSession[] {
   }
 
   if (loadedSessions.length === 0) {
-    const initialSessionId = `session_${Date.now()}`;
+    const initialSessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     const defaultSession: ChatSession = {
       id: initialSessionId,
       title: 'New Chat',
@@ -222,6 +231,22 @@ async function apiDeleteSession(workspace: string, sessionId: string): Promise<b
     console.error('[SessionsAPI] DELETE failed:', e);
   }
   return false;
+}
+
+export async function apiSearchSessions(workspace: string, query: string): Promise<any[]> {
+  if (!query || !query.trim()) return [];
+  try {
+    const res = await fetch(`/api/superagent/sessions/search?workspace=${encodeURIComponent(workspace)}&q=${encodeURIComponent(query.trim())}`, {
+      headers: getAuthHeader()
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return Array.isArray(data.results) ? data.results : [];
+    }
+  } catch (e) {
+    console.error('[SessionsAPI] FTS search failed:', e);
+  }
+  return [];
 }
 
 export function getCleanUserText(rawText: string): string {
@@ -519,7 +544,13 @@ export function useSuperAgentSessions(workspace: string) {
   useEffect(() => {
     const handleWsMessage = (payload: any) => {
       if (payload && payload.type === 'superagent-sessions-changed') {
-        syncSessions(workspace, activeSessionIdRef.current);
+        if (payload.action === 'delete' && payload.sessionId) {
+          setSessions(prev => prev.filter(s => s.id !== payload.sessionId));
+        } else if (payload.action === 'update' && payload.sessionId && payload.title) {
+          setSessions(prev => prev.map(s => s.id === payload.sessionId ? { ...s, title: cleanSessionTitle(payload.title), updatedAt: Date.now() } : s));
+        } else {
+          syncSessions(workspace, activeSessionIdRef.current);
+        }
       }
     };
     wsManager.addGlobalMessageListener(handleWsMessage);
@@ -715,7 +746,7 @@ export function useSuperAgentSessions(workspace: string) {
   }, [workspace, messages.length]);
 
   const handleNewChat = useCallback((): string => {
-    const newId = `session_${Date.now()}`;
+    const newId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     const newSession: ChatSession = {
       id: newId,
       title: 'New Chat',
@@ -723,7 +754,7 @@ export function useSuperAgentSessions(workspace: string) {
       updatedAt: Date.now()
     };
 
-    const wsKey = workspace || 'default';
+    const wsKey = getNormalizedWsKey(workspace);
     setSessions(prev => {
       const nextSessions = [newSession, ...prev];
       try {

@@ -2,6 +2,19 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.669] - 2026-07-29
+
+### SuperAgent Session Management & Sync Enhancements
+- **Enhanced Workspace Session Management (`backend/src/sessionManager.ts`)**:
+  - Implemented pagination parameters (`limit`, `offset`) and `mode=all` query support for workspace sessions.
+  - Refined title extraction heuristics for substantive user prompts.
+- **Session Search REST Proxy (`backend/src/superAgentRoutes.ts`)**:
+  - Added `/sessions/search` endpoint proxy routing search queries directly to SuperAgent FTS engine.
+- **Frontend Session Management & Path Normalization (`frontend/src/components/useSuperAgentSessions.ts`)**:
+  - Added `getNormalizedWsKey` for consistent local storage session key calculation across operating systems.
+  - Added `apiSearchSessions` utility for session searching.
+  - Enhanced WebSocket event listener for granular session deletion and title update notifications.
+
 ## [1.3.668] - 2026-07-28
 
 ### Design & Landing Page — Hallmark Anti-AI-Slop Redesign (`docs/`)

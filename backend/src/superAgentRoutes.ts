@@ -183,6 +183,14 @@ router.get('/skills/detail', async (req, res) => {
 });
 
 // Session history → fetch cleaned & formatted sessions from sessionManager
+router.get('/sessions/search', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const q = (req.query.q as string) || '';
+  const limit = (req.query.limit as string) || '50';
+  const data = await proxyToSuperAgent(`/api/history/search?q=${encodeURIComponent(q)}&limit=${limit}`, { success: true, results: [] }, workspace, 3000);
+  res.json(data);
+});
+
 router.get('/sessions', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
