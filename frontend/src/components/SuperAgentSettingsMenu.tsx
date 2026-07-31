@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Settings, RefreshCw, Activity, Trash2, Sliders, X, Terminal, ExternalLink, Folder, Key, Sparkles, Server } from 'lucide-react';
+import { Settings, RefreshCw, Activity, Trash2, Sliders, X, ExternalLink, Folder, Key, Sparkles, Server } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 
 interface SuperAgentSettingsMenuProps {
@@ -15,8 +15,6 @@ interface SuperAgentSettingsMenuProps {
   setConnectTrigger: React.Dispatch<React.SetStateAction<number>>;
   showSidebar: boolean;
   setShowSidebar: (show: boolean) => void;
-  onRefreshMonitor?: () => void;
-  isLoadingMonitor?: boolean;
   onClearConsole?: () => void;
   onOpenGlobalSettings?: () => void;
   onOpenSettingsModal?: (tab?: 'login' | 'presets' | 'execution' | 'monitor' | 'mcp' | 'skills' | 'memory' | 'chains') => void;
@@ -33,10 +31,8 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
   customArgs,
   setCustomArgs,
   setConnectTrigger,
-  showSidebar,
-  setShowSidebar,
-  onRefreshMonitor,
-  isLoadingMonitor,
+  showSidebar = false,
+  setShowSidebar = () => {},
   onClearConsole,
   onOpenGlobalSettings,
   onOpenSettingsModal
@@ -62,49 +58,54 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="absolute right-0 top-11 w-84 sm:w-96 bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-xl  z-50 p-4 text-xs font-sans animate-in fade-in zoom-in-95 duration-150"
+      className="absolute right-0 top-11 w-72 bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-xl shadow-xl z-50 p-2 text-xs font-sans animate-in fade-in zoom-in-95 duration-150"
     >
-      {/* Menu Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-[var(--border-color)] mb-3">
+      {/* Sleek Minimal Header */}
+      <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-[var(--border-color)]/60 mb-1.5">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/50 text-[var(--color-primary)]">
-            <Settings className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <h4 className="font-semibold text-[var(--text-main)] text-xs">SuperAgent Menu</h4>
-              <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-[var(--color-primary-glow)] text-[var(--color-primary)] border border-[var(--color-primary)]/40">
-                v1.2.520
-              </span>
-            </div>
-            <p className="text-[10px] text-[var(--text-muted)]">Navigate views & configure settings</p>
-          </div>
+          <Settings className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+          <span className="font-semibold text-[var(--text-main)] text-xs">SuperAgent Settings</span>
         </div>
         <button
           onClick={onClose}
-          className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] transition"
+          className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] transition cursor-pointer"
           title="Close menu"
         >
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      <div className="space-y-3.5 max-h-[75vh] overflow-y-auto pr-0.5">
-        {/* Quick Modal Tabs Section */}
+      <div className="space-y-1 max-h-[75vh] overflow-y-auto pr-0.5">
+        {/* Quick Tools & Settings Action Grid */}
         {onOpenSettingsModal && (
-          <div className="bg-[var(--bg-card)] p-3 rounded-lg border border-[var(--border-color)] space-y-2">
-            <div className="flex items-center gap-1 text-[var(--text-muted)] font-semibold text-[10px] uppercase tracking-wider">
-              <span>Open Tools & Settings</span>
+          <div className="p-1 space-y-1">
+            <div className="text-[10px] font-medium text-[var(--text-muted)] px-2 py-0.5 uppercase tracking-wider">
+              Quick Config
             </div>
-            <div className="grid grid-cols-3 gap-1.5">
+            
+            <button
+              onClick={() => {
+                onOpenSettingsModal('login');
+                onClose();
+              }}
+              className="w-full px-2.5 py-2 rounded-lg bg-[var(--color-primary-glow)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--color-primary)]/40 text-[var(--color-primary)] transition flex items-center justify-between text-xs cursor-pointer font-medium"
+            >
+              <div className="flex items-center gap-2">
+                <Key className="w-3.5 h-3.5 shrink-0" />
+                <span>Logins & Presets</span>
+              </div>
+              <ExternalLink className="w-3 h-3 opacity-70" />
+            </button>
+
+            <div className="grid grid-cols-3 gap-1 pt-0.5">
               <button
                 onClick={() => {
                   onOpenSettingsModal('skills');
                   onClose();
                 }}
-                className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md transition font-medium cursor-pointer text-xs bg-[var(--bg-sidebar)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]"
+                className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-md transition font-medium cursor-pointer text-[11px] bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]/70"
               >
-                <Sparkles className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                <Sparkles className="w-3 h-3 text-[var(--color-primary)] shrink-0" />
                 <span>Skills</span>
               </button>
               <button
@@ -112,9 +113,9 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
                   onOpenSettingsModal('memory');
                   onClose();
                 }}
-                className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md transition font-medium cursor-pointer text-xs bg-[var(--bg-sidebar)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]"
+                className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-md transition font-medium cursor-pointer text-[11px] bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]/70"
               >
-                <Activity className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                <Activity className="w-3 h-3 text-[var(--color-primary)] shrink-0" />
                 <span>Memory</span>
               </button>
               <button
@@ -122,49 +123,26 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
                   onOpenSettingsModal('mcp');
                   onClose();
                 }}
-                className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md transition font-medium cursor-pointer text-xs bg-[var(--bg-sidebar)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]"
+                className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-md transition font-medium cursor-pointer text-[11px] bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]/70"
               >
-                <Server className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                <Server className="w-3 h-3 text-[var(--color-primary)] shrink-0" />
                 <span>MCP</span>
               </button>
             </div>
           </div>
         )}
-        {/* Combined SuperAgent Login & Presets Settings Link */}
-        {onOpenSettingsModal && (
-          <button
-            onClick={() => {
-              onOpenSettingsModal('login');
-              onClose();
-            }}
-            className="w-full p-2.5 rounded-lg bg-[var(--color-primary-glow)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--color-primary)]/50 text-[var(--color-primary)] transition flex items-center justify-between cursor-pointer "
-          >
-            <div className="flex items-center gap-2.5 text-left">
-              <div className="p-1.5 rounded-md bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--color-primary)]">
-                <Key className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="font-semibold text-xs text-[var(--color-primary)] flex items-center gap-1.5">
-                  <span>Manage Login & Model Presets</span>
-                </div>
-                <p className="text-[10px] text-[var(--text-muted)]">Configure API Keys, LLM logins, and model presets</p>
-              </div>
-            </div>
-            <ExternalLink className="w-3.5 h-3.5 text-[var(--color-primary)] shrink-0" />
-          </button>
-        )}
-        {/* Section 1: Agent & Workspace Config */}
-        <div className="bg-[var(--bg-card)] p-3 rounded-lg border border-[var(--border-color)] space-y-2.5">
-          <div className="flex items-center gap-1.5 text-[var(--text-main)] font-medium text-[11px]">
-            <Sliders className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-            <span>Workspace & Agent Configuration</span>
-          </div>
 
+        <div className="h-px bg-[var(--border-color)]/60 my-1" />
+
+        {/* Minimal Workspace & Mode Controls */}
+        <div className="p-2 space-y-2 bg-[var(--bg-card)]/50 rounded-lg border border-[var(--border-color)]/50">
           {setWorkspace && (
-            <div className="space-y-1.5">
-              <label className="text-[10px] text-[var(--text-muted)] flex items-center gap-1">
-                <Folder className="w-3 h-3 text-[var(--color-primary)]" />
-                Active Workspace
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-[var(--text-muted)] flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Folder className="w-3 h-3 text-[var(--color-primary)]" />
+                  Workspace
+                </span>
               </label>
               {workspaces.length > 0 ? (
                 <select
@@ -173,14 +151,11 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
                     setWorkspace(e.target.value);
                     localStorage.setItem('currentWorkspace', e.target.value);
                   }}
-                  className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md px-2.5 py-1.5 text-[var(--text-main)] font-mono outline-none focus:border-[var(--color-primary)] text-xs transition truncate"
+                  className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md px-2 py-1 text-[var(--text-main)] font-mono outline-none focus:border-[var(--color-primary)] text-[11px] transition truncate"
                 >
                   {workspaces.map(w => (
-                    <option key={w.id} value={w.path}>{w.name} ({w.path})</option>
+                    <option key={w.id} value={w.path}>{w.name}</option>
                   ))}
-                  {!workspaces.some(w => w.path === workspace) && workspace && (
-                    <option value={workspace}>Custom ({workspace})</option>
-                  )}
                 </select>
               ) : (
                 <input
@@ -190,34 +165,36 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
                     setWorkspace(e.target.value);
                     localStorage.setItem('currentWorkspace', e.target.value);
                   }}
-                  className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md px-2.5 py-1.5 text-[var(--text-main)] font-mono outline-none focus:border-[var(--color-primary)] text-xs transition"
-                  placeholder="Workspace directory path"
+                  className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md px-2 py-1 text-[var(--text-main)] font-mono outline-none focus:border-[var(--color-primary)] text-[11px] transition"
+                  placeholder="Path"
                 />
               )}
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <label className="text-[10px] text-[var(--text-muted)]">Execution Mode</label>
-            <select
-              value={agentMode}
-              onChange={(e) => setAgentMode(e.target.value as 'single' | 'multi')}
-              className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md px-2.5 py-1.5 text-[var(--text-main)] outline-none focus:border-[var(--color-primary)] text-xs transition"
-            >
-              <option value="single">Single Agent Mode</option>
-              <option value="multi">Multi-Agent Master (--multi)</option>
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-[10px] text-[var(--text-muted)]">Custom CLI Arguments</label>
-            <input
-              type="text"
-              value={customArgs}
-              onChange={(e) => setCustomArgs(e.target.value)}
-              className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md px-2.5 py-1.5 text-[var(--text-main)] font-mono outline-none focus:border-[var(--color-primary)] text-xs transition"
-              placeholder="e.g. --resume"
-            />
+          <div className="grid grid-cols-2 gap-1.5 items-center">
+            <div className="space-y-0.5">
+              <label className="text-[10px] text-[var(--text-muted)]">Mode</label>
+              <select
+                value={agentMode}
+                onChange={(e) => setAgentMode(e.target.value as 'single' | 'multi')}
+                className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md px-2 py-1 text-[var(--text-main)] outline-none focus:border-[var(--color-primary)] text-[11px] transition"
+              >
+                <option value="single">Single Agent</option>
+                <option value="multi">Multi-Agent</option>
+              </select>
+            </div>
+            
+            <div className="space-y-0.5">
+              <label className="text-[10px] text-[var(--text-muted)]">CLI Args</label>
+              <input
+                type="text"
+                value={customArgs}
+                onChange={(e) => setCustomArgs(e.target.value)}
+                className="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md px-2 py-1 text-[var(--text-main)] font-mono outline-none focus:border-[var(--color-primary)] text-[11px] transition"
+                placeholder="--resume"
+              />
+            </div>
           </div>
 
           <button
@@ -225,86 +202,60 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
               setConnectTrigger(prev => prev + 1);
               onClose();
             }}
-            className="w-full mt-1 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium py-1.5 px-3 rounded-md transition flex items-center justify-center gap-1.5 text-xs "
+            className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium py-1 px-2.5 rounded-md transition flex items-center justify-center gap-1.5 text-[11px] cursor-pointer"
           >
             <RefreshCw className="w-3 h-3" />
             Apply & Restart Bridge
           </button>
         </div>
 
-        {/* Section 2: Live Monitor Options */}
-        <div className="bg-[var(--bg-card)] p-3 rounded-lg border border-[var(--border-color)] space-y-2.5">
-          <div className="flex items-center gap-1.5 text-[var(--text-main)] font-medium text-[11px]">
-            <Activity className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-            <span>Monitor Panel</span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-[var(--text-main)] text-[11px]">Show Live Monitor Sidebar</span>
+        {/* Minimal Quick Actions & Toggles */}
+        <div className="p-1 space-y-0.5">
+          <div className="flex items-center justify-between px-2 py-1 hover:bg-[var(--surface-overlay-hover)] rounded-md transition">
+            <span className="text-[var(--text-main)] text-[11px] font-medium">Live Monitor Sidebar</span>
             <button
               onClick={() => setShowSidebar(!showSidebar)}
-              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                showSidebar ? 'bg-[var(--color-primary)]' : 'bg-[var(--bg-main)]'
+              className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out ${
+                showSidebar ? 'bg-[var(--color-primary)]' : 'bg-[var(--bg-card)] border-[var(--border-color)]'
               }`}
             >
               <span
-                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white  ring-0 transition duration-200 ease-in-out ${
-                  showSidebar ? 'translate-x-4' : 'translate-x-0'
+                className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white transition duration-200 ease-in-out ${
+                  showSidebar ? 'translate-x-3' : 'translate-x-0'
                 }`}
               />
             </button>
           </div>
 
-          {onRefreshMonitor && (
-            <button
-              onClick={() => {
-                onRefreshMonitor();
-              }}
-              disabled={isLoadingMonitor}
-              className="w-full bg-[var(--bg-sidebar)] hover:bg-[var(--surface-overlay-hover)] text-[var(--text-main)] border border-[var(--border-color)] font-medium py-1.5 px-3 rounded-md transition flex items-center justify-center gap-1.5 text-xs disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3 h-3 ${isLoadingMonitor ? 'animate-spin' : ''}`} />
-              {isLoadingMonitor ? 'Refreshing Data...' : 'Refresh Monitor Data'}
-            </button>
-          )}
-        </div>
-
-        {/* Section 3: Console Tools */}
-        {onClearConsole && (
-          <div className="bg-[var(--bg-card)] p-3 rounded-lg border border-[var(--border-color)] space-y-2">
-            <div className="flex items-center gap-1.5 text-[var(--text-main)] font-medium text-[11px]">
-              <Terminal className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-              <span>Console Tools</span>
-            </div>
+          {onClearConsole && (
             <button
               onClick={() => {
                 onClearConsole();
                 onClose();
               }}
-              className="w-full bg-[var(--bg-sidebar)] hover:bg-[var(--surface-overlay-hover)] text-[var(--text-main)] font-medium py-1.5 px-3 rounded-md border border-[var(--border-color)] transition flex items-center justify-center gap-1.5 text-xs"
+              className="w-full px-2 py-1 rounded-md text-[var(--text-muted)] hover:text-rose-400 hover:bg-[var(--surface-overlay-hover)] transition flex items-center gap-2 text-[11px] font-medium cursor-pointer"
             >
               <Trash2 className="w-3 h-3 text-rose-400" />
-              Clear Console Output
+              <span>Clear Console Output</span>
             </button>
-          </div>
-        )}
+          )}
 
-        {/* Section 4: Global App Settings Link */}
-        {onOpenGlobalSettings && (
-          <button
-            onClick={() => {
-              onOpenGlobalSettings();
-              onClose();
-            }}
-            className="w-full bg-[var(--color-primary-glow)] hover:bg-[var(--surface-overlay-hover)] text-[var(--color-primary)] border border-[var(--color-primary)]/50 font-medium py-2 px-3 rounded-lg transition flex items-center justify-between text-xs"
-          >
-            <div className="flex items-center gap-2">
-              <Settings className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-              <span>Global App Settings</span>
-            </div>
-            <ExternalLink className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-          </button>
-        )}
+          {onOpenGlobalSettings && (
+            <button
+              onClick={() => {
+                onOpenGlobalSettings();
+                onClose();
+              }}
+              className="w-full px-2 py-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] transition flex items-center justify-between text-[11px] font-medium cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Sliders className="w-3 h-3 text-[var(--color-primary)]" />
+                <span>All Modal Settings</span>
+              </div>
+              <ExternalLink className="w-3 h-3 opacity-60" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

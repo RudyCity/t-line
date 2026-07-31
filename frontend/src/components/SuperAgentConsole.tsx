@@ -932,8 +932,6 @@ export function SuperAgentConsole({
             setConnectTrigger={setConnectTrigger}
             showSidebar={showSidebar}
             setShowSidebar={setShowSidebar}
-            onRefreshMonitor={fetchMonitorData}
-            isLoadingMonitor={isLoadingMonitor}
             onClearConsole={() => setMessages([{ role: 'system', text: 'Console output cleared.' }])}
             onOpenGlobalSettings={onOpenSettings}
             onOpenSettingsModal={handleOpenSettingsModal}
