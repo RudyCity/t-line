@@ -203,8 +203,12 @@ export async function getWorkspaceSessions(
 ): Promise<{ sessions: ChatSession[]; totalCount: number; hasMore: boolean }> {
   try {
     let endpoint = '/api/history/sessions';
-    if (limit !== undefined) endpoint += `&limit=${limit}`;
-    if (offset !== undefined) endpoint += `&offset=${offset}`;
+    const params = [];
+    if (limit !== undefined) params.push(`limit=${limit}`);
+    if (offset !== undefined) params.push(`offset=${offset}`);
+    if (params.length > 0) {
+      endpoint += '?' + params.join('&');
+    }
 
     const response = await requestSuperAgentServer(endpoint, 'GET', undefined, workspace);
     

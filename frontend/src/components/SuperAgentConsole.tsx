@@ -474,7 +474,7 @@ export function SuperAgentConsole({
     }
 
     const token = localStorage.getItem('token') || '';
-    const wsUrl = `${protocol}//${host}/api/superagent?workspace=${encodeURIComponent(workspace)}&agentMode=${agentMode}&customArgs=${encodeURIComponent(customArgs)}&token=${encodeURIComponent(token)}`;
+    const wsUrl = `${protocol}//${host}/api/superagent?workspace=${encodeURIComponent(workspace)}&agentMode=${agentMode}&customArgs=${encodeURIComponent(customArgs)}&sessionId=${encodeURIComponent(activeSessionId)}&token=${encodeURIComponent(token)}`;
 
     if (wsRef.current && activeWsUrlRef.current === wsUrl && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
       return;
@@ -522,7 +522,7 @@ export function SuperAgentConsole({
         try { socket.close(); } catch {}
       }
     };
-  }, [workspace, agentMode, customArgs, connectTrigger]);
+  }, [workspace, agentMode, customArgs, activeSessionId, connectTrigger]);
 
   useEffect(() => {
     if (isPrependingRef.current) {

@@ -344,6 +344,12 @@ router.post('/background-tasks/kill', async (req, res) => {
   res.json(data);
 });
 
+router.delete('/background-tasks/:id', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/background-tasks/kill', { success: false }, workspace, 3000, 'POST', { id: req.params.id });
+  res.json(data);
+});
+
 // Workspace File Operations → proxy to SA
 router.get('/workspace/files', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';

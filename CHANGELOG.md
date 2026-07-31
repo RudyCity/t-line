@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.672] - 2026-07-31
+
+### Fix: SuperAgent Chat Session Mismatches & Background Process Control
+- **Session History Path Resolution (`backend/src/sessionManager.ts`)**: Corrected query parameter serialization in `getWorkspaceSessions` by replacing the incorrect `&` separator with `?` for the first query parameter, resolving `404 Not Found` response codes on the SuperAgent server and enabling real-time session history sync.
+- **Background Task Termination Route (`backend/src/superAgentRoutes.ts`)**: Added the missing `DELETE /background-tasks/:id` route proxy to translate the frontend's deletion requests to SuperAgent's `POST /api/background-tasks/kill` payload structure, resolving `404` errors when killing background processes.
+- **WebSocket URL Optimization (`frontend/src/components/SuperAgentConsole.tsx`)**: Appended the active `sessionId` to the upgrade request URL so the bridge eagerly pre-warms the correct session, eliminating initial `Session not initialized` payload failures and reducing request round-trip latency.
+
 ## [1.3.671] - 2026-07-31
 
 ### Feat: Workspace SSH and Workspace Chain Integration
