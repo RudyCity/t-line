@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Settings, RefreshCw, Activity, Trash2, Sliders, X, Terminal, ExternalLink, Folder, Key } from 'lucide-react';
+import { Settings, RefreshCw, Activity, Trash2, Sliders, X, Terminal, ExternalLink, Folder, Key, Sparkles, Server } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 
 interface SuperAgentSettingsMenuProps {
@@ -20,6 +20,8 @@ interface SuperAgentSettingsMenuProps {
   onClearConsole?: () => void;
   onOpenGlobalSettings?: () => void;
   onOpenSettingsModal?: (tab?: 'login' | 'presets' | 'execution' | 'monitor') => void;
+  activeTab?: 'console' | 'memory' | 'skills' | 'mcp';
+  setActiveTab?: (tab: 'console' | 'memory' | 'skills' | 'mcp') => void;
 }
 
 export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
@@ -39,7 +41,9 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
   isLoadingMonitor,
   onClearConsole,
   onOpenGlobalSettings,
-  onOpenSettingsModal
+  onOpenSettingsModal,
+  activeTab = 'console',
+  setActiveTab
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -72,12 +76,12 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <h4 className="font-semibold text-[var(--text-main)] text-xs">SuperAgent Quick Settings</h4>
+              <h4 className="font-semibold text-[var(--text-main)] text-xs">SuperAgent Menu</h4>
               <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-[var(--color-primary-glow)] text-[var(--color-primary)] border border-[var(--color-primary)]/40">
                 v1.2.520
               </span>
             </div>
-            <p className="text-[10px] text-[var(--text-muted)]">Manage workspace, login, presets & monitor</p>
+            <p className="text-[10px] text-[var(--text-muted)]">Navigate views & configure settings</p>
           </div>
         </div>
         <button
@@ -90,6 +94,72 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
       </div>
 
       <div className="space-y-3.5 max-h-[75vh] overflow-y-auto pr-0.5">
+        {/* Navigation Section */}
+        {setActiveTab && (
+          <div className="bg-[var(--bg-card)] p-3 rounded-lg border border-[var(--border-color)] space-y-2">
+            <div className="flex items-center gap-1 text-[var(--text-muted)] font-semibold text-[10px] uppercase tracking-wider">
+              <span>Switch View</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  setActiveTab('console');
+                  onClose();
+                }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md transition font-medium cursor-pointer text-xs ${
+                  activeTab === 'console'
+                    ? 'bg-[var(--color-primary)] text-white font-semibold shadow-sm'
+                    : 'bg-[var(--bg-sidebar)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]'
+                }`}
+              >
+                <Terminal className="w-3.5 h-3.5" />
+                <span>Console</span>
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('memory');
+                  onClose();
+                }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md transition font-medium cursor-pointer text-xs ${
+                  activeTab === 'memory'
+                    ? 'bg-[var(--color-primary)] text-white font-semibold shadow-sm'
+                    : 'bg-[var(--bg-sidebar)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]'
+                }`}
+              >
+                <Activity className="w-3.5 h-3.5" />
+                <span>Memory</span>
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('skills');
+                  onClose();
+                }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md transition font-medium cursor-pointer text-xs ${
+                  activeTab === 'skills'
+                    ? 'bg-[var(--color-primary)] text-white font-semibold shadow-sm'
+                    : 'bg-[var(--bg-sidebar)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Skills</span>
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('mcp');
+                  onClose();
+                }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md transition font-medium cursor-pointer text-xs ${
+                  activeTab === 'mcp'
+                    ? 'bg-[var(--color-primary)] text-white font-semibold shadow-sm'
+                    : 'bg-[var(--bg-sidebar)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]'
+                }`}
+              >
+                <Server className="w-3.5 h-3.5" />
+                <span>MCP Tools</span>
+              </button>
+            </div>
+          </div>
+        )}
         {/* Combined SuperAgent Login & Presets Settings Link */}
         {onOpenSettingsModal && (
           <button

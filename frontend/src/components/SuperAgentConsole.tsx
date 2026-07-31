@@ -20,7 +20,7 @@ import { getAuthHeader, readFileAsText, readFileAsDataURL, getMainModelLabel as 
 import { SuperAgentMemoryInspector } from './SuperAgentMemoryInspector';
 import { SkillMarketplaceInspector } from './SkillMarketplaceInspector';
 import { SuperAgentMcpManager } from './SuperAgentMcpManager';
-import { History, Folder, Terminal, Activity, Sparkles, Settings, RefreshCw, ArrowDown, Server } from 'lucide-react';
+import { History, Folder, Terminal, Activity, Sparkles, RefreshCw, ArrowDown, Server, MoreVertical } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 
 interface SuperAgentConsoleProps {
@@ -887,54 +887,17 @@ export function SuperAgentConsole({
           )}
         </div>
 
-        {/* Center Column: Segmented Tab Switcher */}
-        <div className="flex justify-center">
-          <div className="flex bg-[var(--bg-card)] rounded-xl p-1 border border-[var(--border-color)]  gap-1">
-            <button
-              onClick={() => setActiveTab('console')}
-              className={`flex items-center gap-1.5 px-3.5 py-1 text-xs rounded-lg transition font-medium cursor-pointer ${
-                activeTab === 'console' 
-                  ? 'bg-[var(--color-primary)] text-white font-semibold ' 
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
-              }`}
-            >
-              <Terminal className="w-3.5 h-3.5" />
-              Console
-            </button>
-
-            <button
-              onClick={() => setActiveTab('memory')}
-              className={`flex items-center gap-1.5 px-3.5 py-1 text-xs rounded-lg transition font-medium cursor-pointer ${
-                activeTab === 'memory' 
-                  ? 'bg-[var(--color-primary)] text-white font-semibold ' 
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
-              }`}
-            >
-              <Activity className="w-3.5 h-3.5" />
-              Memory Inspector
-            </button>
-            <button
-              onClick={() => setActiveTab('skills')}
-              className={`flex items-center gap-1.5 px-3.5 py-1 text-xs rounded-lg transition font-medium cursor-pointer ${
-                activeTab === 'skills' 
-                  ? 'bg-[var(--color-primary)] text-white font-semibold ' 
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Skills
-            </button>
-            <button
-              onClick={() => setActiveTab('mcp')}
-              className={`flex items-center gap-1.5 px-3.5 py-1 text-xs rounded-lg transition font-medium cursor-pointer ${
-                activeTab === 'mcp' 
-                  ? 'bg-[var(--color-primary)] text-white font-semibold ' 
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
-              }`}
-            >
-              <Server className="w-3.5 h-3.5" />
-              MCP Tools
-            </button>
+        {/* Center Column: Active View Label */}
+        <div className="flex justify-center items-center">
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg text-xs text-[var(--text-main)] font-semibold select-none">
+            {activeTab === 'console' && <Terminal className="w-3.5 h-3.5 text-[var(--color-primary)]" />}
+            {activeTab === 'memory' && <Activity className="w-3.5 h-3.5 text-[var(--color-primary)]" />}
+            {activeTab === 'skills' && <Sparkles className="w-3.5 h-3.5 text-[var(--color-primary)]" />}
+            {activeTab === 'mcp' && <Server className="w-3.5 h-3.5 text-[var(--color-primary)]" />}
+            {activeTab === 'console' && 'Console'}
+            {activeTab === 'memory' && 'Memory Inspector'}
+            {activeTab === 'skills' && 'Skills'}
+            {activeTab === 'mcp' && 'MCP Tools'}
           </div>
         </div>
 
@@ -959,9 +922,9 @@ export function SuperAgentConsole({
                 ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)] text-[var(--color-primary)] ' 
                 : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-color)]'
             }`}
-            title="SuperAgent v1.2.520 & App Settings"
+            title="SuperAgent Menu"
           >
-            <Settings className="w-4 h-4" />
+            <MoreVertical className="w-4 h-4" />
           </button>
 
           <SuperAgentSettingsMenu
@@ -982,6 +945,8 @@ export function SuperAgentConsole({
             onClearConsole={() => setMessages([{ role: 'system', text: 'Console output cleared.' }])}
             onOpenGlobalSettings={onOpenSettings}
             onOpenSettingsModal={handleOpenSettingsModal}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
           />
         </div>
       </div>

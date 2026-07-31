@@ -2,6 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.676] - 2026-08-01
+
+### Feat: Integrate Tabs and Settings into Three-Dots Dropdown Menu
+- **View Navigation Switcher (`frontend/src/components/SuperAgentSettingsMenu.tsx`)**: Added a brand new navigation section at the top of the menu body with quick-switch buttons for Console, Memory, Skills, and MCP Tools.
+- **Three-Dots Menu Trigger (`frontend/src/components/SuperAgentConsole.tsx`)**: Replaced the settings gear icon with a three-dots (`MoreVertical`) menu trigger and updated the tooltip to "SuperAgent Menu".
+- **View Indicator (`frontend/src/components/SuperAgentConsole.tsx`)**: Removed the segmented tab bar in the center column of the header and replaced it with a clean active-view title and icon.
+
 ## [1.3.675] - 2026-07-31
 
 ### Fix: SuperAgent Console Sidebar Resizing
