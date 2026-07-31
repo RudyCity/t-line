@@ -19,9 +19,7 @@ interface SuperAgentSettingsMenuProps {
   isLoadingMonitor?: boolean;
   onClearConsole?: () => void;
   onOpenGlobalSettings?: () => void;
-  onOpenSettingsModal?: (tab?: 'login' | 'presets' | 'execution' | 'monitor') => void;
-  activeTab?: 'console' | 'memory' | 'skills' | 'mcp';
-  setActiveTab?: (tab: 'console' | 'memory' | 'skills' | 'mcp') => void;
+  onOpenSettingsModal?: (tab?: 'login' | 'presets' | 'execution' | 'monitor' | 'mcp' | 'skills' | 'memory' | 'chains') => void;
 }
 
 export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
@@ -41,9 +39,7 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
   isLoadingMonitor,
   onClearConsole,
   onOpenGlobalSettings,
-  onOpenSettingsModal,
-  activeTab = 'console',
-  setActiveTab
+  onOpenSettingsModal
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -94,68 +90,42 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
       </div>
 
       <div className="space-y-3.5 max-h-[75vh] overflow-y-auto pr-0.5">
-        {/* Navigation Section */}
-        {setActiveTab && (
+        {/* Quick Modal Tabs Section */}
+        {onOpenSettingsModal && (
           <div className="bg-[var(--bg-card)] p-3 rounded-lg border border-[var(--border-color)] space-y-2">
             <div className="flex items-center gap-1 text-[var(--text-muted)] font-semibold text-[10px] uppercase tracking-wider">
-              <span>Switch View</span>
+              <span>Open Tools & Settings</span>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-1.5">
               <button
                 onClick={() => {
-                  setActiveTab('console');
+                  onOpenSettingsModal('skills');
                   onClose();
                 }}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md transition font-medium cursor-pointer text-xs ${
-                  activeTab === 'console'
-                    ? 'bg-[var(--color-primary)] text-white font-semibold shadow-sm'
-                    : 'bg-[var(--bg-sidebar)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]'
-                }`}
+                className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md transition font-medium cursor-pointer text-xs bg-[var(--bg-sidebar)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]"
               >
-                <Terminal className="w-3.5 h-3.5" />
-                <span>Console</span>
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('memory');
-                  onClose();
-                }}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md transition font-medium cursor-pointer text-xs ${
-                  activeTab === 'memory'
-                    ? 'bg-[var(--color-primary)] text-white font-semibold shadow-sm'
-                    : 'bg-[var(--bg-sidebar)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]'
-                }`}
-              >
-                <Activity className="w-3.5 h-3.5" />
-                <span>Memory</span>
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('skills');
-                  onClose();
-                }}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md transition font-medium cursor-pointer text-xs ${
-                  activeTab === 'skills'
-                    ? 'bg-[var(--color-primary)] text-white font-semibold shadow-sm'
-                    : 'bg-[var(--bg-sidebar)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="w-3.5 h-3.5 text-[var(--color-primary)]" />
                 <span>Skills</span>
               </button>
               <button
                 onClick={() => {
-                  setActiveTab('mcp');
+                  onOpenSettingsModal('memory');
                   onClose();
                 }}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md transition font-medium cursor-pointer text-xs ${
-                  activeTab === 'mcp'
-                    ? 'bg-[var(--color-primary)] text-white font-semibold shadow-sm'
-                    : 'bg-[var(--bg-sidebar)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]'
-                }`}
+                className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md transition font-medium cursor-pointer text-xs bg-[var(--bg-sidebar)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]"
               >
-                <Server className="w-3.5 h-3.5" />
-                <span>MCP Tools</span>
+                <Activity className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                <span>Memory</span>
+              </button>
+              <button
+                onClick={() => {
+                  onOpenSettingsModal('mcp');
+                  onClose();
+                }}
+                className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md transition font-medium cursor-pointer text-xs bg-[var(--bg-sidebar)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]"
+              >
+                <Server className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                <span>MCP</span>
               </button>
             </div>
           </div>

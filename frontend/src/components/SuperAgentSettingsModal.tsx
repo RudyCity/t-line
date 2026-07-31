@@ -5,6 +5,8 @@ import { SuperAgentLoginManager, ProviderProfile } from './SuperAgentLoginManage
 import { SuperAgentPresetManager, ModelPreset } from './SuperAgentPresetManager';
 import { SuperAgentMcpManager } from './SuperAgentMcpManager';
 import { SuperAgentChainManager } from './SuperAgentChainManager';
+import { SkillMarketplaceInspector } from './SkillMarketplaceInspector';
+import { SuperAgentMemoryInspector } from './SuperAgentMemoryInspector';
 
 interface SuperAgentSettingsModalProps {
   isOpen: boolean;
@@ -33,7 +35,7 @@ interface SuperAgentSettingsModalProps {
   onSaveCustomPreset: (mode: 'single' | 'multi', preset: { id: string; name: string; description?: string; models: any }) => Promise<void>;
   onDeleteCustomPreset: (mode: 'single' | 'multi', presetId: string) => Promise<void>;
   getAuthHeader: () => Record<string, string>;
-  defaultTab?: 'login' | 'presets' | 'execution' | 'monitor' | 'mcp' | 'chains';
+  defaultTab?: 'login' | 'presets' | 'execution' | 'monitor' | 'mcp' | 'skills' | 'memory' | 'chains';
 }
 
 export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = ({
@@ -65,7 +67,13 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
   getAuthHeader,
   defaultTab = 'login'
 }) => {
-  const [activeTab, setActiveTab] = useState<'login' | 'presets' | 'execution' | 'monitor' | 'mcp' | 'chains'>(defaultTab);
+  const [activeTab, setActiveTab] = useState<'login' | 'presets' | 'execution' | 'monitor' | 'mcp' | 'skills' | 'memory' | 'chains'>(defaultTab);
+
+  useEffect(() => {
+    if (isOpen && defaultTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [isOpen, defaultTab]);
   const [execSettings, setExecSettings] = useState<Record<string, any>>({});
   const [trustedDirs,  setTrustedDirs]  = useState<string[]>([]);
   const [newDir,       setNewDir]       = useState('');
@@ -126,10 +134,10 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
 
   return (
     <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col  overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-xs font-sans">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-xs font-sans">
         
         {/* Modal Header */}
-        <div className="px-6 py-4 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] flex items-center justify-between">
+        <div className="px-6 py-4 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/50 text-[var(--color-primary)]">
               <Sliders className="w-5 h-5" />
@@ -141,7 +149,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
                   v1.2.520
                 </span>
               </div>
-              <p className="text-[11px] text-[var(--text-muted)]">Manage LLM Login credentials, Model Presets, Execution mode & Live Monitor</p>
+              <p className="text-[11px] text-[var(--text-muted)]">Manage LLM Credentials, Presets, Execution, Skills, Memory, MCP Tools & Workspace Chains</p>
             </div>
           </div>
           <button
@@ -152,37 +160,41 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
           </button>
         </div>
 
-        {/* Modal Navigation Tabs */}
-        <div className="px-6 py-2.5 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] flex items-center gap-1.5 overflow-x-auto shrink-0">
-          {[
-            { id: 'login' as const, label: `Management Login (${providers.length})`, icon: Key },
-            { id: 'presets' as const, label: 'Model Presets', icon: Sparkles },
-            { id: 'execution' as const, label: 'Execution & Workspace', icon: Sliders },
-            { id: 'monitor' as const, label: 'Monitor & Console', icon: Activity },
-            { id: 'mcp' as const, label: 'MCP Servers', icon: Server },
-            { id: 'chains' as const, label: 'Workspace Chains', icon: LinkIcon },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-3.5 py-1.5 rounded-lg font-medium transition-all flex items-center gap-2 text-xs cursor-pointer whitespace-nowrap border ${
-                  isActive
-                    ? 'border-[var(--color-primary)]/40 text-[var(--color-primary)] bg-[var(--color-primary)]/15 font-semibold '
-                    : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
-                }`}
-              >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[var(--color-primary)]' : ''}`} />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        {/* Modal Body: Left Sidebar Navigation + Right Content Area */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left Navigation Sidebar */}
+          <div className="w-56 bg-[var(--panel-header-bg)] border-r border-[var(--border-color)] p-3 flex flex-col gap-1 shrink-0 overflow-y-auto">
+            {[
+              { id: 'login' as const, label: `Management Login (${providers.length})`, icon: Key },
+              { id: 'presets' as const, label: 'Model Presets', icon: Sparkles },
+              { id: 'execution' as const, label: 'Execution & Workspace', icon: Sliders },
+              { id: 'monitor' as const, label: 'Monitor & Console', icon: Activity },
+              { id: 'skills' as const, label: 'Skills Marketplace', icon: Sparkles },
+              { id: 'memory' as const, label: 'Long-term Memory', icon: Activity },
+              { id: 'mcp' as const, label: 'MCP Servers', icon: Server },
+              { id: 'chains' as const, label: 'Workspace Chains', icon: LinkIcon },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full px-3 py-2 rounded-xl font-medium transition-all flex items-center gap-2.5 text-xs cursor-pointer text-left border ${
+                    isActive
+                      ? 'border-[var(--color-primary)]/40 text-[var(--color-primary)] bg-[var(--color-primary)]/15 font-semibold shadow-xs'
+                      : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[var(--color-primary)]' : ''}`} />
+                  <span className="truncate">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
 
-        {/* Modal Body */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-4 bg-[var(--bg-card)]">
+          {/* Right Main Content Panel */}
+          <div className="p-6 overflow-y-auto flex-1 bg-[var(--bg-card)]">
           {activeTab === 'login' && (
             <SuperAgentLoginManager
               providers={providers}
@@ -405,6 +417,14 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
             </div>
           )}
 
+          {activeTab === 'skills' && (
+            <SkillMarketplaceInspector workspacePath={workspace} getAuthHeader={getAuthHeader} />
+          )}
+
+          {activeTab === 'memory' && (
+            <SuperAgentMemoryInspector workspacePath={workspace} getAuthHeader={getAuthHeader} />
+          )}
+
           {activeTab === 'mcp' && (
             <SuperAgentMcpManager getAuthHeader={getAuthHeader} />
           )}
@@ -416,6 +436,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
               getAuthHeader={getAuthHeader}
             />
           )}
+        </div>
         </div>
 
         {/* Modal Footer */}

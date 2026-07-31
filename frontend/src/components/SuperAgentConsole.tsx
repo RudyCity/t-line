@@ -17,10 +17,7 @@ import { SuperAgentHistorySidebar } from './SuperAgentHistorySidebar';
 import { useSuperAgentSessions, isSystemNoiseMsg } from './useSuperAgentSessions';
 import { useSidebarResize } from './useSidebarResize';
 import { getAuthHeader, readFileAsText, readFileAsDataURL, getMainModelLabel as getModelLabelUtil, handleAgentEventPayload, fetchCliPromptHistory } from './SuperAgentConsoleUtils';
-import { SuperAgentMemoryInspector } from './SuperAgentMemoryInspector';
-import { SkillMarketplaceInspector } from './SkillMarketplaceInspector';
-import { SuperAgentMcpManager } from './SuperAgentMcpManager';
-import { History, Folder, Terminal, Activity, Sparkles, RefreshCw, ArrowDown, Server, MoreVertical } from 'lucide-react';
+import { History, Folder, Terminal, Activity, Sparkles, RefreshCw, ArrowDown, MoreVertical } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 
 interface SuperAgentConsoleProps {
@@ -67,7 +64,6 @@ export function SuperAgentConsole({
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [ws, setWs] = useState<WebSocket | null>(null);
-  const [activeTab, setActiveTab] = useState<'console' | 'memory' | 'skills' | 'mcp'>('console');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -122,7 +118,7 @@ export function SuperAgentConsole({
   const [providers, setProviders] = useState<ProviderProfile[]>([]);
   const [activeProviderId, setActiveProviderId] = useState<string>('');
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
-  const [settingsModalTab, setSettingsModalTab] = useState<'login' | 'presets' | 'execution' | 'monitor'>('login');
+  const [settingsModalTab, setSettingsModalTab] = useState<'login' | 'presets' | 'execution' | 'monitor' | 'mcp' | 'skills' | 'memory' | 'chains'>('login');
 
   // Sidebar Monitor & Subagent Terminal states
   const [subagentList, setSubagentList] = useState<SubAgentItem[]>([]);
@@ -302,7 +298,7 @@ export function SuperAgentConsole({
     }
   };
 
-  const handleOpenSettingsModal = (tab: 'login' | 'presets' | 'execution' | 'monitor' = 'login') => {
+  const handleOpenSettingsModal = (tab: 'login' | 'presets' | 'execution' | 'monitor' | 'mcp' | 'skills' | 'memory' | 'chains' = 'login') => {
     fetchConfig();
     setSettingsModalTab(tab);
     setShowSettingsModal(true);
@@ -887,18 +883,14 @@ export function SuperAgentConsole({
           )}
         </div>
 
-        {/* Center Column: Active View Label */}
+        {/* Center Column: Active Session ID / Title */}
         <div className="flex justify-center items-center">
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg text-xs text-[var(--text-main)] font-semibold select-none">
-            {activeTab === 'console' && <Terminal className="w-3.5 h-3.5 text-[var(--color-primary)]" />}
-            {activeTab === 'memory' && <Activity className="w-3.5 h-3.5 text-[var(--color-primary)]" />}
-            {activeTab === 'skills' && <Sparkles className="w-3.5 h-3.5 text-[var(--color-primary)]" />}
-            {activeTab === 'mcp' && <Server className="w-3.5 h-3.5 text-[var(--color-primary)]" />}
-            {activeTab === 'console' && 'Console'}
-            {activeTab === 'memory' && 'Memory Inspector'}
-            {activeTab === 'skills' && 'Skills'}
-            {activeTab === 'mcp' && 'MCP Tools'}
-          </div>
+          {activeSessionId && (
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg text-xs text-[var(--text-main)] font-semibold select-none">
+              <Terminal className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+              <span>SuperAgent Console</span>
+            </div>
+          )}
         </div>
 
         {/* Right Column: Monitor & Settings Actions */}
@@ -945,13 +937,11 @@ export function SuperAgentConsole({
             onClearConsole={() => setMessages([{ role: 'system', text: 'Console output cleared.' }])}
             onOpenGlobalSettings={onOpenSettings}
             onOpenSettingsModal={handleOpenSettingsModal}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
           />
         </div>
       </div>
 
-      <div className={`flex-1 flex overflow-hidden relative w-full ${activeTab === 'console' ? '' : 'hidden'}`} ref={mainConsoleRef}>
+      <div className="flex-1 flex overflow-hidden relative w-full" ref={mainConsoleRef}>
           {/* Left Resizable Chat History Sidebar */}
           {showHistorySidebar && (
             <div style={{ width: `${historyWidth}px` }} className="superagent-history-panel h-full shrink-0 relative min-w-[160px] max-w-[500px]">
@@ -1178,27 +1168,6 @@ export function SuperAgentConsole({
           {(isResizingLeft || isResizingRight) && (
             <div className="fixed inset-0 z-50 cursor-col-resize select-none bg-transparent" />
           )}
-        </div>
-
-
-
-        <div className={`flex-1 flex flex-col overflow-hidden relative w-full p-4 ${activeTab === 'memory' ? '' : 'hidden'}`}>
-          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-4 flex-1 flex flex-col overflow-hidden shadow-xs">
-            <SuperAgentMemoryInspector workspacePath={workspace} getAuthHeader={getAuthHeader} />
-          </div>
-        </div>
-
-        <div className={`flex-1 flex flex-col overflow-hidden relative w-full p-4 ${activeTab === 'skills' ? '' : 'hidden'}`}>
-          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-4 flex-1 flex flex-col overflow-hidden shadow-xs">
-            <SkillMarketplaceInspector workspacePath={workspace} getAuthHeader={getAuthHeader} onOpenFile={onOpenFile} />
-          </div>
-        </div>
-
-        {/* MCP Management Tab View */}
-        <div className={`flex-1 flex flex-col overflow-hidden relative w-full p-4 ${activeTab === 'mcp' ? '' : 'hidden'}`}>
-          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-4 flex-1 flex flex-col overflow-hidden shadow-xs">
-            <SuperAgentMcpManager getAuthHeader={getAuthHeader} />
-          </div>
         </div>
 
       {/* Subagent / Process Live Terminal Output Modal */}
