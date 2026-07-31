@@ -360,7 +360,7 @@ router.get('/workspace/files', async (req, res) => {
 router.get('/workspace/file/read', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';
   const filePath = (req.query.path as string) || '';
-  const data = await proxyToSuperAgent(`/api/workspace/file/read?path=${encodeURIComponent(filePath)}`, { content: '' }, workspace, 5000);
+  const data = await proxyToSuperAgent('/api/workspace/file/read', { content: '' }, workspace, 5000, 'POST', { filepath: filePath });
   res.json(data);
 });
 

@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.673] - 2026-07-31
+
+### Fix: SuperAgent Workspace File Read Routing Method
+- **File Reading Route proxy (`backend/src/superAgentRoutes.ts`)**: Corrected `/workspace/file/read` proxy routing. SuperAgent expects a `POST` request with JSON body `{ filepath }`, whereas t-line was requesting it via `GET` with a query parameter. Changed the request proxy method to `POST` and mapped query parameter `path` to target body parameter `filepath`, resolving `404` errors when reading files.
+
 ## [1.3.672] - 2026-07-31
 
 ### Fix: SuperAgent Chat Session Mismatches & Background Process Control
