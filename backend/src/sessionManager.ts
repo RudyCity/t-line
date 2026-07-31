@@ -1,3 +1,4 @@
+import { logE2E } from "./unifiedLogger";
 import http from 'http';
 
 // ─── Interfaces ───────────────────────────────────────────────
@@ -22,8 +23,8 @@ export interface SuperAgentMessage {
 
 export function closeSessionDb() {}
 
-const NOISE_PREFIXES = ['[RMemory', '[TencentDB', '[Emergency', '[Context', '[SYS]', '[System', '[memory]', '[memory', '- [memory]', '-[memory]', '<relevant-memories>'];
-const NOISE_SUBSTRINGS = ['Agent Memory Context', 'Emergency Summary', 'Context Restoration', '[memory]', '[SYS]'];
+const NOISE_PREFIXES = ['[RMemory', '[TencentDB', '[Emergency', '[Context', '[System', '[memory]', '[memory', '- [memory]', '-[memory]', '<relevant-memories>'];
+const NOISE_SUBSTRINGS = ['Agent Memory Context', 'Emergency Summary', 'Context Restoration', '[memory]'];
 
 function isNoiseMessageContent(content: string): boolean {
   if (!content) return true;
@@ -151,8 +152,10 @@ function requestSuperAgentServer(
       : `${pathName}?workspace=${encodeURIComponent(wsPath)}`;
 
     const postData = payload ? JSON.stringify(payload) : undefined;
+    // Normalize workspace path slashes for HTTP header
+    const cleanHeaderWsPath = (wsPath || '').replace(/\\/g, '/');
     const headers: Record<string, string> = {
-      'x-workspace-path': wsPath,
+      'x-workspace-path': cleanHeaderWsPath,
       'x-client-mode': 'tline'
     };
     if (postData) {
@@ -298,6 +301,7 @@ export async function getWorkspaceSessions(
 
 /** Get paginated messages for a given session ID from SuperAgent Server */
 export async function getSessionMessages(
+
   workspace: string,
   sessionId: string,
   limit?: number,
@@ -310,7 +314,9 @@ export async function getSessionMessages(
 
   try {
     // Fetch history messages directly from SuperAgent server (FAST lookup without blocking init)
-    const response = await requestSuperAgentServer(`/api/history?sessionId=${encodeURIComponent(actualId)}`, 'GET', undefined, workspace);
+    logE2E("TLINE-BACKEND", `getSessionMessages: ${actualId}`, { workspace, limit, offset });
+const response = await requestSuperAgentServer(`/api/history?sessionId=${encodeURIComponent(actualId)}`, 'GET', undefined, workspace);
+logE2E("TLINE-BACKEND", `getSessionMessages response: ${actualId}`, { count: response?.messages?.length });
 
     if (response && response.success && Array.isArray(response.messages)) {
       const guiMsgs: SuperAgentMessage[] = [];

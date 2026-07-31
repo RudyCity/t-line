@@ -22,7 +22,6 @@ export function isSystemNoiseMsg(msg: { role: string; text?: string }): boolean 
     text.startsWith('[TencentDB') ||
     text.startsWith('[Emergency') ||
     text.startsWith('[Context') ||
-    text.startsWith('[SYS]') ||
     text.startsWith('[System') ||
     text.startsWith('<relevant-memories>') ||
     text.includes('Agent Memory Context') ||
@@ -430,6 +429,7 @@ export function useSuperAgentSessions(workspace: string) {
         (localSessions[0]?.id);
       
       if (targetActiveId && validServerSessions.some(s => s.id === targetActiveId)) {
+        activeSessionIdRef.current = targetActiveId;
         setActiveSessionId(targetActiveId);
         loadedMessagesSessionIdRef.current = targetActiveId;
         const result = await apiGetSessionMessages(wsPath, targetActiveId, PAGE_SIZE, 0);
@@ -466,6 +466,7 @@ export function useSuperAgentSessions(workspace: string) {
         }
       } else if (targetActiveId && !deletedSessionIdsRef.current.has(targetActiveId)) {
         // Target active ID is a local-only session (e.g., brand new chat)
+        activeSessionIdRef.current = targetActiveId;
         setActiveSessionId(targetActiveId);
         const wsKey = wsPath || 'default';
         const saved = localStorage.getItem(`superagent_messages_${wsKey}_${targetActiveId}`);
@@ -565,7 +566,7 @@ export function useSuperAgentSessions(workspace: string) {
     if (loadedMessagesSessionIdRef.current !== activeSessionId) return; // Isolated check!
 
     const wsKey = workspace || 'default';
-    const msgKey = `superagent_messages_${wsKey}__${activeSessionId}`;
+    const msgKey = `superagent_messages_${wsKey}_${activeSessionId}`;
 
     if (saveDebounceTimerRef.current) {
       clearTimeout(saveDebounceTimerRef.current);
@@ -695,6 +696,7 @@ export function useSuperAgentSessions(workspace: string) {
     const abortController = new AbortController();
     selectSessionAbortControllerRef.current = abortController;
 
+    activeSessionIdRef.current = id;
     setActiveSessionId(id);
     loadedSessionIdRef.current = id;
     loadedMessagesSessionIdRef.current = id;

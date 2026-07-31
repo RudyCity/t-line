@@ -8,6 +8,8 @@ import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
 import { ActiveTasksBar, ChecklistTaskItem } from './ActiveTasksBar';
 import { SuperAgentInputContainer } from './SuperAgentInputContainer';
 import { SuperAgentSettingsMenu } from './SuperAgentSettingsMenu';
+import { SessionIdBadge } from './SessionIdBadge';
+
 import { SuperAgentSettingsModal } from './SuperAgentSettingsModal';
 import { ProviderProfile } from './SuperAgentLoginManager';
 import { SuperAgentGroupedMessages } from './SuperAgentGroupedMessages';
@@ -1053,6 +1055,11 @@ export function SuperAgentConsole({
                 <span className="w-1 h-1 rounded-full bg-[var(--border-color)]" />
               </div>
             ) : null}
+            {/* Session ID Badge with Copy Button */}
+            {messages.length > 0 && (
+              <SessionIdBadge sessionId={activeSessionId} />
+            )}
+
             <SuperAgentGroupedMessages
               messages={messages}
               isSystemNoiseMsg={isSystemNoiseMsg}

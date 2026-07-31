@@ -1,3 +1,4 @@
+import { logE2E } from "./unifiedLogger";
 import { Router } from 'express';
 import http from 'http';
 import { authMiddleware } from './auth';
@@ -8,6 +9,14 @@ const router = Router();
 
 // Apply authMiddleware globally to all routes in this router
 router.use(authMiddleware);
+
+// End-to-End Unified Logging Endpoint
+router.post("/log", (req, res) => {
+  const { category, message, meta } = req.body || {};
+  logE2E(category || "TLINE-UI", message || "UI Event", meta);
+  res.json({ success: true });
+});
+
 
 // Helper for forwarding requests to SuperAgent HTTP Server (port 7888)
 function proxyToSuperAgent(pathName: string, fallback: any, workspace?: string, timeoutMs: number = 1500, method: string = 'GET', body?: any): Promise<any> {
