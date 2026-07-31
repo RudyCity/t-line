@@ -2,6 +2,14 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.671] - 2026-07-31
+
+### Feat: Workspace SSH and Workspace Chain Integration
+- **Backend Spawn Handling (`backend/src/superAgentBridge.ts`)**: Resolved fallback local CWD when starting SuperAgent server in SSH/Chain workspaces to prevent ENOENT crashes.
+- **REST Endpoints (`backend/src/superAgentRoutes.ts`)**: Added proxy routes for all workspace chain management APIs.
+- **UI Workspace Chain Manager (`frontend/src/components/SuperAgentChainManager.tsx`)**: Created UI for CRUD, node focusing, connection statuses, and live health metrics dashboard.
+- **Settings Modal Integration (`frontend/src/components/SuperAgentSettingsModal.tsx`)**: Embedded the new chain manager component and tab layout.
+
 ## [1.3.670] - 2026-07-31
 
 ### Fix: SuperAgent Session History Workspace Filtering

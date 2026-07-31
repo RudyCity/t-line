@@ -432,13 +432,20 @@ function ensureSuperAgentServer(
     currentAgentMode = agentMode;
     currentCustomArgs = customArgs;
 
+    const resolvedCwd = (workspacePath.startsWith('ssh:') || workspacePath.startsWith('ssh://') || workspacePath.startsWith('chain:'))
+      ? process.cwd()
+      : workspacePath;
+
     spawnSuperAgentProcess({
       agentMode,
       customArgs,
-      cwd: workspacePath,
+      cwd: resolvedCwd,
       label: 'WS-Agent',
       onReady: () => {
-        ws.send(JSON.stringify({ type: 'status', text: `Connected to SuperAgent server (${path.basename(workspacePath)})` }));
+        const workspaceLabel = workspacePath.startsWith('ssh:') || workspacePath.startsWith('chain:') 
+          ? workspacePath 
+          : path.basename(workspacePath);
+        ws.send(JSON.stringify({ type: 'status', text: `Connected to SuperAgent server (${workspaceLabel})` }));
         callback();
       },
       onFail: (reason) => {

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Key, Sparkles, Sliders, Activity, Terminal, RefreshCw, Folder, Trash2, Server, ShieldCheck, Minus, Plus as PlusIcon } from 'lucide-react';
+import { X, Key, Sparkles, Sliders, Activity, Terminal, RefreshCw, Folder, Trash2, Server, ShieldCheck, Minus, Plus as PlusIcon, Link as LinkIcon } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { SuperAgentLoginManager, ProviderProfile } from './SuperAgentLoginManager';
 import { SuperAgentPresetManager, ModelPreset } from './SuperAgentPresetManager';
 import { SuperAgentMcpManager } from './SuperAgentMcpManager';
+import { SuperAgentChainManager } from './SuperAgentChainManager';
 
 interface SuperAgentSettingsModalProps {
   isOpen: boolean;
@@ -32,7 +33,7 @@ interface SuperAgentSettingsModalProps {
   onSaveCustomPreset: (mode: 'single' | 'multi', preset: { id: string; name: string; description?: string; models: any }) => Promise<void>;
   onDeleteCustomPreset: (mode: 'single' | 'multi', presetId: string) => Promise<void>;
   getAuthHeader: () => Record<string, string>;
-  defaultTab?: 'login' | 'presets' | 'execution' | 'monitor' | 'mcp';
+  defaultTab?: 'login' | 'presets' | 'execution' | 'monitor' | 'mcp' | 'chains';
 }
 
 export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = ({
@@ -64,7 +65,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
   getAuthHeader,
   defaultTab = 'login'
 }) => {
-  const [activeTab, setActiveTab] = useState<'login' | 'presets' | 'execution' | 'monitor' | 'mcp'>(defaultTab);
+  const [activeTab, setActiveTab] = useState<'login' | 'presets' | 'execution' | 'monitor' | 'mcp' | 'chains'>(defaultTab);
   const [execSettings, setExecSettings] = useState<Record<string, any>>({});
   const [trustedDirs,  setTrustedDirs]  = useState<string[]>([]);
   const [newDir,       setNewDir]       = useState('');
@@ -159,6 +160,7 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
             { id: 'execution' as const, label: 'Execution & Workspace', icon: Sliders },
             { id: 'monitor' as const, label: 'Monitor & Console', icon: Activity },
             { id: 'mcp' as const, label: 'MCP Servers', icon: Server },
+            { id: 'chains' as const, label: 'Workspace Chains', icon: LinkIcon },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -405,6 +407,14 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
 
           {activeTab === 'mcp' && (
             <SuperAgentMcpManager getAuthHeader={getAuthHeader} />
+          )}
+
+          {activeTab === 'chains' && (
+            <SuperAgentChainManager
+              workspace={workspace}
+              setWorkspace={setWorkspace}
+              getAuthHeader={getAuthHeader}
+            />
           )}
         </div>
 

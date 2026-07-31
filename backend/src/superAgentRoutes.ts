@@ -432,4 +432,66 @@ router.post('/browser/update-instance', async (req, res) => {
   res.json(data);
 });
 
+// Workspace Chain APIs proxied to SuperAgent
+router.get('/workspace/chains', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const filter = (req.query.filter as string) || 'true';
+  const data = await proxyToSuperAgent(`/api/workspace/chains?filter=${filter}`, { success: false, chains: [] }, workspace, 3000);
+  res.json(data);
+});
+
+router.get('/workspace/chains/active', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/workspace/chains/active', { success: false, activeChainId: null }, workspace, 3000);
+  res.json(data);
+});
+
+router.post('/workspace/chains/active', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/workspace/chains/active', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+router.post('/workspace/chains', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/workspace/chains', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+router.delete('/workspace/chains', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/workspace/chains', { success: false }, workspace, 3000, 'DELETE', req.body);
+  res.json(data);
+});
+
+router.post('/workspace/chains/nodes', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/workspace/chains/nodes', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+router.delete('/workspace/chains/nodes', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/workspace/chains/nodes', { success: false }, workspace, 3000, 'DELETE', req.body);
+  res.json(data);
+});
+
+router.post('/workspace/chains/switch-node', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/workspace/chains/switch-node', { success: false }, workspace, 3000, 'POST', req.body);
+  res.json(data);
+});
+
+router.get('/workspace/chains/health', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/workspace/chains/health', { success: false, healthTable: '', healthData: [] }, workspace, 15000);
+  res.json(data);
+});
+
+router.get('/workspace/chains/status', async (req, res) => {
+  const workspace = (req.query.workspace as string) || '';
+  const data = await proxyToSuperAgent('/api/workspace/chains/status', { success: false, status: [], activeNodeId: null }, workspace, 3000);
+  res.json(data);
+});
+
 export default router;
