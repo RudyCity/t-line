@@ -2,6 +2,11 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.674] - 2026-07-31
+
+### Style: Unified Chat Input Card Dark Background
+- **Chat Input styling (`frontend/src/components/SuperAgentInputContainer.tsx`)**: Replaced the chat input card wrapper background `bg-[var(--bg-sidebar)]` with `bg-[var(--panel-header-bg)]` and changed the footer background from `bg-[var(--panel-header-bg)]` to `bg-transparent`. This ensures the input area and footer toolbar share a dark, uniform background color, matching the dark theme layout aesthetic.
+
 ## [1.3.673] - 2026-07-31
 
 ### Fix: SuperAgent Workspace File Read Routing Method

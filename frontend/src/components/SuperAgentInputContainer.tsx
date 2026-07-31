@@ -143,7 +143,7 @@ export function SuperAgentInputContainer({
       )}
 
       {/* Unified High-Craft CLI Input Card */}
-      <div className={`bg-[var(--bg-sidebar)] border-t border-[var(--border-color)] focus-within:border-t-[var(--color-primary)] transition-all duration-200 ${
+      <div className={`bg-[var(--panel-header-bg)] border-t border-[var(--border-color)] focus-within:border-t-[var(--color-primary)] transition-all duration-200 ${
         showSuggestions && suggestions.length > 0 ? 'rounded-t-none' : 'rounded-t-xl'
       }`}>
         {/* Attachment Previews */}
@@ -211,7 +211,7 @@ export function SuperAgentInputContainer({
         </div>
 
         {/* Control Footer Toolbar with Presets & Model */}
-        <div className="flex items-center justify-between gap-2 px-2 py-1.5 bg-[var(--panel-header-bg)] border-t border-[var(--border-color)] overflow-visible">
+        <div className="flex items-center justify-between gap-2 px-2 py-1.5 bg-transparent border-t border-[var(--border-color)] overflow-visible">
           <div className="flex items-center gap-1.5 min-w-0">
             <button
               type="button"
