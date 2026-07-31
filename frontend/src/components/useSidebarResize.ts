@@ -34,22 +34,29 @@ export function useSidebarResize(containerRef: React.RefObject<HTMLDivElement>) 
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
 
-      if (isResizingLeft) {
-        const calculatedWidth = e.clientX - rect.left;
-        const newW = Math.max(160, Math.min(500, calculatedWidth));
-        historyWidthRef.current = newW;
-        if (leftPanelEl) {
-          leftPanelEl.style.width = `${newW}px`;
-        }
-      } else if (isResizingRight) {
-        const calculatedWidth = rect.right - e.clientX;
-        const newW = Math.max(180, Math.min(600, calculatedWidth));
-        monitorWidthRef.current = newW;
-        if (rightPanelEl) {
-          rightPanelEl.style.width = `${newW}px`;
-        }
+      if (animationFrameId === null) {
+        animationFrameId = requestAnimationFrame(() => {
+          animationFrameId = null;
+          if (!containerRef.current) return;
+          const rect = containerRef.current.getBoundingClientRect();
+
+          if (isResizingLeft) {
+            const calculatedWidth = e.clientX - rect.left;
+            const newW = Math.max(160, Math.min(500, calculatedWidth));
+            historyWidthRef.current = newW;
+            if (leftPanelEl) {
+              leftPanelEl.style.width = `${newW}px`;
+            }
+          } else if (isResizingRight) {
+            const calculatedWidth = rect.right - e.clientX;
+            const newW = Math.max(180, Math.min(600, calculatedWidth));
+            monitorWidthRef.current = newW;
+            if (rightPanelEl) {
+              rightPanelEl.style.width = `${newW}px`;
+            }
+          }
+        });
       }
     };
 

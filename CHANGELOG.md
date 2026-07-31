@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.675] - 2026-07-31
+
+### Fix: SuperAgent Console Sidebar Resizing
+- **Missing Selector Classes (`frontend/src/components/SuperAgentConsole.tsx`)**: Added missing `superagent-history-panel` and `superagent-monitor-panel` class names to the sidebar wrapper elements. This resolved a selector mismatch that prevented real-time width updates.
+- **Throttled Resizing Performance (`frontend/src/components/useSidebarResize.ts`)**: Implemented a high-performance `requestAnimationFrame` throttling mechanism on `mousemove` drag events, yielding ultra-smooth 60fps/120fps side panel resizing.
+
 ## [1.3.674] - 2026-07-31
 
 ### Style: Unified Chat Input Card Dark Background

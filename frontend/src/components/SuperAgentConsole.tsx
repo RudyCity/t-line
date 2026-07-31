@@ -987,7 +987,7 @@ export function SuperAgentConsole({
       <div className={`flex-1 flex overflow-hidden relative w-full ${activeTab === 'console' ? '' : 'hidden'}`} ref={mainConsoleRef}>
           {/* Left Resizable Chat History Sidebar */}
           {showHistorySidebar && (
-            <div style={{ width: `${historyWidth}px` }} className="h-full shrink-0 relative min-w-[160px] max-w-[500px]">
+            <div style={{ width: `${historyWidth}px` }} className="superagent-history-panel h-full shrink-0 relative min-w-[160px] max-w-[500px]">
               <SuperAgentHistorySidebar
                 sessions={sessions}
                 activeSessionId={activeSessionId}
@@ -1174,7 +1174,7 @@ export function SuperAgentConsole({
 
           {/* Right Resizable Live Monitor Sidebar */}
           {showSidebar && (
-            <div style={{ width: `${monitorWidth}px` }} className="h-full shrink-0 relative min-w-[180px] max-w-[600px]">
+            <div style={{ width: `${monitorWidth}px` }} className="superagent-monitor-panel h-full shrink-0 relative min-w-[180px] max-w-[600px]">
               <SuperAgentSidebar
                 workspacePath={workspace}
                 getAuthHeader={getAuthHeader}
