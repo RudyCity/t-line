@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Settings, RefreshCw, Activity, Trash2, Sliders, X, ExternalLink, Folder, Key, Sparkles, Server } from 'lucide-react';
+import { Settings, RefreshCw, Activity, Trash2, X, ExternalLink, Folder, Key, Sparkles, Server } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 
 interface SuperAgentSettingsMenuProps {
@@ -16,7 +16,6 @@ interface SuperAgentSettingsMenuProps {
   showSidebar: boolean;
   setShowSidebar: (show: boolean) => void;
   onClearConsole?: () => void;
-  onOpenGlobalSettings?: () => void;
   onOpenSettingsModal?: (tab?: 'login' | 'presets' | 'execution' | 'monitor' | 'mcp' | 'skills' | 'memory' | 'chains') => void;
 }
 
@@ -34,7 +33,6 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
   showSidebar = false,
   setShowSidebar = () => {},
   onClearConsole,
-  onOpenGlobalSettings,
   onOpenSettingsModal
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -237,22 +235,6 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
             >
               <Trash2 className="w-3 h-3 text-rose-400" />
               <span>Clear Console Output</span>
-            </button>
-          )}
-
-          {onOpenGlobalSettings && (
-            <button
-              onClick={() => {
-                onOpenGlobalSettings();
-                onClose();
-              }}
-              className="w-full px-2 py-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] transition flex items-center justify-between text-[11px] font-medium cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <Sliders className="w-3 h-3 text-[var(--color-primary)]" />
-                <span>All Modal Settings</span>
-              </div>
-              <ExternalLink className="w-3 h-3 opacity-60" />
             </button>
           )}
         </div>

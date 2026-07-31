@@ -32,7 +32,7 @@ interface SuperAgentConsoleProps {
 export function SuperAgentConsole({
   activeWorkspacePath,
   workspaces = [],
-  onOpenSettings,
+  onOpenSettings: _onOpenSettings,
   onLoadingChange,
   onOpenFile,
   onOpenDiffTab
@@ -933,7 +933,6 @@ export function SuperAgentConsole({
             showSidebar={showSidebar}
             setShowSidebar={setShowSidebar}
             onClearConsole={() => setMessages([{ role: 'system', text: 'Console output cleared.' }])}
-            onOpenGlobalSettings={onOpenSettings}
             onOpenSettingsModal={handleOpenSettingsModal}
           />
         </div>
