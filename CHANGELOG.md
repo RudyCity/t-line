@@ -2,6 +2,12 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
+## [1.3.670] - 2026-07-31
+
+### Fix: SuperAgent Session History Workspace Filtering
+- **History Filtering (`backend/src/sessionManager.ts`)**:
+  - Removed `mode=all` query parameter fallback in `getWorkspaceSessions` endpoint to allow SuperAgent server to filter history correctly based on the active workspace identifier (including SSH targets and workspace chains).
+
 ## [1.3.669] - 2026-07-29
 
 ### SuperAgent Session Management & Sync Enhancements

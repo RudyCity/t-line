@@ -202,7 +202,7 @@ export async function getWorkspaceSessions(
   offset?: number
 ): Promise<{ sessions: ChatSession[]; totalCount: number; hasMore: boolean }> {
   try {
-    let endpoint = '/api/history/sessions?mode=all';
+    let endpoint = '/api/history/sessions';
     if (limit !== undefined) endpoint += `&limit=${limit}`;
     if (offset !== undefined) endpoint += `&offset=${offset}`;
 
