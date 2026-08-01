@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Key, Sparkles, Sliders, Activity, Terminal, RefreshCw, Folder, Trash2, Server, ShieldCheck, Minus, Plus as PlusIcon, Link as LinkIcon } from 'lucide-react';
+import { X, Key, Sparkles, Sliders, Activity, Folder, Server, ShieldCheck, Minus, Plus as PlusIcon, Link as LinkIcon } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { SuperAgentLoginManager, ProviderProfile } from './SuperAgentLoginManager';
 import { SuperAgentPresetManager, ModelPreset } from './SuperAgentPresetManager';
@@ -19,8 +19,8 @@ interface SuperAgentSettingsModalProps {
   customArgs: string;
   setCustomArgs: (args: string) => void;
   setConnectTrigger: React.Dispatch<React.SetStateAction<number>>;
-  showSidebar: boolean;
-  setShowSidebar: (show: boolean) => void;
+  showSidebar?: boolean;
+  setShowSidebar?: (show: boolean) => void;
   onRefreshMonitor?: () => void;
   isLoadingMonitor?: boolean;
   onClearConsole?: () => void;
@@ -49,11 +49,11 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
   customArgs,
   setCustomArgs,
   setConnectTrigger,
-  showSidebar,
-  setShowSidebar,
-  onRefreshMonitor,
-  isLoadingMonitor,
-  onClearConsole,
+  showSidebar: _showSidebar = false,
+  setShowSidebar: _setShowSidebar = () => {},
+  onRefreshMonitor: _onRefreshMonitor,
+  isLoadingMonitor: _isLoadingMonitor,
+  onClearConsole: _onClearConsole,
   providers,
   activeProviderId,
   onSaveProvider,
@@ -67,11 +67,11 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
   getAuthHeader,
   defaultTab = 'login'
 }) => {
-  const [activeTab, setActiveTab] = useState<'login' | 'presets' | 'execution' | 'monitor' | 'mcp' | 'skills' | 'memory' | 'chains'>(defaultTab);
+  const [activeTab, setActiveTab] = useState<'login' | 'presets' | 'execution' | 'skills' | 'memory' | 'mcp' | 'chains'>(defaultTab as any);
 
   useEffect(() => {
     if (isOpen && defaultTab) {
-      setActiveTab(defaultTab);
+      setActiveTab(defaultTab as any);
     }
   }, [isOpen, defaultTab]);
   const [execSettings, setExecSettings] = useState<Record<string, any>>({});
@@ -168,7 +168,6 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
               { id: 'login' as const, label: `Management Login (${providers.length})`, icon: Key },
               { id: 'presets' as const, label: 'Model Presets', icon: Sparkles },
               { id: 'execution' as const, label: 'Execution & Workspace', icon: Sliders },
-              { id: 'monitor' as const, label: 'Monitor & Console', icon: Activity },
               { id: 'skills' as const, label: 'Skills Marketplace', icon: Sparkles },
               { id: 'memory' as const, label: 'Long-term Memory', icon: Activity },
               { id: 'mcp' as const, label: 'MCP Servers', icon: Server },
@@ -291,7 +290,6 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
                   }}
                   className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 text-xs "
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
                   Apply Settings & Restart SuperAgent Bridge
                 </button>
               </div>
@@ -359,61 +357,6 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
                   </button>
                 </div>
               </div>
-            </div>
-          )}
-
-          {activeTab === 'monitor' && (
-            <div className="space-y-4">
-              <div className="bg-[var(--bg-sidebar)] p-4 rounded-xl border border-[var(--border-color)] space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold text-[var(--text-main)] text-xs">Live Process & Change Monitor Sidebar</h4>
-                    <p className="text-[11px] text-[var(--text-muted)]">Display running subagents, system processes, and git status</p>
-                  </div>
-                  <button
-                    onClick={() => setShowSidebar(!showSidebar)}
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      showSidebar ? 'bg-[var(--color-primary)]' : 'bg-[var(--bg-main)]'
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white  ring-0 transition duration-200 ease-in-out ${
-                        showSidebar ? 'translate-x-4' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {onRefreshMonitor && (
-                  <button
-                    onClick={onRefreshMonitor}
-                    disabled={isLoadingMonitor}
-                    className="w-full bg-[var(--bg-card)] hover:bg-[var(--surface-overlay-hover)] text-[var(--text-main)] border border-[var(--border-color)] font-medium py-2 px-3 rounded-lg transition flex items-center justify-center gap-2 text-xs disabled:opacity-50"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingMonitor ? 'animate-spin' : ''}`} />
-                    {isLoadingMonitor ? 'Refreshing...' : 'Refresh Monitor Data Now'}
-                  </button>
-                )}
-              </div>
-
-              {onClearConsole && (
-                <div className="bg-[var(--bg-sidebar)] p-4 rounded-xl border border-[var(--border-color)] space-y-2">
-                  <h4 className="font-semibold text-[var(--text-main)] text-xs flex items-center gap-2">
-                    <Terminal className="w-4 h-4 text-[var(--color-primary)]" />
-                    Console Output Tools
-                  </h4>
-                  <button
-                    onClick={() => {
-                      onClearConsole();
-                      onClose();
-                    }}
-                    className="w-full bg-[var(--bg-card)] hover:bg-[var(--surface-overlay-hover)] text-[var(--text-main)] font-medium py-2 px-3 rounded-lg border border-[var(--border-color)] transition flex items-center justify-center gap-2 text-xs"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                    Clear Current Console Log Output
-                  </button>
-                </div>
-              )}
             </div>
           )}
 

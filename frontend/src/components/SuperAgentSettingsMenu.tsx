@@ -16,7 +16,7 @@ interface SuperAgentSettingsMenuProps {
   showSidebar?: boolean;
   setShowSidebar?: (show: boolean) => void;
   onClearConsole?: () => void;
-  onOpenSettingsModal?: (tab?: 'login' | 'presets' | 'execution' | 'monitor' | 'mcp' | 'skills' | 'memory' | 'chains') => void;
+  onOpenSettingsModal?: (tab?: 'login' | 'presets' | 'execution' | 'mcp' | 'skills' | 'memory' | 'chains') => void;
 }
 
 export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({

@@ -298,7 +298,7 @@ export function SuperAgentConsole({
     }
   };
 
-  const handleOpenSettingsModal = (tab: 'login' | 'presets' | 'execution' | 'monitor' | 'mcp' | 'skills' | 'memory' | 'chains' = 'login') => {
+  const handleOpenSettingsModal = (tab: 'login' | 'presets' | 'execution' | 'mcp' | 'skills' | 'memory' | 'chains' = 'login') => {
     fetchConfig();
     setSettingsModalTab(tab);
     setShowSettingsModal(true);
