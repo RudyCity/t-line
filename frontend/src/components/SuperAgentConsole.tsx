@@ -17,7 +17,7 @@ import { SuperAgentHistorySidebar } from './SuperAgentHistorySidebar';
 import { useSuperAgentSessions, isSystemNoiseMsg } from './useSuperAgentSessions';
 import { useSidebarResize } from './useSidebarResize';
 import { getAuthHeader, readFileAsText, readFileAsDataURL, getMainModelLabel as getModelLabelUtil, handleAgentEventPayload, fetchCliPromptHistory } from './SuperAgentConsoleUtils';
-import { History, Folder, Terminal, Activity, Sparkles, RefreshCw, ArrowDown, MoreVertical } from 'lucide-react';
+import { History, Folder, Activity, Sparkles, RefreshCw, ArrowDown, MoreVertical } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 
 interface SuperAgentConsoleProps {
@@ -883,14 +883,8 @@ export function SuperAgentConsole({
           )}
         </div>
 
-        {/* Center Column: Active Session ID / Title */}
+        {/* Center Column: Title */}
         <div className="flex justify-center items-center">
-          {activeSessionId && (
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg text-xs text-[var(--text-main)] font-semibold select-none">
-              <Terminal className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-              <span>SuperAgent Console</span>
-            </div>
-          )}
         </div>
 
         {/* Right Column: Monitor & Settings Actions */}
