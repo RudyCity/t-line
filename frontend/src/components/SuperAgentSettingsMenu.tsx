@@ -13,8 +13,8 @@ interface SuperAgentSettingsMenuProps {
   customArgs: string;
   setCustomArgs: (args: string) => void;
   setConnectTrigger: React.Dispatch<React.SetStateAction<number>>;
-  showSidebar: boolean;
-  setShowSidebar: (show: boolean) => void;
+  showSidebar?: boolean;
+  setShowSidebar?: (show: boolean) => void;
   onClearConsole?: () => void;
   onOpenSettingsModal?: (tab?: 'login' | 'presets' | 'execution' | 'monitor' | 'mcp' | 'skills' | 'memory' | 'chains') => void;
 }
@@ -30,8 +30,6 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
   customArgs,
   setCustomArgs,
   setConnectTrigger,
-  showSidebar = false,
-  setShowSidebar = () => {},
   onClearConsole,
   onOpenSettingsModal
 }) => {
@@ -209,22 +207,6 @@ export const SuperAgentSettingsMenu: React.FC<SuperAgentSettingsMenuProps> = ({
 
         {/* Minimal Quick Actions & Toggles */}
         <div className="p-1 space-y-0.5">
-          <div className="flex items-center justify-between px-2 py-1 hover:bg-[var(--surface-overlay-hover)] rounded-md transition">
-            <span className="text-[var(--text-main)] text-[11px] font-medium">Live Monitor Sidebar</span>
-            <button
-              onClick={() => setShowSidebar(!showSidebar)}
-              className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out ${
-                showSidebar ? 'bg-[var(--color-primary)]' : 'bg-[var(--bg-card)] border-[var(--border-color)]'
-              }`}
-            >
-              <span
-                className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white transition duration-200 ease-in-out ${
-                  showSidebar ? 'translate-x-3' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-
           {onClearConsole && (
             <button
               onClick={() => {
