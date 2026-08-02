@@ -2,7 +2,13 @@
 
 All notable changes to the **t-line** workspace manager project will be documented in this file.
 
-## [1.3.676] - 2026-08-01
+## [1.3.677] - 2026-08-01
+
+### Style: Minimalist Redesign of Right Live Monitor Sidebar
+- **Header & Layout (`frontend/src/components/SuperAgentSidebar.tsx`)**: Refactored the Live Monitor sidebar header with a clean compact layout, subtle pulsing status dot indicator, and spinning refresh icon.
+- **Card Containers & Badges (`frontend/src/components/SuperAgentSidebar.tsx`)**: Replaced heavy container styling with subtle rounded translucent cards and clean status pill badges (MAIN, ACTIVE, SSH, M/A/D git changes).
+- **Typography & Scrollbar (`frontend/src/components/SuperAgentSidebar.tsx`)**: Improved typography hierarchy and spacing, added hover-triggered subtle scrollbars (`scrollbar-none hover:scrollbar-thin`).
+
 
 ### Feat: Integrate Tabs and Settings into Three-Dots Dropdown Menu
 - **View Navigation Switcher (`frontend/src/components/SuperAgentSettingsMenu.tsx`)**: Added a brand new navigation section at the top of the menu body with quick-switch buttons for Console, Memory, Skills, and MCP Tools.

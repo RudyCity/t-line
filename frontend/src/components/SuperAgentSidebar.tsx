@@ -1,5 +1,8 @@
-import { useState, useEffect } from 'react';
-import { GitBranch, Activity, Cpu, RefreshCw, ChevronDown, ChevronRight, Terminal as TerminalIcon, FileCode, ExternalLink, Globe, Clock, Trash2, Link as LinkIcon, Server } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  GitBranch, Activity, Cpu, RefreshCw, ChevronDown, ChevronRight,
+  Terminal as TerminalIcon, FileCode, ExternalLink, Globe, Clock, Trash2, Link as LinkIcon, Server
+} from 'lucide-react';
 import { SubAgentItem } from './SubAgentTerminalModal';
 
 export interface BgTaskItem {
@@ -123,7 +126,6 @@ export function SuperAgentSidebar({
       const headers = getAuthHeader ? getAuthHeader() : {};
       const wsParam = workspacePath ? `?workspace=${encodeURIComponent(workspacePath)}` : '';
       
-      // 1. Fetch active chain endpoint via superagent server proxy
       const activeRes = await fetch(`/api/superagent/workspace/chains/active${wsParam}`, { headers });
       let activeChainId = '';
       if (activeRes.ok) {
@@ -136,7 +138,6 @@ export function SuperAgentSidebar({
         activeChainId = activeData.activeChainId || activeData.activeChain?.id || '';
       }
 
-      // 2. Fetch all chains without filtering by workspace path to guarantee match
       const listRes = await fetch(`/api/superagent/workspace/chains?filter=false${wsParam ? '&' + wsParam.slice(1) : ''}`, { headers });
       if (listRes.ok) {
         const listData = await listRes.json();
@@ -168,21 +169,24 @@ export function SuperAgentSidebar({
 
   const getChangeBadge = (type: string) => {
     const t = type.toLowerCase();
-    if (t === 'modified' || t === 'm') return <span className="text-[9px] font-mono font-bold text-amber-500 bg-amber-500/15 px-1 py-0.2 rounded border border-amber-500/30">M</span>;
-    if (t === 'added' || t === 'a') return <span className="text-[9px] font-mono font-bold text-emerald-500 bg-emerald-500/15 px-1 py-0.2 rounded border border-emerald-500/30">A</span>;
-    if (t === 'deleted' || t === 'd') return <span className="text-[9px] font-mono font-bold text-rose-500 bg-rose-500/15 px-1 py-0.2 rounded border border-rose-500/30">D</span>;
-    return <span className="text-[9px] font-mono font-bold text-sky-500 bg-sky-500/15 px-1 py-0.2 rounded border border-sky-500/30">?</span>;
+    if (t === 'modified' || t === 'm') return <span className="text-[9px] font-mono font-medium text-amber-400 bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/20">M</span>;
+    if (t === 'added' || t === 'a') return <span className="text-[9px] font-mono font-medium text-emerald-400 bg-emerald-500/10 px-1 py-0.5 rounded border border-emerald-500/20">A</span>;
+    if (t === 'deleted' || t === 'd') return <span className="text-[9px] font-mono font-medium text-rose-400 bg-rose-500/10 px-1 py-0.5 rounded border border-rose-500/20">D</span>;
+    return <span className="text-[9px] font-mono font-medium text-sky-400 bg-sky-500/10 px-1 py-0.5 rounded border border-sky-500/20">?</span>;
   };
 
   const chainNodes = chainInfo?.nodes || [];
 
   return (
     <div className="w-full bg-[var(--bg-sidebar)] border-l border-[var(--border-color)] flex flex-col h-full font-sans select-none overflow-hidden shrink-0">
-      {/* Sidebar Header */}
-      <div className="flex items-center justify-between px-3 py-2.5 bg-[var(--panel-header-bg)] border-b border-[var(--border-color)] shrink-0">
-        <div className="flex items-center gap-1.5">
-          <Activity className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-          <span className="text-xs font-semibold text-[var(--text-main)] tracking-wide">Live Monitor</span>
+      {/* Sleek Minimal Header */}
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--border-color)]/70 bg-[var(--bg-sidebar)]/80 backdrop-blur-sm shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="relative flex items-center justify-center">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="absolute w-2.5 h-2.5 rounded-full bg-emerald-500/40 animate-ping" />
+          </div>
+          <span className="text-[11px] font-semibold tracking-wider uppercase text-[var(--text-main)] opacity-90">Live Monitor</span>
         </div>
         {onRefreshData && (
           <button
@@ -191,43 +195,45 @@ export function SuperAgentSidebar({
               fetchChainInfo();
             }}
             disabled={isLoadingData}
-            className="p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] rounded transition cursor-pointer disabled:opacity-50"
+            className="p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] rounded-md transition-colors cursor-pointer disabled:opacity-40"
             title="Refresh monitor data"
           >
-            <RefreshCw className={`w-3 h-3 ${isLoadingData ? 'animate-spin text-[var(--color-primary)]' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingData ? 'animate-spin text-[var(--color-primary)]' : ''}`} />
           </button>
         )}
       </div>
 
-      {/* Accordion Panels Scroll Area */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-thin">
+      {/* Accordion Content */}
+      <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-none hover:scrollbar-thin">
 
         {/* SECTION 0: WORKSPACE CHAIN */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg overflow-hidden">
+        <div className="rounded-lg border border-[var(--border-color)]/60 bg-[var(--bg-card)]/40 overflow-hidden transition-all">
           <button
             onClick={() => toggleSection('chain')}
-            className="w-full flex items-center justify-between px-2.5 py-1.5 bg-[var(--panel-header-bg)] text-xs font-semibold text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] transition cursor-pointer"
+            className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-[var(--surface-overlay-hover)]/60 transition cursor-pointer text-left"
           >
-            <div className="flex items-center gap-1.5">
-              <LinkIcon className="w-3.5 h-3.5 text-purple-400" />
-              <span>Workspace Chain</span>
-              <span className="text-[10px] text-purple-300 font-mono">
-                ({chainNodes.length})
-              </span>
+            <div className="flex items-center gap-2">
+              <LinkIcon className="w-3.5 h-3.5 text-purple-400 opacity-90" />
+              <span className="text-[11px] font-medium text-[var(--text-main)]">Workspace Chain</span>
+              {chainNodes.length > 0 && (
+                <span className="text-[9px] font-mono text-purple-400 bg-purple-500/10 px-1.5 py-0.2 rounded-full">
+                  {chainNodes.length}
+                </span>
+              )}
             </div>
-            {openSections.chain ? <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" /> : <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
+            {openSections.chain ? <ChevronDown className="w-3 h-3 text-[var(--text-muted)] opacity-70" /> : <ChevronRight className="w-3 h-3 text-[var(--text-muted)] opacity-70" />}
           </button>
 
           {openSections.chain && (
-            <div className="p-1.5 space-y-1">
+            <div className="p-1.5 pt-0.5 space-y-1">
               {chainInfo && chainNodes.length > 0 ? (
                 <>
-                  <div className="flex items-center justify-between px-1.5 py-1 bg-purple-950/20 border border-purple-500/20 rounded text-[10px] font-mono text-purple-300">
-                    <span className="truncate font-semibold">{chainInfo.name}</span>
-                    <span className="text-[9px] bg-purple-500/20 px-1 rounded">ACTIVE</span>
+                  <div className="flex items-center justify-between px-2 py-1 bg-purple-500/5 rounded border border-purple-500/15 text-[10px] font-mono text-purple-300">
+                    <span className="truncate font-medium">{chainInfo.name}</span>
+                    <span className="text-[8px] bg-purple-500/20 text-purple-200 px-1 py-0.2 rounded font-semibold tracking-wide">ACTIVE</span>
                   </div>
 
-                  <div className="space-y-1 pt-1">
+                  <div className="space-y-1 pt-0.5">
                     {chainNodes.map(node => {
                       const isPrimary = node.id === chainInfo.primaryNodeId;
                       const isCurrent = node.id === activeNodeId || (!activeNodeId && isPrimary);
@@ -236,25 +242,25 @@ export function SuperAgentSidebar({
                         <div
                           key={node.id}
                           onClick={() => onSwitchChainNode?.(node.id)}
-                          className={`p-1.5 rounded-md border font-mono text-[10px] transition cursor-pointer flex items-center justify-between ${
+                          className={`p-1.5 rounded-md text-[10px] transition-all cursor-pointer flex items-center justify-between font-mono ${
                             isCurrent
-                              ? 'bg-purple-900/30 border-purple-500/50 text-purple-200'
-                              : 'bg-[var(--bg-sidebar)] hover:bg-[var(--surface-overlay-hover)] border-[var(--border-color)] text-[var(--text-muted)]'
+                              ? 'bg-purple-500/10 border border-purple-500/30 text-purple-200 shadow-sm'
+                              : 'hover:bg-[var(--surface-overlay-hover)]/80 text-[var(--text-muted)] border border-transparent'
                           }`}
                         >
                           <div className="flex items-center gap-1.5 min-w-0">
                             <Server className={`w-3 h-3 shrink-0 ${isPrimary ? 'text-amber-400' : 'text-slate-400'}`} />
-                            <span className="truncate font-semibold">{node.label}</span>
+                            <span className="truncate font-medium">{node.label}</span>
                             {node.type === 'ssh' && (
-                              <span className="text-[8px] bg-sky-950/50 text-sky-300 border border-sky-500/30 px-1 rounded">SSH</span>
+                              <span className="text-[8px] bg-sky-500/10 text-sky-400 border border-sky-500/20 px-1 rounded">SSH</span>
                             )}
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
                             {isPrimary && (
-                              <span className="text-[8px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1 rounded font-semibold">MAIN</span>
+                              <span className="text-[8px] bg-amber-500/10 text-amber-300 border border-amber-500/20 px-1 rounded font-medium">MAIN</span>
                             )}
                             {isCurrent && (
-                              <span className="text-[8px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1 rounded font-semibold">ACTIVE</span>
+                              <span className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1 rounded font-medium">ACTIVE</span>
                             )}
                           </div>
                         </div>
@@ -263,30 +269,34 @@ export function SuperAgentSidebar({
                   </div>
                 </>
               ) : (
-                <div className="p-3 text-center text-[11px] text-[var(--text-muted)] font-mono">
-                  No active chain selected
+                <div className="py-2.5 text-center text-[10px] text-[var(--text-muted)] opacity-70 font-mono">
+                  No active workspace chain
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* SECTION 1: SUB AGENT RUNNING */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg overflow-hidden">
+        {/* SECTION 1: SUB AGENTS */}
+        <div className="rounded-lg border border-[var(--border-color)]/60 bg-[var(--bg-card)]/40 overflow-hidden transition-all">
           <button
             onClick={() => toggleSection('subagents')}
-            className="w-full flex items-center justify-between px-2.5 py-1.5 bg-[var(--panel-header-bg)] text-xs font-semibold text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] transition cursor-pointer"
+            className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-[var(--surface-overlay-hover)]/60 transition cursor-pointer text-left"
           >
-            <div className="flex items-center gap-1.5">
-              <Cpu className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-              <span>Sub Agents</span>
-              <span className="text-[10px] text-[var(--text-muted)] font-mono">({subagents.length})</span>
+            <div className="flex items-center gap-2">
+              <Cpu className="w-3.5 h-3.5 text-[var(--color-primary)] opacity-90" />
+              <span className="text-[11px] font-medium text-[var(--text-main)]">Sub Agents</span>
+              {subagents.length > 0 && (
+                <span className="text-[9px] font-mono text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-1.5 py-0.2 rounded-full">
+                  {subagents.length}
+                </span>
+              )}
             </div>
-            {openSections.subagents ? <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" /> : <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
+            {openSections.subagents ? <ChevronDown className="w-3 h-3 text-[var(--text-muted)] opacity-70" /> : <ChevronRight className="w-3 h-3 text-[var(--text-muted)] opacity-70" />}
           </button>
 
           {openSections.subagents && (
-            <div className="p-1.5 space-y-1">
+            <div className="p-1.5 pt-0.5 space-y-1">
               {subagents.length > 0 ? (
                 subagents.map(sa => {
                   const isRunning = (sa.status || 'RUNNING').toUpperCase() === 'RUNNING';
@@ -294,22 +304,22 @@ export function SuperAgentSidebar({
                     <div
                       key={sa.id}
                       onClick={() => onSelectSubAgent(sa)}
-                      className="group p-2 bg-[var(--bg-sidebar)] hover:bg-[var(--color-primary-glow)] border border-[var(--border-color)] hover:border-[var(--color-primary)] rounded-md transition cursor-pointer flex flex-col gap-1"
+                      className="group p-2 rounded-md hover:bg-[var(--surface-overlay-hover)] border border-transparent hover:border-[var(--border-color)] transition-all cursor-pointer flex flex-col gap-1"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className={`w-2 h-2 rounded-full shrink-0 ${isRunning ? 'bg-emerald-400 animate-ping' : 'bg-[var(--color-primary)]'}`} />
-                          <span className="text-xs font-mono font-medium text-[var(--text-main)] group-hover:text-[var(--color-primary)] truncate">
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isRunning ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'}`} />
+                          <span className="text-[11px] font-mono font-medium text-[var(--text-main)] group-hover:text-[var(--color-primary)] truncate">
                             {sa.role || sa.typeName || `SubAgent-${sa.id.slice(0, 6)}`}
                           </span>
                         </div>
-                        <span className="text-[9px] font-mono text-[var(--text-muted)] group-hover:text-[var(--color-primary)] flex items-center gap-0.5">
+                        <span className="text-[9px] font-mono text-[var(--text-muted)] opacity-70 group-hover:opacity-100 flex items-center gap-1">
                           <TerminalIcon className="w-2.5 h-2.5" />
                           Live
                         </span>
                       </div>
                       {sa.prompt && (
-                        <p className="text-[10px] text-[var(--text-muted)] font-sans truncate pl-3">
+                        <p className="text-[10px] text-[var(--text-muted)] font-sans truncate pl-3 opacity-80">
                           {sa.prompt}
                         </p>
                       )}
@@ -317,30 +327,34 @@ export function SuperAgentSidebar({
                   );
                 })
               ) : (
-                <div className="p-3 text-center text-[11px] text-[var(--text-muted)] font-mono">
-                  No sub-agents active (Single Mode)
+                <div className="py-2.5 text-center text-[10px] text-[var(--text-muted)] opacity-70 font-mono">
+                  No active sub-agents
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* SECTION 2: PROCS (RUNNING PROCESSES) */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg overflow-hidden">
+        {/* SECTION 2: PROCESSES (PROCS) */}
+        <div className="rounded-lg border border-[var(--border-color)]/60 bg-[var(--bg-card)]/40 overflow-hidden transition-all">
           <button
             onClick={() => toggleSection('procs')}
-            className="w-full flex items-center justify-between px-2.5 py-1.5 bg-[var(--panel-header-bg)] text-xs font-semibold text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] transition cursor-pointer"
+            className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-[var(--surface-overlay-hover)]/60 transition cursor-pointer text-left"
           >
-            <div className="flex items-center gap-1.5">
-              <Activity className="w-3.5 h-3.5 text-amber-400" />
-              <span>Processes (Procs)</span>
-              <span className="text-[10px] text-[var(--text-muted)] font-mono">({procs.length})</span>
+            <div className="flex items-center gap-2">
+              <Activity className="w-3.5 h-3.5 text-amber-400 opacity-90" />
+              <span className="text-[11px] font-medium text-[var(--text-main)]">Processes</span>
+              {procs.length > 0 && (
+                <span className="text-[9px] font-mono text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded-full">
+                  {procs.length}
+                </span>
+              )}
             </div>
-            {openSections.procs ? <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" /> : <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
+            {openSections.procs ? <ChevronDown className="w-3 h-3 text-[var(--text-muted)] opacity-70" /> : <ChevronRight className="w-3 h-3 text-[var(--text-muted)] opacity-70" />}
           </button>
 
           {openSections.procs && (
-            <div className="p-1.5 space-y-1 max-h-48 overflow-y-auto scrollbar-thin">
+            <div className="p-1.5 pt-0.5 space-y-1 max-h-48 overflow-y-auto scrollbar-none hover:scrollbar-thin">
               {procs.length > 0 ? (
                 procs.map(proc => {
                   const isRunning = !proc.hasExited && proc.status === 'running';
@@ -361,22 +375,22 @@ export function SuperAgentSidebar({
                           });
                         }
                       }}
-                      className="group p-2 bg-[var(--bg-sidebar)] hover:bg-[var(--color-primary-glow)] border border-[var(--border-color)] hover:border-[var(--color-primary)] rounded-md transition cursor-pointer flex flex-col gap-1"
+                      className="group p-2 rounded-md hover:bg-[var(--surface-overlay-hover)] border border-transparent hover:border-[var(--border-color)] transition-all cursor-pointer flex flex-col gap-1"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className={`w-2 h-2 rounded-full shrink-0 ${isRunning ? 'bg-sky-400 animate-ping' : 'bg-slate-400'}`} />
-                          <span className="text-xs font-mono font-medium text-[var(--text-main)] group-hover:text-[var(--color-primary)] truncate">
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isRunning ? 'bg-sky-400 animate-pulse' : 'bg-slate-400'}`} />
+                          <span className="text-[11px] font-mono font-medium text-[var(--text-main)] group-hover:text-[var(--color-primary)] truncate">
                             {proc.name || proc.commandLine || `Process #${proc.pid}`}
                           </span>
                         </div>
-                        <span className="text-[9px] font-mono text-[var(--text-muted)] group-hover:text-[var(--color-primary)] flex items-center gap-0.5">
+                        <span className="text-[9px] font-mono text-[var(--text-muted)] opacity-70 group-hover:opacity-100 flex items-center gap-1">
                           <TerminalIcon className="w-2.5 h-2.5" />
                           PID:{proc.pid}
                         </span>
                       </div>
                       {proc.commandLine && proc.commandLine !== proc.name && (
-                        <p className="text-[10px] text-[var(--text-muted)] font-sans truncate pl-3">
+                        <p className="text-[10px] text-[var(--text-muted)] font-sans truncate pl-3 opacity-80">
                           {proc.commandLine}
                         </p>
                       )}
@@ -384,8 +398,8 @@ export function SuperAgentSidebar({
                   );
                 })
               ) : (
-                <div className="p-3 text-center text-[11px] text-[var(--text-muted)] font-mono">
-                  No active processes
+                <div className="py-2.5 text-center text-[10px] text-[var(--text-muted)] opacity-70 font-mono">
+                  No running processes
                 </div>
               )}
             </div>
@@ -393,21 +407,25 @@ export function SuperAgentSidebar({
         </div>
 
         {/* SECTION 3: RECENT CHANGES */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg overflow-hidden">
+        <div className="rounded-lg border border-[var(--border-color)]/60 bg-[var(--bg-card)]/40 overflow-hidden transition-all">
           <button
             onClick={() => toggleSection('changes')}
-            className="w-full flex items-center justify-between px-2.5 py-1.5 bg-[var(--panel-header-bg)] text-xs font-semibold text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] transition cursor-pointer"
+            className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-[var(--surface-overlay-hover)]/60 transition cursor-pointer text-left"
           >
-            <div className="flex items-center gap-1.5">
-              <GitBranch className="w-3.5 h-3.5 text-sky-400" />
-              <span>Recent Changes</span>
-              <span className="text-[10px] text-[var(--text-muted)] font-mono">({recentChanges.length})</span>
+            <div className="flex items-center gap-2">
+              <GitBranch className="w-3.5 h-3.5 text-sky-400 opacity-90" />
+              <span className="text-[11px] font-medium text-[var(--text-main)]">Recent Changes</span>
+              {recentChanges.length > 0 && (
+                <span className="text-[9px] font-mono text-sky-400 bg-sky-500/10 px-1.5 py-0.2 rounded-full">
+                  {recentChanges.length}
+                </span>
+              )}
             </div>
-            {openSections.changes ? <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" /> : <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
+            {openSections.changes ? <ChevronDown className="w-3 h-3 text-[var(--text-muted)] opacity-70" /> : <ChevronRight className="w-3 h-3 text-[var(--text-muted)] opacity-70" />}
           </button>
 
           {openSections.changes && (
-            <div className="p-1.5 space-y-1 max-h-56 overflow-y-auto scrollbar-thin">
+            <div className="p-1.5 pt-0.5 space-y-1 max-h-56 overflow-y-auto scrollbar-none hover:scrollbar-thin">
               {recentChanges.length > 0 ? (
                 recentChanges.map((item, idx) => {
                   const filename = item.path.split(/[/\\\\]/).pop() || item.path;
@@ -433,11 +451,11 @@ export function SuperAgentSidebar({
                     <div
                       key={idx}
                       onClick={handleClickItem}
-                      className="group p-1.5 bg-[var(--bg-sidebar)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)] hover:border-[var(--color-primary)] rounded-md flex items-center justify-between text-xs transition cursor-pointer"
-                      title={`Click to open diff for ${item.path}`}
+                      className="group p-1.5 rounded-md hover:bg-[var(--surface-overlay-hover)] border border-transparent hover:border-[var(--border-color)] flex items-center justify-between transition-all cursor-pointer"
+                      title={`Click to view diff for ${item.path}`}
                     >
                       <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                        <FileCode className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--color-primary)] shrink-0 transition-colors" />
+                        <FileCode className="w-3.5 h-3.5 text-[var(--text-muted)] opacity-75 group-hover:text-[var(--color-primary)] group-hover:opacity-100 shrink-0 transition-colors" />
                         <span className="font-mono text-[11px] text-[var(--text-main)] group-hover:text-[var(--color-primary)] truncate transition-colors">
                           {filename}
                         </span>
@@ -446,7 +464,7 @@ export function SuperAgentSidebar({
                         {onOpenFile && (
                           <button
                             onClick={handleOpenFileOnly}
-                            className="opacity-0 group-hover:opacity-100 p-0.5 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded transition cursor-pointer"
+                            className="opacity-0 group-hover:opacity-100 p-0.5 text-[var(--text-muted)] hover:text-[var(--text-main)] rounded transition cursor-pointer"
                             title="Open file tab"
                           >
                             <ExternalLink className="w-3 h-3" />
@@ -458,55 +476,55 @@ export function SuperAgentSidebar({
                   );
                 })
               ) : (
-                <div className="p-3 text-center text-[11px] text-[var(--text-muted)] font-mono">
-                  Clean working tree (No changes)
+                <div className="py-2.5 text-center text-[10px] text-[var(--text-muted)] opacity-70 font-mono">
+                  Clean working tree
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Section 4: Background Tasks */}
-        <div className="border-b border-[var(--border-color)]">
+        {/* SECTION 4: BACKGROUND TASKS */}
+        <div className="rounded-lg border border-[var(--border-color)]/60 bg-[var(--bg-card)]/40 overflow-hidden transition-all">
           <button
             onClick={() => toggleSection('bgTasks')}
-            className="w-full px-3 py-2 flex items-center justify-between bg-[var(--panel-header-bg)] hover:bg-[var(--surface-overlay-hover)] transition cursor-pointer select-none"
+            className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-[var(--surface-overlay-hover)]/60 transition cursor-pointer text-left"
           >
             <div className="flex items-center gap-2">
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
-              <span className="font-semibold text-xs text-[var(--text-main)]">Background Tasks</span>
+              <Clock className="w-3.5 h-3.5 text-amber-400 opacity-90" />
+              <span className="text-[11px] font-medium text-[var(--text-main)]">Background Tasks</span>
               {bgTasks.length > 0 && (
-                <span className="px-1.5 py-0.2 text-[10px] bg-amber-500/20 text-amber-300 rounded-full font-mono">
+                <span className="text-[9px] font-mono text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded-full">
                   {bgTasks.length}
                 </span>
               )}
             </div>
-            {openSections.bgTasks ? <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" /> : <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
+            {openSections.bgTasks ? <ChevronDown className="w-3 h-3 text-[var(--text-muted)] opacity-70" /> : <ChevronRight className="w-3 h-3 text-[var(--text-muted)] opacity-70" />}
           </button>
 
           {openSections.bgTasks && (
-            <div className="p-1.5 space-y-1">
+            <div className="p-1.5 pt-0.5 space-y-1">
               {bgTasks.length > 0 ? (
                 bgTasks.map(task => (
                   <div
                     key={task.id}
-                    className="p-2 bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md flex items-center justify-between gap-2"
+                    className="p-1.5 rounded-md bg-[var(--bg-sidebar)]/50 border border-[var(--border-color)]/50 flex items-center justify-between gap-2"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
-                        <span className="text-xs font-semibold truncate text-[var(--text-main)]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                        <span className="text-[11px] font-medium truncate text-[var(--text-main)]">
                           {task.name || task.id}
                         </span>
                       </div>
-                      <span className="text-[10px] text-[var(--text-muted)] font-mono truncate block mt-0.5">
+                      <span className="text-[9px] text-[var(--text-muted)] font-mono truncate block mt-0.5 opacity-80">
                         {task.prompt || task.status || 'Active Task'}
                       </span>
                     </div>
                     {onKillBgTask && (
                       <button
                         onClick={() => onKillBgTask(task.id)}
-                        className="p-1 hover:bg-red-500/20 text-red-400 rounded transition cursor-pointer shrink-0"
+                        className="p-1 hover:bg-rose-500/10 text-rose-400 rounded transition cursor-pointer shrink-0"
                         title="Kill Task"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -515,61 +533,62 @@ export function SuperAgentSidebar({
                   </div>
                 ))
               ) : (
-                <div className="p-3 text-center text-[11px] text-[var(--text-muted)] font-mono">
-                  No active background tasks
+                <div className="py-2.5 text-center text-[10px] text-[var(--text-muted)] opacity-70 font-mono">
+                  No background tasks
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Section 5: Browser Instances (Extension Tabs) */}
-        <div className="border-b border-[var(--border-color)]">
+        {/* SECTION 5: BROWSER INSTANCES */}
+        <div className="rounded-lg border border-[var(--border-color)]/60 bg-[var(--bg-card)]/40 overflow-hidden transition-all">
           <button
             onClick={() => toggleSection('browserInstances')}
-            className="w-full px-3 py-2 flex items-center justify-between bg-[var(--panel-header-bg)] hover:bg-[var(--surface-overlay-hover)] transition cursor-pointer select-none"
+            className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-[var(--surface-overlay-hover)]/60 transition cursor-pointer text-left"
           >
             <div className="flex items-center gap-2">
-              <Globe className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="font-semibold text-xs text-[var(--text-main)]">Browser Tabs</span>
+              <Globe className="w-3.5 h-3.5 text-emerald-400 opacity-90" />
+              <span className="text-[11px] font-medium text-[var(--text-main)]">Browser Tabs</span>
               {browserInstances.length > 0 && (
-                <span className="px-1.5 py-0.2 text-[10px] bg-emerald-500/20 text-emerald-300 rounded-full font-mono">
+                <span className="text-[9px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-full">
                   {browserInstances.length}
                 </span>
               )}
             </div>
-            {openSections.browserInstances ? <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" /> : <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
+            {openSections.browserInstances ? <ChevronDown className="w-3 h-3 text-[var(--text-muted)] opacity-70" /> : <ChevronRight className="w-3 h-3 text-[var(--text-muted)] opacity-70" />}
           </button>
 
           {openSections.browserInstances && (
-            <div className="p-1.5 space-y-1">
+            <div className="p-1.5 pt-0.5 space-y-1">
               {browserInstances.length > 0 ? (
                 browserInstances.map(inst => (
                   <div
                     key={inst.id}
-                    className="p-2 bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-md flex flex-col gap-1"
+                    className="p-1.5 rounded-md bg-[var(--bg-sidebar)]/50 border border-[var(--border-color)]/50 flex flex-col gap-0.5"
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                      <span className="text-xs font-semibold truncate text-[var(--text-main)]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                      <span className="text-[11px] font-medium truncate text-[var(--text-main)]">
                         {inst.title || inst.id}
                       </span>
                     </div>
                     {inst.url && (
-                      <span className="text-[10px] text-[var(--text-muted)] font-mono truncate">
+                      <span className="text-[9px] text-[var(--text-muted)] font-mono truncate opacity-80">
                         {inst.url}
                       </span>
                     )}
                   </div>
                 ))
               ) : (
-                <div className="p-3 text-center text-[11px] text-[var(--text-muted)] font-mono">
-                  No Chrome extension connected
+                <div className="py-2.5 text-center text-[10px] text-[var(--text-muted)] opacity-70 font-mono">
+                  No extension connected
                 </div>
               )}
             </div>
           )}
         </div>
+
       </div>
     </div>
   );
