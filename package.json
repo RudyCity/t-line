@@ -16,7 +16,8 @@
     "verify:all": "bun run build && bun run verify:extension-js && bun run test",
     "ext:css": "tailwindcss -i chrome-extension/sidepanel.src.css -o chrome-extension/sidepanel.css",
     "ext:css:watch": "tailwindcss -i chrome-extension/sidepanel.src.css -o chrome-extension/sidepanel.css --watch",
-    "postinstall": "bun x patch-package"
+    "postinstall": "bun x patch-package",
+    "tauri": "bun --cwd desktop-tauri tauri"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",

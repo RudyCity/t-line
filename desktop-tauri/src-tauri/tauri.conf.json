@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../../frontend/dist",
     "devUrl": "http://localhost:5773",
-    "beforeDevCommand": "",
-    "beforeBuildCommand": ""
+    "beforeDevCommand": "bun run copy-assets && bun --cwd ../frontend dev",
+    "beforeBuildCommand": "bun run copy-assets && bun --cwd ../frontend build"
   },
   "app": {
     "withGlobalTauri": true,
@@ -17,10 +17,13 @@
         "title": "t-line Workspace Manager",
         "width": 1280,
         "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
         "resizable": true,
         "fullscreen": false,
+        "transparent": true,
         "decorations": false,
-        "visible": false
+        "shadow": true
       }
     ],
     "security": {
@@ -30,30 +33,12 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "resources": [
-      "../backend/package.json",
-      "../backend/dist/**/*",
-      "../backend/node_modules/**/*",
-      "../frontend/dist/**/*"
-    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ],
-    "macOS": {
-      "signingIdentity": "-"
-    }
-  },
-  "plugins": {
-    "updater": {
-      "active": true,
-      "endpoints": [
-        "https://github.com/RudyCity/t-line/releases/latest/download/updater.json"
-      ],
-      "pubkey": "dW51c2VkX3BsYWNlaG9sZGVyX2tleV9mb3JfZGV2X29ubHk="
-    }
+    ]
   }
 }
