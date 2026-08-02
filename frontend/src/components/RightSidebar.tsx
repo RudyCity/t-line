@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Plus, Terminal as TerminalIcon, FileCode, Settings, LogOut, X,
   ZoomIn, ZoomOut, Globe, ExternalLink, Copy, Check, Info, RefreshCw,
-  LayoutGrid, GitCompare, Zap, HelpCircle
+  LayoutGrid, GitCompare, Zap, HelpCircle, Link as LinkIcon, Server
 } from 'lucide-react';
 import { TabData, TerminalInstanceData, WorkspaceInfo } from '../hooks/useTerminals';
 import { Select } from './Form';
@@ -14,6 +14,23 @@ interface SavedPrompt {
   command: string;
   cwd: string;
   shellType: string;
+}
+
+export interface WorkspaceChainNodeInfo {
+  id: string;
+  label: string;
+  type: 'local' | 'ssh';
+  role: 'main' | 'module' | 'deploy' | 'dependency' | 'test' | 'staging' | 'custom';
+  path?: string;
+  description?: string;
+}
+
+export interface WorkspaceChainInfo {
+  id: string;
+  name: string;
+  description?: string;
+  primaryNodeId: string;
+  nodes: WorkspaceChainNodeInfo[];
 }
 
 interface RightSidebarProps {
@@ -49,6 +66,9 @@ interface RightSidebarProps {
   onAddSavedPrompt?: () => void;
   // Shortcut help
   onShowShortcutHelp?: () => void;
+  // Workspace Chain
+  activeChain?: WorkspaceChainInfo | null;
+  activeChainNodeId?: string;
 }
 
 export function RightSidebar({
@@ -80,8 +100,41 @@ export function RightSidebar({
   onDeleteSavedPrompt,
   onAddSavedPrompt,
   onShowShortcutHelp,
+  activeChain: propActiveChain,
+  activeChainNodeId: propActiveNodeId,
 }: RightSidebarProps) {
-  const [copied, setCopied] = React.useState(false);
+  const [copied, setCopied] = useState(false);
+  const [chainInfo, setChainInfo] = useState<WorkspaceChainInfo | null>(propActiveChain || null);
+  const [activeNodeId, setActiveNodeId] = useState<string>(propActiveNodeId || '');
+
+  useEffect(() => {
+    if (propActiveChain) setChainInfo(propActiveChain);
+  }, [propActiveChain]);
+
+  useEffect(() => {
+    if (propActiveNodeId) setActiveNodeId(propActiveNodeId);
+  }, [propActiveNodeId]);
+
+  useEffect(() => {
+    const fetchChain = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+        const wsParam = panelWorkspace?.path ? `?workspace=${encodeURIComponent(panelWorkspace.path)}` : '';
+        const res = await fetch(`/api/superagent/workspace/chains/active${wsParam}`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.activeChain) {
+            setChainInfo(data.activeChain);
+            if (data.activeNodeId) setActiveNodeId(data.activeNodeId);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch workspace chain in RightSidebar:', err);
+      }
+    };
+    fetchChain();
+  }, [panelWorkspace?.path]);
 
   const handleCopy = async () => {
     if (!tunnelStatus.tline.url) return;
@@ -179,6 +232,69 @@ export function RightSidebar({
               <div className="text-center py-8 text-xs text-[var(--text-muted)] font-medium">No active tabs</div>
             )}
           </div>
+        </div>
+
+        {/* ─── Active Workspace Chain ─── */}
+        <div className="flex flex-col gap-3 pt-4 border-t border-[var(--border-color)]">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] uppercase tracking-wider text-purple-400 font-bold flex items-center gap-1.5">
+              <LinkIcon size={12} className="text-purple-400" />
+              Workspace Chain
+            </span>
+            <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
+              chainInfo
+                ? 'bg-purple-500/10 border-purple-500/30 text-purple-300'
+                : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)]'
+            }`}>
+              {chainInfo ? chainInfo.name : 'No Chain Active'}
+            </span>
+          </div>
+
+          {chainInfo && chainInfo.nodes.length > 0 ? (
+            <div className="flex flex-col gap-2 p-3 rounded-lg border bg-[var(--bg-card)]/50 border-[var(--border-color)] text-xs">
+              {chainInfo.nodes.map(node => {
+                const isPrimary = node.id === chainInfo.primaryNodeId;
+                const isCurrentNode = node.id === activeNodeId || (!activeNodeId && isPrimary);
+
+                return (
+                  <div
+                    key={node.id}
+                    className={`flex items-center justify-between p-2 rounded border font-mono text-[11px] transition-all ${
+                      isCurrentNode
+                        ? 'bg-purple-950/30 border-purple-500/40 text-purple-200'
+                        : 'bg-black/20 border-white/5 text-[var(--text-muted)]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <Server size={12} className={isPrimary ? 'text-amber-400 shrink-0' : 'text-slate-400 shrink-0'} />
+                      <span className="truncate font-semibold">{node.label}</span>
+                      {node.type === 'ssh' && (
+                        <span className="text-[9px] bg-sky-950/40 text-sky-300 border border-sky-500/30 px-1 py-0.2 rounded font-sans">SSH</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {isPrimary && (
+                        <span className="text-[9px] bg-amber-500/10 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-sans font-semibold">PRIMARY</span>
+                      )}
+                      {isCurrentNode && (
+                        <span className="text-[9px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-sans font-semibold">ACTIVE</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setShowSettingsModal(true);
+                onClose();
+              }}
+              className="p-3 rounded-lg border border-dashed border-[var(--border-color)] hover:border-purple-500/40 text-xs text-[var(--text-muted)] hover:text-purple-300 transition-all text-center cursor-pointer"
+            >
+              Configure Workspace Chain in Settings →
+            </button>
+          )}
         </div>
 
         {/* ─── Quick Launch (mobile only) ─── */}

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { GitBranch, Activity, Cpu, RefreshCw, ChevronDown, ChevronRight, Terminal as TerminalIcon, FileCode, ExternalLink, Globe, Clock, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { GitBranch, Activity, Cpu, RefreshCw, ChevronDown, ChevronRight, Terminal as TerminalIcon, FileCode, ExternalLink, Globe, Clock, Trash2, Link as LinkIcon, Server } from 'lucide-react';
 import { SubAgentItem } from './SubAgentTerminalModal';
 
 export interface BgTaskItem {
@@ -34,6 +34,23 @@ export interface ProcessItem {
   logs?: string[];
 }
 
+export interface WorkspaceChainNodeInfo {
+  id: string;
+  label: string;
+  type: 'local' | 'ssh';
+  role: 'main' | 'module' | 'deploy' | 'dependency' | 'test' | 'staging' | 'custom';
+  path?: string;
+  description?: string;
+}
+
+export interface WorkspaceChainInfo {
+  id: string;
+  name: string;
+  description?: string;
+  primaryNodeId: string;
+  nodes: WorkspaceChainNodeInfo[];
+}
+
 interface SuperAgentSidebarProps {
   workspacePath?: string;
   getAuthHeader?: () => Record<string, string>;
@@ -49,10 +66,14 @@ interface SuperAgentSidebarProps {
   isLoadingData?: boolean;
   onOpenFile?: (filePath: string, fileName?: string) => void;
   onOpenDiffTab?: (commitHash: string, filePath: string, worktreePath?: string) => void;
+  activeChain?: WorkspaceChainInfo | null;
+  activeChainNodeId?: string;
+  onSwitchChainNode?: (nodeId: string) => void;
 }
 
 export function SuperAgentSidebar({
   workspacePath,
+  getAuthHeader,
   subagents = [],
   procs = [],
   recentChanges = [],
@@ -64,15 +85,20 @@ export function SuperAgentSidebar({
   onRefreshData,
   isLoadingData = false,
   onOpenFile,
-  onOpenDiffTab
+  onOpenDiffTab,
+  activeChain: initialActiveChain = null,
+  activeChainNodeId: initialActiveNodeId = '',
+  onSwitchChainNode
 }: SuperAgentSidebarProps) {
   const [openSections, setOpenSections] = useState<{
+    chain: boolean;
     changes: boolean;
     procs: boolean;
     subagents: boolean;
     bgTasks: boolean;
     browserInstances: boolean;
   }>({
+    chain: true,
     changes: true,
     procs: true,
     subagents: true,
@@ -80,7 +106,63 @@ export function SuperAgentSidebar({
     browserInstances: true
   });
 
-  const toggleSection = (section: 'changes' | 'procs' | 'subagents' | 'bgTasks' | 'browserInstances') => {
+  const [chainInfo, setChainInfo] = useState<WorkspaceChainInfo | null>(initialActiveChain);
+  const [activeNodeId, setActiveNodeId] = useState<string>(initialActiveNodeId);
+
+  useEffect(() => {
+    if (initialActiveChain) setChainInfo(initialActiveChain);
+  }, [initialActiveChain]);
+
+  useEffect(() => {
+    if (initialActiveNodeId) setActiveNodeId(initialActiveNodeId);
+  }, [initialActiveNodeId]);
+
+  // Fetch active workspace chain object from API
+  const fetchChainInfo = async () => {
+    try {
+      const headers = getAuthHeader ? getAuthHeader() : {};
+      const wsParam = workspacePath ? `?workspace=${encodeURIComponent(workspacePath)}` : '';
+      
+      // 1. Fetch active chain endpoint via superagent server proxy
+      const activeRes = await fetch(`/api/superagent/workspace/chains/active${wsParam}`, { headers });
+      let activeChainId = '';
+      if (activeRes.ok) {
+        const activeData = await activeRes.json();
+        if (activeData.activeChain && Array.isArray(activeData.activeChain.nodes) && activeData.activeChain.nodes.length > 0) {
+          setChainInfo(activeData.activeChain);
+          if (activeData.activeNodeId) setActiveNodeId(activeData.activeNodeId);
+          return;
+        }
+        activeChainId = activeData.activeChainId || activeData.activeChain?.id || '';
+      }
+
+      // 2. Fetch all chains without filtering by workspace path to guarantee match
+      const listRes = await fetch(`/api/superagent/workspace/chains?filter=false${wsParam ? '&' + wsParam.slice(1) : ''}`, { headers });
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        const chainsList: WorkspaceChainInfo[] = listData.chains || [];
+        
+        if (chainsList.length > 0) {
+          const found = activeChainId 
+            ? (chainsList.find(c => c.id === activeChainId) || chainsList[0])
+            : chainsList[0];
+            
+          if (found) {
+            setChainInfo(found);
+            setActiveNodeId(found.primaryNodeId || (found.nodes?.[0]?.id ?? ''));
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch active workspace chain in sidebar:', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchChainInfo();
+  }, [workspacePath]);
+
+  const toggleSection = (section: 'chain' | 'changes' | 'procs' | 'subagents' | 'bgTasks' | 'browserInstances') => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
@@ -92,6 +174,8 @@ export function SuperAgentSidebar({
     return <span className="text-[9px] font-mono font-bold text-sky-500 bg-sky-500/15 px-1 py-0.2 rounded border border-sky-500/30">?</span>;
   };
 
+  const chainNodes = chainInfo?.nodes || [];
+
   return (
     <div className="w-full bg-[var(--bg-sidebar)] border-l border-[var(--border-color)] flex flex-col h-full font-sans select-none overflow-hidden shrink-0">
       {/* Sidebar Header */}
@@ -102,7 +186,10 @@ export function SuperAgentSidebar({
         </div>
         {onRefreshData && (
           <button
-            onClick={onRefreshData}
+            onClick={() => {
+              onRefreshData();
+              fetchChainInfo();
+            }}
             disabled={isLoadingData}
             className="p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] rounded transition cursor-pointer disabled:opacity-50"
             title="Refresh monitor data"
@@ -114,6 +201,76 @@ export function SuperAgentSidebar({
 
       {/* Accordion Panels Scroll Area */}
       <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-thin">
+
+        {/* SECTION 0: WORKSPACE CHAIN */}
+        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg overflow-hidden">
+          <button
+            onClick={() => toggleSection('chain')}
+            className="w-full flex items-center justify-between px-2.5 py-1.5 bg-[var(--panel-header-bg)] text-xs font-semibold text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] transition cursor-pointer"
+          >
+            <div className="flex items-center gap-1.5">
+              <LinkIcon className="w-3.5 h-3.5 text-purple-400" />
+              <span>Workspace Chain</span>
+              <span className="text-[10px] text-purple-300 font-mono">
+                ({chainNodes.length})
+              </span>
+            </div>
+            {openSections.chain ? <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" /> : <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
+          </button>
+
+          {openSections.chain && (
+            <div className="p-1.5 space-y-1">
+              {chainInfo && chainNodes.length > 0 ? (
+                <>
+                  <div className="flex items-center justify-between px-1.5 py-1 bg-purple-950/20 border border-purple-500/20 rounded text-[10px] font-mono text-purple-300">
+                    <span className="truncate font-semibold">{chainInfo.name}</span>
+                    <span className="text-[9px] bg-purple-500/20 px-1 rounded">ACTIVE</span>
+                  </div>
+
+                  <div className="space-y-1 pt-1">
+                    {chainNodes.map(node => {
+                      const isPrimary = node.id === chainInfo.primaryNodeId;
+                      const isCurrent = node.id === activeNodeId || (!activeNodeId && isPrimary);
+
+                      return (
+                        <div
+                          key={node.id}
+                          onClick={() => onSwitchChainNode?.(node.id)}
+                          className={`p-1.5 rounded-md border font-mono text-[10px] transition cursor-pointer flex items-center justify-between ${
+                            isCurrent
+                              ? 'bg-purple-900/30 border-purple-500/50 text-purple-200'
+                              : 'bg-[var(--bg-sidebar)] hover:bg-[var(--surface-overlay-hover)] border-[var(--border-color)] text-[var(--text-muted)]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Server className={`w-3 h-3 shrink-0 ${isPrimary ? 'text-amber-400' : 'text-slate-400'}`} />
+                            <span className="truncate font-semibold">{node.label}</span>
+                            {node.type === 'ssh' && (
+                              <span className="text-[8px] bg-sky-950/50 text-sky-300 border border-sky-500/30 px-1 rounded">SSH</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {isPrimary && (
+                              <span className="text-[8px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1 rounded font-semibold">MAIN</span>
+                            )}
+                            {isCurrent && (
+                              <span className="text-[8px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1 rounded font-semibold">ACTIVE</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div className="p-3 text-center text-[11px] text-[var(--text-muted)] font-mono">
+                  No active chain selected
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* SECTION 1: SUB AGENT RUNNING */}
         <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg overflow-hidden">
           <button
@@ -253,7 +410,7 @@ export function SuperAgentSidebar({
             <div className="p-1.5 space-y-1 max-h-56 overflow-y-auto scrollbar-thin">
               {recentChanges.length > 0 ? (
                 recentChanges.map((item, idx) => {
-                  const filename = item.path.split(/[/\\]/).pop() || item.path;
+                  const filename = item.path.split(/[/\\\\]/).pop() || item.path;
                   const fullPath = workspacePath ? (item.path.startsWith('/') || item.path.includes(':') ? item.path : `${workspacePath}/${item.path}`) : item.path;
 
                   const handleClickItem = (e: React.MouseEvent) => {
