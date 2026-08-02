@@ -258,19 +258,30 @@ export class TerminalManager {
       normalizedCwd = os.homedir();
     } else {
       if (isWin) {
-        switch (shellType) {
-          case 'cmd':
-            shell = 'cmd.exe'; args = []; break;
+        // Normalize common aliases so workspace configs that store 'bash'
+        // (Git Bash) map correctly instead of falling through to PowerShell.
+        const st = (shellType || 'powershell').trim().toLowerCase();
+        switch (st) {
           case 'gitbash':
+          case 'bash':
+          case 'bash.exe':
+          case 'git-bash':
+          case 'sh':
             shell = this.getGitBashPath(); args = ['--login', '-i']; break;
+          case 'cmd':
+          case 'cmd.exe':
+            shell = 'cmd.exe'; args = ['/k']; break;
           case 'wsl':
             shell = 'wsl.exe'; args = []; break;
           case 'powershell':
+          case 'ps':
+          case 'pwsh':
           default:
             shell = 'powershell.exe'; args = ['-NoLogo']; break;
         }
       } else {
-        shell = shellType === 'wsl' ? 'bash' : (shellType === 'cmd' ? 'sh' : 'bash');
+        const st = (shellType || 'bash').trim().toLowerCase();
+        shell = (st === 'wsl' || st === 'bash' || st === 'gitbash' || st === 'sh') ? 'bash' : (st === 'cmd' ? 'sh' : 'bash');
         args = [];
       }
       normalizedCwd = cwd ? path.normalize(cwd) : os.homedir();

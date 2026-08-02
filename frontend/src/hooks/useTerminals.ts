@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { wsManager } from '../services/websocket';
+import { normalizeShellType } from '../utils/shellUtils';
 
 export interface WorktreeInfo {
   path: string;
@@ -224,7 +225,20 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     return localStorage.getItem('tline-active-tab-id') || '';
   });
 
-  const [defaultShell, setDefaultShell] = useState<string>('powershell');
+  const [defaultShell, setDefaultShellState] = useState<string>(() => {
+    try {
+      return localStorage.getItem('tline-default-shell') || 'powershell';
+    } catch {
+      return 'powershell';
+    }
+  });
+
+  const setDefaultShell = useCallback((val: string) => {
+    setDefaultShellState(val);
+    try {
+      localStorage.setItem('tline-default-shell', val);
+    } catch {}
+  }, []);
 
   const [workspaceActiveTab, setWorkspaceActiveTabState] = useState<WorkspaceActiveTabMap>(() => {
     try {
@@ -384,7 +398,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
   ) => {
     const tabId = `tab-${Date.now()}`;
     const termId = `term-${Date.now()}`;
-    const activeShell = shellType || defaultShell;
+    const activeShell = normalizeShellType(shellType || defaultShell);
     
     let tabName = name;
     if (name === 'Shell' && cwd) {

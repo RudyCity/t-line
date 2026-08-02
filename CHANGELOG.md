@@ -1,3 +1,11 @@
+## [1.2.689] - 2026-08-02
+
+### Fix: Non-PowerShell Default Shell Terminals Not Running
+- **Backend Shell Alias Normalization**: Updated `backend/src/terminalManager.ts` `createTerminal()` Windows switch to normalize shell aliases so `bash|bash.exe|git-bash|sh` correctly resolve to Git Bash, `cmd|cmd.exe` to CMD, `powershell|ps|pwsh` to PowerShell, and `wsl` to WSL. Previously unknown values (e.g. `bash` saved from workspace config) fell through to the `default` PowerShell case, so selecting a non-PowerShell default shell never actually spawned that shell.
+- **Frontend Shell Normalization Utility**: Added `frontend/src/utils/shellUtils.ts` with `normalizeShellType()` and applied it in `useTerminals.ts` `openTerminal()` so all alias values map to backend-supported canonical keys.
+- **Default Shell Persistence**: `defaultShell` in `useTerminals.ts` now loads from `localStorage('tline-default-shell')` and persists on change, so the "Default Shell" selector survives reloads.
+- **Workspace Config Consistency**: Fixed `Modals.tsx` workspace shell option to save canonical `gitbash` instead of `bash`, and relabeled the RightSidebar selector to "git bash".
+
 ## [1.2.688] - 2026-08-02
 
 ### Fix: Workspace Chain Live Monitoring Workspace Filtering

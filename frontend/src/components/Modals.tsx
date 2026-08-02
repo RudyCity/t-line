@@ -816,7 +816,7 @@ export const WorkspaceEditModal: React.FC<WorkspaceEditModalProps> = ({
   const shellOptions = [
     { value: 'powershell', label: 'PowerShell' },
     { value: 'cmd', label: 'Command Prompt (cmd)' },
-    { value: 'bash', label: 'Git Bash / Bash' },
+    { value: 'gitbash', label: 'Git Bash / Bash' },
     { value: 'wsl', label: 'WSL Default' }
   ];
 

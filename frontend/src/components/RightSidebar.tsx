@@ -382,7 +382,7 @@ export function RightSidebar({
               options={[
                 { value: 'powershell', label: 'powershell' },
                 { value: 'cmd', label: 'cmd' },
-                { value: 'gitbash', label: 'gitbash' },
+                { value: 'gitbash', label: 'git bash' },
                 { value: 'wsl', label: 'wsl' }
               ]}
             />
