@@ -1,3 +1,17 @@
+## [1.2.692] - 2026-08-02
+
+### Feat: SuperAgent ↔ t-line Integration Audit & Enhancement Suite
+- **Auto-Session Resumption (B1)**: Automatically restores and connects `activeSessionId` on WebSocket reconnect without requiring manual re-initialization.
+- **Multi-Agent Instance Auto-Sync (B2)**: Subagent & Superagent instance list auto-refreshes via 3-second polling interval + SSE event triggers.
+- **Question Card Option Reset Fix (B3)**: State of selected option buttons and custom input resets cleanly when a question is retried.
+- **Provider & Preset Change Bridge Restart (B4)**: Switching LLM Provider or Model Preset via the dropdown automatically restarts the SuperAgent HTTP bridge process on port 7888 and re-establishes session state.
+- **Token Usage & Cost Tracking Card (B5)**: Added `TokenUsageCard` UI component displaying prompt tokens (`in`), completion tokens (`out`), total tokens, and estimated USD cost.
+- **Pre-Apply File Diff Preview (B6)**: `PermissionCard` now features a collapsible **"View Changes / Diff Preview"** toggle to inspect proposed code/file changes before approving tool calls.
+- **SSE Context Cleanup (B7)**: Safe disconnection and buffer flushing of SSE streams on process abort or session switch.
+- **Subagent Context Fallback (B8)**: Subagent instances safely receive context snapshots from parent agents without context leakage.
+- **Plan Approval Integration (B9)**: `PlanCard` handles plan approval requests seamlessly via dedicated UI events.
+- **Real-Time Abort SSE Stream Handling (B10)**: User abort actions instantly terminate active agent execution and stop the SSE stream.
+
 ## [1.2.691] - 2026-08-02
 
 ### Feat: Terminal Shell Dropdown Enhancements

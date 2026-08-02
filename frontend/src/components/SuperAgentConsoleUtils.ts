@@ -107,7 +107,8 @@ export const handleAgentEventPayload = (
   setCustomQuestionInput: (i: string) => void,
   setPendingPlanApproval: (b: boolean) => void,
   isAbortedRef: React.MutableRefObject<boolean>,
-  currentActiveSessionId?: string
+  currentActiveSessionId?: string,
+  setTokenUsage?: React.Dispatch<React.SetStateAction<any>>
 ) => {
   // Filter out stray background events belonging to a different session using normalized matching
   if (payload.sessionId && currentActiveSessionId && !isMatchingSessionId(payload.sessionId, currentActiveSessionId)) {
@@ -168,6 +169,23 @@ export const handleAgentEventPayload = (
       if (!isAbortedRef.current) {
         setLoading(false);
         setToolProgressMsg('');
+      }
+      return;
+    }
+
+    if (innerEvent.type === 'token_usage' || innerEvent.type === 'usage') {
+      const promptDelta = Number(innerEvent.promptTokens ?? innerEvent.input_tokens ?? innerEvent.prompt_tokens ?? 0);
+      const completionDelta = Number(innerEvent.completionTokens ?? innerEvent.output_tokens ?? innerEvent.completion_tokens ?? 0);
+      const costDelta = Number(innerEvent.costUsd ?? innerEvent.cost ?? 0);
+      const durationMs = Number(innerEvent.durationMs ?? 0);
+      if (setTokenUsage && (promptDelta || completionDelta || costDelta)) {
+        setTokenUsage((prev: any) => ({
+          promptTokens: (prev?.promptTokens || 0) + promptDelta,
+          completionTokens: (prev?.completionTokens || 0) + completionDelta,
+          lastDurationMs: durationMs || prev?.lastDurationMs,
+          totalCostUsd: (prev?.totalCostUsd || 0) + costDelta,
+          lastUpdated: Date.now()
+        }));
       }
       return;
     }

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Check, X, AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, X, AlertTriangle, FileText, ChevronDown, ChevronUp, Coins } from 'lucide-react';
 
 export interface PendingPermission {
   permissionId: string;
@@ -20,8 +20,20 @@ interface PermissionCardProps {
 }
 
 export function PermissionCard({ pendingPermission, handlePermissionDecision }: PermissionCardProps) {
+  const [showDiff, setShowDiff] = useState(false);
+
+  const toolCall = pendingPermission.toolCall || {};
+  const args = toolCall.args || toolCall.input || toolCall.parameters || toolCall;
+  const filePath = args?.filePath || args?.path || (Array.isArray(args?.files) && args.files[0]?.filePath);
+  const diffContent = args?.patchContent || args?.diff || args?.content || args?.replacementContent ||
+    (args?.edits && JSON.stringify(args.edits, null, 2)) ||
+    (args?.chunks && JSON.stringify(args.chunks, null, 2)) ||
+    (args?.files && JSON.stringify(args.files, null, 2));
+
+  const hasDiffPreview = Boolean(filePath || diffContent);
+
   return (
-    <div className="group relative p-4 rounded-xl bg-[var(--bg-card)] border border-amber-500/50 hover:border-amber-500 text-[var(--text-main)] space-y-3.5  backdrop-blur-md transition-all duration-200">
+    <div className="group relative p-4 rounded-xl bg-[var(--bg-card)] border border-amber-500/50 hover:border-amber-500 text-[var(--text-main)] space-y-3.5 backdrop-blur-md transition-all duration-200">
       {/* Top Header Badge */}
       <div className="flex items-center gap-2">
         <span className="relative flex h-2 w-2">
@@ -38,6 +50,36 @@ export function PermissionCard({ pendingPermission, handlePermissionDecision }: 
       <p className="text-xs text-[var(--text-main)] font-mono bg-[var(--bg-sidebar)] p-3 rounded-lg border border-amber-500/30 leading-relaxed break-all select-all">
         {pendingPermission.description || `SuperAgent wants to execute: ${JSON.stringify(pendingPermission.toolCall)}`}
       </p>
+
+      {/* B6: Pre-apply Diff Preview Toggle */}
+      {hasDiffPreview && (
+        <div className="pt-1">
+          <button
+            onClick={() => setShowDiff(!showDiff)}
+            className="text-xs font-mono font-medium text-amber-400 hover:text-amber-300 flex items-center gap-1.5 cursor-pointer"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>{showDiff ? 'Hide Diff Preview' : 'View Changes / Diff Preview'}</span>
+            {showDiff ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+          {showDiff && (
+            <div className="mt-2 p-3 rounded-lg bg-black/40 border border-amber-500/30 font-mono text-[11px] max-h-60 overflow-y-auto space-y-1.5">
+              {filePath && (
+                <div className="text-amber-300 font-semibold border-b border-amber-500/20 pb-1">
+                  Target File: {String(filePath)}
+                </div>
+              )}
+              {diffContent ? (
+                <pre className="text-emerald-300 whitespace-pre-wrap leading-relaxed">
+                  {typeof diffContent === 'string' ? diffContent : JSON.stringify(diffContent, null, 2)}
+                </pre>
+              ) : (
+                <div className="text-[var(--text-secondary)] italic">No raw diff content provided.</div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Action Footer */}
       <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[var(--border-color)]">
@@ -381,6 +423,42 @@ export function AdvisorResultCard({
       {expanded && (reasoning || rawText) && (
         <div className="p-2.5 rounded-lg bg-black/20 border border-white/5 font-mono text-[11px] text-[var(--text-main)] whitespace-pre-wrap leading-relaxed overflow-x-auto max-h-48">
           {reasoning || rawText}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export interface TokenUsageData {
+  promptTokens: number;
+  completionTokens: number;
+  lastDurationMs?: number;
+  totalCostUsd: number;
+  lastUpdated?: number;
+}
+
+export function TokenUsageCard({ tokenUsage, modelName }: { tokenUsage: TokenUsageData; modelName?: string }) {
+  const totalTokens = tokenUsage.promptTokens + tokenUsage.completionTokens;
+  if (!tokenUsage.lastUpdated && totalTokens === 0) return null;
+
+  return (
+    <div className="my-2 rounded-lg border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-xs backdrop-blur-sm">
+      <div className="flex items-center justify-between gap-2 text-emerald-400 font-mono text-[11px] border-b border-emerald-500/20 pb-1 mb-1.5">
+        <div className="flex items-center gap-1.5 font-semibold">
+          <Coins className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Token Usage & Costs</span>
+        </div>
+        {modelName && <span className="text-[10px] text-emerald-300/70">{modelName}</span>}
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-emerald-200/90 font-mono text-[11px]">
+        <div>↑ <span className="font-semibold text-emerald-300">{tokenUsage.promptTokens.toLocaleString()}</span> in</div>
+        <div>↓ <span className="font-semibold text-emerald-300">{tokenUsage.completionTokens.toLocaleString()}</span> out</div>
+        <div>Σ <span className="font-semibold text-emerald-300">{totalTokens.toLocaleString()}</span> total</div>
+      </div>
+      {tokenUsage.totalCostUsd > 0 && (
+        <div className="mt-1 text-[10px] font-mono text-amber-300 flex items-center justify-between">
+          <span>Est. Session Cost:</span>
+          <span className="font-semibold">${tokenUsage.totalCostUsd.toFixed(4)} USD</span>
         </div>
       )}
     </div>

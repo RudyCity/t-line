@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 
-import { PermissionCard, QuestionCard, PlanCard, PendingPermission, PendingQuestion } from './SuperAgentInteractiveCards';
+import { PermissionCard, QuestionCard, PlanCard, TokenUsageCard, PendingPermission, PendingQuestion, TokenUsageData } from './SuperAgentInteractiveCards';
 import { getSlashCommands, getSubCommands, SlashCommand } from './SuperAgentCommands';
 import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSidebar';
 import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
@@ -339,6 +339,7 @@ export function SuperAgentConsole({
   const [customQuestionInput, setCustomQuestionInput] = useState('');
   const [pendingPlanApproval, setPendingPlanApproval] = useState<boolean>(false);
   const [toolProgressMsg, setToolProgressMsg] = useState<string>('');
+  const [tokenUsage, setTokenUsage] = useState<TokenUsageData>({ promptTokens: 0, completionTokens: 0, totalCostUsd: 0 });
 
   // Enhanced Input States
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -516,7 +517,8 @@ export function SuperAgentConsole({
         handleAgentEventPayload(
           payload, setLoading, setToolProgressMsg, setMessages, setSubagentList,
           setPendingPermission, setPendingQuestion, setSelectedQuestionAnswers,
-          setCustomQuestionInput, setPendingPlanApproval, isAbortedRef, activeSessionIdRef.current
+          setCustomQuestionInput, setPendingPlanApproval, isAbortedRef, activeSessionIdRef.current,
+          setTokenUsage
         );
       } catch (e) {
         setMessages(prev => [...prev, { role: 'assistant', text: event.data }]);
@@ -1080,6 +1082,17 @@ export function SuperAgentConsole({
                 handlePermissionDecision={handlePermissionDecision}
               />
             )}
+
+            {/* Token Usage & Cost Card (B5) */}
+            <TokenUsageCard
+              tokenUsage={tokenUsage}
+              modelName={
+                (presets[agentMode] || []).find(
+                  p => p.id?.toLowerCase() === (activePresetId[agentMode] || '').toLowerCase() ||
+                       p.name?.toLowerCase() === (activePresetId[agentMode] || '').toLowerCase()
+                )?.name
+              }
+            />
 
             {/* Interactive Question Card */}
             {pendingQuestion && (
