@@ -18,6 +18,8 @@ export interface KeyboardShortcutsOptions {
   onZoomIn?: () => void;
   onZoomOut?: () => void;
   onQuickSnapshot?: () => void;
+  /** Buka shell spesifik via Ctrl+Shift+1..4 (PowerShell/CMD/Git Bash/WSL). */
+  onOpenShellByDigit?: (digit: number) => void;
   /** Aktif atau tidak (false jika modal terbuka, dll) */
   enabled?: boolean;
 }
@@ -52,6 +54,7 @@ export function useKeyboardShortcuts({
   onZoomIn,
   onZoomOut,
   onQuickSnapshot,
+  onOpenShellByDigit,
   enabled = true,
 }: KeyboardShortcutsOptions) {
 
@@ -106,6 +109,13 @@ export function useKeyboardShortcuts({
       if (alt && !shift && e.key >= '1' && e.key <= '9') {
         e.preventDefault();
         onJumpToTab(parseInt(e.key) - 1);
+        return;
+      }
+
+      // ── Ctrl+Shift+1..4 — Open shell by digit ──────────
+      if (e.ctrlKey && shift && e.key >= '1' && e.key <= '4') {
+        e.preventDefault();
+        onOpenShellByDigit?.(parseInt(e.key));
         return;
       }
 

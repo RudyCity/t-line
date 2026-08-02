@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { wsManager } from '../services/websocket';
-import { normalizeShellType } from '../utils/shellUtils';
+import { normalizeShellType, getWorkspaceShell } from '../utils/shellUtils';
 
 export interface WorktreeInfo {
   path: string;
@@ -398,7 +398,8 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
   ) => {
     const tabId = `tab-${Date.now()}`;
     const termId = `term-${Date.now()}`;
-    const activeShell = normalizeShellType(shellType || defaultShell);
+    const wsOverride = getWorkspaceShell(cwd || '');
+    const activeShell = normalizeShellType(shellType || wsOverride || defaultShell);
     
     let tabName = name;
     if (name === 'Shell' && cwd) {

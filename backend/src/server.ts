@@ -373,6 +373,29 @@ app.get('/api/terminals/active', authMiddleware, (req, res) => {
   res.json(terminalManager.listTerminals());
 });
 
+app.get('/api/terminal/shells/availability', authMiddleware, async (_req, res) => {
+  const isWin = process.platform === 'win32';
+  const fsMod = require('fs');
+  const exists = (p: string) => { try { return fsMod.existsSync(p); } catch { return false; } };
+  let wslAvailable = false;
+  if (isWin) {
+    try {
+      const cp = require('node:child_process');
+      wslAvailable = await new Promise<boolean>((resolve) => {
+        cp.exec('wsl.exe --status', { timeout: 3000 }, (err: any) => resolve(!err));
+      });
+    } catch { wslAvailable = false; }
+  }
+  res.json({
+    powershell: true,
+    cmd: true,
+    gitbash: isWin
+      ? exists('C:\\Program Files\\Git\\bin\\bash.exe') || exists('C:\\Program Files\\Git\\git-bash.exe')
+      : exists('/bin/bash'),
+    wsl: wslAvailable
+  });
+});
+
 app.get('/api/system/stats', authMiddleware, (_req, res) => {
   const memoryUsage = process.memoryUsage();
   res.json({

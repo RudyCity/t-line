@@ -64,6 +64,7 @@ import { TPlusLogo } from './components/TPlusLogo';
 import { TabTooltip, TabContextMenu } from './components/TabUiComponents';
 import { NewTerminalButton } from './components/NewTerminalButton';
 import { getRuntimeSearchParams } from './utils/runtimeQuery';
+import { shellForDigit, getShellMeta, isCustomShell } from './utils/shellUtils';
 
 function normalizeLayout(node: any): any {
   if (!node) return null;
@@ -299,6 +300,19 @@ export default function App() {
   // Active panel state: 'workspaces' | 'explorer' | 'changes' | 'checkpoints'
   const [activePanel, setActivePanel] = useState<'workspaces' | 'explorer' | 'changes' | 'checkpoints' | 'tabs'>('workspaces');
   const [panelWorkspace, setPanelWorkspace] = useState<WorkspaceInfo | null>(null);
+  const [shellAvailability, setShellAvailability] = useState<Record<string, boolean> | null>(null);
+  const [recentShells, setRecentShells] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/terminal/shells/availability', { headers: { Authorization: `Bearer ${localStorage.getItem('tline-token') || ''}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (!cancelled && data) setShellAvailability(data); })
+      .catch(() => {});
+    const stored = typeof localStorage !== 'undefined' ? JSON.parse(localStorage.getItem('tline-recent-shells') || '[]') : [];
+    setRecentShells(Array.isArray(stored) ? stored : []);
+    return () => { cancelled = true; };
+  }, []);
 
   const activeWorkspacePrompts = useMemo(() => {
     if (!panelWorkspace) return savedPrompts;
@@ -1051,6 +1065,10 @@ export default function App() {
     onSplitVertical: () => splitFocusedTerminal('vertical'),
     onZoomIn: handleZoomIn,
     onZoomOut: handleZoomOut,
+    onOpenShellByDigit: (digit) => {
+      const shell = shellForDigit(digit);
+      if (shell) openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '', shell);
+    },
   });  const handleMinimize = async () => {
     if ((window as any).electron) {
       (window as any).electron.minimize();
@@ -2030,13 +2048,16 @@ export default function App() {
                   );
                 })}
               </div>
-              <button
-                className="mobile-tab-new"
-                onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')}
-                title="New Terminal"
-              >
-                <Plus size={13} />
-              </button>
+              <div className="mobile-tab-new" style={{ display: 'inline-flex' }}>
+                <NewTerminalButton
+                  defaultShell={defaultShell}
+                  setDefaultShell={setDefaultShell}
+                  cwd={panelWorkspace?.path || workspaces[0]?.path || ''}
+                  shellAvailability={shellAvailability || undefined}
+                  recentShells={recentShells}
+                  onOpenTerminal={(name, cwd, shellType, initialCommand) => openTerminal(name, cwd, shellType, initialCommand)}
+                />
+              </div>
             </div>
           )}
 
@@ -2194,9 +2215,24 @@ export default function App() {
                             <span className="tab-title-container">
                               <span className="tab-title">{displayName}</span>
 
-                              {shellType && (
-                                <span className="tab-shell-type">({shellType === 'powershell' ? 'ps' : shellType})</span>
-                              )}
+                              {shellType && (() => {
+                                const meta = getShellMeta(shellType);
+                                return (
+                                  <span
+                                    className="tab-shell-type"
+                                    title={isCustomShell(shellType) ? `Custom shell: ${shellType.replace(/^custom:/i, '')}` : meta.label}
+                                    style={{
+                                      display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                      fontSize: '10px', fontWeight: 600, padding: '0 5px',
+                                      borderRadius: '4px', lineHeight: '1.5',
+                                      color: meta.color, background: `${meta.color}1a`,
+                                      border: `1px solid ${meta.color}40`, marginLeft: '4px'
+                                    }}
+                                  >
+                                    {meta.short}
+                                  </span>
+                                );
+                              })()}
                               {t.isDetached && (
                                 <ExternalLink size={10} className="tab-detached-icon ml-1 inline text-purple-400 opacity-80" />
                               )}
@@ -2212,7 +2248,9 @@ export default function App() {
                     defaultShell={defaultShell}
                     setDefaultShell={setDefaultShell}
                     cwd={panelWorkspace?.path || workspaces[0]?.path || ''}
-                    onOpenTerminal={(name, cwd, shellType) => openTerminal(name, cwd, shellType)}
+                    shellAvailability={shellAvailability || undefined}
+                    recentShells={recentShells}
+                    onOpenTerminal={(name, cwd, shellType, initialCommand) => openTerminal(name, cwd, shellType, initialCommand)}
                   />
                   {/* New Browser Preview button */}
                   <button

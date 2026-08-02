@@ -261,23 +261,18 @@ export class TerminalManager {
         // Normalize common aliases so workspace configs that store 'bash'
         // (Git Bash) map correctly instead of falling through to PowerShell.
         const st = (shellType || 'powershell').trim().toLowerCase();
-        switch (st) {
-          case 'gitbash':
-          case 'bash':
-          case 'bash.exe':
-          case 'git-bash':
-          case 'sh':
-            shell = this.getGitBashPath(); args = ['--login', '-i']; break;
-          case 'cmd':
-          case 'cmd.exe':
-            shell = 'cmd.exe'; args = ['/k']; break;
-          case 'wsl':
-            shell = 'wsl.exe'; args = []; break;
-          case 'powershell':
-          case 'ps':
-          case 'pwsh':
-          default:
-            shell = 'powershell.exe'; args = ['-NoLogo']; break;
+        // Custom absolute path (from frontend "custom:<path>").
+        if (st.startsWith('custom:')) {
+          shell = shellType!.replace(/^custom:/i, '').trim();
+          args = [];
+        } else if (st === 'gitbash' || st === 'bash' || st === 'bash.exe' || st === 'git-bash' || st === 'sh') {
+          shell = this.getGitBashPath(); args = ['--login', '-i'];
+        } else if (st === 'cmd' || st === 'cmd.exe') {
+          shell = 'cmd.exe'; args = ['/k'];
+        } else if (st === 'wsl') {
+          shell = 'wsl.exe'; args = [];
+        } else {
+          shell = 'powershell.exe'; args = ['-NoLogo'];
         }
       } else {
         const st = (shellType || 'bash').trim().toLowerCase();

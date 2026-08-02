@@ -1,3 +1,15 @@
+## [1.2.691] - 2026-08-02
+
+### Feat: Terminal Shell Dropdown Enhancements
+- **Mobile "+" dropdown**: Applied the shell-picker dropdown to the mobile tab-bar "+" button too.
+- **Shell badge on tabs**: Terminal tabs now show a colored per-shell badge (PS/CMD/Git/WSL); custom shells show a violet badge.
+- **WSL detection**: Backend `/api/terminal/shells/availability` checks `wsl.exe` and Git Bash presence; unavailable shells are disabled in the dropdown.
+- **Per-workspace default shell**: Selecting a shell persists a per-workspace override (`localStorage tline-workspace-shell-overrides`) so each workspace can keep its own default; `openTerminal()` resolves workspace override → global default.
+- **Custom shell path**: Added a "Custom shell path..." option in the dropdown to spawn an arbitrary shell executable (`custom:<path>`).
+- **Shell keyboard shortcuts**: `Ctrl+Shift+1/2/3/4` open PowerShell / Command Prompt / Git Bash / WSL directly.
+- **Recent shells**: Recently used (non-default) shells are listed in a "Recent" section of the dropdown.
+- **Inline initial command**: Optional initial-command field in the dropdown, passed through to the spawned terminal.
+
 ## [1.2.690] - 2026-08-02
 
 ### Feat: New Terminal Shell Dropdown on "+" Button
