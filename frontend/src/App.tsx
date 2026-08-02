@@ -62,6 +62,7 @@ import { useConfirmDialog } from './hooks/useConfirmDialog';
 import { useWorkspaceHandlers, getTabWorktreePath } from './hooks/useWorkspaceHandlers';
 import { TPlusLogo } from './components/TPlusLogo';
 import { TabTooltip, TabContextMenu } from './components/TabUiComponents';
+import { NewTerminalButton } from './components/NewTerminalButton';
 import { getRuntimeSearchParams } from './utils/runtimeQuery';
 
 function normalizeLayout(node: any): any {
@@ -2207,14 +2208,12 @@ export default function App() {
                     });
                   })()}
                   {/* New Terminal button */}
-                  <button
-                    className="action-btn shrink-0"
-                    onClick={() => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '')}
-                    title="New terminal (Alt+T)"
-                    style={{ marginLeft: '6px' }}
-                  >
-                    <Plus size={14} />
-                  </button>
+                  <NewTerminalButton
+                    defaultShell={defaultShell}
+                    setDefaultShell={setDefaultShell}
+                    cwd={panelWorkspace?.path || workspaces[0]?.path || ''}
+                    onOpenTerminal={(name, cwd, shellType) => openTerminal(name, cwd, shellType)}
+                  />
                   {/* New Browser Preview button */}
                   <button
                     className="action-btn shrink-0"

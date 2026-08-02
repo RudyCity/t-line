@@ -1,3 +1,8 @@
+## [1.2.690] - 2026-08-02
+
+### Feat: New Terminal Shell Dropdown on "+" Button
+- Added `frontend/src/components/NewTerminalButton.tsx` — the desktop tab-bar "+" button now renders a split control: clicking "+" opens a terminal with the current default shell; clicking the caret opens a dropdown to pick PowerShell / Command Prompt / Git Bash / WSL before creating the terminal. Selecting a shell also updates the persisted default shell.
+
 ## [1.2.689] - 2026-08-02
 
 ### Fix: Non-PowerShell Default Shell Terminals Not Running
