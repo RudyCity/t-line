@@ -16,7 +16,7 @@ export interface PendingQuestion {
 
 interface PermissionCardProps {
   pendingPermission: PendingPermission;
-  handlePermissionDecision: (approval: boolean | 'session') => void;
+  handlePermissionDecision: (approval: boolean | 'session' | 'always') => void;
 }
 
 export function PermissionCard({ pendingPermission, handlePermissionDecision }: PermissionCardProps) {
@@ -53,6 +53,14 @@ export function PermissionCard({ pendingPermission, handlePermissionDecision }: 
           className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] active:scale-[0.98] text-white font-medium text-xs px-3.5 py-1.5 rounded-lg  transition-all duration-150 cursor-pointer"
         >
           <span>Allow for Session</span>
+        </button>
+        <button
+          onClick={() => handlePermissionDecision('always')}
+          title="Auto-approve this tool every time in this workspace"
+          className="bg-amber-800 hover:bg-amber-700 active:scale-[0.98] text-white font-medium text-xs px-3.5 py-1.5 rounded-lg transition-all duration-150 flex items-center gap-1.5 cursor-pointer"
+        >
+          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>Allow Always</span>
         </button>
         <button
           onClick={() => handlePermissionDecision(false)}

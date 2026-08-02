@@ -19,6 +19,7 @@ import { useSidebarResize } from './useSidebarResize';
 import { getAuthHeader, readFileAsText, readFileAsDataURL, getMainModelLabel as getModelLabelUtil, handleAgentEventPayload, fetchCliPromptHistory } from './SuperAgentConsoleUtils';
 import { History, Folder, Activity, Sparkles, RefreshCw, ArrowDown, MoreVertical } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
+import { addRule, loadRules, matchesRule, patternFromPermission, toolNameFromPermission } from '../utils/permissionRules';
 
 interface SuperAgentConsoleProps {
   activeWorkspacePath?: string;
@@ -448,6 +449,8 @@ export function SuperAgentConsole({
   const activeSessionIdRef = useRef(activeSessionId);
   const activeWsUrlRef = useRef<string>('');
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectAttemptsRef = useRef<number>(0);
+  const reconnectTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (activeSessionId !== prevSessionIdRef.current) {
@@ -484,12 +487,32 @@ export function SuperAgentConsole({
 
     socket.onopen = () => {
       console.log(`[SuperAgent WS] Connection established. Workspace: ${workspace || 'Default'}`);
+      reconnectAttemptsRef.current = 0;
     };
 
     socket.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
-        
+
+        // Auto-approve permission requests matching persistent rules.
+        if (payload?.type === 'permission_required' && ws) {
+          const candidate = {
+            permissionId: payload.permissionId,
+            toolCall: payload.toolCall,
+            description: payload.description,
+          };
+          const rules = loadRules(workspace || '');
+          if (matchesRule(candidate, rules)) {
+            ws.send(JSON.stringify({
+              type: 'approve_permission',
+              permissionId: payload.permissionId,
+              approval: true,
+            }));
+            setMessages(prev => [...prev, { role: 'system', text: `Auto-approved: ${toolNameFromPermission(candidate)}` }]);
+            return;
+          }
+        }
+
         handleAgentEventPayload(
           payload, setLoading, setToolProgressMsg, setMessages, setSubagentList,
           setPendingPermission, setPendingQuestion, setSelectedQuestionAnswers,
@@ -504,6 +527,15 @@ export function SuperAgentConsole({
     socket.onclose = () => {
       console.log('[SuperAgent WS] Connection closed.');
       setLoading(false);
+      if (activeWsUrlRef.current !== wsUrl) return; // intentional unmount
+      const attempts = reconnectAttemptsRef.current + 1;
+      reconnectAttemptsRef.current = attempts;
+      const delay = Math.min(30000, 500 * Math.pow(2, attempts - 1));
+      console.log(`[SuperAgent WS] Reconnect attempt ${attempts} in ${delay}ms`);
+      reconnectTimerRef.current = window.setTimeout(() => {
+        reconnectTimerRef.current = null;
+        setConnectTrigger(prev => prev + 1);
+      }, delay);
     };
 
     wsRef.current = socket;
@@ -512,6 +544,10 @@ export function SuperAgentConsole({
     return () => {
       activeWsUrlRef.current = '';
       wsRef.current = null;
+      if (reconnectTimerRef.current !== null) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       if (socket.readyState === WebSocket.CONNECTING) {
         socket.onopen = () => {
           try { socket.close(); } catch {}
@@ -814,8 +850,25 @@ export function SuperAgentConsole({
     handleNewChat();
   };
 
-  const handlePermissionDecision = (approval: boolean | 'session') => {
+  const handlePermissionDecision = (approval: boolean | 'session' | 'always') => {
     if (!pendingPermission || !ws) return;
+    if (approval === 'always') {
+      const perm = { ...pendingPermission };
+      const rule = {
+        pattern: patternFromPermission(perm),
+        description: toolNameFromPermission(perm),
+        createdAt: Date.now(),
+      };
+      addRule(workspace || '', rule);
+      ws.send(JSON.stringify({
+        type: 'approve_permission',
+        permissionId: pendingPermission.permissionId,
+        approval: true
+      }));
+      setPendingPermission(null);
+      setMessages(prev => [...prev, { role: 'system', text: `Auto-approve rule saved: ${rule.pattern}` }]);
+      return;
+    }
     ws.send(JSON.stringify({
       type: 'approve_permission',
       permissionId: pendingPermission.permissionId,

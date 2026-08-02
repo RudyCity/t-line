@@ -610,6 +610,14 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
   const initialSessionId = parsedUrl.searchParams.get('sessionId') || undefined;
 
   let sseReq: http.ClientRequest | null = null;
+let sseReconnectTimeout: NodeJS.Timeout | null = null;
+let sseReconnectAttempts = 0;
+const SSE_EVENT_BUFFER_LIMIT = 200;
+const sseEventBuffer: Array<{ id: number; payload: string }> = [];
+let sseEventCounter = 0;
+let lastSseEventIdRef = 0;
+let replayCursor = 0;
+let suppressBufferWrite = false;
   let connectionAttempts = 0;
   let isClosed = false;
 
@@ -619,6 +627,8 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
       try { sseReq.destroy(); } catch {}
       sseReq = null;
     }
+    const lastBufferedEventId = lastSseEventIdRef;
+    const replayEventId = replayCursor;
 
     const ssePath = `/api/events?workspace=${encodeURIComponent(workspacePath)}${initialSessionId ? `&sessionId=${encodeURIComponent(initialSessionId)}` : ''}`;
 
@@ -629,22 +639,34 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
       method: 'GET',
       headers: {
         'Accept': 'text/event-stream',
-        'x-workspace-path': workspacePath
+        'x-workspace-path': workspacePath,
+        ...(lastBufferedEventId > 0 ? { 'Last-Event-ID': String(lastBufferedEventId) } : {})
       }
     }, (res) => {
       // Reset connectionAttempts on successful connection
       connectionAttempts = 0;
+      sseReconnectAttempts = 0;
       ws.send(JSON.stringify({ type: 'status', text: `Connected to SuperAgent server (${path.basename(workspacePath)})` }));
 
       // Disable Nagle algorithm on the SSE loopback socket.
-      // Without this, TCP buffers small token packets for ~200ms before flushing,
-      // adding visible latency to every streaming token sent over 127.0.0.1.
       try { (res.socket as any)?.setNoDelay(true); } catch {}
 
       res.setEncoding('utf8');
       let buffer = '';
+      // After successful reconnect, replay any events buffered while disconnected.
+      // Only replay once per reconnect cycle.
+      suppressBufferWrite = false;
+      if (replayEventId > 0 && replayEventId < lastSseEventIdRef) {
+        const missed = sseEventBuffer.filter((e) => e.id > replayEventId);
+        for (const evt of missed) {
+          try { ws.send(evt.payload); } catch { /* ws closed mid-replay */ }
+        }
+        replayCursor = lastSseEventIdRef;
+      } else {
+        replayCursor = lastSseEventIdRef;
+      }
+
       res.on('data', (chunk) => {
-        console.log(`[BRIDGE DEBUG] Received chunk at ${new Date().toISOString()}, length: ${chunk.length}`);
         buffer += chunk;
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
@@ -653,10 +675,16 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
           const dataStr = line.slice(6).trim();
           if (!dataStr || dataStr === '[DONE]') continue;
 
-          // Fast-path: forward raw JSON string directly to WebSocket client
-          // without parse → re-stringify round-trip to eliminate CPU overhead
-          // on every streaming token.
           ws.send(dataStr);
+
+          if (!suppressBufferWrite) {
+            sseEventCounter += 1;
+            lastSseEventIdRef = sseEventCounter;
+            sseEventBuffer.push({ id: sseEventCounter, payload: dataStr });
+            if (sseEventBuffer.length > SSE_EVENT_BUFFER_LIMIT) {
+              sseEventBuffer.shift();
+            }
+          }
 
           if (process.env.LOG_STREAM_RESPONSE === 'true') {
             try {
@@ -685,9 +713,15 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
 
       res.on('end', () => {
         console.log('[WS-Agent] SuperAgent SSE connection ended by server.');
+        // Capture replay cursor before closing so next connect replays missed events.
+        replayCursor = lastSseEventIdRef;
+        suppressBufferWrite = true;
         if (!isClosed && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'status', text: 'SSE connection ended. Reconnecting...' }));
-          setTimeout(connectToSuperAgentSSE, 1000);
+          sseReconnectAttempts += 1;
+          const delay = Math.min(30000, 500 * Math.pow(2, sseReconnectAttempts - 1));
+          if (sseReconnectTimeout) clearTimeout(sseReconnectTimeout);
+          sseReconnectTimeout = setTimeout(connectToSuperAgentSSE, delay);
         }
       });
     });
@@ -705,7 +739,10 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
             type: 'status',
             text: 'SuperAgent server not running on port 7888. Retrying connection...'
           }));
-          setTimeout(connectToSuperAgentSSE, 2000);
+          sseReconnectAttempts += 1;
+          const delay = Math.min(30000, 500 * Math.pow(2, sseReconnectAttempts - 1));
+          if (sseReconnectTimeout) clearTimeout(sseReconnectTimeout);
+          sseReconnectTimeout = setTimeout(connectToSuperAgentSSE, delay);
         }
       }
     });
