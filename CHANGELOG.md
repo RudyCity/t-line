@@ -1,4 +1,10 @@
-"## [1.2.687] - 2026-08-02
+## [1.2.688] - 2026-08-02
+
+### Fix: Workspace Chain Live Monitoring Workspace Filtering
+- **Backend Active Chain Filtering**: Updated `/api/workspace/chains/active` GET handler in SuperAgent `serverRoutes.ts` to strictly filter chains by the target workspace path. Returns `activeChain: null` when no chains belong to the active workspace instead of falling back to global/unrelated workspace chains.
+- **Frontend Live Monitor Scope**: Updated `SuperAgentSidebar.tsx` and `RightSidebar.tsx` to query workspace chains without `filter=false` override and only display the Workspace Chain accordion section when an active chain belongs to the current workspace.
+
+## [1.2.687] - 2026-08-02
 
 ### Fix: Browser Webview Modal Overlay z-index Stacking & Event Masking
 - **Native Webview Event Signal**: Added `showManagerModal` to `isAnyOverlayActive` in `App.tsx` so `tline-hide-native-webview` fires reliably whenever Port Tunnels Manager modal is open.

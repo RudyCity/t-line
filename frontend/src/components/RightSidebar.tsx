@@ -124,13 +124,18 @@ export function RightSidebar({
         const res = await fetch(`/api/superagent/workspace/chains/active${wsParam}`, { headers });
         if (res.ok) {
           const data = await res.json();
-          if (data.activeChain) {
+          if (data.activeChain && Array.isArray(data.activeChain.nodes) && data.activeChain.nodes.length > 0) {
             setChainInfo(data.activeChain);
             if (data.activeNodeId) setActiveNodeId(data.activeNodeId);
+          } else {
+            setChainInfo(null);
           }
+        } else {
+          setChainInfo(null);
         }
       } catch (err) {
         console.error('Failed to fetch workspace chain in RightSidebar:', err);
+        setChainInfo(null);
       }
     };
     fetchChain();
@@ -234,23 +239,19 @@ export function RightSidebar({
           </div>
         </div>
 
-        {/* ─── Active Workspace Chain ─── */}
-        <div className="flex flex-col gap-3 pt-4 border-t border-[var(--border-color)]">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] uppercase tracking-wider text-purple-400 font-bold flex items-center gap-1.5">
-              <LinkIcon size={12} className="text-purple-400" />
-              Workspace Chain
-            </span>
-            <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
-              chainInfo
-                ? 'bg-purple-500/10 border-purple-500/30 text-purple-300'
-                : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)]'
-            }`}>
-              {chainInfo ? chainInfo.name : 'No Chain Active'}
-            </span>
-          </div>
+        {/* ─── Active Workspace Chain (Only visible if workspace has a valid chain) ─── */}
+        {chainInfo && chainInfo.nodes && chainInfo.nodes.length > 0 && (
+          <div className="flex flex-col gap-3 pt-4 border-t border-[var(--border-color)]">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] uppercase tracking-wider text-purple-400 font-bold flex items-center gap-1.5">
+                <LinkIcon size={12} className="text-purple-400" />
+                Workspace Chain
+              </span>
+              <span className="text-[9px] font-mono px-2 py-0.5 rounded border bg-purple-500/10 border-purple-500/30 text-purple-300">
+                {chainInfo.name}
+              </span>
+            </div>
 
-          {chainInfo && chainInfo.nodes.length > 0 ? (
             <div className="flex flex-col gap-2 p-3 rounded-lg border bg-[var(--bg-card)]/50 border-[var(--border-color)] text-xs">
               {chainInfo.nodes.map(node => {
                 const isPrimary = node.id === chainInfo.primaryNodeId;
@@ -284,18 +285,8 @@ export function RightSidebar({
                 );
               })}
             </div>
-          ) : (
-            <button
-              onClick={() => {
-                setShowSettingsModal(true);
-                onClose();
-              }}
-              className="p-3 rounded-lg border border-dashed border-[var(--border-color)] hover:border-purple-500/40 text-xs text-[var(--text-muted)] hover:text-purple-300 transition-all text-center cursor-pointer"
-            >
-              Configure Workspace Chain in Settings →
-            </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* ─── Quick Launch (mobile only) ─── */}
         <div className="flex flex-col gap-3 pt-4 border-t border-[var(--border-color)]">

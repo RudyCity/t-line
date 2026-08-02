@@ -138,7 +138,8 @@ export function SuperAgentSidebar({
         activeChainId = activeData.activeChainId || activeData.activeChain?.id || '';
       }
 
-      const listRes = await fetch(`/api/superagent/workspace/chains?filter=false${wsParam ? '&' + wsParam.slice(1) : ''}`, { headers });
+      // Filter chains exclusively by current workspace (DO NOT use filter=false!)
+      const listRes = await fetch(`/api/superagent/workspace/chains${wsParam}`, { headers });
       if (listRes.ok) {
         const listData = await listRes.json();
         const chainsList: WorkspaceChainInfo[] = listData.chains || [];
@@ -148,14 +149,17 @@ export function SuperAgentSidebar({
             ? (chainsList.find(c => c.id === activeChainId) || chainsList[0])
             : chainsList[0];
             
-          if (found) {
+          if (found && Array.isArray(found.nodes) && found.nodes.length > 0) {
             setChainInfo(found);
             setActiveNodeId(found.primaryNodeId || (found.nodes?.[0]?.id ?? ''));
+            return;
           }
         }
       }
+      setChainInfo(null);
     } catch (e) {
       console.error('Failed to fetch active workspace chain in sidebar:', e);
+      setChainInfo(null);
     }
   };
 
@@ -206,76 +210,70 @@ export function SuperAgentSidebar({
       {/* Accordion Content */}
       <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-none hover:scrollbar-thin">
 
-        {/* SECTION 0: WORKSPACE CHAIN */}
-        <div className="rounded-lg border border-[var(--border-color)]/60 bg-[var(--bg-card)]/40 overflow-hidden transition-all">
-          <button
-            onClick={() => toggleSection('chain')}
-            className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-[var(--surface-overlay-hover)]/60 transition cursor-pointer text-left"
-          >
-            <div className="flex items-center gap-2">
-              <LinkIcon className="w-3.5 h-3.5 text-purple-400 opacity-90" />
-              <span className="text-[11px] font-medium text-[var(--text-main)]">Workspace Chain</span>
-              {chainNodes.length > 0 && (
-                <span className="text-[9px] font-mono text-purple-400 bg-purple-500/10 px-1.5 py-0.2 rounded-full">
-                  {chainNodes.length}
-                </span>
-              )}
-            </div>
-            {openSections.chain ? <ChevronDown className="w-3 h-3 text-[var(--text-muted)] opacity-70" /> : <ChevronRight className="w-3 h-3 text-[var(--text-muted)] opacity-70" />}
-          </button>
+        {/* SECTION 0: WORKSPACE CHAIN (Only visible if workspace has a valid chain) */}
+        {chainInfo && chainNodes.length > 0 && (
+          <div className="rounded-lg border border-[var(--border-color)]/60 bg-[var(--bg-card)]/40 overflow-hidden transition-all">
+            <button
+              onClick={() => toggleSection('chain')}
+              className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-[var(--surface-overlay-hover)]/60 transition cursor-pointer text-left"
+            >
+              <div className="flex items-center gap-2">
+                <LinkIcon className="w-3.5 h-3.5 text-purple-400 opacity-90" />
+                <span className="text-[11px] font-medium text-[var(--text-main)]">Workspace Chain</span>
+                {chainNodes.length > 0 && (
+                  <span className="text-[9px] font-mono text-purple-400 bg-purple-500/10 px-1.5 py-0.2 rounded-full">
+                    {chainNodes.length}
+                  </span>
+                )}
+              </div>
+              {openSections.chain ? <ChevronDown className="w-3 h-3 text-[var(--text-muted)] opacity-70" /> : <ChevronRight className="w-3 h-3 text-[var(--text-muted)] opacity-70" />}
+            </button>
 
-          {openSections.chain && (
-            <div className="p-1.5 pt-0.5 space-y-1">
-              {chainInfo && chainNodes.length > 0 ? (
-                <>
-                  <div className="flex items-center justify-between px-2 py-1 bg-purple-500/5 rounded border border-purple-500/15 text-[10px] font-mono text-purple-300">
-                    <span className="truncate font-medium">{chainInfo.name}</span>
-                    <span className="text-[8px] bg-purple-500/20 text-purple-200 px-1 py-0.2 rounded font-semibold tracking-wide">ACTIVE</span>
-                  </div>
-
-                  <div className="space-y-1 pt-0.5">
-                    {chainNodes.map(node => {
-                      const isPrimary = node.id === chainInfo.primaryNodeId;
-                      const isCurrent = node.id === activeNodeId || (!activeNodeId && isPrimary);
-
-                      return (
-                        <div
-                          key={node.id}
-                          onClick={() => onSwitchChainNode?.(node.id)}
-                          className={`p-1.5 rounded-md text-[10px] transition-all cursor-pointer flex items-center justify-between font-mono ${
-                            isCurrent
-                              ? 'bg-purple-500/10 border border-purple-500/30 text-purple-200 shadow-sm'
-                              : 'hover:bg-[var(--surface-overlay-hover)]/80 text-[var(--text-muted)] border border-transparent'
-                          }`}
-                        >
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <Server className={`w-3 h-3 shrink-0 ${isPrimary ? 'text-amber-400' : 'text-slate-400'}`} />
-                            <span className="truncate font-medium">{node.label}</span>
-                            {node.type === 'ssh' && (
-                              <span className="text-[8px] bg-sky-500/10 text-sky-400 border border-sky-500/20 px-1 rounded">SSH</span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            {isPrimary && (
-                              <span className="text-[8px] bg-amber-500/10 text-amber-300 border border-amber-500/20 px-1 rounded font-medium">MAIN</span>
-                            )}
-                            {isCurrent && (
-                              <span className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1 rounded font-medium">ACTIVE</span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              ) : (
-                <div className="py-2.5 text-center text-[10px] text-[var(--text-muted)] opacity-70 font-mono">
-                  No active workspace chain
+            {openSections.chain && (
+              <div className="p-1.5 pt-0.5 space-y-1">
+                <div className="flex items-center justify-between px-2 py-1 bg-purple-500/5 rounded border border-purple-500/15 text-[10px] font-mono text-purple-300">
+                  <span className="truncate font-medium">{chainInfo.name}</span>
+                  <span className="text-[8px] bg-purple-500/20 text-purple-200 px-1 py-0.2 rounded font-semibold tracking-wide">ACTIVE</span>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+
+                <div className="space-y-1 pt-0.5">
+                  {chainNodes.map(node => {
+                    const isPrimary = node.id === chainInfo.primaryNodeId;
+                    const isCurrent = node.id === activeNodeId || (!activeNodeId && isPrimary);
+
+                    return (
+                      <div
+                        key={node.id}
+                        onClick={() => onSwitchChainNode?.(node.id)}
+                        className={`p-1.5 rounded-md text-[10px] transition-all cursor-pointer flex items-center justify-between font-mono ${
+                          isCurrent
+                            ? 'bg-purple-500/10 border border-purple-500/30 text-purple-200 shadow-sm'
+                            : 'hover:bg-[var(--surface-overlay-hover)]/80 text-[var(--text-muted)] border border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Server className={`w-3 h-3 shrink-0 ${isPrimary ? 'text-amber-400' : 'text-slate-400'}`} />
+                          <span className="truncate font-medium">{node.label}</span>
+                          {node.type === 'ssh' && (
+                            <span className="text-[8px] bg-sky-500/10 text-sky-400 border border-sky-500/20 px-1 rounded">SSH</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {isPrimary && (
+                            <span className="text-[8px] bg-amber-500/10 text-amber-300 border border-amber-500/20 px-1 rounded font-medium">MAIN</span>
+                          )}
+                          {isCurrent && (
+                            <span className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1 rounded font-medium">ACTIVE</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* SECTION 1: SUB AGENTS */}
         <div className="rounded-lg border border-[var(--border-color)]/60 bg-[var(--bg-card)]/40 overflow-hidden transition-all">
