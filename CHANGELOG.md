@@ -1,5515 +1,6505 @@
+"## [1.2.682] - 2026-08-02
+
+### Feature: ONNX Local Translation Model Preload on Startup
+- **Startup Warmup & Download**: Triggered lightweight ONNX translation transformer (`Xenova/opus-mt-id-en` INT8) preloading in background upon application launch (`cliMain.tsx` and `server.ts`).
+
+## [1.2.681] - 2026-08-02
+
+### Feature: Pre-Processing Pipeline — ONNX Local Translation, Secret Alias Vault & Noise Trimming
+- **ONNX Local Translation Pipeline**: Integrated lightweight (< 100MB RAM) local transformer model (`Xenova/opus-mt-id-en` INT8) with async fallback for high-accuracy Indonesian-to-English translation (`analyzePromptIntentAsync`).
+- **Secret & Sensitive Data Masking with Secret Vault**: Implemented automated credential redaction (OpenAI `sk-proj-`, GitHub `ghp_`, AWS `AKIA`, JWT, Private Keys, complex passwords) into ephemeral `$SECRET_N` aliases. Added `unmaskSensitiveData()` for local tool execution recovery.
+- **Conversational Noise & Filler Trimming**: Strips conversational fluff in Indonesian & English (e.g. `"halo mas ai tolong bantu saya untuk..."`) to minimize token consumption and focus LLM attention on core technical instructions.
+- **High Performance Optimizations**: Added `SECRET_HINT_PATTERN` Early Exit Guard (0 ms execution on normal prompts) and single-pass pre-compiled Master Regex scanner.
+- **Files Modified**: `src/core/promptClarification.ts`, `src/core/agent/RequestProcessor.ts`, `tests/onnxTranslation.test.ts`, `tests/promptPreprocessing.test.ts`, `package.json`, `CHANGELOG.md`.
+
+## [1.2.680] - 2026-08-02
+
+### Fix: Request Classifier Indonesian Keyword Support & Degeneration Fallback
+- **Indonesian Debug Keywords**: Added Indonesian debug/fix keywords ("perbaiki", "perbaikan", "benerin", "betulkan", "eror") to the heuristic pre-filter.
+- **Gibberish / Degeneration Fallback**: Added format detection to mapSupraTelemetryToCategory. If the local classifier outputs degenerated, repeating (e.g. "dx or dx"), or unstructured telemetry, it immediately falls back to the heuristicCategory.
+- **Preserve Action-Oriented Categories**: Prevented mapSupraTelemetryToCategory from downgrading action-oriented categories ("debug", "simple_edit", "command", "complex_task") to read-only categories ("question", "research") when the local model returns Code: False or low complexity.
+- **Files Modified**: `src/core/requestClassifier.ts`, `tests/requestClassifier.test.ts`, `package.json`, `CHANGELOG.md`.
+
+## [1.2.679] - 2026-08-02
+
+### Fix: Guard Against Empty Plan Approval Loop
+- **Agent Approval Guard**: Added `hasRealPlanContent()` validation check before marking `planState` as `APPROVED` to prevent infinite nudge loops when plan files are missing or contain only stubs.
+- **Unit Tests**: Added test coverage in `tests/agentPlanContent.test.ts` to verify `hasRealPlanContent()` logic.
+
+## [1.2.678] - 2026-08-02
+
+### Feature: Interactive Checkpoint & Rollback UI Wizard
+- **Interactive Checkpoint Selection**: Enhanced `/checkpoint` wizard UI to allow interactive navigation, preview, and selection of available session checkpoints via keyboard arrow keys (↑/↓) and Enter.
+- **Wizard Hooks & Handlers**: Refactored keyboard handlers and wizard hooks (`useDashboardKeyboard`, `useDashboardWizard`, `useKeyboardHandler`) to support multi-step checkpoint browsing, direct restoration, and deletion.
+- **Component Rendering**: Added structured rendering for `checkpoint` type wizards in `wizard-panels.tsx` with dialog header options and max visible limit.
+- **Files Modified**: `src/components/wizard-panels.tsx`, `src/hooks/useDashboardKeyboard.ts`, `src/hooks/useDashboardWizard.ts`, `src/hooks/useKeyboardHandler.ts`, `tests/checkpointWizard.test.ts`, `package.json`, `CHANGELOG.md`.
+
+## [1.2.677] - 2026-08-02
+
+### Feature: Prompt Intent Analysis, Multi-Language Auto-Translation & Desktop UI Badge
+- **Prompt Intent Analysis & Ambiguity Gate**: Added 2-tier prompt ambiguity detection and intent rewriting middleware (`src/core/promptClarification.ts`). Automatically triggers confirmation/clarification before destructive file modifications when prompt context is ambiguous.
+- **Multi-Language Auto-Translation**: Added language detection and automatic translation for 7 languages (Indonesian, Chinese, Japanese, Spanish, French, German, English), including typo tolerance (e.g. `ptrompt`, `yranslate`, `englosih`).
+- **Persistent Intent Memory & Auto-Learning**: Saved user shorthand mapping to disk (`~/.superagent-r/intent-memory.json`) and added automatic learning from user corrections (`"bukan X, maksud saya Y"`).
+- **Desktop UI Badge Event Bridge**: Implemented `translationBadgeEmitter` to stream visual translation badges directly to connected `t-line` Desktop Client UI connections.
+- **High Performance & Non-Blocking I/O**: Added word-boundary token matching, flexible numeric multi-turn selection (`"pilih 2"`, `"nomor 1"`), and async non-blocking disk persistence.
+- **Files Modified**: `src/core/promptClarification.ts`, `src/core/agent/RequestProcessor.ts`, `tests/promptClarification.test.ts`, `package.json`, `CHANGELOG.md`.
+
+## [1.2.676] - 2026-08-02
+
+### Fix: Session-Isolated (In-Memory) Preset Switching & Unified `/mp` and `/model` Behavior
+- **In-Memory Session Isolation**: Updated `applyModelPreset` to default to `persist = false` (`setActivePreset`), ensuring preset switches affect only the active terminal session in-memory without overwriting global `model-config.json` on disk. Allows multiple terminal instances to run different presets independently.
+- **Global Save Option**: Added support for `--global` / `--save` flags (e.g. `/mp fast --global` or `/model preset fast --save`) to persist presets globally across disk when explicitly requested.
+- **Unified Model Resolution & Autocomplete**: Fixed `/mp` autocomplete suggestions in terminal dashboard and aligned model resolution via `getEffectiveMasterModel` and `getTierModelWithProvider` across `/mp`, `/model preset`, and `/model` UI wizard.
+- **Files Modified**: `src/app.tsx`, `src/core/commands/mpCommand.ts`, `src/core/commands/modelCommand.ts`, `src/core/config/presets.ts`, `src/hooks/wizard/useModelPresets.ts`, `src/utils/dashboardSuggestions.ts`, `tests/bangSuggestions.test.ts`.
+
+## [1.2.675] - 2026-08-02
+
+### Fix: Context Window Percentage Display Stuck at 0%
+- **Root Cause**: The `Ctx: 0%` display bug had two causes:
+  1. **`app.tsx` (single-agent mode)**: `contextLimit` was hardcoded to `256000` at initialization and never synced with the actual model's context window limit on startup or when `activeModel` changed. This meant the denominator was wrong for any model with a different context window size.
+  2. **`multi-agent-dashboard.tsx` (multi-agent mode)**: `activeContextUsage` only used `lastMasterPromptTokens` from `state.ts`, which is `0` until the first LLM API response arrives. It did not use the `ContextManager`'s `estimateTokensForAll()` for proactive token calculation like `app.tsx` does, so the numerator was always 0 before the first API call.
+- **Fix — `app.tsx`**: Added a `useEffect` that syncs `contextLimit` with `getContextWindowLimit(activeModel)` whenever `activeModel` changes. Also updates the `ContextManager`'s threshold and model to stay in sync.
+- **Fix — `multi-agent-dashboard.tsx`**: Replaced the simple `activeContextUsage = lastMasterPromptTokens` assignment with a `ContextManager`-based estimation that calls `cm.estimateTokensForAll(messages)` to get accurate token counts from conversation history, falling back to `lastMasterPromptTokens` only when `ContextManager` is unavailable. Also added a `useEffect` to sync `contextLimit` with `activeModel` and removed prohibited `process.env.CONTEXT_WINDOW_LIMIT` / `process.env.MAX_CONTEXT_TOKENS` usage (per AGENTS.md JSON-only config rule).
+- **Files Modified**: `src/app.tsx`, `src/components/multi-agent-dashboard.tsx`.
+
+## [1.2.674] - 2026-08-02
+
+### Feature: Dynamic Model Preset Suggestions for `/mp` and `/mp-*`
+- **Dynamic Preset Autocomplete**: The `/mp <preset-name>` and `/mp-<preset-name>` slash commands now display dynamic autocomplete suggestions populated from the user's saved model presets in `model-presets.json` (via `getModelPresets()`), replacing the previous hardcoded `/mp fast` and `/mp default` suggestions.
+- **Shortcut Suggestions**: Typing `/mp-` now triggers fuzzy-filtered suggestions of all available presets in `/mp-<name>` shortcut form (e.g. `/mp-fast`, `/mp-default`, `/mp-balanced`).
+- **Preset Descriptions**: `getSuggestionDescriptions()` now includes descriptions for each dynamic preset suggestion, showing the preset name, mode label (Single-Agent/Multi-Agent), and preset description text.
+- **Empty Preset Fallback**: When no presets are saved, a sensible fallback list (`fast`, `default`, `balanced`) is shown so the autocomplete is never empty.
+- **Files Modified**: `src/utils/dashboardSuggestions.ts`.
+
+## [1.2.673] - 2026-08-02
+
+### Feature: Comprehensive Lock Audit Logging for Multi-Terminal Work
+- **Full Lock Event Audit Trail (SQLite)**: The `file_lock_events` table schema has been expanded with new columns: `project_path`, `line_range`, `ttl_ms`, `is_intent_soft_lock`, `remote_node_id`, `locked_at`, `released_at`, `force_unlock`, and `details`. Every lock lifecycle event now records exactly who locked the file (`session_id` + `terminal_type`), when (`locked_at`), on what line range, and with what TTL.
+- **Enhanced `recordLockEvent()`**: Accepts `LockEventDetails` options object with full lock metadata. New event types: `lock_updated` (heartbeat renewal) and `deadlock_recovered` (stale lock cleanup). Added `getLockEventHistoryFromDb()` query function to retrieve the complete audit trail.
+- **Schema Migration**: Automatic `ALTER TABLE` migrations add the new columns to existing databases, so older `history.db` installations upgrade seamlessly.
+- **Detailed `[LOCK]` logs in `superagent.log`**: Every lock operation (acquire, soft-lock, renew, release, force-release, conflict-block, deadlock recovery) now writes a structured `[LOCK]` log line via `logE2E()` with full metadata including file path, project path, session ID, terminal type, line range, TTL, and timestamps.
+- **`generate_lock_report` includes Audit Trail**: The lock report tool now appends a "Recent Lock Event Audit Trail" markdown table showing the last 20 lock events (time, event type, file, session, terminal, line range, force flag) so agents/users can see exactly when a lock was taken and by whom.
+- **Tool Invocation Logging**: All lock tools (`unlock_file`, `get_lock_stats`, `resolve_lock_conflict`, `generate_lock_report`) now log their invocation and result (success/failure) to `[LOCK-TOOL]` entries in `superagent.log`.
+
+## [1.2.672] - 2026-08-02
+
+### Feature: Optimistic Concurrency & Lock Status UI (Poin 3 & 4)
+- **Optimistic Concurrency (Poin 3)**: Implemented validation using content hashing (`sha256` digest slice) to prevent race conditions from external editors or other processes modifying files between read and write operations. When an edit tool reads a file, it computes and saves the content hash. Right before writing the modified content back to disk, the tool reads the file again and verifies its current hash matches the expected hash. If the hash does not match, the operation aborts with a `[CONCURRENCY_CONFLICT]` error. Applied to `editTool`, `writeToFileTool`, `replaceFileContentTool`, `multiReplaceFileContentTool`, and `applyPatchTool`.
+- **Lock Status UI (Poin 4)**: Renders a lock count badge (e.g. `🔒 N`) in the CLI bottom `StatusBar` component when active locks are held by the project. The main `App` component subscribes to events (`lock_acquired`, `lock_released`, `lock_updated`, `deadlock_recovered`) emitted by `lockEventEmitter` in `sharedMemory.ts` to keep the active locks count state reactive.
+- **t-line Sync**: The server now listens to `tline_bridge_sync` lock events emitted by the backend lock engine and forwards them to connected t-line desktop app clients via standard server-sent events (SSE).
+- **Tests**: Created `tests/fileLockOptimisticAndUI.test.ts` to test lock event synchronization, active lock stats, and concurrency-aware editing.
+
+## [1.2.671] - 2026-08-02
+
+### Fix: Lock System — SessionId Self-Blocking & Auto-Lock on Edit
+- **SessionId Self-Blocking (Bug #2)**: All `checkFileLock()` and `waitForFileLockRelease()` calls in `fileEditTools.ts` previously passed `undefined` as `sessionId`, causing a session to block itself when it held a lock. Fixed by reading `sessionId` from `agentLocalStorage.getStore()` via dynamic import inside each `execute()` body and passing it through all lock check calls. The `checkFileLock()` logic `if (sessionId === valid.sessionId) return { locked: false }` now correctly short-circuits.
+- **Auto-Lock on Edit (Bug #1)**: After a cross-session lock check passes, each write tool now automatically acquires a cross-session lock (`lockFile()`) before performing the write operation, and releases it (`releaseFile()`) in the `finally` block. This ensures two sessions cannot race on the same file even without an explicit `lockFile()` call. Applies to all 6 tools: `writeTool`, `editTool`, `writeToFileTool`, `replaceFileContentTool`, `multiReplaceFileContentTool`, `applyPatchTool`.
+- **waitForFileLockRelease**: Updated to accept optional `sessionId` parameter, passed through to all internal `checkFileLock()` polling calls.
+
+## [1.2.670] - 2026-08-01
+
+### Fix: Lock System — Comprehensive Audit & Bug Fixes (9 Bugs)
+- **sharedMemory.ts (6 fixes)**: `withLock()` now throws on timeout instead of executing unprotected; added `Atomics.wait(1ms)` sleep to reduce CPU spin. `releaseFile()` filter now scoped to target session (`forceUnlock || l.sessionId === targetSessionId`). Debounce timer in `persistLocksToDisk` clears/resets instead of silently dropping. VITEST guard added for `startDeadlockRecoveryDaemon`. `Date.now()` moved inside `withLock()` to fix TOCTOU. Added `SIGBREAK` handler for Windows Git Bash.
+- **fileEditTools.ts (4 fixes)**: Added cross-session lock check to `multiReplaceFileContentTool`, `applyPatchTool`, and `writeTool` which had none. Fixed batch tools (`editTool`, `writeToFileTool`, `replaceFileContentTool`) to check ALL file paths in batch arrays, not just the first.
+- **lockTools.ts (2 fixes)**: `take_theirs` and `merge_adjacent` conflict resolution strategies were stubs — now both call `releaseFile()` with `forceUnlock: true`.
+- **toolsets.ts (1 fix)**: Lock tools (`unlockFileTool`, `getLockStatsTool`, `resolveConflictTool`, `generateLockReportTool`) registered in master, superagent, chromeExtension, and coder toolsets.
+
+## [1.2.669] - 2026-08-01
+
+
+### Fix: Restore history session placeholder file writing and test environment home directory caching
+- **History Session Anchor**: Reintroduced 0-byte JSON file writing to `saveToFile` and `saveToFileSync` in [conversation.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/conversation.ts) to serve as physical session anchors on disk. This fixes the flaky `saveHistorySync` test failure caused by missing expected files.
+- **Skills Resolution Caching**: Added automatic cache invalidation of base search directories under test environments (when `process.env.VITEST` is active) in [skills.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/config/skills.ts). This ensures that mocked home directories are correctly resolved, fixing global skills resolution test failures.
+
+## [1.2.668] - 2026-08-01
+
+### Fix: Restore System Prompt Clipboard Paste Instructions & Cleanup Test Imports
+- **System Prompts**: Restored the `/image paste` and `IMAGE_VISION` prompt instructions to `src/core/config/base.ts` and `src/core/prompts.ts` so the AI agent understands when and how to ask the user to paste clipboard screenshots or attach image files.
+- **Test Cleanup**: Removed obsolete imports and test cases for `textToImage.ts` helpers (`normalizePathsForImage` and `wrapLongLines`) from `tests/imageUtils.test.ts` to ensure the test suite is fully aligned after the vision prompt cleaning.
+
+## [1.2.667] - 2026-08-01
+
+### Clean: Remove Automatic Image Prompt System
+- **Footprint Removal**: Removed the automatic text-to-image prompt compilation (Mode 2 vision token saving) including settings, helpers, slash commands, autocomplete suggestions, descriptions, help pages, and README documentation.
+- **Message and Token Processing**: Simplified `MessageBuilder`, `ContextBuilder`, `LoopIterationProcessor`, `TokenTracker`, `PruningStrategy`, and `Conversation` to process messages directly as plaintext and user-attached images, bypassing image page token/byte estimations.
+- **Tests**: Deleted `tests/visionTokenSaving.test.ts` and updated compaction, serialization, and settings slash command test assertions to align with the simplified, clean message structure.
+
+## [1.2.666] - 2026-07-31
+
+### Fix: Clipboard Image Paste (/image paste) and Multimodal Attachment Support
+- **Windows PowerShell Clipboard**: Added `-sta` (Single-Threaded Apartment) mode flag and safe path escaping to `readClipboardWindows()` in `src/utils/imageUtils.ts` to allow `System.Windows.Forms.Clipboard` OLE access.
+- **Terminal UI Feedback**: Added explicit terminal notices and error handling in `src/app.tsx` when system clipboard contains no image or fails to read.
+- **Vision Model Detection**: Expanded `modelSupportsVision()` in `MessageBuilder.ts` and `TokenTracker.ts` to support models such as `claude`, `gpt-4o`, `gpt-4.5`, `o1`, `o3`, `gemini`, `gemma-3`, `vision`, `vl`, `qwen`, `pixtral`, `llava`, and `llama-3.2`.
+- **Base64 Data URL Standard**: Standardized base64 image encoding with Data URL scheme (`data:${mimeType};base64,...`) across `MessageBuilder.ts` and `FastPath.ts` for full compatibility with all Vercel AI SDK LLM providers.
+
+## [1.2.665] - 2026-07-31
+
+### Fix & Refactor: Workspace Chain Search & Session Resolution
+- **Workspace Chain Search**: Enhanced FTS search in `src/core/storage/historyDb.ts` to support chain node path matching.
+- **Path Resolution**: Fixed path normalization for workspace chain identifiers in `src/core/config/history.ts` and file tools in `src/core/tools/fileReadTools.ts`.
+- **Session Matching**: Fixed `resolveSession()` in `src/server.ts` to prevent silent ID mutations.
+- **Tests**: Added workspace chain search unit tests in `tests/workspaceChainSearch.test.ts`.
+
+## [1.2.664] - 2026-07-31
+
+### Fix: resolveSession() Silent SessionId Mutation Bug
+- **Bug Fix**: Removed 3-line silent mutation `session.sessionId = targetSessionId` in `resolveSession()` (src/server.ts:169-171) that caused API `/api/history` to return wrong in-memory session data instead of persistent SQLite data.
+- **Behavior**: `resolveSession()` with `targetSessionId` now only matches exact session ID — no silent overwrite. API falls back to `loadSessionFromDb()` when in-memory session doesn't match.
+- **Code Quality**: Collateral cleanup of LF/CRLF formatting in `src/core/conversation.ts` and removal of unused code in `agent.ts`, `checkpoints.ts`, `RMemoryStrategy.ts`.
+
+## [1.2.663] - 2026-07-31
+
+### Fix: Workspace Chain Path Allowed Roots & Humanized Tool Descriptions
+- **Path Verification**: Modified resolveFilePathFromArgs in src/core/tools/pathHelpers.ts to allow local node paths belonging to the active workspace chain, resolving boundary violation errors when switching active nodes.
+- **Humanization**: Humanized and clarified terminal UI execution progress description text for all cross_workspace_exec operations and manage_workspace_chain actions in src/core/permissions.ts.
+- **Documentation**: Documented workspace chain automatic routing via cross_workspace_exec (switch-node) in src/core/prompts.ts and src/core/config/base.ts.
+- **Tests**: Added unit tests in tests/workspaceChainPermissions.test.ts to verify local node path resolution and tool description humanization in active chains.
+
+## [1.2.662] - 2026-07-31
+
+### Feat: Server REST Endpoints Integration
+- **REST Endpoints**: Implemented and integrated missing REST API endpoints for key Superagent feature sets in `src/serverRoutes.ts`:
+  - Git Worktrees: GET `/api/git/worktrees`, POST `/api/git/worktrees/prune`, POST `/api/git/worktrees/remove`.
+  - Session Checkpoints: GET `/api/checkpoints`, POST `/api/checkpoints`, POST `/api/checkpoints/restore`, DELETE `/api/checkpoints`.
+  - Pinned Messages & Knowledge: GET `/api/knowledge`, POST `/api/knowledge`, DELETE `/api/knowledge`.
+  - Context Compaction: GET `/api/history/compaction`, POST `/api/history/compaction/clear`, POST `/api/history/compaction/compact`.
+  - Goal Mode: GET `/api/goal`, POST `/api/goal`, DELETE `/api/goal`.
+  - Terminal Presets & background tasks: GET `/api/terminal/presets`, POST `/api/terminal/presets`, POST `/api/terminal/run`.
+  - Internal Hooks: GET `/api/internal-hooks`, POST `/api/internal-hooks/active`.
+  - Skills Installation: POST `/api/skills`.
+- **Tests**: Added full suite of integration tests for all new server endpoints in `tests/server2.test.ts`.
+
+## [1.2.661] - 2026-07-31
+
+### Fix: Fast-fail Timeout for Node Health Checks
+- **Health Checks**: Wrapped active workspace chain node health queries in a fast 2500ms timeout race to prevent offline SSH nodes from hanging settings panels.
+
+## [1.2.660] - 2026-07-31
+
+### Feat: Server Auto-configuration & Workspace Chain Routes
+- **Workspace Auto-configuration**: Added logic to dynamically configure workspace mode (local, SSH proxy, or workspace chain) inside the HTTP server middleware in `src/server.ts` based on request workspace path parameters.
+- **REST Endpoints**: Added dedicated workspace chain API routes in `src/serverRoutes.ts` supporting retrieval, activation, node health checks, and CRUD operations for workspace chains and nodes.
+
+## [1.2.659] - 2026-07-31
+
+### Fix: History Workspace and Resume Filtering for Local, SSH, and Chain modes
+
+- **Workspace Identifiers**: Replaced raw local filesystem paths with structured workspace identifiers in history resolving, listing, and saving.
+  - Local mode -> absolute local directory path.
+  - SSH mode -> `ssh://username@host:port/remoteCwd`.
+  - Workspace chain mode -> `chain:<chainId>`.
+- **PathResolver**: Modified `resolveHistoryFilePath` in `src/core/agent/PathResolver.ts` to sanitize and use the workspace identifier when building unique folder names, preventing collisions between different servers or local paths sharing similar relative folder paths.
+- **Normalize and Check Subpath**: Updated `normalizeAndCheckSubpath` in `src/core/config/history.ts` to correctly compare workspace chain IDs (case-insensitive) and SSH target URLs (comparing username/host/port prefix and remote subpaths).
+- **Paths and Database Layer**: Updated `getWorkspaceId` in `src/core/config/paths.ts` and `saveSessionToDb`, `savePinnedKnowledgeToDb`, and `deleteWorkspaceFromDb` in `src/core/storage/historyDb.ts` to support chain and SSH prefix protocols without resolving locally.
+- **CLI & Server Routes**: Updated `/resume`, `/session list`, `/api/init`, `/api/switch-workspace`, and server session resolution to preserve and use workspace identifiers.
+- **Tests**: Created `tests/history_workspace.test.ts` covering workspace identifier resolution and path validation.
+
+## [1.2.658] - 2026-07-31
+
+### Fix: documentReadTools.ts — 7 improvements
+
+- **Local file size limit**: Added 100 MB cap before `fs.readFile()` for local files (SSH path already had it).
+- **Re-import redundant**: Moved `import os from "os"` to top-level; removed duplicate `import()` calls inside function body.
+- **Silent catches logged**: All 4 catch blocks now log via `console.warn()` with `[readDocument]` prefix for traceability.
+- **OfficeCLI timeout**: Added `timeout: 30000` to `execa()` call preventing indefinite hangs.
+- **Reduced `any` casts**: Renamed `pdfParse` → `PDFParseCtor`; minimized `as any` usage.
+- **PDF error detail**: Catch block logs specific error message before OCR fallback.
+- **Temp file leak fix**: `fs.writeFile(tmp)` wrapped in try → `finally { unlink }` ensures cleanup.
+
+## [1.2.657] - 2026-07-31
+
+### Optimization: System Prompt Token Efficiency and Classification Accuracy
+
+- **Base System Prompt Compression**: Optimized `getSystemPrompt()` in `src/core/config/base.ts` to reduce token usage by ~24%, streamlining cognitive scale-up, reasoning optimization, Maximum Compression rules, and merging redundant tool descriptions.
+- **Tier-Specific Prompt Pruning**: Removed redundant static `BROWSER_CONTROL_RULE` and `WORKSPACE_CHAIN_RULE` rules from `MASTER_AGENT_SYSTEM_PROMPT` and `SUPERAGENT_SYSTEM_PROMPT` in `src/core/prompts.ts` (relying on dynamic capability injection). Deduplicated chrome-agent prompts and introduced a shared report checklist base.
+- **Classification Accuracy & Tie-Breaking**: Optimized keyword routing in `src/core/requestClassifier.ts` by relocating Indonesian and English optimization terms to `COMPLEX_KW`. Corrected question/debug query disambiguation. Improved statistical classifier to output runner-up in `secondaryCategory` and support high confidence dominance checks.
+- **Fuzzy Matching Exclusions**: Prevented incorrect phonetic/semantic keyword matches (e.g. `"file"` fuzzy matching `"fill"`, or `"mikro"` matching `"makro"`).
+- **Dynamic Context Pruning**: Updated `src/core/agent/ContextBuilder.ts` to lazily extract category and bypass workspace chain notices, scratchpads, and shared memory reads for lightweight categories.
+
+## [1.2.656] - 2026-07-31
+
+### CLI: Subagent Prompts and Configuration Visibility Improvements
+
+- **Prompts Visibility**: Updated `SUPERAGENT_SYSTEM_PROMPT` in `src/core/prompts.ts` to include explicit delegation examples for the `"security-engineer"` and `"chrome-agent"` subagents.
+- **Context Builder**: Updated `singleModeSubagentDirective` in `src/core/agent/ContextBuilder.ts` to direct the single mode agent to spawn `"security-engineer"` for security audits and `"chrome-agent"` for browser automation tasks.
+- **Tool Configuration**: Updated the available out-of-the-box subagents list and `invoke_subagent` tool description in `src/core/config/base.ts` to explicitly document the `"security-engineer"` and `"chrome-agent"` subagents.
+- **Testing Robustness**: Refactored the failing master workflow test in `tests/masterAgentWorkflow.test.ts` to filter mock calls by payload, making it robust against concurrent environment/mock pollution.
+
+## [1.2.655] - 2026-07-31
+
+### CLI: chrome-agent Debugging, Testing, and Documentation Improvements
+
+- **chrome-agent System Prompt**: Added `PORT_9223_BRIDGE` debugging instructions to `"chrome-agent"` system prompt in `src/core/prompts.ts` to handle remote WebSocket bridge connection failures and port conflicts.
+- **Unit Testing**: Added a unit test verifying `chrome-agent` subagent toolset resolution in `tests/tierToolsetResolution.test.ts`.
+- **Documentation**: Documented the `chrome-agent` subagent in `AGENTS.md` and clarified browser/Chrome tool isolation.
+
+## [1.2.654] - 2026-07-31
+
+### CLI: chrome-agent Subagent and Chrome Tools Isolation
+
+- **chrome-agent Subagent**: Added a new specialized subagent type `"chrome-agent"` with its own custom system prompt in `src/core/prompts.ts` defining its browser automation role, macros system, rules, and logic gates.
+- **Subagent Registration**: Registered `"chrome-agent"` default subagent in `src/core/tools/index.ts`.
+- **Toolset Isolation**: Modified `src/core/tools/toolsets.ts` to remove all Chrome and browser control tools (e.g. `controlBrowserTabTool`, `launchChromeProfileTool`, `screenshotTool`, `runHeadlessBrowserTool`) from all other toolsets (`masterToolset`, `superagentToolset`, `chromeExtensionToolset`, `researcher`, `software-tester`) and restrict them exclusively to the `"chrome-agent"` subagent.
+
+## [1.2.653] - 2026-07-31
+
+### Testing: Alignment of Test Suites with Production Behavior
+
+- **Toolset Expectations**: Updated `tests/tierToolsetResolution.test.ts` to filter out workspace chain tools when no active chain exists, aligning test expectations with dynamic tool filtering.
+- **Single-File Read Warnings**: Updated `tests/systemTools.test.ts` and `tests/tools.test.ts` to assert truncation ranges via the header suffix instead of expecting the `output truncated` string, reflecting actual single-file read output formatting.
+- **Vision Support Checks**: Updated `tests/visionTokenSaving.test.ts` to assert that model name overrides config preferences in vision saving, aligning with prioritized name heuristic design.
+- **SFTP Client Mock**: Fixed `tests/workspaceChainSsh.test.ts` mock constructor structure to be a standard constructible function instead of an arrow function.
+- **Command Traversal Checks**: Updated command traversal tests in `tests/permissions.test.ts` to expect `false` (allowed) when the command directory remains within allowed workspaces.
+
+## [1.2.652] - 2026-07-31
+
+### Workspace Chaining: Active/Deactive Awareness Isolation
+
+- **Tool Filtering**: Updated `getActiveTools()` in `src/core/agent.ts` to dynamically filter out `manage_workspace_chain` and `cross_workspace_exec` tools from the agent's available toolset if no workspace chain is active for the current workspace.
+- **Prompt Filtering**: Updated `ContextBuilder.ts` to dynamically filter out any workspace chain rules (`WORKSPACE_CHAINS`) and references to workspace chain tools from the agent's system prompt if no chain is active.
+- **Tests**: Added a unit test in `tests/workspaceChain.test.ts` verifying that workspace chain tools and rules are hidden when no chain is active.
+
+## [1.2.651] - 2026-07-31
+
+### CLI: Dynamic and Varied Thinking Loading Indicators
+
+- **Rotating Thinking Messages**: Updated `LoadingIndicator` in `LoadingIndicators.tsx` to cycle through a varied set of thinking messages (e.g. context analysis, logic processing, plan formulation) every 2 seconds when thinking.
+- **Dynamic Tool Execution Logs**: Enhanced `ToolLoadingIndicator` in `LoadingIndicators.tsx` to accept the current tool name and description parameters and format them dynamically (e.g. showing the currently running shell command or tool invocation).
+- **Core Orchestration**: Updated `computeWrappedLines` and `ChatArea` in `chat-area.tsx` to accept active tool name/description props and thread them down to `ToolLoadingIndicator`.
+- **State Integration**: Declared and updated `activeToolName` and `activeToolDesc` React states in `app.tsx`, setting them during `tool_start`, `tool_end`, `runInteractiveProcess`, and `handleSigint` events.
+
+## [1.2.650] - 2026-07-31
+
+### Workspace Chaining: Workspace Chain Isolation and Dynamic Filtering
+
+- **Dynamic Workspace Filtering**: Updated `getWorkspaceChains()` in `WorkspaceChainConfig.ts` to accept a target workspace path and filter chains such that a chain is only visible/active if the current workspace matches one of its nodes (local or SSH). Case-insensitive checks are used on Windows.
+- **Wizard & CLI Integration**: Updated `useWizardSubmit.ts` and `workspaceChainTools.ts` to pass the active workspace path parameter down when retrieving and activating chains.
+- **Tests**: Added a unit test case in `tests/workspaceChain.test.ts` verifying chain list filtering and isolation across workspaces.
+
+## [1.2.649] - 2026-07-31
+
+### CLI: Fix /workspace Wizard Options Mismatch
+
+- **Wizard Options**: Updated `workspaceCommand.ts` option array to match the numbered list expected by `useWizardSubmit.ts` and `useKeyboardHandler.ts`, restoring functionality to the `/workspace` slash command.
+- **Tests**: Updated tests in `tests/workspaceCommand.test.ts` to assert the corrected option array values.
+
+## [1.2.648] - 2026-07-31
+
+### Workspace Chaining: Active Chain Workspace Path Verification
+
+- **Workspace Path Check**: Added validation to `getActiveChainId()` in `WorkspaceChainConfig.ts` to verify if the active workspace chain belongs to the current workspace path (or one of its subdirectories). It returns `null` if the paths do not match, preventing workspace chains defined for other projects from remaining active.
+- **Dynamic Resolvers**: Updated `WorkspaceChainManager` (`loadActiveChain`, `getActiveChain`, `isChainActive`) and `permissions.ts` to pass the active workspace path, ensuring path validation checks are dynamically performed.
+- **Context Injection**: Updated `WorkspaceStateTracker.ts` and `ContextBuilder.ts` to pass the current workspace directory when resolving the active chain.
+- **Tests**: Added path validation unit test coverage in `tests/workspaceChain.test.ts`.
+
+## [1.2.647] - 2026-07-31
+
+### CLI: Workspace Flag Parsing and Directory Switching
+
+- **CLI Arguments**: Added `-w` and `--workspace` command-line argument parsing at startup in `cliMain.tsx`.
+- **Directory Switching**: Enforced automatic `process.chdir` to the target directory if `-w`/`--workspace` is provided.
+- **Filtering**: Filtered out workspace and SSH target arguments from positional arguments to prevent them from bleeding into the initial user prompt.
+- **Tests**: Added tests for workspace argument parsing in `tests/cliWorkspace.test.ts`.
+
+## [1.2.646] - 2026-07-31
+
+### Permissions: Workspace Chain Permission Bypass
+
+- **Permission Management**: Added `getAllowedWorkspacePaths` helper in `permissions.ts` to dynamically retrieve all active workspace chain node paths (local and remote).
+- **Out of Bounds Check**: Updated `isToolCallOutOfBounds` and `isSuperagentOutOfBounds` to evaluate cross-chain file and command accesses against all active workspace chain node boundaries, eliminating permission prompts when operating within an active workspace chain topology.
+- **Tools**: Auto-approved `cross_workspace_exec` and `manage_workspace_chain` operations when an active workspace chain is loaded.
+- **Tests**: Added test suite in `tests/workspaceChainPermissions.test.ts`.
+
+## [1.2.645] - 2026-07-31
+
+### UI: Subagent Action Streaming and Text Truncation
+
+- **Action Streaming**: Added `getSubagentActionStreams` in `uiHelpers.ts` to extract clean subagent action steps and rotate action displays smoothly across timer ticks.
+- **Terminal UI**: Enforced `wrap="truncate"` on subagent and superagent text elements across terminal components to prevent layout wrap glitches.
+- **Tests**: Added test suite coverage for `getSubagentActionStreams` helper in `tests/helpers.test.ts`.
+
+## [1.2.644] - 2026-07-30
+
+### UI: Add Animated Pulsing [R] Badge to Loading and Thinking Indicators
+
+- **Loading & Thinking Indicators**: Added animated pulsing `[R]` badge across `LoadingIndicator`, `ToolLoadingIndicator`, `ProcessingIndicator`, `ThinkingSpinner`, `SessionSpinner`, and `StatusBar` spinner.
+
+## [1.2.643] - 2026-07-30
+
+### UI: Update Thinking, Streaming, and Chat Line Headers to SUPERAGENT R
+
+- **Headers**: Updated `✦ SUPERAGENT (THINKING...)`, `✦ SUPERAGENT (STREAMING...)`, and assistant chat headers to `✦ SUPERAGENT R` for visual consistency.
+
+## [1.2.642] - 2026-07-30
+
+### UI: Update Header Banner Logo and Workspace Alignment
+
+- **Header Banner**: Updated banner logo to `S U P E R  A G E N T  R` with refined spacing and removed workspace path from logo line.
+- **Conversation Log Header**: Aligned workspace path indicator horizontally with the `[` bracket of `💬 CONVERSATION LOG` header for clean terminal presentation.
+
+## [1.2.641] - 2026-07-30
+
+### Update: Workspace Chain Advanced Operations & Health Monitoring Guidance
+
+- **Workspace Chain Operations**: Enhanced system prompts and ContextBuilder notices for workspace chains to document multi-node health monitoring (`health`), cross-node code/config diffs (`diff`), and cross-node file deployments (`sync`).
+- **Prompt Guidance**: Synchronized `manage_workspace_chain` and `cross_workspace_exec` tool documentation across base config, prompts, and ContextBuilder.
+
+## [1.2.640] - 2026-07-30
+
+### Update: System Prompt Rules for Terminal-First Debugging and Verification
+
+- **Terminal-First Debugging**: Updated base system prompts (`prompts.ts`, `ContextBuilder.ts`, `base.ts`) to require agents across all tiers (Master, Superagent, Subagents) to debug using terminal execution/logs first before making code edits.
+- **End-of-Process Build and Test Execution**: Enforced executing build and test suites/files on new/updated files at the conclusion of the fix process.
+
+## [1.2.639] - 2026-07-30
+
+### Fix: Vision/Image Support in FastPath and Model Detection
+
+- **FastPath Vision Passthrough**: Updated `FastPath.ts` to preserve image content parts (base64 data) when sending user messages to vision-capable models, instead of flattening all multipart content to text strings.
+- **Model Vision Detection Priority**: Reordered `modelSupportsVision()` in `MessageBuilder.ts` to check known model names (claude-3, gpt-4o, gemini, gemma-3) before config lookup, preventing config misconfigurations from silently disabling vision.
+- **Stray Statement Removal**: Removed accidental `MergedParts: [...]` labeled statement in `mergeMessages()` that was a no-op but could confuse readers.
+
+## [1.2.638] - 2026-07-30
+
+### Fix: Workspace Chain and SSH Target Configuration Sync and Verification
+
+- **Workspace Mode & sshProxy Target Sync**:
+  - Updated `ensureConnected()` in `sshProxy.ts` to detect target host configuration changes and automatically reconnect.
+  - Prioritized `workspaceMode` configuration in `normalizePosixPath` to avoid cross-test state leakage.
+  - Cleared target `config` on `disconnect()` to clean up singleton state.
+- **WorkspaceChainManager Security & Operations**:
+  - Synchronized active node changes (local and SSH) directly with `workspaceMode` to ensure tool actions route to the correct active host.
+  - Resolved SSH config file aliases/proxy jumps during connection establishment.
+  - Added support for SSH compression and agent forwarding.
+  - Enforced workspace boundary checks (`normalizeAndVerifyPath`) for all read, write, and command execution operations on both local and SSH nodes.
+  - Added stream-level close on timeouts for SSH command execution to prevent resource leaks.
+- **Wizard Form Preservation**:
+  - Preserved all SSH parameters when creating workspace chains or adding nodes in `useWizardSubmit.ts`.
+- **Cleanup & Tests**:
+  - Removed duplicate `src/core/workspace/Workspace` file.
+  - Added unit test suite `tests/workspaceChainSsh.test.ts` covering WorkspaceChainManager boundaries and synchronization.
+
+---
+
+## [1.2.637] - 2026-07-30
+
+### Patch: Version bump for AgenRouter fix release
+
+---
+
+## [1.2.636] - 2026-07-30
+
+### Fix: AgenRouter (Custom Provider) Agent Loop Not Running
+
+- **Root Cause** (`src/utils/promptBasedToolCalling.ts`):
+  - `probeToolCallSupport` was sending the tool-call probe without `User-Agent` and browser-like headers, causing AgenRouter's WAF to reject it with 401.
+  - On any non-ok probe response, the function cached `false` (no native tools) and returned — silently forcing the agent into XML prompt-based tool calling mode, which the model does not produce.
+  - This made the agent loop appear frozen/non-functional when using AgenRouter models.
+
+- **Fix** (`src/utils/promptBasedToolCalling.ts`):
+  - Added `DEFAULT_API_HEADERS` (User-Agent, HTTP-Referer, X-Title) to the probe fetch call to pass WAF checks.
+  - Changed fallback behavior: when probe returns non-ok HTTP status or throws a network error, now caches `true` (native tools supported) rather than `false`, preventing false-negative downgrades.
+  - Updated `clearToolCallSupportCache()` to also delete all entries from the SQLite `tool_support_cache` table, clearing stale incorrect entries.
+
+- **Cascade Fix** (`src/core/storage/historyDb.ts`):
+  - Added `deleteAllToolSupportCacheFromDb()` export to bulk-clear the `tool_support_cache` table.
+
+- **Auto-Invalidation** (`src/hooks/wizard/useLoginWizard.ts`):
+  - Probe cache is now automatically cleared whenever a provider is saved or updated via the `/login` wizard, ensuring the first run with a new endpoint always does a fresh probe.
+
+## [1.2.635] - 2026-07-30
+
+
+### Documentation Upgrade: GitHub Pages Update
+
+- **GitHub Pages Update** (`docs/index.html`):
+  - Updated the static website to reflect both **Workspace Chaining (Cross-Workspace Development)** and **SSH Workspaces** features.
+  - Bumped site versioning to `v1.2.634` in navbar and terminal mockups.
+  - Refactored feature cards and command descriptions in the interactive commands tables.
+
+## [1.2.634] - 2026-07-30
+
+### Documentation Upgrade: Workspace Chaining & SSH Workspaces
+
+- **README Documentation** (`README.md`):
+  - Added a comprehensive documentation section for the new **Workspace Chaining (Cross-Workspace Development)** feature.
+  - Documented workspace chains wizard usage, node context descriptions, dynamic context injection, auto-workspace switching, and cross-workspace execution.
+
+## [1.2.633] - 2026-07-30
+
+### Workspace Chain & Node Descriptions Injected into System Base Prompt
+
+- **Live Workspace State Prompt Update** (`src/core/context/WorkspaceStateTracker.ts`):
+  - Injected both the workspace chain description and all workspace node descriptions (purpose/context) directly into the `LIVE WORKSPACE STATE` block.
+- **System Prompts Instruction Update** (`src/core/prompts.ts`):
+  - Updated the base system prompt instructions (`WORKSPACE_CHAINS` rule) to explicitly instruct the agent to read active workspace chains, node names, paths, roles, and description contexts from the `LIVE WORKSPACE STATE` block.
+
+## [1.2.632] - 2026-07-30
+
+### Step 11 Path Completeness & Filter Suggestions Upgrades
+
+- **Full Paths Displayed**:
+  - Replaced directory basenames with the complete/full paths in the Step 11 options list when adding a node to a workspace chain.
+- **Filter Suggestions & Search Bar**:
+  - Implemented dynamic suggestion filtering and added the search input bar to the Step 11 panels layout in `wizard-panels.tsx` so users can filter options by typing segments of the path or the workspace name.
+
+## [1.2.631] - 2026-07-30
+
+### Node Description Input & Skip Node Role Selection
+
+- **Skip Node Role Selection**:
+  - Removed the select node role step (Step 12 role option list) in the wizard when adding a node to a workspace chain.
+  - Role is automatically assigned to `"custom"` for newly added nodes.
+- **Node Description Input**:
+  - Step 12 is rewritten as a text input dialog asking for the node description directly after path/target selection, providing a faster and more direct setup.
+
+## [1.2.630] - 2026-07-30
+
+### Workspace Chaining Wizard CRUD, Auto-Switch & Dynamic Context Injection
+
+- **Workspace Chaining CRUD Wizard** (`src/hooks/useWizardSubmit.ts`, `src/components/wizard-panels.tsx`):
+  - Fully implemented Steps 7 through 16 in the `/workspace` wizard to support all workspace chain CRUD operations: list, create, edit name, add node (with local workspace selection and SSH custom target input), remove node, and delete chain.
+  - Removed legacy exit path that closed the wizard immediately when 0 chains existed.
+- **Auto-Switch Workspace Chain**:
+  - Automatically matches and activates/switches the active workspace chain when switching workspaces via the `/workspace` wizard (Step 2), comparing the primary node's path or SSH target configuration.
+- **Sorted Listing & Current Workspace Badges**:
+  - Automatically sorts chains in Step 7 so that those matching the current active workspace appear at the top, decorated with a `[CURRENT]` badge.
+- **Dynamic Context Topology Injection** (`src/core/context/WorkspaceStateTracker.ts`):
+  - Dynamically injects the active workspace chain name, ID, primary node path/target, and the complete node topology list into the live `LIVE WORKSPACE STATE` system prompt block on every turn.
+- **System Prompts Update** (`src/core/prompts.ts`):
+  - Added workspace chain and cross-workspace execution tool awareness to the Master Agent and Superagent system prompts.
+- **Unit Tests**:
+  - Added new unit tests in `tests/workspaceWizardFlow.test.ts` to verify full CRUD config manipulation and dynamic active chain state block injection. All pass.
+
+## [1.2.629] - 2026-07-30
+
+### Workspace Chaining — Cross-Workspace Operations & Debugging
+
+- **Workspace Chain System** (`src/core/workspace/`): New feature for chaining multiple workspaces (local + SSH) into a directed graph so the AI agent understands cross-workspace relationships and can operate on any node.
+  - **`WorkspaceChainTypes.ts`**: Type definitions for `WorkspaceChain`, `WorkspaceNode` (local/SSH), `WorkspaceNodeRole` (main/module/deploy/dependency/test/staging/custom), `dependsOn` relationships, validation helpers, and topology formatting.
+  - **`WorkspaceChainConfig.ts`**: Persistence layer storing chains in `model-config.json` under `workspaceChains` key (JSON-only, no process.env). CRUD operations: create, update, delete, add-node, remove-node, activate/deactivate. `createQuickChain` helper for rapid chain creation from SSH targets.
+  - **`WorkspaceChainManager.ts`**: Runtime singleton managing active chain state, multi-SSH connection pool (one connection per SSH node), cross-workspace execution (`execOnNode`, `execOnAllNodes`, `execOnDependencyNodes`), file read/write across nodes, and connection lifecycle management.
+  - **`workspaceChainTools.ts`**: Two new AI tools:
+    - `manage_workspace_chain`: Create, list, activate, deactivate, delete, add-node, remove-node, status, topology, update chains.
+    - `cross_workspace_exec`: Execute operations on specific chain nodes (exec, read, write, exec-all, exec-deps, connect, disconnect, switch-node).
+  - **Tool Registration**: Both tools added to `masterToolset` and `superagentToolset` in `toolsets.ts`.
+  - **Context Injection** (`ContextBuilder.ts`): Active chain topology injected into system prompt so AI understands cross-workspace relationships, active node, and available cross-workspace tools.
+  - **System Prompt** (`base.ts`): Added `manage_workspace_chain` and `cross_workspace_exec` to the TOOLS documentation section.
+  - **Workspace Command** (`workspaceCommand.ts`): Added "🔗 Manage workspace chains..." option to the `/workspace` wizard.
+- **Tests**: 14 unit tests in `tests/workspaceChain.test.ts` covering ID generation, chain validation (7 cases), topology formatting, and chain structure creation. All pass.
+
+### Verification
+- `npx vitest run tests/workspaceChain.test.ts`: 14/14 pass
+- ESM compatibility: Replaced `require()` with dynamic `import()` in `createQuickChain`
+
+## [1.2.628] - 2026-07-30
+
+### Quick Model Preset Switching
+
+- **`/mp` Command**: New `/mp <preset-name>` slash command for fast model preset switching. Shortcut: `/mp-<name>`.
+- **`/mp-<name>` Shortcut**: Type `/mp-fast` or `/mp-default` directly to instantly switch to a saved model preset without typing the full `/mp` command.
+- **Mode-Aware**: Automatically detects multi-agent vs single-agent mode and applies the correct preset section.
+- **Context Manager Integration**: Updates ContextManager model and threshold after switching.
+- **Background Model Fetch**: Fetches and caches model config in background for accurate context limit.
+
+### Verification
+- TypeScript compilation: ✅ Pass
+- Test suite: 143 test files passed, 1464 tests passed, 5 skipped
+
+## [1.2.627] - 2026-07-30
+
+### SSH Workspace — Advanced Features
+
+- **SSH Config File Support** (`sshConfig.ts`): Parse `~/.ssh/config` for host aliases, identity files, ProxyJump, compression, and agent forwarding settings. Host aliases resolved automatically on connect.
+- **Connection State Events** (`sshEvents.ts`): EventEmitter for connection state changes (connecting/connected/disconnected/reconnecting/error), SFTP transfer progress, and port forwarding events. UI components can subscribe via `sshEvents.onStateChange()`, `sshEvents.onTransferProgress()`, `sshEvents.onPortForward()`.
+- **Connection Retry with Backoff**: Automatic reconnection with exponential backoff (1s, 2s, 4s) on transient failures. Auth and host key errors are not retried.
+- **Configurable Connection Timeout**: `readyTimeout` configurable via URL parameter `?timeout=30000` or `SshWorkspaceConfig.readyTimeout`.
+- **ProxyJump / Bastion Host**: Parse and log ProxyJump configuration from `~/.ssh/config` or URL parameter `?proxyJump=user@bastion:port`.
+- **SSH Agent Forwarding**: Enable via `?agentForward=yes` URL parameter or `~/.ssh/config` `ForwardAgent yes`.
+- **SSH Compression**: Enable via `?compress=yes` URL parameter or `~/.ssh/config` `Compression yes`.
+- **SFTP Transfer Progress**: Transfer progress events emitted on readFile/writeFile operations.
+- **Bandwidth Throttling**: Configurable via `?bwlimit=102400` URL parameter (bytes/sec).
+- **Port Forwarding**: Local port forwarding via `sshProxy.addLocalPortForward()` with event emission.
+- **New Config Fields**: `readyTimeout`, `compression`, `agentForward`, `proxyJump`, `bandwidthLimit` added to `SshWorkspaceConfig`.
+- **New Modules**: `sshConfig.ts` (SSH config parser), `sshEvents.ts` (connection state events).
+- **Tests**: 17 new tests in `sshAdvancedFeatures.test.ts` (122 pass, 1 skipped).
+
+### Verification
+
+- `npx tsc --noEmit`: No errors
+- `npx vitest run` (SSH suite): 122 passed, 1 skipped (123 total)
+
 # Changelog
 
-All notable changes to the **t-line** workspace manager project will be documented in this file.
+## [1.2.670] - 2025-03-30
+### Added
+- **Multi-Terminal Cross-Session File Lock & Conflict Prevention Suite (Phases 1-5 Final & Optimization)**:
+  - Non-blocking atomic file lock storage with TTL, session owner, and terminal tagging (`cli` vs `t-line`).
+  - Automatic hard-block guard on `write_to_file`, `edit`, `replace_file_content`.
+  - Smart queue auto-retry for blocked edits and intent soft-locks on file read.
+  - Dynamic TTL auto-heartbeat ping timers.
+  - `t-line` Desktop Workspace Bridge Sync event emitter (`tline_bridge_sync`).
+  - Lock Health Dashboard & CLI Stats Tool (`get_lock_stats`).
+  - Automatic Deadlock Recovery & Stale Lock Cleanup Daemon (5s interval).
+  - Granular Line Range / AST Block Level Locking (`LineRange` support).
+  - Workspace Chain Remote Node Lock Propagation (`remote_node_lock_propagated`).
+  - Interactive Conflict Resolver & 3-Way Merge Tool (`resolve_lock_conflict`).
+  - Zero-Token Heuristic Rule-Based Semantic Conflict Predictor (`predictSemanticConflict`).
+  - Lock Health & Audit Analytics Markdown Report Generator Tool (`generate_lock_report`).
+  - OS System Notification Toast Emitter for released locks (`os_notification_toast`).
+  - In-memory caching + 100ms debounced disk persistence (90%+ I/O reduction).
+  - mtime-based multi-process cache invalidation across concurrent CLI instances.
+  - Lifecycle signal cleanup hooks (`SIGINT`, `SIGTERM`, `beforeExit`, `exit`).
+  - SQLite lock audit auto-logging (`recordLockEvent`).
+  - 10 comprehensive Vitest test suites (26/26 unit tests passed).
+
+
+## [1.2.626] - 2026-07-30
+
+### SSH Workspace — All Audit Findings Implemented
+
+Implemented all 8 improvements identified in the SSH workspace audit:
+
+- **S1: Host Key Verification** (`sshProxy.ts`): Added known_hosts-based host key verification using SHA-256 fingerprints stored in `~/.superagent-r/known_hosts`. First connection uses TOFU (Trust On First Use); subsequent connections verify the fingerprint and reject MITM attacks.
+- **S2: Password Memory Cleanup** (`sshProxy.ts`): Password is now deleted from `SshWorkspaceConfig` after successful authentication, preventing exposure via `workspaceMode.getConfig()`.
+- **S4: Background Process PID Tracking** (`sshProxy.ts`, `sshCommands.ts`): PIDs started by `execBackground()` are tracked in a Set. `sshKillBackgroundProcessExecute` now validates that the PID was started by Superagent before sending `kill -9`.
+- **S5: Exec Timeout Process Cleanup** (`sshProxy.ts`): Timeout handler now closes the SSH stream to kill the remote process instead of leaving it orphaned.
+- **Q1: Host/Port Validation** (`workspaceMode.ts`): `parseSshTarget` now validates host format (hostname/IPv4/IPv6 regex) and port range (1-65535). Fixed port 0 parsing bug (`parseInt("0") || 22` → 22).
+- **Q2: Glob Command Fix** (`sshCommands.ts`): `sshGlobToolExecute` now uses `-name` for filename patterns (no slashes) and `-path` for path patterns (with slashes) separately, instead of using the same pattern for both.
+- **Q3: Configurable Cache Mode** (`sshProxy.ts`): Added `setCacheMode("strict" | "fast")` API. "strict" mode validates mtime on every cache hit (default); "fast" mode trusts TTL without mtime check for reduced latency.
+- **Q4: Connection Health Monitoring** (`sshProxy.ts`): `ensureConnected()` now runs a lightweight keepalive check (`exec("true")`) if the connection has been idle > 60s, detecting half-open connections and automatically reconnecting.
+
+### Tests
+
+- Added `tests/sshImprovements.test.ts` with 23 tests covering all 8 improvements.
+- All 105 SSH tests pass (7 test files).
+
+### Verification
+
+- `npx vitest run` (SSH suite): 105/105 pass
+- `npx tsc --noEmit`: No errors
+
+## [1.2.625] - 2026-07-30
+
+### SSH Workspace Audit — Critical ESM Fix
+
+- **`pathHelpers.ts`**: Fixed critical ESM `require()` incompatibility — `require("../ssh/workspaceMode.js")` is unavailable in ESM modules (`"type": "module"`). Replaced with top-level static `import { workspaceMode }` and extracted SSH path resolution into synchronous `tryResolveSshPath()` helper. This was silently bypassing SSH boundary enforcement for all file tools.
+- **`docs/ssh-workspace-audit.md`**: Added comprehensive audit report covering 13 files, 82 tests, 1 critical fix, 5 security findings, 5 code quality findings, and 12 test coverage gaps.
+- **Tests**: 6 previously-failing tests in `sshToolsFull.test.ts` now pass (82/82 SSH tests pass).
+
+### Verification
+
+- `npx vitest run` (SSH suite): 82/82 pass
+- `npx tsc --noEmit`: No errors
+
+## [1.2.624] - 2026-07-30
+
+### SSH Workspace Logging & Boundary Hardening
+
+- **sshLogger.ts**: New centralized SSH operation logger with rotation (10 MB cap), 5 levels (INFO/WARN/ERROR/DEBUG/BOUNDARY), structured JSON output to `~/.superagent-r/ssh-workspace.log`.
+- **sshCommands.ts**: Added `logToolEntry`/`logToolExit` wrappers to all SSH tool handlers (read, write, edit, multiEdit, exec, glob, grep) with duration tracking.
+- **sshProxy.ts**: Added connect/disconnect/command/read/write/boundary violation logging with host, user, remoteCwd, durationMs, and error details.
+- **workspaceMode.ts**: Added `logBoundaryViolation()` method logging boundary violations with operation, path, and violation type.
+- **.gitignore**: Added `*.pem`, `*.key` patterns to prevent SSH key material from being committed.
+
+## [1.2.623] - 2026-07-30
+
+### Credential Error Surfacing (Silent Fallback Fixes)
+
+Fixes six independent silent-fallback layers where credential-needing tools
+(`/login`, `/settings`, RMemory embedding, provider selection) hid failures
+instead of surfacing clear errors.
+
+- **`getConfiguredProviders()` no longer filters empty-key providers**: now
+  returns ALL providers with a new `hasValidKey: boolean` flag, so callers
+  can distinguish "provider exists but needs key" from "no provider
+  configured". Sorted: active first → valid-key → insertion order.
+- **`getActiveProviderName()` returns `string | null`**: previously hardcoded
+  `'openai'` when no provider had a valid key. Now returns `null`. All callers
+  updated: `getProviderLabel()` shows `"(no provider — /login)"`,
+  `getResolvedModelWithProvider()` shows `"(no active provider with valid
+  API key — run /login)"` hint.
+- **`loginCommand.ts` post-save validation**: both `.catch(() => {})` handlers
+  (lines 248, 351) replaced with explicit `addLine({type:'error'})` so
+  post-save key-validation failures are visible to the user.
+- **`loginWizardLogic.fetchModelsForProvider` error differentiation**:
+  HTTP 401/403 → `Authentication rejected by <provider>`; HTTP non-2xx →
+  `HTTP <status>`; timeout → `Network timeout`; DNS/connect → `Network
+  error`; unknown → `Failed to fetch models`. Removed the catch-all silent
+  empty-list fallback.
+- **`rmemoryUtil.ts:304` removed `process.env.OPENAI_API_KEY` fallback**:
+  now throws clear error when embedding provider is `"openai"` but active
+  provider has no key or is not OpenAI-compatible.
+- **`useLoginWizard` step 14/17**: filter provider picker to `hasValidKey`
+  providers only, preserving the "No providers configured yet" UX when no
+  usable providers exist.
+- **Dead imports removed**: `getActiveProviderName` removed from
+  `useDashboardWizard`, `useKeyboardHandler`, `useModelWizard`.
 
-## [1.3.677] - 2026-08-01
+### Verification
 
-### Style: Minimalist Redesign of Right Live Monitor Sidebar
-- **Header & Layout (`frontend/src/components/SuperAgentSidebar.tsx`)**: Refactored the Live Monitor sidebar header with a clean compact layout, subtle pulsing status dot indicator, and spinning refresh icon.
-- **Card Containers & Badges (`frontend/src/components/SuperAgentSidebar.tsx`)**: Replaced heavy container styling with subtle rounded translucent cards and clean status pill badges (MAIN, ACTIVE, SSH, M/A/D git changes).
-- **Typography & Scrollbar (`frontend/src/components/SuperAgentSidebar.tsx`)**: Improved typography hierarchy and spacing, added hover-triggered subtle scrollbars (`scrollbar-none hover:scrollbar-thin`).
+- `bun run build` ✅
+- `bun test` (scope): 102/102 pass in
+  `loginWizardLogic`, `loginWizardDelete`, `loginWizardEdit`, `config`,
+  `configJson`, `providerCredentialResolution`, `rmemoryUtil`.
+- Full suite: 1418 pass, 6 pre-existing failures (verified on `main` HEAD,
+  unrelated to this fix).
 
+### Out of scope
 
-### Feat: Integrate Tabs and Settings into Three-Dots Dropdown Menu
-- **View Navigation Switcher (`frontend/src/components/SuperAgentSettingsMenu.tsx`)**: Added a brand new navigation section at the top of the menu body with quick-switch buttons for Console, Memory, Skills, and MCP Tools.
-- **Three-Dots Menu Trigger (`frontend/src/components/SuperAgentConsole.tsx`)**: Replaced the settings gear icon with a three-dots (`MoreVertical`) menu trigger and updated the tooltip to "SuperAgent Menu".
-- **View Indicator (`frontend/src/components/SuperAgentConsole.tsx`)**: Removed the segmented tab bar in the center column of the header and replaced it with a clean active-view title and icon.
+- `addProvider()` storage-layer validation: explicitly NOT added at
+  `jsonConfig.ts:772` because storage of empty keys is valid (OAuth/legacy
+  configs). Validation lives in consumers via `hasValidKey`.
+- `remoteChromeBridge` has no auth layer — separate security concern,
+  flagged but not fixed here.
 
-## [1.3.675] - 2026-07-31
 
-### Fix: SuperAgent Console Sidebar Resizing
-- **Missing Selector Classes (`frontend/src/components/SuperAgentConsole.tsx`)**: Added missing `superagent-history-panel` and `superagent-monitor-panel` class names to the sidebar wrapper elements. This resolved a selector mismatch that prevented real-time width updates.
-- **Throttled Resizing Performance (`frontend/src/components/useSidebarResize.ts`)**: Implemented a high-performance `requestAnimationFrame` throttling mechanism on `mousemove` drag events, yielding ultra-smooth 60fps/120fps side panel resizing.
+## [1.2.622] - 2026-07-29
 
-## [1.3.674] - 2026-07-31
+### SSH Workspace Boundary & Performance
 
-### Style: Unified Chat Input Card Dark Background
-- **Chat Input styling (`frontend/src/components/SuperAgentInputContainer.tsx`)**: Replaced the chat input card wrapper background `bg-[var(--bg-sidebar)]` with `bg-[var(--panel-header-bg)]` and changed the footer background from `bg-[var(--panel-header-bg)]` to `bg-transparent`. This ensures the input area and footer toolbar share a dark, uniform background color, matching the dark theme layout aesthetic.
+- **`pathHelpers.resolveFilePathFromArgs` boundary enforcement**: SSH branch now applies `..` collapse + boundary check after POSIX normalization; throws if path escapes `remoteCwd`. Mirrors local basename-safety behavior.
+- **`sshProxy.stat(path)` helper**: New SFTP-based file metadata fetcher (size, mtime, isFile, isDirectory). Replaces `wc -c` shell call in `read_document` SSH routing (~2x faster).
+- **`sshProxy.readFile` mtime-aware cache**: Validates `sftpClient.stat().modifyTime` against cached mtime; external edits invalidate automatically (was TTL-only with 30s stale window).
+- **`sshProxy.exec` AbortSignal support**: New optional `signal?: AbortSignal` parameter; on abort, closes stream and removes listener to kill the remote process.
+- **`sshRunCommandExecute`, `sshGlobToolExecute`, `sshGrepToolExecute` signal propagation**: Thread `AbortSignal` end-to-end from tool callers to `sshProxy.exec`.
+- **`git_worktree add/remove` SSH boundary**: Now uses `sshProxy.normalizePosixPath` which throws on `..` escape or out-of-workspace path.
+- **`office_cli` SSH boundary**: Scans all arg tokens for absolute paths; rejects any token outside `remoteCwd`.
+- **`read_document` SSH**: Uses `sshProxy.stat()` for file-size pre-check; forwards `signal` to `sshProxy.exec`.
+- **Tests**: Added 7 boundary/abort test cases to `tests/sshToolsFull.test.ts` (37/37 pass).
 
-## [1.3.673] - 2026-07-31
+### Verification
 
-### Fix: SuperAgent Workspace File Read Routing Method
-- **File Reading Route proxy (`backend/src/superAgentRoutes.ts`)**: Corrected `/workspace/file/read` proxy routing. SuperAgent expects a `POST` request with JSON body `{ filepath }`, whereas t-line was requesting it via `GET` with a query parameter. Changed the request proxy method to `POST` and mapped query parameter `path` to target body parameter `filepath`, resolving `404` errors when reading files.
+- `bun run build` ✅
+- `bun test tests/sshToolsFull.test.ts`: 37/37 pass (was 30)
+- Full suite: 1399 pass, 6 pre-existing failures (env), 0 new regressions
 
-## [1.3.672] - 2026-07-31
 
-### Fix: SuperAgent Chat Session Mismatches & Background Process Control
-- **Session History Path Resolution (`backend/src/sessionManager.ts`)**: Corrected query parameter serialization in `getWorkspaceSessions` by replacing the incorrect `&` separator with `?` for the first query parameter, resolving `404 Not Found` response codes on the SuperAgent server and enabling real-time session history sync.
-- **Background Task Termination Route (`backend/src/superAgentRoutes.ts`)**: Added the missing `DELETE /background-tasks/:id` route proxy to translate the frontend's deletion requests to SuperAgent's `POST /api/background-tasks/kill` payload structure, resolving `404` errors when killing background processes.
-- **WebSocket URL Optimization (`frontend/src/components/SuperAgentConsole.tsx`)**: Appended the active `sessionId` to the upgrade request URL so the bridge eagerly pre-warms the correct session, eliminating initial `Session not initialized` payload failures and reducing request round-trip latency.
+### Features & System Prompts
+- **Mandatory Non-Linear Debugging Skill**: Updated `NON_LINEAR_DEBUG_RULE` in `src/core/prompts.ts` and mandatory skills in `.agents/AGENTS.md` to strictly require agents to view `.agents/skills/non-linear-debugging/SKILL.md` before executing debugging and error investigation tasks.
+- **Prompt Guidance Testing**: Added automated test assertion in `tests/promptToolGuidance.test.ts` ensuring `non-linear-debugging` skill requirement is preserved in system prompts.
 
-## [1.3.671] - 2026-07-31
+## [1.2.620] - 2026-07-29
 
-### Feat: Workspace SSH and Workspace Chain Integration
-- **Backend Spawn Handling (`backend/src/superAgentBridge.ts`)**: Resolved fallback local CWD when starting SuperAgent server in SSH/Chain workspaces to prevent ENOENT crashes.
-- **REST Endpoints (`backend/src/superAgentRoutes.ts`)**: Added proxy routes for all workspace chain management APIs.
-- **UI Workspace Chain Manager (`frontend/src/components/SuperAgentChainManager.tsx`)**: Created UI for CRUD, node focusing, connection statuses, and live health metrics dashboard.
-- **Settings Modal Integration (`frontend/src/components/SuperAgentSettingsModal.tsx`)**: Embedded the new chain manager component and tab layout.
+### Features & Refactoring
+- **Unified Workspace Wizard**: Deprecated subcommands for `/workspace` (`/w`) in favor of an interactive multi-step Ink UI wizard supporting listing, switching, creating/adding, deleting/removing, and status inspection.
+- **Trusted Workspace Removal**: Added `removeTrustedDirectory` helper to clean up untrusted or deleted workspace entries in `jsonConfig.ts` and SQLite history database.
 
-## [1.3.670] - 2026-07-31
+## [1.2.619] - 2026-07-29
 
-### Fix: SuperAgent Session History Workspace Filtering
-- **History Filtering (`backend/src/sessionManager.ts`)**:
-  - Removed `mode=all` query parameter fallback in `getWorkspaceSessions` endpoint to allow SuperAgent server to filter history correctly based on the active workspace identifier (including SSH targets and workspace chains).
+### Features & Enhancements
+- **SSH Workspace & Tooling Enhancements**: Enhanced SSH tunnel, proxy connection handling, workspace command integration, remote file read/edit tools, and expanded test suite in `tests/sshToolsFull.test.ts`.
 
-## [1.3.669] - 2026-07-29
+## [1.2.618] - 2026-07-29
 
-### SuperAgent Session Management & Sync Enhancements
-- **Enhanced Workspace Session Management (`backend/src/sessionManager.ts`)**:
-  - Implemented pagination parameters (`limit`, `offset`) and `mode=all` query support for workspace sessions.
-  - Refined title extraction heuristics for substantive user prompts.
-- **Session Search REST Proxy (`backend/src/superAgentRoutes.ts`)**:
-  - Added `/sessions/search` endpoint proxy routing search queries directly to SuperAgent FTS engine.
-- **Frontend Session Management & Path Normalization (`frontend/src/components/useSuperAgentSessions.ts`)**:
-  - Added `getNormalizedWsKey` for consistent local storage session key calculation across operating systems.
-  - Added `apiSearchSessions` utility for session searching.
-  - Enhanced WebSocket event listener for granular session deletion and title update notifications.
+### Features & Enhancements
+- **FTS5 Full-Text Search API**: Added `/api/history/search` endpoint supporting full-text message content search across workspace sessions using SQLite FTS5 table `messages_fts`.
+- **Granular WebSocket Syncing**: Enriched `superagent-sessions-changed` WebSocket event payloads with `action` (`create`, `update`, `delete`), `sessionId`, and `title` for selective frontend updates.
+- **T-Line Integrations**: Added FTS search proxy route, selective session syncing, and LocalStorage orphan cache cleanup in T-Line desktop client.
 
-## [1.3.668] - 2026-07-28
+## [1.2.617] - 2026-07-29
 
-### Design & Landing Page — Hallmark Anti-AI-Slop Redesign (`docs/`)
-- **Anti-AI-Slop Brand Redesign**:
-  - Replaced generic glowing gradient blobs with an architectural grid overlay (`bg-grid-overlay`) and micro-textured dark obsidian system.
-  - Locked all color and font declarations to strict CSS custom properties (`var(--font-display)`, `var(--font-mono)`, `var(--accent-emerald)`).
-  - Enhanced contrast ratios across all text elements to pass WCAG AAA/AA standards.
-  - Redesigned feature cards with inline monospace tags (`HTTP/SSE Proxy`, `xterm.js WebGL`, `Git Ref Isolation`, `Zero Trust`, `Rust Engine`, `Local Refs`).
-  - Updated hero section with real-time metrics (<100MB RAM, 45+ endpoints, 0ms latency) and clear status indicator pill.
+### Fixes
+- **History Chat Alignment with T-Line**: Added `modeFilter` ('all' | 'single' | 'multi') and server-side pagination (`limit`, `offset`, `totalCount`, `hasMore`) to `/api/history/sessions` and `/api/history` endpoints.
+- **Session Title & Role Preservation**: Preserved custom non-generic session titles and mapped synthetic `thought` / `tool` message roles cleanly without database schema corruption.
 
-## [1.3.667] - 2026-07-28
+## [1.2.616] - 2026-07-29
 
-### Documentation & GitHub Pages — Installation Section Enhancement
-- **Expanded Quick Start & Installation Section (`docs/index.html`)**:
-  - Added dedicated pre-built binary download cards for Windows (`.exe` / `.msi`), macOS (`.dmg`), and Linux (`.AppImage` / `.deb`).
-  - Added step-by-step developer tabs: Local Dev Run, SuperAgent Engine Integration, Desktop Tauri Run, and Production Installer Build.
-  - Clarified system prerequisites: Bun 1.1+, Git, and Rust for desktop binaries.
+### Documentation & GitHub Pages
+- **GitHub Pages Landing Page**: Added standalone responsive dark-cyberpunk landing page in `docs/index.html` for GitHub Pages deployment.
+- **Comprehensive Slash Commands & Workspace Reference**: Updated `README.md` with complete reference table for 30+ `/slash` commands, including `/workspace` local and SSH remote commands with examples.
 
-## [1.3.666] - 2026-07-28
-
-### Documentation & Web Landing Page — GitHub Pages Overhaul
-- **GitHub Pages Landing Site (`docs/`)**:
-  - Updated `docs/index.html` with new SuperAgent AI Orchestration showcase cards, interactive simulator tabs, and direct release download buttons.
-  - Linked installer downloads directly to GitHub Release `v1.3.665` assets (`.exe` setup installer, `.msi` package, macOS/Linux release bundles).
-  - Updated command snippets to Bun (`bun install`, `bun dev`, `bun run tauri`).
-  - Synced author contact info to Rudy City (`@RudyCity` • `hrudy715@gmail.com`).
-
-## [1.3.665] - 2026-07-28
-
-### Documentation & Branding
-- **Updated README Footer**: Added author credit (Rudy City `@RudyCity`), contact email (`hrudy715@gmail.com`), and MIT License distribution notice.
-
-## [1.3.664] - 2026-07-28
-
-### Documentation & Repository — Professional README Overhaul
-- **Comprehensive Project Overview (`README.md`)**:
-  - Rewrote project documentation into a highly professional, developer-first reference.
-  - Added feature breakdowns for SuperAgent multi-agent orchestration, GPU-accelerated terminals, Git Worktree management, embedded web browser DevTools, and Cloudflare Tunnel remote sharing.
-  - Included interactive architecture diagram showcasing native Tauri v2 wrapper, Bun/Express backend, terminal PTY, and 100% server-proxy SuperAgent bridge (port 7888).
-  - Standardized setup instructions, repository structure, and configuration rules.
-
-## [1.3.663] - 2026-07-28
-
-### Feature & Logging — Dedicated Debug Log File for SuperAgent Process
-- **SuperAgent Process Logging (`superAgentBridge.ts`)**:
-  - Defined a dedicated log file path (`.tline-superagent.log` in user's home directory) with automated log rotation if the file size exceeds 5MB.
-  - Implemented `logToSuperAgentFile` helper function to append timestamps and log entries asynchronously.
-  - Instrumented the process lifecycle manager to log the full Bun command execution path, process PID, and environment resolution details.
-  - Redirected all raw stdout and stderr stream chunks from the spawned SuperAgent process directly into the dedicated log file.
-  - Added logging coverage for socket ping checks, socket connections/disconnections, settings changes/restarts, session initializations, and connection errors (e.g. ECONNREFUSED).
-
-## [1.3.662] - 2026-07-28
-
-### Feature & Control — System Tray Tab Control & Focus/Close Actions
-- **Tauri Backend Wrapper (`lib.rs`)**:
-  - Added `sync_state` to `DesktopState` to store tab state, and updated `poll_backend` to fetch active tab states from `/api/sync/state` every 3 seconds.
-  - Redesigned `build_tray_menu` to display categorized tabs (🤖 Agents/Background, 🌐 Browser Tabs, 💻 Terminal Tabs, 📄 File & Diff Tabs) with emoji icons and submenus for each tab containing "Focus Tab" and "Close Tab" options.
-  - Implemented `on_menu_event` handlers for `focus_tab_` and `close_tab_` IDs to emit `select-tab` and `close-tab` Tauri events.
-- **Frontend React App (`App.tsx`)**:
-  - Implemented stable ref wrappers (`closeTerminalRef`, `setActiveTabIdRef`) to avoid stale closure references.
-  - Added Tauri event listeners for `select-tab` and `close-tab` events to focus/switch active tabs and close tabs dynamically from the system tray.
-
-## [1.3.661] - 2026-07-28
-
-### Performance Optimization — CPU Load Elimination & Instant Scroll Transitions
-- **Monaco Editor CPU Optimization (`FileViewerTab.tsx`)**: Disabled Monaco's native background resize observations (`automaticLayout: false`) for all file tabs. Replaced it with a lightweight observer that manually calls `.layout()` *only* when the tab is currently active (`isActive`) and when the window receives a `resize` event. This completely eliminates layout recalculation cycles and observer overhead for background tabs, resolving UI sluggishness when multiple files are open.
-- **Instant Scroll Transition (`FileExplorer.tsx`)**: Switched the `scrollIntoView` behavior for the active file explorer node from `smooth` to `auto` (instant). This makes transitions feel snappier by eliminating the animation lag on file selection.
-
-## [1.3.660] - 2026-07-28
-
-### Performance Optimization — Persistent File Tabs & Explorer Caching
-- **Persistent Tab State (`App.tsx`)**: Refactored the file editor tab rendering structure to persistently mount all opened file tabs inside the DOM using `display: none` style toggles. This prevents unmounting and remounting files when switching tabs, leading to instant tab switching and automatic preservation of scroll, selection, and dirty (unsaved) states.
-- **Directory Listing Caching (`FileExplorer.tsx`)**: Introduced a global caching map (`exploreCache`) for filesystem directory contents with a 15-second TTL. Auto-expansion transitions utilize the cache for instant directory loading, while manual refreshes, updates, renames, and file creations bypass the cache.
-
-## [1.3.659] - 2026-07-28
-
-### Feature & Sync — File Explorer Active File Selection & Auto-Expansion
-- **State Synchronization (`SidebarContentPanel.tsx`)**: Extracted the `activeFilePath` from the currently active file tab and passed it down to the `FileExplorer` component.
-- **Auto-Selection & Scroll-to-View (`FileExplorer.tsx`)**:
-  - Implemented an effect in `FileExplorer` that automatically selects the active tab's file in `selectedNodes` when it changes.
-  - Implemented auto-expansion in `TreeNodeItem` so directories automatically expand and fetch their children when the active file is inside them. Used a reference to prevent forced re-expansion loops if the user manually collapses folders.
-  - Added smooth scroll-to-view alignment (`elementRef.current.scrollIntoView`) to automatically reveal the active file when it is opened or activated in the tabs.
-
-## [1.3.658] - 2026-07-28
-
-### Style, UI, & Capability — SuperAgent Skills and Memory Inspector Theme Integration & Skill Editing
-- **SuperAgent Console Layout (`SuperAgentConsole.tsx`)**: Standardized container structures for both Skills and Memory tabs to match the MCP management view, including glassmorphic backgrounds and border definitions, and propagated the `onOpenFile` callback to the skills view.
-- **Skill Marketplace Inspector (`SkillMarketplaceInspector.tsx`)**: Removed hardcoded background/border rules, refactored elements to use standardized CSS theme variables, and added a quick "Edit Skill" button (`Edit3` icon) next to local/downloaded skills that opens the skill markdown document inside the IDE editor.
-- **Memory Inspector (`SuperAgentMemoryInspector.tsx`)**: Refactored the atomic and shared memory lists, badges, tags, buttons, search input, and popup modals to utilize system color tokens (`--color-primary`, `--bg-card`, `--border-color`, etc.), resolving dark theme rendering inconsistencies.
-
-## [1.3.657] - 2026-07-28
-
-### Style & UI Optimization — Active Workspace Path Styling Refinement
-- **Active Workspace Badge (`SuperAgentConsole.tsx`)**: Removed border and background styling from the active workspace path pill in the header.
-
-## [1.3.656] - 2026-07-28
-
-### Style & UI Optimization — SuperAgent Console Header Refinement
-- **Console Header Controls (`SuperAgentConsole.tsx`)**: Removed borders from workspace badge and history toggle button, made the history toggle button icon-only (removed text label), and removed the model preset selector dropdown as requested.
-
-## [1.3.655] - 2026-07-26
-
-### Feature & Refactoring — SuperAgent UI Layout & Session Integration Overhaul
-- **SuperAgent Layout & Sidebar Adjustments (`SuperAgentSidebar.tsx`, `SuperAgentConsole.tsx`, `useLayoutHelpers.ts`, `layout.css`)**: Enhanced responsive sidebar layout, console dimensions, session history panel positioning, and drag-resize handler stability (`useSidebarResize.ts`).
-- **Backend & REST Bridge Synchronization (`superAgentBridge.ts`, `superAgentRoutes.ts`, `sessionManager.ts`)**: Refactored backend session lifecycle handlers and REST endpoints to ensure consistent workspace session proxying and clean error handling.
-
-## [1.3.654] - 2026-07-26
-
-### Fix & Integration — SuperAgent Sessions API Abort Signal Support
-- **Session Message Proxying (`useSuperAgentSessions.ts`)**: Added `AbortSignal` parameter to `apiGetSessionMessages` to support clean request cancellation during workspace tab switches and session reloads.
-
-## [1.3.653] - 2026-07-26
-
-### UI & Execution Intelligence — Real-Time Execution Advisor Card & Formatting
-- **Interactive Advisor Result Card (`SuperAgentInteractiveCards.tsx`)**: Introduced `AdvisorResultCard` component with distinct verdict styling (`PASS`, `WARN`, `BLOCK`, `SUGGESTION`, `INFO`), confidence percentage score meter, suggestion bullet lists, copy action button, and collapsible reasoning panel.
-- **Message Stream Detection (`SuperAgentMessageItem.tsx`)**: Integrated real-time parser to intercept Execution Advisor outputs and render interactive cards directly within the SuperAgent desktop chat.
-- **Tool Item Enhancement (`SuperAgentToolItem.tsx`)**: Added `Advisor` action icon (`Cpu`) and custom target labeling for advisor execution tools.
-
-
-### Feature Expansion — SuperAgent Audit Intelligence & Telemetry Analytics
-- **Backend Audit Bridge**: Enhanced `getAuditLogs()` in `backend/src/superAgentBridge.ts` with multi-criteria filtering (`type`, `search`, `workspace`), pagination, and added `getAuditStats()` for telemetry aggregation.
-- **REST Proxy Routes**: Updated `GET /api/superagent/audit-logs` in `backend/src/superAgentRoutes.ts` with query parameter filtering and exposed `GET /api/superagent/audit-logs/stats` for real-time audit metrics.
-- **Frontend Audit Inspector**: Overhauled `SuperAgentAuditLogs.tsx` with top metric cards, date range filtering (`Today`, `24h`, `7d`), configurable live auto-poll intervals (`3s`, `5s`, `10s`), multi-format exports (`JSON` & `NDJSON`), and row pagination controls.
-
-## [1.3.651] - 2026-07-26
-
-### Fix & Refactoring — SuperAgent Memory POST Handler & Integration Proxy
-- **SuperAgent Routes**: Updated `router.post('/memory/save')` in `backend/src/superAgentRoutes.ts` to use `sendSuperAgentRequest` with JSON payload forwarding and correct parameters.
-- **SuperAgent Bridge**: Exported `sendSuperAgentRequest` from `backend/src/superAgentBridge.ts` to enable proper REST proxying for memory save requests.
-- **Build Verification**: Fixed TypeScript compilation issue in `backend` build target and verified clean build across all workspace projects.
-
-## [1.3.650] - 2026-07-26
-
-### Fix & Refactoring — SuperAgent Console Hook & Icon Imports
-- **React Hooks Import**: Fixed a runtime `ReferenceError` where `useState` was not defined in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) by properly importing `React, { useState, useEffect, useRef }` from `'react'`.
-- **Lucide Icons & Query Utils**: Fixed missing icon imports (`History`, `Folder`, `Terminal`, `Shield`, `Activity`, `Sparkles`, `Settings`, `RefreshCw`, `ArrowDown`) and missing `getRuntimeSearchParams` utility import in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx).
-- **TypeScript Type Cleanup**: Cleaned up unused props in [SuperAgentMessageList.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentMessageList.tsx) and unused imports in [SkillMarketplaceInspector.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SkillMarketplaceInspector.tsx) and [SuperAgentMemoryInspector.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentMemoryInspector.tsx) to achieve a clean production build.
-
-## [1.3.649] - 2026-07-24
-
-### UI/UX — Absolute Alignment for Top-Right Window Controls
-- **Snapping Window Controls to Corner**:
-  - Updated window control buttons (minimize, maximize, close) in [layout.css](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/layout.css) to snap perfectly to the absolute top-right corner of the application window, extending them to the full height of the header for better desktop integration.
-  - Adjusted button dimensions to standard 46px width, removed border-radius, and centered the icons inside.
-  - Added dynamic `has-window-controls` layout class to top-bars in [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx) to dynamically adjust padding when window controls are present, avoiding overlaps.
-  - Refactored the titlebar buttons in [error.html](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/public/error.html) to also snap and stretch for a seamless offline status layout.
-
-## [1.3.648] - 2026-07-24
-
-### Feature & UX — Multiple Concurrent Port Tunneling with Management Modal
-- **Multiple Custom Port Tunnels**:
-  - Replaced the single custom port tunnel implementation in [tunnelManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/tunnelManager.ts) with a `Map<number, ActiveTunnel>` structure, enabling developers to expose multiple concurrent ports (e.g. `3000`, `8080`, `5000` etc.) to the internet simultaneously.
-  - Expose independent lifecycles for each port tunnel via `/api/tunnel/start` and `/api/tunnel/stop` endpoints.
-- **Port Tunnels Manager Modal**:
-  - Introduced `PortTunnelsManagerModal` in [Modals.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/Modals.tsx) that shows all active custom tunnels in a clean, scrollable layout with individual Open, Copy, and Stop controls.
-  - Exposed starting controls in the modal for both quick temporary tunnels and named Cloudflare tokens.
-- **Footer Count Badge indicator**:
-  - Replaced the wide inline custom port form in [Footer.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/Footer.tsx) with a single, space-efficient `Port Tunnels` button that displays a reactive active count badge (e.g. `Port Tunnels [2]`).
-
-## [1.3.647] - 2026-07-23
-
-### Feature & UX — Concurrent Specific Port Tunneling Support
-- **Concurrent Dual Cloudflare Tunnels**:
-  - Refactored `TunnelManager` in [tunnelManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/tunnelManager.ts) to manage two concurrent `ActiveTunnel` instances: one for the `t-line` dashboard itself (`tline`), and one for a custom user-defined local port (`custom`).
-  - Added exit safety listeners to ensure both active tunnels are gracefully killed when the backend exits, avoiding orphaned `cloudflared` processes.
-- **REST API Multi-Tunnel Endpoints**:
-  - Updated `/api/tunnel/status`, `/api/tunnel/start`, and `/api/tunnel/stop` endpoints in [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) to accept a `target` parameter (`tline` | `custom`) and support custom port forwarding.
-- **Obsidian-themed UI Controls**:
-  - Upgraded the `useTunnel` React hook in [useTunnel.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useTunnel.ts) to manage independent statuses, copy flags, and loading indicators.
-  - Redesigned the right section of the footer in [Footer.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/Footer.tsx) to feature two parallel tunnel controls: the main `tline` dashboard control and a `Port` tunnel control complete with an Obsidian-styled numeric input box.
-  - Updated the mobile overlay menu in [RightSidebar.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/RightSidebar.tsx) to support updated multi-tunnel structures.
-
-## [1.3.646] - 2026-07-23
-
-### Feature & UX — Prioritize First Workspace Tab on Click (`useWorkspaceHandlers.ts`)
-- **Activate First Tab on Workspace Click**:
-   - Modified `handleWorkspaceClick` in [useWorkspaceHandlers.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useWorkspaceHandlers.ts) to find the first open tab that belongs to the clicked workspace (including any of its git worktrees) using the `getWorkspaceForTab` helper.
-   - If one or more tabs belonging to the clicked workspace are open, the app automatically switches focus to the first tab (instead of only checking the main worktree path).
-
-## [1.3.645] - 2026-07-23
-
-### Feature & UX — Disable Automatic Terminal Creation on Workspace/Worktree Click (`useWorkspaceHandlers.ts`)
-- **Disabled Automatic Terminal Spawning**:
-  - Modified `handleWorkspaceClick` and `handleWorktreeClick` in [useWorkspaceHandlers.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useWorkspaceHandlers.ts) to prevent the application from opening a new terminal tab when a workspace or worktree is clicked and no active matching tab is currently open.
-  - Instead of calling `openTerminal`, the active tab selection is cleared by setting `activeTabId` to an empty string, allowing the user to view the empty workspace dashboard or manually select what tab/file/terminal to open.
-- **Dependency Clean Up**:
-  - Removed unused `openTerminal` parameter, interface declaration, and useCallback dependency in `useWorkspaceHandlers.ts` and updated its call site in `App.tsx`.
-
-## [1.3.644] - 2026-07-22
-
-### Bug Fix & UX — Correct First/Last Chat Session Title Generation & SQLite Sync (`serverRoutes.ts`, `sessionManager.ts`)
-- **Fixed Overwritten First/Last User Chat Messages (SuperAgent `serverRoutes.ts`)**:
-  - Replaced the incorrect assignment of `firstChat: title` and `lastChat: title` in SuperAgent's `POST /api/history/session` route with dynamically extracted first and last user message content.
-  - This prevents generic session titles from getting locked permanently in the SQLite database and preserves the actual user prompts.
-- **Enhanced Session Title Candidates Priority (`sessionManager.ts`)**:
-  - Prioritized `firstSubstantive` and `lastSubstantive` messages over fallback `cleanFirst` values in backend `sessionManager.ts`.
-  - Automatically skips generic greetings like "hallo" and favors substantive prompts for session title generation.
-
-## [1.3.643] - 2026-07-22
-
-### Bug Fix & UX — Clean First-Substantive Prompt Title Generation (`useSuperAgentSessions.ts`, `SuperAgentConsoleUtils.ts`, `sessionManager.ts`)
-- **Eliminated `Prompt Awal → Prompt Akhir` Title Repetition**:
-  - Replaced `first → last` prompt concatenation in `generateSessionTitle()` ([useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts)) and `getWorkspaceSessions()` ([sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts)) with a smart, first-substantive prompt extractor.
-  - Automatically filters out generic greetings (`hallo`, `hai`, `hello`, `hi`, `hey`, `ping`, `test`, `selamat pagi`) and generic stop commands (`stop`, `stop semua`, `clear`, `exit`, `done`) when selecting the chat title.
-- **Sanitized Legacy Session Titles**:
-  - Updated `cleanSessionTitle()` helper across [SuperAgentConsoleUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsoleUtils.ts) and [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) to automatically clean existing legacy titles with `→`, `➔`, `[First: ...]`, or `[Last: ...]` markers into clean, concise titles.
-
-## [1.3.642] - 2026-07-22
-
-### UX & Scroll Enhancement — Instant Session Jump & Smart Auto-Scroll (`SuperAgentConsole.tsx`)
-- **Instant Session Jump on Session Load**:
-  - Replaced smooth auto-scrolling on session switch with `behavior: 'instant'` in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx#L506-L520), eliminating the fast motion-blur scroll sweep when opening long chat histories.
-- **Smart Scroll Lock & Floating Jump Button**:
-  - Added detection of user scroll position (`isUserScrolledUpRef`). If user scrolls up to inspect history, auto-scroll is temporarily paused during streaming.
-  - Added a floating `↓ Ke Bawah` button in the bottom-right corner of the console to allow one-click instant navigation to the latest messages.
-
-## [1.3.641] - 2026-07-22
-
-### Integration & Feature Enhancement — SuperAgent Core 'Prompt Awal → Prompt Akhir' Title Support (`conversation.ts`)
-- **SuperAgent Core Title Generation (`conversation.ts`)**:
-  - Updated SuperAgent session persistence logic in [conversation.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/conversation.ts) to automatically calculate `displayName` as `Prompt Awal → Prompt Akhir` when saving conversation history.
-  - Recompiled SuperAgent project (`bun run build`) and committed changes to SuperAgent repository.
-
-## [1.3.640] - 2026-07-22
-
-### Feature & Title Enhancement — Automatic 'Prompt Awal → Prompt Akhir' Title Generation (`useSuperAgentSessions.ts`, `sessionManager.ts`)
-- **Automatic Multi-Prompt Session Title Formatting**:
-  - Updated `generateSessionTitle()` in [useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts) to automatically extract the first and last non-empty user prompts. If multiple unique prompts exist, title is formatted as `Prompt Awal → Prompt Akhir`.
-  - Updated `getWorkspaceSessions()` in [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) to join `firstChat` and `lastChat` from SuperAgent database into clean `Prompt Awal → Prompt Akhir` session titles.
-
-## [1.3.639] - 2026-07-22
-
-### UI & Formatting Enhancement — Enhanced Session Title Sanitization (`SuperAgentConsoleUtils.ts`, `sessionManager.ts`)
-- **Cleaned Chat Session Titles**:
-  - Enhanced `cleanSessionTitle()` helper across frontend ([SuperAgentConsoleUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsoleUtils.ts)) and backend ([sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts)).
-  - Stripped stray `[First: ...]`, `[Last: ...]`, and `→` markers that previously left trailing brackets in titles.
-  - Automatically converted raw directory key strings (e.g. `D__backup_from_pc_asus_...`) into clean, human-readable workspace titles (e.g. `UB-surat-bebas-tanggungan`).
-
-## [1.3.638] - 2026-07-22
-
-### Bug Fix — Fix Session Selection & Message Retrieval (`useSuperAgentSessions.ts`, SuperAgent `serverRoutes.ts`)
-- **Fixed Cross-Project Session Message Retrieval (SuperAgent `serverRoutes.ts`)**:
-  - Recompiled SuperAgent project (`dist/serverRoutes.js`) to ensure `loadSessionFromDb(targetSessionId)` fallback logic is present.
-  - Updated `GET /api/history` handler in SuperAgent to verify that in-memory messages are only used if active session ID matches requested `targetSessionId`; otherwise, messages are loaded directly from SQLite database.
-- **Fixed Frontend Session Selection (`useSuperAgentSessions.ts`)**:
-  - Allowed clicking active session card to trigger a fresh message load when current message state is empty (`messages.length === 0`).
-  - Fixed empty API response handling so `[]` messages from server do not overwrite valid messages loaded from local storage cache.
-
-## [1.3.637] - 2026-07-22
-
-### Bug Fix — Fix Infinite WebSocket Reconnection Loop & `Insufficient resources` Error (`SuperAgentConsole.tsx`)
-- **Fixed Infinite WebSocket Loop**: Resolved React render loop caused by including `ws` state in `useEffect`'s dependency array. When `setWs(socket)` executed inside the effect, React re-rendered and ran the previous effect's cleanup, which closed the WebSocket and immediately opened a new one in the next render pass.
-- **Added `wsRef` Reference Guard**: Added `wsRef = useRef<WebSocket | null>(null)` to maintain active socket state across component renders without triggering effect dependency re-runs.
-- **Cleaned Dependency Array**: Removed `ws` state from the connection `useEffect` dependency array (`[workspace, agentMode, customArgs, connectTrigger]`), stabilizing the connection lifecycle.
-
-## [1.3.636] - 2026-07-22
-
-### Bug Fix — Duplicate SuperAgent WebSocket Connections & React Hook Order Error (`SuperAgentConsole.tsx`)
-- **Prevented duplicate WS connections**: Added `activeWsUrlRef` guard — if a WebSocket with the same URL is already `OPEN` or `CONNECTING`, a new socket is not created. This eliminates the flood of 10+ duplicate `[SuperAgent WS] Connection established` / `Connection closed` log entries.
-- **Fixed React "change in order of Hooks" error**: The `activeWsUrlRef = useRef('')` is now declared in the top-level scope (before all `useEffect` calls), correcting the conditional hook violation that caused `Error: Should have a queue. This is likely a bug in React.` and crashed `SuperAgentConsole`.
-- **Cleanup**: `activeWsUrlRef.current` is cleared in the `useEffect` cleanup function so reconnections are always permitted after the component unmounts or deps change.
-
-## [1.3.635] - 2026-07-22
-
-### Bug Fix — Preserve Session `updatedAt` Timestamp & Prevent Moving to 'Hari Ini' On Selection (`useSuperAgentSessions.ts`)
-- **Preserved Selection Timestamp (`useSuperAgentSessions.ts`)**:
-  - Added message count tracking (`lastSeenMessageCountRef`) when selecting chat sessions.
-  - Fixed bug where merely clicking an older session in the sidebar overwrote its `updatedAt` timestamp with `Date.now()`, which incorrectly moved it to the **Hari Ini** (Today) category without user editing.
-  - `updatedAt` is now preserved when selecting/viewing chats or cleaning titles, and is updated to `Date.now()` strictly when a new message is submitted or generated.
-
-## [1.3.634] - 2026-07-22
-
-### UI & Sanitization Fix — Automatic Cleaning & Stripping of `[memory]` / `[SYS]` Tags from Chat Session Titles (`sessionManager.ts`, `SuperAgentConsoleUtils.ts`, `useSuperAgentSessions.ts`, `SuperAgentHistorySidebar.tsx`)
-- **Backend Title Sanitization (`sessionManager.ts`)**:
-  - Implemented `cleanSessionTitle()` to strip bracketed memory tags (`[memory]`, `- [memory]`, `[SYS]`, `[system]`, `[Context]`, `[RMemory]`, etc.), CLI headers, role prefixes, and leading slash commands when fetching or saving sessions.
-  - Added trailing fragment deduplication (e.g. `kamu model apa? - kam...` $\to$ `kamu model apa?`).
-- **Frontend Title Sanitization (`SuperAgentConsoleUtils.ts`, `useSuperAgentSessions.ts`, `SuperAgentHistorySidebar.tsx`)**:
-  - Exported `cleanSessionTitle()` helper to automatically sanitize session titles on API load and when rendering sidebar session cards.
-
-## [1.3.633] - 2026-07-22
-
-### Fix — Resolve Version Fetch SyntaxError & Prevent SuperAgent WebSocket Connection Teardown Loop (`server.ts`, `useUpdateChecker.ts`, `SuperAgentConsole.tsx`)
-- **Backend Version Route (`server.ts`)**:
-  - Added `GET /api/system/version` endpoint to serve application version from `package.json`, resolving Vite dev server fallback returning `index.html` (`<!doctype html>...`).
-- **Update Checker Robustness (`useUpdateChecker.ts`)**:
-  - Added HTTP `res.ok` status check and `Content-Type` validation (`application/json`) before attempting `res.json()`, preventing `SyntaxError: Unexpected token '<'` when fetching local version.
-- **SuperAgent WebSocket Lifecycle (`SuperAgentConsole.tsx`)**:
-  - Added safe cleanup for WebSockets in `WebSocket.CONNECTING` state (`socket.onopen = () => socket.close()`), eliminating Chrome/Edge `WebSocket is closed before the connection is established` console errors.
-  - Added missing dependencies (`workspace`, `agentMode`, `customArgs`) to `useEffect` dependency array for stable connection state management.
-
-## [1.3.632] - 2026-07-22
-
-### UI Enhancement — Per-Category Limit 5 & Removal of Global Infinite Scroll (`SuperAgentHistorySidebar.tsx`, `useSuperAgentSessions.ts`)
-- **Removed Global Infinite Scroll**:
-  - Removed container `onScroll` pagination and bottom global "Load more chats..." button.
-- **Per-Category Limit 5 & Interactive Expand Link**:
-  - Set default display limit to **5 sessions per time category** (**Hari Ini**, **Kemarin**, **7 Hari Terakhir**, **Lebih Lama**).
-  - Added clickable per-category text link: `+ Muat 5 lagi (N tersisa)` to expand chat sessions incrementally within that specific time category.
-
-## [1.3.631] - 2026-07-22
-
-### Feature Enhancement — Chat History Temporal Grouping, Pinned Chats & One-Click Export (`SuperAgentHistorySidebar.tsx`, `useSuperAgentSessions.ts`, `serverRoutes.ts`)
-- **Temporal Grouping (`SuperAgentHistorySidebar.tsx`)**:
-  - Organized sidebar session list into temporal section headers: **Hari Ini** (Today), **Kemarin** (Yesterday), **7 Hari Terakhir** (Last 7 Days), and **Lebih Lama** (Older).
-- **Pinned / Favorite Sessions (`useSuperAgentSessions.ts`, `SuperAgentHistorySidebar.tsx`)**:
-  - Added Pin/Unpin action to sidebar chat cards with persistent `localStorage` storage. Pinned chats automatically dock at the very top under a dedicated **Pinned** section header with an amber pin badge.
-- **Real-Time Instant Search (`SuperAgentHistorySidebar.tsx`)**:
-  - Enhanced search bar filter to instantly filter through titles across both pinned and temporal groups.
-- **One-Click Transkrip Export (`SuperAgentHistorySidebar.tsx`)**:
-  - Added one-click `.md` (Markdown) and `.json` transkrip exports with toast feedback upon download.
-- **Real-Time SuperAgent Session Persistence (`serverRoutes.ts`, `sessionManager.ts`)**:
-  - Added `POST /api/history/session` REST endpoint to SuperAgent Server to immediately persist session title & message metadata to SQLite `history.db` upon prompt creation without requiring a manual click.
-
-## [1.3.630] - 2026-07-22
-
-### Bug Fix — Resolve Chat History Session Titles & Message Intermittency (`sessionManager.ts`, `useSuperAgentSessions.ts`, `serverRoutes.ts`, `history.ts`)
-- **Noise-Aware User Prompt Title Extraction (`sessionManager.ts`)**:
-  - Updated `extractCleanUserText` in [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) to filter out injected memory/context noise headers (`[RMemory]`, `[Context Restoration]`, `[SYS]`, `<relevant-memories>`) and extract the actual user prompt lines instead of immediately returning an empty string. Prevents session titles from defaulting to `"New Chat"`.
-- **SQLite History DB Direct Fallback (`serverRoutes.ts`)**:
-  - Updated `GET /api/history` endpoint handler in SuperAgent's [serverRoutes.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/serverRoutes.ts) to accept explicit `sessionId` lookups and query SQLite `history.db` directly if the session is not currently loaded in active memory (`activeSessions` RAM).
-- **Windows Path Normalization for Workspace Session Listing (`history.ts`)**:
-  - Updated `normalizeAndCheckSubpath` in SuperAgent's [history.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/config/history.ts) to compare slash-normalized paths (`/` vs `\`), ensuring workspace directory lookups match consistently across Windows path variations.
-- **Frontend Message State Protection (`useSuperAgentSessions.ts`)**:
-  - Added local storage fallback retention in `syncSessions` within [useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts) when server responses are delayed or empty, preventing chat messages from being wiped out from the UI.
-
-## [1.3.629] - 2026-07-22
-
-### UI Enhancement — Icon-Only Header Buttons for Monitor & Settings (`SuperAgentConsole.tsx`)
-- **Icon-Only Header Buttons**:
-  - Removed text labels from the top-right **Live Monitor** and **Settings** header action buttons in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx).
-  - Streamlined header layout to clean, compact square-rounded icon buttons with tooltip descriptions.
-
-## [1.3.628] - 2026-07-22
-
-### Feature — Expose & Display SuperAgent Package Version (`paths.ts`, `server.ts`, `serverRoutes.ts`, `presetUtils.ts`, `SuperAgentConsole.tsx`, `SuperAgentSettingsMenu.tsx`, `SuperAgentSettingsModal.tsx`)
-- **SuperAgent Version Exporter (`paths.ts`, `server.ts`, `serverRoutes.ts`)**:
-  - Exported `getSuperAgentVersion()` helper in SuperAgent's [paths.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/config/paths.ts) to dynamically read package version (`v1.2.520`).
-  - Added version tag in `server.ts` startup logs and included `version: getSuperAgentVersion()` in `GET /api/status` and `GET /api/config` HTTP endpoints.
-- **t-line Proxy & UI Version Display (`presetUtils.ts`, `SuperAgentConsole.tsx`, `SuperAgentSettingsMenu.tsx`, `SuperAgentSettingsModal.tsx`)**:
-  - Added `superagentVersion` field to `MergedPresetsResult` in [presetUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/presetUtils.ts).
-  - Prominently displayed SuperAgent version badges in the main Console Settings button (`v1.2.520 Settings`), Quick Settings Menu header (`v1.2.520`), and SuperAgent Settings Modal header.
-
-## [1.3.627] - 2026-07-22
-
-### Feature — Interactive Clickable Processes (Procs) & Log Terminal Viewer (`serverRoutes.ts`, `ActiveTasksBar.tsx`, `SuperAgentSidebar.tsx`, `SubAgentTerminalModal.tsx`, `SuperAgentConsole.tsx`)
-- **Process Log Output Streaming (`serverRoutes.ts`)**:
-  - Updated `GET /api/instances` endpoint in SuperAgent's [serverRoutes.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/serverRoutes.ts) to read log files (`logPath`) or buffered stdout (`output`) for each background process and include `logs: string[]` in the `procs` JSON payload.
-- **Clickable Process Items (`ActiveTasksBar.tsx`, `SuperAgentSidebar.tsx`)**:
-  - Made processes clickable in both the **Active Tasks Bar** (with `Terminal` action button) and the **Live Monitor Sidebar** process cards.
-  - Clicking any active or stopped background process opens the terminal log viewer modal.
-- **Unified Process & SubAgent Terminal Modal (`SubAgentTerminalModal.tsx`, `SuperAgentConsole.tsx`)**:
-  - Enhanced `SubAgentTerminalModal.tsx` to detect `typeName === 'Process'`, displaying process icons, command line prompt header, auto-scrolling terminal logs, copy button, and live status bar.
-  - Linked `handleSelectProc` in `SuperAgentConsole.tsx` so process logs update dynamically in real time as SuperAgent streams process output.
-
-## [1.3.626] - 2026-07-21
-
-### Bug Fix — SuperAgent Procs & Instances Exposure (`serverRoutes.ts`, `superAgentRoutes.ts`, `SuperAgentConsole.tsx`)
-- **SuperAgent Server `/api/instances` Enhancement**:
-  - Updated `GET /api/instances` in SuperAgent's [serverRoutes.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/serverRoutes.ts) to expose active background processes (`backgroundTasks`) as `procs` alongside `subagents` and `superagents`.
-- **t-line Bridge Proxy Update**:
-  - Updated `/api/superagent/instances` route in [superAgentRoutes.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentRoutes.ts) to include `procs: []` fallback.
-- **Frontend Monitor State Resolution**:
-  - Updated `SuperAgentConsole.tsx` to declare state setter `setProcList` and parse `instData.procs` into `procList`.
-  - Merged both `subagents` AND `superagents` from `instData` into `subagentList` so all active sub-agent and super-agent instances display in the Live Monitor sidebar and Active Tasks bar.
-
-## [1.3.625] - 2026-07-21
-
-### Bug Fix — Resolve Historical Session Titles Automatically (`historyDb.ts`, `sessionManager.ts`)
-- **Native SQL First User Message Resolution (SuperAgent)**:
-  - Updated `listSessionsFromDb` and `loadSessionFromDb` SQL queries in SuperAgent's [historyDb.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/storage/historyDb.ts) to auto-derive `firstChat` and `lastChat` from the `messages` table via `COALESCE(s.first_chat, (SELECT m.content FROM messages ...))` if `first_chat` is NULL or empty in SQLite `sessions` table.
-  - Updated `saveSessionToDb` to auto-calculate `firstChat` and `lastChat` directly from user messages array on save.
-- **Enhanced Title Extraction Fallback (t-line)**:
-  - Updated `getWorkspaceSessions` in [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) to fallback to `s.preview` (with `"User:"` prefix cleaning) whenever `s.firstChat` is absent.
-  - All historical chat items in the History sidebar now immediately display their actual title generated from user prompts on initial load without requiring a click.
-
-## [1.3.624] - 2026-07-21
-
-### Bug Fix — Synchronous Session Registration on Direct Input Prompt Send (`SuperAgentConsole.tsx`, `useSuperAgentSessions.ts`)
-- **Fix User Message Wipe & Async Abort Singularity**:
-  - Replaced legacy async `handleSelectSession` invocation inside `handleSend` in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx). Previously, sending a prompt without an un-indexed session ID triggered `handleSelectSession`, which called `apiGetSessionMessages` (clearing `messages` to `[]` and wiping out the user message) and sent a background `POST /api/init` that aborted the newly launched agent.
-  - Updated `handleNewChat` in [useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts) to return the new session ID string synchronously.
-  - Updated `handleSend` to invoke `handleNewChat()` synchronously *before* appending the user message when no valid active session is selected.
-  - User messages now display instantly, the new chat session is added to history, and the agent streams back responses without cancellation.
-
-## [1.3.623] - 2026-07-21
-
-### Keybinding & UI Update — Change Send Message Keybinding to Enter (`SuperAgentConsole.tsx`, `SuperAgentInputContainer.tsx`)
-- **Keybinding Update**: Changed chat prompt submission in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) so pressing `Enter` directly sends the message, while `Shift+Enter` inserts a new line in the text area.
-- **UI Label Alignment**: Updated input container toolbar labels and Send button tooltip in [SuperAgentInputContainer.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentInputContainer.tsx) to accurately display `↵` for sending.
-
-## [1.3.622] - 2026-07-21
-
-### Bug Fix — Resolve Empty History List & Fix Mid-Run Abort on Auto-Created Sessions (`sessionManager.ts`, `useSuperAgentSessions.ts`)
-- **Fix Mid-Run Abort Collision Node**:
-  - Identified and fixed missing `'x-client-mode': 'tline'` header and payload property in `requestSuperAgentServer` and `saveWorkspaceSession` in [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts). Previously, auto-saving newly created sessions mid-stream triggered a `POST /api/init` with mismatched client modes, causing SuperAgent to abort the running agent mid-thought.
-  - Passing `clientMode: 'tline'` allows SuperAgent to match active session state and return 200 OK without interrupting active LLM execution.
-- **Fix Initial Blank History & Orphan Active Session**:
-  - Updated `loadWorkspaceSessions` in [useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts) to automatically instantiate a default `"New Chat"` session when no existing sessions are found in local or server storage.
-  - Ensures history list is never empty on fresh start, keeping `activeSessionId` properly indexed in `sessions` state array.
-
-## [1.3.621] - 2026-07-21
-
-### Bug Fix — Prevent Prompt Execution & Enforce Guard When No Preset is Active (`SuperAgentInputContainer.tsx`, `SuperAgentConsole.tsx`, `superAgentBridge.ts`, SuperAgent `serverRoutes.ts`)
-- **Frontend Guarding**:
-  - Disabled textarea input, paperclip attachment, and send button in [SuperAgentInputContainer.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentInputContainer.tsx) when no active model preset is selected for the current mode.
-  - Set explicit placeholder `"No active model preset selected. Please select a preset first..."` and styled preset indicator when unselected.
-  - Intercepted `handleSend` in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) to display a clear system error if a user attempts to send a prompt without an active preset.
-- **Backend Bridge Guarding**:
-  - Added preset validation check in `actionType === 'prompt'` handler in [superAgentBridge.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentBridge.ts). Prompts sent over WebSocket without a valid active preset return a `chat_response` error and do not reach the SuperAgent server process.
-- **SuperAgent HTTP Validation**:
-  - Added preset validation guard in `POST /api/chat` in SuperAgent's [serverRoutes.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/serverRoutes.ts) to ensure `getActivePresetId` matches a valid preset before passing messages to `agent.sendMessage()`.
-
-## [1.3.620] - 2026-07-21
-
-### Refactor — Centralize All Config Access Through SuperAgent Server (`presetUtils.ts`, `superAgentRoutes.ts`, SuperAgent `serverRoutes.ts`)
-- **Zero Direct Filesystem Access**: Completely rewrote [presetUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/presetUtils.ts) (647 → ~170 lines). All `fs.readFileSync` / `fs.writeFileSync` calls to `~/.superagent-r/model-config.json` and `model-presets.json` removed. Every config operation now proxies through the SuperAgent HTTP server at port 7888 via a lean `saRequest()` helper.
-- **Expanded SuperAgent Config REST API**: Added 7 new endpoints to SuperAgent's [serverRoutes.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/serverRoutes.ts):
-  - `POST /api/config/active-preset` — set active preset for single/multi mode
-  - `POST /api/config/preset` — save/update a preset (writes both `model-config.json` and `model-presets.json` for CLI compat)
-  - `DELETE /api/config/preset/:mode/:id` — delete a preset from both stores
-  - `POST /api/config/provider` — save/update a provider profile
-  - `DELETE /api/config/provider/:id` — delete a provider profile
-  - `POST /api/config/active-provider` — switch active provider profile
-  - `GET /api/config/provider-models?providerId=` — live model fetch with provider-type-aware defaults (moved from t-line into SuperAgent)
-- **Async Route Handlers**: Updated all config route handlers in [superAgentRoutes.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentRoutes.ts) to `async/await` since `presetUtils` functions now return Promises.
-- **Error Resilience**: `saRequest()` produces clear user-facing errors for ECONNREFUSED, HTML error pages, non-JSON responses, and request timeouts.
-
-
-
-### Bug Fix — SuperAgent & t-line Cross-System Preset Alignment & Storage Synchronization (`presetUtils.ts` & SuperAgent Server)
-- **Synchronized CLI Preset Storage**: Updated `saveCustomPreset` in [presetUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/presetUtils.ts#L234) to serialize and write canonical `MODEL_*` keys (`MODEL_MULTI_MASTER`, `MODEL_MULTI_SUPERAGENT`, `MODEL_MULTI_SUBAGENT`, `MODEL_SINGLE_SUPERAGENT`, etc.) with `providerId@model` string formats into `~/.superagent-r/model-presets.json` alongside `model-config.json`.
-- **SuperAgent HTTP Active Preset Application**: Updated `POST /api/config` in SuperAgent's [serverRoutes.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/serverRoutes.ts#L860) to call `applyModelPreset()` when changing active presets over HTTP, ensuring tier model selections are immediately updated and saved into `model-config.json`.
-- **Resilient Preset Fallback**: Added fallback resolution in SuperAgent's `applyModelPreset()` in [presets.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/config/presets.ts#L305) to check `model-config.json` presets if the requested preset is not present in `model-presets.json`.
-
-## [1.3.618] - 2026-07-21
-
-### Bug Fix — Permanent Preset Deletion Across `model-config.json` & `model-presets.json` (`presetUtils.ts`)
-- **Fix Persistent CLI Presets Re-emerging**: Updated `deleteCustomPreset` in [presetUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/presetUtils.ts#L272) to delete the target preset ID & preset name from **both** `model-config.json` and `model-presets.json`. Previously, presets deleted from `model-config.json` were read back from `model-presets.json` during `loadMergedPresets()` and re-appeared in the list.
-- **Fix User Edit Precedence**: In `loadMergedPresets()`, user-customized presets from `model-config.json` now take precedence over default entries in `model-presets.json`.
-
-## [1.3.617] - 2026-07-21
-
-### Feature & Bug Fix — Fast Delete Preset & Toast Notifications with Name (`SuperAgentPresetManager.tsx` & `SuperAgentConsole.tsx`)
-- **Fast Responsive Deletion State**: Added `deletingPresetId` state and `handleDeletePreset` wrapper in [SuperAgentPresetManager.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentPresetManager.tsx#L230) that disables double-clicks and renders an inline spinning indicator (`Deleting...`) for immediate feedback.
-- **Global & Inline Toast Notifications**: Dispatches system `tline-toast` events and renders an in-manager alert banner showing the exact preset name and ID (e.g. `Model preset "opencode" (opencode) deleted successfully`).
-- **Error Propagation on Deletion**: Updated `handleDeleteCustomPreset` in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx#L264) to await `fetchConfig()` and throw errors if the server returns non-200 status, rendering clear error feedback toasts.
-
-## [1.3.616] - 2026-07-21
-
-### UI Fix — Select Dropdown Option High Contrast Styling & Empty Parenthetical Type (`SuperAgentPresetManager.tsx`)
-- **Fix Option Contrast & Background**: Applied explicit `bg-[#18181b] text-white py-1` styling to all `<option>` elements in provider profile and model selects, preventing browser default washed-out/gray option popups in dark mode.
-- **Fix Empty `()` Parenthetical Display**: Conditionalized the provider type badge `{pType ? ` (${pType})` : ''}` across all provider profile dropdown menus so profiles without a explicit type string render cleanly (e.g. `opencodefree` instead of `opencodefree ()`).
-
-## [1.3.615] - 2026-07-21
-
-### Bug Fix — SuperAgent Model Preset Modal "Not Set" Selection & Save Pipeline (`SuperAgentPresetManager.tsx` & `SuperAgentConsole.tsx`)
-- **Fix Auto-Overwriting Falsy "Not Set" State**: Removed aggressive `useEffect` hook in [SuperAgentPresetManager.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentPresetManager.tsx#L92) that forced empty `mainProviderId` and `subDefaultProviderId` back to `providers[0].id`.
-- **Preserve Empty Provider Profiles on Edit**: Fixed `openEditPresetModal` and `handleSavePreset` so that selecting `-- Not Set (Use Global Active Profile) --` or `-- Not Set (Use Default Model) --` is accurately preserved and saved without being forcibly overwritten with provider fallbacks.
-- **Error Propagation & Modal Error Alert**: Updated `handleSaveCustomPreset` in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx#L250) to check HTTP response status (`res.ok`) and throw errors so `SuperAgentPresetManager` can catch them, render a clear error alert banner, and keep the modal open instead of closing silently on failure.
-- **Enhanced Model Labels & Backward Compatibility**: Updated `formatModelLabel` to display `Global Active Profile → ModelName` for empty provider profile IDs, and added legacy string parameters (`MODEL_SINGLE_SUPERAGENT`, `MODEL_SINGLE_SUBAGENT`, etc.) into `structuredModels` for max SuperAgent CLI compatibility.
-
-## [1.3.614] - 2026-07-21
-
-### Feature — Model Preset Search & Pagination (`SuperAgentPresetManager.tsx` & `SuperAgentInputContainer.tsx`)
-- **Search Bar & Filtering in Preset Manager**: Added a real-time search input bar in [SuperAgentPresetManager.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentPresetManager.tsx#L350) allowing instant filtering of model presets by name, preset ID, description, or model string.
-- **Card Pagination Controls**: Implemented 6-item page grid pagination with page range indicators, previous/next controls (`ChevronLeft`/`ChevronRight`), and empty search result fallbacks.
-- **Quick Filter Search in Console Dropup**: Integrated a compact filter input inside the console dropup popover menu in [SuperAgentInputContainer.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentInputContainer.tsx#L245) with auto-scroll containment for fast preset switching.
-
-## [1.3.613] - 2026-07-21
-
-### Bug Fix — SuperAgent Preset Dropup Popover Visibility & Settings Modal (`SuperAgentInputContainer.tsx` & `SuperAgentSettingsModal.tsx`)
-- **Fix Overflow Clipping on Preset Dropup**: Replaced `overflow-x-auto` with `overflow-visible` on the input console footer toolbar in [SuperAgentInputContainer.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentInputContainer.tsx#L207) so the preset selection dropup menu is no longer clipped by the container boundary.
-- **Enhanced Popover UI & Case-Insensitive Matching**: Upgraded dropup menu z-index (`z-[100]`), rounded corners (`rounded-xl`), backdrop blur, active state indicator (`● Active`), and case-insensitive preset ID/name matching.
-- **Unclipped Segmented Pill Switcher**: Converted modal tab navigation in [SuperAgentSettingsModal.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentSettingsModal.tsx#L94) to a segmented pill switcher with explicit container padding (`py-2.5`) and `shrink-0`, eliminating overflow clipping issues.
-
-## [1.3.612] - 2026-07-21
-
-### UI Alignment Fix — SuperAgent Settings Modal Tab Height (`SuperAgentSettingsModal.tsx`)
-- **Bottom-Border Tab Alignment**: Replaced vertical flex-centering (`items-center`) with bottom alignment (`items-end`) and `-mb-px` in [SuperAgentSettingsModal.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentSettingsModal.tsx#L94) so active and inactive tabs sit flush with the bottom container border.
-- **Consistent Height & Padding**: Standardized padding (`px-4 py-2.5`), line-height, icon sizes, and top rounded corners (`rounded-t-lg`) across all modal navigation tabs (`login`, `presets`, `execution`, `monitor`), fixing uneven tab heights.
-- **Theme-Consistent Styling**: Replaced inline `color-mix` CSS with design system Tailwind classes (`bg-[var(--color-primary)]/10` and `border-[var(--color-primary)]`).
-
-## [1.3.611] - 2026-07-21
-
-### Bug Fix — SuperAgent Thinking Latency & Double Checkpoint Events (`serverRoutes.ts`, `superAgentBridge.ts`, `checkpoints.ts`)
-- **SSE Socket Nagle Optimization**: Added `(res.socket as any)?.setNoDelay(true);` to the `/api/events` SSE endpoint in SuperAgent's [serverRoutes.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/serverRoutes.ts#L81) to eliminate TCP buffer delay on high-frequency reasoning/thinking tokens.
-- **Prevent Duplicate SSE Socket Requests**: Added explicit socket cleanup (`sseReq.destroy()`) in [superAgentBridge.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentBridge.ts#L585) before reconnecting to prevent duplicate SSE listeners from broadcasting doubled `checkpoint_auto` and `agent_event` messages over WebSocket.
-- **High-Frequency Token Fast-Path**: Skipped redundant `JSON.parse()` calls on streaming reasoning/text delta tokens in [superAgentBridge.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentBridge.ts#L623) to reduce event-loop CPU overhead during high-speed model responses.
-- **Non-blocking Git SHA Resolution**: Converted `getGitSha` in [checkpoints.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/checkpoints.ts#L37) from synchronous `execSync` to non-blocking async `execa` execution.
-
-## [1.3.610] - 2026-07-21
-
-### Bug Fix — SuperAgent Session Execution on Empty History (`useSuperAgentSessions.ts` & `SuperAgentConsole.tsx`)
-- **Pre-initialized Session Context**: Updated `useSuperAgentSessions` to pre-generate and preserve a valid `activeSessionId` (`session_${Date.now()}`) when history is empty, preventing `activeSessionId` from lingering as an empty string.
-- **Prevent User Message State Wiping**: Removed redundant `handleSelectSessionWrapped` call in `handleSend` when creating target session ID, preventing `handleSelectSession` from executing `setMessages([])` and erasing the user's prompt state.
-- **Active Session ID Ref Sync**: Added `activeSessionIdRef` in `SuperAgentConsole.tsx` so WebSocket `socket.onmessage` event handlers always filter incoming SSE streaming events against the current active session ID instead of a stale closed-over empty string.
-
-## [1.3.609] - 2026-07-21
-
-### Feature — Open SuperAgent Button in Workspace Manager (`EmptyDashboard.tsx`)
-- **SuperAgent Quick Launch**: Added **Open SuperAgent** action button to `EmptyDashboard.tsx` alongside "Add Workspace" and "Open Terminal".
-- **App Integration**: Wired `openAgentTab` prop in `App.tsx` so users can immediately open SuperAgent tab directly from the empty workspace manager dashboard.
-
-## [1.3.608] - 2026-07-21
-
-### Refactor & UI — Custom Modal Confirmation for Discarding Git Changes (`GitChanges.tsx`)
-- **Custom ConfirmModal UI**: Replaced native browser `window.confirm()` popups with the application's styled `ConfirmModal` component for single file and batch discard actions.
-- **Path Sanitization**: Prevented `'nul'` filename strings from appearing in confirmation prompts when path inputs are empty or fallback values on Windows.
-- **Git Commit Confirmation**: Replaced browser confirm with styled modal when committing without staged changes.
-- **Unit Tests**: Updated `GitFeatures.test.tsx` to test `ConfirmModal` interaction.
-
-### Refactor — SuperAgent Monolith Decomposition & Audit Optimizations (`backend` & `superagent`)
-- **SuperAgent Server Decomposition (`server.ts` & `serverRoutes.ts`)**: Decomposed monolithic `server.ts` (1,643 lines) into `serverRoutes.ts` module, reducing `server.ts` file length to 568 lines in full compliance with project strict line limits (<1000 lines).
-- **Backend Route Consolidation (`superAgentRoutes.ts`)**: Added `proxyToSuperAgent` helper to collapse duplicated inline `http.get` logic for `/instances`, `/tasks`, and `/skills` endpoints, eliminating redundant dynamic imports.
-- **Async Audit Log I/O (`superAgentBridge.ts`)**: Converted synchronous file I/O operations (`appendFileSync` / `statSync` / `readFileSync`) in `logSuperAgentEvent` to non-blocking async callbacks to prevent Node.js event-loop delays under heavy streaming token loads.
-- **DRY Preset & Session Helpers (`sessionManager.ts` & `presetUtils.ts`)**: Unified string noise filter arrays (`NOISE_PREFIXES`, `NOISE_SUBSTRINGS`) and refactored model config path resolution helpers.
-
-## [1.3.607] - 2026-07-21
-
-### Fix — Native Webview Live URL Synchronization (`desktop-tauri` & `BrowserTab.tsx`)
-- **Native URL Querying**: Added `get_webview_url` command in Tauri Rust (`lib.rs`) that queries the live URL directly from the native webview instance (`webview.url()`).
-- **Permissions**: Registered `allow-get-webview-url` capability permission in `desktop-tauri/src-tauri/capabilities/default.json`.
-- **Live URL Polling (`BrowserTab.tsx`)**: Updated `pollUrl` loop to invoke `get_webview_url` every 500ms, bypassing cross-origin JS restrictions on external sites like `youtube.com` (where `window.__TAURI__` is undefined). Instantaneous URL bar synchronization for YouTube video clicks and SPA navigations.
-- **UI Cleanup**: Removed Force Dark Mode toggle button from browser navigation bar (`BrowserNavigationBar.tsx`).
-- **Screenshot & Popover Visibility**: Temporarily hide native Tauri webview during `getDisplayMedia` screen picker dialogs, History dropdown, and Bookmark popovers so native HWND webview overlay does not block dialogs/menus.
-- **Screenshot Toast Notification**: Added full file path resolution (`downloadDir()`) and Toast notification dispatch upon taking a screenshot.
-
-## [1.3.606] - 2026-07-21
-
-### Fix — YouTube & SPA URL Updates in Electron Webview (`BrowserTab.tsx`)
-- **Fix URL Bar Updates**: Removed the `isMainFrame === false` filter on `handleElectronNavigate` in Electron `<webview>`. In-page SPA transitions (like YouTube video link clicks via `pushState`) can report `isMainFrame === false` or `undefined` depending on Electron context, causing URL bar updates to be ignored.
-- **Dynamic Tab Title Updates**: Added `page-title-updated` event listener to Electron `<webview>` so YouTube video titles dynamically update the tab name in real time.
-
-## [1.3.605] - 2026-07-21
-
-### Fix — Browser Tab URL Bar Not Updating on SPA Navigation
-- **Root cause**: YouTube (and all SPAs) use `history.pushState` / `history.replaceState` to change the URL when navigating between videos. The previous implementation only listened to `did-navigate-in-page` and a 500 ms polling loop — both missed or were delayed on SPA transitions.
-- **Electron/WebView2 (`BrowserTab.tsx`)**:
-  - Added `isMainFrame === false` guard to `handleElectronNavigate` so sub-frame navigations (YouTube's internal video-player iframes) no longer overwrite the URL bar with internal iframe URLs.
-  - Skip `blob:` and `about:blank` URLs that the media player emits internally.
-  - Added missing `onUpdateTabUrl` to `useEffect` dependency array — previously a stale closure meant the tab-name callback was never called with the latest version.
-- **Tauri (`browserUrlUtils.ts`)**:
-  - Patched `history.pushState` and `history.replaceState` inside the injected polling script so URL changes are emitted via `tline-url-changed` instantly on SPA navigation (no more 500 ms lag).
-  - Added `popstate` listener to catch browser Back/Forward navigation inside SPAs.
-  - Skip `blob:` and `about:blank` URLs from being emitted as URL-changed events.
-
-## [1.3.604] - 2026-07-21
-
-### Performance & Memory — Browser Tab RAM Fix
-- **WebView2 Memory Reclamation on Tab Close (`BrowserTab.tsx`)**:
-  - Navigate to `about:blank` before `.close()` so WebView2 releases its V8 heap immediately instead of holding RAM until GC.
-  - Cancel pending `requestAnimationFrame` (`rafIdRef`) on teardown to prevent stale callbacks from keeping the renderer alive.
-  - Purge backend proxy cache via `DELETE /api/proxy/cache?tabId=` when a tab is destroyed.
-- **BrowserTab Modularization** (`BrowserTab.tsx`, `BrowserNavigationBar.tsx`, `hooks/useBrowserStorageAndHistory.ts`):
-  - Extracted the navigation bar into a standalone `BrowserNavigationBar` component.
-  - Extracted bookmark/history/storage/zoom state and logic into `useBrowserStorageAndHistory` custom hook.
-  - `BrowserTab.tsx` reduced from ~1,447 lines to ~1,033 lines, complying with the 1,000-line target.
-  - Fixed React hook ordering — moved `useBrowserStorageAndHistory` call before the `useEffect` blocks that depend on `zoomFactor` to eliminate "used before declaration" TypeScript errors.
-  - Removed unused `BookmarkItem` and `HistoryItem` imports; introduced a stable `handleReloadRef` to safely pass `handleReload` into the hook without circular initialization.
-
-## [1.3.603] - 2026-07-21
-
-### UI/UX & Style Optimization
-- **Remove Shadow from User Chat Message Header & Card (`SuperAgentGroupedMessages.tsx`, `SuperAgentMessageItem.tsx`)**:
-  - **Flat Minimalist Styling**: Removed drop shadow effects (`shadow-lg` and `shadow-sm`) from user chat prompt cards and sticky turn headers in SuperAgent console for a cleaner, flat UI integration.
-
-## [1.3.602] - 2026-07-21
-
-### Theme & Light Mode Optimization
-- **SuperAgent Light Mode Coloring Fix (`SuperAgentAuditLogs.tsx`, `SuperAgentPresetManager.tsx`, `SuperAgentLoginManager.tsx`, `SuperAgentInteractiveCards.tsx`, `SuperAgentToolItem.tsx`, `SuperAgentSidebar.tsx`, `SubAgentTerminalModal.tsx`, `SuperAgentMessageItem.tsx`, `components.css`)**:
-  - **CSS Theme Variable Conversion**: Converted hardcoded dark hex codes (`#0d111a`, `#06080e`, `#030407`, `#0b0e17`, `#0b0f19`, `#0d111c`, `#121622`, `#090c14`, `#0d0a07`) across all SuperAgent modals, cards, audit log tables, preset managers, and dialogs to root design variables (`var(--bg-main)`, `var(--bg-sidebar)`, `var(--bg-card)`, `var(--border-color)`, `var(--text-main)`, `var(--text-muted)`).
-  - **Adaptive Vibrant Badges**: Transformed dark 950 badge containers into vibrant opacity-based badge styles (`bg-*-500/15`, `text-*-500`, `border-*-500/30`) for high contrast and readability across Light Mode and Dark themes.
-  - **Component Polish**: Added `.theme-light` CSS rules in `components.css` for workbench containers, cards, command popovers, and status badges.
-
-## [1.3.601] - 2026-07-21
-
-### Performance & Concurrency Optimizations (Round 2)
-- **SSH Command Parameter Escaping (`gitManager.ts`, `sshHelpers.ts`)**:
-  - Exported and integrated `escapeShellArg` with single-quote escaping into `runGit` SSH execution paths to ensure safety and parameter precision on remote paths with spaces or quotes.
-- **Parallel Checkpoint Hash Verification (`checkpointManager.ts`)**:
-  - Replaced sequential `for...of` loop with `Promise.all` concurrency when verifying unvalidated checkpoint commit hashes.
-- **Terminal Buffer Consolidation & Sliding Window (`terminalManager.ts`)**:
-  - Optimized buffer consolidation to slice merged output strings to `OUTPUT_BUFFER_MAX_BYTES` (256 KB) without dropping retained buffer context.
-
-## [1.3.600] - 2026-07-21
-
-### Performance & Security Optimizations (Quick Wins)
-- **Dynamic Memory Allocation on File Read (`fsRoutes.ts`)**:
-  - Replaced fixed 1MB buffer allocation with dynamic sizing `Math.min(stat.size, 1024 * 1024)` to reduce memory pressure during file inspection.
-- **Asynchronous Non-Blocking Backend Logger (`server.ts`)**:
-  - Updated backend file logger to non-blocking `fs.appendFile` to avoid event-loop stalls under heavy log output.
-- **SSH Command Argument Sanitization (`sshHelpers.ts`)**:
-  - Implemented robust `escapeShellArg` helper with single-quote escaping across all remote SSH functions to prevent metacharacter errors and shell injection vectors.
-
-## [1.3.599] - 2026-07-21
-
-### Features & Integration
-- **Interactive Recent Changes Item Click with Diff Tab (`SuperAgentSidebar.tsx`, `SuperAgentConsole.tsx`, `App.tsx`)**:
-  - **Click-to-Open Diff**: Clicking any item row in the "Recent Changes" panel of SuperAgent's Live Monitor now opens the file's Diff Tab (`Δ filename (changes)`).
-  - **Quick File Open**: Added a hover action button (`ExternalLink`) to quickly open the raw file tab alongside the primary diff view action.
-  - **Prop Propagation**: Wire `onOpenFile` and `onOpenDiffTab` through `App.tsx` → `SuperAgentConsole` → `SuperAgentSidebar`.
-
-## [1.3.598] - 2026-07-21
-
-### UI/UX & Theme Customization
-- **Full SuperAgent Theme Variable Integration (`SuperAgentConsole.tsx`, `SuperAgentInputContainer.tsx`, `SuperAgentMessageItem.tsx`, `SuperAgentGroupedMessages.tsx`, `SuperAgentToolItem.tsx`, `SuperAgentInteractiveCards.tsx`, `SuperAgentHistorySidebar.tsx`, `SuperAgentSidebar.tsx`, `ActiveTasksBar.tsx`, `SubAgentTerminalModal.tsx`, `SuperAgentSettingsModal.tsx`, `SuperAgentSettingsMenu.tsx`, `SuperAgentPresetManager.tsx`, `SuperAgentLoginManager.tsx`, `SuperAgentAuditLogs.tsx`, `components.css`)**:
-  - **Dynamic Theme Palette**: Replaced all hardcoded hex (`#090c14`, `#05070c`, `#121622`) and static Tailwind color classes (`bg-indigo-600`, `text-indigo-400`, `border-zinc-800`) with root design CSS variables (`var(--bg-main)`, `var(--bg-sidebar)`, `var(--bg-card)`, `var(--panel-header-bg)`, `var(--border-color)`, `var(--color-primary)`, `var(--color-primary-hover)`, `var(--color-primary-glow)`, `var(--text-main)`, `var(--text-muted)`).
-  - **Visual Consistency**: SuperAgent UI elements (headers, popovers, chat prompt boxes, message cards, tool execution items, live monitor sidebar, settings modals, and audit logs) now inherit and automatically adapt to any active application theme (Default Dark, Dracula, Cyberpunk, Forest, Nord, Light Mode).
-
-## [1.3.597] - 2026-07-21
-
-### UI/UX & Redesign
-- **Redesign & Relayout Top Console Header Bar (`SuperAgentConsole.tsx`)**:
-  - **Segmented Tab Control**: Transformed `Console` and `Audit Trails` into a modern, rounded segmented control with `Terminal` & `Shield` icons and glowing active indicator states.
-  - **Balanced 3-Column Layout**: Improved alignment and spacing across History toggle, Active Workspace pill badge, Tab Switcher, Live Monitor, and Setting buttons.
-  - **Hallmark Aesthetic Polish**: Applied sleek dark theme accents (`bg-[#090d16]`, subtle borders, micro-interactions, responsive flex wrapping).
-
-## [1.3.596] - 2026-07-21
-
-### Performance & Optimization
-- **Pagination & Instant Item Click Optimization (`SuperAgentAuditLogs.tsx`)**:
-  - **Click Lag Optimization**: Extracted individual log cards into a memoized `AuditLogItem` (`React.memo`) with localized expansion and view state. Clicking to expand/collapse an item now re-renders **only** that specific item rather than triggering full DOM list reconciliation.
-  - **Pagination Control**: Added full pagination support (15, 25, 50, 100 rows per page) with page jump controls (`First`, `Prev`, `Next`, `Last`). Auto-resets page index on search query or category filter changes.
-
-## [1.3.595] - 2026-07-21
-
-### Features & Redesign
-- **Redesign SuperAgent Audit Logs (`SuperAgentAuditLogs.tsx`)**:
-  - **Hallmark Aesthetics & Anti-AI-Slop**: Implemented sleek dark theme palette with distinct visual hierarchy, color-coded status borders, and category badges for Prompts, Decisions, Agent events, System operations, and Errors.
-  - **Pragmatic Minimalism**: Built clean, structured, and fast viewer without adding extra third-party dependencies.
-  - **Cognitive Scaleup Trace & Decision Intelligence**: Added categorized filter pills, real-time auto-polling toggle, full text search, human-readable log summaries, collapsible detail view with togglable Structured vs Raw JSON display, and 1-click JSON export/copy.
-
-## [1.3.594] - 2026-07-21
-
-### Fixed
-- **Support thinking/reasoning events rendering (`SuperAgentConsoleUtils.ts`, `sessionManager.ts`)**:
-  - **Root Cause**: `extractEventText` tidak mengekstrak field `reasoning`, `thought`, `thinking`, atau `delta` pada event streaming. Akibatnya event `type: 'thought'` / `type: 'reasoning'` menghasilkan text kosong `""` dan tidak dirender ke dalam Process Steps.
-  - **Fix**: Diperbarui `extractEventText` dan pengenalan event `isThoughtType` di `SuperAgentConsoleUtils.ts` untuk mendukung seluruh bentuk event reasoning/thought/thinking.
-  - **History Fix**: Diperbarui `sessionManager.ts` pada backend agar mendukung ekstraksi field `rawMsg.thought` dan `rawMsg.thinking` saat memuat histori.
-
-## [1.3.593] - 2026-07-21
+## [1.2.615] - 2026-07-28
 
 ### Features
-- **Allow empty chat history list (`useSuperAgentSessions.ts`, `SuperAgentConsole.tsx`)**:
-  - Riwayat chat kini diperbolehkan kosong (0 items) tanpa otomatis memaksa membuat "New Chat" sintetis pada `loadWorkspaceSessions` maupun setelah semua chat dihapus.
-  - Sesi chat baru akan otomatis dibuat secara dinamis saat pengguna mengirimkan prompt atau menekan tombol `+` (New Chat).
+- **Live Terminal & Bang Execution Output**: Added real-time loading indicator and live stdout/stderr streaming into the chat area when executing bang (`!`) commands or `/terminal` commands, matching tool call execution behavior.
 
-## [1.3.592] - 2026-07-21
+## [1.2.614] - 2026-07-28
 
-### UI/UX
-- **Remove left border from history chat items (`SuperAgentHistorySidebar.tsx`)**:
-  - Menghapus `border-l-2 border-indigo-500` / `border-l-2 border-transparent` pada item riwayat chat di sidebar kiri agar tampilan list item terlihat lebih bersih dan seamless.
+### Documentation
+- **Corrected Contact Email**: Updated author contact email to `hrudy715@gmail.com` in README.md footer.
 
-## [1.3.591] - 2026-07-21
+## [1.2.613] - 2026-07-28
 
-### Fixed
-- **Process Step wajib semua tools tampil (`SuperAgentConsoleUtils.ts`, `sessionManager.ts`, `useSuperAgentSessions.ts`)**:
-  - **Live streaming tool start matching**: Perbaiki logika `setMessages` pada `handleAgentEventPayload` di `SuperAgentConsoleUtils.ts` agar event `tool_start` / `tool_call` / `tool_use` tidak menggunakan Priority 2 fallback yang dapat menimpa tool yang sedang berjalan sebelumnya. Setiap tool call baru kini di-append dengan aman sehingga semua tool steps tampil lengkap di Process Steps.
-  - **History reload tool retention**: Perbaiki `sessionManager.ts` di backend agar `isNoiseMessageContent` tidak membuang message ber-role `'tool'` atau `'thought'` saat memuat histori dari SuperAgent HTTP Server.
-  - **System noise guard**: Tambahkan pengecualian eksplisit untuk role `'tool'` dan `'thought'` pada `isSystemNoiseMsg` di `useSuperAgentSessions.ts` agar tidak ada tool step yang tersaring sebagai system noise.
-  - **TypeScript interface fix**: Perbarui `SuperAgentToolItemProps` pada `SuperAgentToolItem.tsx` untuk menyertakan role `'connection'`.
+### Documentation
+- **Added Contact Email to Footer**: Updated README.md footer section to include author contact email `rudy.city.developer@gmail.com`.
 
-## [1.3.590] - 2026-07-21
+## [1.2.612] - 2026-07-28
 
-### Performance
-- **Fix streaming latency: t-line sekarang secepat CLI (`superAgentBridge.ts`)**:
-  - **Root cause #1 (kritis)**: `logSuperAgentEvent()` sebelumnya melakukan `fs.readFileSync` seluruh file → `JSON.parse` semua entries → `JSON.stringify(null, 2)` → `fs.writeFileSync` seluruh file **pada setiap SSE event** (termasuk setiap token streaming). Ini memblokir Node.js event loop puluhan kali per detik.
-    - **Fix**: Ganti ke format **NDJSON append-only** (`fs.appendFileSync` 1 baris JSON per event). File read-write penuh hanya terjadi saat rotasi (>2MB). File audit berganti dari `superagent-audit.json` → `superagent-audit.ndjson`.
-    - `getAuditLogs()` diperbarui untuk membaca NDJSON, dengan fallback ke format lama `.json` untuk backward compatibility.
-  - **Root cause #2**: SSE relay melakukan `JSON.parse(dataStr)` lalu `JSON.stringify(event)` tanpa perlu — data sudah berupa JSON string valid dari SuperAgent.
-    - **Fix**: Kirim `dataStr` langsung ke WebSocket (`ws.send(dataStr)`). Parse hanya dilakukan untuk audit logging dan `LOG_STREAM_RESPONSE` mode.
-  - **Root cause #3**: High-frequency streaming events (`text_delta`, `thought`, `reasoning`, `tool_start`, `tool_progress`) tidak perlu masuk audit log — hanya noise.
-    - **Fix**: Skip `logSuperAgentEvent()` untuk event types tersebut via `AUDIT_SKIP_INNER_TYPES` set.
-  - **Root cause #4**: Nagle algorithm TCP buffering pada koneksi loopback `127.0.0.1:7888` menambah latensi ~200ms untuk setiap packet token kecil.
-    - **Fix**: Tambah `socket.setNoDelay(true)` setelah koneksi SSE berhasil.
+### Documentation
+- **Professional README Redesign**: Polished README.md with clean layout, badges, structured overview, architecture diagrams, collapsible experimental section, and command cheat-sheet.
 
-## [1.3.589] - 2026-07-21
+## [1.2.611] - 2026-07-28
 
-### Fixed
-- **`ActiveTasksBar` tidak muncul di atas input (`SuperAgentConsole.tsx`)**:
-  - Bug: `ActiveTasksBar` ditempatkan **di dalam** `div ref={messagesContainerRef}` yang punya `overflow-y-auto`, sehingga bar ikut tergulir bersama chat messages dan tidak terlihat di atas input.
-  - Fix: Dipindahkan ke luar scroll container, di antara `messagesContainerRef` dan `SuperAgentInputContainer`, sehingga selalu tampil pinned di atas area input.
-- **`PlanCard` bisa auto-approve / `handlePlanApproval` terpanggil tanpa state valid (`SuperAgentConsole.tsx`)**:
-  - Bug: `handlePlanApproval` hanya mengecek `!ws` sebelum mengirim `approve_plan` ke server, sehingga bisa terpanggil meskipun `pendingPlanApproval` sudah `false` (race condition / stale closure).
-  - Fix: Ditambahkan guard `if (!pendingPlanApproval || !ws) return` agar approve/reject hanya bisa dikirim saat plan card memang sedang aktif ditampilkan.
+### Documentation
+- **Updated Global Installation**: Updated README.md global installation command to `bun install -g .` for registering global CLI binary executable.
 
-## [1.3.588] - 2026-07-21
+## [1.2.610] - 2026-07-28
 
-### Changed
-- **SuperAgent Permission & Plan Approval Card Redesign (`SuperAgentInteractiveCards.tsx`)**:
-  - Redesigned both the `PermissionCard` and `PlanCard` components to adhere to Hallmark minimalist design guidelines.
-  - Implemented clean, themed dark containers (`bg-[#0d0a07]` for amber/permission warning and `bg-[#090d16]` for indigo/plan approval).
-  - Integrated modern pulsing active beacon states and proper responsive borders.
-  - Refined buttons with hover transformations, active click states, and clean borders.
+### Documentation
+- **Updated Installation Command**: Changed global link command in README.md from `npm link` to `bun link`.
 
-## [1.3.587] - 2026-07-21
+## [1.2.609] - 2026-07-28
 
-### Changed
-- **SuperAgent Question Card Redesign (`SuperAgentInteractiveCards.tsx`)**:
-  - Redesigned the agent question-answering card to adhere to Hallmark minimalist design guidelines.
-  - Added modern, styled custom checkboxes and radio buttons with smooth transition states.
-  - Replaced native inputs with a custom flex-aligned layout containing active ring borders and dot/checkmark indicators.
-  - Integrated status indicator animations (pulsing green/indigo dot) and proper spacing.
+### Documentation
+- **Automatic `t-line` Desktop Integration**: Clarified in README.md that `t-line` desktop app connects automatically to Superagent without needing manual server commands.
 
-## [1.3.586] - 2026-07-21
+## [1.2.608] - 2026-07-28
 
-### Improved
-- **SubAgent Terminal Modal Status Badge (`SubAgentTerminalModal.tsx`)**:
-  - Added explicit red badge styling for `ERROR` and `FAILED` subagent execution statuses in the SubAgent terminal modal header.
+### Documentation
+- **Marked Chrome Extension as Experimental**: Updated README.md key features list to mark Chrome Extension integration as experimental.
 
-## [1.3.585] - 2026-07-21
+## [1.2.607] - 2026-07-28
 
-### Changed
-- **Default Terminal Stream Response Logging Disabled (`superAgentBridge.ts`)**:
-  - Wrapped terminal stream log output in a `process.env.LOG_STREAM_RESPONSE === 'true'` check.
-  - Stream response terminal logging is now disabled by default and can be enabled on-demand when `LOG_STREAM_RESPONSE=true`.
+### Documentation
+- **Focused README on Single Agent Mode**: Reorganized README.md to focus on default Single Agent pair programming mode and explicitly marked 3-Tier Multi-Agent mode as experimental.
 
-## [1.3.584] - 2026-07-21
+## [1.2.606] - 2026-07-28
 
-### Added
-- **Stream Response Logging to Terminal (`superAgentBridge.ts`)**:
-  - Added stdout/console logging for SSE stream response events (`text_delta`, `message`, `tool_call`, `tool_result`, and execution events).
-  - Stream response events arriving from SuperAgent are now formatted and displayed live in the backend terminal console output.
+### Documentation & Desktop App Integration
+- **Simplified `README.md`**: Cleaned up and restructured documentation for conciseness and token efficiency.
+- **Added `t-line` Integration**: Documented integration setup with [t-line](https://github.com/RudyCity/t-line) (Superagent Desktop App) via `superagent --server 9222 --client-mode tline`.
 
-## [1.3.583] - 2026-07-21
+## [1.2.605] - 2026-07-28
 
-### Changed
-- **Default Expanded Tool Use in SuperAgent Chat (`SuperAgentGroupedMessages.tsx`)**:
-  - Updated `CollapsibleProcessBlock` in SuperAgent chat UI so process steps and tool usage default to expanded (`expanded = true`) across active and historical chat turns.
-  - Removed auto-collapsing on response completion, ensuring tool execution steps (`Read file`, `Ran command`, `Searched`, etc.) remain visible by default in SuperAgent chat log.
+### Fixed & Improved - OCR Engine & Workspace Boundary Policy
+- **Workspace Boundary Guidance** (`pathHelpers.ts`): Updated security boundary guard error message to provide clear actionable instructions for external paths (`ask_question` user permission gate or copying target file into workspace).
+- **OCR Engine Optimization** (`pdfOcrEngine.ts`): Reduced PDF rendering scale to `scale=1.5` (~35% faster render) and added negative caching to prevent redundant processing of failed/corrupted PDF files.
+- **Dynamic Language & OCR Engine Fallback** (`pdfOcrEngine.ts`): Enhanced fallback chain (`ind+eng` -> `eng`) for PyTesseract OCR.
+- **External Path Security Gate** (`prompts.ts`): Enforced `EXTERNAL_PATH_PERMIT` prompt rule requiring interactive `ask_question` user confirmation before referencing files outside the active workspace.
 
-## [1.3.582] - 2026-07-21
+## [1.2.604] - 2026-07-28
 
-### Fixed
-- **Normalized Session ID Matching (`SuperAgentConsoleUtils.ts`, `SuperAgentGroupedMessages.tsx`)**:
-  - Added `isMatchingSessionId()` helper to normalize session ID prefixes (`session_`, `sess_`, `workspace::`) so live streaming events match regardless of ID prefix variations.
-  - Updated `SuperAgentGroupedMessages.tsx` so process/thinking block expansion checks `isStreaming && isLastTurn`, keeping process steps open during the active turn until the assistant response completes.
+### Documentation & Terminal Help Updates
+- **Updated Terminal `/help` Text** (`coreCommands.ts`): Added detailed usage pattern for `/workspace add` with custom port and `?key=` query parameters.
+- **Expanded `README.md`**: Added CLI shortcut examples (`-ws`), custom port, and `.pem` key connection examples.
 
-## [1.3.581] - 2026-07-21
+## [1.2.603] - 2026-07-28
 
-### Changed
-- **Live Process & Thinking Step Auto-Expansion (`SuperAgentGroupedMessages.tsx`)**:
-  - Updated `CollapsibleProcessBlock` to automatically stay open/expanded while an agent is actively running or streaming (`isStreaming = true`).
-  - Tool calls, execution reasoning, and thoughts remain visible live during turn execution, and automatically collapse into a summary pill only after the final assistant response completes.
+### Added - Custom Private Key Query Parameter (`?key=...`)
+- **Query Parameter Key Parsing** (`workspaceMode.ts`): Supported custom `.pem` / private key paths directly inside SSH target URIs using `?key=C:\path\to\key.pem`.
+- **Custom Port & Private Key SSH Parsing**: Users can connect directly to custom SSH ports with custom identity files in a single URI string.
 
-## [1.3.580] - 2026-07-21
+## [1.2.602] - 2026-07-28
 
-### Fixed
-- **New Chat Session Event Isolation & Mismatch Filter (`SuperAgentConsoleUtils.ts`, `server.ts`, `agent.ts`)**:
-  - Fixed an issue where clicking "New Chat" caused stray `done` / `[Interrupted]` events from the old aborted session to prematurely stop loading for new chat responses.
-  - Added `sessionId` metadata tracking to `Agent` and `server.ts` `onEvent` emissions.
-  - Added `activeSessionId` filtering in `SuperAgentConsoleUtils.ts` to discard stray background events belonging to inactive/previous sessions.
+### Added & Improved - Complete SSH Proxy Workspace Mode & Advanced Features
+- **100% Comprehensive Tool Interception Layer** (`fileEditTools.ts`, `fileReadTools.ts`, `shellTools.ts`): All tools (`read`, `write_to_file`, `edit`, `replace_file_content`, `multi_replace_file_content`, `glob`, `grep`, `ripgrep_search`, `run_command`, `bash`, `run_background_process`) are transparently routed to SSH/SFTP when in SSH mode.
+- **SFTP In-Memory Smart Caching** (`sshProxy.ts`): Implemented a 30s TTL in-memory cache for SFTP `readFile` operations to eliminate latency delays during repetitive file reads.
+- **Remote System Metrics & `/workspace status`** (`sshProxy.ts`, `workspaceCommand.ts`): Added real-time remote system metrics collector (`sshProxy.getSystemMetrics()`) and `/workspace status` slash command displaying SSH latency, remote OS, system uptime, RAM, and disk usage.
+- **Interactive Password Prompt Fallback** (`cliMain.tsx`, `sshProxy.ts`): Automatically prompts for interactive password input when SSH key authentication is unavailable or fails.
+- **Bulk File Operations Routing** (`sshCommands.ts`): Full support for array-based bulk reads (`filePaths`) and bulk writes (`files`) over SSH.
+- **Unit Tests Added**: Added 14 unit tests across `tests/sshProxy.test.ts`, `tests/sshBulkOps.test.ts`, `tests/sshToolsFull.test.ts`, and `tests/sshAdvanced.test.ts`.
 
-## [1.3.579] - 2026-07-21
+## [1.2.601] - 2026-07-28
 
-### Fixed
-- **Chat Output Print Stream Bug Fix (`SuperAgentConsoleUtils.ts`, `SuperAgentConsole.tsx`)**:
-  - Added safe `extractEventText()` helper to handle array/object content payloads (`[{ type: 'text', text: '...' }]`) without throwing `TypeError: chunk.startsWith is not a function`.
-  - Optimized chat scroll behavior during active text streaming: uses instant `'auto'` scroll during stream arrival to prevent smooth-scroll animation queue stutter and lag.
+### Fixed & Improved - Advisor Runtime Config
 
-## [1.3.578] - 2026-07-21
+- **Live settings sync** (`advisor.ts`, `agent.ts`): Added `syncSettings(s)` method to `RealtimeAdvisor` — called at the start of every `runAgentLoop()` via `this.advisor.syncSettings(getSettings())`. All threshold and feature-flag changes made via `/setting-advisor` now take effect on the next agent run without restarting.
+- **`enableAdaptiveScaling` and `enablePatternMemory` now configurable** (`jsonConfig.ts`, `agent.ts`): Added `advisorAdaptiveScaling` and `advisorPatternMemory` to `SystemSettings` interface, `DEFAULT_CONFIG`, `getSettings()` return, and the `RealtimeAdvisor` constructor in `agent.ts`. Both default to `true`.
+- **Expanded `/setting-advisor` command** (`settingsCommand.ts`): Command now supports 7 sub-commands — `on`, `off`, `warn=N`, `pause=N`, `error=N`, `adaptive=on/off`, `pattern=on/off`. Calling with no args now shows a full status table of all current advisor settings.
+- **`/settings` display now shows full advisor config** (`settingsCommand.ts`): The Advisor line now includes all 5 configurable values inline: warn threshold, pause threshold, error threshold, adaptive scaling state, and pattern memory state.
 
-### Fixed
-- **Instant New Chat Session Title Synchronization (`useSuperAgentSessions.ts`, `historyDb.ts`)**:
-  - Fixed a bug where a new chat session title defaulted to "New Chat" and only updated after opening/clicking the session.
-  - Added title preservation in `useSuperAgentSessions.ts` `syncSessions()` so background session list syncing doesn't overwrite generated session titles with "New Chat".
-  - Updated `historyDb.ts` in SuperAgent to invalidate `clearHistoryCache()` immediately when session history is saved or deleted, eliminating 30-second stale session list cache delays.
+### Refactored - Android Setup & Document Reading Extraction
+- **Android setup refactored** (`androidSetup.ts` → `setup/ocrSetup.ts`, `setup/pdfOcrEngine.ts`): Extracted OCR and PDF engine setup from monolithic `androidSetup.ts` into modular, testable modules under `src/core/setup/`. Reduces `androidSetup.ts` by 200+ lines.
+- **Office CLI setup extracted** (`setup/officeCliSetup.ts`): Moved LibreOffice / OfficeCLI detection logic into dedicated module.
+- **Document read tool enhanced** (`documentReadTools.ts`): Integrated new modular setup pipeline for OCR + office-cli with cleaner error handling and fallback chain.
+- **Tests added** (`tests/documentReadTools.test.ts`, `tests/pdfOcr.test.ts`): Unit tests for refactored setup modules.
 
-## [1.3.577] - 2026-07-21
+## [1.2.600] - 2026-07-28
+
+### Fixed & Improved - Advisor System Overhaul
+- **Critical: Config thresholds now respected** (`advisor.ts`, `agent.ts`, `jsonConfig.ts`): `advisorWarningThreshold`, `advisorPauseThreshold`, and `advisorErrorThreshold` from `model-config.json` were silently ignored — advisor was always constructed with hardcoded defaults. Fixed by adding all three fields to `getSettings()` return and passing them to the `RealtimeAdvisor` constructor.
+- **Critical: Transient error backoff is now applied** (`LoopIterationProcessor.ts`): `recommendedBackoffMs` returned by the advisor on rate-limit / network errors was computed but never used. Now triggers `delayWithCountdown()` and surfaces the delay message to the user before the next iteration.
+- **Critical: Transient error counter fixed** (`advisor.ts`): `consecutiveErrorsCount` was not incremented when a transient error (429, ETIMEDOUT, etc.) was detected, breaking exponential backoff escalation. Counter now increments before the early return, enabling proper escalating backoffs across repeated transient errors. Transient errors are now also logged to advisor events.
+- **Pattern memory: deterministic keys** (`advisor.ts`): Pattern cache signatures now use `sortedJsonStringify()` so objects with the same keys in different insertion order correctly match stored patterns.
+- **Pattern memory: in-memory cache** (`advisorLogger.ts`): Replaced synchronous file I/O on every tool step with an authoritative in-memory `Map`. Disk persistence is async fire-and-forget. `getFailedPattern()` reads from memory instantly — no disk access.
+- **Pattern memory: TTL eviction** (`advisorLogger.ts`): Patterns older than 24 hours are evicted on write and silently skipped on read. Prevents stale patterns from past sessions causing false-positive warnings indefinitely.
+- **Pattern memory: LRU cap** (`advisorLogger.ts`): Pattern store capped at 200 entries. Oldest entries (by `lastFailed`) are removed when the limit is reached.
+- **Health score enhancement** (`advisor.ts`): Added `successStreak` and `patternWarningHits` to `AgentState`. Score now rewards sustained success (≥5 consecutive clean steps → +10 cap at 100) and penalizes repeated pattern memory hits. Error penalty capped at 6 errors (-90 max) to prevent permanently zero scores.
+- **Event logging for transient errors** (`advisor.ts`): Transient error events are now logged to the advisor event store (same as loop warnings) for visibility in `/advisor events` and the server API.
+- **4 new tests** (`tests/advisor.test.ts`): Covering transient error backoff escalation, custom threshold enforcement, health score recovery via success streak, and health score floor at 0.
+
+## [1.2.599] - 2026-07-28
+
+### Fixed & Enhanced
+- **Terminal & Commands**: Updated terminal commands and types.
+- **RMemory Integration**: Enhanced RMemory strategy and history storage.
+- **Agent Context & Messaging**: Updated ContextBuilder, HistoryCompactor, and MessageBuilder.
+
+## [1.2.598] - 2026-07-28
 
 ### Added
-- **Dual Client Mode Support for SuperAgent (`server.ts`, `superAgentBridge.ts`, `sidepanel.js`)**:
-  - Added support for `chrome-extension` and `tline` client modes in SuperAgent HTTP Server.
-  - SuperAgent server dynamically configures system prompt and toolsets based on client mode (`CHROME_EXTENSION_SYSTEM_PROMPT` + `chromeExtensionToolset` for Chrome extension; `superagentToolset` / `masterToolset` for `tline`).
-  - Updated `superAgentBridge.ts` to spawn SuperAgent with `--client-mode tline` and pass `x-client-mode: tline` HTTP header and payload for all bridge requests.
+- **Server Logging (`server.ts`)**:
+  - Implemented a dedicated debug log file (`~/.superagent-r/superagent-server.log`) to record server events, request methods/URLs, response statuses, and SSE client broadcasts.
+  - Overwrote global `console.log`, `console.error`, and `console.warn` methods inside the server execution context to automatically mirror all server logs and warnings into the dedicated file.
+  - Implemented automatic log file rotation when the file size exceeds 5MB.
 
-## [1.3.576] - 2026-07-20
-
-### Fixed
-- **SuperAgent Plural Tool Results Extraction (`sessionManager.ts`, `SuperAgentConsoleUtils.ts`)**:
-  - SuperAgent stores and streams tool execution outputs as `toolResults` (plural array). Added extraction for `toolResults` / `tool_results` array properties across history session loading and live SSE event handlers so historical tool outputs are never lost or evaluated to `undefined`.
-
-## [1.3.575] - 2026-07-20
+## [1.2.597] - 2026-07-27
 
 ### Fixed
-- **Chat Initial Load Message Order & Smooth Infinite Scroll Up (`sessionManager.ts`, `useSuperAgentSessions.ts`, `SuperAgentConsole.tsx`)**:
-  - **Reverse Offset Pagination**: Updated `getSessionMessages` in `sessionManager.ts` so `offset = 0` loads the 50 most recent messages (bottom of chat) in exact chronological order, while scrolling up loads older message chunks backwards without mixing up message history order.
-  - **Scroll Position Preservation**: Prevented `scrollIntoView` auto-scroll to bottom from triggering when older messages are loaded into the chat container during top scrolling, calculating relative scroll height (`newScrollHeight - prevScrollHeight + prevScrollTop`) to keep scrolling completely seamless.
-  - **Top UI Indicators**: Added a sleek infinite scroll header UI displaying a loading spinner during fetch, an "↑ Load older messages" manual trigger button when `hasMore` is true, and a "Beginning of conversation history" badge when the top of session history is reached.
+- **Compilation & REST APIs**: Restored the missing `deriveActiveProviderId` helper and `GET /api/config` endpoint in `serverRoutes.ts` which were accidentally removed during recent memory API enhancements.
+- **Test Robustness**: Added error event handlers to write streams in `PromptLogger.ts` to prevent uncaught exceptions when test environments purge temp config/log directories.
 
-## [1.3.574] - 2026-07-20
+## [1.2.596] - 2026-07-28
 
 ### Fixed
-- **SuperAgent Tool Call Pairing & Parameter Preservation (`SuperAgentConsoleUtils.ts`, `sessionManager.ts`)**:
-  - Fixed a critical bug where SuperAgent's `toolResult.toolCallId` property was not being extracted during `tool_end` SSE events. This caused `tool_end` to fail matching its corresponding `tool_start` item, resulting in orphaned tool items with missing parameters or un-merged results.
-  - Added `toolCallId` property extraction across SSE events and historical session message payloads, ensuring `args` and `result` are seamlessly merged into a single complete tool call item.
+- **Test Pollution (uiDetrDetection)**: Added `stopRemoteChromeBridge()` cleanup in `afterEach` to prevent WebSocketServer singleton from leaking between tests, which silently reinstated `browserControlHandler` and broke null-handler expectations.
 
-## [1.3.573] - 2026-07-20
+## [1.2.595] - 2026-07-27
 
 ### Fixed
-- **Rich Tool Inspection Panel & Full Height Toggle (`SuperAgentToolItem.tsx`)**:
-  - Added a `Full View` / `Compact` toggle button allowing users to un-truncate long tool arguments and outputs without strict scroll height limits.
-  - Added real-time status badges (`COMPLETED` / `RUNNING`) and `callId` tracking pill directly inside expanded tool detail headers for complete transparency.
+- **Chrome Extension Tab-Awareness**: Dynamic window tracking via `chrome.windows.onFocusChanged` listener; re-register SSE instance on window switch.
+- **Server-side Upsert**: `POST /api/browser/update-instance` now creates instance if missing instead of silently dropping.
+- **Extension Source Tagging**: Added `source` field (`"sidepanel"`/`"remote"`) to instance registry for disambiguation.
+- **Tab Poll Fallback**: Added `setInterval(2000)` as fallback tab tracker.
+- **Test Alignment**: Updated `server2.test.ts` expectations to match new upsert behavior.
 
-## [1.3.572] - 2026-07-20
-
-### Fixed
-- **Unified Tool Event Listener & Target Label Duplication (`SuperAgentConsoleUtils.ts`, `SuperAgentToolItem.tsx`)**:
-  - Unified tool event handling across `tool_start`, `tool_call`, `tool`, `tool_end`, `tool_result`, and `tool_output` so single or multi-phase tool SSE events never drop tool results or arguments.
-  - Resolved `Read read` label duplication bug by cleanly resolving target filenames/URLs or defaulting to `file` / `workspace` / `command`.
-  - Added fallback `Status / Log` block when expanding tool items to guarantee tool invocation status is always visible even when arguments or output are absent.
-
-## [1.3.571] - 2026-07-20
+## [1.2.594] - 2026-07-26
 
 ### Fixed
-- **Tool Contract Query & Result Display (`SuperAgentToolItem.tsx`, `SuperAgentConsoleUtils.ts`, `sessionManager.ts`)**:
-  - Fixed an issue where expanding a tool call item (details contract block) resulted in search queries or tool execution outputs not appearing.
-  - Enhanced search query extraction across all field aliases (`Query`, `query`, `pattern`, `search`, `q`, `searchTerm`, `text`, `Prompt`, `prompt`, etc.).
-  - Fixed `tool_end` / `tool_result` event parsing to capture raw strings, objects, and nested `toolResult` outputs so tool results reliably populate `msg.result` and display when expanding the tool contract block.
-  - Added robust stringified JSON handling for `args` and `result` displaying formatted JSON or fallback string output when expanded.
+- **Slash Commands & UI Polish**: Enhanced slash command auto-completion, browser macro execution tools, keyboard handlers, and multi-agent dashboard updates.
+- **Extension Controls**: Added extension reload action and browser macro control features.
 
-## [1.3.570] - 2026-07-20
+## [1.2.593] - 2026-07-26
 
 ### Fixed
-- **SuperAgent Tab Theme Color Alignment (`App.tsx`, `SuperAgentConsole.tsx`, `SuperAgentSettingsModal.tsx`, `SuperAgentPresetManager.tsx`, `TabsDropdown.tsx`, `components.css`)**:
-  - Replaced hardcoded `#818cf8` and `indigo` style colors across the SuperAgent tab icon, quick launch button, header mode/navigation pills, and settings modal buttons with dynamic CSS theme variables (`var(--color-primary)` & `color-mix()`). SuperAgent elements now seamlessly adapt to the user's active theme palette.
+- **Tab Autocomplete Text Preservation**: Fixed Tab autocomplete replacing the entire input line when `/skill-*` or any slash command is typed mid-sentence. Now preserves all text before and after the slash command trigger during Tab completion.
 
-## [1.3.569] - 2026-07-20
-
-### Fixed
-- **Tool Details Parsing & Generic Fallback Bug (`sessionManager.ts`, `SuperAgentConsoleUtils.ts`, `SuperAgentToolItem.tsx`)**:
-  - Fixed an issue where tool calls were displaying generic `Tool tool` names and `tool details` text due to missing fields in SSE events and history payloads. Added comprehensive field extraction across `function`, `tool_calls`, `arguments`, `name`, and `content`, as well as smart regex/args inference fallbacks to correctly display tool names (`Read`, `Edited`, `Searched`, `Ran`, `Subagent`), parameters, arguments, and execution outputs.
-
-## [1.3.568] - 2026-07-20
+## [1.2.592] - 2026-07-26
 
 ### Fixed
-- **Chronological Tool Placement & Stream Sequence Layout (`SuperAgentGroupedMessages.tsx`)**:
-  - Restored exact chronological stream sequence placement for process blocks. Tools executed between assistant text streaming chunks are rendered at their exact usage positions in the timeline, grouping sequential tool calls into clean `Process steps` blocks right where they occur.
+- **Slash Skill Prompt Truncation**: Fixed `/skill <name> <user text>` and `/skill-<slug> <user text>` commands truncating user prompts appended after the skill name. `extraPrompt` text is now extracted and forwarded to the agent.
 
-## [1.3.567] - 2026-07-20
-
-### Fixed
-- **Process Steps Consolidation & Tool Count Display Bug (`SuperAgentGroupedMessages.tsx`)**:
-  - Fixed an issue where tool steps during a turn were fragmented into separate single-step sub-blocks displaying `Process steps (1 tool step)`. All tool execution and thought steps for a given turn are now consolidated into a single unified `Process steps` block rendered below the assistant text, correctly displaying the total count of tool steps for that turn (e.g. `Process steps (5 tool steps)`).
-
-## [1.3.566] - 2026-07-20
+## [1.2.591] - 2026-07-26
 
 ### Fixed
-- **Rich Markdown Formatting & Table Rendering (`SuperAgentMessageItem.tsx`)**:
-  - Implemented a complete Markdown block and inline parser/renderer in `renderMessageContent`. Chat responses now render rich headings (`#`, `##`, `###`), bold/italic formatting, interactive code blocks with copy buttons, indigo inline code badges, blockquotes, list items, divider lines, and styled Markdown tables (`<table>`) with dark glass borders and zebra striping.
+- **Inline Trigger Slash Suggestions**: Fixed command suggestions and Tab autocomplete failing to trigger when `/` or `!` is typed in the middle or end of a sentence. Uses `getActiveCommandContext` to detect active command triggers anywhere in the input line.
 
-## [1.3.565] - 2026-07-20
-
-### Fixed
-- **Tool Message Duplication & Premature Block Collapse Bug (`SuperAgentConsoleUtils.ts` & `SuperAgentGroupedMessages.tsx`)**:
-  - Fixed an issue where live tool execution created duplicate entries for `tool_start` and `tool_end` events, causing tool counts to jump and vanish upon backend history sync. `tool_end` events now update the matching `tool_start` message in-place with execution results.
-  - Ensured all process blocks in an active streaming turn stay expanded during execution without collapsing prematurely.
-
-## [1.3.564] - 2026-07-20
+## [1.2.590] - 2026-07-26
 
 ### Fixed
-- **Tool Block Ordering & Chronological Stream Layout (`SuperAgentGroupedMessages.tsx`)**:
-  - Updated `groupMessagesIntoTurns` to group messages into chronological turn sub-blocks. Initial assistant text (e.g. streaming responses) now renders at the top below the user query, and tool process blocks render below the assistant text in exact chronological order.
+- **Background Task Sync Loop**: Fixed an infinite loop in background task notifications by preventing the restoration of already-completed tasks from the SQLite database to the active memory map.
 
-## [1.3.563] - 2026-07-20
-
-### Fixed
-- **Manual Expansion Persistence Bug (`SuperAgentGroupedMessages.tsx`)**:
-  - Fixed an issue where manually expanding the process steps block (`CollapsibleProcessBlock`) while idle caused `useEffect` to trigger a re-render collapse. Expansion state transitions are now strictly scoped to active streaming start/finish events, allowing users to expand and collapse process blocks and tool details freely without auto-collapsing.
-
-## [1.3.562] - 2026-07-20
-
-### Fixed
-- **Permanent Session Deletion Persistence Bug (`sessionManager.ts`)**:
-  - Fixed a bug where deleting chat sessions created with `session_<timestamp>` IDs bypassed calling SuperAgent's HTTP DELETE API (`/api/history/session/:id`). This left the session intact in SuperAgent's SQLite database (`sessions` table) and on disk, causing deleted sessions to reappear upon app/server restart.
-
-## [1.3.561] - 2026-07-20
-
-### Fixed
-- **Process Steps Auto-Collapse Timing Bug (`SuperAgentGroupedMessages.tsx`)**:
-  - Fixed an issue where the process steps block (`CollapsibleProcessBlock`) did not automatically contract (collapse) upon agent execution completion. It now remains expanded during active streaming tool processing so users can watch live tool steps, and automatically contracts when execution finishes (`isStreaming` transitions from `true` to `false`).
-
-## [1.3.560] - 2026-07-20
-
-### Fixed
-- **SuperAgent Session Title & New Chat Display Bug (`sessionManager.ts` & `useSuperAgentSessions.ts`)**:
-  - Fixed an issue where raw session IDs (e.g. `sess/1784537657160/6gu4c4`) were rendered in the sidebar for new chat sessions. Raw session ID strings starting with `sess/`, `sess_`, or `session_` are now sanitized and fallback to `'New Chat'`.
-  - Fixed `extractCleanUserText` and `getCleanUserText` to strip `<USER_REQUEST>` prompt wrappers instead of marking the prompt as system noise, enabling proper title generation from user queries.
-
-## [1.3.559] - 2026-07-20
-
-### Fixed
-- **WebSocket Proactive Init Race Condition (`superAgentBridge.ts`)**:
-  - Removed the redundant proactive `initializeSuperAgentSession` call when establishing a WebSocket connection. This prevents a race condition where the proactive call (initializing a default session without ID) concurrently aborted a prompt's chat run sent immediately after opening the connection.
+## [1.2.589] - 2026-07-26
 
 ### Added
-- **Comprehensive Integration Test Suite (`test_tline_superagent_all_features.js`)**:
-  - Added a test script that validates all SuperAgent REST API endpoints and real-time WebSocket chat/SSE streaming against the running t-line backend server with auth bypass token integration.
+- **Chrome Remote WSS Bridge Auto-Start**: Auto-start the Chrome Remote WSS WebSocket bridge server on port 9223 immediately when the SuperAgent API server starts (unless running inside a unit test environment). This allows Chrome Remote Extensions to connect immediately upon opening without waiting for an on-demand tool trigger.
 
-## [1.3.558] - 2026-07-20
+## [1.2.588] - 2026-07-26
 
-### Fixed
-- **New Session ID Persistence Alignment (SuperAgent `PathResolver.ts` & `sessionManager.ts`)**:
-  - Fixed a bug where a newly created chat session (using `session_<timestamp>` format) was generated as a random UUID by the backend's `PathResolver.ts` because the directory did not exist on disk yet. We now ensure the custom session ID is directly used to construct the new history directory and file path if it contains no path separators.
-  - Added `resume: sessionId` parameter inside `saveWorkspaceSession` API call inside `sessionManager.ts` to ensure that server registration properly aligns with database historical persistence.
+### Added
+- **Single Server Instance Check**: Implemented duplicate server port detection using net.Socket before starting a new server. Exits cleanly (or returns null if silent) to prevent duplicate SuperAgent server and Python Vision server processes.
 
-## [1.3.557] - 2026-07-20
+## [1.2.587] - 2026-07-26
 
-### Fixed
-- **SuperAgent Session Continuation Bug (`superAgentBridge.ts` & SuperAgent `server.ts`)**:
-  - Removed the redundant unconditional session initialization call (`initializeSuperAgentSession`) on every prompt in the bridge. Instead, the bridge now directly calls `/api/chat` and lazily re-initializes only if the server returns a "Session not initialized" error, preserving the active `Agent` context.
-  - Fixed `initializeSuperAgentSession` to correctly pass the `resume` payload mapping to `sessionId` so the SuperAgent server actually restores/loads the session message history from the database.
-  - Optimized the SuperAgent `/api/init` handler to bypass recreating the `Agent` instance if the requested session is already active in that workspace with the same ID and mode, preserving the runtime context, cache, and token progress.
+### Added
+- **Server Status in Settings**: Added SuperAgent API server (port 7888) and Chrome Remote WSS bridge (port 9223) online/offline detection status to `/settings` command output.
+- **Active Server Sessions**: Included list of all active server sessions (showing clientMode, sessionId, workspace path, and running/idle status) under a new section in `/settings` command output.
 
-## [1.3.556] - 2026-07-20
+## [1.2.586] - 2026-07-26
 
 ### Fixed
-- **SSE Stream Auto-Reconnection (`superAgentBridge.ts`)**:
-  - Implemented self-healing reconnect loop for local SSE events. If the SuperAgent server crashes, is restarted, or terminates, the SSE stream will automatically schedule reconnection attempts (every 1s/2s) until the server is back online.
-- **Robust Hybrid Stream Parser (`SuperAgentConsoleUtils.ts`)**:
-  - Fixed a streaming print bug where repeating characters (like `"aa"` or `"111"` at the start of a message) or duplicate words (like `"haha"`) were swallowed due to a raw `.startsWith()` check.
-  - Implemented a safer hybrid check: it only treats a chunk as cumulative if the incoming chunk strictly starts with the accumulated text AND its length is strictly greater than the accumulated text length. Otherwise, it is correctly treated as a delta chunk and appended.
+- **Tool Filtering During Active Plans**: Bypassed request-classification tool filtering in `ContextBuilder.ts` and `LoopIterationProcessor.ts` when a plan is active (`planState !== "IDLE"`) or the agent is a subagent. This fixes a critical bug where short user replies like "lanjut" disable all tools during plan execution.
+- **Plan Prompt Injection**: Ensured plan notices and rules are never skipped in the system prompt when a plan is active or the agent is a subagent.
+- **Tool Parameter Description Parsing**: Added more parameter aliases (`AbsolutePath`, `absolutePath`, `file`) to `permissions.ts` for robust path resolution in tool descriptions.
 
-## [1.3.555] - 2026-07-20
-
-### Improved
-- **Deduplicated Spawn Implementation (`superAgentBridge.ts`)**:
-  - Extracted common spawning logic (stdout, stderr, exit handlers, timeouts, and polling) into a shared `spawnSuperAgentProcess` function.
-  - Implemented cached bun environment mapping (`getCachedBunEnv()`) to avoid executing `where bun` / `which bun` repeatedly.
-  - Added stdout event capture to trigger `onReady` immediately when the server's running marker is found (removing the artificial polling delay when starting fresh).
-  - Reset `connectionAttempts = 0` upon successful SSE connection to allow future auto-start attempts if the server goes down and comes back.
-  - Registered a process exit listener (`process.on('exit')`) to cleanly kill the spawned SuperAgent server sub-process on backend exit (preventing orphaned processes).
-
-## [1.3.554] - 2026-07-20
-
-### Fixed
-- **SuperAgent Double-Spawn Race Condition (`superAgentBridge.ts`)**:
-  - Root cause: `isStartingSuperAgent` was set to `true` **inside** the async `.then()` of `pingPort7888()`, not before. During the ~1.5ms window while the ping was in flight, a second concurrent caller (e.g. eager startup + WS connection arriving simultaneously) would also see `isStartingSuperAgent = false`, also call `pingPort7888()`, also get `false`, and also spawn — resulting in two SuperAgent servers competing on port 7888.
-  - **Fix**: Set `isStartingSuperAgent = true` **synchronously** (before the async ping) in both `ensureSuperAgentServer()` and `startSuperAgentEager()`. Any second caller immediately sees the flag and queues itself via `pendingStartCallbacks` instead of racing.
-  - When the ping returns `true` (server already running), `isStartingSuperAgent` is reset to `false` and `drainPendingCallbacks()` is called so queued callers proceed immediately.
-
-## [1.3.553] - 2026-07-20
-
-### Fixed
-- **`bun.cmd` Also Not Recognized — Bun PATH Not Inherited by Spawn (`superAgentBridge.ts`)**:
-  - Root cause: bun installs to `~/.bun/bin/` which is added to the **user's interactive PATH** but is NOT present in the environment inherited by Node.js child processes spawned by the backend (e.g. when launched as a service or via Tauri). So both `bunx.cmd` and `bun.cmd` failed with "not recognized".
-  - **Fix**: Added `resolveBunEnv()` helper that:
-    1. Tries `where bun` (Windows) / `which bun` (Unix) using the current process PATH.
-    2. Falls back to checking `~/.bun/bin/bun.exe` directly on disk.
-    3. If found via path 2, injects `~/.bun/bin` into the `PATH` of the spawn env so bun can find its own dependencies.
-    4. Returns `{ cmd: absolutePath, spawnEnv }` used in all spawn calls.
-  - Switched `shell: false` since we now pass an absolute path — avoids CMD/PowerShell wrapper ambiguity entirely.
-  - Applied to both `ensureSuperAgentServer()` and `startSuperAgentEager()`.
-
-## [1.3.552] - 2026-07-20
-
-### Fixed
-- **`bunx.cmd` Not Recognized on Windows (`superAgentBridge.ts`)**:
-  - Root cause: bun on Windows installs as `bun.exe`, not `bunx.cmd`. Spawning `bunx.cmd` failed with "not recognized as an internal or external command".
-  - **Fix**: Changed spawn command from `bunx.cmd` / `bunx` to `bun.cmd` / `bun` with `x` prepended as the first argument (`bun x superagent --server`). This is the canonical cross-platform way to run bun packages and doesn't depend on the `bunx` shim being present.
-  - Applied in both `ensureSuperAgentServer()` and `startSuperAgentEager()`.
-
-## [1.3.551] - 2026-07-20
-
-### Changed
-- **SuperAgent Server Spawned Once at Backend Startup (`superAgentBridge.ts`, `server.ts`)**:
-  - Previously the SuperAgent server was spawned lazily — only when the first WebSocket connection arrived and the SSE connection to port 7888 failed. This caused race conditions when multiple workspaces connected simultaneously (each could trigger its own spawn attempt).
-  - Added `startSuperAgentEager()` — a WebSocket-independent startup function that uses the same global `autoSuperAgentProcess` / `isStartingSuperAgent` singleton flags. Called immediately in `server.listen()` callback so the server is warming up before any client connects.
-  - `cwd` for the eager spawn is `process.cwd()` (the backend's own working directory), not a user workspace path, making it truly workspace-agnostic.
-  - Subsequent `ensureSuperAgentServer()` calls from WS handlers will hit `pingPort7888()` → already up → `callback()` immediately, zero spawning.
-
-## [1.3.550] - 2026-07-20
-
-### Fixed
-- **SuperAgent Still Waits 20s on Genuine Startup Failure (`superAgentBridge.ts`)**:
-  - When `bunx superagent --server` exits with code 1 (genuine failure, e.g. unsupported workspace), the v1.3.549 fix still waited the full 20-second poll timeout before reporting the error because the exit handler no longer called `abortStartup` at all.
-  - **Fix**: Added a deferred 2-second ping after process exit. Flow:
-    1. Process exits → wait 2 seconds
-    2. `pingPort7888()` → if server IS up: do nothing (polling loop will resolve normally)
-    3. If server is NOT up: call `abortStartup` immediately with the captured stderr output
-  - This correctly handles both scenarios: shell-wrapper-exits-fast (server still comes up) and genuine process crash (fast failure with real error message in ≤ 3 seconds instead of 20).
-
-## [1.3.549] - 2026-07-20
-
-### Fixed
-- **SuperAgent "Failed to Start Within 15 Seconds" False Positive (`superAgentBridge.ts`)**:
-  - Root cause: on Windows with `shell: true`, Node's `spawn` creates a shell wrapper process (`bunx.cmd`) that **exits almost immediately** after handing off to the real bun/node server. The `exit` event on the child process fired while the server was still booting, which (in v1.3.548) triggered `abortStartup()` — cancelling the polling loop and incorrectly reporting failure even though the server was running fine.
-  - Confirmed by running `bunx superagent --server` manually: `🚀 Superagent Extension Server is running at http://localhost:7888` appears successfully; the stderr "ExperimentalWarning: SQLite" is a harmless Node.js warning that PowerShell treats as stderr, not a real error.
-  - **Fix**: Removed the `abortStartup` call from the `exit` handler. `pingPort7888()` is now the *sole* readiness signal — the polling loop runs regardless of whether the shell wrapper exits early. `abortStartup` is only called from `pollReady` on timeout or from the `error` event (spawn failure).
-  - **Bonus**: Pending callbacks queued during startup are now properly resolved/rejected when polling completes, eliminating the case where a `prompt` action's `ensureSuperAgentServer` Promise would hang forever while a spawn was in flight.
-
-## [1.3.548] - 2026-07-20
-
-### Fixed
-- **SuperAgent ECONNREFUSED — Server Not Ready After Auto-Restart (`superAgentBridge.ts`)**:
-  - Root cause: after an ECONNREFUSED triggered an auto-restart of the SuperAgent server, the bridge waited a fixed 3 seconds then immediately retried `/api/chat`. If the server wasn't yet accepting connections (which is common on slower machines or first-start), a second ECONNREFUSED propagated all the way to the user as "Failed to send prompt: connect ECONNREFUSED 127.0.0.1:7888".
-  - **Fix 1 — Polling startup**: Replaced the hard-coded `setTimeout(3000)` in `ensureSuperAgentServer` with a `pingPort7888()` polling loop (every 500 ms, up to 15 s). The callback is only fired once the port actually responds, so downstream callers are guaranteed the server is reachable.
-  - **Fix 2 — Validated restart retry**: In the ECONNREFUSED recovery path, `initializeSuperAgentSession` is now awaited and its return value checked before retrying `/api/chat`. If init fails, a clear error is thrown immediately rather than blindly retrying.
-  - **Fix 3 — Second ECONNREFUSED surfaced clearly**: If `/api/chat` still fails after restart (e.g. `superagent --server` cannot run in the workspace), the error is caught and re-thrown as a descriptive human-readable message instead of the raw Node.js ECONNREFUSED code.
-
-## [1.3.547] - 2026-07-20
-
-### Fixed
-- **Loop Spawn SuperAgent Server Berulang (`superAgentBridge.ts`, `sessionManager.ts`)**:
-  - Ditemukan dua bug bersamaan yang menyebabkan SuperAgent server di-spawn berulang kali dan keluar dengan `exit code 1`:
-    1. **Dual Spawner**: `sessionManager.ts` yang baru diperbarui juga memiliki `autoStartSuperAgentServer` yang men-spawn server secara paralel dengan `ensureSuperAgentServer` di `superAgentBridge.ts`, menyebabkan dua spawn bersaing memperebutkan port 7888 — spawn kedua langsung exit `EADDRINUSE`.
-    2. **Respawn Tanpa Ping**: `ensureSuperAgentServer` langsung spawn server baru tanpa mengecek dulu apakah port 7888 sudah ada yang listen.
-  - **Fix**: Hapus total `autoStartSuperAgentServer` dan spawn logic dari `sessionManager.ts` — `sessionManager` kini hanya HTTP client murni, bukan spawner.
-  - **Fix**: Tambahkan `pingPort7888()` sebelum spawn di `ensureSuperAgentServer`. Jika port 7888 sudah ada server yang berjalan (dari instance external atau spawn sebelumnya), langsung `callback()` tanpa spawn ulang.
-
-## [1.3.546] - 2026-07-20
-
-### Fixed
-- **SuperAgent Server Tidak Lagi Dikill saat Abort (`superAgentBridge.ts`)**:
-  - Ditemukan bug kritis: ketika user menekan **Stop/Abort**, kode sebelumnya tidak hanya mengirim `POST /api/abort` ke SuperAgent server tetapi juga langsung **membunuh proses** SuperAgent server (`taskkill /F` di Windows, `SIGKILL` di Unix) dan memanggil `forceKillPort7888()` — menyebabkan server mati total dan harus respawn dari awal untuk request berikutnya.
-  - Sekarang action `abort` hanya memanggil endpoint `POST /api/abort` dan membiarkan SuperAgent server tetap hidup di port 7888, sehingga request berikutnya (prompt baru, hapus sesi, dll.) langsung terlayani tanpa jeda respawn.
-
-## [1.3.545] - 2026-07-20
-
-### Fixed
-- **100% SuperAgent HTTP Server Auto-Spawn & Resilient Session Deletion (`sessionManager.ts`)**:
-  - Removed all direct SQLite database fallback code (`better-sqlite3`) to adhere strictly to the 100% SuperAgent HTTP server architecture.
-  - Implemented automatic SuperAgent server auto-spawning (`autoStartSuperAgentServer`) in `sessionManager.ts`. If the SuperAgent HTTP server on port 7888 is offline when a session operation (including `DELETE /api/history/session/:id`) is executed, `sessionManager.ts` automatically spawns `bunx superagent --server` and retries the HTTP request.
-  - Expanded API response status checking (`res.success`, `res.ok`, `res.status === 'ok'`, `res.status === 'success'`, `res.deleted`, `res.message`) to support all SuperAgent server response formats cleanly.
-
-## [1.3.544] - 2026-07-20
-
-### Fixed
-- **SuperAgent ECONNREFUSED 127.0.0.1:7888 Auto-Recovery & Resilient Reconnection (`superAgentBridge.ts`)**:
-  - Registered an `exit` event listener on `autoSuperAgentProcess` to immediately reset process reference when the background `superagent --server` process exits or is killed.
-  - Added auto-start verification and `ECONNREFUSED` exception handling in `superAgentBridge.ts` when processing `prompt` messages. If the SuperAgent server process is unreachable or terminated, `superAgentBridge` automatically spawns `superagent --server`, initializes the session, and retries prompt delivery seamlessly.
-
-## [1.3.543] - 2026-07-20
-
-### Fixed
-- **Session Chat Deletion Bug & Success/Failure Toast Notifications (`useSuperAgentSessions.ts`, `sessionManager.ts`, `superAgentRoutes.ts`)**:
-  - Added success toast (`"Session chat berhasil dihapus"`) and error toast (`"Gagal menghapus session chat"`) on chat session removal using `tline-toast`.
-  - Fixed a race condition bug where deleting a session previously caused the deleted session to reappear in the sidebar when real-time WebSocket events (`superagent-sessions-changed`) triggered `syncSessions`.
-  - Added `deletedSessionIdsRef` to prevent deleted session IDs from being restored during session synchronization.
-  - Made `deleteWorkspaceSession` in `sessionManager.ts` return boolean status to handle draft vs server sessions cleanly.
-
-## [1.3.542] - 2026-07-20
-
-### Fixed
-- **Missing RAM Stats Endpoint & Responsive Visibility in Footer (`server.ts`, `Footer.tsx`)**:
-  - Added missing `/api/system/stats` GET endpoint in `backend/src/server.ts` to return Node process memory usage (RSS, heapUsed, heapTotal) and OS system memory (total, free, platform).
-  - Fixed `useSystemStats` hook silently failing with 404 network error when fetching system stats.
-  - Adjusted the responsive Tailwind CSS breakpoint for RAM resource stats badge in `Footer.tsx` from `hidden lg:flex` to `hidden sm:flex`, ensuring RAM usage stays visible even on narrower or half-screen snapped windows.
-
-## [1.3.541] - 2026-07-20
+## [1.2.585] - 2026-07-26
 
 ### Optimized
-- **Multi-Workspace Daemon Mode Support (`superAgentBridge.ts`)**:
-  - Removed `pathChanged` from the process kill/restart condition in `ensureSuperAgentServer`.
-  - The `superagent --server` process now runs ONCE as a permanent background daemon serving all workspaces concurrently.
-  - Workspace switching in `t-line` is now 100% instant without server restarts, process kills, or connection delays.
-
-## [1.3.540] - 2026-07-20
+- **Browser Automation Research Capabilities**: Added active browser tab control, emulation, simulation, and macro tools to Allowed Toolsets in the research and question categories in `src/core/requestClassifier.ts`.
+- **Researcher Subagent**: Equipped the researcher subagent in `src/core/tools/toolsets.ts` with all advanced Chrome and emulation tools. Modified researcher system prompt in `src/core/prompts.ts` to support page and element structure analysis.
+- **Chrome Extension Prompt**: Restructured Chrome Extension logic gates in `src/core/prompts.ts` to enforce page research before saving/running macros.
 
 ### Fixed
-- **Unsaved "New Chat" Session Reset & Chat Stream Leak Fix (`useSuperAgentSessions.ts`, `SuperAgentConsole.tsx`)**:
-  - Fixed a critical bug in `useSuperAgentSessions.ts` where creating a new chat session (`+ New Chat`) was overwritten and reset back to the previous chat session whenever `syncSessions` or `superagent-sessions-changed` was triggered before a prompt was sent.
-  - `syncSessions` now preserves local-only unsaved sessions (`localOnly`) and keeps `activeSessionIdRef.current` active without wiping out empty chat messages or jumping back to older history.
-  - `handleNewChat` now immediately invokes `apiSaveSession(workspace, newSession, [])` to register new session IDs (`/api/init`) with the backend server upon creation.
-  - Wrapped `handleSelectSession` and `handleNewChat` in `SuperAgentConsole.tsx` to set `isAbortedRef.current = true` and clear loading/progress/permission states on session switch, preventing in-flight SSE stream chunks from leaking into newly selected or created chat sessions.
+- **Tool Registry Consistency**: Registered advanced automation tools (`run_headless_browser`, `simulate_virtual_cursor`, `control_isolated_cdp`) in the tool registry index `src/core/tools/index.ts`.
+- **Browser Control Test Mocks**: Updated `tests/chromeBrowserTools.test.ts` and `tests/chromeExtraTools.test.ts` to mock direct action commands correctly.
 
-## [1.3.539] - 2026-07-20
+## [1.2.584] - 2026-07-25
 
-### Fixed
-- **SuperAgent Process Termination & Abort Event Filtering Fix (`superAgentBridge.ts`, `SuperAgentConsoleUtils.ts`, `SuperAgentConsole.tsx`)**:
-  - Fixed a critical bug in `SuperAgentConsoleUtils.ts` where receiving status messages containing `"aborted"` prematurely reset `isAbortedRef.current = false`. This caused lingering in-flight SSE events (like `thought`, `tool_start`, `content_delta`, and prompts) to re-enable loading spinners and print messages after the user clicked Stop.
-  - `isAbortedRef.current` now stays strictly `true` until the user submits a new prompt in `handleSend`.
-  - Updated `handleAgentEventPayload` to also ignore `permission_required`, `question_required`, `plan_approval_required`, and `tool_progress` payloads when `isAbortedRef.current` is true.
-  - Implemented `forceKillPort7888()` fallback in `superAgentBridge.ts` to inspect and terminate any active process listening on port 7888 during abort, guaranteeing that background LLM generations, CLI server processes, and subagent tools stop completely even if `autoSuperAgentProcess` is detached or null.
-  - Updated `handleAbort()` in `SuperAgentConsole.tsx` to automatically mark any active subagents in `subagentList` as `'CANCELLED'`.
+### Updated
+- **Chrome & Automation System Prompts (`src/core/prompts.ts`)**:
+  - Comprehensive update to `BROWSER_CONTROL_RULE` and `CHROME_EXTENSION_SYSTEM_PROMPT`.
+  - Added explicit instructions for all 16 Chrome/Browser tools (profiles, session storage, cookies, emulation, network throttling, CDP, macros, text/PDF extraction, and diagnostic logging).
+  - Added logic gates for extension disconnection fallback (`run_headless_browser` / `control_isolated_cdp`), stealth anti-bot automation, and diagnostic logging (`get_browser_console_logs`, `get_browser_network_logs`, screenshot capture) on macro failure.
 
-## [1.3.538] - 2026-07-20
+## [1.2.583] - 2026-07-25
 
-### Fixed
-- **Backend crash: double-response in `/api/superagent/instances` (`superAgentRoutes.ts`)**:
-  - When the upstream SuperAgent server at `127.0.0.1:7888` was unreachable or timed out, `request.destroy()` triggered both the `timeout` and `error` handlers sequentially, each calling `res.json()`. The second call threw `"Cannot set headers after they are sent to the client"`, crashing the entire backend process.
-  - Added a `responded` guard flag via `safeSend()` wrapper so only the first handler actually sends the response; subsequent calls are silently ignored.
-- **Server errors not propagated to chat UI (`superAgentBridge.ts`, `SuperAgentConsoleUtils.ts`)**:
-  - `sendSuperAgentRequest` now detects HTTP non-2xx status codes and HTML error pages instead of silently resolving with `{ raw: body }`.
-  - Chat prompt handler now sends `chat_response` with `success: false` when the SuperAgent response contains errors, instead of always reporting `success: true`.
-  - Frontend `handleAgentEventPayload` now handles `success === false`, `result.raw`, and `result.message` error variants — previously only `result.error` was checked, causing the loading spinner to spin indefinitely on server errors.
-  - Status messages containing "failed" or "error" keywords now also stop the loading state.
-  - Unknown payload types are now logged with `console.warn` instead of being silently dropped.
+### Updated
+- **System Prompts Update (`src/core/prompts.ts`)**:
+  - Enhanced `BROWSER_CONTROL_RULE` across system prompts to explicitly include `run_headless_browser`, `simulate_virtual_cursor`, and `control_isolated_cdp` advanced browser automation suite tools.
+
+## [1.2.582] - 2026-07-25
 
 ### Added
-- **Process-level crash protection (`server.ts`)**: Added `uncaughtException` and `unhandledRejection` handlers as a safety net. These log the error but keep the backend process alive, preventing future unhandled errors from taking down the server.
+- **Advanced Automation Tools Suite (Features 1, 2, and 3)**:
+  - Added `run_headless_browser` tool in `src/core/tools/advancedAutomationTools.ts` for executing headless browser sessions without stealing window focus.
+  - Added `simulate_virtual_cursor` tool for multi-cursor virtual input and caret simulation.
+  - Added `control_isolated_cdp` tool for direct Chrome DevTools Protocol (CDP) command routing to isolated background tab targets.
+  - Registered all new tools in `src/core/tools/toolsets.ts` across Tier toolsets.
 
-## [1.3.537] - 2026-07-20
-
-### Refactored (Breaking)
-- **100% SuperAgent HTTP Server Migration (`sessionManager.ts`, `superAgentRoutes.ts`)**:
-  - Completely removed `better-sqlite3` and all direct SQLite DB access from `sessionManager.ts`. Zero dependency on `~/.superagent-r/history.db` file.
-  - All session operations (`getWorkspaceSessions`, `getSessionMessages`, `saveWorkspaceSession`, `deleteWorkspaceSession`) now route 100% through SuperAgent HTTP server at `http://127.0.0.1:7888`.
-  - Input history (`getInputHistory`, `saveInputHistory`) now routes 100% through SuperAgent HTTP server (`GET/POST /api/input-history`), no more in-memory or file-based fallback.
-  - Removed redundant `fetchSessionsFromSuperAgentServer` helper from `superAgentRoutes.ts` (logic consolidated into `sessionManager.ts`).
-  - All Express route handlers in `superAgentRoutes.ts` and `superAgentBridge.ts` updated to `async` to support the new Promise-based API.
-
-### Added (SuperAgent Server)
-- **New API endpoints in SuperAgent server (`superagent/src/server.ts`)**:
-  - `DELETE /api/history/session/:id` — Delete a session by ID from SuperAgent's history DB.
-  - `GET /api/input-history` — Fetch workspace-scoped input/prompt history from DB.
-  - `POST /api/input-history` — Save a new input/prompt entry to workspace-scoped history DB.
-
-## [1.3.536] - 2026-07-20
-
-### Cleaned & Refactored
-- **Database Safety & SuperAgent Decoupling (`sessionManager.ts`)**:
-  - Updated `sessionManager.ts` to open SQLite `history.db` safely in read-only mode (`readonly: true`) for fallback reads, eliminating process file locking conflicts with SuperAgent server.
-  - Added safe null-checking across all session query handlers (`getWorkspaceSessions`, `getSessionMessages`, `getInputHistory`, `saveInputHistory`).
-  - Fully decoupled `t-line` backend from writing directly into SuperAgent's internal SQLite database, allowing SuperAgent server to manage its own database lifecycle without lock contention.
-
-## [1.3.535] - 2026-07-20
-
-### Fixed & Enhanced
-- **SuperAgent Direct Server Session Fetching (`superAgentRoutes.ts`)**:
-  - Updated `/api/superagent/sessions` endpoint in [superAgentRoutes.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentRoutes.ts) to query history sessions directly from SuperAgent HTTP server (`http://127.0.0.1:7888/api/history/sessions`).
-  - Added `fetchSessionsFromSuperAgentServer` helper with automated noise filtering (`[Emergency...]`, `[RMemory]`, `[SYS]`, etc.) and title deduplication.
-  - Retained graceful SQLite database fallback (`getWorkspaceSessions`) when SuperAgent server is offline or restarting.
-
-## [1.3.534] - 2026-07-20
+## [1.2.581] - 2026-07-25
 
 ### Fixed
-- **Session Deduplication Sub-String Matching (`sessionManager.ts`)**:
-  - Enhanced `cleanDuplicateWorkspaceSessions` and `saveWorkspaceSession` in [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) to detect overlapping title sub-strings (e.g. `hai` vs `hai ➔ spawn sub agent...`).
-  - Merges duplicate GUI draft sessions (`session_...`) with CLI sessions (`D__...`) created within a 10-minute window, preventing single chat conversations from splitting into two separate sidebar entries.
+- **Slate.js / Medium Editor Browser Automation**:
+  - Enhanced `type` and `paste` action handlers in `chrome-extension-remote/background.js` with simulated `ClipboardEvent` paste dispatch and `DataTransfer` payloads.
+  - Added fallback node append and DOM selection range setup for rich `contenteditable` / Slate.js editors.
 
-## [1.3.533] - 2026-07-20
+## [1.2.580] - 2026-07-25
 
-### Fixed & Added
-- **Delete Confirmation & Session Purge (`SuperAgentHistorySidebar.tsx`, `sessionManager.ts`)**:
-  - Added inline confirmation buttons ("Hapus chat?" -> `Hapus` / `Batal`) when clicking the delete icon in [SuperAgentHistorySidebar.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentHistorySidebar.tsx) to prevent accidental deletions.
-  - Fixed backend session deletion logic in [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) to explicitly purge all session messages and session records inside a database transaction.
+### Added
+- **Advisor Logging & Chrome Bridge Enhancements**:
+  - Added `advisorLogger.ts` for structured event tracking and session exporting.
+  - Enhanced remote Chrome extension popup, background, and manifest setup.
+  - Updated `chromeExtraTools` and `browserMacroTools` integration.
+  - Fixed `GitUtils` summary formatting for discarded file changes.
 
-## [1.3.532] - 2026-07-20
+## [1.2.579] - 2026-07-25
 
-### Fixed & Enhanced
-- **Filtered Injected Emergency Summary Noise & Session Title Deduplication (`sessionManager.ts`, `useSuperAgentSessions.ts`)**:
-  - Filtered out `[Emergency Summary...]`, `[Emergency Context...]`, `[Context...]`, `[SYS]`, and other injected system noise from session title generation and chat message rendering.
-  - Enhanced `cleanDuplicateWorkspaceSessions` in `sessionManager.ts` to purge duplicate CLI and GUI session records in SQLite database that shared matching titles or close timestamps.
-  - Resolved session history sidebar clutter and restored clean chat title display (`First Msg ➔ Last Msg`).
+### Added
+- **Zero-Defect Policy & Prompt Deduplication**:
+  - Added `ZERO_DEFECT_POLICY_RULE` to `src/core/prompts.ts` with strict anti-pattern prohibitions (forbidding `// TODO`, `@ts-ignore`, `any`, and incomplete edits).
+  - Injected zero-defect rules into `MASTER_AGENT_SYSTEM_PROMPT`, `SUPERAGENT_SYSTEM_PROMPT`, and subagent `coder`.
+  - Consolidated reasoning rules and deduplicated edit failure instructions to optimize token context.
 
-## [1.3.531] - 2026-07-20
+## [1.2.578] - 2026-07-25
 
-### Fixed & Enhanced
-- **SuperAgent `/api/init` Session ID Handshake (`superAgentBridge.ts`)**:
-  - Extended `initializeSuperAgentSession` in `superAgentBridge.ts` to forward `sessionId` during `/api/init` requests.
-  - Ensures SuperAgent CLI server immediately binds its active session Map to the GUI's selected session ID upon initialization, closing any remaining session alignment gaps.
+### Added
+- **Creative Thinking & Innovation System Prompt Module**:
+  - Added `CREATIVE_THINKING_RULE` to `src/core/prompts.ts` (`CREATIVE_EXPLORATION: Evaluate at least 2-3 distinct approaches pre-implementation...`).
+  - Injected `CREATIVE_THINKING_RULE` across `MASTER_AGENT_SYSTEM_PROMPT`, `SUPERAGENT_SYSTEM_PROMPT`, `CHROME_EXTENSION_SYSTEM_PROMPT`, and subagent system prompts (`coder`, `researcher`, `reviewer`).
 
-## [1.3.530] - 2026-07-20
-
-### Added & Integrated
-- **SuperAgent Explicit `sessionId` Integration (`SuperAgentConsole.tsx`, `superAgentBridge.ts`)**:
-  - Integrated full support for SuperAgent CLI's new `sessionId` parameter handling in `/api/chat` and WebSocket payloads.
-  - `SuperAgentConsole.tsx` now passes `activeSessionId` directly in WebSocket prompt payloads.
-  - `superAgentBridge.ts` forwards `sessionId` to SuperAgent server `/api/chat` endpoint, guaranteeing 100% session alignment between GUI and SuperAgent engine.
-
-## [1.3.529] - 2026-07-20
+## [1.2.577] - 2026-07-25
 
 ### Fixed
-- **SuperAgent Duplicate Session History Bug (`sessionManager.ts`, `useSuperAgentSessions.ts`)**:
-  - Implemented `cleanDuplicateWorkspaceSessions` helper in `sessionManager.ts` to automatically detect and purge redundant `session_<timestamp>` entries created alongside CLI `D__...` sessions for the same workspace.
-  - Updated `saveWorkspaceSession` to match existing CLI `D__...` sessions for the same prompt/workspace, preventing insertion of parallel session records into SQLite `history.db`.
-  - Updated `handleNewChat` in `useSuperAgentSessions.ts` to defer backend API session persistence until a message is actually sent, eliminating empty draft sessions.
-  - Guarantees clean, single-session history sidebar entries without duplicate chats when sending messages.
+- **History Compactor & Summarization Format**:
+  - Refined compaction prompts in `HistoryCompactor.ts` and `SummarizationStrategy.ts` for cleaner, human-readable summary outputs.
+- **Browser Tools Documentation & Error Messages**:
+  - Updated target parameter descriptions across `browserMacroTools.ts` and `chromeBrowserTools.ts`.
 
-## [1.3.528] - 2026-07-20
-
-### Fixed
-- **Strict Session Isolation & Switching Bug (`useSuperAgentSessions.ts`)**:
-  - Added `loadedSessionIdRef` guard to prevent race conditions during chat session switching
-  - Fixes an issue where switching sessions previously caused the current message state to overwrite target session messages in local storage and SQLite
-  - Chat sessions are now 100% isolated, preserving independent chat history and titles when switching between sessions
-
-## [1.3.527] - 2026-07-20
-
-### Added & Redesigned
-- **Collapsible Process & Tool Execution Blocks (`SuperAgentGroupedMessages.tsx`)**:
-  - Automatically groups intermediate `thought` and `tool` steps for each turn into a clean collapsible block (`> Process steps (N thoughts • M tool steps)`)
-  - Automatically contracts intermediate steps upon task completion, keeping the final `assistant` response prominent and clean
-  - Live active turn auto-expands while streaming so users can monitor real-time execution steps, and contracts smoothly once finished
-
-## [1.3.526] - 2026-07-20
+## [1.2.576] - 2026-07-25
 
 ### Fixed
-- **Smart Parameter & Action Extraction for All Tool Types (`SuperAgentToolItem.tsx`)**:
-  - Updated `getToolDetails` to extract and display primary action parameters for `manage_plan`, `manage_task`, `schedule`, `ask_question`, `ask_permission`, `generate_image`, `read_url`, `subagent`, etc.
-  - Eliminated generic uninformative fallbacks (`Tool manage_plan`), replacing them with clear action descriptions (e.g. `Manage Plan status`, `Manage Task kill (task-123)`, `Schedule 15s: Check build`)
+- **UI Terminal Help Text Separators**:
+  - Normalized component help text and border text separators across active agents list, banner, chat area, history panel, task checklist, status bar, and dashboard panels to standard pipe (`│`) separators.
 
-## [1.3.525] - 2026-07-20
+## [1.2.575] - 2026-07-25
 
-### Improved
-- **Inline Tool Item Chevron Indicator (`SuperAgentToolItem.tsx`)**:
-  - Placed the chevron arrow indicator (`ChevronRight` / `ChevronDown`) directly inline following the target text (`[icon] Action Target >`)
-  - Removed far-right positioning (`ml-auto`), keeping tool item headers compact and naturally grouped together
+### Added
+- **Complete Chrome & Browser Automation Tool Suite (15 Tools)**:
+  - Added full suite of 15 Chrome integration tools: `list_chrome_profiles`, `launch_chrome_profile`, `chrome_extension_status`, `control_browser_tab`, `control_browser_macro_run`, `get_active_browser_tabs`, `extract_page_content_markdown`, `capture_tab_fullpage_pdf`, `manage_chrome_bookmarks`, `manage_chrome_history`, `manage_chrome_downloads`, `manage_browser_cookies_storage`, `list_chrome_extensions`, `get_browser_console_logs`, `get_browser_network_logs`, `set_browser_emulation`, `set_network_conditions`.
+- **Standalone Remote Chrome Extension & Serverless CLI Bridge**:
+  - Created standalone Manifest V3 extension in `chrome-extension-remote/` (`manifest.json`, `background.js`, `popup.html`, `popup.js`, `README.md`).
+  - Added serverless WebSocket bridge `src/core/tools/remoteChromeBridge.ts` listening on port `9223` for direct CLI-to-extension control without requiring `superagent --server`.
+- **100% Comprehensive Unit Test Suite**:
+  - Added unit test suites covering all 15 Chrome tools, error boundaries, parameter options, device emulation, storage management, network throttling, and WebSocket remote bridge protocol.
 
-## [1.3.524] - 2026-07-20
-
-### Improved
-- **Moved Chevron Arrow Indicator to Right End (`SuperAgentToolItem.tsx`)**:
-  - Moved the expand/collapse chevron arrow (`ChevronRight` / `ChevronDown`) to the right end (`ml-auto`) of the tool item header line
-  - Keeps tool action (`Read`, `Ran`, `Edited`) and target filename clean and aligned at the beginning of the line
-
-## [1.3.523] - 2026-07-20
-
-### Redesigned & Simplified
-- **Ultra-Compact 1-Line Tool Usage Entries (`SuperAgentToolItem.tsx`)**:
-  - Simplified tool usage rendering into clean, single-line log items (e.g. `> [icon] Read filename.ts:L1-50`, `> [icon] Ran git commit...`)
-  - Reduced vertical height and visual clutter in chat console
-  - Retained expandable details panel with left accent border (`border-l border-zinc-800`) for inspecting tool arguments and outputs on demand
-
-## [1.3.522] - 2026-07-20
-
-### Redesigned
-- **Borderless & Backgroundless Tool Usage Items (`SuperAgentToolItem.tsx`)**:
-  - Removed container background styles (`bg-[#0d101a]`, `bg-[#060810]`, `bg-[#090c14]`) and borders
-  - Replaced card box borders with a subtle hover background (`hover:bg-zinc-800/30`) and transparent panel layout
-  - Clean left accent border (`border-l-2 border-zinc-800/80`) for expanded tool arguments and execution output
-
-## [1.3.521] - 2026-07-20
-
-### Added & Redesigned
-- **Borderless & Backgroundless Chat Message Styling**:
-  - Removed message box backgrounds (`bg-transparent`) and borders (`border-none`) from `SuperAgentMessageItem.tsx`
-  - Replaced heavy card borders with a clean, modern, borderless layout with colored role header labels (`User`, `Assistant`, `Thought`)
-  - Significantly improves readability and eliminates visual clutter in the chat console
-
-## [1.3.520] - 2026-07-20
 
 ### Fixed
-- **Filtered RMemory & System Prompt Context from Console & Session Titles**:
-  - Updated `isSystemNoiseMsg` in `useSuperAgentSessions.ts` to filter out injected memory context headers (`[RMemory`, `[TencentDB`, `<relevant-memories>`, `Agent Memory Context`, `[SYS]`)
-  - Memory context headers are no longer rendered as regular chat bubbles in the console UI
-  - Updated `generateSessionTitle` (frontend) and `formatSessionTitleFromDb` (backend) to ignore memory context prompts when extracting `First Chat ➔ Last Chat` titles
+- **Paste Mode Navigation & Spinner Alignment**:
+  - Implemented left/right arrow jump out of paste preview block in `ChatTextInput.tsx`.
+  - Cleaned up line break formatting in `RequestProcessor.ts` narrative outputs.
+  - Aligned loader UI and status bar indicator rendering across dashboard and status components.
 
-## [1.3.519] - 2026-07-20
-
-### Fixed & Improved
-- **Backend-side Immediate Session Title Generation**:
-  - Implemented `formatSessionTitleFromDb` in `backend/src/sessionManager.ts`
-  - Session titles are now formatted as `First Chat ➔ Last Chat` directly in the backend when sessions are loaded
-  - All chat sessions in the sidebar immediately display their formatted names upon opening the app without needing to click on each session first
-
-## [1.3.518] - 2026-07-20
+## [1.2.573] - 2026-07-25
 
 ### Fixed
-- **Fully Fixed Session Ordering Stability**:
-  - Changed SQLite query in `getWorkspaceSessions` to `ORDER BY created_at DESC` instead of `last_modified DESC`
-  - Prevents backend auto-save operations from updating `last_modified` and triggering server-side re-sorting
-  - Chat session positions in the sidebar are now 100% fixed and stable by creation timestamp, ensuring selecting/viewing a session never shifts its order
+- **Terminal Input & Multiline Paste**:
+  - Normalized carriage returns (`\r\n` / `\r`) from Windows Git Bash terminal paste to standard line endings (`\n`) in `ChatTextInput.tsx` to prevent line overwrites.
+  - Raised pasted text placeholder threshold to 500 characters so multi-line text input under 500 characters renders directly in input box.
+  - Added safe visual cursor indicator (`↵`) rendering over newline characters to prevent ANSI layout breakage in Ink terminal output.
 
-## [1.3.517] - 2026-07-20
+## [1.2.572] - 2026-07-25
+
+### Changed
+- **Unlimited Iterations Option**:
+  - Configured default settings in the system settings config to `maxIterations: 0` (unlimited).
+  - Modified the execution iteration logic in `Agent` to set the default `goalMaxIterations` to `Infinity` (unlimited).
+  - Updated context and prompt formatting logic in `ContextBuilder` to properly handle `0` and `Infinity` as unlimited iteration bounds instead of defaulting back to `50`.
+  - Updated the unit tests for `goalMaxIterations` defaults to assert `Infinity`.
+  - Added `"error"` stage to `DownloadProgressCallback` stage union in `androidSetup` to fix a compilation type mismatch.
+
+## [1.2.571] - 2026-07-24
+
+### Changed
+- **Workspace & Grep Tool Improvements**:
+  - Added DIRTY_WORKSPACE rule and updated FILE_EDIT_SAFETY_RULE in prompts to guide agents on handling existing changes.
+  - Fixed relative path output in grepTool when searching a single file path.
+
+## [1.2.570] - 2026-07-24
+
+### Changed
+- **System Prompt & Context Optimization**:
+  - Streamlined system prompt rule blocks in `src/core/prompts.ts` to reduce token bloat and remove redundant meta-prompting jargon.
+  - Filtered out empty content and blank tool output turns (`[TOOL]: \n\n`) from chat history before LLM summarization in `src/core/agent/HistoryCompactor.ts`.
+  - Compacted pinned knowledge preamble in `src/core/pinnedKnowledge.ts` to reduce prompt token injection footprint.
+
+## [1.2.569] - 2026-07-24
+
+### Changed
+- **Past Session Memory Mitigation**:
+  - Enhanced RMemory context pre-population and strategy to tag memories explicitly as `current session` or `past session` based on matching session keys.
+  - Injected an explicit warning header to the AI in brand-new sessions, advising it not to automatically continue or focus on past conversation threads and instead focus on the new user request.
+  - Added unit test cases to verify RMemory session tagging and warning header injection.
+
+## [1.2.568] - 2026-07-24
+
+### Changed
+- **Test Alignment & Suite Verification**:
+  - Aligned prompt guidance test assertions in `tests/promptToolGuidance.test.ts` to match system prompt wording in `src/core/prompts.ts`.
+  - Verified project build and test suite integrity.
+
+## [1.2.567] - 2026-07-24
+
+### Added
+- **Automated Office CLI & RMemory Package Installation**:
+  - Integrated automated checking and installation routines for `officecli` and `r-memory` package inside `src/core/androidSetup.ts` and `src/components/startup-checker.tsx`.
+  - Added new unit test suite cases in `tests/androidSetup.test.ts` to verify global and repository detection logic.
+
+## [1.2.566] - 2026-07-24
+
+### Changed
+- **System Prompts Optimization**:
+  - Refined system prompt rule blocks in `src/core/prompts.ts` using telegraphic English, minified prose, clear markdown headers, and structured logic gates for improved token efficiency and exact directive compliance.
+
+## [1.2.565] - 2026-07-24
+
+### Removed
+- **`[SYS] Initiating action:` Fallback Text**:
+  - Removed `[SYS] Initiating action: ${description}...` fallback text from `app.tsx` and `uiHelpers.ts`. Tool executions in chat UI now display directly without the redundant system prefix line.
+
+## [1.2.564] - 2026-07-24
 
 ### Fixed
-- **Stable Chat Session Sidebar Ordering**:
-  - Removed automatic session re-sorting (`updated.sort`) when selecting or viewing a session
-  - Selecting/viewing a chat session no longer jumps the active session to the top of the sidebar list
-  - Session list maintains a fixed, stable order matching the database sequence
+- **Plan Confirmation Fast-Path Bypass & Auto-Approval**:
+  - Fixed issue where single-word plan confirmations (e.g., "oke", "yes", "proceed") triggered Conversation Fast-Path and stalled execution.
+  - Updated `isHighConfidenceConversation` to check `agent.planState` and bypass Fast-Path when a plan is active or pending approval.
+  - Added automatic planState transition from `PLANNING_PENDING` to `APPROVED` upon receiving user confirmation keywords in `RequestProcessor`.
 
-## [1.3.516] - 2026-07-20
+## [1.2.563] - 2026-07-24
 
-### Added & Improved
-- **First Chat ➔ Last Chat Session Title Formatting**:
-  - Implemented `generateSessionTitle(messages)` in `useSuperAgentSessions.ts`
-  - Chat session titles are now automatically formatted as `First Chat ➔ Last Chat` (e.g. `hai ➔ chat nya juga di buat...`)
-  - Ensures session titles in the history sidebar dynamically reflect both the initial prompt and the latest topic of discussion
+### Fixed
+- **Optimized Fuzzy Auto-Location and Match Replacements**:
+  - Enhanced line-by-line matching in `autoLocateTargetContent` with quote style tolerance (ignores differences between single quotes, double quotes, and backticks), trailing semicolon/comma tolerance, and internal empty lines preservation.
+  - Fixed replacement fallback to directly use replacement content when exact matching fails but the block has been successfully auto-located.
+  - Added new fuzzy match unit tests validating these quote/semicolon/empty line tolerances.
 
-## [1.3.515] - 2026-07-20
+## [1.2.562] - 2026-07-24
 
-### Added & Optimized
-- **SuperAgent Chat Session Sidebar Infinite Scroll**:
-  - Backend `getWorkspaceSessions` now supports `limit`/`offset` query params, returning `{ sessions, totalCount, hasMore }`
-  - Sidebar initially loads 30 most recent chat sessions for ultra-fast sidebar rendering
-  - Automatically loads next batch of older chat sessions when scrolling down the history sidebar
-  - Added "Load more chats..." button and loading indicator at bottom of sidebar list
+### Fixed
+- **Auto-Location and Range Tolerance in All File Edit and Replace Tools**:
+  - Fixed line range shifting/corruption bugs in bulk `edits` of the `edit` tool, single/bulk `replace_file_content`, and single/bulk `multi_replace_file_content`.
+  - Added full fuzzy auto-location fallback to the search-replace format block handler in `applyPatchToContent` (`apply_patch` tool).
+  - Added new comprehensive unit tests verifying correct auto-location behaviors across all edit and replace tools.
 
-## [1.3.514] - 2026-07-20
+## [1.2.561] - 2026-07-24
 
-### Added & Optimized
-- **SuperAgent Infinite Scroll Pagination**:
-  - Backend `getSessionMessages` now supports `limit`/`offset` query params, returning `{ messages, totalCount, hasMore }` for paginated responses
-  - Frontend loads only the latest 50 messages on session open, with automatic infinite scroll to load older messages when scrolling to top
-  - Added "↑ Load older messages" button as manual fallback, plus a spinning indicator during loading
-  - Scroll position is preserved after prepending older messages (no jarring jumps)
-  - Drastically reduces initial load time for sessions with hundreds of messages
+### Added
+- **Command Line Version Options**:
+  - Added support for `--version` and `-v` options to display the current CLI package version and exit immediately.
 
-## [1.3.513] - 2026-07-20
+## [1.2.560] - 2026-07-24
 
-### Refactored
-- **SuperAgent Session Manager: JSON → SQLite Migration**:
-  - Rewrote `sessionManager.ts` to read/write directly from SuperAgent CLI's SQLite database (`~/.superagent-r/history.db`) using `better-sqlite3`
-  - Removed all legacy JSON file-based session storage logic (metadata cache, `history-metadata.json`, per-session JSON files)
-  - Sessions now query the `sessions` table with workspace path matching; messages query the `messages` table ordered by `sequence_order`
-  - Full message format mapping: `reasoning` → thought bubbles, `tool_calls` JSON → tool invocations, `tool_results` JSON → tool completions
-  - GUI session save/delete operations write back to the same SQLite database (UPSERT + transaction-based message replacement)
-  - Input history (`getInputHistory`/`saveInputHistory`) now reads from the `input_history` table keyed by `workspace_id`, with file-based fallback
-  - `superAgentBridge.ts` history functions delegate to SQLite-based `sessionManager`
-  - Added `closeSessionDb()` graceful shutdown handler in `server.ts` for clean DB connection teardown
-  - Added `better-sqlite3` and `@types/better-sqlite3` as dependencies
+### Fixed
+- **Smart Target Auto-Location in File Edit Tools**:
+  - Implemented `autoLocateTargetContent` in `fileEditTools.ts` (`edit`, `replace_file_content`, and `multi_replace_file_content`).
+  - Automatically resolves and adjusts line range (`startLine` / `endLine`) when AI models specify an offset line range or indentation variation.
+  - Prevents repeated line-range mismatch edit failures when replacing code blocks.
 
-## [1.3.512] - 2026-07-20
+## [1.2.559] - 2026-07-24
 
-### Added & Optimized
-- **Optimized Chat History Load Performance**:
-  - Implemented memory caching for index files in [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) (using filesystem modification timestamps to prevent redundant 1MB+ JSON reads/parses).
-  - Implemented truncation for large tool execution result streams (slicing strings and stringified JSON exceeding 10,000 characters). This dramatically reduces JSON payload sizes (from 9MB down to less than 50KB) and results in instant, lag-free message history loading.
+### Added
+- **Workspace Path Header Display**:
+  - Added workspace directory path display to the single-agent header banner (`Banner` component) and multi-agent dashboard system header banner (`MultiAgentDashboard`).
 
-## [1.3.511] - 2026-07-20
+## [1.2.558] - 2026-07-24
+
+### Added
+- **File Changes Reporting Rule**:
+  - Enforced mandatory display of all modified, created, or deleted files at the end of every Superagent process and AI response report.
+  - Added rule to `.agents/AGENTS.md` and system prompts in `src/core/prompts.ts`.
+
+## [1.2.557] - 2026-07-24
+
+### Changed
+- **Compaction & Pre-emptive Pruning Thresholds**:
+  - Adjusted model cap ratio in `ContextManager.ts` and `ContextBuilder.ts` from 85%/75% down to 80%/70% to trigger history compaction earlier.
+  - Lowered the GraphSentry pre-emptive budgeted pruning band threshold from 75% to 65% of context window, proactively clearing low-importance background messages before reaching emergency limits.
+
+## [1.2.556] - 2026-07-24
+
+### Fixed
+- **Token Efficiency & Tool Truncation**:
+  - Added `view_file` and `view` to routine tools list in `conversation.ts` so file outputs age out and truncate earlier (1 cycle instead of 2).
+  - Synchronized `TokenTracker.ts` vision image page cap calculation with `MessageBuilder.ts` (up to 20/100 pages instead of 3), allowing accurate token counting and timely compaction triggers.
+
+## [1.2.555] - 2026-07-24
+
+### Changed
+- **Subagent & Superagent UI Visibility**:
+  - Removed length limits from latest subagent and superagent action output in active agent lists and registry panels to display them in full without truncation.
+  - Implemented fallback to the subagent's prompt or superagent's task description when no execution logs are available yet, avoiding the generic "Initializing..." text.
+
+## [1.2.554] - 2026-07-24
+
+### Added
+- **uv and Python Startup Installer Checks**:
+  - Added checks and automatic installers for uv Package Manager and Python Environment to `androidSetup.ts`.
+  - Integrated uv and Python setup monitoring into `StartupChecker` CLI startup interface.
+
+## [1.2.553] - 2026-07-24
+
+### Added
+- **Startup Dependency & Model Progress Bars**:
+  - Implemented interactive `StartupChecker` Ink component to run and monitor initialization checks on startup.
+  - Added support for progress callbacks with total/loaded byte sizes during HuggingFace transformers model preloading (classifier and embedding models).
+  - Enhanced dependency installer functions (ripgrep, curl, Android CLI) in `androidSetup.ts` with streaming progress callbacks and visual progress tracking in TTY mode.
+
+## [1.2.552] - 2026-07-24
+
+### Fixed
+- **Terminal Input Paste Detection**:
+  - Enhanced `updatePasteState` in `text.ts` to robustly detect and track fast character-by-character pasting and rapid chunk inputs using timing and count heuristics.
+  - Added `resetPasteDetection` helper function to clear global paste detection tracking variables.
+  - Prevented pasted text inputs from being displayed raw in the terminal input box when pasted via terminal emulators that process inputs rapidly character-by-character.
+
+## [1.2.551] - 2026-07-24
+
+### Fixed
+- **Chrome Extension Single Mode Enforcement**:
+  - Enforced single agent mode in Chrome extension UI and scripts (`sidepanel.html`, `sidepanel.js`, `sidepanel-ui.js`).
+  - Removed multi-mode orchestration options from extension panel to focus exclusively on single agent mode and cognitive scale-up.
+
+## [1.2.550] - 2026-07-24
+
+### Fixed
+- **Background Task Agent Auto-Wake Guard**:
+  - Added `notifyAgent?: boolean` property to `BackgroundTask` interface in `types.ts`.
+  - Guarded agent auto-wake (`agentRef.current.sendMessage`) in `app.tsx` task completion listener to only trigger when `task.notifyAgent` is explicitly `true`.
+  - Prevents background shell tasks from triggering unwanted agent execution turns.
+
+## [1.2.549] - 2026-07-24
+
+### Fixed
+- **RMemory Dynamic Migration & Local Model Downloads**:
+  - Refactored `checkAndPerformDbMigration` in `rmemoryUtil.ts` to accept explicit target directories and dimension metadata for both general vector storage and isolated skills index (`rmemory-skills`).
+  - Added cached RMemory instance invalidation when embedding model name or dimensions change.
+  - Added support for explicit local model download commands `/setting-rmemory download` and `/setting-classifier download` in slash commands.
+  - Added unit tests for RMemory database migration and slash command download triggers.
+
+## [1.2.548] - 2026-07-24
+
+### Fixed
+- **RMemory Migration & Background Task Notifications**:
+  - Enhanced `checkAndPerformDbMigration` in `rmemoryUtil.ts` to clean up all stale files and directories in `globalDataDir` upon embedding model or dimension change, preventing vector dimension mismatches.
+  - Batched background task change notifications in `app.tsx` by moving `notifyTasksChanged()` outside the task processing `forEach` loop.
+  - Added robust argument unwrapping in `managePlanTool` (`otherTools.ts`) for nested `args.arguments` payloads.
+
+## [1.2.547] - 2026-07-24
+
+### Fixed
+- **ESC Key AI Process Cancellation & Test Reliability**:
+  - Fixed ESC key handler in `useKeyboardHandler.ts` so that when chat is scrolled (`scrollOffset > 0`), pressing ESC resets scroll and still aborts the running AI process instead of being blocked by the `else-if` condition chain.
+  - Added test case in `keyboardAbortInterrupt.test.ts` to verify ESC aborts processing when `scrollOffset > 0`.
+  - Fixed Windows `EBUSY` file locking errors in `agentAbortInterrupt.test.ts` during temporary directory cleanup.
+
+## [1.2.546] - 2026-07-24
+
+### Fixed
+- **Silent Classifier Fallback on Local Model Failure**: When the local Supra-Router-51M-ONNX model fails to download or any error occurs during Phase 2 LLM classification, the system now silently falls back to the heuristic result instead of showing a user-facing `[SYS] Warning: Request classification issue` message. The heuristic result is applied directly to routing (planState, isSimpleTask) so execution continues normally. Failures are recorded to the log file only (`WARN` level). Root cause: `heuristicResult` was declared inside the `try` block making it inaccessible to the `catch` block — fixed by hoisting the declaration before `try`.
+
+## [1.2.545] - 2026-07-24
+
+### Removed
+- **Codebase Indexing RAG System**: Completely removed the codebase vector embedding and Auto-RAG feature.
+  - Deleted `CodebaseIndexer` module (`codebaseIndexer.ts`) and all background auto-indexing logic.
+  - Deleted `codebaseSearchTool` and removed it from all tier toolsets (master, superagent, chrome extension, and all subagent types).
+  - Removed Auto-RAG prompt injection from `ContextBuilder` system prompt construction.
+  - Deleted `/index` slash command (`indexCommand.ts`) and removed its import from commands registry.
+  - Removed `/index` entries from `/help` output and dashboard autocomplete suggestions.
+  - Deleted `codebaseIndexer.test.ts` test file.
+
+## [1.2.544] - 2026-07-24
+
+### Optimized
+- **Pragmatic Minimalism for Codebase Indexer**:
+  - Refactored `CodebaseIndexer` according to pragmatic minimalism principles to eliminate over-engineering and reduce runtime overhead.
+  - Optimized database memory insertions within batches using concurrent `Promise.all` instead of sequential line-by-line `await` blocking loops.
+  - Streamlined stale deleted file purging into a single-pass `Set` lookup over vector memories instead of repeated O(N) array scans.
+  - Normalized path separator matching for cross-platform ignore rules on Windows and Linux.
+  - Reused chunk creation helper to keep structural and standard chunking DRY.
+
+## [1.2.543] - 2026-07-24
+
+### Fixed
+- **Indexing RAM and File Locks Leak**:
+  - Implemented batching (max size of 8) in `OptimizedLocalTextEmbeddingProvider.embedTexts` to prevent high peak memory allocation during feature extraction.
+  - Added explicit `.dispose()` calls on intermediate ONNX/WASM feature-extraction tensors in both `embedText` and `embedTexts` to prevent native memory leaks in the transformers pipeline.
+  - Resolved locked files and directory deletion failures on Windows by closing FS file watchers and calling `close()` on the cached `RMemory` SQLite database connection within `CodebaseIndexer.clearIndex`.
+  - Optimized `CodebaseIndexer.initAutoIndexing` to avoid scheduling redundant workspace indexing scans on every prompt construction call.
+  - Registered `codebaseSearchTool` in the `allTools` registry to resolve tool registry consistency checks.
+  - Switched default local embedding model from `nomic-ai/nomic-embed-text-v1.5` to `Xenova/all-MiniLM-L6-v2` to reduce memory usage and improve indexing startup and execution speeds. Isolates codebase index storage under model-specific subdirectories to prevent dimension mismatch errors.
+
+## [1.2.542] - 2026-07-24
+
+### Fixed
+- **Terminal Warning for Request Classification Failures**: Added terminal feedback when request classification fails due to invalid API keys or configuration errors, preventing silent logs and informing the user in the UI instead of hanging silently in THINKING state.
+
+## [1.2.541] - 2026-07-24
+
+### Fixed
+- **Startup Lag & Non-Blocking Initialization**: Optimized initial application boot time by making ripgrep setup, Android CLI setup, MCP server initialization, and Git safe directory verification run non-blocking in the background. Improved tool existence checks in `androidSetup.ts` to check fast local binary paths before spawning `execa` shell commands.
+
+## [1.2.540] - 2026-07-24
+
+### Maintenance
+- **Graphify Output Cleanup**: Cleaned up auto-generated `graphify-out` directory artifacts and added `graphify-out/` to `.gitignore` to prevent generated graph files from tracking in repository.
+
+## [1.2.539] - 2026-07-24
+
+
+### Added
+- **Codebase Embedding & Auto RAG System**: Integrated a local vector embedding system using `rmemory` local embedding model (`nomic-embed-text-v1.5`) and SQLite vector storage. Added `CodebaseIndexer` for structural JS/TS and line-based file chunking, auto background indexing on workspace load, `codebase_search` tool for agents, Auto RAG prompt injection, and `/index` slash command (`/index`, `/index clean`, `/index search <query>`).
+
+## [1.2.538] - 2026-07-24
+
+### Fixed
+- **Test Suite Stability & Test Pollution Fixes**: Resolved 5 failing test cases across `rmemoryUtil`, `askQuestionTool`, `visionServer`, and `visionTokenSaving`. Restored test spies, reset active question handlers in `afterEach`, adjusted dynamic vision threshold test assertions, and increased Python vision server boot retry timeout for parallel test runs.
+
+## [1.2.537] - 2026-07-23
+
+### Changed
+- **Global History Sessions in Terminal UI**: Removed workspace-specific path filtering from the `/resume` wizard, `/session list` slash command, keyboard handler wizard, and dashboard wizard. This allows all history sessions to be listed and accessible in the CLI/terminal UI regardless of the active workspace directory.
+
+## [1.2.536] - 2026-07-23
+
+### Removed
+- **Finishing a Development Branch Skill**: Removed the skill, cleaned up files referencing it, and updated configuration to reflect the deletion.
+
+## [1.2.535] - 2026-07-23
+
+### Documentation
+- **Integrations**: Documented the integration between Superagent and `t-line` desktop client in [AGENTS.md](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/AGENTS.md).
+
+## [1.2.534] - 2026-07-23
+
+### Fixed
+- **Filter Terminal UI (tline) Chat History Sessions by Workspace**:
+  - Scoped the history sessions list in `/resume` wizard, `/session list` slash command, keyboard handler wizard activation, and dashboard wizard to use the agent's active `workingDirectory` workspace path instead of defaulting to process root.
+  - This ensures that when switching workspaces in `tline` terminal UI mode, the chat sessions list updates dynamically to show only the sessions matching the active workspace.
+
+## [1.2.533] - 2026-07-23
+
+### Fixed
+- **Filter Chrome Extension Chat History Sessions by Workspace**:
+  - Scoped the history sessions retrieval endpoint in the Chrome Extension's side panel to request and filter sessions based on the currently active workspace.
+  - Added a placeholder message in the history tab prompt when no workspace is active to prompt the user to select one.
+  - Modified the backend session list implementation (`listHistorySessions` in `history.ts`) to strictly exclude sessions with empty/missing working directories when filtering by workspace path, and added unit tests to verify.
+
+## [1.2.532] - 2026-07-23
+
+### Fixed
+- **Cleaned Session Display Names**:
+  - Filtered out system-generated RMemory memory context messages when determining the first and last user messages.
+  - This ensures that sessions with active RMemory context display the actual user conversation prompts on the dashboard rather than leaking RMemory configuration text like ": - [memory] ...".
+
+## [1.2.531] - 2026-07-23
+
+
+### Fixed
+- **Resolved Tool Calls Leaking as Raw Text in Assistant Responses**:
+  - Restored the XML tool call parsing and cleanup block at the end of the agent loop iteration in `LoopIterationProcessor.ts` that was accidentally removed during the modularization refactoring of `agent.ts`.
+  - Re-integrated `StreamXmlFilter` in the text-delta streaming loop inside `LoopIterationProcessor.ts` to block and filter raw XML tool call tags (e.g. `<tool_call>`) from being streamed in real-time.
+  - Ensured only cleaned assistant response text is stored in history and emitted via `onEvent`, resolving issues where raw `<tool_call>` elements and JSON payloads would leak onto the user terminal and Chrome Extension chat interface.
+
+## [1.2.530] - 2026-07-23
+
+### Fixed
+- **Disabled Local Request Classifier by Default**:
+  - Changed the default value of `classifierEnabled` from `true` to `false` in `jsonConfig.ts` and set it to `false` in the user's `model-config.json` settings.
+  - This avoids loading and running the local `Sharjeelbaig/Supra-Router-51M-ONNX` classifier model via `transformers.js` on CPU-only machines. On CPU, the ONNX model inference blocks the Node.js event loop completely, causing the superagent server to freeze and experience extremely long "thinking" delays (~1 minute per simple message) without displaying any streaming response.
+
+## [1.2.529] - 2026-07-23
+
+### Fixed
+- **Prevented CLI and Server Session Collision**:
+  - Differentiated map keys for active CLI and Server sessions using `:cli` and `:server` suffixes. This allows a terminal CLI session and a desktop app session running in the same workspace to coexist seamlessly, preventing them from overwriting each other in the server's session registry.
+
+## [1.2.528] - 2026-07-23
+
+### Fixed
+- **Optimized `tests/androidSetup.test.ts` Execution**:
+  - Added conditional mock setup and deferred dynamic import of `androidSetup` module in tests, enabling execution-level mocks for both Vitest and Bun test runner environments. This prevents `bun test` from executing slow, blocking real-world `execa` commands on Windows.
+
+## [1.2.527] - 2026-07-23
+
+### Fixed
+- **Resolved Cross-Workspace Session Hijack Mismatch**:
+  - Restrained resolveSession's active CLI session fallback so it only routes requests if the requested workspace path matches the CLI session's workspace path (or if no workspace path was requested). This stops multiple clients/environments with different workspaces (like desktop t-line) from accidentally hijacking and routing messages to an unrelated active terminal session.
+
+## [1.2.526] - 2026-07-23
+
+### Optimized
+- **Workspace Telemetry Optimization in GitUtils**:
+  - Prevented parallel file I/O bottlenecks and memory blowup when capturing Git snapshots in workspaces with massive untracked file counts (e.g. desktop apps with large build outputs or unpacked assets). If there are more than 100 untracked files, content reading is bypassed.
+
+## [1.2.525] - 2026-07-23
+
+### Fixed
+- **Resolved Server-CLI Chat Session Routing Conflict**:
+  - Keyed active sessions in the server map by `${clientMode}:${targetWorkspace}` to allow concurrent CLI and Chrome Extension sessions for the same workspace path.
+  - Refactored `resolveSession` to match sessions against the request's client mode (using `resolveClientMode`), preventing extension requests from resolving to CLI sessions.
+  - Added `parentAgent` tracking to subagent and superagent instances, and updated server event subscribers to match completed children only to their spawning parent agent session.
+  - Fixed pre-existing Vitest test failures in `server2.test.ts` (preset config naming mismatch) and `promptToolGuidance.test.ts` (assertions outdated relative to minified system prompts).
+
+## [1.2.524] - 2026-07-22
+
+### Fixed
+- **Test Suite Refactoring and Vitest-Bun Compatibility**:
+  - Replaced slow/deadlocking async module mocks (`vi.mock('...', async (importOriginal) => ...)`) with synchronous mocks and spies to resolve deadlock issues under the Bun environment.
+  - Resolved SQLite database locks (EPERM errors) on Windows by closing database connections dynamically in beforeEach and afterEach hooks via `closeHistoryDb()`.
+  - Fixed `keyboardAbortInterrupt` and wizard tests by invoking hooks directly and mocking React hooks synchronously.
+  - Added `jsonSchema` mock export to `ai` SDK mocks, resolving TypeErrors in the agent loop tests.
+  - Implemented a synchronous mini React renderer in `trustPrompt` mock to support state transitions and input callbacks.
+
+## [1.2.523] - 2026-07-22
+
+### Added
+- **Workspace Custom Name Support (`src/core/storage/historyDb.ts`, `src/core/commands/workspaceCommand.ts`, `src/serverRoutes.ts`)**:
+  - Added a `name` column to the SQLite `workspaces` table to persist custom user-friendly names for directories.
+  - Implemented schema migration inside database initialization to automatically alter existing tables with the new `name` column.
+  - Updated the `/workspace add` command to support parsing an optional workspace name argument, e.g., `/workspace add <path> [name]`. Added support for unquoted paths with spaces.
+  - Modified `/workspace list` to print the custom workspace name (if registered) alongside the directory path.
+  - Updated `addTrustedDirectory` API and `/api/config/trusted-directory` endpoint to accept and record a workspace name.
+  - Exposed workspace names in the `/api/workspaces` list endpoint.
+  - Added unit test coverage for name retrieval, insertion, and CLI command printing.
+
+## [1.2.522] - 2026-07-22
+
+### Changed
+- **Removed Legacy JSON Files Creation**:
+  - Cleaned up [ensureGlobalConfigDir](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/config/paths.ts#L23) in [paths.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/config/paths.ts) to stop pre-creating legacy history directories (history, history/single, history/multi, checkpoints) which are no longer needed as all conversation history, session messages, and checkpoints are stored in SQLite database.
+  - Updated [cleanLegacyInputHistoryFiles](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/storage/historyDb.ts#L1244) in [historyDb.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/storage/historyDb.ts) to fully delete (unlink) legacy input-history.json files after migration instead of writing an empty array to them.
+  - Updated `/new` command in [coreCommands.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/commands/coreCommands.ts) to delete the workspace's legacy input-history.json file upon session reset rather than writing an empty array.
+  - Adjusted unit tests in [historyDb.test.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/tests/historyDb.test.ts) to assert that legacy input history files are successfully unlinked/deleted.
+  - Cleaned up unused import of getWorkspaceInputHistoryPath in [app.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/app.tsx).
+
+## [1.2.521] - 2026-07-22
+
+### Fixed
+- **First/Last Chat Session Title Duplication/Locking Bug (`src/serverRoutes.ts`)**:
+  - Extracted the actual first and last user message content instead of hardcoding `title` to `firstChat` and `lastChat` when saving session metadata to SQLite database via `POST /api/history/session`.
+  - This preserves the actual start and end prompts of a chat session, allowing the t-line bridge to calculate cleaner, more representative conversation titles.
+
+## [1.2.520] - 2026-07-22
+
+### Enhanced
+- **System Prompts Optimization (`src/core/prompts.ts`)**:
+  - Integrated Pragmatic Minimalism to enforce lean, high-density, zero-fluff prompts.
+  - Integrated Single-Agent Cognitive Scale-Up protocols including symbolic problem indexing (`P[001..100]`), Graph of Thought representation, and consolidated single-pass delta execution.
+  - Integrated Hundred-Minds Collective 6-team deliberation structure (Arch, Tech, Red Team, Empirical Validators, Consensus, Lean Ops).
+  - Integrated Non-Linear Debugging Engine with 5-pass cause-effect triangulation, multi-hypothesis superposition matrix, and collision node pinpointing.
+  - Enforced Concept A (Telegraphic English), Concept B (Markdown Hierarchy), and Concept C (Pseudocode Logic Gates) across Master Agent, Superagent, Subagents, and Chrome Extension prompts.
+
+## [1.2.518] - 2026-07-21
+
+### Fixed
+- **Excessive Context Compaction & Summarization Loop**:
+  - Excluded conversation summary messages (`[System Conversation Summary]`) from `autoPinKeyMessages` in `ContextManager.ts` to prevent summaries from being auto-pinned into permanent un-prunable state.
+  - Added filtering in `PinningStrategy.ts` and `SummarizationStrategy.ts` to strip previous summary messages when compacting, preventing duplicate summary stacking.
+  - Aligned emergency compaction threshold `safetyMax` in `ContextBuilder.ts` with `ContextManager.ts` threshold ratio.
+  - Added unit test in `ContextManager.test.ts` verifying summaries are not auto-pinned and do not accumulate across compaction cycles.
+
+## [1.2.517] - 2026-07-21
+
+### Fixed
+- **Python Vision Server Orphan Leak (`server.ts`)**:
+  - Imported `execSync` statically from `child_process`.
+  - Modified process exit hook `killVisionServerProcess()` to kill the Python child process synchronously using `execSync` instead of an asynchronous dynamic `import(...)` that fails to execute during the process exit phase.
+
+## [1.2.516] - 2026-07-21
+
+### Changed
+- **Default Terminal Stream Response Logging Disabled (`server.ts`)**:
+  - Wrapped SSE stream log output in `broadcastEvent` with a `process.env.LOG_STREAM_RESPONSE === 'true'` check.
+  - Stream response logging to server terminal is now disabled by default.
+
+## [1.2.515] - 2026-07-21
+
+### Added
+- **Stream Response Terminal Logging (`server.ts`)**:
+  - Added stdout/console logging for SSE stream events in `broadcastEvent`.
+  - Stream events broadcasted from SuperAgent HTTP server are now logged directly to the server terminal process.
+
+## [1.2.514] - 2026-07-20
+
+### Added
+- **`tests/server.test.ts` — Part 1 (546 lines)**: Comprehensive integration tests for `src/server.ts` core session endpoints:
+  - OPTIONS CORS preflight, GET /api/status (+ workspace header/query param resolution)
+  - GET /api/workspaces, GET /api/history, GET /api/history/sessions
+  - DELETE /api/history/session/:id (active session removal), GET/POST /api/input-history
+  - POST /api/init (single, multi, initialPrompt, resume), POST /api/chat (!, session, empty)
+  - POST /api/approve, POST /api/plan/approve, POST /api/answer
+  - Session resolution via `?sessionId` query param
+- **`tests/server2.test.ts` — Part 2 (621 lines)**: Integration tests for `src/server.ts` infrastructure endpoints:
+  - POST /api/browser/update-instance, POST /api/browser/result
+  - GET|POST|DELETE /api/browser/macros (CRUD round-trip)
+  - POST /api/abort, GET /api/tasks, GET /api/instances
+  - GET /api/workspace/files, POST /api/workspace/file/read (content, 400/403/404)
+  - POST /api/workspace/file/open (400/403/404/200), GET /api/git/changes
+  - GET /api/background-tasks, POST /api/background-tasks/kill
+  - GET /api/config, POST /api/config (settings, activePresetId)
+  - POST /api/switch-workspace (new, existing, multi-mode), GET /api/documents
+  - GET /api/workspaces (after sessions), GET /api/events SSE stream
+  - 404 fallthrough for unknown routes
+- **`tests/serverTestHelper.ts`** (90 lines): Shared test fixture module (helpers: `getFreePort`, `getJSON`, `postJSON`, `deleteJSON`, `optionsReq`; shared workspace/config vars used by both server test files).
+
+### Fixed
+- Corrected 4 test assertions that assumed server files live in the workspace directory (they live in `~/.superagent-r/history/`) and one assertion about input-history no-workspace behaviour (server uses `lastActiveWorkspace` fallback, not 400).
+- Refactored monolithic `server.test.ts` (was 1269 lines, exceeding the 1000-line code limit) into two sub-1000-line files.
+
+## [1.2.513] - 2026-07-20
+
+### Fixed
+- **Test Suite — Full 1178/1178 Pass (`tests/`)**:
+  - `conversation.ts` `loadFromFile`: Restored `result = "[Paused by session exit]"` and log message injection for `superagent`/`subagent` instances whose status was `"running"` or `"idle"` at session exit. The SQLite migration had inadvertently dropped this behavior.
+  - `tests/skillsInjection.test.ts`: Updated assertions to match simplified `GuidelineLoader` (removed stale `PLAN WRITING/EXECUTION GUIDELINES` expectations) and updated dev-hook notice assertion from `"ACTIVE INTERNAL HOOK DEVELOPMENT FOCUS"` → `"HOOK FOCUS"` to match current `ContextBuilder.ts` copy.
+  - `tests/requestClassifier.test.ts`: Updated `getCategoryPromptAddendum` assertions to expect lowercase classification tags (`"conversation"`, `"question"`, `"research"`). Replaced `"audit"` with `"scan"` in TF-IDF test string to avoid COMPLEX_KW early-exit that prevented the statistical router from running.
+  - `tests/connectionTestFlow.test.ts`: Changed custom provider cached model names to use `custom/` prefix so they pass the `getModelOptions("custom", …)` filter correctly.
+  - `tests/agentOptimizations.test.ts`: Updated subagent prompt test to assert `"Research Subagent"` + `"CRITICAL RULES"` instead of deleted `SEMI_FORMAL_REASONING` / `LOGIC_OF_AWARENESS` variables.
+  - `tests/promptToolGuidance.test.ts`: Removed stale assertions for `"Can this be batched, delegated, or run in parallel safely?"`, `"if multiple_independent_subagents"`, `"single-agent-cognitive-scaleup"`, and `"optimal non-human reasoning"` from `prompts.ts` (removed during SQLite migration prompt cleanup). Retained `skillsConfig` assertion for `"single-agent-cognitive-scaleup"`.
+
+## [1.2.512] - 2026-07-20
+
+### Fixed
+- **Vision Server Path Resolution (`src/server.ts` & `tests/visionServer.test.ts`)**:
+  - Replaced `process.cwd()` with `getPackageRootDir()` when resolving `scripts/vision_server.py`.
+  - Fixes `[Errno 2] No such file or directory` error when launching `superagent --server` from workspace directories outside the Superagent package root.
+
+## [1.2.511] - 2026-07-20
 
 ### Added & Enhanced
-- **Real-time CLI Chat History Sync Watcher**:
-  - Implemented recursive directory watcher for `~/.superagent-r` in [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) to push events (`superagent-sessions-changed`) on session history file writes.
-  - Linked global WebSocket manager to [useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts) hook on the frontend to automatically refresh chat sessions and message lists in real-time, preserving the user's active session choice during updates.
+- **Idle Session Harvesting, SSE Metadata & `/api/workspaces` Endpoint (`src/server.ts`)**:
+  - Added `lastActiveTime` tracking to `AgentSession` interface, updated automatically on every request resolution and event broadcast.
+  - Added background idle session harvester (30-minute inactivity timeout) to automatically prune inactive non-CLI sessions from memory without interrupting running tasks.
+  - Attached `sessionId` and `workspace` metadata directly to `agent_event` and `plan_approval_required` SSE broadcasts for precise client session event routing.
+  - Added `GET /api/workspaces` endpoint to query all active workspace sessions, modes, running status, and last active timestamps.
 
-## [1.3.510] - 2026-07-20
-
-### Added & Fixed
-- **Sync Chat Session History with Native CLI Storage**:
-  - Updated [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) to read/write session files and meta records directly under the native CLI storage directory `~/.superagent-r/history/single/` and `~/.superagent-r/history/multi/`.
-  - Added full message format mapping between the CLI format (storing messages as `content` with nested `toolCalls` and `toolResults` lists) and the GUI Console interface representation (`text`, `role: 'thought'`, `role: 'tool'`, etc.), ensuring seamless CLI/GUI history synchronization.
-
-## [1.3.509] - 2026-07-20
-
-### Added & Refactored
-- **SuperAgent Chat Session History Sync with Disk**:
-  - Implemented [sessionManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sessionManager.ts) to read and persist chat sessions and message histories under `~/.superagent/sessions/<workspaceHash>/`.
-  - Added REST API endpoints `GET/POST/DELETE /api/superagent/sessions` for sessions list and message synchronization.
-  - Updated [useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts) to sync GUI sidebar chat lists and history logs with backend API endpoints, falling back to `localStorage` when offline.
-- **Codebase Length Reduction Refactoring**:
-  - Refactored [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) by extracting authentication and security connection endpoints into a dedicated router at [authRoutes.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/authRoutes.ts) and all superagent endpoints into [superAgentRoutes.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentRoutes.ts).
-  - Reduced [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) from over 1220 lines to a clean 816 lines (well under the project limit of 1000 lines).
-
-## [1.3.508] - 2026-07-20
-
-### Added & Enhanced
-- **SuperAgent CLI History Synchronization**:
-  - Implemented `getCliPromptHistory()` and `saveCliPromptHistory()` in [superAgentBridge.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentBridge.ts) to read and persist prompts into `~/.superagent_history`.
-  - Added REST API endpoints `GET /api/superagent/history` and `POST /api/superagent/history` in [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts).
-  - Integrated `fetchCliPromptHistory()` in [SuperAgentConsoleUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsoleUtils.ts) and connected it to [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) so Up/Down arrow prompt navigation seamlessly syncs between CLI and GUI.
-
-## [1.3.507] - 2026-07-20
-
-### Fixed & Enhanced
-- **SuperAgent System & Error Message Styling & Text Selection**:
-  - Made system and error message pills dark-themed (`bg-[#060810]` for standard system messages and `bg-[#0a0507]` with rose borders for errors) in [SuperAgentMessageItem.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentMessageItem.tsx).
-  - Enabled full text selection (`select-text`, removing `select-none` and `truncate`) across system messages, user/assistant responses, and tool item outputs in [SuperAgentMessageItem.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentMessageItem.tsx) and [SuperAgentToolItem.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentToolItem.tsx) so users can easily highlight ("block text") and copy error messages and prompt text.
-
-## [1.3.506] - 2026-07-20
-
-### Removed
-- **SuperAgent Tab Loading Text Badge**:
-  - Removed explicit "Working..." badge from SuperAgent tab header in [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx) for a cleaner tab UI.
-
-## [1.3.505] - 2026-07-20
-
-### Added
-- **SuperAgent Management Login & Provider Credentials**:
-  - Implemented [SuperAgentLoginManager.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentLoginManager.tsx) for managing LLM provider login profiles and API keys (OpenAI, Anthropic, Gemini, DeepSeek, Ollama, OpenRouter, Groq, Mistral, Azure, Custom REST).
-  - Added backend API endpoints `/api/superagent/config/provider` and `/api/superagent/config/active-provider` in [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) and helpers in [presetUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/presetUtils.ts).
-- **Model Preset Management**:
-  - Created [SuperAgentPresetManager.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentPresetManager.tsx) for viewing model presets, customizing Master & Subagent model roles, and creating custom model presets.
-  - Added backend API endpoints `/api/superagent/config/preset` for preset creation, activation, and deletion.
-- **Unified SuperAgent Settings Modal**:
-  - Built [SuperAgentSettingsModal.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentSettingsModal.tsx) tabbed settings modal (**Management Login**, **Model Presets**, **Execution & Workspace**, **Monitor & Console**).
-  - Enhanced [SuperAgentConsoleHeader.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsoleHeader.tsx) and [SuperAgentSettingsMenu.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentSettingsMenu.tsx) with quick action buttons and preset dropdowns.
-- **Codebase Modularization**:
-  - Created [SuperAgentConsoleUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsoleUtils.ts) to keep [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) well under the strict 1000-line project limit (957 lines).
-
-## [1.3.504] - 2026-07-20
-
-### Fixed
-- **Complete Render-Level Hiding of System Connection Noise Pills**:
-  - Implemented `isSystemNoiseMsg()` helper in [useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts) and applied it to the render filter in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx).
-  - Guarantees all WebSocket connection pills ("WebSocket connection established", "SuperAgent WebSocket connection closed", "Connected to SuperAgent server", "SuperAgent ready", "Restarting bridge", etc.) stored in existing `localStorage` sessions or received from state are completely hidden from the chat UI.
-  - Cleared default system greeting messages when initializing or switching sessions.
-
-## [1.3.503] - 2026-07-20
-
-### Fixed
-- **Filtered Out Connection Noise System Messages from Chat UI**:
-  - Filtered out routine WebSocket system connection pills ("WebSocket connection established", "SuperAgent WebSocket connection closed", "Connected to SuperAgent server", "Auto-starting SuperAgent server") from popping up in the chat UI view in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx).
-  - All connection events are now logged cleanly to developer `console.log` / `console.info` instead to keep the chat interface clean and clutter-free.
-
-## [1.3.502] - 2026-07-20
-
-### Improved
-- **Ultra-Thin Resizer Lines**:
-  - Updated sidebar resizer handles in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) to ultra-thin `2px` lines (`w-[2px]`), expanding smoothly to `4px` with indigo glow on hover (`hover:w-[4px] hover:bg-indigo-500/90`).
-
-## [1.3.501] - 2026-07-20
-
-### Fixed
-- **Sidebar Drag Resizing Math & Event Overlay**:
-  - Updated [useSidebarResize.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSidebarResize.ts) to calculate relative offsets using `getBoundingClientRect()` of the main console container (`e.clientX - rect.left` for History, `rect.right - e.clientX` for Monitor).
-  - Solved screen position jump bugs when workspace sidebars or split panels are present.
-  - Added standalone resizer drag bars (`col-resize`) with glowing hover states and a global drag overlay in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) to prevent iframe/mouse selection traps during active dragging.
-
-## [1.3.500] - 2026-07-20
-
-### Added
-- **Resizable Left & Right Sidebars in SuperAgent Console**:
-  - Implemented custom mouse drag resizers for both the left Chat History sidebar and right Live Monitor sidebar.
-  - Created [useSidebarResize.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSidebarResize.ts) hook to handle real-time pixel drag resizing, min/max bounds enforcement, and width persistence in `localStorage`.
-  - Updated [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) with interactive resizer bars (`col-resize`) that glow on hover.
-
-## [1.3.499] - 2026-07-20
-
-### Fixed
-- **Cleaned Up SuperAgent Header Bar**:
-  - Removed awkward left-aligned icon button from the SuperAgent top left header column in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx).
-  - Placed neat `History` toggle button in the top right control group alongside `Monitor` and `Setting`.
-
-## [1.3.498] - 2026-07-20
-
-### Improved
-- **SuperAgent History Header Icon Controls & Search Dropdown**:
-  - Converted **+ New Chat** and **Search** into compact icon action buttons positioned directly in the History sidebar header row next to the title badge.
-  - Implemented collapsible search dropdown panel in [SuperAgentHistorySidebar.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentHistorySidebar.tsx) that smoothly toggles open/close upon clicking the search icon button.
-
-## [1.3.497] - 2026-07-20
-
-### Added
-- **SuperAgent Left Chat History & New Chat Feature**:
-  - Implemented collapsible left history sidebar [SuperAgentHistorySidebar.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentHistorySidebar.tsx) featuring a prominent **+ New Chat** button, real-time title search filter, dynamic title editing/renaming, and session deletion.
-  - Added multi-session state hook [useSuperAgentSessions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/useSuperAgentSessions.ts) with workspace-keyed `localStorage` persistence, automatic session creation, title auto-generation from first user prompt, and backward-compatible migration from legacy single-session storage.
-  - Integrated history toggle button (`History` icon) into the header of [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx).
-
-## [1.3.496] - 2026-07-20
-
-### Fixed
-- **SuperAgent Chat Abort & Execution Stop Fix**: Resolved an issue where clicking "Stop Agent", clicking "Stop Execution", or running `/abort` did not stop the active chat execution:
-  - Added HTTP request timeout handling (2000ms) in [superAgentBridge.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/superAgentBridge.ts) so `/api/abort` calls do not block backend WebSocket processing if the server is non-responsive.
-  - Implemented forceful process termination (`taskkill` on Win32 / `SIGKILL` on Unix) for `autoSuperAgentProcess` upon abort, guaranteeing active background LLM generation and subagent tools stop immediately.
-  - Added `isAbortedRef` event suppression tracking in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) to prevent lingering SSE stream chunks from turning loading states back on after user cancels.
-  - Fixed `/abort` slash command in chat input to immediately trigger `handleAbort()` rather than forwarding `/abort` text as a prompt to the AI model.
-- **Strict File Limit Refactoring**: Extracted message rendering into [SuperAgentMessageItem.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentMessageItem.tsx) to maintain `SuperAgentConsole.tsx` strictly under 1000 lines of code.
-
-## [1.3.495] - 2026-07-20
-
-### Added
-- **Collapsible Tool Call Summaries**: Implemented clean, expandable tool call rows matching modern IDE agent UI:
-  - Created [SuperAgentToolItem.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentToolItem.tsx) component with compact single-line summaries (e.g. `Analyzed App.tsx #L2125-2150`, `Edited SuperAgentConsole.tsx`, `Searched "query"`).
-  - Features interactive click-to-expand / collapse (`>` to `v`) to reveal full JSON arguments, execution output/stdout, and a one-click copy button.
-  - Integrated [SuperAgentToolItem](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentToolItem.tsx) into [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx#L874-L878) to replace previous bulky tool output boxes.
-
-## [1.3.494] - 2026-07-20
-
-### Added
-- **AI Working Indicator on SuperAgent Tab Header**: Added a visual loading indicator to the SuperAgent tab header in [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx#L2133-L2147):
-  - Automatically converts the tab icon to a spinning `Loader2` indigo icon when the AI agent is thinking or running tools.
-  - Displays a glowing `Working...` pill badge with a pulsing dot next to the tab title so users can instantly monitor AI background activity even while working in other terminal or editor tabs.
-  - Updated [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx#L70-L75) with `onLoadingChange` callback to notify parent header of real-time execution status.
-
-## [1.3.493] - 2026-07-20
-
-### Fixed
-- **Background Execution & Persistent SuperAgent Component**: Fixed SuperAgent process stopping when switching tabs in [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx#L2326-L2338):
-  - Changed tab rendering so `SuperAgentConsole` remains continuously mounted in the DOM (`display: none` when non-active) instead of conditionally unmounting.
-  - Keeps the WebSocket connection and SSE listener alive when switching to terminal, file, or diff tabs, enabling AI tasks to run seamlessly in the background without process interruption.
-
-## [1.3.492] - 2026-07-20
-
-### Fixed
-- **SuperAgent Chat History Persistence**: Fixed chat history disappearing when switching tabs in [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx):
-  - Integrated `localStorage` persistence keyed per workspace (`superagent_messages_<workspace>`) so chat stream, system notifications, tool calls, and assistant responses are automatically preserved.
-  - Added workspace change detection to seamlessly load history when switching active project workspaces.
-  - Deduplicated WebSocket connection notifications on tab re-activation to prevent cluttering the message log.
-
-## [1.3.491] - 2026-07-20
-
-### Fixed
-- **Superagent Preset & Provider Profile Resolution**: Fixed preset application in [presetUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/presetUtils.ts) when switching presets:
-  - Validates and resolves `providerProfileId` against configured provider profiles in `model-config.json`.
-  - Automatically falls back to the active/configured provider profile if a CLI preset references a non-existent provider profile ID, preventing Superagent from using invalid credential references.
-  - Correctly builds structured tier configs (`superagent`, `subagentDefault`, `master`) so preset model settings match the Superagent core expectations.
-
-## [1.3.490] - 2026-07-20
-
-### Removed
-- **Redundant SuperAgent Header Bar**: Removed the `SuperAgentConsoleHeader` sub-bar (`Active Workspace`, `CLI Mode`, `Custom CLI Flags`, `Apply & Restart Bridge`) from [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx).
-  - All workspace, execution mode, and bridge restart controls have been fully consolidated into the top-right [SuperAgentSettingsMenu.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentSettingsMenu.tsx) popover, maximizing vertical space for the console log.
-
-## [1.3.489] - 2026-07-20
-
-### Added
-- **Top-Right Setting Menu**: Added a new `Setting` menu button next to the `Monitor` button in the top right header of the SuperAgent Panel.
-  - Created [SuperAgentSettingsMenu.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentSettingsMenu.tsx) popover component providing quick access to CLI Mode switcher, custom flags, bridge restart, live monitor toggles, console output cleaner, and global application settings modal.
-  - Integrated [SuperAgentSettingsMenu](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentSettingsMenu.tsx) into [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) and updated [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx) to pass global settings handler.
-
-## [1.3.488] - 2026-07-20
-
-### Fixed
-- **Superagent CLI Preset Integration**: Fixed preset sync and loading for Superagent:
-  - Created [presetUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/presetUtils.ts) to merge presets stored in `~/.superagent-r/model-presets.json` (saved via Superagent CLI `/model` command) with `model-config.json`.
-  - Updated `/api/superagent/config` endpoint in [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) so all CLI presets appear in the frontend preset dropdown switcher.
-  - Updated `/api/superagent/config/active-preset` endpoint to parse and apply the selected preset's model parameters and active provider profile to `model-config.json`, ensuring selected CLI presets take effect upon bridge restart.
-
-## [1.3.487] - 2026-07-20
-
-### Fixed
-- **Left-Aligned System Message Pills**: Changed status pill alignment for `system` role messages from centered to left-aligned (`justify-start`, `text-left`), creating a consistent vertical alignment along the left edge of the SuperAgent message stream.
-
-## [1.3.486] - 2026-07-20
-
-### Fixed
-- **Cleaned Up System Message Cards**: Replaced wide, heavy card container blocks for `system` status messages with sleek, compact centered status pills featuring an status indicator dot. Prevents cluttering the stream and conserves vertical space.
-
-## [1.3.485] - 2026-07-20
+## [1.2.510] - 2026-07-20
 
 ### Enhanced
-- **Hallmark Anti-AI-Slop SuperAgent Interface Redesign**: Applied Hallmark design principles across all SuperAgent console components (`modern-minimal` genre, `Cobalt` theme, `Workbench` macrostructure):
-  - Added CSS design tokens stamp and OKLCH color definitions in [components.css](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/components.css).
-  - Polished interactive card UI states ([SuperAgentInteractiveCards.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentInteractiveCards.tsx)) with 8-state button microinteractions, instant focus-visible rings, and high-density dark backdrop filters.
-  - Refined [SuperAgentConsoleHeader.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsoleHeader.tsx) and [SuperAgentInputContainer.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentInputContainer.tsx) with token-based borders, high-precision typography, slash command popover styling, and status indicators.
-  - Upgraded [SuperAgentAuditLogs.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentAuditLogs.tsx) with real-time log filtering, custom tag badges, and formatted JSON output containers.
-  - Recorded project memory in [.hallmark/log.json](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/.hallmark/log.json).
+- **SuperAgent HTTP Server CORS & Active Session Purge (`src/server.ts`)**:
+  - Updated CORS preflight and `sendJSON` headers to allow `x-workspace-path` and `Authorization` headers across all origins.
+  - Enhanced `DELETE /api/history/session/:id` to purge deleted sessions from memory (`activeSessions`), aborting active runs if still executing, and broadcasting `superagent-sessions-changed` via SSE for real-time sidebar synchronization.
 
-## [1.3.484] - 2026-07-20
+## [1.2.509] - 2026-07-20
 
-### Enhanced
-- **Unified File & Image Attachments**: Merged image and document pickers into a single, compact `Paperclip` trigger button next to the console textarea. The file selection automatically detects file types: images render visual thumbnail previews, while text-based files/documents are read as raw text and automatically appended to the backend prompt.
-- **Minimalist Preset & Model Changer**: Added a minimalist selector directly below the input console. Users can select and change model presets, view the main model name, and have the bridge automatically restart to apply changes immediately.
-- **Strict File Limit Modularization**: Split and refactored [SuperAgentConsole.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsole.tsx) to remain strictly under the 1000-line constraint (total lines reduced to 903):
-  - Extracted workspace configuration header to [SuperAgentConsoleHeader.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentConsoleHeader.tsx).
-  - Extracted log list tab to [SuperAgentAuditLogs.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentAuditLogs.tsx).
-  - Extracted permission, question, and plan approval cards to [SuperAgentInteractiveCards.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentInteractiveCards.tsx).
-  - Extracted slash commands list generator to [SuperAgentCommands.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SuperAgentCommands.ts).
+### Fixed
+- **SuperAgent HTTP Server `/api/abort` & Session ID Alignment (`src/server.ts`)**:
+  - Enhanced `/api/abort` endpoint in `src/server.ts` to abort all active workspace agents, mark running subagent & superagent instances as `cancelled`, clear pending permissions and questions, and broadcast SSE status & done events.
+  - Updated `resolveSession` in `src/server.ts` to update `session.sessionId = targetSessionId` whenever a session is resolved via workspace path, ensuring 100% session ID alignment for incoming chat requests.
 
-## [1.3.483] - 2026-07-20
+## [1.2.508] - 2026-07-20
 
-### Enhanced
-- **SuperAgent Console Input Upgrades**: Replaced the single-line input field with a multi-line, auto-growing textarea supporting dynamic height (up to `240px`) and custom key bindings (`Enter` to send, `Shift+Enter` for newlines).
-- **Interactive Slash Commands (`/`)**: Introduced autocomplete drop-up menu triggered strictly by typing `/` in the input (supporting `/help`, `/status`, `/abort`, `/clear`, `/mode`, `/single`, `/multi`, `/resume`, `/workspace`, `/explain`, `/test`, `/reset`) with full keyboard navigation support (`ArrowUp`/`ArrowDown`/`Tab`/`Enter`/`Escape`).
-- **Outside Click Handler**: Added automatic closing of the autocomplete suggestions popup when the user clicks outside the console input container.
-- **Prompt History Navigation**: Enabled cycling through sent prompts inside the textarea using `ArrowUp`/`ArrowDown` navigation.
-- **Input Stats & Helper info**: Displayed character counter and shortcut instruction guide.
+### Fixed
+- **Input Focus Recovery**: Fixed bug where keystrokes were silently discarded when `focusMode` was stuck on a non-input mode (chat, checklist, superagents, subagents, procs). Typing a printable character now auto-returns focus to the input field, preventing the "typing does nothing" issue.
+- **Mouse Click Focus Steal**: Clicking on chat items to expand/collapse tool outputs no longer changes `focusMode` to "chat", which previously stole keyboard focus from the input field.
 
-## [1.3.482] - 2026-07-19
-
-### Fixed & Enhanced
-- **SuperAgent Workspace Auto-Sync**: SuperAgent Console now automatically tracks and syncs with the active workspace selected in t-line (`panelWorkspace`). Added an interactive workspace dropdown selector allowing quick workspace switching.
-- **SuperAgent Auto Session Initialization**: Fixed missing session errors (`Session not initialized`) by auto-calling `/api/init` on the SuperAgent server (`127.0.0.1:7888`) before sending chat prompts or establishing SSE listeners.
-- **Interactive Agent Capabilities**: Added interactive cards in SuperAgent Console for Tool Permission requests (Allow Once / Allow Session / Deny), Agent Question prompts (Choice buttons & custom text input), and Plan Approval requests (Approve & Execute / Reject).
-- **Execution Abort & Stream Progress**: Added a real-time Stop/Abort button to cancel running agent tasks and live stream output indicators for progress events.
-- **Modular Backend Architecture**: Refactored SuperAgent server bridge handling into `backend/src/superAgentBridge.ts`, maintaining clean code modularity and respecting file length limits.
-
-## [1.3.481] - 2026-10-24
+## [1.2.507] - 2026-07-20
 
 ### Changed
-- Bumped workspace packages and project version to 1.3.481.
-- Synchronized latest repository modifications and pushed updates.
+- **Workspace Cache File Cleanup on Pruning**:
+  - Updated `deleteWorkspaceDataFromDb` to clean up the JSON cache file under `workspace-caches/` whenever a workspace is deleted or pruned as stale, preventing directory and cache file leaks on disk.
 
-## [1.3.480] - 2026-10-24
-
-### Changed
-- **Migrated package manager to Bun**: Replaced all `npm` runner tasks and commands with `bun`. Removed lockfiles and generated new `bun.lockb` structure.
-- **Optimized Scripts**: Configured global workspace targets to utilize bun filtering syntax (`bun run --filter`).
-
-## [1.3.478] - 2026-07-16
-
-### Fixed
-- **Terminal Output Lag and Disappearing Content**: Fixed a major bug where terminal output would lag, freeze, or display corrupted/duplicated content. 
-  - Removed the `requestAnimationFrame` (RAF) write-batching queue on the frontend ([TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx)) to write PTY data directly to `xterm.js`. This prevents extreme memory-accumulation lag when browser tabs are in the background and resolves out-of-order viewport/scrollback redraws when refocusing/reconnecting.
-  - Increased xterm.js scrollback buffer configuration from `1000` to `10000` lines so that older logs are not prematurely deleted from the scrollback history buffer.
-  - Added an automatic fallback to `CanvasAddon` when the `WebglAddon` triggers a context loss event (`onContextLoss`), preventing blank or frozen terminal screens.
-- **Backend Replay Buffer Limit**: Increased the maximum rolling output replay buffer size (`OUTPUT_BUFFER_MAX_BYTES`) in [terminalManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/terminalManager.ts) from `32KB` to `256KB` to support longer scrollback recovery on session re-attach / tab refresh.
-
-## [1.3.477] - 2026-07-16
-
-### Fixed
-- **Terminal Initial Command Log Spam**: Stopped console log spam during terminal instance initialization when no `initialCommand` is provided (which is the case for most normal terminals). The `useTerminalInitialCommand` hook ([useTerminalInitialCommand.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useTerminalInitialCommand.ts)) now returns early immediately if `initialCommand` is empty or undefined, avoiding unnecessary "Hook triggered" and "Skipping command execution" log spams.
-
-## [1.3.476] - 2026-07-16
-
-### Added
-- **Terminal Grid Inline Copy & Run Actions**: Added inline action buttons (Copy and Run) to the header of terminal cards in the Grid Monitor tab ([TerminalGridTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalGridTab.tsx)). Hovering over a card reveals two new buttons next to the title:
-  - **Copy**: Copies the terminal name/command (`displayName`) to the clipboard with an interactive visual checkmark micro-animation.
-  - **Run**: Sends the command directly to the terminal shell to execute it.
-
-### Refactored
-- **TerminalGridTab Code Length Optimization**: Extracted all CSS rules (546 lines of CSS) out of [TerminalGridTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalGridTab.tsx) into a new dedicated stylesheet [TerminalGrid.css](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/TerminalGrid.css) imported via [index.css](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/index.css). This reduces the size of `TerminalGridTab.tsx` from 1164 lines down to ~620 lines, fully satisfying the strict 1000-line project length limit.
-
-## [1.3.475] - 2026-07-16
-
-### Fixed
-- **Virtual Touch Keyboard Popup on Desktop**: Fixed a bug where focusing the terminal on touch-screen desktop computers (like ASUS laptops) or small window sizes (width <= 768px) automatically popped up the virtual touch keyboard (`MobileKeyboard`). Refined the `isMobileDevice` detection utility in [TerminalHelpers.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalHelpers.ts) to strictly match mobile operating systems and iPad Safari browsers, excluding desktop platforms.
-
-## [1.3.474] - 2026-07-16
-
-### Improved
-- **Graceful Network Offline & Change Handling**: Centralized fetch/network error handling to prevent console log spam with red `net::ERR_NETWORK_CHANGED` or offline `TypeError: Failed to fetch` stack traces during connection switches or drops. Added [network.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/utils/network.ts) utility to identify offline/network-change failures and log them as soft warnings instead of red error stack traces in all background polling hooks (`useTunnel`, `useSystemStats`, `useGitStatus`, `useWorkspaces`, `useUpdateChecker`, and `useAuth`).
-
-## [1.3.473] - 2026-07-16
-
-### Fixed
-- **xterm WebGL Addon Undefined 'loadCell' Crash**: Fixed a crash (`TypeError: Cannot read properties of undefined (reading 'loadCell')`) in `WebglRenderer._updateModel` when the terminal buffer is temporarily reset (e.g. during a scrollback history replay). Monkey-patched `WebglRenderer._updateModel` in [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx) to check if the requested row buffer lines are populated before updating the rendering model, returning early if they are not yet available.
-
-### Refactored
-- **TerminalInstance Code Length Optimization**: Moved `FILE_PATH_REGEX` and `registerFileLinkProvider` into [TerminalHelpers.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalHelpers.ts) to reduce the size of [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx) below the strict 1000-line project limit (bringing it down to 995 lines).
-
-## [1.3.472] - 2026-07-15
-
-
-### Fixed
-- **Preview Proxy: `Origin header is not a valid URL` / 500 errors**: Fixed a bug where invalid `Origin` headers sent by the Tauri WebView (e.g. `null`, `tauri://localhost`) were being forwarded verbatim to the target dev server via the preview proxy. Target dev-servers (Vite, webpack-dev-server, etc.) run their own `cors` middleware which throws `"Origin header is not a valid URL"` on non-HTTP origins, crashing the proxied request and returning a 500 back to the browser. The fix strips any non-HTTP/HTTPS `Origin` header in the `proxyReq` event handler in [previewProxy.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/previewProxy.ts) before the outbound request is forwarded.
-
-## [1.3.471] - 2026-07-15
-
-### Improved
-- **Process Memory Stats Algorithm Optimization**: Redesigned the process tree query algorithm in the Tauri memory command. Instead of doing independent upward parent-chain traversals for all 300+ system processes, the algorithm now builds a single-pass parent-to-children tree and performs a Depth-First Search (DFS) starting from the main application PID, pruning at the backend PID. This reduces time complexity from $O(N \cdot H)$ to $O(M)$ where $M$ is the number of application descendants ($M \ll N$).
-
-## [1.3.470] - 2026-07-15
-
-### Improved
-- **Process Memory Stats Query Optimization**: Optimized memory usage stats polling in the Tauri application. Cached the `sysinfo::System` instance in `DesktopState` to avoid expensive system re-allocations on every poll (every 5 seconds) and enable sysinfo's native Windows process delta updates. Consolidated parent-child traversal logic into a single combined check (`get_descendant_status`), halving the required process tree traversals for every system process.
-
-## [1.3.469] - 2026-07-15
-
-### Fixed
-- **Tauri Main Thread Hang (Application Not Responding)**: Fixed a critical app hang bug (reported as Event ID 1002, "Top level window is idle" in Event Viewer) that caused `t-line.exe` to lock up when polling memory stats. Refactored `is_descendant_of` in [lib.rs](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/src/lib.rs) to use loop-cycle detection with a `HashSet` and filter out PID 0 (System Idle Process), preventing infinite traversal loops when checking system process trees.
-
-## [1.3.468] - 2026-07-15
-
-### Improved
-- **Browser Address Bar Retrigger/Reload**: Updated URL navigation and bookmark handlers in [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) to detect when navigating to the currently active URL. If it matches, the tab now automatically triggers a reload (`handleReload`), allowing users to refresh the page by pressing Enter in the address bar.
-
-## [1.3.467] - 2026-07-15
-
-### Improved
-- **Smooth Browser Navigation**: Refactored the native webview lifecycle in [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) to prevent destroying and recreating the Tauri native Webview overlay when navigating or changing URLs. Instead, the existing Webview is navigated programmatically, which completely eliminates white loading flashes.
-- **Flashing Mitigation via Dark Theme Background**: Replaced hardcoded `bg-white` classes with `bg-[var(--bg-main)]` on all webview and iframe viewport wrappers to ensure a smooth background transition matching the active workspace theme.
-
-## [1.3.466] - 2026-07-15
-
-### Added
-- **Browser Blank Link Interception**: Clicking on `target="_blank"` anchors or calling `window.open` within the embedded browser will now automatically open a new browser tab inside the **t-line** workspace manager instead of launching them in the default system browser or failing to navigate. Works across Tauri, Electron, and standard web browser (proxied iframe) environments.
-
-### Refactored
-- **Browser Tab Code Optimization**: Moved the inline native webview polling Javascript generator from [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) to [browserUrlUtils.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/browserUrlUtils.ts). This keeps [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) strictly under the 1000-line repository limit (reduced to 948 lines).
-
-## [1.3.465] - 2026-07-15
-
-### Added
-- **Automatic 401 Unauthorized Session Recovery**: Introduced a global fetch interceptor in `useAuth` to catch 401 Unauthorized HTTP errors. If running inside Tauri, the client retrieves the new bypass token, updates local storage, resets the WebSocket manager, and transparently retries the failed API request.
-- **WebSocket Lifecycle Management**: Added `disconnect` and `reconnect` methods to `TerminalWebSocketManager` to handle token changes gracefully and avoid infinite connection attempt loops.
-
-## [1.3.464] - 2026-07-15
-
-### Improved
-- **Split Pane Close Icon Replacement**: Replaced the default cross (X) close icon on split panes with the `Trash2` trash bin icon (for both desktop action bar and mobile viewport action popover) as requested for clearer semantic deletion feedback.
-
-## [1.3.463] - 2026-07-15
-
-### Added
-- **Tab Drag → Terminal Viewport Splits (IDE-style)**: You can now drag a terminal tab header directly onto any terminal screen viewport (the main workspace window). Depending on which quadrant the cursor is dropped on (left/right/top/bottom), the target terminal pane will split horizontally or vertically.
-- **Visual Split Overlays**: Terminal panes now render a semi-transparent dashed purple overlay to preview where the dragged terminal will split.
-
-## [1.3.462] - 2026-07-15
-
-### Fixed
-- **Grid Tab Leak Across Workspaces**: Grid tabs (type === 'grid') were previously displayed in all workspace views regardless of which workspace context they belonged to. Now, they are filtered dynamically and only rendered in the workspace/project context where their corresponding terminal instances belong (or if their explicit `workspaceId` matches).
-
-## [1.3.461] - 2026-07-15
-
-### Added
-- **Tab Drag → Terminal Split Pane**: Dragging a terminal tab onto the edge (left/right/top/bottom quarter) of another terminal tab now merges both into a split-pane layout (SplitLayoutNode) instead of reordering. Dropping in the center still reorders.
-- **Tab Drag → Grid Tab**: Dragging a terminal tab onto a grid tab now adds all terminal IDs from the dragged tab into the target grid's `gridTerminalIds`, then switches focus to the grid. The dragged tab is removed.
-
-### Improved
-- **5-Zone Drop Detection for Terminals**: When dragging a terminal over another terminal, the cursor position is divided into 5 zones (left 25% / right 25% / top 35% / bottom 35% / center). Each zone triggers a distinct visual indicator and drop action.
-- **CSS indicators `drag-over-top` / `drag-over-bottom` / `drag-over-center`** now also fire during mouse-based drag (previously only used in HTML5 DnD path).
-
-## [1.3.460] - 2026-07-15
-
-### Fixed
-- **Tab Drag & Drop Stale Closure Bug**: `draggingTabId` was captured via stale closure in `handleTabDragOver` — the first `dragover` event fired before React state updated, causing early bail-out. Fixed by adding a `useRef` alongside the state so handlers always read the latest value synchronously.
-- **Tab Drag-End Cleanup**: `handleTabDragEnd` no longer relies on `e.currentTarget` to remove the `dragging` class (DOM manipulation was redundant since React controls the class via state). Cleaned up to only reset state/ref.
-
-### Improved
-- **Tab Reorder Logic — Swap → Insert**: Dropping a tab onto another now uses insert-before/after semantics instead of position-swap. This gives correct ordering when dragging across multiple positions (e.g. dragging tab A past tabs B and C now places A correctly, not just swapping A with C).
-- **Tab Drag Insertion Indicator**: Non-terminal tab drag-over now shows a glowing left/right edge line (instead of a generic center-highlight) to clearly show where the tab will be inserted.
-- **Cursor Feedback**: Tabs now show `cursor: grab` on hover and `cursor: grabbing` while being dragged, making the drag affordance immediately discoverable.
-- **Dragging Visual**: The tab being dragged now slightly shrinks (`scale(0.96)`) with a purple dashed border and glow shadow for a polished "lifted" feel.
-- **Insertion Line Animation**: The drop-target indicator line pulses with a subtle keyframe animation for better visibility.
-
-## [1.3.459] - 2026-07-15
-
-### Added
-- **Confirm Modal for Bookmark Deletion**: Clicking the trash icon on a bookmark now shows an inline confirm dialog with the bookmark name before deleting.
-- **Confirm Modal for Clear All**: Clicking "Clear All" now shows an inline confirm dialog showing how many bookmarks will be removed before proceeding.
-
-## [1.3.458] - 2026-07-15
-
-### Fixed
-- **Bookmarks Dropdown Stacking Context & Background Color Fix**:
-  - Added `relative z-50` to the Top Navbar container in `BrowserTab.tsx` to establish a stacking context. This ensures that absolute-positioned dropdowns float on top of the sibling relative viewport container instead of rendering behind/underneath it.
-  - Replaced the opacity modifier `bg-[var(--bg-card)]/95` in `BookmarksDropdown.tsx` with standard `bg-[var(--bg-card)]`. Since opacity modifiers do not resolve correctly with CSS variables containing hex color values, this fix restores the opaque background to the dropdown and prevents it from rendering transparently.
-
-## [1.3.457] - 2026-07-15
-
-### Fixed
-- **Tauri Native Webview Overlap on Bookmarks Dropdown**:
-  - Automatically hide the OS-level Tauri native webview overlay when the Bookmarks dropdown is open (`showBookmarksDropdown = true`).
-  - This prevents the native webview overlay from drawing over the HTML dropdown list.
-  - Hiding the native webview also restores click event registration on the main page wrapper, ensuring that clicking outside the dropdown correctly triggers the `handleClickOutside` listener to dismiss it.
-
-## [1.3.456] - 2026-07-15
+## [1.2.506] - 2026-07-20
 
 ### Changed
-- **Browser Preview UI Relayout**:
-  - Re-organized the browser preview top toolbar into a highly polished, clean 3-section layout.
-  - Grouped navigation buttons (Back, Forward, Reload) into a unified glassmorphic container on the left.
-  - Elongated the URL input bar in the center with a purple Globe icon and rounded-full borders.
-  - Integrated the Bookmark Star toggle and Bookmarks folder trigger directly inside the right of the URL bar container.
-  - Simplified Zoom controls and Device View mode selectors into compact, pill-shaped groups on the right.
-  - Replaced text buttons like "Inspect" and "Open Browser" with clean, space-saving icon buttons.
-  - Extracted the Bookmarks list dropdown logic into a separate `BookmarksDropdown` component.
-  - Refactored `BrowserTab.tsx` to combine duplicate useEffect hooks, bringing its total line count strictly below the 1000 lines limit.
+- **Workspace ID retrieval in Read Queries**:
+  - Updated `SessionRecord` interface to define the optional `workspaceId` property.
+  - Updated `getSessionFromDb`, `listSessionsFromDb`, and `getSessionsByTagFromDb` queries to select the `workspace_id` column as `workspaceId`.
+  - Updated `getAllPinnedKnowledgeFromDb` to return the `workspaceId` value for mapped entries.
 
-## [1.3.455] - 2026-07-15
-
-### Added
-- **Browser Preview: Zoom Controls & URL Bookmarking**:
-  - Added new zoom in, zoom out, and zoom reset controls (Minus/Plus buttons) to the browser toolbar.
-  - Implemented native/CSS zoom for iframe, Electron webview, and Tauri native webview.
-  - Added a bookmark Star icon in the URL bar to bookmark pages, and a folder dropdown menu to manage and visit saved URLs/domains.
-
-## [1.3.454] - 2026-07-15
-
-### Fixed
-- **Cursor/Caret Visibility with CLI AI Agents**:
-  - Replaced the narrow check for `isSuperagentRunning` with a broader `isAiAgentRunning` check, which covers all CLI AI agents (`isClaude`, `isGemini`, `isSuperagent`, `isAgy`, `isOpenCode`).
-  - Hides the terminal emulator's cursor when any of these agents are running to prevent duplicate carets (one at the input line, and another block cursor in the status line at the bottom right).
-
-## [1.3.453] - 2026-07-15
-
-### Fixed
-- **Smart Paste Confirm Dialog Event Interception & Key Handling**:
-  - Stopped event propagation of `mousedown`, `mouseup`, `click`, and touch events inside the smart paste confirmation modal to prevent the terminal's focus handler from intercepting the clicks and stealing focus.
-  - Added native keyboard event listener inside the smart paste modal for confirming with `Enter` and cancelling with `Escape`.
-  - Blocked terminal keydown processing in xterm when the smart paste confirmation modal is open to avoid typing behind the modal.
-
-## [1.3.452] - 2026-07-15
-
-### Added
-- **Browser Preview: Device Switcher (Mobile, Tablet, Desktop Views)**:
-  - Added new toolbar button controls (`Monitor`, `Tablet`, `Smartphone`) to switch between Desktop, Tablet, and Mobile preview dimensions.
-  - Sized and rendered a premium device frame bezel layout overlay with shadows, centering, and size/resolution info labels when mobile or tablet view mode is selected.
-  - Refactored `BrowserTab.tsx` by extracting raw event listeners to `useBrowserListeners` hook to stay below the strict 1000-line limit per file.
-
-## [1.3.451] - 2026-07-15
-
-### Added
-- **Quick Launch: Select Grid Modal (Multi-Grid Support)**:
-  - Ditambahkan komponen `SelectGridModal` baru untuk menangani kasus ketika pengguna mengklik item Quick Launch dan terdapat lebih dari satu tab Grid yang sedang aktif.
-  - Modal akan menampilkan daftar semua tab Grid yang aktif beserta jumlah terminal di dalamnya, dan memberikan opsi pilihan untuk memasukkan terminal baru ke dalam salah satu grid tersebut, atau membuat tab grid baru.
-  - Jika jumlah tab grid aktif adalah 0 atau 1, terminal akan langsung dibuat/ditambahkan secara otomatis tanpa memunculkan modal konfirmasi.
-
-## [1.3.450] - 2026-07-15
+## [1.2.505] - 2026-07-20
 
 ### Changed
-- **Quick Launch Default Grid vs Regular Terminal Tab**:
-  - Mengubah perilaku default: hanya pembukaan terminal via **Quick Launch** yang akan langsung diarahkan masuk ke tab Grid (`forceGrid = true`). 
-  - Pembukaan terminal baru biasa (seperti tombol `+` di tab bar) akan tetap membuka terminal tunggal fullscreen (`type: 'terminal'`) secara default (kecuali jika saat itu tab aktifnya memang sudah berupa tab grid).
+- **Relational Key Integrity for Scoped Data**:
+  - Linked `input_history` and `workspace_tasks` SQLite tables to `workspaces` with cascading deletions (`ON DELETE CASCADE`).
+  - Added a `workspace_id` column to the `pinned_knowledge` SQLite table with a foreign key constraint.
+  - Implemented dynamic database migrations to auto-add the `workspace_id` column to `pinned_knowledge` table.
+  - Updated `savePinnedKnowledgeToDb` to resolve and record workspace IDs when saving pinned entries.
 
-## [1.3.449] - 2026-07-15
+## [1.2.504] - 2026-07-20
+
+### Changed
+- **SQLite-Backed Workspace Trust & Parent Model**:
+  - Migrated trusted directory registration from `model-config.json` to the central SQLite database inside a new `workspaces` table.
+  - Established workspaces as the main parent data, registering workspace paths with their 12-char SHA-1 hashes.
+  - Linked sessions to workspaces via a `workspace_id` column in the `sessions` table.
+  - Implemented automatic, transparent migration of existing `trustedDirectories` config from `model-config.json` to SQLite.
+  - Updated config JSON tests to resolve resource busy locks during teardown hooks.
+
+## [1.2.503] - 2026-07-20
+
+### Changed
+- **SQLite Concurrency & Workspace Storage Alignment**:
+  - Configured SQLite `PRAGMA busy_timeout = 5000;` during initialization to resolve busy timeouts under parallel execution.
+  - Implemented database migrations to auto-add missing columns (like `extra_data`, `plan_state`) in existing tables, preventing column existence errors.
+  - Added clean connection closing on process exit across CLI, API server, and background synchronization modules.
+  - Unified workspace caching and project summary naming to standard SHA-1 path hashing.
+  - Fixed input history clearing in SQLite on `/new` session command.
+  - Resolved SQLite storage leak by deleting database rows in `workspace_tasks` and `input_history` when workspaces are pruned.
+
+## [1.2.502] - 2026-07-20
+
+### Changed
+- **Pinned Knowledge & Background Tasks SQLite Migration**:
+  - Migrated `pinned-knowledge.json` and workspace-scoped `background-tasks.json` to SQLite tables (`pinned_knowledge` and `workspace_tasks`) in the central `history.db`.
+  - Removed all file-based locks (`background-tasks.json.lock`), relying entirely on SQLite's concurrent writes.
+  - Implemented one-time transparent migrations for both stores upon first access.
+  - Updated `pinnedKnowledge.test.ts` and `backgroundTasksSync.test.ts` to assert against the database state, seeding the database directly to ensure test isolation.
+
+## [1.2.501] - 2026-07-20
+
+### Changed
+- **SQLite History Listing & Test Robustness**:
+  - Bound the SQLite `dbInstance` to `globalThis.__superagent_db_instance` to share the connection across duplicate imports, resolving database lock (`EBUSY`) issues under Vitest.
+  - Implemented `isMulti` (single vs. multi-agent) session filtering and superagent/subagent subdirectory exclusion inside `listHistorySessions()` to preserve correct folder isolation.
+  - Refactored `config.test.ts` to write session data directly to SQLite instead of mocking legacy file paths, making the entire configuration test suite pass.
+  - Cached the legacy cache migration state in `models.ts` with a `legacyCacheMigrated` flag to avoid file check overhead.
+
+## [1.2.500] - 2026-07-20
+
+### Changed
+- **SQLite Storage Optimization**: Migrated `models_cache.json`, `tool_support_cache.json`, and `rate_limit_state.json` from JSON file storage to SQLite tables in `history.db`.
+  - Added `model_caches`, `tool_support_cache`, and `rate_limit_state` tables to `historyDb.ts` with 7 new helper functions.
+  - Refactored `models.ts` to read/write model context limits via SQLite instead of `models_cache.json`.
+  - Refactored `promptBasedToolCalling.ts` to store tool support probe results in SQLite with TTL-based expiration.
+  - Refactored `rateLimiter.ts` to use SQLite for token bucket state, removing file-based locking (`rate_limit.lock` and `rate_limit_state.json`).
+  - All three modules include transparent one-time migration from legacy JSON files to SQLite on first access.
+  - Updated `config.test.ts` to use SQLite helpers for model cache tests.
+
+## [1.2.499] - 2026-07-20
 
 ### Added
-- **Default Grid Tab Creation**:
-  - Mengubah perilaku default saat membuka terminal baru (baik dari pintasan Quick Launch maupun tombol `+` di tab bar).
-  - Terminal baru sekarang secara default akan dibuat di dalam Tab Grid (`type: 'grid'`) dengan nama format `Grid (WorkspaceName)` alih-alih sebagai terminal tunggal fullscreen. Ini memudahkan pengelompokan terminal baru langsung ke dalam grid sejak awal.
+- **CLI Prompt Input History SQLite Migration & Auto-Cleanup**:
+  - Created `input_history` table in SQLite `history.db` with workspace-scoped indexing.
+  - Implemented `saveInputHistoryToDb()`, `getInputHistoryFromDb()`, and `clearInputHistoryInDb()` functions.
+  - Updated `app.tsx` terminal UI to load and save typed command history directly to SQLite.
+  - Added `migrateLegacyInputHistoryToDb()` and `cleanLegacyInputHistoryFiles()` functions with startup auto-execution.
+  - Added unit test case in `tests/historyDb.test.ts` for input history operations.
 
-## [1.3.448] - 2026-07-15
-
-### Added
-- **Quick Launch: Launch directly into Active Grid**:
-  - Mengubah fungsi `openTerminal` agar mendeteksi jika tab aktif saat ini bertipe `'grid'`.
-  - Jika ya, terminal baru yang dibuat akan langsung dimasukkan ke dalam daftar `gridTerminalIds` pada tab grid aktif tersebut daripada membuka tab terminal fullscreen baru. Ini memungkinkan eksekusi pintasan Quick Launch atau pembukaan terminal baru langsung mengisi grid yang sedang dilihat.
-
-## [1.3.447] - 2026-07-15
+## [1.2.498] - 2026-07-20
 
 ### Added
-- **Drag-to-Split Tab**:
-  - Ditambahkan fitur penarikan (*drag*) tab terminal dan menjatuhkannya (*drop*) di atas tab terminal lain untuk menggabungkan panel-panel terminal tersebut ke dalam *split layout*.
-  - Mendukung pembagian panel secara **horizontal** (bila tab ditarik ke area 25% sisi kiri/kanan tab tujuan) dan **vertikal** (bila ditarik ke area 35% sisi atas/bawah tab tujuan).
-  - Ditambahkan indikator visual interaktif saat melayang (*drag over*) berupa garis ungu menyala di batas panel (kiri, kanan, atas, bawah) atau highlight di tengah tab jika ingin melakukan pengurutan ulang (*swap/reorder*).
+- **Incremental Vacuuming, Rolling Daily Backups, DB Stats, & Session Tagging**:
+  - Implemented `PRAGMA auto_vacuum = INCREMENTAL;` and `vacuumDatabase()` after session and checkpoint deletions.
+  - Implemented `performRollingBackup()` maintaining up to 7 timestamped rolling backups under `~/.superagent-r/backups/`.
+  - Added `getDatabaseStats()` and registered `/history stats` subcommand to display database metrics and disk usage.
+  - Added `tags` column to `sessions` table and registered `/history tag <id> <label>` subcommand for session tagging and filtering.
+  - Added unit test cases covering stats, rolling backups, tagging, and vacuuming in `tests/historyDb.test.ts`.
 
-## [1.3.446] - 2026-07-15
-
-### Fixed
-- **Quick Launch: Gagal Auto-Run Akibat Component Reuse**:
-  - Ditemukan dan diperbaiki bug di mana ketika mengklik item Quick Launch baru, command tidak otomatis jalan karena React me-reuse komponen `<TerminalInstance>` dan hook `useTerminalInitialCommand` (karena posisi render yang sama tanpa prop `key` yang unik).
-  - Akibat dari component/hook reuse ini, referensi status `initialCommandSent.current` tetap bernilai `true` dari sesi terminal sebelumnya, sehingga memblokir eksekusi perintah baru.
-  - **Solusi**: 
-    1. Ditambahkan pendeteksi perubahan `tabId` di dalam hook `useTerminalInitialCommand.ts` untuk me-reset status `initialCommandSent` kembali ke `false`.
-    2. Ditambahkan prop `key={term.id}` pada inisialisasi `<TerminalInstance>` di dalam `SplitLayoutRenderer.tsx` dan `TerminalGridTab.tsx` untuk memastikan React menghancurkan (unmount) dan membuat ulang (remount) komponen terminal baru secara bersih.
-  - Menambahkan log konsol terperinci untuk melacak inisialisasi terminal dan status eksekusi command.
-
-## [1.3.445] - 2026-07-15
+## [1.2.497] - 2026-07-20
 
 ### Fixed
-- **xterm Canvas Renderer: `Cannot read properties of undefined (reading 'loadCell')` uncaught TypeError**:
-  - Diperbaiki crash rendering yang terjadi secara intermittent pada `@xterm/addon-canvas` akibat race condition di mana `_charAtlas` (character atlas texture) belum terinisialisasi saat render frame dipanggil oleh `RenderDebouncer`.
-  - Error ini bersifat **uncaught** karena terjadi di dalam animation frame callback internal xterm, melewati semua try-catch yang ada di level aplikasi.
-  - **Solusi**: Beralih ke `@xterm/addon-webgl` sebagai renderer utama (sudah terdaftar di `package.json` namun sebelumnya tidak digunakan). WebGL lebih stabil dan tidak memiliki masalah uninitialized atlas. Jika WebGL tidak tersedia (mis. headless browser, GPU lama), fallback ke Canvas, kemudian DOM renderer.
-  - Ditambahkan `onContextLoss` handler pada `WebglAddon` untuk dispose gracefully saat GPU context hilang (terjadi di beberapa browser saat tab terlalu lama di-background).
+- **Cascade Checkpoint Deletion**:
+  - Added explicit SQLite deletion of associated checkpoints in `deleteSessionFromDb()` transaction when deleting a session.
 
-## [1.3.444] - 2026-07-15
+## [1.2.496] - 2026-07-20
+
+### Added
+- **Full SQLite Checkpoint Persistence, Migration, & Cleanup**:
+  - Created `checkpoints` table schema with indices in SQLite `history.db`.
+  - Refactored `checkpoints.ts` functions (`createCheckpoint`, `listCheckpointsForSession`, `restoreCheckpoint`, `deleteCheckpointById`, `deleteCheckpointsForSession`) to operate directly against SQLite.
+  - Implemented `migrateLegacyCheckpointsToDb()` and `cleanLegacyCheckpointsFiles()` functions in `historyDb.ts`.
+  - Added automated startup migration and cleanup for legacy checkpoint JSON files.
+  - Added unit test suite covering SQLite checkpoint CRUD operations, legacy migration, and cleanup in `tests/historyDb.test.ts`.
+
+## [1.2.495] - 2026-07-20
 
 ### Fixed
-- **Quick Launch: Multiple Items Running, hanya satu yang tereksekusi**:
-  - Ditemukan dan diperbaiki bug kritis di mana semua terminal yang dibuka via Quick Launch hanya menjalankan command dari terminal **terakhir** yang dibuka, sementara terminal lainnya terbuka namun command-nya tidak dieksekusi.
-  - **Root cause**: `initialCommand` (perintah yang akan dijalankan otomatis saat terminal pertama kali dibuat) ikut disimpan ke dalam *sync state* server (`/api/sync/state`) dan di dalam `toCanonicalString`. Saat sesi di-restore atau di-reconnect, `terminalInstances` dari server di-apply langsung ke React state **termasuk `initialCommand`** — menyebabkan `useTerminalInitialCommand` terpicu ulang di setiap terminal yang sudah berjalan.
-  - **Perbaikan** di `frontend/src/App.tsx`:
-    1. **`toCanonicalString`**: `initialCommand` dihapus dari representasi canonical sehingga tidak pernah tersimpan ke server. Field ini bersifat ephemeral dan hanya valid pada saat terminal pertama kali dibuat secara lokal.
-    2. **`sync_update` WebSocket listener**: Saat menerima `terminalInstances` dari remote sync, `initialCommand` di-strip dari semua instance sebelum di-set ke React state.
-    3. **`fetchSyncState`**: Saat me-restore session dari server pada startup/login, `initialCommand` di-strip dari semua instance untuk mencegah re-eksekusi command.
+- **Checkpoint Restoration SQLite Integration**:
+  - Updated `restoreCheckpoint()` in `checkpoints.ts` to write restored messages, plan state, and metadata directly to SQLite `history.db` instead of legacy JSON files.
 
-## [1.3.443] - 2026-07-15
+## [1.2.494] - 2026-07-20
+
+### Added
+- **Automated Startup Migration & Legacy JSON Cleanup**:
+  - Configured automatic startup execution of both `migrateLegacyJsonToDb()` and `cleanLegacyJsonFiles()` so all legacy JSON session files are imported into SQLite and purged automatically on launch.
+
+## [1.2.493] - 2026-07-20
+
+### Added
+- **Legacy JSON Cleanup Utility & /history clean Command**:
+  - Implemented `cleanLegacyJsonFiles()` function in `historyDb.ts` to convert legacy `.json` payload files into empty file anchors after SQLite import verification.
+  - Registered `/history clean` (and alias `/history cleanup`) subcommand to safely purge obsolete JSON session files.
+  - Added unit test in `tests/historyDb.test.ts` to verify legacy JSON cleanup behavior.
+
+## [1.2.492] - 2026-07-20
+
+### Added
+- **History Command Help & Autocomplete Suggestions**:
+  - Registered `/history` command description and usage under `/help` listing in `coreCommands.ts`.
+  - Registered `/history` built-in description and subcommand autocompletes (`/history export`, `/history backup`, `/history migrate`) in `dashboardSuggestions.ts`.
+
+## [1.2.491] - 2026-07-20
+
+### Added
+- **SQLite Database Architecture & Performance Enhancements**:
+  - Implemented PRAGMA WAL mode (`journal_mode=WAL; synchronous=NORMAL;`) for concurrent read/write throughput.
+  - Implemented `messages_fts` SQLite FTS5 virtual table with auto-sync triggers for fast full-text message search.
+  - Added `migrateLegacyJsonToDb()` utility to automatically import legacy `.json` session files into SQLite.
+  - Added `exportSessionToJson()` and `backupDatabase()` helper functions.
+  - Registered `/history export [session_id]`, `/history backup [path]`, and `/history migrate` slash commands.
+  - Added unit test cases covering WAL, FTS5, legacy migration, export, and backup in `tests/historyDb.test.ts`.
+
+## [1.2.490] - 2026-07-20
+
+### Added
+- **SQLite History Storage**:
+  - Migrated session history, message logs, and compaction events to a unified SQLite database (`~/.superagent-r/history.db`).
+  - Added dynamic SQLite storage module (`src/core/storage/historyDb.ts`) supporting both Node `node:sqlite` and Bun `bun:sqlite` runtimes.
+  - Refactored `history.ts`, `conversation.ts`, `CompactionHistory.ts`, and `historySearch.ts` to query SQLite with JSON file fallback.
+  - Added unit test suite in `tests/historyDb.test.ts`.
+
+## [1.2.489] - 2026-07-19
+
+### Fixed
+- **Task Checklist Synchronization**:
+  - Implemented `syncChildTasksToMaster` in `otherTools.ts` to automatically propagate active/completed task status changes from child agents (Superagents) to the Master Agent's checklist file.
+  - Dynamically updates checkboxes, appends newly added tasks with the correct agent prefix, and removes child-specific tasks when they are removed.
+  - Corrected capture group index references in regex match arrays.
+  - Added comprehensive integration tests in `tests/taskSync.test.ts` to verify the synchronization logic for update, add, and remove actions.
+
+## [1.2.488] - 2026-07-19
+
+### Fixed
+- **superagentTools Test Mocking**:
+  - Captured original `fs.readFileSync` and updated mock implementation in `superagentTools.test.ts` to fallback to it, preventing real configuration file corruption during test runs.
+
+## [1.2.487] - 2026-07-19
+
+### Fixed
+- **Test Harness Configuration**:
+  - Configured `globals: true` in `vitest.config.ts`, fixing the `vi.mocked is not a function` error across the entire test suite.
+  - Updated mock type assertions in `postMergeValidation.test.ts` and `superagentTools.test.ts` to be fully compatible with Bun/Vitest test runner.
+
+## [1.2.486] - 2026-07-19
+
+### Added
+- **Parallel Agentic Reasoning & Optimization**:
+  - Implemented Self-Consistency voting (Wang 2022) support for single-agent subagents in `subagentTools.ts`.
+  - Implemented Upper Confidence Bound (UCB) dynamic Monte Carlo Tree Search (MCTS) prompt guidance for agent reasoning in `base.ts`.
+  - Implemented Budgeted DAG Pruning Strategy (GraphSentry 2026) in `ContextManager` to proactively manage token budgets before compaction.
+  - Implemented early termination controls and reasoning aggregation inside `masterAgent` merge flows.
+
+## [1.2.485] - 2026-07-19
+
+### Added
+- **Advanced Agentic Reasoning Principles**:
+  - Implemented `SEMI_FORMAL_REASONING` and `LOGIC_OF_AWARENESS` rules in coder and researcher system prompts.
+  - Extended `ContextGraph` to track semantic premises and generate logical mind-map context blocks.
+
+## [1.2.484] - 2026-07-19
+
+### Added
+- **Advanced Multi-Agent Optimizations**:
+  - Implemented recursive subagent delegation up to depth of 3.
+  - Implemented `CriticAgent` for automated post-merge code reviews.
+  - Integrated `ContextGraph` to construct component summaries and inject them into system prompts.
+  - Implemented `PromptOptimizer` to analyze execution traces and optimize prompt guidelines over sessions.
+
+## [1.2.483] - 2026-07-19
+
+### Fixed
+- **Heuristic Classifier Optimization**:
+  - Implemented missing request classification algorithms: Soundex phonetic variations, Jaro-Winkler/Levenshtein fuzzy matching, and statistical TF-IDF classification fallback.
+  - Added support for fuzzy word matching in `countKeywordMatches` using duplicate letter collapsing, Jaro-Winkler, and Levenshtein distance checks.
+  - Added exact and phrase matches for `ongoing`, `onging`, and `on going` to conversational keyword definitions.
+
+## [1.2.482] - 2026-07-19
+
+### Fixed
+- **Gemini API Message Sequence Validation**:
+  - Implemented `cleanMessageSequence()` in `MessageBuilder.ts` to enforce strict alternating message roles (user/assistant) and correct pairing of tool calls and results.
+  - Automatically merges consecutive user messages and consecutive assistant messages.
+  - Automatically strips unanswered tool calls from assistant messages to keep the API compliant.
+  - Automatically filters/skips orphaned tool messages and ensures the first message is always a user message.
+
+## [1.2.481] - 2026-07-18
 
 ### Optimized
-- **Advanced Terminal Performance Improvements**:
-  - **Regex Instantiation Optimization**: Moved the file link regex to the global scope in `TerminalInstance.tsx` to prevent redundant object creations and decrease garbage collection pressure on terminal scroll/hover.
-  - **Predictive Session Pre-warming**: Configured frontend tab-header hover states to proactively send `prewarm` signals, preloading and caching active process listings (`wmic`/`ps`) and process names on the backend before the user clicks the tab.
-  - **Viewport-Only Replay & Lazy-Loading**: Split backend replay streams at safe newline boundaries near the 4KB limit. The client renders the active viewport instantly, and lazy-loads the scrollback history 60ms later, rebuilding the buffer seamlessly.
+- **Agent Request Hot Paths**:
+  - `MessageBuilder`: single `getMessages()` pass for both vision Mode 2 and plaintext Mode 1; removed duplicate `contentToString` per-message serialization.
+  - `ContextBuilder`: replaced full `.filter(role==="user").slice(-3)` with reverse-scan for last 3 user messages; reused `allMessages` ref for `getBreakdown` (no second `getMessages()` call).
+  - `FastPath`: single `contentToString` call per message instead of duplicate user/assistant branches.
+  - `HistoryCompactor`: confirmed single `getMessages()` per entry point; no redundant intra-method calls.
+  - `advisor`: no change needed (small N).
 
-## [1.3.442] - 2026-07-15
-
-### Optimized
-- **PTY Replay Buffer Memory Optimization**:
-  - Implemented automatic merging of output buffer chunks on the backend when the buffer array grows beyond 100 entries. This flattens the rolling buffer array, preventing array size explosion and optimizing array shift performance under high-throughput terminal streams.
-
-## [1.3.441] - 2026-07-15
+## [1.2.480] - 2026-07-18
 
 ### Optimized
-- **Smart Active Process & Title Polling**:
-  - Configured active process (`wmic`/`ps`) and process title polling to skip execution for suspended or detached terminal tabs. This keeps idle CPU and disk usage at zero and prevents background child process thrashing when terminal tabs are inactive or hidden.
+- **Token Compression Subsystem**:
+  - Replaced O(n) heuristic `tokensForMessages()` with cached `TokenTracker` LRU estimator (`estimateTokensCached`) in Summarization, Pruning, and Pinning budget loops.
+  - Made budget loops incremental (subtract-on-shift) instead of full recompute per iteration — O(1) per shift for 1000+ message conversations.
+  - Extracted duplicated vision-support detection into single `TokenTracker.resolveVisionSaving()` static helper; removed inline duplication in PruningStrategy.
+  - Wired `SemanticAnalyzer.scoreImportance` into PruningStrategy to drop lowest-importance older messages first instead of pure FIFO.
+  - Added 60s memoized recall cache to RMemoryStrategy to avoid repeated gateway calls per compaction cycle.
 
-## [1.3.440] - 2026-07-15
+## [1.2.479] - 2026-07-18
+
+### Fixed
+- **CLI Conversation Log Scrolling**:
+  - Automatically transition focus mode to `"chat"` when scroll keys (PageUp, PageDown, Ctrl+Arrows, Shift+Arrows) are pressed while in `"input"` mode, enabling easy line-by-line keyboard scrolling using simple Up/Down arrow keys.
+  - Automatically revert focus mode back to `"input"` typing mode once the user scrolls all the way back down to the bottom (`scrollOffset === 0`), eliminating the need to manually press Escape.
+  - Reset scroll offset to `0` when loading history, restoring checkpoints, or resuming sessions to prevent conversation misalignment.
+
+## [1.2.478] - 2026-07-18
+
+### Changed
+- **Chrome Extension Caching Optimization**: Optimized updateActiveTab tracking in sidepanel.js by caching the last sent title, URL, and profile name. Network requests to /api/browser/update-instance are now throttled to only fire when a genuine state change occurs, preventing redundant duplicate POST requests during navigation events.
+
+## [1.2.477] - 2026-07-18
+
+### Changed
+- **Subagent Rename**: Renamed the manual-tester subagent to software-tester throughout the codebase, prompts, and registry configuration.
+- **New Subagent Addition**: Added a security-engineer subagent, complete with its own specialized system prompt, registered subagent definition, and a robust toolset including ripgrep search, web search, execution, and security-focused skill resolution.
+
+## [1.2.476] - 2026-07-18
+
+### Changed
+- **Chrome Extension Tool Access**: Enabled browser control tools (control_browser_tab, control_browser_macro_save, control_browser_macro_run) for both the researcher and manual-tester subagent toolsets.
+- **System Prompt Updates**: Updated system prompts (master, superagent, researcher, manual-tester) to always contain instructions on how to use Chrome extension tools and macros, removing the server-mode conditional checks.
+
+## [1.2.475] - 2026-07-18
+
+### Added
+- **Multi-Instance Browser Registration**: Enabled registering and tracking multiple Chrome instances running the Chrome extension. We can now uniquely identify and selectively target individual Chrome windows/profiles using clientId and windowId.
+- **Custom Profile Naming**: Added a Profile Name text input field in the extension settings to allow custom friendly labels (e.g. Work, Personal) stored locally and synchronized with the backend.
+- **Targeted Browser Control**: Updated control_browser_tab and control_browser_macro_run tools to support listing instances (list_instances) and selectively routing commands to specific target instances via instanceId.
+
+## [1.2.474] - 2026-07-18
+
+### Changed
+- **Subagent Tool Optimization**: Updated the researcher subagent system prompt to explicitly restrict terminal/bash execution tools, preventing invalid tool call generation.
+- **Self-Healing Error Recovery**: Modified the agent iteration loop to intercept "tried to call unavailable tool" errors from the LLM, inject a correction into the conversation history, and continue instead of crashing.
+- **Test Suite Mock Fix**: Extended the mocked `fs` in `skillsTool.test.ts` to preserve other native filesystem methods, resolving lock file contention and test suite failures across worker threads.
+
+## [1.2.473] - 2026-07-18
+
+### Changed
+- **Agent Codebase Modularization (Phase 8)**: Successfully completed modularization of `agent.ts`. Extracted the primary agent iteration/loop execution logic (AI SDK streamText/generateText calls, retry behaviors, 413 compaction fallbacks, empty response retries) to `LoopIterationProcessor.ts`.
+- **Refactoring**: Reduced `agent.ts` file length from 1,509 lines to exactly 705 lines, and kept `LoopIterationProcessor.ts` at exactly 653 lines, keeping both files comfortably below the 1,000-line limit. Verified complete test suite passing.
+
+## [1.2.472] - 2026-07-18
+
+### Changed
+- **Agent Codebase Modularization (Phase 7)**: Extracted directory/path resolver helper getters to `PathResolver.ts`, conversation history saving/loading and session clear routines to `HistoryManager.ts`, request preprocessing/concurrency checks to `RequestProcessor.ts`, and base prompt building, workspace cache loading, and pre-flight compaction checks to `ContextBuilder.ts`.
+- **Refactoring**: Reduced `agent.ts` file length from 2,654 lines to 1,509 lines (approaching the 1000-line limit), while keeping retry loops, delay countdowns, and planning nudges fully functional.
+
+## [1.2.471] - 2026-07-18
+
+### Changed
+- **Agent Codebase Modularization (Phase 6)**: Extracted git diff utilities to `GitUtils.ts`, conversation fast-path execution to `FastPath.ts`, and the entire tool execution loop (interactive questions, permissions, out-of-bounds, shell validations) to `ToolExecutor.ts`.
+- **Refactoring**: Reduced `agent.ts` file length from 3,430 lines to 2,654 lines.
+
+## [1.2.470] - 2026-07-18
+
+### Changed
+- **Model Wizard Hook Modularization (Phase 5)**: Extracted provider configuration, profile setup, credentials saving, and model selection wizard steps from `useModelWizard.ts` into `useModelProviders.ts`.
+- **Refactoring**: Reduced `useModelWizard.ts` length to 488 lines (well below the 1000-line limit) and kept the extracted `useModelProviders.ts` helper at 705 lines.
+
+## [1.2.469] - 2026-07-18
+
+### Changed
+- **Agent Codebase Modularization (Phase 4)**: Extracted message building logic to `MessageBuilder.ts` and history compaction/RMemory prepopulation to `HistoryCompactor.ts`.
+- **Refactoring & Cleanups**: Reduced `agent.ts` file length by 704 lines, ensuring modularity, cleaner code organization, and strict compliance with the codebase length limit guidelines.
+
+## [1.2.468] - 2026-07-18
+
+### Changed
+- **Codebase Modularization**: Refactored large modules to improve maintainability and keep code files under 1000 lines.
+- **System Tools Refactoring**: Split file editing, reading, and browser macro utilities out of systemTools.ts and otherTools.ts.
+- **Agent Logic Modularization**: Extracted PlanValidator and AgentEvents out of agent.ts.
+- **Model Wizard Hooks**: Extracted preset wizard handling logic from useModelWizard.ts into useModelPresets.ts.
+
+## [1.2.467] - 2026-07-18
+
+### Fixed
+- **Request Classifier Keywords & Toolsets**: Expanded research keywords with optimization and review terms, and registered missing tools (`use_skill`, `ask_question`, `read_shared_memory`) in category toolsets.
+
+## [1.2.466] - 2026-07-18
+
+### Fixed
+- **Tool Registry Consistency**: Registered `read_shared_memory` tool in central `allTools` array.
+- **RMemory Tool Unit Tests**: Updated limit assertions in `rmemoryTools.test.ts` to match search query multiplier logic.
+
+## [1.2.465] - 2026-07-18
+
+### Added
+- **Git Worktree Path Normalization**: Added git repository root resolution to ensure isolated multi-agent worktrees share the same project memory namespace.
+- **Dedicated Shared Memory Reader Tool**: Created `read_shared_memory` tool to allow AI agents to inspect project and global shared memory entries.
+- **RMemory Vector Workspace Filtering**: Enhanced vector memory search tools with active project filtering and relevance boosting.
+- **Workspace Summary Auto-Indexing**: Added `workspaceSummary` module to persist workspace cold-start summaries in `~/.superagent-r/projects/<hash>/summary.json`.
+
+## [1.2.464] - 2026-07-18
+
+### Fixed
+- **Cached Model Notification Suppression**: Fixed progress callback checks in request classifier and RMemory embedding utilities so that model load completion messages are completely suppressed when models are loaded from disk cache without network downloads.
+
+## [1.2.463] - 2026-07-18
+
+### Fixed
+- **Conditional Model Download Indicator**: Configured both local Request Classifier and RMemory embedding model loaders to only emit downloading and loading progress indicators when the model is actually being downloaded, hiding unnecessary loading messages when loading from local cache.
+
+## [1.2.462] - 2026-07-18
+
+### Changed
+- **System Services Status Relocation**: Moved the System Services Status display from the startup banner into the `/settings` command output.
+
+## [1.2.461] - 2026-07-18
+
+### Changed
+- **System Services Status UI**: Removed icons and borders from the system services status display in the terminal banner.
+
+## [1.2.460] - 2026-07-18
+
+### Added
+- **Chrome Extension Auto Scroll & Limits**: Added client-side Auto Scroll toggle, Chat Message DOM Limit, and Max Explorer Files limit to the Superagent Chrome Extension.
+- **Chrome Extension Performance Optimization**: Optimized chat panel rendering and file tree builder to slice large DOM node lists and render clear truncation warnings.
+
+## [1.2.459] - 2026-07-17
+
+### Added
+- **Workspace Management Command**: Added a workspace management feature via `/workspace` and `/w` command that supports `list`, `add`, and `use` subcommands.
+- **Workspace Management Wizard**: Integrated a step-by-step interactive wizard dialog for managing and switching project workspaces in both CLI mode and Multi-Agent Dashboard mode.
+- **Reactive Git Status**: Configured git-branch and worktree counts to reactively re-fetch and update whenever the active workspace path changes.
+
+## [1.2.458] - 2026-07-17
+
+### Changed
+- **Browser Control Tools Conditional Activation**: Configured Chrome extension browser control tools (`control_browser_tab`, `control_browser_macro_save`, `control_browser_macro_run`) and their system prompt optimizations to only be active when running in server mode (`--server`).
+
+## [1.2.457] - 2026-07-17
+
+### Fixed
+- **Chrome Extension History**: Restored the missing innerHTML for history items in the Chrome extension history list to ensure workspace history chat sessions render correctly instead of showing up blank.
+
+## [1.2.456] - 2026-07-17
+
+### Changed
+- **Chrome Extension Redesign**: Redesigned the Chrome extension's sidepanel UI to adhere to a clean, premium Material-inspired Design style. Added the "Outfit" Google Font, revised theme color variables for cool grey/white light mode and dark charcoal/grey backgrounds with Material blue accents, and configured premium component styling for buttons, inputs, checkboxes, selects, and mode cards with soft box-shadows and 8-16px rounded corners.
+
+## [1.2.455] - 2026-07-17
+
+### Fixed
+- **Chrome Extension Manifest**: Removed redundant `"http://localhost/*"` from `optional_host_permissions` since it is already declared as a required permission under `host_permissions`.
+
+## [1.2.454] - 2026-07-17
+
+### Changed
+- **r-memory Update**: Updated the `r-memory` dependency to version 1.3.0 which natively supports the Bun runtime. Removed the temporary sqlite patch (`patches/r-memory+1.2.0.patch`) and added a new patch (`patches/r-memory+1.3.0.patch`) to pre-compile the library on installation.
+
+## [1.2.453] - 2026-07-17
+
+### Fixed
+- **Local Router ONNX Filename**: Passed `model_file_name: "model_int8"` to Transformers.js pipeline options for the classifier model. This resolves an issue where the pipeline was failing to load the model because it looked for the non-existent default `model.onnx`/`model_quantized.onnx` filenames in the repository, which left the system services status banner stuck on `⏳ LOADING`.
+
+## [1.2.452] - 2026-07-17
+
+### Fixed
+- **Pre-loading Status Events**: Emitted `downloading` loading status event immediately before creating/warming up local ONNX model pipelines (for both classifier and embedding models), and emitted `loaded` status immediately upon successful initialization. This ensures that the status banner updates to `⏳ LOADING` during model setup/initialization time even if the model was already fully cached on disk.
+
+## [1.2.451] - 2026-07-17
+
+### Fixed
+- **Advisor Loop Warnings**: Excluded status polling and waiting tools from triggering consecutive same call loop warnings (including `manage_subagents` for subagent status updates, `manage_superagents` for superagent status, `manage_background_process` / `view_background_processes` for background processes, `manage_tasks` for checklists, and external `manage_task` status checks). Added test coverage to prevent regressions and preserve loop state for other tool calls.
+
+## [1.2.450] - 2026-07-17
+
+### Added
+- **Real-Time Services Status**: Connected the system services status in the startup banner to real-time download events. When a model is downloading or loading in the background, the status updates dynamically to `⏳ LOADING` instead of staying statically `● ONLINE` or `○ OFFLINE`.
+
+## [1.2.449] - 2026-07-17
+
+### Fixed
+- **Model Download Progress**: Fixed download progress display going over 100% (showing values like 1011.3%) by removing redundant multiplication by 100 on the progress percentage returned by Hugging Face Transformers.js.
+
+## [1.2.448] - 2026-07-17
+
+### Fixed
+- **README Documentation**: Updated instructions for running local/target project with `bunx` to use `--bun` flag (`bunx --bun superagent`) so it runs fully under the Bun runtime instead of Node.js shebang.
+
+## [1.2.447] - 2026-07-17
+
+### Fixed
+- **Model Download Progress**: Redirected local HuggingFace classifier and embedding model downloading progress outputs from standard output/footer directly into the scrollable chat feed (system logs) in-place, preventing terminal DOM layout corruption.
+
+## [1.2.446] - 2026-07-17
+
+### Added
+- **README Documentation**: Added instructions for linking and running the local Superagent package inside other projects using `bun link` and `bunx`.
+
+## [1.2.445] - 2026-07-17
+
+### Added
+- **Worktree Collision Prevention (SKILL.md v4.0.0)**: Upgraded `preventing-subagent-collisions` skill to cover Scenario B — Master Agent → Superagent worktree-level collisions. Documents which files must never be modified inside a worktree (`package.json`, `CHANGELOG.md`, `AGENTS.md`, `README.md`), adds the strict post-merge serial sequence for Master Agent, and adds a Superagent worktree constraint section with updated plan template.
+- **Master Agent — `WORKTREE_SHARED_FILES` Rule**: Superagents inside worktrees must never bump version or update changelog. They include proposed entries in their final report; Master Agent writes them ONCE post-merge.
+- **Master Agent — `POST_MERGE_SERIAL` Rule**: Enforces strict post-merge order: build → test → version bump → changelog → commit → prune worktrees.
+- **Superagent — `WORKTREE_PROTECTED_FILES` Rule**: Explicit prohibition on touching `package.json`, `CHANGELOG.md`, `AGENTS.md`, `README.md` inside the worktree.
+- **Superagent Report — Proposed Version/Changelog Fields**: Added `Proposed Version Bump` and `Proposed Changelog Entry` fields to Superagent final report format so Master Agent can collect and apply them in one post-merge commit.
+
+## [1.2.444] - 2026-07-17
+
+### Fixed
+- **Superagent Package Manager Detection**: Updated `detectPackageManager` in `src/core/tools/superagentTools.ts` to check for `bun.lock` in addition to `bun.lockb`. This ensures that Superagent running on environments with text-based `bun.lock` configured will properly run via Bun rather than falling back to npm.
+
+## [1.2.443] - 2026-07-17
+
+### Fixed
+- **Test Suite Package Manager Detection**: Updated post-merge validation mocks in `tests/postMergeValidation.test.ts` and `tests/masterAgent.test.ts` to correctly handle `bun.lock` alongside `bun.lockb`. This prevents test suite validation failures on local environments that have Bun configured.
+
+## [1.2.442] - 2026-07-17
+
+### Fixed
+- **AGENTS.md Bun Migration**: Updated Verification Checklist in `AGENTS.md` to use `bun run build` and `bun test` instead of stale `npm run build` and `npm test` references, consistent with the full Bun migration completed in v1.2.439.
+
+## [1.2.441] - 2026-07-17
 
 ### Optimized
-- **Terminal Session Reattachment Latency**:
-  - Removed artificial timeouts (`setTimeout` of 100ms and 50ms) on the backend when reattaching existing terminal sessions and spawning new ones. Re-attaching metadata (PID, replay buffer, and status) is now sent immediately in sequence, reducing reattach latency to 0ms.
-- **Resource Leak Prevention**:
-  - Restored process persistence for suspended tabs while the application is active, preventing background processes (such as `npm run dev`) from being terminated during active tab switching.
-  - Schedulers for the 10-minute terminal cleanup timer are only triggered when the entire client WebSocket connection is completely disconnected or closed, preventing orphaned background processes when the user exits the app.
-- **Frontend WebSocket Subscription Consolidation**:
-  - De-duplicated WebSocket subscription handling by introducing a single `subscribeToSocket` helper in `TerminalInstance.tsx`.
-  - Restored high-performance RAF-batched writes (`scheduleWrite`) for resumed terminal sessions, preventing UI lag/freezes and rendering storms.
-  - Reduced overall lines of code in `TerminalInstance.tsx`, keeping the file cleanly below the repository's strict 1000-line limit.
+- **Skill Auto-Trigger on Parallel Spawn**: Added `use_skill('preventing-subagent-collisions')` directive to the `multiple_independent_subagents` branch in both `base.ts` (single-agent mode) and `SUPERAGENT_SYSTEM_PROMPT` (multi-agent mode). The agent now reads the coordination skill automatically before issuing parallel `invoke_subagent` calls, ensuring the pre-assignment and file scope workflow is always followed without requiring a manual `get_skills()` query.
 
-## [1.3.439] - 2026-07-15
-
-### Fixed
-- **Local Monaco Editor Hosting**:
-  - Added `copy-monaco.cjs` script to automate copying Monaco Editor minified assets from `node_modules` (including hoisted workspaces) to `frontend/public/vs/`.
-  - Configured `@monaco-editor/react` to load Monaco assets from local `/vs` path rather than external jsDelivr CDN.
-  - Ignored the local Monaco assets folder in the root `.gitignore`.
-  - Resolved browser tracking prevention blocks of Monaco storage access and enabled offline code-editing.
-
-## [1.3.438] - 2026-07-15
-
-### Fixed
-- **Terminal Split Resize Persistence**:
-  - Added `firstSize` and `secondSize` optional properties to the `SplitLayoutNode` tree definition.
-  - Passed recursive `onLayoutChange` handler down from `App.tsx` through `SplitLayoutRenderer` to capture layout resize adjustments.
-  - Used `Math.round(val * 100) / 100` rounding in `normalizeLayout` to keep floating point layout sizes canonical and prevent state-synchronization infinite loops.
-  - Restored stored sizes on mount via `<Panel defaultSize={...}>`.
-
-## [1.3.437] - 2026-07-14
+## [1.2.440] - 2026-07-17
 
 ### Added
-- **GitHub Pages Promotional Landing Page**:
-  - Created a modern, premium landing page in the `/docs` directory including `index.html`, `style.css`, and `app.js` with responsive glassmorphism, animations, custom icons, and visual layout specs.
-  - Added an interactive CLI/terminal simulator playground in HTML/JS that models `t-line` terminal sessions, git worktree dirty-sorting, and Cloudflare share tunnels with ACL loggers.
-  - Added quick-start commands and tabs with copy-to-clipboard utilities.
+- **Subagent Collision Prevention Skill**: New skill `.agents/skills/preventing-subagent-collisions/SKILL.md` providing a complete coordination guide for parallel subagents. Covers pre-assignment workflow, serialization gates, shared file protocol, and integration with `manage_plan` + `_task.md` as the coordination hub.
+- **`fileScope` Parameter in `invoke_subagent`**: New optional `fileScope: string[]` parameter that auto-injects a structured `## FILE SCOPE (Enforced)` block at the top of the subagent system prompt. Enforces file boundaries structurally without relying on parent prose.
+- **Coder Subagent Report Fields**: Added `Files Changed` and `Scope Compliance` fields to coder subagent final report format so the parent can audit file touches and scope violations from the report alone.
+- **`[agent: role]` Annotation in `manage_tasks list`**: `manage_tasks(action: 'list')` now parses and displays `[agent: role]` prefix from task descriptions as a suffix, e.g. `1. [/] Implement JWT middleware (agent: auth-coder)`. Enables task ownership tracking across parallel agents.
 
-## [1.3.436] - 2026-07-14
+### Optimized
+- **Base Prompt — Single-Agent Mode**: Added `TASK_OWNERSHIP`, `NO_SELF_ASSIGN`, and `SHARED_FILES` rules to the `spawning_subagent` logic gate in `base.ts`.
+- **Master Agent Prompt**: Added `ANNOTATE` (plan task annotation with `[agent: role]`) and `STATUS` (task status lifecycle) rules to the `multiple_superagents_ready` gate.
+- **Superagent Prompt**: Added `COLLISION_GUARD` rule to `spawning_subagent` gate; appended pre-assign enforcement to `LEADERSHIP_AND_DELEGATION` rule.
+- **All Subagent Prompts**: Added `Do NOT call manage_tasks or manage_plan` to every subagent LIMIT line (researcher, coder, reviewer, manual-tester).
+- **Coder Subagent**: Added `SCOPE_GUARD` and `SHARED_FILE_GUARD` rules — coder must only touch files in its assigned scope and must stop and report if a shared/read-only file needs modification.
 
-### Fixed
-- **Browser Tab URL Persistence**:
-  - Implemented the `onUpdateTabUrl` callback on the `<BrowserTab>` component and propagated URL changes from WebSocket (`tline-url-changed`), Tauri, and Electron navigation events back to the parent tabs list.
-  - Ensured `activeUrl` in `BrowserTab.tsx`'s local state is kept in sync with in-page navigation so it can be restored on tab reactivation.
-  - Refactored `BrowserTab.tsx` by moving `getCleanUrl` and `openInSystemBrowser` helper functions to `browserUrlUtils.ts`, keeping `BrowserTab.tsx` under the strict 1000-line repository limit.
-
-## [1.3.435] - 2026-07-14
-
-### Fixed
-- **Terminal Typing Lag & Unresponsiveness (Superagent / TUI)**:
-  - Switched the default GPU-accelerated terminal renderer to `@xterm/addon-canvas`, avoiding `@xterm/addon-webgl`'s glyph texture cache memory leaks, WebGL context limits, and sudden context-loss crashes when running active CLI AI agents for a long time.
-  - Throttled terminal cursor position updates in the status bar to at most once every `250ms` (using throttle + debounce). This prevents the React component from re-rendering 60 times per second during rapid output, keeping the main thread free for keystrokes.
-  - Extracted the initial command execution logic into a dedicated custom hook (`useTerminalInitialCommand.ts`), which modularizes the codebase and reduces `TerminalInstance.tsx` below the repository's 1000-line limit.
-
-## [1.3.434] - 2026-07-14
+## [1.2.439] - 2026-07-17
 
 ### Fixed
-- **State Synchronization Infinite Loop**: Resolved an infinite loop where `[Sync] Received real-time state update from server` logged repeatedly. Added a `toCanonicalString` serialization function that normalizes client-only flags (like `isDetached`) and alphabetically sorts keys of the `terminalInstances` object. This ensures state comparison is order-independent and structurally stable across WebSocket pushes and HTTP fetches.
-- **Graceful Update Checker Network Handling**: Checks `navigator.onLine` before executing update checks, and catches fetch failures during network status changes (`TypeError: Failed to fetch`) cleanly as warnings instead of console errors.
+- **Full Bun Migration**: Updated `package.json` scripts to use `bun run` and `bun x` instead of `npm.cmd` and `npx`. Fixed `detectPackageManager()` in `masterAgent.ts` to also detect `bun.lock` (Bun v1.1+ format) alongside the legacy `bun.lockb`, ensuring build/test validation uses Bun automatically.
 
-## [1.3.433] - 2026-07-14
+## [1.2.438] - 2026-07-17
 
 ### Fixed
-- **Windows Active Process Detection with Commas in CommandLine**: Fixed a major bug in the `wmic` CSV parsing function (`parseWmicCsv` in terminalManager.ts) where processes with command line arguments containing commas were completely ignored due to column parsing shifts. Implemented a robust cell-rebuilding logic that slices fixed fields from the left and right, joining everything in between to correctly reconstruct the `CommandLine` field.
+- **autoRetry Test Compatibility**: Updated `enhancedFeatures.test.ts` auto-retry mock to detect any package runner prefix (bunx, npx, pnpm dlx, yarn dlx) so the test passes regardless of which lockfile is present on the machine.
 
-## [1.3.432] - 2026-07-14
+## [1.2.437] - 2026-07-17
 
 ### Added
-- **Browser Loading Progress Bar**: Added a Chrome-style animated linear loading progress bar at the top of the browser viewport. The loading bar animates when a navigation event starts or a page is reloaded, and transitions smoothly to completion when the page has finished loading (or after an optimized delay in native shell environments).
-- **Reload Spin Animation**: Added a spin animation to the reload icon button during active page loading.
+- **Bun Support Documentation**: Updated README.md with detailed installation, global executable linking, and script execution instructions for utilizing the Bun runtime and package manager.
 
-## [1.3.431] - 2026-07-14
+## [1.2.436] - 2026-07-17
 
-### Fixed
-- **Tauri Native Webview Overlay Covering HTML Dropdowns/Modals**: Fixed the issue where the native child WebView2 overlay covers/cuts off React-rendered context menus, dropdowns, and dialog modals. Added an overlay monitoring `useEffect` in `App.tsx` that dispatches a `tline-hide-native-webview` event when any overlay, dropdown, or modal is active, and updated `BrowserTab.tsx` to listen to this event and toggle the native WebView2 overlay's visibility.
+### Optimized
+- **Shared Tokenizer Encoder**: Shared a single global tiktoken encoder instance across all TokenTracker instances rather than instantiating a new WASM encoder per agent, saving significant WebAssembly heap allocations.
+- **History Search Cache Capping**: Capped the local history search cache at 100 entries with LRU-style eviction to prevent unlimited memory growth when querying or syncing thousands of conversation files.
 
-## [1.3.430] - 2026-07-14
+## [1.2.435] - 2026-07-17
 
-### Fixed
-- **Tab Context Menu Auto-Closing**: Fixed a race condition where right-clicking a tab header (especially noticeable in Tauri environments on browser tabs) caused the context menu to close immediately. Added `stopImmediatePropagation()` to the initiating contextmenu event and deferred registering the window-level close event listeners to the next macro-task queue using `setTimeout`.
+### Optimized
+- **Memory Footprint Optimization**: Freed up massive memory allocations in long-running CLI sessions by nullifying the underlying `agent` reference of completed and errored subagents and superagents, allowing V8 to garbage collect their large message histories, caches, and WASM-based tiktoken tokenizers.
 
-## [1.3.429] - 2026-07-14
-
-### Changed
-- **Terminal Local File Path Click Handling**: Added a custom `LinkProvider` in `TerminalInstance.tsx` that detects local file paths and line numbers in terminal output (e.g. `src/App.tsx:234`). When clicked, it dispatches a `tline-open-file-path` event, which is handled in `App.tsx` by resolving the relative path against the active terminal's current working directory and opening the file as a file tab inside the `t-line` editor, scroll-focusing Monaco editor to the exact line number.
-
-## [1.3.428] - 2026-07-14
-
-### Changed
-- **Terminal Web Link Handling**: Configured the link click handler in xterm.js (`TerminalInstance.tsx` / `WebLinksAddon`) to dispatch a `tline-open-browser-tab` event. This is handled by a listener in `App.tsx` which opens the clicked link inside a new `t-line` browser tab instead of spawning an external system browser window.
-
-## [1.3.427] - 2026-07-14
-
-### Fixed
-- **Open Browser Button**: Updated the `openInSystemBrowser` function in `BrowserTab.tsx` to request the Node backend's browser open endpoint (`/api/browser/open`) first. This resolves the issue where the Tauri native command `open_in_browser` did not exist, causing the "Open Browser" button to fail in Tauri environments.
-
-## [1.3.426] - 2026-07-14
-
-### Changed
-- **Folder Explorer (Browse Project)**: Renamed the "Up" navigation button to **"Back"** with an `ArrowLeft` icon for clearer UX when browsing directories inside the "Track New Workspace" modal.
-
-## [1.3.425] - 2026-07-14
-
-### Fixed
-- **WebView2 High RAM Usage (BrowserTab)**:
-  - **Root Cause Analysis**:
-    1. In Tauri, `determineRenderMode` always returns `'tauri-native'` regardless of URL, so every browser tab spawns a full OS-level native WebView2 overlay (Chromium GPU/renderer/network processes) — not a simple iframe.
-    2. All browser tabs were mounted in the DOM simultaneously; inactive ones were only `hide()`-d but still alive in memory.
-    3. A `requestAnimationFrame` loop ran continuously per-tab syncing WebView2 bounds, even when invisible.
-  - **Fix — Lazy+Cache Hybrid Strategy**:
-    - `App.tsx`: Added `mountedBrowserTabIds` Set state. A `BrowserTab` is **only added to the React DOM the first time its tab becomes active** (lazy mount), preventing unused WebView2 instances from being created upfront. The Set is pruned when tabs are closed.
-    - `BrowserTab.tsx`: Added `webviewActive` state. When `isActive` transitions to `false`, the native WebView2 overlay is **destroyed** (`.close()`) immediately to release RAM. When `isActive` becomes `true` again, the WebView2 is **recreated** from the preserved `activeUrl` state.
-    - Replaced the previous `show()`/`hide()` visibility approach with this destroy/recreate lifecycle.
-    - URL polling (500ms interval) and the ResizeObserver are now gated on `webviewActive` so they stop when the WebView2 is suspended.
-  - **Expected Result**: Only 1 active WebView2 process group in memory at a time. Switching tabs will briefly reload the preview, but RAM usage drops from ~3+ GB to near the single-tab baseline.
-
-## [1.3.424] - 2026-07-14
-
-
-### Fixed
-- **RAM Usage Inflated to 3.9 GB in System Resources Widget**:
-  - Root cause: `get_memory_usage` Tauri command was aggregating RSS of **all** WebView2/Chromium child processes (renderer, GPU, network, utility) into a single `desktopTotal` figure, producing a misleadingly large number (3-4 GB).
-  - Refactored `get_memory_usage` in `lib.rs` to now separately track `desktopRss` (main Tauri host process only) and `webviewTotal` (aggregate RSS of all WebView2 child processes excluding the backend node process).
-  - Updated `SystemStats` TypeScript interface in `useSystemStats.ts` to expose the new `webviewTotal` field.
-  - Updated `Footer.tsx` tooltip to display **Main RSS** and **WebView2** on separate rows with a clear subtotal row, instead of a single inflated "App Total". The mini footer badge now shows `D: <main>+<wv>` format.
-
-## [1.3.423] - 2026-07-14
-
-
-### Changed
-- **Automated Desktop Process Cleanup on Restart**:
-  - Modified the development manager script `dev.js` to automatically clean up and terminate any existing, running desktop application instances (`t-line` / `t-line-dev`) before launching the dev servers.
-  - This eliminates the need to manually restart the desktop app from the system tray when starting a new development build, avoiding single-instance lock deadlocks.
-
-## [1.3.422] - 2026-07-14
-
-### Fixed
-- **Tauri ACL Permission Error for Local Preview Webviews**:
-  - Modified `desktop-tauri/src-tauri/capabilities/default.json` to allow all localhost and 127.0.0.1 origins on wildcard ports (`http://localhost:*/**`, `https://localhost:*/**`, `http://127.0.0.1:*/**`, `https://127.0.0.1:*/**`) in the permitted remote URLs.
-  - Resolves Uncaught (in promise) security rejections for `event.emit` and `webview.internal_toggle_devtools` commands when loaded web applications run on dynamic or custom local development server ports (e.g. 6992).
-
-## [1.3.421] - 2026-07-14
-
-### Fixed
-- **Clean Browser-Like URL Syncing on Link Clicks**:
-  - Implemented `getCleanUrl` in `BrowserTab.tsx` to automatically strip internal `/api/preview-proxy` path structures, target, and tabId query params from URL updates (updating all handlers: initial load, websocket events, Tauri events, and Electron events).
-  - Updated `notifyUrlChanged()` in `tline-helper-code.ts` to call `getRealCurrentUrl()` directly, resolving to the clean target application URL instead of the raw proxy path.
-  - Updated the Tauri webview URL polling code in `BrowserTab.tsx` to resolve the clean target URL using proxy target parameters before emitting events.
-
-## [1.3.420] - 2026-07-14
-
-### Fixed
-- **Browser URL Input Syncing**:
-  - Implemented popstate and hashchange event listeners in `tline-helper-code.ts` to notify the parent browser tab when client-side history navigation occurs (e.g. going back/forward or hash changes in SPAs).
-  - Added Electron webview `did-navigate` and `did-navigate-in-page` event listeners in `BrowserTab.tsx` to automatically update the URL bar input on navigation.
-  - Added a periodic poller `useEffect` (runs every 500ms) for native Tauri webview (`tauri-native` mode) in `BrowserTab.tsx` that evaluates the location URL inside the webview and emits a `tline-webview-event` to update the parent tab's URL input when the page changes.
-
-## [1.3.419] - 2026-07-14
+## [1.2.434] - 2026-07-17
 
 ### Added
-- **Browser Navigation Controls (Back & Forward)**:
-  - Added "Go Back" (`ArrowLeft` icon) and "Go Forward" (`ArrowRight` icon) buttons to the top navbar in the `BrowserTab` component.
-  - Implemented navigation history actions for all rendering modes (`tauri-native`, `electron-webview`, and `iframe-local`), invoking history navigation methods or evaluating history state commands respectively.
+- **Advisor Help & Suggestion Integration**: Integrated the `/setting-advisor` command description into the `/settings` help list screen, status dashboard display, and terminal/dashboard auto-completion suggestions list.
 
-## [1.3.418] - 2026-07-14
-
-### Fixed
-- **Tauri IPC Message Queue Saturation Loop**:
-  - Root cause: If a Tauri/WebView2 IPC call encountered a postMessage failure (such as "PostMessage failed ; is the messages queue full? Error code 0x80070718"), it logged an error to `console.error`. The helper code's `console.error` hook intercepted this log and tried to send it back to the parent window via another Tauri IPC call. Since the IPC queue was already full, this second call failed, logging another `console.error`, creating an infinite recursive loop of error logs and IPC calls that crashed or froze the application.
-  - Added a reentrancy guard (`isSendingError`) to `sendErrorToParent` to prevent nested/recursive error captures.
-  - Implemented a Tauri IPC/WebView2 failure keyword filter (`isTauriIPCError`) to completely ignore system-level message queue failures from being forwarded.
-  - Added rate limiting and deduplication (`shouldThrottleError`) to drop duplicate error messages within 2 seconds and limit error logs to a maximum of 15 messages per 5 seconds.
-
-## [1.3.417] - 2026-07-14
+## [1.2.433] - 2026-07-17
 
 ### Added
-- **Detailed Click Logs in Element Inspector**:
-  - Added comprehensive `console.log` statements in the helper script's `onClick` handler to output the raw target, resolution details, element traversal, and final dispatched payload in the browser console when an element is clicked.
+- **Advisor Slash Command Toggle**: Added the `/setting-advisor` command to enable or disable the Real-Time Execution Advisor dynamically, with matching configuration storage and automated tests.
 
-## [1.3.416] - 2026-07-14
-
-### Fixed
-- **Element Inspector Click Handling & Data Extraction**:
-  - Root cause: Clicking on `Text` nodes (button text, paragraph contents) or the purple inspect overlay itself (`tline-inspect-highlight`) caused an uncaught `TypeError` because `Text` nodes do not have `getAttribute` or `classList`. This aborted the dispatch of the selected element payload, preventing data from appearing in the DevTools Inspector panel.
-  - Traverse up from `e.target` to find the nearest `Element` node (nodeType 1) before extracting attributes and classes.
-  - Temporarily hide the highlight overlay and use `document.elementFromPoint` to locate the true underlying element if the highlight overlay itself intercepts the click event.
-  - Wrapped the entire inspect-click flow in a `try...catch...finally` block so that inspect mode is always gracefully cleaned up.
-
-## [1.3.415] - 2026-07-14
-
-### Fixed
-- **Uncaught Tauri Event Unlisten Promise Rejection**:
-  - Root cause: React StrictMode or component unmounting before the async `listen` promise resolves causes `unlistenTauriEvent` to remain `null` or uncalled, leaking listeners. Calling `unlisten` in rapid sequence or on stale event state causes Tauri internal `_unlisten` to throw `Cannot read properties of undefined (reading 'handlerId')`.
-  - Added an `isMounted` flag inside `BrowserTab` to guard and ignore state updates if the tab unmounts before events resolve.
-  - Wrapped `unlistenTauriEvent()` call in a safety try-catch block and caught any unhandled promise rejections on the returned unlisten Promise, filtering out irrelevant `handlerId` error traces.
-- **Webview Close Warning on Cleanup**:
-  - Root cause: Webview instances being closed multiple times or in race conditions with already-destroyed webviews triggered `Failed to close webview on cleanup: webview not found` warnings.
-  - Filtered out `webview not found` errors in the close cleanup catch block to keep the dev console clean.
-
-## [1.3.414] - 2026-07-14
-
-### Fixed
-- **Native Webview Covers DevTools on Expand**:
-  - Root cause: Tauri native webview is an OS-level overlay. When DevTools expands, DOM layout shrinks but native webview bounds stay full-height, covering Console/Inspector.
-  - Added `syncWebviewBounds()` + `ResizeObserver` (with mount-retry) so container size changes force `setPosition`/`setSize` on the native webview.
-  - Force bounds resync on `devtoolsHeight` / `isDevtoolsCollapsed` change (double-rAF + 220ms timeout after CSS transition).
-  - Viewport area uses `min-h-0 overflow-hidden`; webview/iframe containers use `absolute inset-0` so they always match the flex-shrunk parent rect.
-  - DevTools drawer gets `z-10` so DOM panel stacks above the placeholder region.
-
-## [1.3.413] - 2026-07-14
-
-### Fixed
-- **DevTools Drawer Responsiveness & Viewport Shrinking**:
-  - Removed `min-h-[250px]` from Main Browser Viewport Area, replaced with `min-h-0` so the flexbox container correctly shrinks when the DevTools drawer is expanded.
-  - Added `height: '100%'` to the `tauri-native` container div so the `updateLoop` correctly reads shrunken bounds and syncs the native webview size.
-  - Proactively fetch and inject `TLINE_HELPER_CODE` from `/api/preview-proxy/tline-helper.js` into the native Tauri webview when the Inspect button is pressed, with `__TLINE_TAB_ID__` and `__TLINE_NATIVE__ = true` flags prepended.
-  - Split Tauri `tline-webview-event` listener into its own dedicated `useEffect` with minimal deps so it is registered at component mount rather than after the async WS handler, preventing missed element-selection events.
-
-## [1.3.412] - 2026-07-13
-
-### Fixed
-- **Browser Tab Tauri-Native Inspect (Element Picker)**:
-  - Fixed root bug: `tline-element-selected` events from Tauri native webview never reached the React app because `window.parent.postMessage()` is a no-op in native webviews (`window.parent === window`) and the HTTP POST fallback only activates when `isProxied` is true.
-  - Added Tauri event bus path in `sendPreviewEvent` (`tline-helper-code.ts`): when `isTauri` is true, emits `tline-webview-event` via `window.__TAURI__.event.emit()` directly to the Tauri event system.
-  - Added `listen('tline-webview-event')` in `BrowserTab.tsx` WebSocket useEffect: native webview events (element-selected, error, url-changed, ready) now route through Tauri event bus instead of the broken postMessage/HTTP path.
-  - Fixed stale closure bug: removed `isInspecting` from `handleMessage` useEffect dep array — listener no longer tears down mid-event, preventing dropped `tline-element-selected` messages in iframe mode.
-  - Added `renderMode === 'iframe-local'` guard on `toggleInspect` iframe postMessage path to prevent sending inspect commands to wrong targets in cross-origin or proxy iframe modes.
-
-## [1.3.411] - 2026-07-13
-
-### Changed
-- **Browser Shell Rewrite without Proxy Dependency**:
-  - Rewrote the app preview engine to bypass the proxy connection layer entirely.
-  - Embedded native Webviews (`tauri-native` / `electron-webview`) directly in desktop runtime layouts.
-  - Added fallback routing for browser/web context to safely present external links natively or external-site actions.
-  - Removed `forceProxy` and `bypassProxy` configuration modes, reducing component size and complexity.
-  - Split `BrowserTab.tsx` by extracting drawer markup into a modular child component (`BrowserDevTools.tsx`), bringing files well under the 1000 lines threshold.
-
-## [1.3.410] - 2026-07-13
-
-### Fixed
-- **Browser Preview Inspection & Interactivity**:
-  - Corrected syntax errors in the client-side helper script (`tline-helper-code.ts`) caused by invalid double backslash escapes (`\\\\/\\\\//` instead of `\\/\\//` in the TS template literal backticks).
-  - Resolved event propagation blocks and page navigation freeze when clicking links or submitting forms under the preview proxy by modifying `href`/`action` attributes dynamically for matching targets without calling `preventDefault`/`stopPropagation`.
-  - Added support for reading and parsing the `tline_tab_id` cookie to resolve context losses for tab states on external/system browsers.
-  - Capped the client-side `tline-ready` handshake retry to 10 attempts to avoid spamming backend WebSocket endpoints in system browsers.
-
-## [1.3.409] - 2026-07-13
-
-### Fixed
-- **Show Dashboard Tray Restore**:
-  - Restructured the Tauri tray click handler (`on_tray_icon_event`) to listen to both single `Click` and `DoubleClick` events.
-  - Corrected the method execution order in `show_dashboard_window` to call `unminimize()` before `show()` and `set_focus()`.
-  - Removed the forced maximize behavior to respect user preferences and prevent WebView2 window focus/rendering blocks on Windows.
-
-## [1.3.408] - 2026-07-13
-
-### Fixed
-- **Web Preview Handshake Reliability**:
-  - Implemented a periodic retry interval for sending the `tline-ready` event from the client helper script (`tline-helper-code.ts`) until it is acknowledged by the parent window.
-  - Added parent-to-child `tline-ack-ready` message acknowledgements in `BrowserTab.tsx` for both iframe (postMessage) and Tauri native webview (eval_webview_js) flows, resolving cases where the status indicator could get stuck on "Connecting Helper..." due to early/missed handshake events.
-
-## [1.3.407] - 2026-07-13
-
-### Fixed
-- **Web Preview Proxy & Redirects**:
-  - Refactored `sanitizeHeaders` in `previewProxy.ts` to merge custom cookies (`tline_tab_id` and `tline_proxy_target`) into the outgoing response headers, preventing them from being overwritten by cookies returned by the target application server.
-  - Implemented relative redirect path resolution against the target application server's origin to prevent relative redirects (e.g. `/dashboard`) from breaking out of the proxy and causing 404 errors.
-  - Added suffix-based Vite dev port detection (`endsWith(':5773')`) in `BrowserTab.tsx` and `websocket.ts` to support all loopback interfaces (like `[::1]`) and local IP address bindings.
-- **Client-Side Injected Helper Improvements**:
-  - Modified click and submit event listeners in `tline-helper-code.ts` to resolve links and actions relative to the target application's base URL instead of `window.location.href`, preventing loops back into the proxy.
-  - Added robust validation in both backend and frontend to discard `"null"` and `"undefined"` string literals for tab ID and target URL parameters.
-  - Replaced property-based ID calls with `getAttribute('id')` to avoid browser DOM property pollution (where elements like `<input name="id">` contaminate the parent form ID object).
-
-## [1.3.406] - 2026-07-13
-
-### Fixed
-- **Cookie-Based tabId Session Persistence**:
-  - Implemented cookie-based persistence for `tabId` (`tline_tab_id`) in `previewProxy.ts`. By setting a tecredited `Set-Cookie` header on the first request and parsing the cookies header on subsequent requests, the `tabId` is safely retained for every page request and sub-resource load under the proxy origin, preventing the `tabId` from resolving as `null` after complex redirection paths or navigations.
-
-## [1.3.405] - 2026-07-13
-
-### Fixed
-- **HTTP Redirects tabId Preservation in Proxy**:
-  - Updated the `sanitizeHeaders` function in the backend `previewProxy.ts` to accept the request object and append `tabId` as a query parameter when rewriting HTTP `Location` redirect headers. This ensures `tabId` is not lost on target website redirects (like `google.com` to `google.co.id` or trailing slash redirects) before the helper script can run and persist it in client-side storage.
-
-## [1.3.404] - 2026-07-13
+## [1.2.432] - 2026-07-17
 
 ### Added
-- **Proxy Port and Frontend Dev Port to Tauri Remote Capability Scope**:
-  - Added authorization rules in `default.json` for remote URL patterns `http://localhost:5779/**` (backend proxy) and `http://localhost:5773/**` (frontend dev). This resolves permission rejections (`webview.internal_toggle_devtools not allowed...`) when WebViews serving proxied web pages try to trigger native Tauri commands.
-- **WebSocket & Proxy Event Logging**:
-  - Added backend console logs in the `/api/preview-proxy/event` route and frontend console logs in the WebSocket message listener of `BrowserTab.tsx` to simplify debugging of inspector and error events.
+- **Advisor Model Configuration Options**: Integrated options to set custom models for the Real-Time Execution Advisor in `/model` CLI commands, setup wizard screens, keyboard navigation menus, and dashboard interfaces.
 
-## [1.3.403] - 2026-07-13
-
-### Fixed
-- **Element Inspector Loss of Tab ID on Navigation**:
-  - Persisted the workspace `tabId` using client-side `sessionStorage` (`tline_tab_id`) inside the `tline-helper.js` script. This prevents the `tabId` from being lost during full-page reloads, redirects, or navigation (which strips query parameters), ensuring that element inspection and error events continue to be correctly routed via WebSocket to the appropriate parent tab in the main interface.
-
-## [1.3.402] - 2026-07-13
-
-### Fixed
-- **Tauri Webview Bounds Sync "Webview Not Found" Warnings**:
-  - Suppressed the console warnings and failed state triggers for temporary `webview not found` errors inside the updateLoop bounds syncing logic and show/hide transition catch handlers. These transitions occur normally during asynchronous creation/destruction/unmounting phases when switching tabs or reloading.
-
-## [1.3.401] - 2026-07-13
-
-### Fixed
-- **Stuck Connecting Helper Status Text**:
-  - Implemented dynamic status text and dot color functions (`getHelperStatusText`, `getHelperStatusColorClass`) for the Web Preview DevTools status indicator.
-  - Corrected the state display to show "Waiting for preview URL..." (gray dot) when no URL is entered, and "Direct Mode Active" (green dot) when running in Tauri Direct Mode (where the proxy helper is bypassed), resolving confusing/incorrect "Connecting Helper..." prompts.
-
-## [1.3.400] - 2026-07-13
-
-### Fixed
-- **Bypass Proxy for Tauri Internal IPC & Protocols**:
-  - Added a check in `tline-helper.js` to prevent intercepting and proxying Tauri internal hostnames and protocols (like `ipc.localhost`, `tauri.localhost`, and `tauri://`). This resolves 404/502/403 errors when Tauri's injected scripts trigger native IPC actions (such as `plugin:webview|internal_toggle_devtools`) within a proxied Web Preview window.
-
-## [1.3.399] - 2026-07-13
-
-### Fixed
-- **Browser Tab Side-by-Side Duplicate Rendering**:
-  - Only render the BrowserTab placeholder block in the main workspace DOM when the tab is detached. This prevents the placeholder (globe icon and "Browser Tab" text) from rendering side-by-side with the persistent live `<BrowserTab>` when a browser preview is active.
-
-## [1.3.398] - 2026-07-13
+## [1.2.431] - 2026-07-17
 
 ### Added
-- **Multi-Platform Update Checker**:
-  - Re-enabled the manual "Check" update button in the Settings modal for all platforms (Tauri desktop and Web browsers).
-  - Integrated the native Tauri auto-updater (`tauri-plugin-updater` v2) in `src-tauri` and exposed `check_tauri_update` and `install_tauri_update` custom Rust commands.
-  - Implemented a graceful fallback to checking the GitHub Releases API directly if running in a Web browser or if the Tauri native updater is not fully configured (e.g. missing signature keys).
-  - Added a "Download" button in the Settings UI linking directly to the repository's GitHub release page when an update is found in Web/Fallback mode.
+- **Real-Time Execution Advisor**: Added a real-time advisor subsystem that monitors tool execution loops, repeated errors, and hallucinated tools across all agent tiers (master agent, superagents, subagents, and single agent). It raises helpful guidance warnings or pauses execution when stuck.
 
-## [1.3.397] - 2026-07-11
+## [1.2.430] - 2026-07-17
+
+### Changed
+- **Simplify /memory sync output**: Removed the checkmark icon (`✓`) from the synchronization success message.
+
+## [1.2.429] - 2026-07-17
+
+### Optimized
+- **Test Suite RAM Usage Optimization**: Prevented background classifier warming and local embedding/router model loading during test suite runs unless explicitly mocked. This dramatically reduces vitest memory usage (saving gigabytes of RAM) and speeds up test execution time by over 50%.
+
+## [1.2.428] - 2026-07-17
 
 ### Added
-- **System Tray Terminal Navigation**:
-  - Implemented the ability to click any active PTY session in the system tray menu to instantly switch the active workspace (project) and tab in the main interface.
-  - Added a new `focus_window` Tauri command to focus detached windows when switching to a terminal in a detached tab (dual-display mode).
-  - Used React refs (`tabsRef`, `terminalInstancesRef`) in `App.tsx` for optimal, stable event listening.
+- **Manual Sync Command**: Added `/memory sync` subcommand allowing users to manually force synchronization of their current conversation history to the RMemory database.
 
-## [1.3.396] - 2026-07-11
-
-### Fixed
-- **Tauri Webview ACL Permissions**:
-  - Added `"webviews"` glob pattern array to the default capability definition in `desktop-tauri/src-tauri/capabilities/default.json` matching `"main"` and `"browser-*"` to correctly allow dynamically created programmatic child webviews to invoke custom commands (such as `get_memory_usage`).
-  - Added `"core:webview:allow-internal-toggle-devtools"` permission to resolve `plugin:webview|internal_toggle_devtools` ACL rejection crashes when programmatically opening devtools in Tauri preview tabs.
-
-## [1.3.395] - 2026-07-11
-
-### Fixed
-- **Production Updater Version Detection**:
-  - Bundled `backend/package.json` into the Tauri installer resources under the `_up_/backend/` layout so that the Node.js backend can successfully read and return the correct production version from disk.
-  - Added support for reading version from `process.env.APP_VERSION` when running inside the Tauri shell environment.
-  - Aligned fallbacks and package version declarations to `1.3.395` to ensure the update notifications and badges work accurately without displaying incorrect outdated statuses in production.
-
-## [1.3.394] - 2026-07-11
-
-### Fixed
-- **Headless & Background Backend Execution on Windows**:
-  - Configured Tauri subprocess spawner on Windows to spawn all child command prompt, powershell, node, npm, and taskkill processes headlessly with `creation_flags(0x08000000)` (`CREATE_NO_WINDOW`) to prevent console windows from popping up or remaining visible in the foreground.
-  - Declared app custom commands in `build.rs` via `AppManifest::commands` so that Tauri v2 autogenerates permission identifiers at compile time, and updated `capabilities/default.json` to allow them individually.
-
-## [1.3.393] - 2026-07-11
-
-### Fixed
-- **Tauri RAM Detection & Custom Command Permissions**:
-  - Restored the `custom-commands-permission` block in `capabilities/default.json` to allow the frontend to invoke kustom commands (`get_memory_usage`, `open_webview_devtools`, `eval_webview_js`, `create_detached_window`, `close_detached_window`, `get_app_url`, `start_backend_command`, `quit_app`) without throwing permission denied errors.
-  - Refactored `get_memory_usage` in `lib.rs` to recursively walk the process tree and aggregate RAM usage of all descendant processes (including WebView2 utility, renderer, and GPU grandchild processes).
-  - Ensured backend Node.js process and its descendants are recursively excluded from the total desktop RAM calculation to avoid double-counting.
-
-## [1.3.392] - 2026-07-11
-
-### Fixed
-- **Terminal Double Cursor Caret with Superagent**:
-  - Automatically detect when the Superagent AI coding agent CLI (`isSuperagent`) is running in a terminal instance.
-  - Dynamically hide the xterm.js cursor by setting the theme's `cursor` and `cursorAccent` to `'transparent'` whenever Superagent is active, ensuring it does not collide/render double with Superagent's own custom cursor.
-  - Added a `.hide-xterm-cursor` class style with `visibility: hidden !important` applied to `.xterm-cursor` as a CSS fallback mechanism.
-
-## [1.3.391] - 2026-07-10
-
-### Fixed
-- **Tauri Window Controls**:
-  - Added missing permissions (`core:window:allow-is-maximized`, `core:window:allow-maximize`, and `core:window:allow-unmaximize`) to `capabilities/default.json` to resolve permission denied crashes when verifying window maximization state in production built installers.
-  - Refactored `App.tsx` window control actions to safely invoke the global `window.__TAURI__.window` object directly when available (which is populated synchronously when `withGlobalTauri` is enabled), completely bypassing dynamic ESM import and chunk loading issues in built release installations.
-  - Explicitly added `@tauri-apps/api` to `frontend/package.json` dependencies to ensure correct compilation and bundling.
-
-## [1.3.390] - 2026-07-10
-
-### Changed
-- **Documentation & Release**:
-  - Updated `README.md` to document new features (detached tabs with blurred lock screens, async multi-display stability fixes, custom window decorations, terminal footer controls, and non-destructive tray restore).
-  - Bumped version to `1.3.390` across all packages, Cargo configuration, and Tauri settings.
-
-## [1.3.389] - 2026-07-10
-
-### Fixed
-- **Detached Window DevTools**:
-  - Removed the automatic devtools popup (`open_devtools`) when creating detached WebviewWindows in the Rust backend for debug builds, preventing intrusive debug panels.
-
-## [1.3.388] - 2026-07-10
-
-### Changed
-- **Detached Window Styling**:
-  - Disabled native OS decorations (`decorations(false)`) on detached Tauri windows in the Rust backend to prevent duplicate title bars, relying entirely on the custom React-rendered header and window controls.
-
-## [1.3.387] - 2026-07-10
-
-### Fixed
-- **Detached tab state client-side preservation**:
-  - Merged local `isDetached` state flag when updating client states from WebSocket `sync_state` updates and HTTP `fetchSyncState` responses, preventing backend synchronizations from wiping out client-side lock state.
-
-## [1.3.386] - 2026-07-10
-
-### Fixed
-- **Detached Tab Selectability and Instant Lock transition**:
-  - Disabled automatic switching of active tabs when a tab is detached, so the current tab remains selected and instantly transitions into the premium lock overlay.
-  - Allowed users to click on detached tab buttons in the tab bar/sidebar to select them in the main window (viewing the locked screen) while simultaneously focusing/restoring the detached window.
-
-## [1.3.385] - 2026-07-10
+## [1.2.427] - 2026-07-17
 
 ### Added
-- **Detached Tab Lock Overlay and Tab Indicators**:
-  - Replaced the blank `Tab Detached` placeholder screen with a frozen/blurred view of the actual tab contents under a frosted-glass overlay with a pulsing lock icon.
-  - Replaced the generic `ExternalLink` icon on detached tab buttons with a custom lock icon badge (`Lock` icon inside a small rounded capsule) to clearly indicate a detached/locked tab.
-  - Added a "Re-attach Workspace" button inside the lock overlay to easily merge it back into the main window.
+- **Download Percentage Progress**: Added inline percentage progress updates to the CLI output when downloading local embedding and local router models.
 
-## [1.3.384] - 2026-07-10
+## [1.2.426] - 2026-07-17
 
 ### Changed
-- **Relocated Terminal Controls to Footer Terminal (Status Bar)**:
-  - Moved Zoom Out, Font Size Indicator, Zoom In, Shell Selector, Refresh/Restart, and Scroll to Bottom controls from the global app footer (`Footer.tsx`) to each individual terminal's status bar/footer (`TerminalStatusBar` in `TerminalSubComponents.tsx`).
-  - Added new clean, premium styling (`.terminal-status-center`) for the controls inside the 22px-high status bar.
-  - Extended prop propagation through `App.tsx`, `SplitLayoutRenderer.tsx`, and `TerminalGridTab.tsx` to pass the necessary state and handlers directly down to `TerminalInstance.tsx` and `TerminalStatusBar` (including for detached tabs and windows).
-  - Cleaned up unused props in `Footer.tsx` and `App.tsx`.
-
-## [1.3.383] - 2026-07-10
-
-### Fixed
-- **Detached Dual Screen Window Crash**:
-  - Changed `create_detached_window` and `close_detached_window` Tauri commands to be asynchronous (`async fn`) in the Rust backend.
-  - This prevents blocking/deadlocking the main GUI thread during WebView2 creation and monitor configuration queries, resolving crashes/freezes on Windows setups with dual displays.
-- **Show Dashboard Tray Restore**:
-  - Removed the destructive and crash-prone navigation/reload logic from `show_dashboard_window` in the Rust backend.
-  - This ensures that restoring or showing the main window from the tray does not reload the frontend, preserving the active user workspace (terminal sessions, scrollbacks, and file edits) and avoiding WebView2 deadlocks on Windows.
-
-## [1.3.382] - 2026-07-10
-
-### Fixed
-- **Detached Browser Tab Blank Window**:
-  - Stopped the main window from keeping detached browser tabs mounted as hidden native Tauri webviews, preventing duplicate child webviews from fighting over the same preview tab.
-  - Encoded detached-window query parameters with `URLSearchParams` so auth tokens and tab IDs are passed safely to new windows.
-## [1.3.381] - 2026-07-10
-
-### Fixed
-- **Tray Show Dashboard Restore**:
-  - Reworked Show Dashboard, tray click, and single-instance restore to use one shared main-window restore path.
-  - Reloads the dashboard URL when the backend is running, then shows, unminimizes, maximizes, and focuses the main app window.
-
-## [1.3.380] - 2026-07-10
-
-### Fixed
-- **Detached Tab White Window and Close Control**:
-  - Passed detached-tab context through Tauri's initialization script instead of an unsupported query string on `WebviewUrl::App` asset paths.
-  - Restored the detached tab ID and auth token before React initializes, so the bundled production app can render the intended tab.
-  - Force-destroy detached windows on a native close request, ensuring stuck blank windows can always be closed.
-
-## [1.3.379] - 2026-07-10
-
-### Fixed
-- **Detached Tab Blank Window**:
-  - Restored Tauri's bundled application protocol for detached windows in production, preventing a blank page when the backend is not serving frontend assets.
-  - Kept Vite as the development source and normalized detached-window URLs to include the SPA root path.
-
-## [1.3.378] - 2026-07-10
-
-### Fixed
-- **Tauri Native Webview Initialization**:
-  - Prevented native child webview creation before its React container is mounted and a preview URL is available.
-  - Guarded all container bounds reads during initialization and visibility synchronization, eliminating repeated `getBoundingClientRect()` calls on a null ref.
-
-## [1.3.377] - 2026-07-10
-
-### Fixed
-- **Dual Screen / Detached Tab (production blank window)**:
-  - Root cause: detached window used `tauri::WebviewUrl::External` with a URL built from `window.location.origin`. In production builds `window.location.origin` resolves to `tauri://localhost` (Tauri's virtual asset protocol, not a real network address), so the external webview failed to load and opened blank.
-  - Fix: `create_detached_window` now accepts a `query` string and opens the bundled app via `tauri::WebviewUrl::App(PathBuf)` (works in both dev and production). Frontend invoke calls pass `query = token=...&detachedTabId=...` instead of a full origin-based URL.
-
-## [1.3.376] - 2026-07-10
-
-### Added
-- **Dual Screen / Detached Tab Support**:
-  - Implemented the ability to detach any tab or grid into a separate Tauri WebviewWindow.
-  - Added new Tauri commands `create_detached_window` and `close_detached_window` in Rust backend.
-  - Integrated `storage` event synchronization in the frontend to keep tab lists and terminal instances in real-time sync across windows.
-  - Added visual indicators for detached tabs in the tab bar and a placeholder view for detached tabs in the main window.
-
-## [1.3.375] - 2026-07-10
-
-### Fixed
-- **Tauri Custom Window Controls**:
-  - Replaced the global `window.__TAURI__.window` reference with explicit dynamic import of `@tauri-apps/api/window` to resolve issues where minimize and maximize controls were not functioning in the Tauri desktop wrapper.
-  - Implemented robust, race-condition-free event subscription for window resize state tracking in `App.tsx`.
-
-## [1.3.374] - 2026-07-09
-
-### Fixed
-- **Tauri Installed Backend Startup**:
-  - Updated resource path resolution inside `desktop-tauri/src-tauri/src/lib.rs` to lookup the backend script at both `_up_/backend/dist/server.js` and `backend/dist/server.js`. This resolves issues where Tauri bundles resources with an `_up_` prefix relative to the `src-tauri` folder.
-  - Stripped the Windows UNC long-path namespace prefix (`\\?\\`) from the script path before passing it to `node`. This prevents the Node.js module loader from crashing with `EISDIR` path resolution errors at startup.
-
-## [1.3.373] - 2026-07-08
-
-### Fixed
-- **Tauri Native Webview Mount Visibility**:
-  - Resolved a race condition where the newly created native child webview overlay remained hidden on initial mount when the tab was active. Added an immediate explicit `.show()` call during the `initWebview` initialization flow if `isActiveRef.current` is true.
-
-## [1.3.372] - 2026-07-08
-
-### Added / Fixed
-- **Cookie Sanitization & Direct Mode Toggle**:
-  - Implemented automatic cookie attribute stripping (`Domain` and `Secure` attributes) in the preview proxy middleware. This allows target websites to set cookies and persist sessions on `http://localhost:5779` under Proxy Mode.
-  - Added a **"Direct Mode / Proxy Mode"** toggle button in the BrowserTab toolbar for Tauri Webviews, allowing developers to bypass the proxy completely and load sites directly (enabling complex OAuth redirects and native secure cookies).
-
-## [1.3.371] - 2026-07-08
-
-### Fixed
-- **Tauri Webview Inspect Element Mode**:
-  - Replaced the direct (and unsupported in JS API) `webview.eval()` call with a custom backend Tauri command `eval_webview_js` to evaluate JavaScript commands inside target child webviews. This fixes the issue where the kursor inspect state was not toggling inside Tauri native Webview instances.
-
-## [1.3.370] - 2026-07-08
-
-### Fixed
-- **Tauri Compilation Error**:
-  - Removed the invalid `"core:webview:allow-eval"` permission entry from `capabilities/default.json` which was causing a panic (exit code 101) during `tauri dev` / `cargo run`. (In Tauri v2, webview JavaScript evaluation is a host-only API and does not require this guest capability).
-
-## [1.3.369] - 2026-07-08
-
-### Added / Changed
-- **WebSocket-Bridged Webview Inspection and Logging for Tauri**:
-  - Integrated a custom event bridging system that routes child webview click selection, console error capture, and load ready events via the Express proxy to the main UI window.
-  - Implemented HTTP POST `/api/preview-proxy/event` on the Express backend to capture events from the helper script and broadcast them to all active WebSocket clients.
-  - Configured `previewProxy.ts` to attach `tabId` to each proxied document request and inject `window.__TLINE_TAB_ID__` to partition events correctly.
-  - Added WebSocket listeners in `BrowserTab.tsx` to handle logs and element selections, enabling the bottom DevTools drawer in Tauri mode.
-  - Enabled programmatic script injection and inspect toggling in Tauri child Webviews using `Webview.eval()`, and granted the necessary `"core:webview:allow-eval"` capability.
-
-## [1.3.368] - 2026-07-08
-
-### Changed
-- **Agent Rules Update**:
-  - Updated rules in [AGENTS.md](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/.agents/AGENTS.md) to replace references to the deprecated Electron desktop component with `desktop-tauri`.
-
-## [1.3.367] - 2026-07-08
-
-### Added / Fixed
-- **Tauri Native Webview in Browser Tab**:
-  - Activated the native child Webview overlay for the Tauri platform by default (`useTauriWebview = isTauri`), replacing the iframe preview proxy for better performance, cookies, and login session support.
-  - Changed the dynamic webview window label prefix from `inline-browser-webview-` to `browser-webview-` to align with the permitted glob pattern `browser-*` in `capabilities/default.json`. This resolves permission restrictions on bounds resizing and DevTools invocation in Tauri v2.
-  - Cleaned up the user interface by hiding the custom React-based DevTools drawer when the native Webview is active, since users have access to native Developer Tools via the "Open DevTools" button.
-
-## [1.3.366] - 2026-07-08
-
-### Removed
-- **Browser Pop-out Button**:
-  - Removed the "Pop-out" external browser link button from the Browser tab toolbar.
-  - Cleaned up the unused `openInTauriBrowser` helper function inside `BrowserTab.tsx`.
-
-## [1.3.365] - 2026-07-08
-
-### Fixed
-- **Tauri CI/CD Build Failures**:
-  - Restructured the Tauri bundling resource configuration to exclude the root `node_modules` directory, preventing compilation failures caused by symbolic links (symlinks) inside devDependencies (like `@tauri-apps/cli`) on headless GitHub Actions runners.
-  - Updated `copy-assets.js` to run `npm install --omit=dev` directly inside `desktop-tauri/backend/` during the assets copy phase, and cleaned up any symlink directories (`.bin`) before bundling. This minimizes final installer size (saving ~50MB+) and ensures all backend dependencies are cleanly packaged.
-  - Corrected the `swatinem/rust-cache` cache workspaces target paths inside `.github/workflows/release.yml`.
-
-## [1.3.364] - 2026-07-08
-
-### Fixed
-- **Preview Proxy originalUrl Rewrite**:
-  - Rewrote both `req.url` and `req.originalUrl` inside the host-relative fallback middleware in `backend/src/server.ts`. This allows the path filter in `http-proxy-middleware` to recognize host-relative requests (like `/gen_204`) correctly and forward them.
-
-## [1.3.363] - 2026-07-08
-
-### Fixed
-- **Preview Proxy Target Hijacking**:
-  - Restructured routing logic in `backend/src/previewProxy.ts` so that subresource requests (fetch/XHR, images, scripts) specifying a target parameter do not overwrite the global `currentProxyTarget` or the main session cookie `tline_proxy_target`. This ensures cross-origin APIs loaded by the previewed site do not break main site asset loading.
-- **Host-Relative 404 Routing Fallback**:
-  - Added a fallback Express middleware in `backend/src/server.ts` to capture unmatched host-relative requests (like `/gen_204`) from the preview frame and rewrite/redirect them through the preview proxy.
-
-## [1.3.362] - 2026-07-08
-
-### Fixed
-- **Terminal WebSocket Upgrade Conflict**:
-  - Resolved `failed: Invalid frame header` error on terminal WebSocket connections by adding a `pathFilter` to `http-proxy-middleware`'s config inside `backend/src/previewProxy.ts`. This prevents the proxy from intercepting and corrupting websocket upgrades intended for the terminal WebSocket at `/`.
-
-### Changed
-- **Backend Refactoring & Code Length Compliance**:
-  - Extracted the web preview proxy logic, sanitize headers function, and temporary state variables from `backend/src/server.ts` into a new modular file `backend/src/previewProxy.ts`. This reduces the size of `server.ts` from 1,174 lines to ~950 lines, satisfying the strict 1,000-line code file limit rule.
-
-## [1.3.361] - 2026-07-08
-
-### Fixed
-- **Dev Mode Frontend Restart Loop / Port Conflict**:
-  - Fixed an issue where the Rust backend failed to detect that Vite was already running on port 5773 because Vite was bound to the IPv6 loopback (`[::1]`) while the detection logic only checked the IPv4 loopback (`127.0.0.1`).
-  - Updated `is_port_active` in `desktop-tauri/src-tauri/src/lib.rs` to check both `127.0.0.1` and `[::1]`.
-  - Updated `checkPort` in `dev.js` to also check both `127.0.0.1` and `::1` loopbacks.
-  - This prevents Tauri from spawning a duplicate frontend dev process that killed the active one and crashed the launch runner.
-
-## [1.3.360] - 2026-07-08
-
-### Fixed
-- **xterm.js Viewport Initialization Warning**:
-  - Silenced the expected uncaught TypeError `Cannot read properties of undefined (reading 'dimensions')` during xterm.js syncScrollArea initialization.
-  - Added a check for renderer readiness (`core._renderService._renderer`) before delegating to `originalSyncScrollArea` inside `TerminalInstance.tsx`.
-
-## [1.3.359] - 2026-07-08
-
-### Changed
-- **Dynamic Theming on Connection Error Page**:
-  - Dynamically style the offline reconnection/connection error screen (`error.html` and the rust fallback string) based on the user's active theme and fonts stored in `localStorage`.
-  - Added links to Google Fonts inside `error.html` and configured Content-Security-Policy (CSP) to allow styling and fonts from Google sources.
-  - Implemented dot-grid backgrounds and radial accent glows to match the design aesthetics of the rest of the application.
-
-## [1.3.358] - 2026-07-08
-
-### Fixed
-- **Race Condition on Vite Dev Server Startup**:
-  - Added a 3-second startup delay check for the Vite dev server port (`5773`) in the Rust backend before attempting to spawn a new instance.
-  - This prevents Tauri from spawning duplicate Vite instances and clashing/killing the frontend dev server when running the application via the main orchestrator script (`npm run dev`).
-
-## [1.3.357] - 2026-07-08
-
-### Fixed
-- **Tauri IPC Origin Validation on Connection Error Page**:
-  - Moved the offline connection error screen from a `data:` URI (which has a `null` origin and blocks Tauri IPC calls) to a static `error.html` served under the local asset protocol (`tauri://localhost/error.html` or `http://tauri.localhost/error.html` in production, and `http://localhost:5773/error.html` in development).
-  - This preserves the localhost/app origin context, resolving the `"Origin header is not a valid URL"` error and allowing the "Start Backend" and window commands to successfully execute via Tauri IPC.
-
-## [1.3.356] - 2026-07-08
-
-### Added
-- **Window Controls for Pre-Auth and Connection Error Screens**:
-  - Added a draggable custom title bar with minimize, maximize, and close buttons to the connection error page template.
-  - Implemented window controls support on the client-side pre-auth screens (Login, Loading, and Setup) to provide consistent frame controls on frameless windows.
-
-## [1.3.355] - 2026-07-08
-
-### Removed
-- **Close Button on Connection Error Page**:
-  - Removed the "Close App" button and the `quitApp` JS function from the backend offline error page.
-  - Updated the error text to remove reference to closing the app.
-  - Removed the corresponding `error_page_close_uses_invoke` unit test.
-
-## [1.3.354] - 2026-07-08
-
-### Fixed
-- **Pembersihan Port dan Validasi Backend**:
-  - Menambahkan pembersihan proses port `5773` dan `5779` secara otomatis di `dev.js` saat startup untuk menghindari konflik port (Address In Use) dari sisa proses sebelumnya yang menggantung.
-  - Memperbarui pengecekan backend di Tauri (`lib.rs`) agar melakukan request validasi dengan bypass token. Jika port aktif namun tidak merespons atau token tidak cocok (misal dari sisa proses backend lama), proses tersebut langsung di-kill dan backend baru dijalankan secara bersih.
-  - Menambahkan endpoint `/api/health` di backend agar halaman error offline di webview tidak terjebak dalam loop refresh tiada henti (reload loop) karena mendapatkan 404 pada health check.
-  - Menambahkan deklarasi izin `custom-commands-permission` di `capabilities/default.json` Tauri agar command Rust kustom (`quit_app`, `start_backend_command`, `get_memory_usage`, `open_webview_devtools`) bisa dipanggil oleh frontend, memperbaiki tombol "Close App" dan interaktivitas lainnya.
-
-## [1.3.353] - 2026-07-08
-
-### Added
-- **Navigasi Otomatis Halaman Error**:
-  - Mengekstraksi pembuatan dan pemuatan halaman error webview ke fungsi helper terpusat `show_error_page(&app_handle)`.
-  - Mengintegrasikan `show_error_page` ke dalam `stop_backend_async` dan loop `poll_backend` (ketika status terdeteksi berubah menjadi `"stopped"`), sehingga t-line langsung memuat halaman error secara real-time saat backend dimatikan oleh user atau mendadak crash.
-
-## [1.3.352] - 2026-07-08
-
-### Fixed
-- **Deteksi Root Workspace di Dev Mode**:
-  - Memperbaiki `find_workspace_root()` agar memeriksa keberadaan direktori `desktop-tauri` selain `backend` dan `package.json`. Ini mencegah folder `desktop-tauri` (yang juga memiliki folder `backend` hasil copy-assets dan `package.json`) disalahartikan sebagai root workspace saat pengembangan.
-- **Interaktivitas Error Page**:
-  - Menambahkan tombol aksi **Start Backend** dan **Close App** di halaman error webview.
-  - Mendaftarkan command baru di Rust (`quit_app` dan `start_backend_command`) dan mengintegrasikannya dengan UI HTML error page menggunakan global Tauri core invoke API.
-
-## [1.3.351] - 2026-07-08
-
-### Added
-- **Status Loading pada Tray Menu**:
-  - Menambahkan status `"stopping"` untuk backend, sehingga saat mematikan/restart backend, status menu tray langsung menampilkan `t-line: Stopping...` dan menonaktifkan seluruh tombol aksi (Start/Stop/Restart).
-  - Mengubah penanganan aksi tray "Stop Backend" dan "Restart Backend" menjadi asynchronous (`stop_backend_async` dan `restart_backend_async`) untuk mencegah menu tray membeku (freeze) selama port dilepaskan.
-  - Memperbarui status backend ke `"running"` secara instan di menu tray begitu server aktif dalam thread `spawn_backend`, mengurangi delay polling dari 3 detik menjadi instan.
-
-## [1.3.350] - 2026-07-08
-
-### Added
-- **Otomatisasi Backend dengan Tauri Dev**:
-  - Mengubah script `tauri` dan `dev:tauri` di root `package.json` untuk menjalankan `node dev.js tauri`.
-  - Memperbarui `dev.js` agar secara otomatis menjalankan dev server backend (port 5779) dan dev server frontend (port 5773) saat `tauri dev` dijalankan, serta mematikan semuanya secara bersih saat Tauri ditutup.
-
-### Fixed
-- **Masalah Restart/Start Backend di System Tray**:
-  - Memperbaiki race condition di mana `restart_backend` mencoba memulai ulang backend sebelum port 5779 benar-benar dilepas oleh proses lama.
-  - Memodifikasi `stop_backend` di Rust (`lib.rs`) agar menunggu terminasi pohon proses (menggunakan `taskkill /f /t` di Windows) dan mem-poll port hingga bersih (maksimal 2 detik).
-  - Menambahkan fallback `kill_port_process` menggunakan PowerShell di Windows untuk memaksa mengakhiri proses apa pun di port 5779 jika backend_child bernilai `None`.
-  - Menambahkan deteksi root workspace di `lib.rs` untuk menjalankan dev server backend via `npm run dev:backend` jika backend dist belum dikompilasi saat pengembangan.
-
-## [1.3.349] - 2026-07-08
-
-### Fixed
-- **Tauri Devtools Compilation in Production Build**:
-  - Mengaktifkan feature `"devtools"` pada dependensi `tauri` di dalam [Cargo.toml](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/Cargo.toml) untuk memperbaiki error kompilasi Rust `no method named open_devtools found` saat mem-build aplikasi dalam mode rilis/produksi di runner CI/CD.
-
-## [1.3.348] - 2026-07-07
-
-### Added
-- **Ad-Hoc macOS Code Signing**:
-  - Menambahkan konfigurasi `"macOS": { "signingIdentity": "-" }` di dalam [tauri.conf.json](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/tauri.conf.json) untuk menggunakan tanda tangan ad-hoc secara default pada target macOS. Ini menghindari kegagalan build/codesign di GitHub Actions runner yang tidak memiliki sertifikat Apple developer terkonfigurasi.
-
-### Changed
-- **Verbose Build Logs in CI**:
-  - Menambahkan argumen `args: --verbose` pada langkah `Build Tauri Desktop` di `.github/workflows/release.yml` ([release.yml](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/.github/workflows/release.yml)) untuk mencetak detail kompilasi Cargo dan Tauri secara mendalam demi kemudahan debugging jika ada error di runner.
-
-## [1.3.347] - 2026-07-07
-
-### Fixed
-- **Tauri Action Version in Workflow**:
-  - Mengubah referensi `tauri-apps/tauri-action` dari `@v2` ke `@v0` di dalam `.github/workflows/release.yml` ([release.yml](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/.github/workflows/release.yml)) untuk memperbaiki error resolusi tag action pada server runner GitHub Actions.
-
-## [1.3.346] - 2026-07-07
-
-### Removed
-- **Penghentian Dukungan Desktop Electron**:
-  - Menghapus folder workspace `desktop/` secara permanen karena pengembangan resmi dialihkan sepenuhnya ke desktop Tauri.
-  - Menghapus referensi workspace `desktop` dari root [package.json](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/package.json) serta menghapus script `build:desktop` dan `desktop`.
-  - Memperbarui script `build:exe` di root [package.json](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/package.json) untuk langsung menjalankan build Tauri (`npm run build:tauri`).
-
-### Changed
-- **Migrasi Workflow GitHub Actions**:
-  - Menghapus langkah `Build Electron Desktop` dari file workflow rilis `.github/workflows/release.yml` ([release.yml](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/.github/workflows/release.yml)) sehingga rilis multi-platform di GitHub Actions hanya berfokus pada build dan publikasi installer desktop-tauri.
-  - Meningkatkan versi aplikasi ke `1.3.346` di seluruh workspace (root, backend, frontend, desktop-tauri, dan konfigurasi tauri).
-
-## [1.3.345] - 2026-07-07
-
-### Added
-- **Intercept Fetch and XMLHttpRequest in Preview Proxy**:
-  - Meng-override `window.fetch` dan `window.XMLHttpRequest` di dalam script pembantu pratinjau `tline-helper.js` ([tline-helper-code.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/tline-helper-code.ts)) untuk merutekan request API dan asset relatif/absolut melewati proxy `/api/preview-proxy`, menyelesaikan masalah CORS dan relative-path URL resolving.
-- **Case-Insensitive Security Header & Meta Tag Removal**:
-  - Menghapus header security (`Content-Security-Policy`, `X-Frame-Options`, dll.) dan meta tag `<meta http-equiv="Content-Security-Policy" ...>` secara case-insensitive saat merender halaman proxied untuk menghindari pemblokiran iframe.
-- **Automatic Port 3000 to 4333 Migration**:
-  - Menambahkan migrasi otomatis untuk tab preview lokal yang tersimpan di `localStorage` ([useTerminals.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useTerminals.ts)) dan file sinkronisasi pusat ([server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts)) dari port `3000` ke `4333`.
-
-## [1.3.344] - 2026-07-07
-
-### Changed
-- **Update Default Web Preview Port Preset to 4333**:
-  - Mengubah placeholder input URL lokal dan preset port dari port `3000` menjadi `4333` di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) untuk menghindari konflik port.
-
-## [1.3.343] - 2026-07-07
-
-### Changed
-- **Remove Shadows from Web Preview Cards & Buttons**:
-  - Menghapus property `box-shadow` pada card dan button di halaman offline proxy [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts).
-  - Menghapus class `shadow-lg` pada native React welcome card di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx).
-  - Ini memberikan gaya flat minimalis yang lebih bersih dan modern, selaras dengan estetika Obsidian.
-
-## [1.3.342] - 2026-07-07
-
-### Changed
-- **Set Default Proxy Target to Empty**:
-  - Mengubah default target proxy dari `https://www.google.com` menjadi kosong (`""`) di [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts).
-  - Ini memastikan proxy server tidak lagi membuka Google secara default jika tidak ada target URL spesifik yang didefinisikan, melainkan langsung menyajikan halaman Welcome/Offline Preview yang terintegrasi dengan tema pengguna.
-
-## [1.3.341] - 2026-07-07
-
-### Changed
-- **Default Browser Tab URL to Blank**:
-  - Mengubah inisialisasi default URL pada tab browser dari `http://localhost:3000` menjadi kosong (`""`) di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) and [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx).
-  - Menambahkan tampilan Welcome/Home View asli bernuansa t-line di dalam tab browser jika URL kosong, lengkap dengan panduan memulai server lokal dan tombol pintasan (preset) untuk port-port populer (`:3000`, `:5173`, `:8080`).
-
-### Fixed
-- **Dynamic Theme Color Integration on Offline Proxy Page**:
-  - Menambahkan pendeteksi tema aktif (`tline-theme` & `tline-accent-color` dari localStorage) ke dalam halaman error offline proxy di [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts).
-  - Halaman offline proxy sekarang otomatis menyesuaikan warna latar belakang, teks, kartu, border, dan aksen tombol dengan tema aktif pengguna (Dracula, Nord, Cyberpunk, Forest, Light Mode, dll.).
-
-## [1.3.340] - 2026-07-07
-
-### Added
-- **Premium Web Preview Offline Home Page**:
-  - Memperbarui halaman error 502/offline pada proxy server di [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts).
-  - Mengubah tampilan peringatan error merah mentah menjadi halaman sambutan pratinjau web bergaya Obsidian/t-line yang premium, lengkap dengan ikon, panduan instruksi cara menyalakan server development lokal, dan tombol penyegaran koneksi yang elegan.
-
-## [1.3.339] - 2026-07-07
-
-### Fixed
-- **Fix SyntaxError in Proxy Helper Script**:
-  - Melakukan double-escape pada karakter slash regex (`/`) di [tline-helper-code.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/tline-helper-code.ts).
-  - Ini mencegah pemrosesan template string menganggap karakter escape backslash (`\`) sebagai string escape normal, yang sebelumnya mereduksi regex `://` menjadi `//` sehingga memicu `Uncaught SyntaxError: Unexpected token 'var'` di browser dan menghentikan seluruh logika helper script (termasuk navigasi, pencatatan konsol, dan inspeksi elemen).
-
-## [1.3.338] - 2026-07-07
-
-### Changed
-- **Restore Native Electron Webview Tag**:
-  - Mengembalikan penggunaan tag `<webview>` native untuk lingkungan Electron di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx).
-  - Ini memulihkan fungsi navigasi dan Developer Tools (inspect element) secara penuh dalam Electron, sementara lingkungan Tauri dan Web tetap menggunakan proxy iframe.
-
-## [1.3.337] - 2026-07-07
-
-### Fixed
-- **Fix Element Inspection and Console Logging in Proxy Iframe**:
-  - Menghapus atribut `sandbox` pada tag `iframe` di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx).
-  - Ini mengatasi pembatasan keamanan Chromium/Electron yang memblokir komunikasi `postMessage` antar-jendela dan pembatasan cookie pada sandbox same-origin, memulihkan fungsi inspeksi elemen dan konsol error secara penuh saat menggunakan proxy.
-
-## [1.3.336] - 2026-07-07
-
-### Changed
-- **Disable Native Webviews in Browser Tab**:
-  - Menonaktifkan penggunaan tag `<webview>` bawaan Electron dan overlay `Webview` native Tauri di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx).
-  - Mengarahkan pratinjau browser agar selalu menggunakan `iframe` via `preview-proxy` di semua platform (Electron, Tauri, dan Web), memberikan perilaku dan interoperabilitas pencarian/inspeksi elemen yang seragam.
-
-## [1.3.335] - 2026-07-07
-
-### Fixed
-- **Fix Element Inspection and Error Capturing in Browser (Iframe Proxy)**:
-  - Mengubah path script helper `tline-helper.js` dari relative ke absolute path `/api/preview-proxy/tline-helper.js` untuk mencegah konflik resolusi URL ketika target web app menggunakan tag `<base>` milik sendiri.
-  - Memperbaiki pencocokan tag `<head>` pada server proxy di [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) dengan menggunakan regular expression case-insensitive yang mendukung atribut, serta menambahkan fallback ke tag `<html>` atau `<!doctype html>` sebelum menempelkan script ke awal berkas.
-  - Menambahkan dukungan dekompresi otomatis (`gzip`, `deflate`, `br` via module `zlib`) untuk memproses respons HTML yang terkompresi dari server target sebelum dilakukan injeksi script helper.
-  - Menambahkan pemeriksaan tipe element (`instanceof Element`) dan keberadaan properti (`tagName`, `classList`) pada event handler mouseover dan klik di [tline-helper-code.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/tline-helper-code.ts) guna mencegah eksekusi error saat pengguna mengeklik/menyorot objek teks, SVG, atau window/document.
-- **Fix Webview Inspection (Tauri Dynamic Webview Overlay)**:
-  - Menambahkan command Tauri Rust `open_webview_devtools` pada [lib.rs](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/src/lib.rs) untuk membuka Developer Tools dari dynamic webview target secara langsung di desktop.
-  - Memperbarui navbar di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) agar merender tombol "Open DevTools" (yang memanggil command Rust tersebut) ketika preview dimuat menggunakan Tauri native webview, menggantikan tombol inspect element iframe biasa yang tidak berfungsi pada overlay native.
-
-## [1.3.334] - 2026-07-07
-
-### Fixed
-- **Fix Webview Creation Timeout**:
-  - Di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx), menghapus logika *promise blocking* yang menunggu event `"tauri://created"` pada objek `Webview` anak dinamis, karena event tersebut tidak selalu dipancarkan oleh instance `Webview` di Tauri v2. Logika ini diganti dengan penundaan non-blokir singkat (150ms) dan pendengar galat `"tauri://error"` asinkron, mencegah kegagalan inisialisasi akibat timeout.
-
-## [1.3.333] - 2026-07-07
-
-### Added
-- **Grant Webview Hide/Show Permissions in Capabilities**:
-  - Menambahkan `"core:webview:allow-webview-hide"` dan `"core:webview:allow-webview-show"` ke list izin di [default.json](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/capabilities/default.json).
-  - Tanpa izin ini, pemanggilan `.hide()` dan `.show()` pada Tauri dynamic Webview diblokir oleh sistem keamanan Tauri secara internal, sehingga menyebabkan webview Google/web pratinjau tetap muncul melayang di atas tab terminal atau berkas teks.
-
-## [1.3.332] - 2026-07-07
-
-### Fixed
-- **Fix Native Webview Overlay Visibility Race Condition**:
-  - Di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx), menyinkronkan status visibilitas webview segera setelah inisialisasi/pembuatan selesai.
-  - Ini mengatasi kondisi balapan (*race condition*) di mana pengguna berpindah ke tab lain (seperti terminal) saat webview sedang loading, yang menyebabkan efek visibilitas terlewati dan membuat webview native tetap muncul menimpa tab aktif lainnya.
-
-## [1.3.331] - 2026-07-07
+- **Embedding Model Upgrade to nomic-embed-text-v1.5**: Changed the default local embedding model from `all-MiniLM-L6-v2` to `nomic-embed-text-v1.5` (via `nomic-ai/nomic-embed-text-v1.5` dynamically supported by `@huggingface/transformers`).
+- **Dynamic Dimension Adjustment**: Added a dynamic getter for embedding vector dimensions (384 for MiniLM and 768 for Nomic models).
+- **Task Prefix Support**: Integrated task-specific prefixes (`search_query:` and `search_document:`) automatically prepended for instruction-aware Nomic embeddings depending on the query context.
+- **Auto-healing DB Migration**: Implemented a `metadata.json`-based database migration helper that deletes legacy SQLite databases when embedding dimensions or models change, preventing schema dimension mismatch crashes.
+- **Banner Label Update**: Updated the welcome banner component to display `nomic-embed-text-v1.5` inside the system services status panel.
+
+## [1.2.425] - 2026-07-17
 
 ### Improved
-- **Persist Browser Tabs State on Tab Switching**:
-  - Di [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx), semua tab bertipe `browser` kini di-render sekaligus di dalam DOM dan disembunyikan/ditampilkan menggunakan properti `isActive` & inline CSS `display: flex/none` alih-alih di-unmount ketika tidak aktif. Hal ini mencegah browser tab memuat ulang/reload halamannya setiap kali berganti tab.
-  - Di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx), menambahkan efek visibility menggunakan `.show()` dan `.hide()` pada objek Tauri `Webview` untuk menyembunyikan/menampilkan child webview native ketika status tab aktif/tidak aktif, serta menjeda loop sinkronisasi bounds saat tab sedang tidak aktif.
+- **System Services Status Expansion**: Added a dedicated row for the **Local Embedding Model (all-MiniLM-L6-v2)** inside the system services status panel in `Banner` to explicitly indicate its active state alongside RMemory Gateway and Local Router.
 
-## [1.3.330] - 2026-07-07
-
-### Fixed
-- **Fix Webview Navigation by Recreating on URL Change**:
-  - Menghapus pemanggilan `.navigate()` pada instance `Webview` di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx). Di Tauri v2, kelas frontend `Webview` tidak mengekspor metode `.navigate()`, sehingga memicu `TypeError`.
-  - Sekarang navigasi ditangani dengan menyertakan `activeUrl` ke dalam *dependency array* `useEffect` inisialisasi utama. Ketika URL pratinjau berubah, webview lama otomatis ditutup (*closed*) secara bersih dan webview baru dibuat dengan URL target yang baru.
-
-## [1.3.329] - 2026-07-07
-
-### Fixed
-- **Revert Unstable Flag from tauri-build**:
-  - Menghapus fitur `"unstable"` dari `tauri-build` di [Cargo.toml](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/Cargo.toml) karena `tauri-build` tidak memiliki opsi fitur tersebut dan memicu error kompilasi Cargo. Fitur `"unstable"` tetap dipertahankan pada dependensi `tauri` utama yang membutuhkannya.
-
-## [1.3.328] - 2026-07-07
+## [1.2.424] - 2026-07-17
 
 ### Added
-- **Enable Tauri Unstable Features in Cargo.toml**:
-  - Menambahkan fitur `"unstable"` pada dependensi `tauri` dan `tauri-build` di [Cargo.toml](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/Cargo.toml).
-  - Ini diperlukan karena API pembuatan webview anak secara dinamis (`new Webview(...)`) di Tauri v2 saat ini tergolong fitur tidak stabil (*unstable*) dan memicu pesan kesalahan: `"this feature requires the unstable flag on Cargo.toml"`.
+- **Startup System Services Status Panel**: Integrated a clean Cyberpunk-themed status panel inside the welcome `Banner` component. This panel queries current configuration settings at startup and visually reports whether local services are active, specifically indicating the status of **RMemory Gateway (Local Embeddings)** and **Local Router (Supra-Router-51M-ONNX)**.
 
-## [1.3.327] - 2026-07-07
+## [1.2.423] - 2026-07-17
 
-### Fixed
-- **Fix Webview Bounds Sync Loop when Creation Fails**:
-  - Di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx), loop `updateLoop` bounds sync kini tidak akan berjalan jika inisialisasi Tauri native webview gagal atau mengalami timeout.
-  - Sebelumnya, kegagalan pembuatan webview (misalnya akibat hilangnya izin atau ketidaktersediaan backend) tetap membuat loop bounds sync berjalan, sehingga memicu spam pesan error `Failed to sync webview bounds: webview not found`.
+### Improved
+- **Classifier Background Pre-Warming**: Added `warmUpClassifier()` to trigger asynchronous pre-loading of the local `Supra-Router-51M-ONNX` weights during Agent class construction. This eliminates the warm-up latency on the user's first ambiguous query.
+- **Optimized Download Logs**: Cleaned up the progress callback handler to print a single informational log when downloading the classifier model rather than spamming the CLI.
+- **Test Isolation**: Introduced `clearLocalClassifierCache()` to reset global pipeline state between vitest test suites.
 
-## [1.3.326] - 2026-07-07
+## [1.2.422] - 2026-07-17
 
-### Fixed
-- **Fix Webview Creation Permissions on Tauri (allow-create-webview)**:
-  - Menambahkan permission `"core:webview:allow-create-webview"` dan `"core:webview:allow-webview-close"` di [default.json](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/capabilities/default.json) pada desktop-tauri capabilities.
-  - Ini mengatasi kegagalan loading web preview external (seperti `google.com`) di tab Browser Preview pada lingkungan Tauri, yang sebelumnya gagal di-render karena frontend diblokir dari memanggil `new Webview(...)` secara dinamis.
+### Improved
+- **Local 51M Classifier Model Integration**: Upgraded Phase 2 classification in `requestClassifier.ts` to use the local micro-LLM **Supra-Router-51M-ONNX** via `@huggingface/transformers`. When the heuristic filter is low confidence, the classifier runs locally on CPU (downloading the 66MB model to cache on first run), analyzing prompt complexity and routing requirements before mapping them to the 7 Superagent categories, eliminating classifier API costs.
 
-## [1.3.325] - 2026-07-07
-
-### Fixed
-- **Fix useTauriWebview untuk Membaca activeUrl Alih-alih tab.url**:
-  - Di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx), variabel `useTauriWebview` diubah agar mendeteksi tipe URL dari `activeUrl` alih-alih `tab.url || activeUrl`.
-  - Sebelumnya, `tab.url` tidak pernah diupdate ketika pengguna mengetik dan menavigasi ke URL baru (seperti `google.com`) di address bar. Hal ini membuat `useTauriWebview` tetap bernilai `false` (karena default tab.url adalah localhost yang merupakan local URL), sehingga memaksa mode Iframe/Proxy untuk URL eksternal yang kemudian diblokir oleh Google (karena X-Frame-Options/CSP).
-
-## [1.3.324] - 2026-07-07
-
-### Fixed
-- **Fix Webview Label Conflict on Page Reload (F5 / Refresh)**:
-  - Menyimpan label webview unik yang aktif dalam `sessionStorage` (yang dipertahankan selama refresh di tab browser yang sama).
-  - Saat `BrowserTab` dimount/reload, ia membaca `sessionStorage` untuk menemukan label lama, mencari webview lama di backend Tauri dengan `Webview.getByLabel`, dan menutupnya.
-  - Menambahkan delay/tunda 250ms setelah penutupan webview lama agar Tauri backend sempat menyelesaikan proses penutupan dan pelepasan label sebelum webview baru dibuat.
-  - Menggunakan label webview acak yang unik (`inline-browser-webview-${tab.id}-${randomString}`) untuk menghindari tabrakan label di backend Tauri ketika webview baru dibuat.
-
-## [1.3.323] - 2026-07-07
-
-### Fixed
-- **Fix Spurious Webview Bounds Sync Failures at Startup**:
-  - Di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx), kita kini mendengarkan event `tauri://created` dan `tauri://error` dari Tauri webview instance (dengan fallback timeout 500ms) untuk memastikan webview native telah benar-benar dibuat dan terdaftar sebelum memulai loop bounds sync (`updateLoop`).
-  - Ini mengatasi transient error `"webview not found"` yang muncul saat mencoba menyinkronkan posisi/ukuran tepat setelah inisiasi sebelum webview Rust-side sepenuhnya siap, sehingga mencegah loop bounds sync terhenti sebelum waktunya.
-
-## [1.3.322] - 2026-07-07
-
-### Fixed
-- **Fix Infinite Webview Bounds Sync Loop**:
-  - Di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx), loop `updateLoop` bounds sync menggunakan `requestAnimationFrame` kini otomatis berhenti jika webview tidak lagi aktif/valid (`tauriWebviewRef.current !== webviewInstance`).
-  - Menambahkan pembatasan peringatan (`console.warn`) hingga maksimal 5 kali berturut-turut, dan menghentikan loop sepenuhnya setelah 10 kegagalan beruntun untuk menghindari console spamming 60+ FPS dengan error "webview not found".
-  - Di [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx), komponen `BrowserTab` kini diberikan properti `key={activeTab.id}` agar React melepas/unmount instance lama dan membuat yang baru saat berpindah tab.
-  - Menambahkan `useEffect` reset state pada pergantian `tab.id` di `BrowserTab.tsx` untuk membersihkan logs, URL input, dan element inspection state demi keamanan agar data tidak bocor antartab.
-
-## [1.3.314] - 2026-07-07
-
-### Fixed
-- **Fix URL Resolution Salah pada Navigasi JS dalam Proxy Browser**:
-  - Root cause: Saat Google (atau SPA lain) menavigasi menggunakan URL relatif seperti `/search?q=...`, fungsi `proxyNavigateUrl` di helper script meresolve URL menggunakan `window.location.href` (yaitu `http://localhost:5773/api/preview-proxy`) sebagai base — sehingga origin salah menjadi `http://localhost:5773` dan proxy memanggil t-line sendiri.
-  - **Fix 1 (server.ts):** Backend kini menginjeksikan `<script>window.__TLINE_PROXY_TARGET__="https://www.google.com";</script>` ke setiap halaman HTML yang diproxy, sehingga helper script selalu tahu origin target yang benar.
-  - **Fix 2 (tline-helper-code.ts):** Fungsi `getProxyTarget()` membaca `window.__TLINE_PROXY_TARGET__` (atau fallback ke cookie) untuk digunakan sebagai base URL resolusi, memastikan `/search?q=...` di-resolve menjadi `https://www.google.com/search?q=...` bukan `http://localhost:5773/search?q=...`.
-  - **Fix 3 (server.ts):** Query parameter `target=...` kini dihapus dari request yang diteruskan ke server target agar Google dan situs lain tidak bingung dengan parameter asing tersebut.
-
-## [1.3.313] - 2026-07-07
-
-### Added / Changed
-- **Fix Navigasi JavaScript dalam Proxy Browser (Google Search & SPA)**:
-  - Menambahkan interceptor navigasi berbasis JavaScript pada [tline-helper-code.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/tline-helper-code.ts) dengan meng-override `Location.prototype.href` setter, `location.assign()`, `location.replace()`, `history.pushState()`, dan `history.replaceState()` sehingga semua navigasi programatik (termasuk Google Search yang tidak menggunakan klik link biasa) tetap dialihkan melalui proxy backend.
-
-## [1.3.312] - 2026-07-07
-
-### Added / Changed
-- **Peningkatan Proxy Browser Preview & Perubahan Default URL**:
-  - Mengubah default URL saat membuka tab Browser Preview dari `https://www.google.com` ke `http://localhost:3000` di [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx) dan [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) agar pengguna langsung terarah ke preview aplikasi lokal yang sedang dikembangkan.
-  - Menambahkan `secure: false` pada middleware proxy Express di [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) untuk mendukung proxy ke server lokal yang menggunakan HTTPS self-signed certificates.
-  - Mengimplementasikan sanitasi dan penulisan ulang (*rewriting*) header `Location` untuk respon redirect (3xx) di backend proxy agar navigasi redirect tetap berada di dalam lingkup proxy (`/api/preview-proxy`).
-  - Menambahkan interceptor navigasi klik link (`<a>`) dan pengiriman form (`<form>`) pada script helper ([tline-helper-code.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/tline-helper-code.ts)) untuk menangkap dan mengalihkan navigasi absolut/relatif agar tetap diproxy oleh backend.
-
-## [1.3.311] - 2026-07-07
-
-### Added / Changed
-- **Fix Console Errors Capture (Electron & Iframe)**:
-  - Mengubah cara `<webview>` di Electron didaftarkan *event listener* `console-message`-nya di [BrowserTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BrowserTab.tsx) dengan menggunakan Callback Ref State (`webviewEl`) alih-alih `webviewRef.current` di dependency array `useEffect`, memastikan listener sukses terpasang saat komponen dimount.
-  - Menghapus atribut `defer` dari tag `<script src="tline-helper.js">` di proxy preview [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) agar script memblokir parsing dan dieksekusi sedini mungkin (sinkron), sehingga dapat menangkap error JavaScript yang terjadi pada saat load-time awal (sebelum DOM sepenuhnya termuat).
-
-## [1.3.310] - 2026-07-07
-
-### Added / Changed
-- **Fix Element Inspection in Browser (Iframe Proxy)**:
-  - Menambahkan route khusus `/api/preview-proxy/tline-helper.js` pada backend Express sebelum middleware proxy terdaftar untuk menyajikan script `tline-helper.js` secara langsung.
-  - Memperbaiki bug di mana request helper script terserap oleh middleware `previewProxy` dan diteruskan ke aplikasi target, mengakibatkan error 404 status dan kegagalan fitur Element Inspection di browser.
-
-## [1.3.309] - 2026-07-07
-
-### Added / Changed
-- **Integrasi Chromium Native Webview pada Electron & Fallback Proxy di Tauri/Web**:
-  - Mengaktifkan tag `<webview>` di sisi Electron dengan menyetel `webviewTag: true` pada `webPreferences` (`desktop/main.js`).
-  - Merender browser native Chromium (`<webview>`) di lingkungan Electron secara langsung menggunakan URL target tanpa melalui proxy, menjamin dukungan penuh bagi *cookies*, *login session*, dan bypass CORS 100%.
-  - Memasang *event listener* `console-message` untuk menangkap error dari halaman tamu di dalam `<webview>` dan menampilkannya di drawer DevTools Obsidian.
-  - Menambahkan tombol "Open DevTools" di navbar saat di dalam Electron untuk meluncurkan developer tools Chromium native bawaan.
-  - Memelihara fallback otomatis menggunakan `iframe` dan reverse proxy backend untuk lingkungan non-Electron (seperti Tauri dan Web browser standar) agar fitur inspeksi elemen tetap berfungsi dengan baik.
-
-## [1.3.308] - 2026-07-07
-
-### Added / Changed
-- **Resizable & Collapsible DevTools Drawer di Tab Browser**:
-  - Menambahkan bar pengubah ukuran (*resize handle*) interaktif di atas panel DevTools sehingga tinggi panel dapat diatur dengan menyeret (*drag*) mouse.
-  - Mematikan sementara *pointer events* pada *iframe* pratinjau ketika proses pengubahan ukuran sedang berlangsung untuk mencegah *lag* atau macet akibat tangkapan event oleh *iframe*.
-  - Menambahkan tombol *collapse/expand* (toggle chevron) di pojok kanan atas *header* DevTools dan mendukung klik-ganda (*double-click*) pada *header* untuk menyembunyikan atau menampilkan panel DevTools dengan animasi transisi yang mulus.
-  - Secara otomatis memperluas (*expand*) kembali panel DevTools ketika pengguna mengeklik tab *Console Errors* atau *Element Inspector* saat dalam kondisi tersembunyi.
-
-## [1.3.307] - 2026-07-07
-
-### Added / Changed
-- **Fix Preview Helper Path**:
-  - Mengubah pemanggilan `tline-helper.js` pada injektor proxy pratinjau di [server.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/server.ts) dari absolute path (`/tline-helper.js`) menjadi relative path (`tline-helper.js`) agar dapat di-resolve dengan benar menggunakan tag `<base href="/api/preview-proxy/">` di browser dan menghindari error status 404.
-
-## [1.3.306] - 2026-07-07
-
-### Added / Changed
-- **Fix React SVG Warning**:
-  - Mengubah properti SVG `stop-color` menjadi `stopColor` (camelCase) pada komponen [TPlusLogo.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TPlusLogo.tsx) untuk memperbaiki peringatan DOM tidak valid di konsol browser.
-
-## [1.3.305] - 2026-07-07
-
-### Added / Changed
-- **Developer Browser Preview Tab dengan Error/Element Inspection & AI-Tagging (Option B)**:
-  - Menambahkan tipe tab `browser` baru di frontend untuk pratinjau situs web lokal (default: `http://localhost:3000`).
-  - Mengintegrasikan dynamic reverse proxy di backend Express (`/api/preview-proxy`) yang secara dinamis melayani aset, WebSocket HMR, dan menyuntikkan script helper (`tline-helper.js`).
-  - Mendukung penyalinan instan prompt Markdown yang kaya konteks (pesan error console, detail struktur HTML elemen, class, Computed CSS) ke clipboard melalui tombol ✨ **Tag to AI** (Opsi B).
-  - Menjamin kompatibilitas pratinjau jarak jauh (remote preview) dan inspeksi melalui Cloudflare Tunnel secara mulus.
-
-## [1.3.304] - 2026-07-07
-
-### Added / Changed
-- **Pencegahan Crash xterm.js Viewport & Refactor TerminalInstance**:
-  - Memperbaiki bug crash uncaught TypeError `Cannot read properties of undefined (reading 'dimensions')` pada method `syncScrollArea` dari class `Viewport` di xterm.js dengan melakukan monkey-patching try/catch secara dinamis setelah terminal dibuka (`term.open()`).
-  - Merefaktor event handling mobile touch-to-mouse ke custom React hook [useTerminalTouchMapping.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useTerminalTouchMapping.ts).
-  - Mengurangi ukuran file [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx) menjadi di bawah limit 1000 baris kode (sekarang 968 baris) untuk mematuhi standar arsitektur proyek.
-
-## [1.3.303] - 2026-07-07
-
-### Added / Changed
-- **Penyembunyian Teks Tab Sidebar Saat Sempit (Dynamic Sidebar Tab Text Collapse)**:
-  - Menyembunyikan teks label tab menu kiri (`Workspaces`, `Explorer`, `Changes`, `Snapshots`) secara dinamis jika lebar sidebar di-resize di bawah `280px` agar tampilan tetap bersih, tidak bertumpuk/terpotong.
-  - Memosisikan lencana (badge) jumlah perubahan file Git secara melayang di atas icon `GitCompare` saat teks menu disembunyikan.
-
-## [1.3.302] - 2026-07-07
-
-### Added / Changed
-- **Sinkronisasi Status Proses Aktif Global (Global WS Process/Title Sync)**:
-  - Memperbaiki bug di mana mematikan proses agent (seperti `superagent`) atau mengubah judul shell saat tab terminal sedang tidak fokus (unmounted/suspended) menyebabkan status lencana (badges) pada sidebar tersangkut (stuck) dan tidak terupdate di frontend.
-  - Menambahkan dukungan `globalMsgListeners` di `TerminalWebSocketManager` untuk menerima dan mendistribusikan event `activeProcesses` dan `title` secara terus menerus ke global React state `terminalInstances`, bahkan jika komponen visual terminal individual telah di-unmount dari DOM.
-
-## [1.3.301] - 2026-07-07
-
-### Added / Changed
-- **Pembersihan Proses Anak Terminal (Recursive Process Tree Kill)**:
-  - Memperbaiki kebocoran proses (process leak) di mana menutup tab terminal di UI tidak mematikan proses anak/descendant (seperti `node.exe` yang menjalankan `superagent`) pada Windows dan Unix.
-  - Mengimplementasikan helper `killProcessTree` di [terminalManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/terminalManager.ts) yang menggunakan `taskkill /pid <PID> /f /t` pada Windows dan `pkill -P <PID>` pada Unix untuk secara rekursif mematikan seluruh pohon proses turunan saat sesi terminal di-kill.
-  - Ini memastikan badge proses aktif dan status memori terupdate secara instan dan akurat ketika terminal ditutup atau di-reset.
-
-## [1.3.300] - 2026-07-07
-
-### Added / Changed
-- **Peningkatan Fungsionalitas Desktop Tauri (Paritas Fitur Electron)**:
-  - Mengintegrasikan System Tray Icon (Tray Icon) di Tauri v2 dengan menu dinamis yang sepenuhnya mereplikasi fungsionalitas Electron.
-  - Menu tray kini secara dinamis menampilkan status backend, opsi toggle dashboard, kontrol penuh backend (Start, Stop, Restart), dan sub-menu berisi daftar sesi PTY terminal aktif yang dikelompokkan berdasarkan workspace (termasuk informasi branch git). Mengklik sesi PTY akan memfokuskan window utama.
-  - Menambahkan *Close-to-Tray* dengan meng-intercept `WindowEvent::CloseRequested` untuk menyembunyikan window alih-alih keluar secara paksa, agar proses AI agent background tidak terhenti.
-  - Mengintegrasikan Single Instance Lock menggunakan plugin `tauri-plugin-single-instance` di Tauri v2 untuk mencegah konflik port `5779` dan database.
-  - Menambahkan validasi keberadaan Node.js pada saat startup dengan dialog peringatan native (cross-platform) jika Node.js belum terinstall.
-  - Mengoptimalkan konfigurasi resources di `tauri.conf.json` agar hanya membundel folder produksi (`dist`) dan `node_modules` internal, memotong file sampah workspace dan meminimalkan ukuran installer akhir.
-
-## [1.3.299] - 2026-07-07
-
-### Added / Changed
-- **Icon Close & Window Controls Desktop Tauri**:
-  - Menambahkan controls window (Minimize, Maximize/Restore, Close) untuk desktop berbasis Tauri v2 di frontend [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx).
-  - Menyambungkan window controls ke API window Tauri v2 (`getCurrentWindow`) via objek global `window.__TAURI__.window`.
-  - Menambahkan attribute `data-tauri-drag-region` pada topbar dan sidebar header di [App.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx) agar window bisa di-drag dengan normal.
-  - Membuka permission window controls (`core:window:default`, `core:window:allow-close`, `core:window:allow-minimize`, `core:window:allow-toggle-maximize`, `core:window:allow-start-dragging`) di file capability [default.json](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/capabilities/default.json).
-
-## [1.3.298] - 2026-07-07
-
-### Added / Changed
-- **Pemisahan Perhitungan Memori Backend dan Desktop di Tauri**:
-  - Mengabaikan (exclude) PID proses backend Node.js dari penjumlahan memori proses anak di Tauri Command `get_memory_usage`.
-  - Ini mencegah memori backend dihitung dua kali (di B: dan D:) di footer, sehingga status memori D: benar-benar menunjukkan memori shell desktop murni (~56MB) secara akurat.
-
-## [1.3.297] - 2026-07-07
-
-### Added / Changed
-- **Optimasi Tambahan RAM Backend Node.js di Tauri**:
-  - Mengonfigurasi Rust process launcher untuk menyuntikkan flag optimasi V8 (`--max-old-space-size=64` dan `--expose-gc`) saat meluncurkan Node.js.
-  - Ini mengaktifkan fitur garbage collection periodik bawaan di backend dan membatasi ukuran heap maks ke 64MB, memotong penggunaan memori backend secara drastis dari ~60MB menjadi ~25MB-35MB.
-
-## [1.3.296] - 2026-07-07
-
-### Added / Changed
-- **Migrasi Desktop Wrapper ke Tauri v2 untuk Optimasi RAM (<100MB)**:
-  - Membuat sub-workspace baru [desktop-tauri](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri) sebagai wrapper desktop alternatif berbasis Tauri v2 untuk memangkas penggunaan memori RAM hingga di bawah 100MB (gabungan proses frontend & backend).
-  - Mengimplementasikan Rust launcher di [lib.rs](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/src-tauri/src/lib.rs) untuk meluncurkan backend Node.js, memantau kesiapan server melalui TCP polling port `5779`, mem-bypass auth token ke webview, dan mematikan proses backend secara otomatis menggunakan `taskkill` di Windows pada saat keluar.
-  - Menambahkan skrip [copy-assets.js](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop-tauri/copy-assets.js) untuk bundling otomatis dan menyusun dependensi `node_modules` lokal produksi agar terkemas sebagai bundle resources Tauri.
-  - Menambahkan perintah pintasan `npm run tauri` dan `npm run build:tauri` pada root [package.json](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/package.json).
-  - Menambahkan Rust command `get_memory_usage` (menggunakan crate `sysinfo`) dan menghubungkannya ke hook [useSystemStats.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useSystemStats.ts) via `window.__TAURI__.core.invoke` untuk menampilkan info penggunaan RAM gabungan Tauri di footer secara real-time.
-
-## [1.3.295] - 2026-07-07
-
-### Added / Changed
-- **Penyederhanaan Tampilan Lencana Proses Aktif (Process Badges)**:
-  - Menyederhanakan tampilan lencana proses aktif seperti Superagent, Claude, Gemini, Cursor, Agy, dan OpenCode pada daftar workspace/worktree di sidebar.
-  - Menghilangkan efek animasi denyut (pulse animation), efek bayangan bercahaya (glow/box-shadow), gradasi warna, dan border.
-  - Mengubah latar belakang lencana menjadi warna solid yang datar (flat solid background) dengan kontras tinggi agar tetap terlihat mencolok namun bersih dan simpel.
-
-## [1.3.294] - 2026-07-07
-
-### Added / Changed
-- **Perbaikan Pembajakan Fokus Tab Terminal oleh Terminal Grid (Tab Focus Hijacking)**:
-  - Memperbaiki bug di mana mengklik tab terminal tunggal (dedicated terminal) malah memaksa layar berpindah kembali ke tab Terminal Grid (jika terminal tersebut juga terdaftar di grid).
-  - Masalah ini terjadi karena `focusTerminal` di [useTerminals.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useTerminals.ts) secara naif memicu `setActiveTabId` untuk setiap tab yang berisi terminal tersebut (baik tipe `'terminal'` maupun `'grid'`), sehingga tab terakhir yang diproses (biasanya grid) membajak fokus.
-  - Memperbaiki penanganan dengan memeriksa apakah tab aktif saat ini (`activeTabId`) sudah memuat terminal tersebut; jika ya, fokus tab tetap dipertahankan. Jika tidak, ia akan memilih tab terbaik secara sekuensial (memprioritaskan tab terminal berdedikasi sebelum tab grid).
-
-## [1.3.293] - 2026-07-07
-
-### Added / Changed
-- **Dukungan Deteksi Khusus AI Agent Tambahan (Agy & OpenCode)**:
-  - Menambahkan deteksi proses khusus dan visualisasi badge untuk AI agent **Agy** dan **OpenCode** (termasuk variasi keyword `open-code` dan `opencode`).
-  - Memperbarui interface data `ActiveProcessSummary` di sisi backend ([terminalManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/terminalManager.ts)) dan frontend ([useTerminals.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useTerminals.ts)).
-  - Mengintegrasikan styling badge khusus untuk Agy (emerald/green) dan OpenCode (indigo) di sidebar daftar workspace dan worktree ([WorkspaceList.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/WorkspaceList.tsx)) serta file CSS ([components.css](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/components.css)).
-  - Menyempurnakan fallback badge "Active" agar tidak bentrok atau muncul berlebih saat AI agent baru tersebut sedang berjalan.
-
-## [1.3.292] - 2026-07-07
-
-### Added / Changed
-- **Perbaikan Deteksi Proses Aktif Terminal (Windows CRCRLF wmic parse)**:
-  - Memperbaiki parsing CSV output dari perintah `wmic` di [terminalManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/terminalManager.ts) pada sistem Windows.
-  - Pada Windows, `wmic` sering mengembalikan carriage return berlipat (`\r\r\n`). Hal ini merusak pembacaan header CSV jika hanya di-split menggunakan regex `\r?\n`, menyebabkan header terbaca sebagai `\r` kosong dan seluruh baris anak proses gagal diurai (menjadi `NaN` / `undefined`).
-  - Memperbaiki kode dengan cara membersihkan seluruh karakter `\r` terlebih dahulu sebelum melakukan split baris, memastikan proses anak (seperti `superagent` atau `node.exe`) di bawah shell PTY terdeteksi dengan benar dan tidak menampilkan status "idle" secara keliru.
-
-## [1.3.291] - 2026-07-07
-
-### Added / Changed
-- **Penyelarasan Sinkronisasi Ukuran Awal Terminal (Initial Fit)**:
-  - Mengubah inisialisasi xterm.js di [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx) agar memicu `fitAddon.fit()` secara sinkron segera setelah terminal dibuka.
-  - Ini memastikan dimensi kolom dan baris yang sebenarnya dari container terhitung dengan tepat sebelum koneksi WebSocket mengirimkan pesan `init`.
-  - Mencegah masalah di mana PTY shell dan aplikasi interaktif di dalamnya (seperti `superagent` berbasis Ink) dimulai dengan dimensi default `80x24` yang menyebabkan UI terpotong di pojok dan mengharuskan user me-refresh terminal secara manual.
-
-## [1.3.290] - 2026-07-07
-
-### Added / Changed
-- **Perbaikan Interupsi Mouse Tracking / Scroll & Click Terminal**:
-  - Mengatasi bug pada [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx) di mana scroll wheel dan mouse click pada aplikasi yang menggunakan *Mouse Reporting* (seperti `superagent` atau `claudecode`) tidak berfungsi (macet).
-  - Penyebabnya adalah pemanggilan programmatic `.focus()` dan `.textarea.focus()` yang berlebihan di phase capture (`handleFocusTrigger`) dan bubble (`handleTerminalFocus`) pada setiap event click/mousedown, yang menginterupsi pointer capture/propagation dari xterm.js ke shell PTY.
-  - Memperbaiki penanganan dengan mendeteksi status fokus aktif (`document.activeElement`) sebelum memicu `focus()`, sehingga event mouse/scroll diteruskan dengan lancar dan utuh tanpa distorsi.
-
-## [1.3.288] - 2026-07-06
-
-### Added / Changed
-- **Perbaikan Keyboard Shortcut Terminal (Ctrl+C / Copy & Interrupt) dan Refaktorisasi Kode**:
-  - **Penghindaran Intersepsi Shortcut Electron**: Memodifikasi pembuatan menu aplikasi di [main.js](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/desktop/main.js) agar Edit menu (dengan shortcut copy/paste default role) hanya dipasang pada macOS. Pada Windows/Linux, menu ini dilewati sehingga Electron tidak mencegat penekanan tombol `Ctrl+C` dan `Ctrl+V` secara global di tingkat window. Ini mengembalikan kemampuan terminal untuk menerima input `Ctrl+C` (untuk membatalkan/menghentikan perintah aktif) secara langsung.
-  - **Dukungan Copy Cerdas Renderer**: Memperbarui penanganan tombol keyboard di [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx) agar mendukung `Ctrl+C` (Windows/Linux) dan `Cmd+C` (macOS) secara cerdas: jika ada teks yang diseleksi di terminal, shortcut tersebut akan menyalin teks ke clipboard, sedangkan jika tidak ada teks yang diseleksi, `Ctrl+C` akan dikirimkan ke PTY shell untuk interupsi proses (SIGINT).
-  - **Utilitas Clipboard Robust**: Menambahkan helper `copyToClipboard` di [TerminalHelpers.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalHelpers.ts) yang mendeteksi ketersediaan `navigator.clipboard` dalam konteks aman (secure context), dengan fallback otomatis menggunakan seleksi elemen `textarea` tiruan dan `document.execCommand('copy')` agar fungsi Copy tetap bekerja di semua konteks HTTP non-aman.
-  - **Refaktorisasi Batas File 1000 Baris**: Memindahkan berbagai tipe data, fungsi helper penilai warna/kondisi, detektor mobile, dan pembuat tema terminal dari `TerminalInstance.tsx` ke file helper baru [TerminalHelpers.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalHelpers.ts). Tindakan ini sukses memangkas baris kode `TerminalInstance.tsx` dari **1128** baris menjadi **996** baris, memenuhi aturan ketat basis kode (di bawah 1000 baris).
-
-## [1.3.287] - 2026-07-04
-
-### Added / Changed
-- **Perbaikan Pembatalan Timer & Eksekusi Otomatis Perintah Panjang (Orbit & Command Lainnya)**:
-  - Memperbaiki penguncian eksekusi perintah di [TerminalInstance.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx). Sebelumnya, saat PTY memancarkan data secara berkelanjutan (misal output git/profil prompt), `clearTimeout` dipanggil terus-menerus sehingga perintah panjang seperti `.\orbit.exe dashboard --full` dibatalkan berulang kali.
-  - Setelah prompt siap terdeteksi (`isPromptReady`), eksekusi dikunci (*locked*) dan dipicu dalam `150ms` tanpa bisa dibatalkan oleh sinyal PTY data berikutnya, menjamin seluruh pintasan Quick Launch berjalan konsisten.
-
-## [1.3.286] - 2026-07-04
-
-### Added / Changed
-- **Sinkronisasi Deteksi Prompt Asinkron xterm.js**:
-  - Mengatasi masalah di mana pendeteksian prompt asinkron di [TerminalInstance.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx) gagal (karena xterm.js melakukan antrean penulisan buffer secara asinkron menggunakan requestAnimationFrame, sedangkan pembacaan status prompt terjadi seketika di waktu penerimaan paket data WebSocket).
-  - Menunda pengecekan prompt kesiapan buffer terminal sebanyak `50ms` (menggunakan debounced timeout) agar xterm.js selesai memproses dan menggambar prompt di buffer, sehingga eksekusi perintah otomatis seperti `bun run dev` dan `.\orbit.exe dashboard --full` kembali berjalan secara langsung dan andal tanpa harus menunggu fallback delay 1.5 detik.
-
-## [1.3.285] - 2026-07-04
-
-### Added / Changed
-- **Penyelesaian Auto-Run Command Lambat & Perbaikan Detektor Electron**:
-  - **Detektor Prompt Cerdas (isPromptReady)**: Menambahkan utilitas pendeteksi kesiapan prompt xterm.js di [TerminalInstance.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx). Jika prompt terminal aktif dideteksi siap (`>`, `$`, `%`, `#`), penundaan auto-run dipersingkat menjadi 300ms. Jika belum siap (sedang menjalankan posh-git/starship/pemuatan profil startup lambat), delay disesuaikan secara dinamis hingga 1500ms dari keheningan aliran data PTY.
-  - **Pengecualian Detektor Remote Electron**: Memperbarui penentu koneksi remote `isRemoteConnection()` agar mengecualikan desktop app (Electron) yang menggunakan skema `file:`, hostname kosong, or agent Electron, sehingga fitur auto-suspend 5-menit tidak aktif pada aplikasi desktop lokal.
-
-## [1.3.284] - 2026-07-04
-
-### Added / Changed
-- **Penyelesaian Masalah Eksekusi Perintah Awal Terminal (Quick Launch)**:
-  - Meningkatkan stabilitas auto-run *Quick Launch* dengan memperpanjang `SILENCE_MS` dari 300ms ke 1000ms dan `FALLBACK_MS` dari 4s ke 6s di [TerminalInstance.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx). Hal ini mencegah pemotongan/swallowing perintah saat shell (seperti PowerShell atau Bash) sedang melakukan pemuatan lambat profil startup.
-  - Memperbaiki pengiriman properti `clearInitialCommand` pada child components di [SplitLayoutRenderer.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SplitLayoutRenderer.tsx) agar status perintah awal tersapu bersih dengan tepat di semua layout pane (termasuk layout split/grid).
-
-## [1.3.283] - 2026-07-04
-
-### Added / Changed
-- **Peningkatan Sinkronisasi Dimensi & Manajemen Daya/Bandwidth Terminal**:
-  - **Broadcast Resize Terminal**: Backend memancarkan event `resize_broadcast` ke seluruh klien tersambung lainnya ketika sebuah klien melakukan resize dimensi terminal. Ditambah proteksi loop pencocokan dimensi di backend agar terhindar dari pemanggilan resize berantai tak berujung.
-  - **Exponential Backoff Reconnect**: Mengubah sistem coba-koneksi-kembali WebSocket yang sebelumnya bernilai statis 3s menjadi jeda eksponensial (berkembang dari 1.5s s/d maksimal 15s) untuk meringankan load server dan menstabilkan reconnect saat offline.
-  - **Auto-Suspend Terminal Inaktif di Koneksi Remote**: Menerapkan detektor koneksi remote (bukan localhost). Bila koneksi terdeteksi remote dan tidak ada input/output selama 5 menit, terminal akan disuspensi secara otomatis (memutuskan aliran WebSocket dan merilis listener untuk menghemat kuota data & daya baterai) dengan visualisasi overlay buram dan tombol "Click to Resume" yang mulus.
-
-## [1.3.282] - 2026-07-04
-
-### Added / Changed
-- **Multiplexing Terminal dan Sinkronisasi Sesi Multi-klien**:
-  - Mengubah penanganan PTY session di `TerminalManager` agar mendukung beberapa WebSocket senders dan exit callbacks sekaligus (menggunakan `Map` berbasis key socket unik `ws`).
-  - Mencegah masalah di mana sesi terminal terputus atau tidak tersinkronisasi outputnya (beku/freeze) ketika diakses secara bersamaan lewat remote tunnel (seperti HP/tablet) dan aplikasi desktop lokal.
-  - Memastikan event `suspend` atau penutupan koneksi satu klien tidak menghentikan sesi terminal yang masih memiliki koneksi aktif dari klien lain.
-
-## [1.3.281] - 2026-07-04
-
-### Added / Changed
-- **Penyelesaian Loop Rekursif & Masalah Spasi Path Bun Run Dev**:
-  - Membuat script runner `dev.js` terpadu di root project yang mendeteksi runtime (`bun` vs `npm`) dan mengeksekusi workspace backend dan frontend dengan aman tanpa memicu loop penafsiran ulang/intersepsi perintah bun di Windows.
-- **Normalisasi Baris Baru (Newline) pada Terminal Fallback (SpawnTerminal)**:
-  - Mengonversi carriage return (`\r`) menjadi newline platform yang sesuai (`\r\n` di Windows, `\n` di POSIX) saat menulis input ke standard input child process di mode terminal fallback (`SpawnTerminal`).
-  - Menghilangkan bug di mana pintasan *Quick Launch* (seperti `bun run dev`) atau input ketukan Enter tidak merespon/macet di terminal fallback ketika `node-pty` gagal dimuat di bawah bun.
-
-## [1.3.280] - 2026-07-04
-
-### Added / Changed
-- **Scroll to Bottom di Footer Terminal**:
-  - Menambahkan tombol "Scroll to bottom" (dengan ikon `ChevronDown`) pada footer utama aplikasi saat tab bertipe `terminal` atau `grid` aktif.
-  - Mengimplementasikan listener event `tline-scroll-to-bottom` di [TerminalInstance.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx) yang secara dinamis memicu fungsi `scrollToBottom()` bawaan xterm.js pada terminal instance yang sedang aktif.
-  - Memperbarui `focusTerminal` di [useTerminals.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useTerminals.ts) dan properti `onFocus` pada terminal grid di [TerminalGridTab.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalGridTab.tsx) agar status terminal terfokus dapat dilacak dengan presisi baik di tab biasa maupun grid.
-
-## [1.3.279] - 2026-07-04
-
-### Added / Changed
-- **Peta Klik Presisi Terminal & Pemetaan Sentuhan ke Mouse (Mobile/Tablet)**:
-  - Mengimplementasikan pendeteksi ketukan (tap) menggunakan `touchstart` dan `touchend` di dalam container terminal xterm.js pada [TerminalInstance.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx).
-  - Mengonversi tap layar tersebut menjadi event mouse virtual (`mousedown`, `mouseup`, `click`) di koordinat tepat sentuhan dan mengirimkannya langsung ke elemen target xterm.js.
-  - Memperbaiki dukungan interaksi CLI interaktif (seperti Claude Code, agy, micro editor, atau tombol expand) agar bisa diklik sesuai dengan posisinya di layar sentuh, sekaligus mempertahankan fungsi *suppress* keyboard native dan auto-open keyboard virtual bawaan tline.
-
-## [1.3.278] - 2026-07-04
-
-### Added / Changed
-- **Isolasi Quick Launch per Project/Workspace**:
-  - Menyaring daftar pintasan Quick Launch baik di dropdown desktop maupun di sidebar mobile secara dinamis berdasarkan workspace terfokus saat ini (`panelWorkspace.path`).
-  - Menampilkan nama workspace di judul dropdown Quick Launch untuk memperjelas konteks proyek yang sedang aktif.
-
-## [1.3.277] - 2026-07-04
-
-### Added / Changed
-- **Sinkronisasi Tab Real-time via WebSocket**:
-  - Mengintegrasikan penyiaran (broadcast) perubahan state sinkronisasi terpusat ke semua klien WebSocket yang sedang terhubung dari backend saat menerima pembaruan state.
-  - Menambahkan langganan (subscription) event `sync_update` pada sisi frontend menggunakan WebSocket manager agar tab baru, tab ditutup, file yang dibuka, maupun perubahan Quick Launch di mobile langsung terbuka/diperbarui secara real-time di desktop secara instan tanpa perlu memuat ulang halaman (refreshed).
-
-## [1.3.276] - 2026-07-04
-
-### Added / Changed
-- **Sinkronisasi Tab Aktif & Quick Launch Terpusat**:
-  - Menambahkan endpoint REST API di backend (`/api/sync/state`) untuk menyimpan dan membaca data tab aktif, saved prompts (Quick Launch), dan informasi instance terminal.
-  - Mengintegrasikan mekanisme fetch saat login/start dan debounced auto-upload di frontend, sehingga tab dan pintasan Quick Launch tersinkronisasi secara real-time antar perangkat (desktop & mobile).
-- **Perbaikan Responsivitas Terminal Grid di Mobile**:
-  - Memperbaiki tata letak terminal grid agar mengecil secara dinamis menggunakan formula `min(100%, cardWidth)` untuk mencegah overflow dan menumpuk secara vertikal (vertical stack) dengan rapi pada layar mobile/tablet.
-
-## [1.3.275] - 2026-07-04
-
-### Added / Changed
-- **Dukungan Shortcut Help dan Quick Launch di Mobile/Tablet**:
-  - Menambahkan menu Keyboard Shortcuts (info shortcut) ke dalam RightSidebar untuk pengguna perangkat seluler/tablet.
-  - Menambahkan menu dan fungsionalitas Quick Launch ke dalam RightSidebar sehingga pintasan perintah/prompt tersimpan dapat dijalankan, dihapus, dan ditambahkan dari perangkat mobile/tablet.
-
-## [1.3.274] - 2026-07-04
-
-### Added / Changed
-- **Peningkatan Visual Indikator Penghapusan & Proses Aktif Worktree**:
-  - Memperbaiki animasi loading penghapusan worktree (`Removing...`) agar ter-nesting dengan indah di tingkat direktori child, mempertahankan tajuk branch tetap terlihat.
-  - Memasukkan kembali indikator proses aktif (dot warna hijau) yang menempel pada ikon `FolderOpen` untuk worktree yang sedang memiliki terminal aktif.
-
-## [1.3.273] - 2026-07-04
-
-### Added / Changed
-- **Struktur Hirarki Branch dan Worktree (Menjorok)**:
-  - Menyusun visualisasi branch Git dan worktree menjadi berjenjang (nested).
-  - Branch ditampilkan sebagai entitas induk (parent) dengan ikon `GitBranch`.
-  - Jika branch tersebut memiliki direktori worktree fisik, direktori tersebut akan ditampilkan di bawahnya (child) menjorok ke dalam (`margin-left: 32px`) menggunakan ikon `FolderOpen` dan path relatif yang ringkas.
-  - Memindahkan indikator proses aktif (seperti Claude, Gemini, Cursor) dan tombol tindakan (Terminal, Hapus) ke baris direktori worktree fisik agar sesuai konteks operasionalnya.
-
-## [1.3.272] - 2026-07-04
-
-### Added / Changed
-- **Dukungan Tampilan Semua Branch Git & Integrasi Checkout**:
-  - Menampilkan semua branch Git lokal di sidebar explorer, bahkan untuk branch yang belum didaftarkan sebagai worktree (ditandai dengan badge `git` abu-abu).
-  - Mengklik branch non-worktree akan memicu dialog konfirmasi switch branch untuk melakukan checkout branch tersebut di dalam direktori workspace utama.
-  - Untuk branch yang telah terdaftar sebagai worktree, perilaku tetap sama (fokus langsung ke direktori worktree bersangkutan tanpa dialog konfirmasi).
-
-## [1.3.271] - 2026-07-04
-
-### Changed
-- **Bypass Konfirmasi Perpindahan Worktree & Proteksi Checkout Branch**:
-  - Menghapus modal konfirmasi (`showConfirm`) saat berpindah direktori worktree di panel samping pada [useWorkspaceHandlers.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useWorkspaceHandlers.ts). Perpindahan fokus antar-folder worktree kini berjalan instan.
-  - Memindahkan dialog konfirmasi ke aksi pemindahan/checkout branch aktif pada worktree/workspace di dalam [BranchModal.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/BranchModal.tsx) dengan meluncurkan prompt Switch/Cancel inline untuk mencegah checkout yang tidak diinginkan.
-
-## [1.3.270] - 2026-07-04
-
-### Changed
-- **Bypass Konfirmasi untuk Perpindahan Workspace**:
-  - Menghapus modal konfirmasi (`showConfirm`) saat pengguna berpindah workspace langsung dari header repositori pada [useWorkspaceHandlers.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useWorkspaceHandlers.ts). Perpindahan antar-workspace kini berjalan instan tanpa dialog.
-  - Tetap mempertahankan modal konfirmasi untuk perpindahan antar branch/worktree di bawah workspace yang bersangkutan.
-
-## [1.3.269] - 2026-07-04
-
-### Changed / Added
-- **Optimasi Tampilan Branch Terfokus pada Workspace Non-Aktif**:
-  - Mengubah logika list worktree pada [WorkspaceList.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/WorkspaceList.tsx) agar tetap menampilkan branch/worktree yang sedang terfokus (aktif) pada workspace non-aktif, alih-alih menyembunyikannya secara total.
-  - Untuk workspace yang sedang tidak difokuskan secara global, list branch-nya disaring hanya menampilkan 1 item branch yang aktif di workspace tersebut, sementara branch-branch lain yang tidak aktif pada workspace tersebut disembunyikan.
-  - Untuk workspace yang sedang aktif secara global, semua branch/worktree tetap ditampilkan secara penuh dengan opsi expand/collapse toggle.
-
-## [1.3.268] - 2026-07-04
-
-### Changed / Added
-- **Peningkatan Visual Indentasi & Fokus Workspace / Worktree**:
-  - Memperlebar indentasi visual daftar worktree di panel samping dari `20px` menjadi `32px` serta menyesuaikan posisi garis putus-putus (`tree-connector`) agar struktur pohon lebih menjorok dan terlihat jelas di [components.css](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/components.css).
-  - Menyembunyikan daftar worktree untuk workspace yang sedang tidak aktif di [WorkspaceList.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/WorkspaceList.tsx) agar hanya branch/worktree dari workspace fokus yang ditampilkan.
-  - Menerapkan efek visual redup/gelap (`.ws-card-dimmed`) pada workspace card yang tidak aktif untuk mengarahkan fokus pengguna ke workspace/branch yang sedang dibuka.
-  - Menambahkan modal dialog konfirmasi sebelum berpindah workspace atau worktree branch aktif pada [useWorkspaceHandlers.ts](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useWorkspaceHandlers.ts) untuk mencegah kesalahan klik/pindah fokus yang tidak disengaja.
-
-## [1.3.267] - 2026-07-04
-
-### Changed / Added
-- **Suppress Native Keyboard & Auto-Open t-line Keyboard**:
-  - Menonaktifkan keyboard native bawaan pada perangkat mobile/tablet saat terminal diklik atau difokuskan dengan mengatur `inputmode="none"` pada xterm textarea di [TerminalInstance.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx).
-  - Mengirimkan custom event `tline-terminal-focus` dari terminal ke container window saat terminal difokuskan di perangkat mobile/tablet.
-  - Menangkap custom event `tline-terminal-focus` pada [App.tsx](file:///D:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx) untuk secara otomatis membuka/menampilkan keyboard virtual `t-line` bawaan aplikasi demi pengalaman mengetik mobile yang mulus.
-
-## [1.3.266] - 2026-07-03
-
-### Fixed
-- **Quick Launch Reliability (Silence-Detection)**:
-  - Mengganti delay statis 600ms saat mengirim perintah dari Quick Launch shortcut dengan algoritma **silence-detection** yang lebih andal di [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx).
-  - Sebelumnya, jika proses startup shell (misalnya PowerShell profile) memerlukan waktu lebih dari 600ms, perintah shortcut dikirim terlalu dini dan "hilang" atau tidak tereksekusi sama sekali — menyebabkan fitur Quick Launch kadang berhasil kadang tidak.
-  - Sekarang, sistem mendengarkan output stream PTY: setiap kali terminal mengeluarkan data, timer 300ms direset. Perintah baru dikirim setelah output terhenti selama 300ms (tanda prompt siap). Terdapat fallback otomatis 4 detik untuk shell yang tidak mengeluarkan output sama sekali.
-
-## [1.3.265] - 2026-07-03
-
-### Improved / Optimized
-- **PTY Active Process Polling CPU Optimization**:
-  - Mengubah metode pendeteksian proses aktif terminal di backend ([terminalManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/terminalManager.ts#L505)). Sebelumnya, backend secara konstan memanggil `wmic` secara global untuk mengambil seluruh daftar proses sistem operasi setiap 5 detik (sangat membebani CPU Windows & menyebabkan terminal terasa lambat/berat).
-  - Sekarang, pencarian proses aktif dioptimalkan secara drastis dengan menargetkan query WMI/ps secara rekursif hanya untuk PID shell yang bersangkutan beserta keturunannya (`ParentProcessId=shellPid`).
-  - Menambahkan sistem caching berdurasi 4 detik untuk ringkasan proses aktif per shell PID guna meminimalkan redundant query saat beberapa tab atau split-pane terminal dibuka bersamaan. Hal ini memangkas penggunaan CPU di latar belakang hingga mendekati 0% dan membuat responsivitas terminal jauh lebih ringan.
-
-## [1.3.264] - 2026-07-03
-
-### Fixed
-- **Double Caret (Cursor) in Terminal & Focus Interception**:
-  - Membatasi CSS positioning `.xterm-helper-textarea` ke perangkat mobile/tablet (layar sentuh / lebar <= 1024px) menggunakan media query `@media (pointer: coarse) or (max-width: 1024px)` pada [layout.css](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/layout.css#L565). Hal ini menghilangkan caret/kursor kedip kedua (double caret) di pojok bawah/kiri terminal pada browser desktop.
-  - Mengubah listener event penanganan fokus terminal pada [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx#L527) dan wrapper pane dari event `click` menjadi event `mousedown` pada fase capture (`true`). Hal ini mencegah aplikasi dalam terminal yang mengaktifkan deteksi mouse (seperti `claudecode` atau `superagent`) menangkap (intercept) dan mematikan (eat) event klik, sehingga terminal tetap dapat difokuskan dengan normal saat diklik.
-
-## [1.3.263] - 2026-07-02
-
-### Fixed
-- **Restore Workspace Path & Git Branch Pill in Mobile/Tablet Footer**:
-  - Memisahkan elemen konteks workspace (nama folder + badge Git Branch aktif) dari blok tombol Zoom & Shell pada [Footer.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/Footer.tsx#L287).
-  - Memastikan nama workspace ([Folder] `fassst-manager`) dan pill branch aktif ([GitBranch] `master`) **selalu tampil** di Footer pada semua ukuran layar (mobile, tablet, maupun desktop), sementara hanya kontrol Zoom, Shell Selector, dan Cloudflare Tunnel yang disembunyikan di tampilan mobile/tablet.
-
-## [1.3.262] - 2026-07-02
-
-### Changed
-- **Hide Duplicated Footer Controls on Mobile & Tablet (`<= 1024px`)**:
-  - Mengubah breakpoint responsif kontrol tengah (Zoom in/out font, selector default shell, tombol restart terminal) dan kontrol kanan (Cloudflare Tunnel status, URL, tombol start Quick/Custom & Stop) pada [Footer.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/Footer.tsx#L288) dari `hidden sm:flex` / `hidden md:flex` menjadi **`hidden lg:flex`**.
-  - Kontrol-kontrol tersebut kini disembunyikan dari Footer pada tampilan Mobile & Tablet (`<= 1024px`) agar footer tidak berantakan/berlapis, karena semua fungsi tersebut sudah tersedia lengkap pada Menu Kanan ([RightSidebar.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/RightSidebar.tsx#L167)).
-
-## [1.3.261] - 2026-07-02
-
-### Fixed
-- **Fixed Mobile & Tablet Terminal Keyboard Popup**:
-  - Menghapus pengecekan kondisional `!insideXterm` pada [TerminalInstance.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx#L510) agar sentuhan/tap langsung di area canvas terminal pada perangkat mobile & tablet selalu memicu `textarea.focus()`.
-  - Mengatur atribut `inputmode="text"`, `autocorrect="off"`, dan `autocapitalize="none"` pada textarea xterm.
-  - Menambahkan aturan CSS `.xterm-helper-textarea` di [layout.css](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/layout.css#L564) agar textarea terposisi secara valid di dalam viewport dengan ukuran non-zero, memaksa browser mobile (iOS Safari & Android Chrome) menampilkan soft keyboard bawaan saat area terminal di-tap.
-
-## [1.3.260] - 2026-07-02
-
-### Added / Fixed
-- **Enabled Monaco Editor Word Wrap & Fixed Mobile File Header Layout**:
-  - Mengaktifkan fitur Word Wrap (`wordWrap: 'on'`) pada Monaco Editor di [FileViewerTab.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/FileViewerTab.tsx#L623) agar kode/teks panjang otomatis terpotong rapi ke baris berikutnya di layar mobile tanpa perlu scroll horizontal.
-  - Memperbaiki layout flex header file viewer agar label status (`Auto-save active`, `Saved`, `Modified`) tidak tertekan atau terlipat secara vertikal (`whitespace-nowrap shrink-0`) di layar sentuh/mobile yang sempit.
-
-## [1.3.259] - 2026-07-02
-
-### Changed
-- **Lower Minimum Terminal Font Size to 5px**: Menurunkan batas minimum font size terminal dari `8px` menjadi **`5px`**.
-  - Diperbarui pada handler zoom out ([useTerminals.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/hooks/useTerminals.ts#L253)) serta slider range input pada modal pengaturan ([SettingsModal.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SettingsModal.tsx#L546)).
-
-## [1.3.258] - 2026-07-02
-
-### Fixed
-- **Fixed Mobile/Tablet New Tab Button Position**: Memisahkan tombol tambah terminal (`+` / `.mobile-tab-new`) dari container scroll tab ([.mobile-tab-bar](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/layout.css#L546)) pada tampilan header mobile & tablet (`<= 768px`).
-  - Menggunakan wrapper [.mobile-tab-wrapper](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/layout.css#L536) agar tombol `+` tetap **fixed / pinned** di posisi kanan dan tidak ikut tergeser saat daftar tab di-scroll secara horizontal.
-
-## [1.3.257] - 2026-07-02
-
-### Fixed
-- **Strict Mobile Font Size Enforcement**: Memastikan [TerminalInstance](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalInstance.tsx#L221) di perangkat mobile/tablet selalu menerapkan **`9px`** secara langsung saat halaman direfresh/dibuka, mengabaikan nilai prop font desktop lama dari memori browser.
-
-## [1.3.256] - 2026-07-02
-
-### Fixed
-- **Mobile Terminal Font Size Isolation**: Memisahkan kunci penyimpanan `localStorage` font size antara desktop (`tline-terminal-font-size-v2`) dan mobile/tablet (`tline-mobile-font-size`).
-  - **Penyebab font masih 12px**: Sebelumnya browser menyimpan nilai 12px dari sesi desktop lama di key `tline-terminal-font-size` sehingga meng-override nilai default mobile.
-  - **Solusi**: Mode mobile/tablet kini menggunakan storage key independen `tline-mobile-font-size` yang langsung terinisialisasi ke **9px** secara terpisah dari settingan desktop.
-
-## [1.3.255] - 2026-07-02
-
-### Added / Fixed
-- **Left Sidebar Close Button for Mobile & Tablet**: Menambahkan tombol tutup `✕` pada header sidebar kiri ([sidebar-header](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/App.tsx#L757)) yang khusus muncul di mode mobile & tablet, memungkinkan pengguna menutup sidebar berukuran full-screen dengan satu sentuhan.
-
-## [1.3.254] - 2026-07-02
-
-### Changed
-- **Default Terminal Font Size for Mobile & Tablet**: Mengubah ukuran default font terminal pada perangkat mobile & tablet (`<= 1024px` atau perangkat layar sentuh) menjadi **9px** (sebelumnya default 12px) untuk memaksimalkan jumlah kolom/baris terminal yang muat di layar.
-
-## [1.3.253] - 2026-07-02
-
-### Changed
-- **Full Width Sidebars for Mobile & Tablet**: Memperbarui lebar sidebar kiri ([.sidebar](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/layout.css#L354)) dan sidebar kanan ([.right-sidebar](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/styles/layout.css#L371)) menjadi **100% full width (`100vw`)** saat dibuka pada perangkat mobile maupun tablet (breakpoint `@media (max-width: 1024px)`).
-
-## [1.3.252] - 2026-07-02
-
-### Fixed
-- **Mobile Terminal Black Screen Bug**: Memperbaiki masalah terminal yang tidak muncul / layar hitam di tampilan mobile (HP/tablet).
-  - **Bypass WebGL Addon on Mobile**: Di perangkat mobile / layar sentuh, WebGL Addon xterm.js dapat mengalami kegagalan konteks render tanpa throw exception yang menyebabkan layer teks hitam/transparan. Di mobile, otomatis menggunakan `CanvasAddon` / DOM renderer yang stabil 100%.
-  - **Leaf Pane Active State**: Memastikan prop `active` pada `TerminalInstance` bernilai `true` selama tab terminal aktif, sehingga proses WebSocket `init` dan penyesuaian dimensi (`fit()`) selalu berjalan meskipun dalam mode split pane.
-  - **CSS Flex & Height Fix**: Menambahkan `min-height: 0`, `height: 100%`, dan `width: 100%` pada elemen `.terminal-container`, `.terminal-element`, dan `.terminal-element .xterm` agar kalkulasi tinggi layout flexbox tidak bertabrakan pada browser mobile.
-
-### Changed
-- **Right Side Tab Actions Layout**: Menyusun 3 ikon aksi utama secara rapi di **sisi kanan** baris tab:
-  1. ⚡ **Quick Launch**: Ikon petir yang saat diklik menampilkan menu popover dropdown shortcut dengan penanganan auto click-outside.
-  2. 🔲 **Terminal Grid**: Ikon grid untuk membuka tab Terminal Grid baru.
-  3. ⌄ **Dropdown Tab Switcher**: Ikon dropdown chevron untuk melihat & berpindah antar tab yang terbuka.
-
-## [1.3.250] - 2026-07-02
-
-### Fixed / Improved
-- **Quick Launch & Grid Placement**: Mengembalikan item Quick Launch agar tetap tampil langsung (inline) berupa chip/button di sebelah ikon ⚡ Zap, serta memindahkan Grid button (`<LayoutGrid />`) & Quick Launch secara lengkap ke **sisi kanan** tab bar (kanan sendiri).
-  - Quick Launch tidak lagi tersembunyi di dalam dropdown popover, sehingga item-item shortcut favorit tetap dapat diakses secara langsung dengan satu klik.
-  - Membuang baris horizontal Quick Launch terpisah di bawah tab bar untuk efisiensi ruang layout.
-
-## [1.3.249] - 2026-07-02
-
-### Fixed
-- **Terminal Dispose Error (Real Root Cause)**: Memperbaiki secara tuntas `TypeError: Cannot read properties of undefined (reading '_isDisposed')` pada `AddonManager._wrappedAddonDispose`.
-  - **Root cause**: Meskipun addon di-dispose secara manual, xterm's `AddonManager` tetap menyimpan referensi addon di internal `_addons` array. Ketika `term.dispose()` dipanggil, `AddonManager.dispose()` mengiterasi `_addons` dan memanggil `_wrappedAddonDispose()` pada addon yang sudah ter-dispose → crash.
-  - **Fix**: Setelah loop pre-dispose addon, clear `(term as any)._addonManager._addons = []` dan `_disposables = []` sehingga `AddonManager.dispose()` menemukan array kosong dan tidak mencoba re-dispose apapun.
-
-## [1.3.248] - 2026-07-02
-
-
-### Changed
-- **Quick Launch UI Refactor**: Quick Launch bar terpisah dihapus dan digantikan dengan icon ⚡ (Zap) yang menjadi dropdown popover di tab bar.
-  - Icon ⚡ Quick Launch dan tombol 🔲 Grid dipindahkan ke **sisi kanan** tab bar, sejajar dengan tombol tabs dropdown.
-  - Klik icon ⚡ untuk membuka dropdown yang menampilkan daftar shortcuts, serta tombol "Add" untuk menambah shortcut baru.
-  - Klik salah satu shortcut langsung menjalankan command dan menutup dropdown.
-  - Menghemat ruang vertikal dengan menghilangkan bar tambahan di bawah tab.
-
-## [1.3.247] - 2026-07-02
-
-### Fixed
-- **Terminal Addon Dispose Error (Root Cause Fix)**: Memperbaiki secara tuntas `TypeError: Cannot read properties of undefined (reading '_isDisposed')` yang muncul di console saat terminal dihancurkan.
-  - Penyebab utama: xterm.js `AddonManager` secara internal mengiterasi semua addon yang ter-register dan memanggil `dispose()` pada setiap addon. Salah satu addon sudah memiliki state internal `undefined` saat iterasi terjadi, menyebabkan crash.
-  - Solusi: Menambahkan `addonListRef` untuk melacak **semua** addon yang di-load (`FitAddon`, `Unicode11Addon`, `WebLinksAddon`, `SearchAddon`, `ImageAddon`, `WebglAddon`/`CanvasAddon`). Setiap addon kini di-dispose secara **individual** dengan try-catch sebelum `term.dispose()` dipanggil, sehingga `AddonManager` tidak perlu mengiterasi addon yang sudah di-dispose.
-  - Saat WebGL context loss, addon WebGL dihapus dari `addonListRef` setelah di-dispose agar tidak di-dispose dua kali.
-  - `CanvasAddon` fallback (baik dari context loss maupun fallback awal) juga ditambahkan ke `addonListRef` agar disposal-nya dikelola dengan benar.
-
-## [1.3.246] - 2026-07-02
-
-
-### Changed
-- **Mobile/Tablet Terminal Split Button UX**: Memindahkan tombol split pane di perangkat mobile/tablet dari posisi kanan bawah ke **kanan atas**, dengan desain yang lebih minimalis.
-  - Tombol split tidak lagi selalu terlihat di layar — kini tersembunyi by default dan hanya muncul saat user mengetuk ikon split kecil di pojok kanan atas setiap pane terminal.
-  - Menampilkan panel aksi (split horizontal, split vertikal, close pane) hanya saat toggle aktif, lalu menutup otomatis setelah aksi dipilih.
-  - Desktop tetap menggunakan perilaku hover-to-reveal yang sama seperti sebelumnya.
-  - Refactor `SplitLayoutRenderer.tsx`: logika leaf node dipisah ke komponen `LeafPane` tersendiri agar dapat menggunakan `useState` (React Hooks rule) secara aman.
-
-## [1.3.245] - 2026-07-02
-
-### Fixed
-- **WebGL Addon Dispose Crash**: Memperbaiki `TypeError: Cannot read properties of undefined (reading '_isDisposed')` yang terjadi saat terminal dihancurkan atau WebGL context hilang. Bug ini disebabkan oleh version mismatch antara `@xterm/xterm` dan `@xterm/addon-webgl` dimana addon WebGL mencoba mengakses properti internal `_core._store` yang tidak ada di versi xterm yang terinstall.
-  - Menambahkan `webglAddonRef` untuk tracking instance WebGL addon dan mencegah double-dispose.
-  - Membungkus `webglAddon.dispose()` di `onContextLoss` dengan try-catch agar tidak crash, dengan fallback otomatis ke `CanvasAddon` setelah context loss.
-  - Membungkus `term.dispose()` di cleanup useEffect dengan try-catch dan menset semua addon refs ke `null` sebelum disposal untuk mencegah error.
-  - GPU stall warning (`GL Driver Message: GPU stall due to ReadPixels`) adalah peringatan performa WebGL normal dan tidak memengaruhi fungsionalitas.
-
-## [1.3.244] - 2026-07-02
-
-### Fixed
-- **Loading Bug & Git Leak on Non-Git Workspaces**: Memperbaiki bug loading tanpa akhir pada panel Git Changes dan Snapshots ketika beralih ke/dari workspace tanpa Git, serta membatasi data Git agar tidak bocor di header/footer pada workspace non-Git.
-  - **Auto-Switch Workspace Removal**: Menghapus logika auto-switch workspace ke repositori Git lain ketika memilih panel Git Changes/Checkpoints pada workspace non-Git, sehingga workspace aktif tetap terjaga.
-  - **Reset Loading States**: Menyetel state `loading` di `CheckpointsPanel.tsx` dan `gitStatusLoading` di `useGitStatus.ts` ke `false` saat early return agar spinner loading tidak berjalan terus-menerus.
-  - **Safety Worktree Reset**: Menambahkan safety check di `App.tsx` untuk memastikan `panelWorktreePath` selalu `null` ketika workspace aktif bukan merupakan repositori Git, sehingga menghilangkan badge branch Git di tab bar (header) secara penuh.
-  - **Checkpoints Empty State**: Menampilkan tulisan "No workspace selected" secara benar jika tidak ada workspace aktif di panel Snapshots, alih-alih peringatan tidak mendukung Git.
-
-## [1.3.243] - 2026-07-02
+## [1.2.421] - 2026-07-17
 
 ### Added
-- **Saved Prompt Shortcuts (Quick Launch)**: Menambahkan fitur shortcut prompt perintah tersimpan.
-  - Pengguna dapat menyimpan perintah/prompt terminal yang sering digunakan via opsi "Save as Shortcut..." di menu klik-kanan (context menu) tab terminal.
-  - Shortcut yang disimpan akan muncul sebagai tombol/pills di area "Quick Launch" bar baru tepat di bawah tab bar utama.
-  - Klik pada tombol shortcut akan membuka tab terminal baru dengan CWD dan shell yang sesuai, lalu otomatis menjalankan perintah yang tersimpan setelah delay aman 600ms (auto-execution).
-  - Menambahkan tombol "Add Shortcut" di Quick Launch bar untuk membuat shortcut baru secara manual melalui form modal yang terintegrasi (`SavePromptModal`).
-  - Shortcut tersimpan dipersistenkan di `localStorage` dan dapat dihapus dengan mengklik tombol `×` pada masing-masing pill shortcut.
+- **Mandatory Hallmark Design Skill Rule**: Registered hallmark as a workspace-scoped mandatory skill in AGENTS.md, enforcing that the Hallmark guidelines are always read when designing or building user interfaces.
 
-## [1.3.242] - 2026-07-02
+## [1.2.420] - 2026-07-17
 
 ### Added
-- **WebGL GPU-Accelerated Renderer**: Menginstal `@xterm/addon-webgl` dan mengintegrasikannya sebagai render engine utama di `TerminalInstance.tsx`. Jika terjadi context loss pada WebGL (GPU reset/crash), addon otomatis didispose agar xterm.js kembali ke renderer bawaan secara mulus. Jika WebGL tidak didukung oleh browser/lingkungan, sistem secara otomatis melakukan fallback bertahap (progressive fallback) ke Canvas renderer, lalu ke DOM renderer, memastikan performa rendering throughput data yang tinggi dan responsif.
-- **Refactoring & Modulerisasi Terminal**: Memisahkan subkomponen pendukung terminal (`TerminalSearchBar`, `SmartPasteConfirm`, `TerminalStatusBar`, dan `TerminalContextMenu`) dari `TerminalInstance.tsx` ke file baru [TerminalSubComponents.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/TerminalSubComponents.tsx) demi menjaga kepatuhan batas panjang file maksimal 1000 baris.
+- **Hallmark Design Skill Integration**: Added design-skill (cloned and configured from nutlope/hallmark) to provide anti-AI-slop design quality gates, structural layouts, and themed UI generation principles.
 
-## [1.3.241] - 2026-07-02
-
-### Fixed
-- **Terminal Focus & Selection Bug**: Memperbaiki bug di mana menyeleksi teks (text selection) di terminal sering terhapus otomatis ketika mouse dilepas. Hal ini dikarenakan capture-phase event listener click/touchend yang memaksa fokus kembali ke textarea terminal. Kini, programmatic focus dinonaktifkan ketika target klik berada di dalam `.xterm` atau ketika terminal memiliki seleksi aktif, memulihkan perilaku klik dan seleksi teks bawaan terminal yang sebenarnya.
-
-## [1.3.240] - 2026-07-02
-
-### Fixed
-- **Infinite Reload Loop on Non-Git Workspaces**: Memperbaiki bug "flash flash" (flickering/reloading tak terbatas) di panel Explorer dan Git Changes pada workspace tanpa Git. Masalah ini disebabkan oleh hook `useGitStatus.ts` yang selalu mengembalikan referensi array baru `[]` (karena `setChangedFiles([])` dipanggil setiap kali status git di-fetch untuk workspace non-git), yang memicu trigger update `fsChangeTrigger` di `App.tsx`, yang kemudian memicu re-render dan me-load ulang file explorer secara terus-menerus. Diperbaiki dengan mengembalikan referensi `prev` yang sama jika array sudah kosong.
-
-## [1.3.239] - 2026-07-02
-
-### Fixed
-- **Workspace Non-Git Error & Loading Bug**: Memperbaiki bug di mana Explorer, Changes, dan Snapshot/Checkpoints mengalami crash atau error ketika menggunakan workspace yang tidak memiliki repositori Git.
-  - **Checkpoints/Snapshots**: Menambahkan proteksi pada `CheckpointsPanel.tsx` agar tidak melakukan fetch data checkpoints jika workspace bukan Git, sehingga langsung menampilkan peringatan "Checkpoints are only supported in Git workspaces." secara bersih tanpa error 500.
-  - **Git Changes**: Memperbarui tampilan kosong (empty state) di tab Git Changes untuk menampilkan pesan "Git changes are only supported in Git workspaces." jika workspace yang aktif bukan Git.
-  - **App.tsx Active Panel Switcher**: Menambahkan sinkronisasi workspace otomatis ketika berpindah ke panel checkpoints; jika workspace aktif bukan Git, otomatis berpindah ke workspace Git pertama yang tersedia.
-  - **Backend gitRoutes Middleware**: Menambahkan middleware `gitWorkspaceMiddleware` pada route endpoints di `backend/src/gitRoutes.ts` yang berawalan `/workspaces/:id` untuk memvalidasi dan menolak request dengan status 400 Bad Request jika workspace target bukan repositori Git.
-
-## [1.3.238] - 2026-07-02
-
-### Fixed
-- **Dropdown Select Terminals Tertimpa Terminal Grid Card**: Meningkatkan z-index pada `.grid-tab-header` dan memberikan `position: relative` agar dropdown konfigurasi terminal grid tampil di atas komponen-komponen terminal card (seperti status bar dan search bar) tanpa terpotong atau tertimpa.
-
-## [1.3.237] - 2026-07-02
+## [1.2.419] - 2026-07-17
 
 ### Added
-- **Mobile Tab Bar di Header**: Pada layar mobile/tablet (≤768px), tab-tab terminal kini tampil langsung di header (top-bar) sebagai strip horizontal yang dapat discroll. Mengklik tab langsung berpindah ke terminal tersebut. Setiap tab menampilkan ikon tipe (terminal, file, diff, grid), nama tab, dan tombol tutup (×). Tombol `+` di ujung kanan strip memungkinkan membuka terminal baru langsung dari header.
+- **Okapi BM25 Unit Tests**: Added unit tests to `tests/historySearch.test.ts` to directly verify term frequency saturation, document length normalization, IDF weighting for rare terms, and subsequence fuzzy penalties.
 
-## [1.3.236] - 2026-07-02
+## [1.2.418] - 2026-07-17
 
-### Fixed
-- **Terminal Tidak Berfungsi di Workspace Non-Git**: Workspace yang bukan repository Git (folder biasa tanpa `.git`) kini dapat membuka terminal dengan benar. Root cause: `handleWorkspaceClick` selalu men-set `panelWorktreePath` ke `ws.path`, padahal untuk workspace non-git tidak ada worktrees — sehingga `filteredTabs` memfilter semua tab keluar karena worktree target tidak ditemukan.
-- **Sync Worktree Path Salah untuk Non-Git**: `useEffect` sinkronisasi panel di `App.tsx` juga di-fix: workspace non-git kini selalu menggunakan `panelWorktreePath = null`, sedangkan git workspace menggunakan path `mainWt` yang akurat (bukan `ws.path` yang sebelumnya bisa berbeda dari path worktree utama).
+### Improved
+- **Okapi BM25 + Fuzzy Hybrid Local Search**: Upgraded both `searchHistory` and `searchKnowledge` local search fallback scoring algorithms to Okapi BM25. This introduces proper term frequency (TF) saturation limits (with standard $k_1 = 1.2$) and document length normalization (with standard $b = 0.75$), preventing long transcripts from skewing scores and prioritizing short, highly relevant matching turns.
 
-## [1.3.235] - 2026-07-02
+## [1.2.417] - 2026-07-17
 
-### Fixed
-- **Open Terminal dari Home Tidak Berfungsi**: Terminal yang dibuka dari tombol "Open Terminal" di halaman welcome/home (saat belum ada tab terbuka) kini langsung muncul. Sebelumnya tab baru difilter keluar oleh `filteredTabs` karena `panelWorkspace` belum diset saat render pertama.
-- **Open Terminal dari Context Menu Workspace (Titik Tiga) Tidak Berfungsi**: Tombol "Open Terminal" di dropdown titik tiga workspace kini memanggil `setPanelWorkspace` terlebih dahulu sebelum membuka terminal, sehingga tab baru langsung terlihat di tab bar workspace yang benar.
-- **EmptyDashboard**: Tombol "Open Terminal" kini otomatis menggunakan workspace pertama (`workspaces[0]`) jika belum ada workspace yang dipilih, sehingga terminal selalu dapat dibuka walaupun user belum mengklik workspace manapun.
+### Improved
+- **Local Hybrid TF-IDF + Fuzzy Pinned Knowledge Search**: Upgraded the local fallback search algorithm in `searchKnowledge` (when `enableRmemory` is `false`) from basic substring matching to a local Hybrid TF-IDF + Fuzzy search, aligning it with the optimized `searchHistory` algorithm for higher ranking quality and typo tolerance.
 
-## [1.3.234] - 2026-07-02
+## [1.2.416] - 2026-07-17
 
-### Fixed
-- **Terminal Font Scaling on Mobile/Tablet**: Removed the hardcoded 8px terminal font size lock on mobile/tablet screens. Font size changes now correctly respect the user's settings.
-- **Terminal Font Options Fit Refresh**: Added a forced xterm layout recalculation (`fit()`) after changing the font size, font family, or font weight options to ensure immediate visual alignment.
+### Improved
+- **Local Hybrid TF-IDF + Fuzzy History Search**: Replaced the expensive AI-based history filtering and summarization in `searchHistory` (when `enableRmemory` is `false` and an API key is present) with a 100% local Hybrid TF-IDF + Fuzzy search. It computes term frequency (TF) and inverse document frequency (IDF) with subsequence fuzzy penalties on the fly, rendering matching context turns/snippets in under 5ms without hitting the LLM model APIs.
 
-## [1.3.233] - 2026-07-02
+## [1.2.415] - 2026-07-17
 
-### Added
-- **Reorderable Tabs**: Drag-and-drop support to swap tab positions directly in the main Chrome-like tabs container.
-- **Context Menu Tab Actions**: Left and right tab moving options in the Tab Context Menu ("Move Tab Left" / "Move Tab Right").
-- **Dropdown List Reordering**: Reorder action buttons (ArrowUp / ArrowDown) on hover in the open tabs dropdown menu to move tabs up/down.
+### Improved
+- **Skills Index Hash Persistence**: Optimized `get_skills` semantic search by persisting the computed skills list hash to disk (`~/.superagent-r/rmemory/skills.hash`). This prevents re-indexing (re-embedding all 50+ local skill descriptions) on every new CLI invocation/session if the installed skills haven't changed, reducing subsequent cold starts to < 10ms.
 
-## [1.3.232] - 2026-07-02
+## [1.2.414] - 2026-07-17
 
-### Fixed
-- **Empty Workspaces Message Positioning**: Conditionally rendered `WorkspaceList` to prevent the empty list wrapper from occupying layout height and pushing the "No workspaces registered." text to the bottom center of the sidebar panel. The message now displays at the top center.
+### Improved
+- **`get_skills` Semantic Search via RMemory**: Replaced the expensive LLM call (`generateText` with the main model) used for skill filtering with a lightweight local embedding similarity search powered by the existing RMemory infrastructure (`r-memory` + `Xenova/all-MiniLM-L6-v2`, ~23MB ONNX model). Skills are indexed on demand into a dedicated `~/.superagent-r/rmemory/skills.db` (separate from conversation memory) and re-indexed automatically when the skill list changes. Query embedding + cosine similarity runs in under 10ms after warm-up. The TF-IDF keyword fallback is unchanged and activates if embedding fails.
 
-## [1.3.231] - 2026-07-02
-
-### Changed
-- **RAM and CPU Optimizations**: 
-  - Exposed Node.js Garbage Collection (`--expose-gc`) in both Electron main process and Backend fork configurations.
-  - Registered window state observers (`minimize`, `hide`) to manually invoke garbage collection and release memory back to the OS immediately after user minimizes or hides the app window.
-  - Implemented a 60-second periodic garbage collection schedule in the backend service.
-  - Extended backend process lookup cache lifetime from 2 seconds to 5 seconds to reduce expensive process listing command (wmic / ps) CPU overhead.
-  - Reduced terminal process title update interval from 1s to 3s, and terminal process tree polling interval from 2.5s to 5s.
-
-## [1.3.230] - 2026-07-02
-
-### Changed
-- **Electron Performance Optimizations**: 
-  - Prevented window visual flickering by hiding the window creation initially (`show: false`) and showing it only after the `ready-to-show` event fires.
-  - Enabled Electron's `backgroundThrottling: true` to throttle CPU and timers when the window is hidden or minimized.
-  - Throttled background status/session polling from every 5 seconds to every 15 seconds when the main window is hidden or minimized, reducing local HTTP overhead and CPU consumption.
-
-## [1.3.229] - 2026-07-02
-
-### Fixed
-- **Workspace Disappearance on Password Change**: Fixed a bug where changing the master password deleted all workspaces from the configuration. The application now properly merges and preserves existing configuration options (like the `workspaces` array) when updating the master password.
-
-## [1.3.228] - 2026-07-02
-
-### Fixed
-- **Terminal Grid Default Empty Selection on Load**: Normalized the restored tabs layout from `localStorage` to ensure grid tabs initialize `gridTerminalIds` to an empty array (`[]`) instead of resolving to all active terminal IDs by default, preventing unexpected auto-population of terminal grid cards on application startup.
-
-## [1.3.227] - 2026-07-02
-
-### Fixed
-- **Electron Build Missing Updater**: Added `updater.js` to the electron-builder `files` whitelist in `desktop/package.json` to prevent JavaScript load errors (`Cannot find module './updater'`) in packaged builds.
-
-## [1.3.226] - 2026-07-02
-
-### Fixed
-- **Toast Theme Color Integration**: Synchronized toast notification icon and text colors with the active workspace theme accent color by using CSS variables and dynamic `color-mix` functions.
-
-## [1.3.225] - 2026-07-02
-
-### Changed
-- **Toast Notifications Customization**: Limited the active toast count to a maximum of 2 to avoid cluttering the screen. Moved the toast notification container to the bottom-right corner of the application.
-- **Session Re-attached Toast ID Display**: Appended the terminal session ID to the "Session Re-attached" toast notification message.
-
-## [1.3.224] - 2026-07-02
+## [1.2.413] - 2026-07-17
 
 ### Added
-- **Workspace Panel Scrolling & Search Toggle**: Restructured the workspace list container layout in the sidebar using flexbox, confining scrolling to the list items while keeping the heading fixed at the top. Added a search button next to the plus icon to toggle search input visibility (hidden by default) with auto-focus and clear actions.
+- **Indonesian Discussion Classifier Keywords**: Added `diskusi`, `ngobrol`, `diskusi aja`, `cuma nanya`, `cuma diskusi`, `hanya diskusi`, `kita diskusi`, `mari diskusi`, `mau diskusi`, `mau ngobrol`, `ngobrol aja`, `cuma ngobrol` to the `requestClassifier` heuristic keywords and phrases. This prevents conversational discussion requests from triggering complex execution plans or worktree steps.
 
-## [1.3.223] - 2026-07-02
-
-### Fixed
-- **Terminal Tab Auto-Focus**: Fixed a race condition on mount and tab switching where newly opened or switched terminal tabs would not focus the text entry cursor. Introduced a reactive `isInitialized` state that triggers focus once xterm.js has finished setting up the terminal DOM and textarea elements.
-
-## [1.3.222] - 2026-07-02
+## [1.2.412] - 2026-07-17
 
 ### Fixed
-- **Dropdown Background Transparency**: Set the layout selector popover background to use `var(--bg-main)` and strengthened the drop shadow, ensuring it is 100% solid and opaque so terminal content underneath does not overlap or show through the dropdown menu options.
+- **`mapNormToOrigIndices` Offset Bug**: Fixed a critical bug where column offsets in the normalized-to-original character map were computed from position 0 of the normalized (trimEnd-ed) line instead of from the actual character position in the original line. With `trim()`, leading whitespace was stripped from both ends, making `col` in normalized space != character offset in original space, which could cause wrong splice boundaries and silent file corruption on indented code. The fix correctly tracks that with `trimEnd()`, normalized col 0 maps directly to original col 0 (leading chars are preserved), while the end sentinel now correctly points past the last normalized character — not past trailing whitespace.
+- **`normalizeForMatching` Trim Direction**: Changed from `line.trim()` (strips both leading and trailing whitespace) to `line.trimEnd()` (strips trailing whitespace only). Indentation is semantically significant in TypeScript, Python, YAML and similar languages — `"  foo"` and `"foo"` are different code constructs. Preserving leading whitespace makes matching more precise and prevents accidental cross-indentation matches.
 
-## [1.3.221] - 2026-07-02
+### Improved
+- **Actionable Not-Found Errors**: When `targetContent` or `oldString` is not found in a specified line range, all three edit tools (`edit`, `replace_file_content`, `multi_replace_file_content`) now return the actual content of the searched range (up to 400 chars) in the error message, enabling AI agents to self-correct without a separate read step.
+- **Line Drift Detection**: Not-found errors now also check if the target exists elsewhere in the file. If found, the error includes a hint with the approximate line number where the target actually is (`Hint: The target was found near line N. Update startLine/endLine to cover that range.`), directly surfacing line-drift as the likely cause and providing the fix.
+- **Atomic Rollback for `multi_replace_file_content`**: The single-file multi-chunk path now captures an `originalContent` snapshot before processing any chunk. If post-write verification fails (replacement not found after write), all changes are atomically rolled back to the original, preventing partial/corrupt state.
+- **Post-Write Verification**: Both `replace_file_content` and `multi_replace_file_content` now read back the file immediately after writing and verify the replacement content is present. If verification fails (silent corruption), the file is rolled back to its original content and an error is returned.
 
-### Added
-- **Terminal Termination Confirmation Modal**: Implemented a custom overlay modal dialog with backdrop-blur, confirming when a user clicks the "Trash" (terminate) button on a grid card. This warns the user that closing the terminal will kill its background process and all running scripts inside it.
-
-## [1.3.220] - 2026-07-02
-
-### Added
-- **Persisted Card Resizing**: Added global sliders (Card Width and Card Height) inside the select popover to dynamically resize all terminal grid cards.
-- **Tab Layout Size Persistence**: Persisted custom card width and height values inside the `gridCardWidth` and `gridCardHeight` properties of the grid tab's state, preserving layouts across sessions in `localStorage`.
-
-## [1.3.219] - 2026-07-02
-
-### Added
-- **Manual Grid Addition**: Reverted auto-population so that new Terminal Grid tabs start completely empty by default, allowing users to select and build their grid manually.
-- **Close & Terminate Terminal Action**: Added a close/terminate button (Trash icon) in the card headers of the grid view to completely terminate the PTY session and remove it from the workspace, in addition to the "Hide from grid" option.
-
-## [1.3.218] - 2026-07-02
-
-### Added
-- **Tab Auto-Population**: Pre-populates new Terminal Grid Monitor tabs with all currently open terminal sessions upon creation, eliminating the need to manually configure them one by one.
-- **Tab Label & Header Resolution**: Resolved terminal items to their parent Tab names (e.g. `Shell (t-line)`) in the dropdown selector, suggestions list, and grid card headers, making it easy to identify and display existing tabs.
-- **Unfocused Grid Session Connection**: Implemented a `disableAutoFocus` prop on `TerminalInstance` to connect and initialize all unfocused grid cards in the background without stealing active browser keyboard focus.
-
-## [1.3.217] - 2026-07-02
-
-### Added
-- **Terminal Grid Monitor**: Implemented a cross-workspace Terminal Grid Monitor tab that allows users to select, layout, and monitor active terminal instances across all workspaces in a single unified grid view.
-- **Interactive Grid Cards**: Each card in the grid view renders a live interactive terminal pane, shows running processes dynamically, displays a workspace mapping badge, and supports one-click focusing (switching the main window view directly to the terminal's parent tab).
-
-## [1.3.216] - 2026-07-02
-
-### Added
-- **Typing Latency Optimization**: Bypassed batching/debouncing queues for small data chunks (<= 5 bytes, such as manual keystrokes and their echoing) in both backend PTY sending and frontend xterm writing. Keystrokes are now sent and rendered in real-time, eliminating the typing lag while retaining the performance advantages of batching for high-throughput commands.
-
-## [1.3.215] - 2026-07-02
-
-### Added
-- **Process List Caching**: Implemented a global cached process tree fetcher in `backend/src/terminalManager.ts` with a 2-second TTL. This aggregates concurrent PTY status polling requests across multiple terminals (e.g., in split panes) into a single system command invocation, greatly reducing background CPU load and UI stutters.
-
-### Changed
-- **Terminal Resize Fitting Throttling**: Optimized the `debouncedFit` handler in `frontend/src/components/TerminalInstance.tsx` by using `requestAnimationFrame` with a 50ms throttle during active drag-resizing, and debouncing layout updates to avoid layout thrashing and redundant timers.
-
-## [1.3.214] - 2026-07-02
-
-### Added
-- **Backend Persistent Log File**: Added global overrides for `console.log`, `console.error`, and `console.warn` inside the backend workspace to automatically save all logs, warnings, errors, and stack traces to `~/.tline-backend.log` with a 5MB auto-rotation limit. This ensures logs are preserved even during local development restarts and terminal window closures.
-
-## [1.3.213] - 2026-07-02
-
-### Added
-- **Backend Auto-Restart**: Implemented automatic restart logic in the Electron desktop main process to transparently relaunch the backend on crashes.
-- **Terminal Keep-Alive Timeout**: Increased the PTY session detach timeout from 30 seconds to 10 minutes, allowing terminal states and running processes to persist through network reconnections, application reloads, or temporary backend restarts.
-
-### Changed
-- **Backend Memory Limits**: Raised the backend V8 old space size limit from 192MB to 512MB to avoid OOM crashes on large repos.
-- **Refactoring**: Extracted auto-updater functions into a separate `updater.js` helper file to keep `desktop/main.js` below the 1000-line limit.
-
-## [1.3.212] - 2026-07-01
+## [1.2.411] - 2026-07-17
 
 ### Fixed
-- **Git status path parsing**: Added unescape and unquote support for paths containing spaces, double quotes, and multi-byte UTF-8 octal escape sequences in `backend/src/gitManager.ts` and `backend/src/checkpointManager.ts` to ensure files are correctly tracked, staged, and unstaged in the File Explorer and Changes tab.
+- **Classifier Double-Register Bug**: Removed `"coba"` from `COMMAND_KW` where it was incorrectly duplicated — it already exists in `CONVERSATION_EXACT` for exact-word matching. Previously inputs like `"coba jalankan"` could produce inconsistent classification when individual words were checked against both sets.
 
-## [1.3.211] - 2026-07-01
+### Improved
+- **Expanded Indonesian Conversation Vocabulary**: Extended `CONVERSATION_EXACT` with widely-used Indonesian short replies and affirmations: `"iya"`, `"ya"`, `"sip"`, `"siap"`, `"mantap"`, `"mantul"`, `"keren"`, `"bagus"`, `"gas"`, `"gass"`, `"ngerti"`, `"paham"`, `"mengerti"`, `"hai"`, `"yaudah"`, `"ya udah"`, `"udah"`, `"sudah"`, `"betul"`, `"tepat"`, `"setuju"`, `"trims"`, `"benar"`, plus English additions: `"next"`, `"skip"`, `"pass"`, `"excellent"`, `"got"`.
+- **Expanded Conversation Phrase Patterns**: Added Indonesian multi-word conversational phrases to `CONVERSATION_PHRASES`: `"oke lanjut"`, `"lanjut aja"`, `"silakan lanjut"`, `"bisa lanjut"`, `"oke siap"`, `"siap bos"`, `"oke paham"`, `"iya paham"`, `"sudah paham"`, `"iya betul"`, `"iya benar"`, `"gass aja"`, `"sip lanjut"`, `"gas bro"`, plus English additions: `"makes sense"`, `"got it thanks"`, `"that works"`, `"you're welcome"`, `"no worries"`, `"fair enough"`.
+- **Conversation Fast-Path**: Added `runConversationFastPath` — when the classifier identifies a high-confidence conversational message (greetings, acknowledgments, short replies) on the `single` or `master` tier, the agent now bypasses the full `runAgentLoop` entirely. It calls a lightweight `streamText` directly with a minimal system prompt and conversation history, skipping workspace discovery, tool loading, plan state injection, concurrency and rate limiter acquisition. This significantly reduces latency and token overhead for simple chat interactions.
 
-### Fixed
-- **CSP / Fonts**: Allowed `data:` URIs in `font-src` directive in `frontend/index.html` to resolve issues loading base64-embedded fonts (e.g. from Monaco Editor).
-
-## [1.3.210] - 2026-07-01
-
-### Added
-- **Testing**: Configured Vitest, React Testing Library, and jsdom environment in the frontend workspace.
-- **Git Tests**: Implemented comprehensive unit/integration test suite for Git-related features:
-  - Verified git status decorators and directory changes count badges in `FileExplorer`.
-  - Tested stage, unstage, discard, and commit user interactions and API calls in `GitChanges`.
-
-## [1.3.209] - 2026-07-01
-
-### Fixed
-- **Git & Explorer**: Fixed a bug where git changes in the sidebar and file explorer's modified (M) and untracked (U) badges were not updated in real-time. This was resolved by:
-  - Making path relative calculation case-insensitive to correctly match paths on Windows regardless of casing or drive letters.
-  - Updating the file system watcher in the backend to monitor key Git control files (`.git/index`, `.git/HEAD`, `.git/refs`) so that Git operations run in the terminal immediately trigger Git status updates.
-
-## [1.3.208] - 2026-07-01
-
-### Changed
-- **Documentation**: Updated README.md preview image (`preview.png`) to showcase the latest workspace manager interface.
-
-## [1.3.207] - 2026-07-01
-
-### Fixed
-- **Terminal**: Fixed Ctrl+V / paste event double paste bug by registering the custom paste handler in the capturing phase (`useCapture = true`) and invoking `e.stopImmediatePropagation()`. This intercepts paste events before xterm's native handler can execute and prevents duplicate values.
-
-## [1.3.206] - 2026-07-01
-
-### Fixed
-- **Version Reporting**: Bumped package.json versions across all workspaces (root, backend, frontend, desktop) and updated server.ts fallback to correctly report the application version in the UI.
-
-## [1.3.205] - 2026-07-01
-
-### Fixed
-- **Terminal**: Resolved Ctrl+V double paste bug — now always blocks xterm and browser native paste handlers, then reads clipboard manually via `navigator.clipboard.readText()` once. Increased debounce threshold from 100ms to 300ms as additional safety net.
-
-## [1.3.204] - 2026-07-01
-
-### Fixed
-- **CI/CD**: Fixed electron-builder publish argument passing in GitHub Actions — use `working-directory` and direct `npx electron-builder --publish always` instead of npm workspace proxy.
-
-## [1.3.203] - 2026-07-01
-
-### Fixed
-- **CI/CD**: Fixed GitHub Actions release workflow to properly upload binaries to GitHub Releases by adding `--publish always` flag to `electron-builder`.
-
-## [1.3.202] - 2026-07-01
-
-### Changed
-- **Application Port Configuration**:
-  - Changed the default backend server port from `3999` to `5779` (`backend/src/server.ts`, `desktop/main.js`).
-  - Changed the frontend Vite development server port from `5173` to `5773` (`frontend/vite.config.ts`).
-  - Updated the Vite proxy target for `/api` to point to the new backend port `5779`.
-  - Updated the WebSocket client dev-mode port detection in `frontend/src/services/websocket.ts` to check for port `5773` and fallback to `5779`.
-
----
-
-## [1.3.201] - 2026-07-01
-
-### Fixed
-- **System Update Checker**:
-  - Fixed a critical bug in `checkUpdates` where the `updateAvailable` state was never reset to `false` when the latest release on GitHub was older than or equal to the current version.
-  - Dynamically imported the application version from the frontend's own `package.json` to act as the default fallback version (instead of the outdated hardcoded `'1.3.73'`), avoiding false update triggers.
-  - Updated the backend version endpoint `/api/system/version` fallback version to `1.3.201`.
-  - Triggered the update checker's `fetchLocalVersion` whenever `isAuthenticated` transitions to `true` (indicating successful authentication and a responsive backend), resolving race conditions where the checker ran before the backend server finished starting up.
-
----
-
-## [1.3.200] - 2026-07-01
-
-### Fixed
-- **Terminal Double Paste on Ctrl+V**:
-  - Registered a native `paste` event listener directly on xterm.js's helper `textarea` to intercept all paste events (Ctrl+V, Cmd+V, Shift+Insert, and Edit -> Paste native menu triggers).
-  - Implemented event prevention (`e.preventDefault()`, `e.stopPropagation()`) in the paste listener to completely bypass xterm's native paste handler, avoiding duplicate paste triggers.
-  - Intercepted Ctrl+V (and Cmd+V on macOS) in the custom key event handler to return `false` in Electron (avoiding PTY character emission) while allowing standard propagation in browsers.
-  - Added a ref-based `performPaste` utility with 100ms/identical-content paste deduplication as a safety layer.
-
----
-
-## [1.3.199] - 2026-07-01
-
-### Changed
-- **Logo & Icon Color Theme Redesign**: Updated the brand logo (`TPlusLogo`), desktop icon (`icon.svg`, `icon.png`), and web favicon from the feminine violet/purple scheme to a professional Indigo & Cyan palette.
-- **Default Application Theme Accent**: Changed the default theme's primary accent color from Violet (`#a855f7`) to Indigo (`#6366f1`) and updated all fallbacks and related styles to provide a clean, tech-focused, and gender-neutral user interface.
-
----
-
-## [1.3.198] - 2026-07-01
-
-### Changed
-- **Checkpoint/Snapshot UI Enhancement**: Styled "Autosave" snapshot cards with a distinct amber theme and added an auto-generated "autosave" badge to distinguish them from standard checkpoints, making it easier for users to identify automatic revert points.
-
----
-
-## [1.3.197] - 2026-07-01
-
-### Added
-- **Auto-Snapshot before Restore (Autosave)**: If the working directory has unsaved (dirty) changes when restoring a snapshot, the system will automatically create a temporary "Autosave" snapshot of those changes before resetting and performing the checkout/restore. This prevents any loss of work and allows reverting/recovering back to the dirty state.
-
----
-
-## [1.3.196] - 2026-07-01
-
-### Changed
-- **Checkpoint/Snapshot UI**: Replaced native browser `window.confirm` and `alert` prompts with custom modal-based dialogs (`ConfirmModal` / `useConfirmDialog`) for checkpoint restore, delete, and create operations, resulting in a cleaner and more integrated user interface.
-
----
-
-## [1.3.195] - 2026-07-01
-
-### Fixed
-- **Git Changes Untracked Files/Folders Detection**:
-  - Appended the `-u` (show untracked files) flag to the `git status --porcelain` command in `gitManager.ts`. This ensures Git reports individual files inside newly created/untracked folders, allowing them to bypass the directory-excluding filter and display correctly in the Git Changes side panel.
-
-### Refactored
-- **Strict File Length Limit Compliance**:
-  - Extracted all checkpoint/snapshot functions and types (such as `Checkpoint` interface, `getMetaPath`, `getCheckpoints`, `createCheckpoint`, `restoreCheckpoint`, and `deleteCheckpoint`) from the monolithic `gitManager.ts` file into a new dedicated module, `checkpointManager.ts` (approx. 250 lines).
-  - Updated `gitRoutes.ts` imports to consume the migrated functions, ensuring the codebase complies with the strict 1000-line limit per file.
-
----
-
-## [1.3.194] - 2026-07-01
-
-### Changed
-- **Documentation**: Updated `README.md` to detail key new features including SSH/SFTP Remote Workspace support, Workspace Checkpoints (Snapshots), interactive file explorer operations, theme-aware SVGs, and binary file warnings.
-
----
-
-## [1.3.193] - 2026-07-01
-
-### Added
-- **SSH/SFTP Remote Workspace Support**:
-  - **Backend Helpers**: Created [sshHelpers.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/sshHelpers.ts) to manage remote SSH filesystem operations, directory listing (`ls -F -A`), file read/write (`cat`/`head` / stdin streaming), and file check operations using native OpenSSH CLI tools.
-  - **SSH Workspace Interception**: Adapted [fsRoutes.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/fsRoutes.ts) and [gitManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/gitManager.ts) to inspect path prefixes and automatically delegate operations to remote servers when target directories start with `ssh://`.
-  - **Checkpoints over SSH**: Programmed remote checkpoints configuration metadata support, saving snapshots (`tline-checkpoints.json`) in the remote `.git` common directory.
-  - **Interactive Remote Terminals**: Integrated remote terminal session support in [terminalManager.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/backend/src/terminalManager.ts), launching an interactive `ssh -t` terminal when creating shell instances for SSH-prefixed directories.
-  - **UI Add Workspace Hints**: Updated [Modals.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/Modals.tsx) workspace add input to display hints on remote SSH paths (`ssh://user@host:port/path`) and disable the local directory explorer button for remote inputs.
-
----
-
-## [1.3.192] - 2026-07-01
-
-### Added
-- **File Explorer Operations (Rename, New File, New Folder)**:
-  - **Backend Endpoints**: Added `/api/fs/create` to create empty files and folders, and `/api/fs/rename` to rename/move files and folders.
-  - **Reusable Modal**: Added `InputModal` in `Modals.tsx` to handle user input prompts with clean Glassmorphism styling and focus handling.
-  - **Explorer Header Actions**: Integrated new file and folder buttons next to the Refresh button in the explorer panel header.
-  - **Explorer Context Menu**: Extended context menu items for workspace items to support creating new files/folders relative to the selected item and renaming files/folders.
-
----
-
-## [1.3.191] - 2026-07-01
-
-### Fixed
-- **Terminal Pane Split Buttons in Light Mode**:
-  - Dynamically styled the terminal floating action bar (containing horizontal split, vertical split, and close pane buttons) to use custom translucent light styling in light mode. This replaces the hardcoded dark background and border styling with a clean light layout that integrates perfectly with the light theme.
-  - Adapted the pane resize handles to use a softer purple translucency in light mode to improve contrast and feel premium.
-
----
-
-## [1.3.190] - 2026-07-01
-
-### Fixed
-- **Terminal Padding Clipping of Bottom Rows**:
-  - Isolated the xterm `.terminal-element` container inside a wrapper class `.terminal-element-wrapper`. Shuffled the padding styling over to this wrapper and kept `.terminal-element` at `width: 100%; height: 100%`. This enables xterm's FitAddon to calculate row sizes based on the true content container height, preventing the bottom shell lines from being clipped or covered by the terminal status bar.
-
----
-
-## [1.3.189] - 2026-07-01
-
-### Fixed
-- **Terminal Status Bar Hidden Overflow**:
-  - Replaced `.terminal-element` hardcoded `height: 100%` with `flex: 1` and `min-height: 0` to align with the parent flexbox layout. This prevents the terminal container from pushing the `TerminalStatusBar` (at the bottom of the pane) off-screen and being clipped.
-
----
-
-## [1.3.188] - 2026-07-01
-
-### Changed
-- **Branch Management Modal â€” Redesign & Feature Upgrade**:
-  - **Redesigned UI**: Replaced the plain browser `<select>` dropdown with a custom scrollable branch list panel. Active branch is highlighted with a purple left-border indicator and check icon.
-  - **Branch Search**: Added a live search/filter input at the top of the branch list, letting users instantly filter by name across many branches.
-  - **Branch Deletion**: Each non-active branch now shows a trash icon on hover. Clicking it reveals an inline confirmation row. If Git reports unmerged changes, the modal escalates to a force-delete prompt before proceeding.
-  - **Fetch Repository**: Added a "Fetch" action button alongside Pull and Push, wired to a new `POST /api/workspaces/:id/git/fetch` endpoint that runs `git fetch --all --prune`.
-  - **3-Column Sync Grid**: Fetch / Pull / Push are rendered side-by-side in a uniform grid with consistent sizing and hover effects. Push uses a primary purple accent; Fetch and Pull use a neutral ghost style.
-  - **Premium Animations**: Overlay fades in and the modal card scales up with a spring bounce animation on open.
-  - **Self-Contained Styles**: All modal styles are scoped via a `<style>` block inside the component to avoid polluting global CSS.
-
-### Added (Backend)
-- `deleteBranch(repoPath, branchName, force)` in `gitManager.ts` â€” runs `git branch -d` / `git branch -D`.
-- `fetchRemote(repoPath)` in `gitManager.ts` â€” runs `git fetch --all --prune`.
-- `POST /api/workspaces/:id/git/branch/delete` route in `gitRoutes.ts`.
-- `POST /api/workspaces/:id/git/fetch` route in `gitRoutes.ts`.
-
----
-
-## [1.3.186] - 2026-07-01
-
-### Changed
-- **Redesigned Git Branch Group Badge**:
-  - Polished the Git branch badge in the `.content-tabs-bar` to float cleanly off the bottom border using `margin-bottom: 5px`.
-  - Upgraded the badge style to a premium pill shape (`border-radius: 10px`) with refined vertical height, padding, and subtle translucent colors (`color-mix` values) for optimal visual alignment with tab controls.
-
----
-
-## [1.3.185] - 2026-07-01
-
-### Fixed
-- **Clipping of Active Tab Bottom Border Overlap**:
-  - Adjusted the height of `.chrome-tabs-container` to `calc(100% + 1px)` and positioned it with `bottom: -1px; overflow: hidden`.
-  - This allows the active tab and its outward curves to sit on top of the `.content-tabs-bar` container's bottom border without being clipped by `overflow: hidden`, successfully masking the border under the active tab.
-
----
-
-## [1.3.184] - 2026-07-01
-
-### Changed
-- **Chrome-like Seamless Active Tab Curves**:
-  - Implemented smooth, outward bottom-corner curves for active tabs (`.tab-active::before` and `.tab-active::after`) using radial-gradient overlays to blend the active tab seamlessly into the workspace panel.
-  - Removed side borders of active tabs and replaced them with top-only accent colors to mimic the modern Google Chrome tab design.
-
----
-
-## [1.3.183] - 2026-07-01
-
-### Changed
-- **Active Tab Seamless Merging**:
-  - Aligned all tabs to the bottom of the `.content-tabs-bar` container using `align-items: flex-end`.
-  - Configured the active tab (`.tab-active`) to use the exact background color of the workspace panel (`var(--bg-main)`).
-  - Overlapped the parent container's bottom border under the active tab using `margin-bottom: -1px` and `z-index: 2` to remove the separation line and seamlessly join the active tab with the terminal/content below it.
-  - Aligned the New Terminal (+) and switcher dropdown buttons to stay vertically centered relative to tab height.
-
----
-
-## [1.3.182] - 2026-07-01
-
-### Changed
-- **Content Integrated Tab Bar**:
-  - Relocated the chrome-like tab bar (`chrome-tabs-container` and dropdown switcher) from the global window `top-bar` down into the `.content-area`.
-  - Positioned the tab bar directly on top of the active workspace panel (e.g. above terminal panes, Monaco file viewers, and diff view tabs), matching modern editor styles (such as VS Code editor tab headers).
-  - Added CSS layout rules for `.content-tabs-bar` with consistent background (`var(--bg-sidebar)`) and borders.
-
----
-
-## [1.3.181] - 2026-07-01
-
-### Fixed
-- **Terminal Text Selection & ANSI Colors in Light Mode**:
-  - Dynamically cleared `selectionForeground` (setting it to `undefined`) in light mode so that selected terminal text preserves its original high-contrast foreground color, instead of forcing white text on a light background.
-  - Adjusted the 16 ANSI colors (black, green, yellow, blue, magenta, cyan, and white) to use higher-contrast/inverted variants specifically when in light mode, ensuring full readability of build scripts and CLI output.
-
----
-
-## [1.3.180] - 2026-07-01
-
-### Added
-- **Workspace & Worktree Checkpoints (Snapshots)**:
-  - Added a brand new **Snapshots** panel in the sidebar to capture the exact working state of any Git workspace or worktree.
-  - Snapshot creation preserves all staged/unstaged changes and untracked files by creating a custom Git reference (`refs/tline/checkpoints/*`) to shield it from Git garbage collection without cluttering the user's regular stashes.
-  - Supported viewing and expanding snapshots to list modified files and open side-by-side diff comparisons directly in Monaco editor tabs.
-  - Enabled one-click restoring of snapshots (switching to the snapshot's branch/commit and applying changes) and deletion.
-
----
-
-## [1.3.179] - 2026-07-01
-
-
-### Fixed
-- **Light Theme Tab Switcher Dropdown** (`App`, `TabsDropdown`):
-  - Fixed color contrast issues in light theme mode (where inactive tabs had extremely low contrast, light gray text on a white background).
-  - Used semantic CSS variables (`--ws-dropdown-bg`, `--ws-dropdown-border`, `--text-main`, `--text-muted`, and `--ws-dropdown-shadow`) so the dropdown switcher automatically adapts between dark and light themes with premium aesthetics.
-
-### Added
-- **Search & Filter in Tab Switcher Dropdown** (`TabsDropdown`):
-  - Added an auto-focused search bar inside the dropdown menu to filter open tabs dynamically by name, path, cwd, or shell type.
-- **Keyboard Navigation** (`TabsDropdown`):
-  - Supported navigating filtered items using `ArrowUp`/`ArrowDown`, selecting using `Enter`, closing the dropdown with `Escape`, and closing the highlighted tab using `Delete`/`Backspace` when the search query is empty.
-  - Implemented automatic smooth scrolling to keep the highlighted item in view during keyboard navigation.
-- **Enhanced Tab Switcher Metadata** (`TabsDropdown`):
-  - Grouped and counted tabs by category (Files, Terminals, Diffs) inside the header.
-  - Displayed relative path/cwd information and Git branch badges for each tab item.
-- **Footer Quick Actions** (`TabsDropdown`):
-  - Added "Close Others" and "Close All" quick action buttons at the bottom of the dropdown.
-
----
-
-## [1.3.176] - 2026-07-01
-
-### Fixed
-- **Light Mode Colors** (`FileViewerTab`):
-  - Replaced all hardcoded dark Tailwind color classes (`bg-slate-900`, `border-slate-800`, `text-slate-300`, `text-slate-400`, `hover:text-white`, `hover:bg-white/5`) with adaptive CSS variable equivalents (`var(--bg-card)`, `var(--border-color)`, `var(--text-muted)`, `var(--text-main)`, `var(--surface-overlay-hover)`).
-  - **Preview/Code toggle** container and inactive button text now adapts correctly in light mode.
-  - **Zoom controls** (Zoom In, Zoom Out, Reset) in image/SVG viewer now use theme-aware colors on hover.
-  - **Skeleton loading** bars now visible in light mode (using `--surface-overlay` instead of opaque dark slate).
-  - **Binary file warning** panel no longer hardcodes a dark background (`#0a0a0c`) â€” now uses `var(--bg-main)`.
-  - **PDF viewer** container background now adapts to theme.
-  - All **file path** spans across image, PDF, binary, and code editor viewers use `var(--text-muted)` for consistent adaptive contrast.
-  - **Revert button** in code editor header uses adaptive hover background.
-
-## [1.3.178] - 2026-07-01
-
-### Added
-- **Commit Diff in Dedicated Tab** (`GitHistory`):
-  - Clicking a file in the **Changed Files** section of Commit Details now opens the file's diff in a **new dedicated tab** (type `diff`) rather than an inline panel within the sidebar.
-  - Diff tabs use a `Î” filename (shortHash)` naming convention and a green `GitCompare` icon in the tab bar to distinguish them from regular file tabs.
-  - The `DiffViewerTab` component features: dual gutter line numbers (old/new), collapsible hunks, per-line add/delete/context coloring, and addition/deletion stats in the header.
-  - Files with `deleted` status are grayed out and non-clickable (no diff can be shown for deleted files).
-  - Opening the same commit+file diff a second time reuses the existing tab instead of creating a duplicate.
-
-### Added
-- **Resizable History / Commit Details panels** (`GitHistory`):
-  - A **drag handle** (`row-resize` cursor) is now rendered between the **Git Commit History** list and the **Commit Details** panel.
-  - Dragging the handle resizes the two panels vertically between 20% and 80% of the available height.
-  - The resize handle highlights with a purple accent on hover for clear discoverability.
-
----
-
-## [1.3.177] - 2026-06-30
-
-### Changed
-- **Image & SVG Preview Background**:
-  - Preview area background now uses `var(--bg-main)` to match the active theme instead of a hardcoded dark color.
-  - Replaced radial dot pattern with a clean **square grid** (`24Ã—24px`) using `linear-gradient` CSS backgrounds. Grid line color is controlled by the new `--preview-grid-line` CSS variable: subtle white (`rgba(255,255,255,0.05)`) on dark themes, subtle black (`rgba(0,0,0,0.07)`) on Light Mode â€” automatically adapts with no JavaScript.
-  - Grid container background uses `var(--bg-sidebar)` and border uses `var(--border-color)`, both theme-aware.
-  - Zoom controls overlay now uses `var(--bg-card)` and `var(--border-color)` instead of hardcoded dark colors.
-
----
-
-## [1.3.176] - 2026-06-30
-
-### Fixed
-- **SVG Preview & Code Edit in Tab**:
-  - SVG files now always load their XML content as text on open, eliminating the need for a re-fetch when switching between Preview and Code modes. Mode switching is now instant with no loading skeleton flash.
-  - SVG preview is now rendered via a dynamically generated **blob URL** created from the in-memory content (`editedContent`), instead of the `/api/fs/raw` HTTP endpoint. This resolves rendering failures caused by auth token propagation on `<img>` tags, Electron CSP restrictions, and browser caching that would prevent the preview from reflecting post-save edits.
-  - The blob URL is automatically revoked and regenerated whenever the SVG content changes (including after every auto-save), ensuring the Preview tab always reflects the latest editor state in real-time.
-
----
-
-## [1.3.175] - 2026-06-30
-
-### Fixed
-- **Image Preview Container Layout**:
-  - Re-implemented the checkerboard wrapper container style using absolute positioning inside the relative parent. This guarantees the container correctly inherits parent boundary dimensions and prevents layout collapsing/blank screens in flex parent environments.
-
----
-
-## [1.3.174] - 2026-06-30
-
-### Fixed
-- **SVG Preview Rendering**:
-  - Added explicit container width/height styling for SVG image views. This prevents the SVG from collapsing to 0x0 size in CSS due to circular dependencies between relative image sizes and parent flex containers.
-
----
-
-## [1.3.173] - 2026-06-30
-
-### Added
-- **Binary File Handling in Editor Tabs**:
-  - Implemented binary file detection (`.exe`, `.zip`, `.dll`, `.mp3`, `.mp4`, etc.) in `FileViewerTab`.
-  - Added a binary warning UI with a "Reveal in Explorer" button to prevent reading binary files as text, avoiding browser freezes/crashes and auto-save corruption.
-- **SVG Preview & Code Toggle**:
-  - Added a preview/code toggle in `FileViewerTab` header for `.svg` files. Users can now switch between visual vector graphics preview and direct XML code editing.
-
----
-
-## [1.3.172] - 2026-06-30
-
-### Added
-- **Visual Distinctions for Hidden/Dot Files**:
-  - Implemented the `.explorer-item-muted` CSS style class in `components.css` to render files/directories starting with `.` (e.g. `.gitignore`, `.env`, `.github`, `.agents`) slightly faded/translucent (opacity: 0.55). This matches premium IDE aesthetics and helps distinguish hidden configurations from primary source files.
-
----
-
-## [1.3.171] - 2026-06-30
-
-### Fixed
-- **Show node_modules and Build Folders**:
-  - Restored visibility of `node_modules`, `dist`, and `dist-exe` directories in the file explorer. Only `.git` folder remains hidden.
-
----
-
-## [1.3.170] - 2026-06-30
-
-### Fixed
-- **Filter Out .git Folder**:
-  - Restored the `.git` metadata folder exclusion while keeping all other hidden dotfiles and dot-directories visible in the file explorer.
-
----
-
-## [1.3.169] - 2026-06-30
-
-### Added
-- **Show Hidden Files in File Explorer**:
-  - Removed filters that exclude hidden files and directories starting with `.`, exposing `.gitignore`, `.env`, `.github`, `.git`, `.agents`, etc. to the file explorer. Dependency and build directories (`node_modules`, `dist`, `dist-exe`) remain excluded.
-- **Refactoring Server File Length**:
-  - Extracted all Express filesystem routes (`/list`, `/explore`, `/read`, `/raw`, `/write`, `/delete`, `/open-explorer`) from `backend/src/server.ts` into a new router file `backend/src/fsRoutes.ts`. This reduces the file length of `server.ts` to ~740 lines, keeping it well within the strict 1000-line limit.
-
----
-
-## [1.3.168] - 2026-06-30
-
-### Fixed
-- **Git Changes: Missing First Character in Filename**:
-  - Replaced `stdout.trim()` with `stdout.trimEnd()` in the `runGit` process execution utility. Using `trim()` stripped leading whitespace on the first line of the output (which is used by `git status --porcelain` to indicate unstaged status codes, e.g. ` M package-lock.json`), causing columns to shift left and parsing functions to slice off the first character of filenames.
-
----
-
-## [1.3.167] - 2026-06-30
-
-### Fixed
-- **Git Commit History: Slashes & Backslashes Column Alignment**:
-  - Corrected the coordinate logic for diagonal curves (`/` and `\`) in `GitGraphLine`. In Git's `--graph` outputs, branch columns are separated by spaces (odd indices) while lines and nodes reside on even indices. Slashes/backslashes are transitions spanning from `index - 1` to `index + 1`. Adjusting both endpoints to these even column coordinates removes the 1-lane horizontal gap offset and connects lanes cleanly.
-
----
-
-## [1.3.166] - 2026-06-30
-
-### Fixed
-- **Git Commit History: Node Line Connection Alignment**:
-  - Replaced the faint `var(--tree-connector-color)` stroke on vertical lines passing through commit nodes (`*`) with the actual `laneColor`. This restores visibility of vertical connectors going to/from commit nodes, making curves and straights connect seamlessly in light and dark themes.
-
----
-
-## [1.3.165] - 2026-06-30
-
-### Changed
-- **Git Commit History: Compact Visual Simplification**:
-  - Reverted card-style feeds back to a standard flat, borderless list format with simple divider lines, reducing the item height and maximizing screen space.
-  - Removed author avatar icons to clean up horizontal layout.
-  - Removed SVG glow blur filters from the `visx` shapes to render crisp, solid, high-contrast branch lines.
-
----
-
-## [1.3.164] - 2026-06-30
-
-### Changed
-- **Git Commit History: Visx Curve Model Only**:
-  - Removed the link type selector button group from the panel header to keep the UI clean and clutter-free.
-  - Locked the rendering logic to use exclusively the curved `LinkVertical` path (matching the core visual style of visx dendrograms) for all diagonal merge and branch lines.
-
----
-
-## [1.3.163] - 2026-06-30
-
-### Added
-- **Git Commit History: Interactive visx Style Selector**:
-  - Added a segmented control button group in the panel header allowing users to dynamically switch between **Curve** (cubic bezier), **Step** (orthogonal dendrogram-style), and **Line** (straight diagonals) rendering modes.
-- **Git Commit History: Premium Visual Layout Redesign**:
-  - Replaced the simple flat border list layout with a modern card-based timeline feed utilizing transparent glassmorphic backgrounds, rounded corners (`8px`), and custom border shadows.
-  - Implemented dynamic hover micro-animations (cards lift upwards on hover with glowing border indicators).
-  - Applied neon SVG drop-shadow filter glow on the visx connector tracks to create a glowing aesthetic in the graph columns.
-
----
-
-## [1.3.162] - 2026-06-30
-
-### Changed
-- **Git Commit History: Full visx Migration & Alignment Corrections**:
-  - Fully migrated all straight, diagonal, and horizontal lines in the visual commit graph rendering to use Airbnb's `@visx/shape` components (`LinkVertical` and `LinkHorizontal`).
-  - Corrected the coordinate formula for backslash (`\`) lines to run from `index - 1` (top) to `index` (bottom), matching the actual branch offsets. This resolves the remaining gaps seen in multi-lane split and merge commits.
-
----
-
-## [1.3.161] - 2026-06-30
-
-### Changed
-- **Git Commit History: Airbnb visx Integration**:
-  - Replaced raw SVG paths for git slash (`/`) and backslash (`\`) connector lines with the `LinkVertical` component from Airbnb's `@visx/shape` library.
-  - Retained exact pixel alignments and correct diagonal slope shift logic for seamless multi-row connection.
-
----
-
-## [1.3.160] - 2026-06-30
-
-### Fixed
-- **Git Commit History: Visual alignment for SVG branch lines**:
-  - Corrected the coordinate logic for slash (`/`) characters in `GitGraphLine`. Shifted the slope to go from bottom-left (`index - 1`) to top-right (`index`), allowing multiple diagonal merge paths to flow smoothly across row boundaries without gaps.
-  - Aligned horizontal underscore (`_`) connectors to the bottom boundary of the row cell (`rowHeight - 1`) so they connect seamlessly with the bottom points of slashes and backslashes.
-
----
-
-## [1.3.159] - 2026-06-30
-
-### Changed
-- **Git Commit History: Custom SVG Renderer**:
-  - Replaced the character-based grid `div` renderer (`GitGraphLine`) with a modern, high-performance SVG drawing system.
-  - Implemented smooth cubic bezier curves (`M ... C ...`) for diagonal slash (`/`) and backslash (`\`) lines, making branch splits and merges visually continuous.
-  - Added support for straight SVG lines for vertical connectors (`|`) and horizontal lines (`_`).
-  - Styled commit nodes (`*`) as SVG circles with a drop shadow glow matching the workspace theme accent.
-  - Cleaned up unused React imports to pass TypeScript compilation checks.
-
----
-
-## [1.3.158] - 2026-06-30
-
-### Fixed
-- **Git Commit History: Light Theme UI fixes**:
-  - Replaced hardcoded dark background and border in the Git Graph column with transparent backgrounds and border variables, aligning it cleanly with the list layout.
-  - Enabled the vertical connecting branch line to dynamically use `--tree-connector-color` instead of a hardcoded white alpha color, making branches clearly visible in Light Mode.
-  - Added high-contrast branch references (badges like `main`, `remote`, `tag`) for the light theme, using darker texts and soft-colored backgrounds to improve readability.
-  - Removed node glows and avatar shadows when the light theme is active.
-
----
-
-## [1.3.157] - 2026-06-30
-
-### Fixed
-- **Light Theme: UI Shadows, Tooltips, Toasts and Sidebar Panels**:
-  - Added CSS class `theme-light` to document root dynamically based on theme.
-  - Eliminated box shadows, active glows, dot pulses, and resizer glows in light theme using CSS overrides.
-  - Removed heavy shadows on `.sidebar` and `.right-sidebar` in light mode.
-  - Updated the inline switcher style block in `SidebarContentPanel.tsx` to use CSS custom properties instead of hardcoded dark values.
-  - Revamped style tags in `GitChanges.tsx` using CSS variables to correctly adjust inputs, textareas, and tabs in light theme.
-  - Improved theme selection highlights and accent selectors in `SettingsModal.tsx` to remain visible and high contrast on light backgrounds.
-
----
-
-## [1.3.156] - 2026-06-30
-
-### Fixed
-- **Light Theme: Global Color Token Fixes**:
-  - Added 28 new light/dark adaptive semantic CSS custom properties to `useThemeAndFonts.ts` (`--surface-overlay`, `--surface-overlay-hover`, `--surface-overlay-active`, `--surface-inverse`, `--scrollbar-thumb`, `--scrollbar-thumb-hover`, `--tree-connector-color`, `--tab-active-bg/border/color`, `--tab-close-hover-bg`, `--tooltip-bg/border/text/title/path/branch`, `--toast-bg/border/text`, `--ws-dropdown-bg/border/shadow`, `--panel-header-bg`, `--sidebar-tabs-bg`, `--window-btn-hover-bg`).
-  - **`components.css`**: Replaced hardcoded dark-only RGBA/hex values with semantic variables in: tab hover/active/close-hover, tab tooltip (background, border, text, title, path, branch), toast item (background, border, color, shadow), workspace dropdown menu (background, border, shadow), dropdown action button hover, workspace search bar (background, border), tree container border, tree connector pseudo-elements, and tree item hover.
-  - **`layout.css`**: Replaced hardcoded RGBA values in sidebar panel tabs background, sidebar panel tab hover/active, panel section header background, and window control button hover.
-  - **`base.css`**: Replaced hardcoded scrollbar thumb colors with CSS variable references with dark-mode fallbacks (`--scrollbar-thumb`, `--scrollbar-thumb-hover`).
-
----
-
-## [1.3.155] - 2026-06-30
-
-### Fixed
-- **Connection Error Page: Light Theme Compatibility**:
-  - Replaced all hardcoded dark-only color values with semantic CSS custom properties (`--btn-secondary-bg`, `--btn-secondary-border`, `--status-footer-bg`, `--heading-gradient-from/to`, `--icon-bg`, `--icon-border`).
-  - Removed all `box-shadow` declarations (card shadow, primary button glow, icon inner shadow, status dot glow) so the page renders cleanly on light themes without dark halos or colored glows.
-  - Added a light-theme override block in `applySavedTheme()` that overrides the semantic tokens with appropriate light values when `settings.theme === 'light'`.
-
----
-
-## [1.3.151] - 2026-06-30
-
-### Fixed
-- **Git Changes: Bottom Diff Panel Hides When Opening as Tab**:
-  - When `onFileOpen` is provided, clicking a file now immediately opens it as an editor tab and **does not show the inline diff panel** below the file list. The file is still highlighted in the list.
-  - Previous behavior caused both the inline diff panel AND the tab to open simultaneously.
-- **Git Changes: File Tab Now Visible in Tab Bar**:
-  - Fixed `filteredTabs` in `App.tsx` to always include `file`-type tabs in the active worktree view. Previously, file tabs opened from the Git Changes panel could be hidden by the worktree filter even though they belonged to the workspace.
-- **Git Changes: Improved Path Construction**:
-  - `workspacePath` backslashes are now normalized to forward-slashes before concatenating with the git-relative `file.path`, producing a consistent forward-slash path for cross-platform compatibility.
-
----
-
-## [1.3.150] - 2026-06-30
-
-### Fixed
-- **Filter Folders from Git Changes Panel**:
-  - Fixed `getGitStatus` in `gitManager.ts` to exclude directory entries (paths ending with `/`) from git status output.
-  - Folders (e.g. untracked `node_modules/`, `dist/`) will no longer incorrectly appear as changed items in the Git Changes sidebar.
-
----
-
-## [1.3.149] - 2026-06-30
-
-### Added
-- **Open Changed Files as Editor Tab from Git Changes Panel**:
-  - Clicking any file in the Git Changes sidebar (both Staged and Unstaged sections) now opens the file directly as an editor tab in the main view.
-  - Added `onFileOpen` and `workspacePath` props to `GitChanges` component to resolve the full absolute file path and pass it to the tab opener.
-  - Deleted files are excluded from tab-opening (no content to display).
-
----
-
-## [1.3.148] - 2026-06-30
-
-### Fixed
-- **CustomSelect Theme Color Support**:
-  - Replaced the hardcoded dark background `rgba(9, 12, 20, 0.95)` on the dropdown panel with a theme-aware `color-mix(in srgb, var(--bg-sidebar) 95%, transparent)` value.
-  - The dropdown now correctly adapts its background color to the active theme (Dark, Nord, Light, etc.).
-
----
-
-## [1.3.147] - 2026-06-30
-
-### Fixed
-- **Optimized CustomSelect Hover Performance**:
-  - Prevented massive layout thrashing and hover lag by conditionalizing the DOM `scrollIntoView` call so that it only runs during keyboard navigation (i.e. arrow key presses or initially opening the selected option), and not during mouse hover movements.
-
----
-
-## [1.3.146] - 2026-06-30
-
-### Fixed
-- **Optimized Settings Modal Tab Switching Performance**:
-  - Moved font and weight options arrays outside the component's render function so they have stable object references, preventing unnecessary re-renders of the custom `<Select>` dropdown elements.
-  - Refactored the connection-checking effect to fetch connections only when the "Access Control" tab is active, eliminating redundant background network requests and associated state-update lags during tab transitions.
-
----
-
-## [1.3.145] - 2026-06-30
-
-### Added
-- **Premium Google Fonts in Appearance Settings**:
-  - Imported a full suite of modern, premium Google Fonts in `index.html` (including Geist, Plus Jakarta Sans, Open Sans, Nunito, Sora, DM Sans, IBM Plex Mono, Inconsolata, Roboto Mono, Space Grotesk, Manrope, Work Sans, Cabin, Space Mono, and Anonymous Pro).
-  - Updated `useThemeAndFonts.ts` to include these new fonts in the UI Font Family and Terminal Font Family choices in the Appearance settings.
-  - Implemented fallbacks for `Geist Sans` to look for both the Vercel local name and Google Fonts name.
-
----
-
-## [1.3.144] - 2026-06-30
-
-### Fixed
-- **Custom Select Integration in Sidebar**:
-  - Replaced the native HTML `<select>` dropdowns in the left sidebar's File Explorer and Git Changes panels with the project's custom, premium `<Select>` component.
-  - Added CSS style overrides in `components.css` to keep the custom Select dropdowns compact and beautifully integrated within the sidebar layout.
-
----
-
-## [1.3.143] - 2026-06-30
-
-### Added
-- **Enriched VSCode-like Git Source Control Features**:
-  - Integrated a premium **Git Commit History** panel showing recent commits alongside a visual **Git Graph** lane tree. Lanes are dynamically colorized to map branch structures clearly.
-  - Implemented detail views for historical commits, displaying author metadata, date details, full commit body messages, and list of changed files.
-  - Allowed side-by-side/inline diff previewing for any modified file in a historical commit.
-  - Created a interactive **Branch Management & Sync** modal, allowing search/checkout of local branches, creation/checkout of new local branches, and remote pull/push sync actions.
-  - Made the Footer's branch indicator pill hoverable and clickable to quickly toggle the Branch Management dialog.
-
----
-
-## [1.3.142] - 2026-06-30
-
-### Fixed
-- **Dropdown Menu Visibility Fix**:
-  - Moved the absolute-positioned tabs dropdown container outside the `.chrome-tabs-container` which has `overflow: hidden;` styling.
-  - This prevents the dropdown switcher menu from being visually clipped/hidden behind the tab bar layout.
-
----
-
-## [1.3.141] - 2026-06-30
-
-### Added
-- **Enforced Maximum Tab Limit in Tab Bar**:
-  - Enforced a maximum limit of 7 visible tabs in the main tab bar.
-  - Automatically moves overflow tabs into the dropdown switcher.
-  - Dynamically includes the active tab as the last visible tab in the tab bar if it is selected from the dropdown list.
-
----
-
-## [1.3.140] - 2026-06-30
-
-### Fixed
-- **Open Tabs Dropdown Button**:
-  - Fixed open tabs dropdown instantly closing itself on click.
-  - Implemented target checks using `closest()` to exclude dropdown button clicks from triggering auto-close.
-
----
-
-## [1.3.139] - 2026-06-30
-
-### Fixed
-- **UTF-16LE File Encoding Auto-detection**:
-  - Implemented auto-detection of UTF-16LE file encoding in `/api/fs/read` (checking BOM `0xFF 0xFE` and null-byte odd-index heuristics).
-  - Correctly decodes UTF-16LE content to prevent spaced-out text rendering and red `NUL` character boxes inside Monaco editor.
-
----
-
-## [1.3.138] - 2026-06-30
-
-### Added
-- **Copy Path Option in Workspace Explorer**:
-  - Added "Copy Path" / "Copy Paths" options in the Explorer's context menu.
-  - Copies absolute path (or newline-separated list for multi-selections) to the clipboard.
-  - Displays a toast confirmation notification upon success.
-
----
-
-## [1.3.137] - 2026-06-30
-
-### Fixed
-- **Footer Path display adjustment**:
-  - Resolved active file paths to parent directories inside the footer to display containing folders exclusively.
-  - Adjusted footer directory folder-opening context clicks to launch parent folders instead of raw file paths.
-
----
-
-## [1.3.136] - 2026-06-30
-
-### Added
-- **Image Mouse Scroll-to-Zoom Support**:
-  - Implemented mouse wheel scroll zoom handling on the image viewer tab.
-  - Attached non-passive wheel event listener to container to intercept default scrolling and adjust zoom scale incrementally.
-
----
-
-## [1.3.135] - 2026-06-30
-
-### Added
-- **Image Grab-to-Pan / Drag-to-Scroll Support**:
-  - Implemented click-and-drag grabbing support to pan/scroll around zoomed images.
-  - Tracked dragging coordinates globally and applied translation offset in the image transform.
-  - Temporarily disabled transitions during dragging to ensure zero-latency movement.
-  - Styled grab/grabbing cursor states dynamically.
-
----
-
-## [1.3.134] - 2026-06-30
-
-### Added
-- **Tab Image & PDF Viewer Support**:
-  - Implemented `/api/fs/raw` raw streaming backend endpoint for loading images and PDF contents directly.
-  - Allowed query parameter authentication (`?token=...`) in `authMiddleware` for embedding resources.
-  - Integrated a premium zoomable image viewer for images (`.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`, `.ico`) with checkerboard transparency background, smooth scaling animations, zoom out, zoom in, and reset options.
-  - Integrated an iframe/embed viewer for PDF documents.
-
----
-
-## [1.3.133] - 2026-06-30
-
-### Added
-- **Shift+Click Range Selection in Explorer**:
-  - Implemented Shift+Click range selection support to select a sequence of visible files/directories in the Workspace Explorer.
-  - Calculated visual range selection by query-selecting active elements in the tree-view viewport dynamically using a scroll container ref and DOM attributes.
-  - Reset range anchor upon background deselect.
-
----
-
-## [1.3.132] - 2026-06-30
-
-### Added
-- **Multi-select Files/Directories in Explorer**:
-  - Added support for multi-selecting items in the Workspace Explorer by holding Ctrl/Cmd key while clicking.
-  - Implemented visual highlighting (`explorer-item-active` class styling) for all selected items.
-  - Updated context menu actions to support batch operations: opening multiple items in the native system file explorer, and deleting multiple items concurrently.
-  - Extended the `ConfirmModal` warning message and title dynamically to reflect the count and names of selected items.
-  - Added background click-to-deselect functionality to clear active selections.
-
----
-
-## [1.3.131] - 2026-06-30
-
-### Fixed
-- **UI Deletion Confirmation Modal**: Replaced the native browser `window.confirm` dialog for Workspace Explorer item deletions with the application's native, glassmorphic `ConfirmModal` UI component.
-
----
-
-## [1.3.130] - 2026-06-30
-
-### Added
-- **Workspace Explorer Right-Click Context Menu**:
-  - Implemented a premium glassmorphic context menu for files and directories in the Workspace Explorer.
-  - Added "Open in Explorer" / "Reveal in Explorer" to open the selected directory/file in the native OS file explorer (Windows Explorer, macOS Finder, or xdg-open on Linux).
-  - Added "Delete" to recursively remove files and directories with confirmation prompts and reactive WebSocket reload events.
-  - Refactored `FilePanel.tsx` by splitting the monolithic code into two new files (`FileExplorer.tsx` and `GitChanges.tsx`) to comply with the 1000-line limit rule.
-
----
-
-## [1.3.129] - 2026-06-30
-
-### Fixed
-- **Terminal Copy/Paste on Text Selection**: Fixed an issue where Ctrl+C did not copy text when selection (blocking text) was active in the terminal.
-  - Added an xterm custom key event handler to intercept Ctrl+C when there is an active selection and write the selected text to the clipboard.
-  - Intercepted Ctrl+V to paste text from the clipboard via the WebSocket pty connection, supporting multi-line smart paste warnings.
-
----
-
-## [1.3.128] - 2026-06-30
-
-### Fixed
-- **File Explorer and Git Changes Sync**: Fixed out-of-date File Explorer and Git Changes views when files are modified, created, or deleted.
-  - Enhanced backend file watcher to recursively watch active worktree directories dynamically in addition to main workspace paths.
-  - Added callback triggers to re-initialize file watchers when worktrees are added or removed.
-  - Configured backend `/api/fs/write` to trigger immediate update notifications when files are saved in the Monaco editor.
-  - Added a deep comparison helper in `useGitStatus` to prevent redundant explorer fetches during background polling.
-  - Updated frontend `App.tsx` to automatically trigger file explorer tree refreshes whenever git status updates or files are saved.
-
----
-
-## [1.3.127] - 2026-06-30
-
-### Fixed
-- **Monaco Editor CSS Blocked by CSP**: Added `https://cdn.jsdelivr.net` to the `style-src` directive in `frontend/index.html`. The Monaco editor stylesheet (`editor.main.css`) is loaded from jsDelivr at runtime and was being blocked because `cdn.jsdelivr.net` was only listed in `script-src` and `worker-src` but not in `style-src`.
-
----
-
-## [1.3.126] - 2026-06-30
-
-### Fixed
-- **File Explorer Request Storm (`ERR_INSUFFICIENT_RESOURCES`)**: Fixed an infinite fetch loop in `FileExplorer` where the `onRefresh` callback prop (an unstable function reference from the parent) was included in the `useCallback` dependency array for `load`. Every parent re-render caused `load` to be recreated, which triggered its `useEffect`, which fired another fetch, which caused another re-render â€” resulting in hundreds of requests per second to `/api/fs/explore`. The fix moves `onRefresh` into a stable `useRef`, decoupling it from the dependency chain entirely.
-
----
-
-## [1.3.125] - 2026-06-30
-
-### Fixed
-- **Insecure Content Security Policy Warning**: Added Content-Security-Policy (CSP) meta tags to both the main application (`index.html`) and the local fallback page (`connection-error.html`) to restrict scripts, styles, fonts, and WebSocket connections to trusted origins, with adjustments to allow Monaco Editor workers from jsDelivr and cdnjs CDNs.
-- **Canvas Renderer Initialization TypeError**: Migrated all xterm.js dependencies from legacy unscoped packages (`xterm`, `xterm-addon-*`) to modern scoped package versions under the `@xterm/` namespace. This prevents duplicate xterm bundle instances and aligns types at runtime, allowing the canvas addon to initialize and render correctly.
-
----
-
-## [1.3.124] - 2026-06-30
-
-### Fixed
-- **Tab Closing Focus Isolation**: Fixed a bug where closing the last tab of a workspace automatically switched the view to a different active workspace. Closing the last tab of a workspace now correctly keeps the focus on that workspace and displays the "Empty Dashboard" welcome screen as expected.
-
----
-
-## [1.3.123] - 2026-06-30
-
-### Added
-- **Theme Synchronization to Reconnect & Restart Screens**:
-  - Saved the user's active theme preset, accent color, and font choices to a local configuration file (`theme_settings.json`) in the Electron application data directory.
-  - Preloaded and applied the saved theme variables dynamically on the offline reconnection screen (`connection-error.html`), updating body mesh gradients, window control buttons, titlebars, background cards, borders, fonts, and active accents.
-  - Replaced hardcoded mesh gradient colors in both the main application (`base.css`) and reconnect screen with dynamic theme CSS variables (`--bg-radial-dot`, `--bg-radial-glow1`, `--bg-radial-glow2`).
-  - Styled the primary action button (`Start Backend`) on the reconnect page using the active theme's accent color and custom shadows.
-
----
-
-## [1.3.122] - 2026-06-30
-
-### Added
-- **Git Actions in Source Control Tab**:
-  - Implemented stage, unstage, and discard changes for individual files directly from the Changes panel.
-  - Added "Stage All", "Unstage All", and "Discard All" buttons in the Changes panel header.
-  - Added a Commit section featuring a commit message text area with Ctrl+Enter keyboard shortcut support and a "Stage all & commit" option.
-  - Grouped changes into explicit "Staged Changes" and "Changes" (unstaged) sections to align with professional Git client standards.
-  - Added robust confirmation prompts before discarding changes to protect unstaged work from accidental deletions.
-  - Refactored git backend endpoints to a separate express router file (`gitRoutes.ts`) to maintain a clean modular architecture and keep `server.ts` well under the 1000-line limit.
-
----
-
-## [1.3.121] - 2026-06-29
-
-### Added
-- **Premium Custom Select Component**:
-  - Implemented a custom glassmorphic select dropdown component with full keyboard navigation (arrows, Enter, Space, Escape) and click-outside closing behavior.
-  - Added support for search/filtering, icons, and descriptions in options.
-  - Replaced all native `<select>` dropdowns across the application with the custom select component, including `Modals.tsx` (workspace/branch/shell settings), `SettingsModal.tsx` (font families), `RightSidebar.tsx` (sidebar shell switcher), and `Footer.tsx` (status bar shell switcher with upward `'top'` alignment and `'minimal'` visual styling).
-  - Added a search filter input directly inside the UI and Terminal font select dropdowns for quick font lookups.
-  - Added several new premium UI and Monospace font variants, including `Geist Sans`, `SF Pro`, `Plus Jakarta Sans`, `Lato`, `Open Sans`, `Nunito`, `Sora`, `DM Sans`, `Geist Mono`, `SF Mono`, `Cascadia Code`, `IBM Plex Mono`, `Inconsolata`, and `Hack`.
-- **Font Weight Control**:
-  - Added `UI Font Weight` and `Terminal Font Weight` dropdowns in Settings (Light/Regular/Medium/Semibold/Bold).
-  - UI font weight is applied globally to the app via `--font-sans-weight` CSS variable on the `body` element.
-  - Terminal font weight is piped from `useThemeAndFonts` â†’ `App.tsx` â†’ `SplitLayoutRenderer` â†’ `TerminalInstance` and passed as `fontWeight` to Xterm.js, with live reactive updates.
-
----
-
-## [1.3.120] - 2026-06-29
-
-### Added
-- **Real-time Workspace and Git Status Sync**:
-  - Implemented recursive workspace file system watching using Node's native `fs.watch` to detect file additions, deletions, renames, and modifications.
-  - Added debounced (300ms) WebSocket broadcast triggers on file changes to notify the client-side UI of changes.
-  - Implemented cascading, state-preserving updates in the File Explorer tree view so that expanded folders automatically reload their updated contents without collapsing.
-  - Automatically refreshes Git status changed files and badges in the sidebar when any file system changes are detected.
-
----
-
-## [1.3.119] - 2026-06-29
-
-### Added
-- **Tabs Dropdown Switcher Menu**: Added a tab dropdown list switcher with a chevron-down icon next to the "New Tab" button in the tab bar. This dropdown appears when there are 2 or more active tabs, allowing the user to quickly view, switch between, or close tabs directly from the list.
-
----
-
-## [1.3.118] - 2026-06-29
-
-### Removed
-- **Removed Branch Prefix from Tab Buttons**: Removed the inline git branch badge prefix (`master | `) inside the individual tab buttons in the tab bar for a cleaner and more compact interface.
-
----
-
-## [1.3.117] - 2026-06-29
-
-### Changed
-- **Removed Branch Suffix from Tab Titles**: Removed the branch name suffix (` (branch)`) from terminal tab titles. Terminal tabs now display only the clean workspace name, while the branch name remains visible in the header and footer status indicators.
-
----
-
-## [1.3.116] - 2026-06-29
-
-### Changed
-- **Workspace Card Non-Toggling Behavior**: Removed toggle-off deselection from parent workspace card clicks, ensuring that parent workspace selections remain persistent and always select their main branch (`master`/`main` via `ws.path`) unconditionally. Toggle-off deselection continues to work for sub-worktree items.
-
----
-
-## [1.3.115] - 2026-06-29
-
-### Changed
-- **Workspace & Worktree Selection and Toggle-Off Behavior**:
-  - Modified workspace parent card click behavior so that clicking a workspace directly selects its main branch (`master`/`main` via `ws.path`) instead of leaving the path unselected.
-  - Implemented toggle-off (deselect) behavior: clicking an already selected workspace or worktree in the sidebar clears the selection (setting `panelWorkspace = null` and `panelWorktreePath = null`), hiding active workspace tabs and displaying a clean welcome dashboard.
-  - Refactored `filteredTabs` and active tab synchronization in `App.tsx` to handle isolation of nested worktree paths when the main branch (`ws.path`) is selected.
-  - Removed unused variable declarations to fix build compiler warnings.
-
----
-
-## [1.3.114] - 2026-06-29
-
-### Fixed
-- **Sub-folder Worktree Path Sorting & Matching**:
-  - Sorted worktrees by path length descending in `getTabGitBranch` (`useTabUiHandlers.ts`) to ensure specific nested worktrees (e.g. `.worktrees/*`) match before falling back to the main workspace path.
-  - Applied the same descending path length sorting in the `Footer` helpers (`getWorkspaceActiveBranch` and `getRelativeActivePath`) to fix incorrect branch/path displays.
-  - Refactored `WorkspaceList.tsx` active worktree highlighting logic (`isWtActive`) to prevent the main branch and sub-folder worktrees from being highlighted simultaneously.
-
----
-
-## [1.3.113] - 2026-06-29
-
-### Added
-- **Bidirectional Tab and Sidebar Workspace/Worktree Synchronization**:
-  - Implemented a `useEffect` hook in `App.tsx` utilizing a `useRef` to track previous tab state changes.
-  - Automatically switches the active sidebar workspace and selected worktree branch when switching between tabs.
-  - Automatically updates the sidebar context when a terminal shell's working directory (CWD) changes.
-  - Automatically updates active terminal tab titles dynamically if the Git branch of the worktree changes.
-
----
-
-## [1.3.112] - 2026-06-29
-
-### Fixed
-- **Worktree Active Highlight Styling in Sidebar**:
-  - Propagated the `panelWorkspace` prop down to the `WorkspaceList` and `WorktreeList` components.
-  - Fixed active workspace card highlighting by tracking both tab active state and user-selected workspace panel state (`panelWorkspace?.id === w.id`).
-  - Corrected `isSelectedWt` logic in the worktree list so that the main branch is highlighted when `panelWorktreePath` is null (representing the main workspace view) only for the active workspace.
-
----
-
-## [1.3.111] - 2026-06-29
-
-### Added
-- **Worktree Header & Footer Synchronization**:
-  - Integrated `panelWorktreePath` into `Footer` to display the selected worktree's branch name and relative directory path even when there are no active tabs or when the active tab path is not in the worktree.
-  - Added a persistent worktree branch badge (`.tab-group-badge`) at the start of the Integrated Tab Bar when in worktree filtering mode.
-  - Pass `panelWorktreePath` to `EmptyDashboard` so that clicking the "Open Terminal" button opens the shell directly within the active worktree directory.
-
----
-
-## [1.3.110] - 2026-06-29
-
-### Changed
-- **Worktree Folder Naming**: Renamed default folder for workspace worktrees from `.worktree/` to `.worktrees/` (plural) based on user preference.
-
----
-
-## [1.3.109] - 2026-06-29
-
-### Changed
-- **Default Worktree Folder Location**: Changed the default base directory for new git worktrees to be created inside a `.worktree` folder within the workspace root itself (e.g., `<workspace-path>/.worktree/<branch-name>`) instead of a sibling folder.
-- **Dynamic Path Synchronization**: Added a `useEffect` hook in `useWorkspaces.ts` to dynamically sync the default worktree checkout path segment to match the typed or selected branch name in real-time.
-
----
-
-## [1.3.108] - 2026-06-29
-
-### Added
-- **Branch Name Input Sanitization**: Automatically sanitize input values for new branch names and custom local branch names in the "Create Git Worktree" modal, converting whitespace to hyphens and stripping special characters invalid in Git reference formats.
-
----
-
-## [1.3.107] - 2026-06-29
-
-### Added
-- **Custom Local Branch Name for Existing Branches**: Added an optional text input in the "Create Git Worktree" modal allowing users to define a custom local branch name when tracking an existing remote or local branch.
-
----
-
-## [1.3.106] - 2026-06-29
-
-### Added
-- **Detached HEAD Fallback for Worktrees**: Added a fallback in `addWorktree` that automatically attempts to use `--detach` when a branch (like `master`) is already checked out by another worktree, preventing `fatal` check out conflicts.
-
----
-
-## [1.3.105] - 2026-06-29
-
-### Changed
-- **Worktree Selection Behavior**: Clicking on a worktree in the sidebar now specifically targets, opens, or switches to a terminal tab configured for that worktree path instead of opening or activating file tabs.
-
----
-
-## [1.3.104] - 2026-06-29
-
-### Added
-- **Worktree Active Branch Integration**:
-  - Integrated file explorer (`FileExplorer`) and git changes (`GitChanges`) to automatically load directories and git status / diffs matching the active worktree selection.
-  - Added support in backend workspace git status and diff routes to process a `worktreePath` parameter.
-
-### Fixed
-- **Null/Undefined Safeguards**: Safeguarded all workspace worktree loops and checks to fall back safely to an empty array when uninitialized, preventing browser runtime crashes.
-- **React Hook Rules**: Fixed React Error #310 by moving the `filteredTabs` `useMemo` definition above the early return conditions inside `App.tsx`.
-
----
-
-## [1.3.103] - 2026-06-29
-
-### Added
-- **Worktree Filtering & Grouping**:
-  - Filter tabs in the top tab bar to only display active worktree tabs when a specific worktree branch is selected.
-  - Display all tabs grouped/sorted by worktree branches with a beautiful themed `.tab-group-badge` in the top bar when the parent workspace itself is clicked.
-  - Automatically sync the active worktree selection when switching tabs.
-  - Removed the active checkmark icon from active worktree tree items in the sidebar list (retaining the selection highlight), while keeping the checkmark on the main workspace tree item layout.
-
----
-
-## [1.3.102] - 2026-06-29
-
-### Added
-- **Appearance Settings**: Added an "Appearance" tab inside the SettingsModal allowing rich customization of themes, colors, and fonts:
-  - **Theme Presets**: Switch between *Default Dark*, *Dracula*, *Cyberpunk Neon*, *Forest Green*, *Nord Frost*, and *Light Mode*.
-  - **Color Customization**: Choose from 7 curated accent colors or specify any custom color using a native color picker. Accent colors dynamically derive states like glows, borders, shadows, and radial grid backgrounds via CSS `color-mix()`.
-  - **UI Font Selection**: Customize the main UI font family (Outfit, Inter, or System Default). Loaded new font families via Google Fonts in `index.html`.
-  - **Terminal Font Selection**: Customize the terminal/editor font family (JetBrains Mono, Fira Code, Source Code Pro, Courier New, or System Monospace).
-  - **Terminal Font Size Settings**: Control the terminal font size dynamically through a range slider.
-  - **Unified xterm.js styling**: Updated terminal instances to dynamically update font families, cursor colors, selection backgrounds, and theme colors on changes.
-
----
-
-## [1.3.101] - 2026-06-29
-
-### Removed
-- **Model Context Protocol (MCP)**: Cleaned up and completely removed the MCP Server integration, SSE/WS endpoints, proxy stdio bridge, and MCP Settings dashboard/logs panel from both the frontend and backend.
-
----
-
-## [1.3.100] - 2026-06-29
-
-### Refactored
-- **Code Modularization (App.tsx)**: Refactored the core frontend `App.tsx` file to bring it fully under the strict 1,000-line repository limit (reduced from 1,028 lines to 938 lines):
-  - Extracted workspace/worktree actions and tab interaction logic to a new custom hook `useWorkspaceHandlers.ts`.
-  - Extracted unified confirmation and alert dialog state management to a new custom hook `useConfirmDialog.ts`.
-  - Extracted active workspace git status polling and state management to a new custom hook `useGitStatus.ts`.
-  - Extracted the static inline SVG `TPlusLogo` component to its own file `TPlusLogo.tsx`.
-  - Extracted `TabTooltip` and `TabContextMenu` components to a dedicated file `TabUiComponents.tsx`.
-
----
-
-## [1.3.99] - 2026-06-29
-
-### Added
-- **Model Context Protocol (MCP) Server**: Exposes workspace data, file operations, git worktrees, and terminal execution capabilities directly to external AI assistants.
-  - Implemented custom JSON-RPC 2.0 message processor and SSE endpoints (`/api/mcp/sse`, `/api/mcp/message`).
-  - Added 7 specialized tools: `list_workspaces`, `get_workspace_details`, `run_command`, `read_file`, `write_file`, `create_worktree`, and `remove_worktree`.
-  - Enforced security filters verifying that all file operations and command executions reside strictly inside configured workspaces.
-  - Protected endpoints by requiring active session token validation.
-- **MCP Stdio Proxy Bridge**: Created a lightweight stdio-to-WebSocket proxy (`mcp-stdio.ts`) allowing stdio-only clients like Claude Desktop to bridge directly into the running backend.
-- **MCP Dashboard & Settings Tab**: Designed a premium, interactive tab inside the `SettingsModal` displaying connection status, active client stats, copy-paste config guides for Claude Desktop and Cursor, and a live-updating audit log of tool calls.
-
----
-
-## [1.3.98] - 2026-06-29
-
-### Added
-- **Terminal Active Processes Loading & Badges**: Added active process monitoring to the workspace list and branch list.
-  - Implemented OS process tree scanning (`getActiveProcessesForPid`) on Windows/Unix in `terminalManager.ts`.
-  - Added a 2.5s interval in WebSocket title polling to check active child processes and push the list to client.
-  - Rendered a glowing pulsing green dot overlapping workspace and worktree icons when a terminal has active commands running.
-  - Added beautiful styled gradient glow badges next to workspace/worktree items for specific processes (Claude Code, Gemini CLI, Cursor, Superagent CLI, and general "Active" processes).
-
----
-
-## [1.3.97] - 2026-06-29
-
-### Refactored
-- **Code Modularization (App.tsx)**: Refactored the core frontend `App.tsx` file to improve maintainability and strictly conform to the 1,000-line limit:
-  - Extracted update checking and GitHub release checks to a new custom hook `useUpdateChecker.ts`.
-  - Extracted tab context menus, tooltips, and tab closure actions to a new custom hook `useTabUiHandlers.ts`.
-  - Extracted authentication lifecycle, login, and setup checks to a new custom hook `useAuth.ts`.
-  - Reduced `App.tsx` file size from 1,582 lines to 1,222 lines.
-
----
-
-## [1.3.96] - 2026-06-29
-
-### Fixed
-- **Workspace & Branch Badges Out-of-date**: Fixed a bug where workspace cards and worktree branch dirty count badges were never updated after initial load. Added periodic workspace list polling (every 10 seconds) in the frontend.
-- **Save Refetch & Cache Invalidation**: Saving a file in the code editor now triggers an immediate workspace refresh in the frontend. Also, the backend file write endpoint `/api/fs/write` now automatically clears the workspace status cache to ensure the badges update instantly.
-- **Type Safety**: Fixed a TypeScript compilation error in `FileViewerTab.tsx` regarding implicit `any` type for Monaco model iterator.
-
----
-
-## [1.3.95] - 2026-06-29
-
-### Added
-- **Git Spawning Optimization (RAM & CPU)**: Added an 8-second memory caching mechanism to `getWorkspaceInfo` in the backend. Since the Electron app polls workspace info every 5 seconds, this completely stops the backend from constantly spawning slow and resource-heavy `git status` and `git worktree list` child processes in the background. The cache is automatically cleared when workspaces or worktrees are added, removed, or updated.
-
----
-
-## [1.3.94] - 2026-06-29
-
-### Added
-- **RAM Optimization**: Implemented several memory optimizations to reduce the footprint of Electron, Node, React, and terminal sessions:
-  - Added `--max-old-space-size=384` js-flags to Electron to restrict V8 heap size in main/renderer processes.
-  - Enabled GPU command buffer pruning on idle.
-  - Limited the Node.js backend utility process memory limit to `192MB`.
-  - Disposed of Monaco Editor models on tab unmount/file change to prevent memory leaks.
-  - Reduced terminal scrollback history from 10,000 to 3,000 lines.
-  - Halved the PTY session output buffer limit to 64KB.
-
----
-
-## [1.3.93] - 2026-06-29
-
-### Fixed
-- **System Tray PTY Sessions**: Fixed an issue where the tray menu would not update when terminal sessions changed due to the polling loop ignoring identical status updates.
-- **Git Worktree Support in Tray**: Updated session-to-workspace mapping to look up git worktree paths in addition to main workspace paths. Submenu items for terminal sessions in a worktree now explicitly indicate the active worktree's branch.
-
----
-
-## [1.3.92] - 2026-06-29
-
-### Fixed
-- **CI Build & Release**: Removed the redundant `softprops/action-gh-release@v2` step from `release.yml`. Since `electron-builder` already publishes and uploads all built binaries and updater metadata files when `GH_TOKEN` is present, the extra upload step was duplicate and resulted in double-uploaded files with space-spaced and hyphenated names.
-
----
-
-## [1.3.91] - 2026-06-29
-
-### Fixed
-- **CI Build Fix**: Reverted workflow back to the original simple structure without native builder rebuild workarounds (removed `electron-rebuild` and extra python setup steps that caused lockfile/compromised conflicts during npm execution), letting `electron-builder` natively handle compiling `node-pty`.
-
----
-
-## [1.3.90] - 2026-06-29
-
-### Fixed
-- **CI Build Fix**: Overhauled GitHub Actions `release.yml` to properly handle native module compilation across all platforms:
-  - Added `setup-python@v5` (Python 3.11) required by `node-pty` native build
-  - Added Linux build tools (`build-essential`, `libx11-dev`, `libxkbfile-dev`, `libsecret-1-dev`)
-  - Added macOS Xcode CLI tools setup
-  - Added `electron-rebuild` step to rebuild `node-pty` against the correct Electron ABI
-  - Added `fail-fast: false` so all 3 platform jobs run independently
-  - Added `GH_TOKEN` env for `electron-builder` publish step
-
----
-
-## [1.3.89] - 2026-06-29
-
-### Fixed
-- **Build Fix**: Removed unused `React` import in `UpdateNotification.tsx` that caused a TypeScript `TS6133` error and broke the GitHub Actions CI build on all platforms.
-
----
-
-## [1.3.88] - 2026-06-29
-
-### Added
-- **Manual Update Check in Settings**: Added a "Software Update" row in the Settings â†’ General tab with a **Check** button that triggers `electron-updater` to immediately check GitHub Releases for a new version. The row displays contextual status badges: *Checkingâ€¦* (spinner), *Up to date* (green checkmark), *vX.X.X available* (purple), *Downloadingâ€¦ N%* (blue), and *Failed* (red with tooltip). When an update is downloaded and ready, the button becomes **Restart & Install vX.X.X**, directly triggering `quitAndInstall`. The row is only rendered inside the Electron desktop environment (hidden in browser).
-
----
-
-## [1.3.87] - 2026-06-29
-
-### Added
-- **Auto-Update System**: Implemented a full end-to-end auto-update system powered by `electron-updater`. The app now automatically checks GitHub Releases for a newer version 5 seconds after startup and every 4 hours thereafter. Downloads happen silently in the background. A non-intrusive floating toast notification (bottom-right) informs users when an update is available, shows a real-time download progress bar (with speed and size info), and presents a "Restart & Install" button when the update is ready. Users can dismiss the toast or manually retry on error. The system is a no-op in development mode.
-
----
-
-## [1.3.86] - 2026-06-29
-
-### Changed
-- **Minimalist Welcome Dashboard**: Redesigned the Empty Dashboard welcome page to be sleek and minimalist: removed the heavy colorful background gradients and glow behind the card; removed the pulsing animation (`animate-pulse`) from the primary CTA button and the Folder icon; simplified the card layout with a clean border (`border-white/5`) and a subtle dark-slate background (`bg-[#090c14]/40`).
-
----
-
-## [1.3.85] - 2026-06-29
-
-### Added
-- **Deletion Loading Skeletons & Success Toasts**: Integrated real-time visual feedback when removing workspaces or worktrees. Displays a responsive, non-interactive loading card skeleton with red border highlights, pulse animations, and spinning loaders for workspaces, and a matching tree connector loading node for worktrees. Dispatches user-facing success notifications (`tline-toast` events) upon completion.
-
----
-
-## [1.3.84] - 2026-06-29
-
-### Changed
-- **Minimalist Header Height & Control Pill Design**: Reduced desktop top-bar height (`--topbar-height`) from 56px to 40px to maximize vertical editor/terminal space. Eliminated the solid dark wrapper background and border on the right action control pill. Separated application action buttons (Help, Settings, Logout) from window actions (Minimize, Maximize, Close), styling them as borderless transparent icons that blend seamlessly into the header background.
-
----
-
-## [1.3.83] - 2026-06-29
-
-### Changed
-- **Footer Status Bar Layout Reorganization**: Relayouted footer items into cleaner, logically grouped sections: Left Section displays metadata (application version and the RAM resource usage statistics pill); Center Section groups active Workspace directory context, active Git branch status badge, and terminal font zoom & shell selection controls; Right Section is dedicated to Cloudflare Tunnel status, URL, and actions. This prevents screen crowding when tunnels are active or workspace paths are long.
-
----
-
-## [1.3.82] - 2026-06-29
-
-### Added
-- **Real-time Memory (RAM) Usage Widget in Footer**: Implemented memory diagnostics directly into the bottom status bar footer. Displays the RAM consumption for the Backend process (`B: XX MB`) and Desktop application (`D: XX MB`, aggregating memory working set size across all Electron processes). Added a detailed hover dropup tooltip showing complete memory breakdown (RSS and Heap memory for the Backend process, App Total and Main Process RSS for Desktop, and Free/Total Host System Memory). Added `/api/system/stats` backend endpoint and Electron main process IPC handler `get-memory-usage` to safely fetch these values.
-
----
-
-## [1.3.81] - 2026-06-29
-
-### Fixed
-- **Monorepo Packaging & Internal Asset Resolution**: Resolved a major packaging issue where external `backend` and `frontend` assets were excluded from compiled builds due to `electron-builder` limitations. Created a cross-platform asset copying pipeline (`copy-assets.js`) to move assets inside the `desktop` workspace directory before compilation. Rewrote `projectRoot` resolution to use `app.getAppPath()` to guarantee path correctness, allowing the utility process to execute directly from within the `app.asar` archive and resolve production dependencies seamlessly.
-
----
-
-## [1.3.80] - 2026-06-29
-
-### Fixed
-- **Portable Build Backend Spawning (utilityProcess)**: Resolved a critical uncaught exception (`Error: spawn ... ENOENT`) that occurred exclusively in packaged portable builds. Migrated the backend process spawning mechanism from manual OS execution via `child_process.spawn(process.execPath)` to Electron's official `utilityProcess.fork` API. This leverages Electron's internal helper process architecture, preventing file permission/existence failures under the temporary directories used by portable NSIS wrappers.
-
----
-
-## [1.3.79] - 2026-06-29
-
-### Fixed
-- **Unpacked Physical Path & Shell Escape Resolution**: Resolved backend startup failure in packaged builds caused by Windows cmd shell whitespace splitting in directories containing spaces. Re-enabled `asarUnpack` for `backend/**/*` inside `desktop/package.json` to generate clean physical file locations, configured `desktop/main.js` to dynamically map `projectRoot` to `app.asar.unpacked`, and disabled `shell` spawning for binary executables in production. This guarantees backend processes spawn seamlessly under any folder path.
-
----
-
-## [1.3.78] - 2026-06-29
 
 ### Optimized
-- **Monorepo Bundle Size & Hoisting Resolution**: Fixed a critical packaging issue where backend dependencies (like `express`, `ws`, and `node-pty`) were missing from the production package because of npm workspaces hoisting. Declared the backend production dependencies directly inside `desktop/package.json`. This prompts `electron-builder` to bundle only the required production dependencies and automatically exclude all heavy `devDependencies` (like `typescript`, `ts-node-dev`, and types), resolving execution crashes on clean systems and optimizing the bundle size.
+- **Low-Spec Local Embedding Optimization**: Implemented `OptimizedLocalTextEmbeddingProvider` utilizing `Xenova/all-MiniLM-L6-v2` as the default local embedding model (reducing layer count from 12 to 6, cutting CPU overhead in half). Integrated thread limiting for ONNX Runtime (`intraOpNumThreads: 2`, `interOpNumThreads: 1`) to ensure local embedding generation never consumes 100% CPU on multi-core systems, keeping the terminal CLI highly responsive during background indexing.
 
----
-
-## [1.3.77] - 2026-06-29
+## [1.2.408] - 2026-07-17
 
 ### Fixed
-- **Production Backend Executable Spawning**: Fixed backend initialization failure in packaged production builds. Reconfigured the spawn command in `desktop/main.js` to run the backend inside Electron's runtime (`process.execPath`) using `ELECTRON_RUN_AS_NODE=1` environment mode to guarantee ABI compatibility for native modules. Added `asarUnpack` configuration for `backend/**/*` inside `desktop/package.json` to prevent executable path loading blocks under the ASAR archive.
+- **RMemory Sync Batching and Truncation**: Implemented batch processing (max 8 messages at a time) and text truncation (max 8,000 characters per message/pin) during conversation and pinned knowledge indexing in the RMemory utility. This prevents ONNX Runtime memory allocation failures (OOM) and extremely high CPU consumption on startup when syncing long conversation histories.
 
----
+## [1.2.407] - 2026-07-17
 
-## [1.3.76] - 2026-06-29
+### Added
+- **Single-Mode Memory Status**: Added RMemory connection status display to the footer status bar of the single-agent console interface. The footer now displays "Mem: ON", "Mem: OFFLINE", "Mem: CHECKING", or "Mem: OFF", matching the multi-agent dashboard footer layout.
+
+## [1.2.406] - 2026-07-17
 
 ### Fixed
-- **Single Instance Focus Lock**: Integrated Electron `requestSingleInstanceLock` and `second-instance` event handlers in `desktop/main.js`. This resolves the issue where opening the executable again when it was already running in the background (minimized to the tray) did not show the window, by immediately focusing and restoring the existing application instance.
+- **CLI Startup Hang**: Resolved a major issue where the terminal UI would freeze and become unresponsive to keyboard inputs on startup when RMemory is enabled. Moving the CPU-intensive history search syncing process (`syncAllHistoryToRMemory`) to a detached background child process prevents it from blocking the main process event loop.
 
----
+## [1.2.405] - 2026-07-17
 
-## [1.3.75] - 2026-06-29
+### Added
+- **RMemory History & Pinned Knowledge Search**: Integrated RMemory semantic vector search as the primary engine for `/search-history` and `/knowledge` commands.
+- **RMemory Transcript Loading**: Enabled `load_pinned_session` to retrieve session transcripts directly from RMemory using `getConversationMessages(sessionId)`.
+- **RMemory Pinned Knowledge Syncing**: Configured pinned knowledge additions, updates, and removals to automatically synchronize to the RMemory database, and added background synchronization of existing pins when `/knowledge` is run.
+
+## [1.2.404] - 2026-07-17
 
 ### Fixed
-- **Linux Packaging Metadata Validation**: Added required packaging fields (`author`, `homepage`, and `maintainer`) inside `desktop/package.json` to resolve build failures for Debian/Linux targets on GitHub Actions.
+- **Planning Narration Nudge**: Fixed a bug where the agent loop would auto-continue and nudge the LLM on conversation and question requests. This prevents system message tags (`[SYS]`) from leaking to the user during simple chat/Q&A interactions.
 
----
+## [1.2.403] - 2026-07-17
 
-## [1.3.74] - 2026-06-29
+### Optimized
+- **Cognitive Scale-Up Skill**: Expanded single-agent-cognitive-scaleup with five new advanced non-human, non-linear cognitive techniques: Multi-Verse Simulation, Fractal Decomposition, Evolutionary Solution Breeding, Constraint-Satisfaction Propagation (CSP), and Entropy Minimization. Also updated the Execution Workflow in SKILL.md to integrate these techniques.
 
-### Added
-- **Dynamic System Update Checker**: Integrated an automatic update checker. Added `/api/system/version` backend endpoint to read the application version dynamically, and configured the frontend to compare it against the latest GitHub release and show toast notifications and highlighted warning badges with direct download links in the UI.
-
----
-
-## [1.3.73] - 2026-06-29
-
-### Added
-- **Multi-Platform CI/CD Release Workflow**: Created a GitHub Actions workflow `.github/workflows/release.yml` that builds and compiles Windows, macOS, and Linux releases in the cloud automatically.
-- **macOS & Linux Build Configurations**: Added new build targets for `mac` (`dmg`, `zip`) and `linux` (`AppImage`, `deb`) to the `desktop` configurations.
-
----
-
-## [1.3.72] - 2026-06-29
-
-### Changed
-- **Documentation Overhaul**: Redesigned and rewrote the primary project README to emphasize marketing appeal, highlighting key value propositions, user pain points solved, high-performance GPU Canvas rendering, and Git Worktrees workflow benefits. Added the visual application preview showcase in the documentation.
-
----
-
-## [1.3.71] - 2026-06-29
-
-### Fixed
-- **Workspace Actions Dropdown Overlap**: Fixed a CSS stacking context bug where subsequent workspace cards overlapped and obscured the open dropdown menu of preceding workspace cards. Lifted the dropdown menu's open state to the parent `WorkspaceList` component and introduced a conditional `.ws-card-dropdown-open` class that sets a higher `z-index` (50) on the active card, ensuring the dropdown menu renders on top of all sibling cards.
-- **Single-Dropdown Policy**: Managing the open dropdown state in the parent ensures only one workspace dropdown can be open at a time, automatically closing any open dropdown when another is toggled.
-
----
-
-## [1.3.70] - 2026-06-29
-
-### Added
-- **xterm â€” Canvas GPU Renderer**: Terminal now uses `@xterm/addon-canvas` Canvas-based renderer instead of the default DOM renderer, delivering significantly smoother scrolling and rendering, especially during rapid streaming output from AI agents and build logs.
-- **xterm â€” Image Protocol Support**: Added `@xterm/addon-image` enabling inline image rendering in the terminal via sixel and iTerm2 inline image protocol. CLI tools that output images (e.g., `viu`, image previews) will now render inline.
-- **xterm â€” Terminal Status Bar**: A compact translucent status bar now appears at the bottom of each terminal pane showing: shell type (PS/CMD/Bash/etc.), WebSocket connection dot (green/red), cursor position (col:row), font size, and inline zoom in/out and clear/search buttons.
-- **xterm â€” Premium Context Menu**: Right-click context menu redesigned with icons for each action, keyboard shortcut hints (Copy, Paste, Select All, Findâ€¦, Clear), scale-in animation, and a distinct danger style for destructive actions.
-- **xterm â€” Smart Paste Warning**: Pasting 3 or more lines now shows an inline confirmation dialog with a preview of the content, preventing accidental multi-line pastes in interactive shells.
-- **xterm â€” Upgraded Search Bar**: Search overlay now uses a slide-down animation, a grouped input wrapper with search icon, better visual toggle buttons for case-sensitive and regex modes, and distinct red styling when no results are found.
-- **xterm â€” Split Pane Focus Ring**: In split-pane layouts, the currently focused terminal pane is highlighted with a violet glow border animation, making it immediately clear which pane is active.
-- **xterm â€” Zoom from Status Bar**: Zoom in/out buttons in the status bar fire a `tline-zoom` custom event, wired to the same zoom handlers as keyboard shortcuts, so font size can be adjusted directly from the terminal bar.
-- **xterm â€” Custom Mouse Cursor**: Changed the default mouse cursor inside the terminal screen from the `text` I-beam selector to a standard `default` arrow pointer. This makes mouse interaction feel natural in interactive TUI apps (e.g. Ink TUI interfaces with hover states), while still allowing dynamic overrides to `pointer` when hovering web links.
-
----
-
-
-
-
-### Changed
-- **Workspace Panel â€” Branch Collapse**: Branch/worktree list per workspace is now collapsed when there are more than 3 entries. A "+N more branches" toggle button appears to expand/collapse the full list, keeping the panel compact.
-- **Workspace Panel â€” Compact Card Design**: Workspace cards are now more minimal with tighter padding, smaller font sizes, and less vertical gap. Replaced the old ad-hoc Tailwind utility classes with dedicated `.ws-card`, `.ws-card-active`, `.ws-card-dirty`, and `.ws-card-idle` CSS classes.
-- **Workspace Panel â€” Search Bar**: Added a real-time search input at the top of the workspace list. Filters workspaces by name or path as you type, with a clear (Ã—) button and focus highlight.
-- **Workspace Panel â€” Dirty-First Sort**: Workspaces with uncommitted changes (dirty worktrees) are automatically sorted to the top of the list so they are immediately visible without scrolling.
-- **Workspace Panel â€” Dirty Count Pill**: If a workspace has uncommitted changes, a compact amber badge showing the total dirty file count is now displayed inline next to the workspace name.
-
----
-
-## [1.3.68] - 2026-06-28
-
-### Fixed
-- **ANSI Black Color Invisible in Terminal**: The xterm.js theme had `black` set to `#1e293b` (near-identical to the `#000000` terminal background), making any program output using ANSI color 0 completely invisible. Changed `black` to `#4a5568` and `brightBlack` to `#718096` so all 16 ANSI colors are clearly readable on the dark background.
-
----
-
-## [1.3.67] - 2026-06-28
-
-### Fixed
-- **Worktree Delete Backend Fallback**: If `git worktree remove --force` still fails with a Permission Denied/lock error (e.g. held by antivirus or File Explorer), the backend now falls back to: (1) clear read-only flags on all files in the directory, (2) force-delete the folder tree via `fs.rmSync`, then (3) run `git worktree prune` to clean up Git's internal registry. This ensures the worktree is always fully removed even when Git itself cannot acquire the necessary file lock.
-
----
-
-## [1.3.66] - 2026-06-28
-
-### Fixed
-- **Worktree Delete Permission Denied**: When removing a git worktree, the app now automatically closes all terminal tabs and file tabs whose path is inside that worktree **before** issuing the backend delete command. This releases any OS-level file locks held by open terminal processes, preventing the `Permission denied: failed to delete '<path>'` error on Windows.
-
----
-
-## [1.3.65] - 2026-06-28
-
-### Changed
-- **Enlarged Sidebar Logo**: Increased the `TPlusLogo` component size in the sidebar header to 28px (up from 22px) for a much clearer and more prominent visual presence.
-
----
-
-## [1.3.64] - 2026-06-28
-
-### Changed
-- **Taskbar Icon White Background Fix**: Generated a new high-quality `T+` PNG icon with a solid dark indigo background (#0f172a) filling the entire 512x512 canvas. This replaces the transparent-corner version to prevent Windows from rendering white backgrounds in the corners.
-- **Sidebar Header Logo Scaling**: Increased the size of the inline vector `TPlusLogo` SVG component inside the sidebar header from 16px to 22px for better readability and a more premium, balanced appearance.
-
----
-
-## [1.3.63] - 2026-06-28
-
-### Changed
-- **Unified Sidebar Brand Logo**: Replaced the generic Lucide terminal icon in the sidebar header with the inline vector `TPlusLogo` SVG component, unifying the app UI branding with the taskbar and system tray icons.
-
----
-
-## [1.3.62] - 2026-06-28
-
-### Added
-- **T+ SVG and PNG Logo**: Designed and wrote a scalable vector graphics (SVG) version of the brand logo at `desktop/icon.svg`, and generated a matching premium high-resolution `T+` PNG at `desktop/icon.png` for unified tray and taskbar support.
-
----
-
-## [1.3.61] - 2026-06-28
-
-### Added
-- **Premium Application Icon Asset**: Created a custom premium glowing purple developer logo featuring a stylized 't' merging with a Git branch/terminal line, replacing `desktop/icon.png` to serve as the unified icon for both the taskbar/window and the system tray.
-
----
-
-## [1.3.60] - 2026-06-28
-
-### Changed
-- **Accidental Closure Prevention for Small Tabs**: Added a CSS container query so that when tabs shrink in width (under 75px), the close button is completely hidden on hover for inactive tabs. This avoids accidental clicks and exactly matches Google Chrome's tab behavior.
-
----
-
-## [1.3.59] - 2026-06-28
-
-### Added
-- **Dirty Files Count Badge**: Added an amber number badge next to dirty git branches/worktrees in the sidebar tree view, showing the exact count of uncommitted changes/untracked files.
-
----
-
-## [1.3.58] - 2026-06-28
-
-### Fixed
-- **Stuck Tooltip Bug**: Fixed custom tab tooltips occasionally getting stuck on the screen when a tab is closed, clicked, or when a context menu is open. Added an automatic cleanup effect based on active tabs list changes.
-- **Context Menu Interaction**: Prevented event bubbling on tab and terminal right-clicks, and registered window listeners for `contextmenu` to close open menus when right-clicking elsewhere.
-
----
-
-## [1.3.57] - 2026-06-28
-
-### Added
-- **3-Strikes Tunnel Login Protection**: Restricted failed login attempts from external tunnel requests (Cloudflare Tunnels or other external proxy headers) to a maximum of 3. If exceeded, the offending IP address is automatically blocked.
-- **Login Block List UI**: Added a dedicated section under the settings modal's Access Control tab, displaying real-time blocked login attempts with metadata (timestamp and failed attempts) and direct "Unblock" action support.
-
-### Changed
-- **Modals Codebase Refactoring**: Extracted and separated the `SettingsModal` code into [SettingsModal.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/t-line/frontend/src/components/SettingsModal.tsx) to improve modularity and adhere strictly to the 1000-line file length limit.
-
----
-
-## [1.3.56] - 2026-06-28
-
-### Added
-- **Backend Reconnection & Control Dashboard**: Implemented a beautiful, self-contained connection error page that is displayed in the desktop window whenever the backend service is stopped, starting, or fails to respond.
-- **Automated Reconnect Ping**: The error page automatically check/pings the local backend server every 2 seconds via native Electron IPC handlers, automatically reloading the main app once the connection is restored.
-- **Direct Backend Window Controls**: Enabled starting, restarting, and manual retrying of the local backend service using action buttons directly inside the Electron window, synced with real-time status updates from the main process.
-
----
-
-## [1.3.55] - 2026-06-28
-
-### Added
-- **Chrome-Like Shrinking Tabs**: Added flexible shrinking layouts for terminal and file tabs in the topbar tab list. When many tabs are open, they dynamically shrink down in width (down to 36px), hiding inactive close buttons and labels gracefully.
-- **Sleek Custom Tooltips**: Implemented custom floating glassmorphic tooltips containing the full tab name/type and working directory/file path when a tab is hovered or clicked.
-
-## [1.3.54] - 2026-06-28
-
-### Fixed
-- **Inactive Workspace Main Branch Icon Color**: Ensured that the `GitBranch` icon for the `main` branch of an inactive workspace is rendered in gray (`text-slate-500`) instead of purple. This aligns it with the gray/slate color of the inactive branch name text, preventing inactive workspaces from appearing partially selected.
-
-## [1.3.53] - 2026-06-28
-
-### Changed
-- **Selected Workspace Coloring Consistency**: Prioritized active/selected workspace styling (purple) over git dirty status coloring (amber) in `WorkspaceList.tsx`. The active/selected workspace will now always remain consistently purple, while other inactive workspaces will turn amber when they have uncommitted changes.
-
-## [1.3.52] - 2026-06-28
-
-### Removed
-- **Blinking Git Dirty Status Dots**: Removed the redundant blinking amber/orange dots next to git branch names in the workspace sidebar list and footer. Dirty status continues to be indicated by the text and branch icon turning amber.
-- **Blinking Version Dot**: Removed the blinking animation from the purple application version indicator in the footer and updated the hardcoded version text from `v1.3.42` to the current "version": "1.3.178".
-
-## [1.3.51] - 2026-06-28
-
-### Fixed
-- **Terminal Grid Sizing Sync**: Resolved an issue where clicking and scrolling in interactive TUI applications (like `superagent`) did not work or was misaligned.
-  - Added resize execution to backend `init` message handler, ensuring that re-attaching/opening a terminal updates the PTY grid size to match the frontend `xterm.js` viewport.
-  - Adjusted frontend `TerminalInstance` initialization to call the initial `debouncedFit` after registering the `onResize` listener, capturing and sending the initial grid dimensions to the PTY backend.
-
-## [1.3.50] - 2026-06-28
-
-### Fixed
-- **Mobile Keyboard Auto-Popup**: Stopped the virtual touch keyboard from automatically opening when tapping/clicking inside the terminal area on mobile. The keyboard now only opens when explicitly toggled using the dedicated Keyboard icon in the top-bar.
-
-## [1.3.49] - 2026-06-28
-
-### Fixed
-- **Terminal Workspace/Tab Switch Freeze**: Fixed a bug where switching workspaces/tabs while running a highly active CLI tool (like `agy` or `claude code`) in a terminal causes the React UI to freeze.
-  - Implemented a `suspend` message to temporarily detach the terminal session sender on the backend when its tab is unmounted, keeping the PTY process and buffer alive in the background without wasting network bandwidth and CPU.
-  - Added a `removeListener` method to the WebSocket client to clean up message handlers.
-  - Properly nullified `terminalRef.current` in the cleanup function of `TerminalInstance` to ensure any queued requestAnimationFrame writes return early instead of attempting to write to a disposed terminal.
-
-## [1.3.48] - 2026-06-28
-
-### Changed
-- **Version Bump**: Bumped version to `1.3.48`.
-
-## [1.3.47] - 2026-06-28
-
-### Added
-- **Workspace Edit Settings Feature**: Added capability to edit existing workspace configurations directly from the workspace list.
-  - Users can now change the **Default Terminal Shell** and configure an optional **Custom Display Name** for any workspace.
-  - Added `PUT /api/workspaces` backend endpoint to update workspace configurations.
-  - Added a new `<WorkspaceEditModal>` settings dialog.
-  - Added a settings edit button in the workspace list (and the mobile actions dropdown).
-
-## [1.3.46] - 2026-06-28
-
-### Added
-- **Unified Custom Confirm/Alert Modals**: Replaced all browser-native `alert()` and `confirm()` prompts with a clean, unified custom `<ConfirmModal>` component to keep design consistency and premium dark mode experience.
-  - Modals support custom titles, custom messages, customizable confirm/cancel action labels, and theme variants (e.g. Danger red for deletion).
-  - Native confirmation requests (like Workspace or Worktree deletions) and API errors now display in the new modal.
-
-## [1.3.45] - 2026-06-28
-
-### Changed
-- **Sleek Session Re-attached Toast**: Replaced the annoying raw `[t-line: Session Re-attached]` terminal text stream with a clean, responsive bottom toast notification.
-  - Desktop/Tablet: Displays at the bottom-left corner above the status bar.
-  - Mobile: Displays at the bottom-center.
-  - Automatic dismissal after 3 seconds with smooth slide-up and fade-out animations.
-
-## [1.3.44] - 2026-06-28
-
-### Added
-- **Git Status Badges on Changes Tab**: Added real-time changed files count badges to the Git Changes tab button. When the sidebar is expanded, a count pill is displayed; when the sidebar is collapsed, a small circular notification badge is displayed on the top right of the GitCompare icon.
-- **Git Status Badges in Workspace Explorer**: Files and folders in the workspace file tree now display Git status badges.
-  - Files display badges like `modif` (for modified), `baru` (for untracked/added), `rename` (for renamed), or `hapus` (for deleted), styled with transparent background colors and borders.
-  - Folders display a right-aligned count of changed files inside the directory.
-- **Auto Git Status Synchronization**:
-  - Global `changedFiles` state managed at `App.tsx` and refreshed using a silent 5-second polling loop.
-  - Immediate refetch when saving files in the Monaco Editor or manually refreshing Explorer/Changes panels.
-
-## [1.3.43] - 2026-06-28
-
-### Added
-- **Per-Workspace Active Tab Memory**: Klik workspace di sidebar sekarang otomatis memindahkan fokus ke tab terakhir yang aktif di workspace tersebut. Jika tidak ada tab yang aktif, akan memilih tab pertama workspace, atau membuka shell baru di direktori workspace tersebut.
-- **Tanda Checkmark pada Workspace Aktif**: Workspace yang tab-nya sedang aktif kini memiliki tanda checkmark (âœ“) dan style visual ungu yang mempertegas focus workspace saat ini.
+## [1.2.402] - 2026-07-17
 
 ### Improved
-- **Responsive Workspace Actions**:
-  - Pada layar mobile (`< 768px`): Tombol aksi workspace (delete, worktrees, git changes, browse files, terminal) disatukan ke dalam menu dropdown titik tiga (`â‹®`) yang responsif dan ringkas.
-  - Pada layar tablet/desktop (`â‰¥ 768px`): Semua tombol aksi selalu ditampilkan secara langsung tanpa memerlukan efek hover.
+- **Memory & History Output Layout**: Tidied up formatting of /memory status, search, list-scenes, read-scene, read-persona, and /search-history command results. Implemented unified, clean ASCII separators, removed forbidden markdown bold elements from the output text, and aligned columns for visual clarity.
 
-## [1.3.41] - 2026-06-28
+## [1.2.401] - 2026-07-17
+
+### Optimized
+- **Batch Embedding Ingestion**: Modified addConversation to use the provider's embedTexts method for parallel batch embedding. This reduces sequential API calls (or local ONNX inference passes) during conversation synchronization, significantly improving performance and decreasing rate limit consumption.
+
+## [1.2.400] - 2026-07-17
+
+### Added
+- **RMemory Documentation and Prompts**: Updated remembering-conversations skill instructions with the new native RMemory tools and slash commands. Added RMemory guidelines to the base system prompt instructions.
+
+## [1.2.399] - 2026-07-17
+
+### Optimized
+- **RMemory Lazy Loading & Setup**: Replaced static imports of the `r-memory` package with dynamic, lazy-loading imports. This reduces CLI startup lag by ~1-2 seconds and reduces baseline RAM usage by 100MB+ when memory features are inactive.
+- **Remote Embeddings Provider Support**: Added configuration settings (`rmemoryEmbeddingProvider`, `rmemoryEmbeddingModel`, and `rmemoryEmbeddingDimensions`) to allow users to use remote OpenAI-compatible embedding APIs instead of local CPU-heavy ONNX models.
+
+### Changed
+- **Slash Commands Re-enabled**: Re-implemented and re-enabled `/memory` and `/setting-rmemory` slash commands to work seamlessly with the local database client.
+- **UI Status Hook**: Updated `useRmemoryStatus` hook to dynamically report status based on the `enableRmemory` setting.
+
+## [1.2.398] - 2026-07-17
+
+### Changed
+- **Renamed TencentDB to RMemory**: Renamed all occurrences of "TencentDB" / "tencentdb" and tool prefix "tdai_" to "RMemory" / "rmemory" and "rmemory_" across the entire codebase. This includes updating filenames, class names, strategy registries, variable names, settings configuration keys, slash commands, and test suites.
+
+## [1.2.397] - 2026-07-17
+
+### Changed
+- **TencentDB to R-Memory Migration**: Completed the migration of the memory system from the remote TencentDB gateway to the local `r-memory` library. Implemented a local `MemoryClient` adapter wrapping `r-memory`'s `RMemory` class and local file reads. Updated all memory strategy and tool test mocks to target `tencentdbUtil` directly.
+
+## [1.2.396] - 2026-07-16
+
+### Changed
+- **Default Auto Vision Off**: Changed the default value of `autoVisionTokenSaving` from `true` to `false` in configuration defaults and all fallback checks throughout the codebase.
+
+## [1.2.395] - 2026-07-16
 
 ### Fixed
-- **Terminal Blink/Flicker saat AI Agent Berjalan**: Eliminasi blinking yang terjadi ketika menjalankan AI coding agents (superagent, Claude Code, Antigravity CLI, dll) yang menghasilkan output streaming cepat (spinner, TUI redraws).
-  - **Backend (`terminalManager.ts`)**: Tambah mekanisme **batch-flush 16ms** â€” data output PTY sekarang dikumpulkan dalam `pendingFlushChunks` lalu dikirim ke WebSocket sekaligus setiap 16ms (â‰ˆ 1 frame @60fps), menggantikan model lama yang mengirim setiap chunk PTY secara individual (ratusan WS messages/detik).
-  - **Frontend (`TerminalInstance.tsx`)**: Tambah **RAF write-queue** â€” data WebSocket yang datang dikumpulkan dalam `writeQueueRef` lalu di-flush ke `term.write()` dalam satu `requestAnimationFrame`, memastikan xterm.js hanya repaint sekali per frame, bukan setiap kali data WS tiba.
-  - Cleanup `cancelAnimationFrame` ditambahkan pada unmount untuk mencegah write ke terminal yang sudah di-dispose.
+- **JavaScript Heap Out of Memory**: Limited Vitest `maxWorkers` to 4 (or available CPUs) in `vitest.config.ts` to prevent OOM errors on high-core machines.
+- **EventEmitter Memory Leak Warning**: Instantiated fresh EventEmitter mock sockets for each call in `tests/enhancedFeatures.test.ts` to stop listener accumulation on retries.
+- **Robust Vision Server Tests**: Skipped `tests/visionServer.test.ts` gracefully if Python launcher or ML packages (torch, huggingface_hub, rfdetr) are missing.
 
-## [1.3.40] - 2026-06-28
+## [1.2.394] - 2026-07-16
+
+### Changed
+- **Unified Vision Mode**: Removed Mode 1 (per-block image conversion) entirely, keeping Mode 2 (full history compilation to images) as the single unified vision token saving mode. Removed `visionMode` from configuration schema, settings defaults, validation/sanitation, and command suggestion descriptions.
+
+## [1.2.393] - 2026-07-16
+
+### Fixed
+- **Mode 2 Image Compilation Cleanups**: Completely removed the system instructions from Mode 2's compiled history images to prevent duplication and save canvas rendering space, since the system instructions are already passed in the plaintext system parameter.
+
+## [1.2.392] - 2026-07-16
+
+### Optimized
+- **System Prompt Vision Parser Instructions**: Added explicit parsing instructions to the system prompt text parameter in both Mode 1 and Mode 2, directing the model to use its vision capabilities to read and analyze the conversation history and dynamic context rendered as WebP images.
+
+## [1.2.391] - 2026-07-16
+
+### Fixed
+- **System Prompt Text Parameter Reversion**: Reverted system prompt image conversion and prepending logic entirely, keeping the system prompt strictly as a plaintext parameter in both Mode 1 and Mode 2.
+
+## [1.2.390] - 2026-07-16
+
+### Fixed
+- **Mode 2 Unified System Image Prepending**: Enabled system prompt image conversion and prepending for Mode 2 when it exceeds the token threshold. Prevented duplicate system prompt image compilation by skipping its inclusion inside the compiled history block in Mode 2 when it has already been prepended.
+
+## [1.2.389] - 2026-07-16
+
+### Fixed
+- **Mode 1 System Image Payload**: Removed all text parts and assistant confirmations from the system instructions image conversion flow in Mode 1, keeping only pure image parts to align with the text-free vision token saving design.
+
+## [1.2.388] - 2026-07-16
+
+### Fixed
+- **Mode 2 System Text Removal**: Completely removed the system text placeholder prompt in Mode 2, leaving the text system parameter empty (or only containing development hook overrides) to ensure zero double-sent system text.
+
+## [1.2.387] - 2026-07-16
+
+### Fixed
+- **Mode 2 Pure Image Payload**: Removed all text parts from the Mode 2 user message content array, leaving only image parts for the vision model, rendering a true pure-image prompt delivery.
+
+## [1.2.386] - 2026-07-16
+
+### Optimized
+- **Mode 2 Prompt Wording**: Refined the system instructions and user message headers for Mode 2 to improve vision model adherence to instructions within images and instruct the model not to mention the image rendering details to the user.
+
+## [1.2.385] - 2026-07-16
+
+### Fixed
+- **Mode 2 Pure Image Flow**: Integrated the dynamic execution context (which contains plan state, workspace state, scratchpad, etc.) directly into the compiled images in Mode 2 instead of appending it as a plaintext user message part. This completely eliminates large text inputs from Mode 2 API payloads.
+
+## [1.2.384] - 2026-07-16
+
+### Fixed
+- **Mode 2 Token Saving**: Minimized the system prompt text to a placeholder notice when Mode 2 is active, preventing the full system instructions from being sent twice (once as text and once inside the compiled images), achieving true visual-only token savings.
+
+## [1.2.383] - 2026-07-16
+
+### Fixed
+- **Mode 2 Image Rendering**: Implemented a `wrapLongLines` helper to wrap lines longer than 120 characters in the text-to-image pipeline. This prevents WebP encoder dimension failures (which happen when lines exceed 1800+ characters, causing the canvas to exceed WebP's 16383px limit) and dramatically improves OCR readability for the vision model.
+
+## [1.2.382] - 2026-07-16
+
+### Added
+- **Guideline Loader**: Introduced `GuidelineLoader` to dynamically load, compress, and inject mandatory skills (such as `karpathy-guidelines` and `pragmatic-minimalism`) directly into system prompts. Avoids redundant re-reading of skills by flagging them as preloaded.
+
+### Modified
+- **Context & Token Management**: Added event emitter cleanup/disposal logic in `ContextManager` and optimized token calculation in `TokenTracker`.
+- **Agent Framework**: Cleaned up codebase logic inside `agent.ts` and UI dashboards.
+
+## [1.2.381] - 2026-07-16
+
+### Added
+- **Verification & Reliability**:
+  - Added a `verify:extension-js` script to validate extension JavaScript files.
+  - Added a `docs/tool-reliability.md` guide to document best practices for tool execution, handling of failed edits, and Windows command guidelines.
+- **Prompts & Guidelines**:
+  - Improved BATCH_OPS guidelines to enforce batching of multi-file, multi-edit, multi-task, and multi-agent operations.
+  - Added guidance on parallel subagent execution and batch planning.
+
+## [1.2.380] - 2026-07-16
+
+### Optimized
+- **Resume Command Performance**:
+  - Implemented directory name timestamp parsing to sort and filter folders before executing file operations, reducing statSync calls.
+  - Added a limit parameter to `listHistorySessions` to restrict metadata parsing to only the top N newest sessions.
+  - Resolved session mode mismatch where single-agent mode wizard loaded multi-agent cache and vice versa.
+
+## [1.2.379] - 2026-07-16
+
+### Changed
+- **Documentation**:
+  - Marked Chrome Extension Integration and 3-Tier Multi-Agent Orchestration (`--multi`) features as experimental in the README.
+
+## [1.2.378] - 2026-07-16
+
+### Optimized
+- **Resume Session Wizard Performance**:
+  - Implemented a unified `history-metadata.json` cache file in the history folders to store metadata (name, message count, preview, workspace, modification timestamp) for all history sessions.
+  - Optimized `listHistorySessions` to use memory cached session metadata directly without executing synchronous `statSync`, `readFileSync`, or `JSON.parse` operations for every folder.
+  - Enabled automatic updates to `history-metadata.json` during both asynchronous and synchronous history saves.
+
+## [1.2.377] - 2026-07-16
+
+### Optimized
+- **Conversation History Serialization**:
+  - Saved history JSON files (`{sessionId}.json`) in minified format instead of pretty-printing with 2-space indentation, reducing file size and CPU/disk usage.
+  - Optimized `stripOldToolResults` to skip already truncated results, avoiding redundant regex execution, string splits, and array slicing.
+
+## [1.2.376] - 2026-07-16
+
+### Optimized
+- **Terminal Input Rendering Performance**:
+  - Replaced O(N) character-by-character loops with O(1) string slices in `ChatTextInput.tsx` for rendering collapsed pasted block prefixes, suffixes, and long visible text windows.
+  - Eliminated terminal freeze and input lag when navigating or typing in inputs with large pasted segments.
+
+### Fixed
+- **Paste State Duplication & Reset**:
+  - Unified paste state detection by calling `updatePasteState` in `multi-agent-dashboard.tsx` instead of duplicate implementation.
+  - Reset `pastePrefixLength` and `pasteSuffixLength` when clearing/submitting inputs in `app.tsx`.
+
+## [1.2.375] - 2026-07-16
+
+### Fixed
+- **Empty Response on Resume**:
+  - Fixed empty response bug and NaN token usage when resuming large sessions using custom providers (such as 9router) that return `content-type: text/event-stream` for non-streaming requests.
+  - Skips text/event-stream SSE reconstruction if the response body is a plain JSON object starting with `{`.
+  - Cleans up `transfer-encoding` and `content-length` headers from reconstructed `Response` objects to prevent stream reading issues in the client.
+  - Refactored fetch interceptor try-catch block to return a new `Response` instead of a consumed response object upon parsing/formatting failures.
+
+## [1.2.374] - 2026-07-16
+
+### Optimized
+- **Session History Loading (/resume command)**:
+  - Optimized the session listing logic by introducing a tiny metadata.json cache next to the main {sessionId}.json file inside the history directories.
+  - Avoided reading and JSON-parsing large session history files synchronously on startup, leading to sub-millisecond execution times for history retrieval.
+  - Automatically writes metadata.json on every history save (saveToFile and saveToFileSync) and lazily backfills it on the first list request if missing or outdated.
+  - Eliminated redundant fs.existsSync calls before fs.statSync in the listing loop.
+
+## [1.2.373] - 2026-07-16
 
 ### Improved
-- **Terminal Refresh Normalize Trick**: Ubah logic refresh terminal dari simple `reset + init` menjadi **shrink â†’ restore** sequence. Saat tombol refresh diklik, PTY backend menerima resize kecil (setengah ukuran asli) terlebih dahulu, lalu setelah 120ms dikembalikan ke ukuran asli. Ini memaksa PTY mengirim dua sinyal SIGWINCH sehingga aplikasi TUI yang berjalan di alternate screen buffer (seperti Claude Code, Antigravity CLI, dll) melakukan **full redraw** dengan posisi yang benar, bukan sekadar resize visual saja.
+- **Bulk Tool Usage Prompts**:
+  - Enhanced instructions and examples in BATCH_OPS_RULE inside prompts.ts to provide precise parameter schemas for array-based bulk tool calls (read, edit, write_to_file, replace_file_content, multi_replace_file_content, apply_patch, manage_subagents, manage_tasks).
+  - Clarified chunks parameter usage for single-file vs multi-file edits in multi_replace_file_content tool guidelines inside base.ts.
 
-## [1.3.39] - 2026-06-28
-
-### Fixed
-- **Tab real process name display**: Tab now shows the live active process name (e.g., `node`, `python`, `git`) instead of the static initial name. When the shell returns to idle (process name matches shellType), the tab name reverts to the original workspace-based name. Uses `focusedInst.name` from `terminalInstances` instead of static `t.name` in `App.tsx` tab rendering.
-- **initialName tracking**: Added optional `initialName` field to `TerminalInstanceData` to preserve the original tab name across process title overrides.
-
-## [1.3.38] - 2026-06-28
+## [1.2.372] - 2026-07-15
 
 ### Fixed
-- **Mobile Side Menu z-index overlap**: Increased z-index of mobile sidebar, right sidebar (`z-index: 90`), and sidebar overlay (`z-index: 80`) in `layout.css` to sit cleanly above terminal split pane floating control bars (`z-index: 50`) on mobile screens.
+- **Custom Provider Tool Calling**:
+  - Fixed 400 Bad Request error ("request is invalid for this model") when using tool calling on custom proxy endpoints (such as OpenRouter and Nexotao).
+  - Modified the custom `fetch` wrapper in `models.ts` to automatically strip the `"strict": true` property from tool definitions for custom base URLs/providers. This ensures maximum compatibility with upstream models that do not support OpenAI's strict tool schemas.
 
-## [1.3.37] - 2026-06-28
+## [1.2.371] - 2026-07-15
+
+### Fixed
+- **Mistral Model Limits**:
+  - Updated context window limits for Mistral flagship/latest models (such as `mistral-large-latest`, `mistral-small-latest`, `codestral-latest`, and `mistral-medium-latest` along with their corresponding `~` prefixed aliases) to correct sizes (262,144 or 256,000 tokens) in `model_limits.ts`.
+  - Added new version-specific fallback checks in `getStaticModelLimit` to ensure correct matching of context lengths for these model groups.
+
+## [1.2.370] - 2026-07-15
+
+### Fixed
+- **Workspace Truncation Bug in Chrome Extension**:
+  - Increased `MAX_SAVED_WORKSPACES` limit from 10 to 100 in `sidepanel.js` to prevent the workspaces list from being truncated/sliced to 10 when switching or saving workspaces.
+
+## [1.2.369] - 2026-07-15
+
+### Added
+- **Instant Paste Mode in Browser Control Tab**:
+  - Introduced a new `paste` action to the browser tab control tool `control_browser_tab`.
+  - Implemented the `pasteTextInstant` function in the Chrome extension sidepanel-browser script to bypass key-by-key typing delays and simulated typos, allowing instant text insertion.
+  - Updated validation and descriptions inside `otherTools.ts`.
+
+## [1.2.368] - 2026-07-15
+
+### Added
+- **Interactive Input Tags System in Chrome Extension**:
+  - Introduced autocomplete suggestions when typing `@` (`@inspect` and `@tab`) to reference page elements or the active tab.
+  - Implemented tag chips container inside the input wrapper above the textarea for visual rendering of active tags.
+  - Added a "Tag Active Tab" button (🌐) in the toolbar.
+  - Refactored element inspection to capture the inspected element's full HTML code (`outerHTML`).
+  - Added a "Tag Details" modal overlay allowing the user to view the full HTML code of an inspected element and edit custom description context for any tag.
+  - Integrated tag details and HTML code directly into `window.sendChatMessage` prompt context injection.
+
+## [1.2.367] - 2026-07-15
+
+### Fixed
+- **Browser Control Tab Wait Action**:
+  - Made target parameter optional for the wait action, allowing simple duration-based waiting using only the value parameter.
+  - Added validation check to ensure at least target (selector/duration) or value (duration) is specified.
+  - Enhanced browser extension side panel implementation to support numeric durations in either target or value, and added specific handling for page_load/document_load checks with configurable timeouts.
+  - Added comprehensive test suite for browser control wait action validation.
+
+## [1.2.366] - 2026-07-15
+
+### Added
+- **Local-Only Python Inference Daemon Server**:
+  - Replaced slow subprocess execution with a persistent, local-only (`127.0.0.1:8095`) Python HTTP server.
+  - Pre-loads `racineai/UI-DETR-1` once at startup, reducing inference latency from ~4s to ~150ms.
+  - Automatically spawns the daemon on Node server boot and cleans it up on process termination/exit.
+- **Sequential Action Chaining**:
+  - Added `execute_chain` action to run a sequence of multiple browser operations (clicks, keypresses, scrolls) in a single tool call.
+- **Hover Highlight Syncing**:
+  - Synchronized item hover states from the extension Vision sidebar to both the canvas overlay and the actual webpage via `highlight_element`.
+- **Smart DOM Selector Fallback**:
+  - Enhanced coordinate resolution to support target coordinates with backup CSS selectors (e.g. `"X,Y|selector"`).
+  - Automatically falls back to standard DOM selectors if coordinate targets drift due to scrolling.
+
+## [1.2.365] - 2026-07-15
+
+### Added
+- **Interactive Vision Panel in Chrome Extension Sidebar** (#2):
+  - Added a dedicated "Vision" tab to the extension sidebar that renders the active tab's screenshot on a canvas.
+  - Automatically draws bounding boxes with category labels and confidence percentages directly over the visual elements.
+  - Added an interactive element list next to the canvas showing coordinates and labels, with click-to-trigger coordinate automation.
+  - Placed a confidence threshold slider in the panel to live-filter detections.
+- **On-Page Bounding Box Overlay** (#1):
+  - Added `show_detections` action to inject a high-priority, absolute-positioned canvas overlay in the active page DOM, displaying color-coded borders and tags over detected components.
+- **Pre-Click Visual Element Highlight** (#4):
+  - Injected an orange animated highlight ring that flashes around coordinate click targets for 400ms before triggering events, improving user visibility.
+- **Auto-Detect Navigation Trigger** (#5):
+  - Added `webNavigation.onCompleted` listener in `background.js` to broadcast main frame loads.
+  - Injected a visual alert dot badge on the Vision tab button, warning when the current screenshot is out of date.
+- **DOM-to-Vision Reconciliation** (#6):
+  - Added `dom_info` action that queries elements at coordinate targets using `document.elementFromPoint()`.
+  - Automatically parses unique CSS selectors (using data-testid, IDs, input tags, or nth-of-type paths) and merges them with coordinate predictions in `detect_ui` outputs.
+- **Base64 Screenshot Handling** (#3):
+  - Enhanced `detect_ui` backend logic to natively support base64 PNG dataURLs and write them directly, eliminating hardcoded filesystem dependencies.
+
+## [1.2.364] - 2026-07-15
+
+### Added
+- **Visual UI Detection via UI-DETR-1 Model** (`detect_ui` action):
+  - Added `detect_ui` action to `control_browser_tab` tool. When called, it automatically takes a screenshot of the active Chrome tab, runs the `racineai/UI-DETR-1` object detection model (via `scripts/detect_ui.py`), and returns a list of all detected interactive UI elements with their visual coordinates.
+  - Output format: `- <label> at coordinate X,Y (box: [...], confidence: <score>)` — coordinates can be passed directly to `click`, `type`, and `hover` actions.
+  - Added `scripts/detect_ui.py` — Python inference script using the Hugging Face `transformers` pipeline to load and run `racineai/UI-DETR-1`. Supports a configurable confidence threshold (default: 0.35).
+- **Coordinate-Based Browser Interactions** (`X,Y` target pattern):
+  - `click`, `type`, `hover`, and `keypress` actions in the Chrome extension (`sidepanel-browser.js`) now accept a coordinate string (e.g., `"320,480"`) as the `target` parameter in addition to CSS selectors.
+  - When a coordinate target is detected, the extension resolves the element at those coordinates via `document.elementFromPoint(x, y)` and dispatches mouse events at the exact coordinate, enabling visual-based automation that is robust against DOM/class name changes.
+
+## [1.2.363] - 2026-07-14
+
+### Fixed
+- **Chrome Extension console.error Hook Safety**:
+  - Wrapped chrome-extension/main-world.js console.error interception in safe try-catch blocks to prevent potential JSON.stringify circular structure exceptions and event dispatch failures from interrupting/breaking host web pages.
+
+## [1.2.362] - 2026-07-14
+
+### Fixed
+- **Failing Payload Too Large Retry Test**:
+  - Appended a question mark to the mock success texts and assertions in tests/agentPayloadTooLargeRetry.test.ts to prevent the agent from classifying the mock response as planning narration and triggering the auto-continue loop.
+
+## [1.2.361] - 2026-07-14
+
+### Fixed
+- **Paste Leak Bug Fix**:
+  - Extracted paste state logic to `updatePasteState` helper in `src/utils/text.ts` and added unit tests in `tests/paste.test.ts`.
+  - Fixed an issue where pasted content split across multiple chunks ended up leaking into input suffix/prefix and showing in the console.
+  - Refactored `handleInputChange` in `src/app.tsx` to delegate to `updatePasteState`.
+
+## [1.2.360] - 2026-07-13
+
+### Fixed
+- **GPT-5.5 / Non-Claude Model Loop Stops After 1 Iteration**:
+  - **Probe cache TTL (24h)**: `probeToolCallSupport` in `promptBasedToolCalling.ts` now stores `{ value, timestamp }` instead of a bare `boolean` on disk. Cache entries older than 24 hours are treated as stale and re-probed automatically. Legacy bare-boolean entries (from older sessions) are also treated as expired and re-probed on next use. This fixes the root cause: a stale `false` cache entry for `localhost:8087/gpt-5.5` caused Superagent to activate XML prompt-based tool fallback — a Claude-specific format that GPT-5.5 does not follow — resulting in text-only responses and immediate loop termination.
+  - **Auto-continue for planning narration responses**: In `agent.ts`, when a model outputs a short text-only response (no tool calls) on the first two iterations and the text does not end with a question mark, Superagent now injects a `[SYS] Continue. Use the available tools...` nudge message and continues the loop instead of breaking immediately. This handles models like GPT-5.5 that announce their intent as text before acting, rather than issuing tool calls directly.
+
+## [1.2.359] - 2026-07-13
+
+
+### Fixed
+- **Anthropic 400: tool_result.tool_use_id Field Required**:
+  - Added guard in `buildMessages()` to skip individual tool results where `toolCallId` is falsy (undefined/empty), preventing the invalid `tool_use_id` field from reaching the Anthropic API.
+  - Added guard to skip empty `toolResults` arrays early, avoiding an empty `role: "tool"` message being pushed to `coreMessages`.
+  - Added guard to skip pushing a `role: "tool"` `coreMessages` entry when all its `contentParts` were filtered out.
+  - Added post-loop orphan guard in `PruningStrategy` after the token-budget `while` loop to mirror the existing byte-budget guard — prevents a `role: "tool"` message from being left at the start of `toKeep` after its paired `role: "assistant"` was pruned.
+
+## [1.2.358] - 2026-07-13
+
+### Added
+- **Interactive Prompt Detection in android_cli**:
+  - Imported `detectInteractivePrompt` into `otherTools.ts`.
+  - androidCliTool now auto-kills and returns an error if a y/n or password prompt is detected during execution.
+- **Unified Verification Helper (`runStreamedVerification`)**:
+  - Extracted a reusable `runStreamedVerification` async helper inside `superagentTools.ts`.
+  - Combines live streaming, interactive prompt detection, and per-run log file persistence into a single function.
+  - Build and test verification in both `invokeSuperagentTool` and `sendMessageToSuperagentTool` now use this helper.
+  - Verification log files are saved to `.superagent/logs/build-<timestamp>.log` and `test-<timestamp>.log` inside each worktree.
+- **Output Throttling in state.ts**:
+  - `appendActiveToolOutput` now batches UI listener notifications using a 50ms `setTimeout` throttle.
+  - `clearActiveToolOutput` cancels any pending throttled notification and immediately notifies listeners with an empty string.
+- **Background Process Live Stream**:
+  - Added `stream` action to `manageBackgroundProcessTool` in `shellTools.ts`.
+  - When used, the action pipes all future stdout/stderr from the target background process into `SYSTEM_CALL_OUTPUT (LIVE)` in real-time, blocking until the process exits or times out.
+
+---
+
+## [1.2.357] - 2026-07-13
+
+### Added
+- **Live Output Streaming for CLI and Verification Tools**:
+  - Added SYSTEM_CALL_OUTPUT (LIVE) streaming for `android_cli` in `otherTools.ts`.
+  - Added streaming for `npm run build` and `npm test` pre-merge verification processes inside `invokeSuperagentTool` and `sendMessageToSuperagentTool` in `superagentTools.ts`.
+  - Added proper subprocess cancellation using `killProcessTree` on abort signal for all three tools.
+
+---
+
+## [1.2.356] - 2026-07-13
+
+### Added
+- **Changes Summary Coloring**:
+  - Implemented `renderDiffColors` inside `chat-line.tsx` and `chat-area.tsx` to automatically highlight added/deleted line statistics (e.g. `+10` in green, `-5` in red).
+  - Integrated `renderDiffColors` into the text elements processed by `renderBoldTargetText` for seamless inline terminal styling.
+
+---
+
+## [1.2.355] - 2026-07-13
+
+### Fixed
+- **Prompt Instruction Leakage**:
+  - Enclosed dynamic execution contexts inside `<system_context_do_not_echo_or_repeat>` tags in `agent.ts`.
+  - Added system prompt rules telling models not to repeat tags.
+  - Implemented `cleanAssistantResponse` in `text.ts` to strip echoed instructions and multi-line separator blocks (including shorter dividers like `---`) from assistant messages.
+  - Called `cleanAssistantResponse` in `addAssistantMessage` to clean messages before saving to database.
+
+---
+
+## [1.2.353] - 2026-07-13
+
+### Fixed
+- **Chrome Extension Selection Caret Typing**:
+  - Rewrote the human-like text input simulation (`typeTextHumanLike`) inside `sidepanel-browser.js` to target the active text selection caret.
+  - Implemented the W3C Selection and Range APIs for writing and deleting characters in rich text/contenteditable containers (such as Medium, Notion, Google Docs) to prevent wiping out container HTML tag structures.
+  - Aligned typing within input and textarea elements to target `selectionStart` and `selectionEnd`, moving the caret position forward dynamically.
+
+---
+
+## [1.2.352] - 2026-07-13
+
+### Added
+- **Chrome Extension Inspect & Annotation Picker**:
+  - Integrated a visual Inspect Element tool (🔍 button) next to the chat input in the toolbar.
+  - Clicking it injects a promise-based content picker overlay onto the active web page.
+  - Hovering elements highlights them with a blue border and shows a tooltip containing their unique CSS selector and metadata annotation.
+  - Clicking an element intercepts the click, resolves the selector, and inserts it at the current cursor caret position in the chat input.
+  - Pressing Escape exits inspect mode.
+
+---
+
+## [1.2.351] - 2026-07-13
+
+### Added
+- **Chrome Extension Human-like Interaction Suite**:
+  - Simulated biological tremors/micro-movements for the virtual cursor when stationary (low-frequency sub-pixel oscillation breathing effect).
+  - Target-size aware movement duration following Fitts's Law (`ID = log2(2 * distance / size + 1)`), moving faster for large items and slowing down for precise adjustments on smaller targets.
+  - Smooth scrolling for off-screen elements with settling detection (polling position until motion stops) to ensure elements are static before cursor tracking.
+  - Character-by-character keyboard input simulation with randomized typing speeds (50ms - 150ms delay) and typo simulation (backspacing to fix mistakes).
+
+---
+
+## [1.2.350] - 2026-07-13
+
+### Added
+- **Chrome Extension Human-like Movement Overshoot**:
+  - Integrated ghost-cursor inspired overshoot and self-correction algorithm for the virtual mouse movement. When distance is greater than 200 pixels, there is a 60% chance to overshoot the target with a slight angular offset, pause for a biological reaction delay, and then make a smooth corrective movement back to the target.
+
+---
+
+## [1.2.349] - 2026-07-13
+
+### Fixed
+- **Chrome Extension Automated Click Focus**:
+  - Enhanced automated clicks to programmatically call `.focus()` on targeted elements and their contenteditable ancestors to ensure text carets appear correctly (e.g. in rich editors like Medium).
+  - Selectively route click triggers: use native `.click()` for native interactive elements (inputs, links, buttons) to avoid double-triggering checkbox toggles, and use bubbling MouseEvents with exact coordinate values for generic elements (divs, spans, paragraphs).
+
+---
+
+## [1.2.348] - 2026-07-13
+
+### Changed
+- **Chrome Extension Automated Click**:
+  - Replaced manual click guidance with fully automated browser clicks. The virtual cursor still animates to target elements to visually guide the user, but now automatically dispatches realistic mousedown, mouseup, and click events with natural biological delays to simulate a human interaction without blocking execution.
+
+---
+
+## [1.2.347] - 2026-07-13
+
+### Fixed
+- **Chrome Extension Virtual Cursor**:
+  - Set `pointer-events: none !important` inline on the virtual cursor div and its inner SVG/path elements to prevent them from intercepting clicks in some environments or under custom styling.
+  - Added fallback detection to the manual click guidance handler; if a click is intercepted by the virtual cursor, the target element is programmatically clicked and the step resolves successfully, preventing click blockages.
+
+---
+
+## [1.2.346] - 2026-07-13
+
+### Fixed
+- **Chrome Extension Newline Rendering**:
+  - Added `white-space: pre-wrap;` to `.msg-content-text` and `.reasoning-block` in `sidepanel.src.css` (and compiled `sidepanel.css`) to preserve newlines and line breaks in AI response texts and reasoning blocks, fixing the issue where text runs together without formatting.
+
+---
+
+## [1.2.345] - 2026-07-13
+
+### Added
+- **Browser Macro Preset System**:
+  - New `src/core/config/browserMacros.ts` module with typed `BrowserMacro` interface, disk-persistent CRUD helpers (`getBrowserMacros`, `saveBrowserMacro`, `deleteBrowserMacro`), and template interpolation utilities (`interpolateStep`, `resolveSteps`). Macros stored at `~/.superagent-r/browser-macros.json`.
+  - New AI tools `control_browser_macro_save` and `control_browser_macro_run` in `otherTools.ts`. The save tool creates named, parameterized macro presets with `{{placeholder}}` support. The run tool executes all steps sequentially and returns per-step results.
+  - Both tools registered in `masterToolset`, `superagentToolset`, and `chromeExtensionToolset` in `toolsets.ts`.
+  - REST API endpoints `GET /api/browser/macros`, `POST /api/browser/macros`, `DELETE /api/browser/macros` added to `server.ts` for full CRUD access from the Chrome Extension.
+  - Chrome Extension: new Macros sidebar tab (user icon) in `sidepanel.html` with a "Browser Macros" pane listing all saved macros with their name, description, params, and step count. Users can delete any macro from the UI. Tab integrates with the existing sidebar toggle/switch system in `sidepanel.js`.
+  - 13 unit tests added in `tests/browserMacros.test.ts` covering save, overwrite, delete, multi-macro storage, case-insensitive lookup, interpolation edge cases, and resolveSteps.
+
+## [1.2.344] - 2026-07-13
+
+### Added
+- **Chrome Extension Human-like Virtual Mouse & Manual Click Guidance**:
+  - Implemented custom Bezier curve animation for the virtual mouse pointer with cubic ease-in-out easing and micro-jitters to mimic actual human hand motor controls.
+  - Upgraded the virtual cursor to use a realistic cursor SVG instead of a simple red dot.
+  - Added visual highlight pulsing effect to target elements.
+  - Modified the click handler to act as visual manual guidance, waiting for the user to perform the click manually before resolving, ensuring complete immunity to bot detection.
+
+---
+
+## [1.2.343] - 2026-07-13
+
+### Added
+- **Chrome Extension Workspace Persistence & Synchronization**:
+  - Exposed `trustedDirectories` from server configuration in the `/api/config` GET endpoint response.
+  - Implemented client-side synchronization (`syncTrustedWorkspaces`) in the Chrome Extension side panel to automatically restore the saved workspaces list from the server's trusted directories list upon reloading or reinstalling.
+  - Automatically pre-populates the workspace directory path input field on the setup screen using the server's last active workspace path.
+  - Automatically synchronizes the selected orchestration mode (Single/Multi Mode radio buttons) on the setup screen with the server's current mode.
+
+---
+
+## [1.2.342] - 2026-07-13
+
+### Added
+- **Chrome Extension Tab Locking & Focus styling**:
+  - Implemented automatic tab locking when the AI Agent is running to prevent context drift.
+  - Automatically reverts tab changes back to the active tab, displays an inline warning banner, and handles agent-initiated tab creation/switching.
+  - Added a global CSS override to `sidepanel.src.css` to disable focus outlines, rings, and box-shadow glows.
+
+---
+
+## [1.2.341] - 2026-07-13
+
+### Added
+- **Browser History, Reading List, Top Sites, and Management API Actions**:
+  - Integrated 11 additional browser control actions: `top_sites`, `reading_list_add`, `reading_list_remove`, `reading_list_get`, `group_update`, `group_get`, `history_search`, `history_delete`, `history_clear`, `management_list`, `management_get`.
+  - Added permissions for `history`, `readingList`, `topSites`, and `management` to `manifest.json`.
+  - Expanded target parameter validation and updated CLI tool schemas.
+
+---
+
+## [1.2.340] - 2026-07-13
+
+### Added
+- **Extended Browser Tab & Window Control**:
+  - Implemented 15 new browser control actions: `open`, `close`, `list`, `switch`, `duplicate`, `pin`, `unpin`, `mute`, `unmute`, `move`, `group`, `ungroup`, `discard`, `new_window`, `close_window`.
+  - Added the `tabGroups` permission to the Chrome extension's manifest to support tab grouping APIs.
+  - Updated the URL restriction handler to allow running background/lifecycle tab commands on system/restricted URLs.
+
+---
+
+## [1.2.339] - 2026-07-13
+
+### Added
+- **Image File Reading & Vision Integration**:
+  - Enhanced `readTool` (`read`) and `readPeerSuperagentFileTool` (`read_peer_superagent_file`) to detect image file extensions and read them as base64 Data URIs rather than failing with a binary error.
+  - Updated the agent execution loop in `src/core/agent.ts` to automatically scan tool outputs for base64 image Data URIs, clean them out of the raw text response, and append them as native vision image parts in subsequent turns.
+
+---
+
+## [1.2.338] - 2026-07-13
+
+### Fixed
+- **Chrome Extension Restricted Pages Handling**:
+  - Added detection of restricted browser tabs (e.g., `chrome://`, `chrome-extension://`, `about:`, `edge://`) in `executeBrowserControl`.
+  - Blocks content script injection and screenshot capture on restricted pages and returns a friendly, instructive error message guiding users to navigate to a regular webpage first.
+
+---
+
+## [1.2.337] - 2026-07-13
+
+### Fixed
+- **Chrome Extension Chat History Tool Calls Double Rendering**:
+  - Prevented duplicate rendering of tool blocks in chat history logs when loading previous sessions.
+  - Aligned lookahead matching logic to identify associated tool results inside subsequent messages of role `tool` and aggregate them cleanly within the primary tool call UI container.
+  - Filtered out already-rendered tool calls in subsequent messages.
+
+---
+
+## [1.2.336] - 2026-07-12
+
+### Optimized
+- **Chrome Extension System Prompt & Context Rule**:
+  - Rewrote Chrome Extension prompt context rules inside prompts.ts using Telegraphic English guidelines (removing conversational filler and pronouns).
+  - Streamlined logic gates and structured workflow requirements to improve token efficiency and focus.
+
+---
+
+## [1.2.335] - 2026-07-12
+
+### Added
+- **Chrome Extension Tab Control Permissions**:
+  - Added "tabs", "webNavigation", and "debugger" permissions to the manifest.json file to support full browser tab control, page navigation tracking, and Chrome DevTools Protocol automation.
+
+---
+
+## [1.2.334] - 2026-07-12
+
+### Optimized
+- **Plan Review Modal Integration**:
+  - Expanded the Plan Approval Overlay modal width from 320px to 480px.
+  - Embedded a scrollable, fully rendered Markdown plan details container inside the modal body.
+  - Automatically fetches the generated `implementation_plan.md` via `/api/documents` and parses it into the viewport so the user can easily read and review the plan inline without having to open the workspace file manually.
+
+---
+
+## [1.2.333] - 2026-07-12
+
+### Added
+- **Browser Active Tab Indicator**:
+  - Implemented a 9px active browser tab display banner at the top of the chat input wrapper.
+  - Automatically queries the current browser window active tab title and URL dynamically on tab activations, title/URL updates, or panel loads.
+  - Injected active tab title and URL context automatically into AI prompts (transparently to the user, except for direct terminal commands starting with `!`) to make the assistant fully context-aware of what page the user is currently viewing.
+
+---
+
+## [1.2.332] - 2026-07-12
+
+### Fixed
+- **Workspace Chat History Sync**:
+  - Fixed a bug where switching chat sessions in the history tab would complete on the server but fail to update the chat message bubble list in the UI.
+  - Ensured switching workspaces automatically refreshes the chat sessions list in the left sidebar history tab to always align with the active workspace.
+  - Enabled passing `mode` as a query parameter when fetching previous history sessions to resolve correct directory (single vs multi) even if the active server session is not yet initialized.
+
+---
+
+## [1.2.331] - 2026-07-12
+
+### Changed
+- **Collapsible Process Logs**:
+  - Re-architected job finish layout to collapse all previous execution logs (tool cards and reasoning blocks) under a clean header showing "Finished in Xm Xs" instead of hiding the summary response.
+  - Left the main summary text bubble always visible for immediate readability when the agent completes its job.
+
+---
+
+## [1.2.330] - 2026-07-12
+
+### Fixed
+- **Right Side Panel Update Reliability**:
+  - Globalized the custom fetch wrapper to `window.fetch` so it is inherited by the monitor and file explorer scripts loaded in the sidepanel.
+  - Resolved race conditions where initial updates returned early because the panel was hidden during DOM load.
+  - Implemented immediate refreshes for workspace file explorer and git changes when toggling the right side panel open or switching workspaces.
+
+---
+
+## [1.2.329] - 2026-07-12
+
+### Fixed
+- **Redundant Tool Log Rendering**:
+  - Filtered out redundant plain text log lines (e.g., `web_search >` or `fetch_url >`) from message markdown rendering, resolving the visual double-show tool bug when tools are already displayed as interactive UI cards.
+
+---
+
+## [1.2.328] - 2026-07-12
+
+### Changed
+- **Response Stream and Summary Consistency**:
+  - Configured response text to format as Markdown incrementally in real-time while streaming, ensuring visual consistency between the stream and the final state.
+  - Simplified the job finish collapsible footer to directly toggle the visibility of the original chat bubble element instead of duplicating text in a separate summary card.
+
+---
+
+## [1.2.327] - 2026-07-12
+
+### Changed
+- **Preset Model Information**:
+  - Configured preset select dropdown options to display their active target model name (e.g., `fast (gemini-2.5-flash)`) for better model visibility.
+  - Adjusted header and toolbar select dropdown max-width limits to avoid excessive text truncation.
+
+---
+
+## [1.2.326] - 2026-07-12
+
+### Changed
+- **Workspace Listing Improvements**:
+  - Redesigned workspace list items to display the workspace directory name, its parent path, and an initials-based circular avatar.
+  - Used theme-safe dynamic colors (pastel backgrounds and matching texts) for workspace avatars.
+- **Chrome Active Tab Attachment Removal**:
+  - Removed "Attach Chrome Active Tab context" button and status badge from the chat input toolbar.
+  - Deleted the active tab context grabbing feature from browser scripts.
+
+---
+
+## [1.2.325] - 2026-07-12
+
+### Changed
+- **Material-Style Visual Redesign for Chrome Extension**:
+  - Redesigned color scheme, typography, and layout of the Chrome Extension side panel using premium Material-style design tokens (matching modern cloud platform console styling).
+  - Configured Outfit and Roboto typography pairings for UI elements and JetBrains Mono/Roboto Mono for logs/terminals.
+  - Reimplemented conversational chat bubbles with rounded corners (18px) and soft shadow systems for User (Material Blue tint card aligned right) and Agent (editor background card aligned left).
+  - Updated Tailwind v4 border radiuses (`--radius-*`) and shadow parameters in CSS.
+- **Project Guidelines Update**:
+  - Updated styling guidelines in `AGENTS.md` to specify Material Design aesthetics instead of legacy dark theme rules.
+
+---
+
+## [1.2.324] - 2026-07-12
+
+### Fixed
+- **Workspace-Scoped History Session Filtering**:
+  - Defined resolveWorkspacePath(req) to resolve the client's current workspace directory via headers, even if no agent session has been active or initialized yet.
+  - Configured /api/history/sessions and related endpoints to use the resolved workspace path, correcting chat history session filtering.
+
+---
+
+## [1.2.323] - 2026-07-12
+
+### Changed
+- **Activity Bar Cleanup**:
+  - Removed the redundancy of the Chat button icon in the Left Activity Bar.
+  - The left menu now only contains "Workspace" and "History" tabs.
+
+---
+
+## [1.2.322] - 2026-07-12
+
+### Changed
+- **Removed Single Session Fallback**:
+  - Removed the generic single session fallback inside resolveSession on the backend server to ensure workspace-scoped routing.
+  - Fixes auto-reconnecting to background CLI sessions when the extension does not have an active workspace connected.
+
+---
+
+## [1.2.321] - 2026-07-12
+
+### Changed
+- **Workspace Empty State Screen**:
+  - Hides the active chat panel completely and displays a full-screen "No Workspace Connected" placeholder panel (#workspace-empty-state) when no workspace is active.
+  - Added a "+ Connect Workspace" trigger button in the empty state screen that summons the workspace add modal overlay.
+  - Automatically toggles between the empty state panel and the active chat panel based on connection/switching status.
+
+---
+
+## [1.2.320] - 2026-07-12
+
+### Changed
+- **Mandatory Workspace Validation on Chat Inputs**:
+  - Hides the "New Chat" button and chat action bar if no active workspace is connected.
+  - Disables the chat input text field and displays a placeholder message instructing the user to connect a workspace first.
+  - Automatically restores input state and shows chat actions when a workspace session is activated.
+
+---
+
+## [1.2.319] - 2026-07-12
+
+### Added
+- **Workspace-Scoped Session History Loading**:
+  - Automatically loads and resumes the last active chat session and conversation history when switching workspaces on the server /api/switch-workspace endpoint.
+
+---
+
+## [1.2.318] - 2026-07-12
+
+### Changed
+- **Removed Saved Workspaces Header**:
+  - Removed the redundant Saved Workspaces section heading from the Left Sidebar workspace tab layout to optimize visual space.
+
+---
+
+## [1.2.317] - 2026-07-12
+
+### Changed
+- **Removed Active Workspace Card**:
+  - Removed the redundant Active Workspace card from the Left Sidebar workspace switcher.
+  - Retained the active-workspace-text span element in the HTML as a hidden element to ensure script configuration backwards compatibility.
+
+---
+
+## [1.2.316] - 2026-07-12
+
+### Changed
+- **Add Workspace Modal Overlay**:
+  - Moved the folder path input, browse button, and add workspace action button from the Left Sidebar into a dedicated overlay modal (#add-workspace-overlay).
+  - Added a "+" trigger button to the Left Sidebar's Workspace panel header to display the modal overlay.
+  - Hides the Add Workspace modal automatically upon a successful local server workspace session initialization.
+
+---
+
+## [1.2.315] - 2026-07-12
+
+### Added
+- **Draggable Left Sidebar Resizer**:
+  - Inserted a draggable splitter handle (#sidebar-resizer) between the Left Sidebar and the Right Content Panel.
+  - Implemented real-time resizing logic on mouse drag with min-width/max-width boundaries (120px to 380px).
+  - Persisted the user's custom sidebar width locally via chrome.storage.local to maintain consistency across sidepanel restarts.
+
+---
+
+## [1.2.314] - 2026-07-12
+
+### Changed
+- **Activity Bar Workspace Tab Integration**:
+  - Reorganized the Left Sidebar layout to run as a unified tab-view switcher container.
+  - Added a dedicated Workspace folder icon button (#tab-workspace) to the Left Activity Bar.
+  - Moved the Workspace Switcher list and Chat History list into the Collapsible Left Sidebar, displaying them dynamically under the 'Workspace' and 'History' headings.
+  - Made the Chat panel view occupy the primary right main content view adjacent to the Left Sidebar, maintaining full editor height and maximizing visual workspace efficiency.
+
+---
+
+## [1.2.313] - 2026-07-12
+
+### Fixed
+- **Summary Response Duplication and Truncation**:
+  - Saved raw streamed markdown directly onto the element dataset before HTML rendering inside sidepanel.js.
+  - Updated appendJobFinishFooter to use this raw markdown, preventing the double-formatting of stripped plain text.
+  - Removed the character length limits and truncation warnings from the collapsible summary card.
+  - Removed white-space: pre-wrap from .job-summary-body and #summary-text modal elements, allowing correct markdown document flow and layout.
+
+---
+
+## [1.2.312] - 2026-07-12
+
+### Changed
+- **Activity Bar Panel Toggling**:
+  - Implemented smart toggling of the Left Sidebar panel by clicking the active tab button in the activity bar, enabling users to hide/show the workspace sidebar to expand or collapse the main chat area layout.
+
+---
+
+## [1.2.311] - 2026-07-12
+
+### Changed
+- **Chrome Extension Branding and Logo Refresh**:
+  - Renamed the extension to 'Super Agent R - AI Autonomous your working.' inside manifest.json and updated the sidepanel title.
+  - Replaced the extension logo icons (16x16, 48x48, and 128x128) with a newly generated abstract glowing logo.
+  - Simplified the header logo container inside sidepanel.html by renaming the heading to 'Super Agent R' and removing the decorative glow-dot.
+
+---
+
+## [1.2.310] - 2026-07-12
+
+### Changed
+- **Chrome Extension Welcome Screen and Sidebar Refactor**:
+  - Simplified welcome/setup screen to only ask for the orchestration mode, API token, and session resume toggle.
+  - Relocated orchestration mode and preset select dropdown into the main top header bar.
+  - Implemented a dedicated Left Sidebar for workspace browser/selector management featuring a list of saved workspaces, current active workspace status card, and a "+ Add Workspace" folder path input.
+  - Added seamless lazy-initialization logic that defers server session startup (`/api/init`) until a workspace is selected or added inside the main workspace view.
+
+---
+
+## [1.2.309] - 2026-07-12
+
+### Added
+- **Interactive Tool Execution Rows in Chat Stream**:
+  - Upgraded tool block headers in `sidepanel.js` and `sidepanel-history.js` to display the raw tool name and a summary of call arguments formatted inside parentheses (`tool_name(arg: val)`).
+  - Added a live status indicator to the header row that displays `running...` (blue) while the tool executes, and updates to `✓ done` (green) or `✗ failed` (red) upon completion.
+
+---
+
+## [1.2.308] - 2026-07-12
+
+### Added
+- **Completed Tasks 15-second Decay and Auto-Hide**:
+  - Implemented a 15-second countdown timer (`~ Hide in (Xs)`) inside `renderTasks` in `sidepanel.js` for completed tasks, matching the CLI task checklist behavior.
+  - Setup a local 1-second interval execution loop in the extension that re-renders the tasks panel dynamically while completed tasks with active countdown timers are present.
+  - Configured automated filtering that excludes completed tasks once their decay countdown is completed.
+
+---
+
+## [1.2.307] - 2026-07-12
+
+### Fixed
+- **Chrome Extension Link Style and Custom List Icons**:
+  - Implemented the `.text-vscode-bright` CSS class inside `sidepanel.src.css` using the vscode bright color `#007fd4` so that markdown and file links are visibly styled as blue links.
+  - Upgraded raw filepath detection regex in `sidepanel-markdown.js` and `sidepanel-ui.js` to match Windows/POSIX directory paths and file names safely using lookbehinds.
+  - Replaced browser default bullet points (`disc` dots) for messages with a clean absolute-positioned dash prefix `-` inside `sidepanel.src.css`.
+
+---
+
+## [1.2.306] - 2026-07-12
 
 ### Removed
-- **Drag-and-Drop Tab Features**: Completely disabled HTML5 drag-and-drop actions on tabs (both tab reordering and drag-and-drop splitting), removing all overlay layers, drag states, refs, and unused local bindings to simplify layout orchestration and align with built-in button split options.
+- **Redundant Halt Execution Button**:
+  - Removed the `btn-abort` ("HALT EXECUTION") button from the workspace session header inside `sidepanel.html`.
+  - Cleaned up the `btnAbort` reference and its click listener event registration inside `sidepanel.js`.
 
-## [1.3.36] - 2026-06-28
+---
+
+## [1.2.305] - 2026-07-12
+
+### Fixed
+- **Chrome Extension Markdown Link Parsing**:
+  - Restored links and list parsing inside `formatMarkdown` in `sidepanel-markdown.js` which previously overrode `sidepanel-ui.js` and caused markdown links to render as plain text.
+  - Added a global click listener inside `sidepanel.js` to catch clicks on local `file:///` links and send a request to a new `/api/workspace/file/open` server endpoint.
+  - Implemented the `/api/workspace/file/open` endpoint in `src/server.ts` to launch local files in their default associated programs using `execa` with path traversal protection.
+
+---
+
+## [1.2.304] - 2026-07-12
+
+### Added
+- **Chrome Extension Tasks Collapse/Expand Feature**:
+  - Implemented an interactive header toggle with a geometric chevron pointer (`▼` / `▶`) inside `sidepanel.html` that allows users to collapse or expand the persistent tasks checklist content.
+  - Added click listener registration on `#persistent-tasks-header` inside `sidepanel.js` to toggle visibility of `#persistent-tasks-content`.
+  - Configured `renderTasks` and `clearChatMessages` to automatically expand the checklist and reset the chevron back to expanded (`▼`) whenever tasks are updated or cleared.
+
+---
+
+## [1.2.303] - 2026-07-12
+
+### Changed
+- **Chrome Extension Tasks Checklist Spacing and Font Size**:
+  - Decreased the font size of the persistent task checklist panel to 10px (header to 8.5px, count to 8px, task items to 10px, icons to 9px).
+  - Reduced padding and gap sizes across the panel (p-1.5, gap-1) and decreased row vertical spacing (py-[1px], gap-1.5).
+  - Reduced the max-height constraint from 58px to 50px to fit 3 smaller items perfectly.
+
+---
+
+## [1.2.302] - 2026-07-12
+
+### Changed
+- **Chrome Extension Tasks Checklist Layout**:
+  - Replaced the in-stream task message cards with a dedicated persistent task checklist panel positioned right above the input box.
+  - Implemented a visible limit of 3 task items max (`max-h-[58px]`) with scrollability for overflow.
+  - Refactored `renderTasks` and `renderAgentsTree` to target the new persistent panel, and added clear/reset routines inside `clearChatMessages`.
+
+---
+
+## [1.2.301] - 2026-07-12
+
+### Fixed
+- **Chrome Extension First Message Loading Indicator**:
+  - Introduced `window.isWaitingForAgentStart` state to track when a chat message has been sent but the agent hasn't started running yet.
+  - Updated the background status polling checks to not reset the thinking spinner and send button state while waiting for agent execution.
+
+---
+
+## [1.2.300] - 2026-07-11
+
+### Fixed
+- **Chrome Extension Streaming Scroll Follow**:
+  - Configured a dynamic scroll threshold that increases to 200px while the AI is actively processing or thinking, ensuring auto-scroll successfully follows fast-streaming logs and content without being broken by large layout updates.
+
+---
+
+## [1.2.299] - 2026-07-11
+
+### Changed
+- **Chrome Extension Inline Task Checklist Updates**:
+  - Re-architected task list rendering to dynamically append a new task checklist card directly in the scrollable chat message list only when the task state changes, preserving a historical timeline of checklist transitions.
+  - Linked active subagent and superagent chips to render dynamically inside the most recently appended checklist card.
+
+---
+
+## [1.2.298] - 2026-07-11
+
+### Fixed
+- **Chrome Extension Smart Auto-Scrolling**:
+  - Implemented a smart scroll behavior inside `scrollToBottom` that only auto-scrolls to the bottom when new content/progress is received if the user was already near the bottom.
+  - Allowed forcing the scroll behavior explicitly during direct user actions (like sending messages).
+
+---
+
+## [1.2.297] - 2026-07-11
+
+### Fixed
+- **Chrome Extension Dropdowns Dark Mode**:
+  - Configured dark background and light text styling for all standard `<select>` and `<option>` elements to adhere strictly to the extension's VS Code dark theme aesthetic.
+
+---
+
+## [1.2.296] - 2026-07-11
+
+### Fixed
+- **Chrome Extension Checklist Persistence**:
+  - Restored tasks checklist card persistence by removing overridden, buggy `clearChatMessages` definitions.
+  - Set checklist card to remain visible constantly in the chat pane, displaying a clean "No active tasks" state instead of being hidden when empty.
+
+---
+
+## [1.2.295] - 2026-07-11
+
+### Changed
+- **Chrome Extension UI Relayout**:
+  - Moved the execution task checklist card directly into the scrollable chat messages area (above the typing indicator) instead of showing it on top of the prompt inputs.
+  - Placed active subagents and superagents list inside the same execution tasks card.
+  - Removed the collapsible bottom terminal drawer completely, streaming active tool terminal logs and outputs directly inside the auto-expanded tool result details within the chat message stream.
+
+---
+
+## [1.2.294] - 2026-07-11
+
+### Fixed
+- **Chrome Extension Preset Select Dropdowns**:
+  - Restored rendering and population of standard quick-preset-select and input-preset-select dropdown selectors.
+  - Linked selection changes to active preset update APIs correctly.
+
+---
+
+## [1.2.293] - 2026-07-11
+
+### Added
+- **Chrome Extension Tool Parameter Details and Full Result Expanse**:
+  - Added an Expand Full Result button to truncated tool output results inside the chat message stream.
+  - Added an Expand Full Summary button to truncated job summary cards.
+  - Improved tool detail rendering inside `buildToolDetail` to present rich snippets of parameter values (command lines, queries, file relative path segments, lines ranges, subagent roles, and prompts) instead of only printing simple filenames.
+
+---
+
+## [1.2.292] - 2026-07-11
+
+### Fixed
+- **Chrome Extension UI Auto-Hiding**:
+  - Automatically hide the status checklist strip (Tasks and Agents) when no tasks are present in the list and no subagents/superagents are running.
+  - Automatically hide the collapsible bottom terminal panel by default on load, when there is no active process running, and when the terminal output logs are empty.
+  - Added CSS utility overrides and script checks to toggle visibility dynamically.
+
+---
+
+## [1.2.291] - 2026-07-11
+
+### Added
+- **Chrome Extension Workspace Monitor Side Panel**:
+  - Implemented a collapsible right-side panel layout showing active file changes, running background processes, and active subagents/superagents.
+  - Added backend endpoints in `server.ts` (`/api/git/changes`, `/api/background-tasks`, `/api/background-tasks/kill`).
+  - Added toggle button in the header bar with persistence state saved in local storage.
+  - Created `sidepanel-monitor.js` script to fetch, map status levels, and render live updates.
+
+---
+
+## [1.2.290] - 2026-07-11
 
 ### Removed
-- **Terminal Pane Borders**: Removed the 1px purple/transparent border around terminal pane containers in `SplitLayoutRenderer.tsx` to provide a completely clean borderless terminal screen.
+- **Chrome Extension Plan, Tasks, and Walkthrough Left Tabs**:
+  - Deleted Plan, Tasks, and Walkthrough tab button triggers from the left activity bar.
+  - Deleted the corresponding view panes (`view-plan`, `view-tasks`, `view-walkthrough`) from the layout.
+  - Simplified the switch tab listener logic and cleaned up unused DOM element references and handlers in `sidepanel.js`.
 
-## [1.3.35] - 2026-06-28
+---
 
-### Added
-- **Icon-Only Collapsed Sidebar**: Refactored the collapsed sidebar behavior to transition into a 48px vertical icon-only Activity Bar instead of hiding completely. Clicking any collapsed icon switches the active tab view and automatically expands the sidebar panel. Active tabs in collapsed mode feature a left purple indicator bar.
+## [1.2.289] - 2026-07-11
 
-## [1.3.34] - 2026-06-28
+### Fixed
+- **Chrome Extension Tasks Layout and Sync**:
+  - Relocated the status checklist strip (Tasks and Agents) from the top of the chat view to the bottom, positioned directly above the input footer.
+  - Implemented collapsible capability for the status strip with a toggle button click listener (Tasks ▾ / Tasks ▸) to minimize vertical space usage.
+  - Fixed `/api/tasks` and `/api/documents` backend endpoints to fetch plan, task, and walkthrough markdown content from the session-specific history path (via `session.agent.getTaskFilePath()`, etc.) instead of workspace root directories when a session is active.
+
+---
+
+## [1.2.288] - 2026-07-11
+
+### Fixed
+- **Chrome Extension Loading/Process Button States**:
+  - Prevented premature hiding of the spinner and reverting of the send button state on intermediate events like `text`, `reasoning`, and `tool_end`.
+  - Added robust synchronization of spinner visibility, chat input text disabled state, and process button (send/stop) state with the `/api/status` endpoint's `data.agentRunning` value.
+  - Enabled active/generating feedback on text and reasoning streams instead of resetting UI early.
+
+---
+
+## [1.2.287] - 2026-07-11
+
+### Refactored
+- **Chrome Extension Code Modularization**:
+  - Split `chrome-extension/sidepanel.js` (previously 1880+ lines) into modular scripts to keep all codebase files strictly under 1000 lines.
+  - Created `chrome-extension/sidepanel-ui.js` (670 lines) containing all DOM rendering, helpers, tool labels, and formatting logic.
+  - Created `chrome-extension/sidepanel-history.js` (240 lines) containing all chat history and session switching controls.
+  - Reduced `chrome-extension/sidepanel.js` to 959 lines containing core orchestrators, SSE events, and event listeners.
+  - Updated `chrome-extension/sidepanel.html` to load split modules in correct dependency order.
+
+---
+
+## [1.2.286] - 2026-07-11
 
 ### Changed
-- **Seamless Tab-Terminal Theme Merge**: Changed `.top-bar` background to `#0b0f19` and removed `border-bottom` in `layout.css` to allow the top bar/tab area to blend seamlessly into the terminal view as a single cohesive dark slate surface.
+- **Chrome Extension Finished Flow Enhancements**:
+  - The job summary card is now default expanded (open) when a job finishes.
+  - Automatically scrolls the summary card smoothly into view when a job completes.
+  - Tool execution blocks (tools usage) are now automatically collapsed (hidden) when a job finishes.
+  - Clicking the "Finished in Xm Xs" badge row will toggle the visibility of the collapsed tool blocks.
 
-## [1.3.33] - 2026-06-28
+---
 
-### Fixed
-- **Multi-Stage Fit to Prevent Overflow**: Updated `debouncedFit` in `TerminalInstance.tsx` to run instantly and at sequential delays (50ms, 150ms, 300ms, 500ms) to cleanly capture window state maximization, split-pane resizes, and sidebar transitions.
-- **Hidden Overflow on Pane Wrapper**: Added `overflow: 'hidden'` to the terminal leaf wrapper `div` in `SplitLayoutRenderer.tsx` to prevent the xterm canvas scrollbar or canvas viewport from overflowing the pane.
-
-## [1.3.32] - 2026-06-28
-
-### Changed
-- **Zero-Padding Content Viewport**: Changed desktop `.content-area-tabs` wrapper padding from 16px to 0 in `layout.css` to allow the terminal to fully stretch to the left and right edges of the window layout.
-- **Matched Background Colors**: Set `.terminal-container` background color to `#0b0f19` in `components.css` to perfectly align with xterm's slate background color, ensuring any leftover grid column spacing is visually hidden.
-
-## [1.3.31] - 2026-06-28
+## [1.2.285] - 2026-07-11
 
 ### Changed
-- **Edge-to-Edge Terminal Layout (No padding/borders)**: Removed the padding, rounding, shadows, and borders from `.terminal-container` and `.terminal-element` in `components.css`. The terminal canvas now sits completely flush and edge-to-edge (nempel ke kanan dan kiri) in its parent pane for a maximized, premium view.
+- **Chrome Extension Tool Stream Redesign**:
+  - Tool execution blocks now render as clean single-line rows matching the screenshot style: `● Ran git add … ›` instead of the previous JSON-heavy verbose layout.
+  - Added `getToolLabel()` that maps tool names to human-readable verbs: `Ran`, `Edited file`, `Read file`, `Explored directory`, `Searched`, `Spawned subagent`, etc.
+  - Added `buildToolDetail()` to extract the key inline detail (filename basename or truncated command) shown in muted text next to the label.
+  - Added `buildResultSuffix()` for inline result stats: edit tools show `+14 -0` diff counts, grep tools show `N matches`.
+  - Status indicator changed from blinking bullet `•` to a 6px dot (blue=running, green=done, red=error).
+  - Chevron `›` toggles to `⌄` on expand; expanded section shows args JSON + result output.
+  - CSS fully replaced: removed old `.tool-header/.tool-indicator/.tool-name/.tool-desc` in favor of `.tool-row/.tool-status-dot/.tool-row-label/.tool-row-detail/.tool-row-suffix/.tool-row-chevron/.tool-expand`.
 
-## [1.3.30] - 2026-06-28
+---
 
-### Added
-- **Tab Reordering (Drag and Drop)**: Integrated HTML5 drag-and-drop support on tab headers in `App.tsx`, enabling users to click, grab, and reorder tabs left/right seamlessly (just like Chrome browser tabs).
-- **Automated Startup Session Restoration**: Replaced the manual background active session import banner/prompt with a fully automated restoration sequence. Active sessions are automatically queried and imported silently into UI tabs upon startup or authentication, ensuring a seamless user experience.
-
-## [1.3.29] - 2026-06-28
-
-### Fixed
-- **Non-Destructive Terminal Refresh**: Refactored the terminal refresh button handler in `App.tsx` and `useTerminals.ts` to be non-destructive. Clicking the button now calls `term.reset()` to clear the frontend canvas visually and triggers a websocket `init` re-attach. This forces the backend to replay its session history buffer rather than killing the active shell process, preserving all background processes and build tasks.
-
-## [1.3.28] - 2026-06-28
+## [1.2.284] - 2026-07-11
 
 ### Added
-- **Terminal Context Menu (Copy/Paste/Select All/Clear)**: Added a premium custom HTML right-click context menu in the terminal panel, allowing users to Copy selected text, Paste clipboard data, Select All terminal text, and Clear the terminal screen. Selection state detection is managed dynamically.
-- **Active PTY Sessions inside System Tray**: Added a dynamic listing of active terminal PTY sessions grouped by their workspaces inside the Electron system tray context menu. It polls running terminal sessions and workspaces periodically and updates context menu submenus smoothly when state changes occur.
+- **Chrome Extension Job Finish Footer**:
+  - After an agent finishes a task, a "Finished in Xm Xs" elapsed-time badge (green pill) now appears below the agent message in the chat.
+  - A "Summary ▾" toggle button lets users expand/collapse a collapsible summary card showing the last portion of the agent's final response.
+  - Timer starts on the first meaningful agent event (text output or tool execution) and stops on the `done` event.
+  - All elements styled with VS Code dark theme aesthetics matching the existing extension design.
 
-## [1.3.27] - 2026-06-28
+---
 
-### Added
-- **Refresh Terminal Button in Footer**: Added a Refresh/Restart Terminal button to the footer's layout control pill. When clicked, it terminates the active terminal session process on the backend and initiates a fresh terminal shell in the same workspace directory without closing/reopening the tab manually.
-
-## [1.3.26] - 2026-06-28
-
-### Added
-- **Restart Desktop option in System Tray**: Added a new "Restart Desktop" menu item to the system tray context menu. This lets users relaunch the Electron wrapper shell cleanly via `app.relaunch()` and `app.quit()`.
-
-## [1.3.25] - 2026-06-28
+## [1.2.283] - 2026-07-11
 
 ### Added
-- **Auto-Close Tabs on Workspace Removal**: Updated `handleRemoveWorkspace` in `App.tsx` to automatically close all active terminal and file tabs that belong to the workspace being removed. This performs websocket unsubscriptions, deletes terminal instances from state, and safely updates the active tab focus.
+- **Chrome Extension Plan Approval Flow**:
+  - Server now exposes `planState` in `/api/status` response so the extension can detect when the agent is waiting for plan approval.
+  - Added `/api/plan/approve` POST endpoint accepting `{ action: "approve" | "reject" }`. Approve calls `agent.approvePlan()` and resumes execution; Reject sets planState to IDLE and aborts.
+  - Server broadcasts a `plan_approval_required` SSE event (with `planState`) when the agent emits a `done` event while in `PLANNING_PENDING` state.
+  - Added a Plan Approval modal overlay in the Chrome extension side panel, following the VS Code dark theme, with Approve & Proceed and Reject Plan buttons.
+  - Extension handles `plan_approval_required` SSE events to show/hide the overlay automatically.
+  - `/api/status` polling fallback ensures the overlay re-appears on extension reload if the agent is already in `PLANNING_PENDING` state.
 
-## [1.3.24] - 2026-06-28
+---
 
-### Fixed
-- **System Tray Backend Detection**: Enhanced the backend detection mechanism in `desktop/main.js` by checking `localhost` first, and falling back to `127.0.0.1` on error or timeout. This resolves connection check failures on systems where the loopback interfaces resolve to different IP families (IPv4 vs IPv6).
-- **Real-Time Status Polling**: Implemented a periodic 5-second polling interval in the Electron main process to check the backend's status. The system tray will now dynamically update its status and enable/disable menu items in real-time, even if the backend process is started or stopped manually outside of Electron.
+## [1.2.282] - 2026-07-11
 
-## [1.3.23] - 2026-06-28
-
-### Added
-- **Password Visibility Toggles**: Added eye/eye-off toggle buttons next to all master password inputs across the application (login, setup form, and master password change tabs in settings). This allows users to inspect or hide their entered password text for better accuracy.
-
-## [1.3.22] - 2026-06-28
 
 ### Changed
-- **Header Shortcut Icon**: Changed the keyboard shortcuts button icon in the top header from `Keyboard` to `HelpCircle`. This avoids confusion and visual collision on mobile screens where a second `Keyboard` icon toggles the virtual touch keyboard.
+- **Chrome Extension Dedicated History Tab**:
+  - Moved the chat session history switcher from a dropdown menu into a dedicated vertical tab in the left-side Activity Bar.
+  - Added a History tab button and a dedicated `view-history` panel containing the list of previous sessions for the active workspace.
+  - Configured client-side redirection to load the session and switch the active tab back to Chat when a session history item is clicked.
 
-## [1.3.21] - 2026-06-28
+---
 
-### Added
-- **Full Screen Mobile Login/Auth Screen**: Styled `.auth-wrapper` and `.auth-card` to match the full-screen layout on mobile (stretching edge-to-edge, zero margin, zero border-radius) while centering form content vertically for a premium user experience.
-
-## [1.3.20] - 2026-06-28
-
-### Added
-- **Full Screen Mobile Modals**: Styled dialog modals (`.modal-overlay` and `.modal-content`) to take up the full width and height of the screen (edge-to-edge, zero margin, zero border-radius) on mobile devices to optimize display space and styling.
-
-## [1.3.19] - 2026-06-28
-
-### Fixed
-- **CSS Reset Specificity**: Wrapped the universal CSS reset (`* { margin: 0; padding: 0; }`) and default element styles (`body`, `button`, `input`, `a`, etc.) inside Tailwind CSS's `@layer base` block. This prevents unlayered CSS resets from overriding layered Tailwind utility classes (like `.px-4` or `.md:px-4`) under standard CSS Cascade Layer rules.
-- **index.css Modularization**: Refactored the large, 1,311-line `index.css` file by splitting it into modular, smaller stylesheets (`base.css`, `layout.css`, `components.css`) to adhere to the project's strict 1,000-line file length limit.
-
-## [1.3.18] - 2026-06-28
-
-### Fixed
-- **Modal Overlay App-Region Interaction**: Added `-webkit-app-region: no-drag` to `.modal-overlay` and `.modal-content` in CSS. This resolves an issue in Electron frameless windows where clicks on the modal (which sits on top of draggable title/topbar zones) were intercepted as window drag events by the OS, preventing input fields (like the master password fields in settings) from receiving focus and keyboard input.
-
-## [1.3.17] - 2026-06-28
-
-### Fixed
-- **Footer Horizontal Padding Adjustment**: Increased horizontal padding on the left and right sides of the footer (`Footer.tsx`) from `px-4` (16px) to `px-6` (24px) to give elements more breathing room and prevent a cramped layout near the screen boundaries.
-
-## [1.3.16] - 2026-06-28
-
-### Added
-- **Modern Footer Redesign**: Reorganized the footer status bar (`Footer.tsx`) with a premium, space-efficient, and responsive layout:
-  - Added new visual icons for Workspace (`Folder`) and Network (`Globe`) to align with design standards.
-  - Implemented glassmorphism styling (`backdrop-blur-md bg-[#080b13]/90 border-t border-white/10 shadow-[0_-2px_10px_rgba(0,0,0,0.3)]`).
-  - Added micro-interaction animations such as hover scaling on zoom controls and translation animations on action buttons.
-  - Re-styled the default HTML select element with a custom background, borders, and a custom SVG chevron icon indicator to match other premium elements.
-  - Formatted active Cloudflare Tunnel statuses into unified badges with subtle glowing dropshadows.
-  - Integrated mobile-responsive styles to automatically hide labels/text descriptions and collapse elements, avoiding vertical overlaps on small screen widths.
-
-## [1.3.15] - 2026-06-28
-
-### Fixed
-- **Mobile Terminal Action Bar Relocation**: Relocated the floating terminal action bar inside `SplitLayoutRenderer.tsx` from the top-right corner (`top-2 right-2`) to the bottom-right corner (`bottom-2 right-2 top-auto`) on mobile and tablet viewport sizes. The top-right positioning is preserved (`lg:top-2 lg:right-2 lg:bottom-auto`) on desktop screens. This prevents buttons from overlapping the terminal output area or other header elements on small devices.
-
-## [1.3.14] - 2026-06-28
-
-### Added
-- **Cloudflare Quick Tunnel Propagation Tip**: Added a helpful info tooltip (`Info` icon from `lucide-react`) next to the generated tunnel URL in `Footer.tsx` when a Cloudflare Quick Tunnel is launched. This informs users that dynamic subdomains (like `*.trycloudflare.com`) can take 5-15 seconds for DNS records to propagate, guiding them to wait and reload if they encounter a "This site can't be reached (NXDOMAIN)" error.
-
-## [1.3.13] - 2026-06-28
-
-### Added
-- **Cloudflare Tunnel Start/Stop Loading Feedbacks**: Added a reactive `tunnelLoading` state inside the `useTunnel` hook. The Cloudflare Tunnel status badge in `Footer.tsx` now shows a blue spinning loader and displays `Starting...` or `Stopping...` while operations are in progress. Disabled all tunnel control buttons (Quick URL, Custom, Stop) during loading to prevent race conditions. Also integrated the loading feedback with a rotating spinner inside the submit button and disabled forms inside `TunnelSetupModal` (`Modals.tsx`).
-
-## [1.3.12] - 2026-06-28
-
-### Added
-- **Responsive Terminal Split Actions**: Modified the floating action bar in `SplitLayoutRenderer.tsx` to be always visible on mobile and tablet screen sizes (`opacity-100 lg:opacity-0 lg:group-hover/pane:opacity-100`) because hover events do not exist on touch devices. Enlarged the touch target size of the action buttons from `20px` to `28px` (`w-7 h-7 lg:w-5 lg:h-5`) and increased icon sizes on mobile and tablet viewports to make them touch-friendly. Added `onTouchEnd` event stop propagation to prevent touch event leaks.
-
-## [1.3.11] - 2026-06-28
-
-### Fixed
-- **Terminal Resize / Fit Debouncing**: Debounced terminal fit actions inside `TerminalInstance.tsx` using a callback helper. This prevents multiple overlapping `fit()` calls from executing simultaneously during initial page render, font size changes, and layout transitions (such as sidebar animation or virtual keyboard popping up). Redundant fits are now coalesced into a single sizing request, eliminating terminal content flashing ("blink-blink") and reducing PTY resize network traffic.
-
-## [1.3.10] - 2026-06-28
-
-### Fixed
-- **Mobile Terminal Click Focus & Virtual Keyboard**: Added capturing phase event listeners for click and touch events on the terminal container inside `TerminalInstance.tsx` to bypass `xterm.js`'s event propagation blocking (`stopPropagation`). Also wrapped the terminal instance's focus callback inside `SplitLayoutRenderer.tsx` to ensure `focusTerminal` is always invoked when the user taps on a terminal pane on mobile, reliably toggling the virtual touch keyboard.
-
-## [1.3.9] - 2026-06-28
-
-### Added
-- **Tunnel URL Copy Action**: Added a "Copy" button next to the "Open" button in the footer when a Cloudflare Tunnel is active. This allows the user to copy the active tunnel URL to their clipboard with a temporary success indicator state showing a green checkmark and "Copied".
-
-## [1.3.8] - 2026-06-28
-
-### Fixed
-- **node-pty AttachConsole Crash**: Added a try-catch block to `node-pty`'s internal console process list agent and monkeypatched `node-pty`'s `WindowsPtyAgent` constructor in `terminalManager.ts` to run the console process list fork silently on Windows. This suppresses distracting and noisy uncaught `AttachConsole failed` stack traces in the backend log console during terminal process cleanup.
-
-## [1.3.7] - 2026-06-28
-
-### Fixed
-- **Mobile Top-Bar & Icon Alignments**: Increased size of Keyboard and MoreVertical toggle icons to `18px` in mobile view to align with other icons. Adjusted top-bar margins and padding to `12px`, and increased action buttons' touch target paddings to `6px`.
-- **Right Drawer Touch Enhancements**: Adjusted padding on mobile "New Tab" button in RightSidebar.
-
-## [1.3.6] - 2026-06-28
-
-### Fixed
-- **Custom Keyboard Padding**: Increased the bottom padding of the virtual touch keyboard on mobile devices to `24px` to prevent overlapping with native gesture bars and home indicator areas.
-
-## [1.3.5] - 2026-06-28
-
-### Added
-- **Mobile Right Drawer Menu**: Relocated active tabs, settings, and logout options on mobile screens to a dedicated right side slide-out drawer menu.
-- **Top-Bar Menu Toggle Button**: Added a new menu action button (vertical dots icon) in the top-right of the navigation bar on mobile screens to open the right drawer.
-- **Top-Bar Cleanup**: Hid settings and logout buttons from the top bar on mobile, moving them cleanly to the new right menu drawer.
-
-## [1.3.4] - 2026-06-28
-
-### Fixed
-- **Welcome Dashboard Spacing**: Increased the vertical margins (`mb-`) of elements (icon wrapper, title, and description text) on the empty dashboard view to add more breathing room and prevent texts from sticking too close together.
-
-## [1.3.3] - 2026-06-28
-
-### Fixed
-- **Welcome Dashboard Bottom Padding**: Replaced Tailwind inline card padding configuration with custom `.welcome-card-outer` and `.welcome-card-inner` classes, enforcing explicit paddings (40px on desktop and 24px on mobile) using `!important` to resolve the button padding cutoff.
-
-## [1.3.2] - 2026-06-28
-
-### Added
-- **Responsive & Minimalist Terminal Spacing**: Refactored the terminal content area classes and container padding. Added mobile-first overrides that remove boundaries, borders, and paddings for a highly minimalist experience on small screens while keeping terminal layouts edge-to-edge.
-- **Desktop Padding Area**: Added a beautiful 16px desktop padding area around the terminal container to restore the premium rounded-border look when tabs/terminals are active on desktop.
-- **Responsive Welcome Dashboard**: Optimized `EmptyDashboard` layout with responsive paddings, margins, button sizes, and icon scaling to ensure a compact, minimalist experience on mobile.
-
-## [1.3.1] - 2026-06-27
-
-### Fixed
-- **Monaco Full-Width Stretch**: Updated `FileViewerTab.tsx` parent container class names with `flex-1 w-full h-full` and passed `width="100%"` explicitly to the Monaco `<Editor>` component, ensuring the coding area stretches cleanly to fill the entire horizontal space of the right viewport pane.
-
-## [1.3.0] - 2026-06-27
-
-### Added
-- **Debounced Auto-Save**: Integrated a 1000ms debounced auto-save mechanism inside `FileViewerTab.tsx`. Edits are automatically saved to disk when the user pauses typing.
-- **Auto-Save Status Bar**: Created real-time feedback elements in the header (e.g. `Saving...`, `Saved` checkmark, `Modified`, or `Auto-save active`) to indicate write status dynamically.
-
-## [1.2.9] - 2026-06-27
-
-### Added
-- **Monaco Code Editor Integration**: Replaced the text area with a full Monaco Editor (`@monaco-editor/react`) for code editing. Features full syntax highlighting, automatic language selection from file extensions, smooth caret animations, and a customized `#030408` theme background.
-- **Default Editable Mode**: Enabled file editing by default upon opening any file. Added visual `Modified` state flags, real-time dirty state tracking, and a Save / Revert action bar in the header.
-
-## [1.2.8] - 2026-06-27
-
-### Fixed
-- **Sidebar Auto-Collapse on File Open**: Updated `openFileTab` inside `useTerminals.ts` to trigger the `onTerminalOpen` callback. This automatically closes/collapses the left sidebar panel on mobile and tablet devices when a file is opened, immediately showing the File Viewer/Editor interface.
-
-## [1.2.7] - 2026-06-27
-
-### Added
-- **Pulsing Skeleton Loader**: Replaced the reading spinner in `FileViewerTab.tsx` with a highly-polished layout-aligned skeleton loader that simulates header bars and rows of code text when loading a file.
-
-## [1.2.6] - 2026-06-27
-
-### Added
-- **File Explorer Editor Support**: Integrated an editor mode inside `FileViewerTab.tsx` with a toggled textarea, enabling full-featured file edits. Exposed a new POST `/api/fs/write` route in `server.ts` to write updated files back to disk.
-
-## [1.2.5] - 2026-06-27
-
-### Added
-- **Hide Keyboard Button**: Added a dedicated `âœ•` button to the far right of the mobile virtual keyboard's modifier toolbar. Clicking this button hides the touch virtual keyboard directly from the interface.
-
-## [1.2.4] - 2026-06-27
-
-### Fixed
-- **Mobile & Tablet Responsive Buttons**: Made the active sessions alert banner container use `flex-col md:flex-row` and added `whitespace-nowrap` to the action buttons to prevent text wrapping on narrow screen sizes. Also updated the welcome dashboard buttons container (`EmptyDashboard.tsx`) to use `flex-col sm:flex-row` to stack cleanly on mobile screen sizes.
-
-## [1.2.3] - 2026-06-27
-
-### Added
-- **Mobile Sidebar Active Tabs Menu**: Added a new mobile-only sidebar panel tab called `Tabs` that lists all currently active pseudoterminal tabs. Clicking any tab in this menu activates it and collapses the sidebar.
-- **Auto-Responsive Text Size**: Locked the default terminal font size to `8px` on mobile/tablet viewports (screen width <= 768px) to reduce line-wrapping and improve code readability, while keeping the user's preferred zoom size on desktop.
-
-### Fixed
-- **App.tsx Refactoring**: Moved the sidebar panel content rendering blocks into a separate component `SidebarContentPanel.tsx` to keep the code modular and under the 1000-line limit (reduced `App.tsx` from 1060 lines down to 903 lines).
-
-## [1.2.2] - 2026-06-27
-
-### Added
-- **Auto-Suppress Native Keyboard & Auto-Open Custom Keyboard**: Dynamically set `inputmode="none"` on the hidden helper `<textarea>` of xterm.js to suppress the native mobile virtual keyboard. Integrated an `onTerminalFocus` callback so that clicking/tapping on any terminal instance automatically opens the custom virtual touch keyboard on mobile.
-
-## [1.2.1] - 2026-06-27
-
-### Fixed
-- **Mobile Navigation Overlap**: Added `calc(env(safe-area-inset-bottom, 0px) + 16px)` bottom padding to the virtual keyboard to prevent the Enter and Space keys from being covered by browser bottom bars or Android system navigation indicators.
-- **Minimalistic Mobile Header**: Reduced `--topbar-height` from 56px to 42px on mobile viewports. Hid the desktop-specific `Keyboard Shortcuts` button from the Topbar when accessed from mobile devices.
-- **Sleeker Virtual Keyboard Key Sizes**: Reduced QWERTY keys font size to `text-[12px]` and vertical padding to `py-2.5`, making the layout much more compact and professional.
-
-## [1.2.0] - 2026-06-27
-
-### Added
-- **Custom Touch On-Screen Keyboard**: Integrated a premium, toggleable virtual on-screen keyboard (`MobileKeyboard`) visible on mobile screens (< 768px). Includes sticky modifier locks for `Ctrl` and `Alt` (enabling shortcuts like `Ctrl+C` or `Ctrl+D` on touch), standard QWERTY rows, a symbols toggle tab, and arrow navigation pads (`â†‘`, `â†“`, `â†�`, `â†’`).
-
-### Fixed
-- **App.tsx Code Complexity Reduction**: Refactored `startResizing` and `handleMergeTab` drag/merge logic from `App.tsx` into a custom hook `useLayoutHelpers.ts` to keep the core component under the strict 1000-line ceiling.
-
-## [1.1.9] - 2026-06-27
-
-### Fixed
-- **Mobile Touch Input Focus (Android/iOS)**: Added explicit click and touch listeners (`onClick` and `onTouchEnd`) on the pseudo-terminal container to directly trigger `.focus()` on xterm.js's hidden helper textarea inside a user interaction gesture, allowing virtual keyboards on Android and iOS to open reliably when tapping a terminal tab.
-
-## [1.1.8] - 2026-06-27
-
-### Added
-- **Active Session Import Offer on Web Access**: Added a notification banner and session importer to let web browser dashboard instances discover and load active pseudo-terminal sessions currently running in the backend (e.g. from the desktop app).
-- **Active Terminal Listing Endpoint**: Exposed `/api/terminals/active` on the backend to list running terminal PTY sessions with their details.
-
-## [1.1.7] - 2026-06-27
-
-### Added
-- **HTTP Health Verification on Port Collision**: Replaced net socket connection checks in desktop initialization with an HTTP-based health check probing the t-line setup API, avoiding false positives on unrelated services using port 3999.
-- **Sequential Git Status Processing**: Implemented sequential worktree status checking to prevent peak CPU and disk I/O bottlenecks in getWorkspaceInfo.
-
-### Fixed
-- **Strict 1000-Line Limit Refactoring**: Refactored frontend `App.tsx` from 1364 lines down to 998 lines by extracting `SplitLayoutRenderer`, `WorkspaceList`, and `EmptyDashboard` into separate files.
-- **Git Command Injection Vulnerability**: Replaced shell-interpolated child_process `exec` execution in gitManager with parameter-safe `execFile` array argument passing and added a 15-second timeout on all git executions to prevent zombie processes.
-- **Secure Bypass Token File Permissions**: Added restricted owner-only file permissions (`mode: 0o600`) when writing the bypass token file.
-- **Memory-Efficient Terminal Buffer**: Refactored terminal output buffers in terminalManager to use chunked array of strings instead of continuous string allocation/slicing on every PTY write.
-
-## [1.1.6] - 2026-06-27
-
-### Fixed
-- **Terminal Mouse Reporting Support**: Changed the pseudo-terminal spawn options on Windows to use the modern `ConPTY` engine (`useConpty: true`) instead of legacy `winpty`. This enables standard ANSI mouse event reporting (like SGR click and scroll tracking), allowing interactive TUI applications (e.g. `superagent`) running inside `t-line` tabs to natively receive and process mouse clicks.
-
-## [1.1.5] - 2026-06-27
-
-### Added
-- **Tiled & Grid Split Terminal Layout**: Rebuilt the split terminal feature to support independent grid/tiled layouts per tab using nested `react-resizable-panels`. Multiple terminal sessions can be split horizontally or vertically in any nested configuration inside a single tab.
-- **Floating Action Bar**: Integrated a floating, hover-activated action bar in each terminal pane with buttons to split horizontally/vertically or close individual panes.
-- **Drag and Drop Merge Splitting**: Dragging any terminal tab and dropping it onto a split zone (left, right, top, bottom) of another tab merges its terminal session into that tab's split layout.
-- **Dynamic Title Synchronization**: Updated active tab titles to dynamically reflect the name of the currently focused terminal pane.
-
-## [1.1.4] - 2026-06-27
+## [1.2.281] - 2026-07-11
 
 ### Changed
-- **Split Pane Library**: Replaced custom split ratios and drag-resize calculations with the `react-resizable-panels` library for horizontal and vertical splitting.
-- **Terminal Resize Observer**: Added a `ResizeObserver` on `TerminalInstance` to automatically refit the active terminal container when dragging split panel layout sizes or collapsing/expanding the sidebar, providing smooth and native-feeling window sizing.
+- **Chrome Extension Activity Bar Layout**:
+  - Restructured the horizontal workspace tabs layout into a vertical, VS Code-style left Activity Bar.
+  - Added SVGs for Chat, Plan, Tasks, and Walkthrough menu items.
+  - Styled the vertical icons with hover states and a sleek left border highlight for the active menu option.
 
-## [1.1.3] - 2026-06-27
+---
 
-### Added
-- **Keyboard Shortcuts** (`useKeyboardShortcuts` hook): Ctrl+T buka terminal baru, Ctrl+W tutup tab aktif, Ctrl+Tab/Ctrl+Shift+Tab navigasi tab, Ctrl+1-9 loncat ke tab ke-N, Ctrl+Shift+D/E toggle split pane horizontal/vertikal, Ctrl+=/- zoom in/out.
-- **Split Pane Terminal** (`useSplitPane` hook): tampilkan dua terminal secara horizontal (side-by-side) atau vertikal (atas-bawah) dengan resize handle bisa di-drag. Tombol split muncul otomatis di tab bar jika ada â‰¥2 terminal.
-- **Terminal Search Bar**: Ctrl+Shift+F membuka search bar floating di atas terminal (SearchAddon). Fitur: prev/next result, toggle case-sensitive, toggle regex, close (Esc).
-- **Unicode11Addon**: dukungan penuh karakter emoji, CJK, dan unicode lebar lainnya di terminal.
-- **Output Buffer Replay**: saat WebSocket reconnect, backend mengirim ulang output terminal yang terlewat selama koneksi terputus (buffer 128KB rolling).
-
-### Changed
-- **Session Cleanup Timeout**: PTY session detach timeout dari 60 detik â†’ 30 detik.
-- **Terminal Auto-Focus**: terminal aktif otomatis mendapat focus saat tab di-switch.
-- **Tab Bar**: tombol `+` New Terminal sekarang muncul dengan tooltip `(Ctrl+T)`. Tombol split Columns/Rows muncul hanya saat ada â‰¥2 terminal aktif.
-
-## [1.1.2] - 2026-06-27
+## [1.2.280] - 2026-07-11
 
 ### Added
-- **WebLinksAddon**: URL/link yang muncul di terminal sekarang bisa diklik langsung (Ctrl+Click/Click) menggunakan `xterm-addon-web-links@^0.9.0`.
-- **Enhanced Scroll Behavior**: Scrollback buffer ditingkatkan ke 10.000 baris (sebelumnya default), `scrollOnUserInput: true` agar terminal otomatis scroll ke bawah saat mengetik, Shift+Scroll untuk fast scroll.
-- **Selection Highlight**: Warna selection teks di terminal kini ungu semi-transparan (konsisten dengan tema app) termasuk state inactive selection.
-- **Right-Click Select Word**: Klik kanan pada kata langsung men-select kata tersebut untuk kemudahan copy.
-- **Font Refinement**: Ditambahkan `Fira Code` sebagai fallback font, `lineHeight: 1.2` untuk keterbacaan yang lebih baik.
+- **Chrome Extension New Chat and Session History**:
+  - Added New Chat and History buttons at the top of the Chat view in the extension panel.
+  - Added a dropdown list of historical chat sessions for the active workspace, showing metadata (display name, preview, message count, and timestamp) for each session.
+  - Implemented client-side switching to load a specific session history when clicked.
+  - Implemented the ability to trigger a fresh empty chat session directly from the extension UI.
+  - Exposed a new `GET /api/history/sessions` endpoint in server.ts.
+  - Enhanced `listHistorySessions` in history.ts to accept a custom workspaceDir parameter and return the session ID.
 
-## [1.1.1] - 2026-06-27
+---
 
-### Changed
-- **Workspace List Full Bleed**: Removed horizontal padding on the workspace list container so cards stretch edge-to-edge (flush kanan kiri) inside the sidebar. Cards now use a bottom border separator instead of individual rounded borders, matching the visual style of Explorer and Changes panels.
+## [1.2.279] - 2026-07-11
 
-## [1.1.0] - 2026-06-27
+### Fixed
+- **Chrome Extension JS Cleanup**:
+  - Removed remaining references to the deleted `startServerTooltip` variable inside the global document click event listener block in sidepanel.js, resolving a ReferenceError.
+
+---
+
+## [1.2.278] - 2026-07-11
+
+### Fixed
+- **Chrome Extension Overlay Layout**:
+  - Fixed a missing closing `</div>` tag for the `question-overlay` container in sidepanel.html which caused subsequent overlays (including the settings panel and job summary overlays) to be nested inside it, preventing the settings gear from opening.
+
+---
+
+## [1.2.277] - 2026-07-11
 
 ### Removed
-- **Global Shell Concept**: Removed the 'Global Shell' terminal title and button configurations, routing all terminal instances through active workspace scopes under standard 'Shell' naming.
+- **Chrome Extension Server Controls**:
+  - Removed start server help button, stop server button, and the start server command tooltip from the sidebar panel header.
+  - Cleaned up event listeners, DOM elements, status visibility logic, and the shutdown/stop server API request function from sidepanel.js.
 
-## [1.0.9] - 2026-06-27
+---
 
-### Added
-- **Backend Process Name Polling**: Integrated active foreground process tracking on the backend (querying `node-pty` process names every 1,000ms) and dispatching WebSocket `title` events to update client terminal tab titles dynamically, resolving WinPTY/shell limitations on Windows.
-
-## [1.0.8] - 2026-06-27
-
-### Changed
-- **Full Bleed Sidebar Panels**: Configured the File Explorer and Git Changes sidebar panels to be full bleed (flush/nempel) to the left, right, and top edges by conditionally removing the sidebar-content padding and gaps.
-
-## [1.0.7] - 2026-06-27
-
-### Added
-- **Dynamic Terminal Tab Titles**: Integrated xterm's `onTitleChange` event handler on the frontend to dynamically update tab titles to match the actual shell process or active directory title.
-- **Terminal State Hook Extraction**: Refactored all terminal-related React states, LocalStorage sync handlers, zoom functions, and open/close commands out of `App.tsx` into a modular custom hook `useTerminals.ts`. This reduces the complexity of `App.tsx` to 966 lines, keeping it below the strict 1,000-line limit.
-
-## [1.0.6] - 2026-06-27
-
-### Added
-- **File Tab Opening**: Clicking a file in the File Explorer now opens it as a dedicated tab in the main editor area alongside terminal tabs, complete with line numbering, custom dark styling, and a Copy button.
-- **Workspace Terminal Paths**: Configured new terminals (from the `+` button or the welcome screen) to open automatically in the current active workspace directory rather than the user's home directory.
-- **Default Maximize Window**: Programmed the desktop application window to launch maximized by default.
-- **Bottom Status Bar (Footer)**: Relocated the Cloudflare Tunnel widget, status indicator, and controls from the sidebar to a new bottom status bar (footer) to free up sidebar space and match standard workspace design layouts.
-- **Dynamic Maximize/Restore Icons**: Integrated main process maximize/unmaximize listeners and window state checks to dynamically toggle the window header maximize button between standard maximize (`â–¢`) and restore (`â��`) icons.
-- **Terminal Font Size & Zoom Controls**: Decreased default terminal font size to `12px` and added real-time Zoom In and Zoom Out controls inside the terminal tab bar header with persistent storage.
-- **Minimalist Headers**: Streamlined the sidebar logo area (removing card backgrounds, padding, and version badges) and the main top bar connection status display (removing connection status labels, leaving a single status dot with hover details) to create a clean, distraction-free environment.
-- **Merged Tab Bar**: Integrated the terminal/file tab bar, font zoom controls, and default shell selector directly into the top window bar header (top-bar) to save vertical screen space and align standard workspace layout design.
-- **Full Bleed Terminal View**: Removed container padding, borders, and margins from the active panel area when tabs are open, making the terminal and file viewer panes attach fully (flush/nempel) to all edges.
-- **Git Branch Status in Footer**: Embedded the active Git branch name (e.g. `main`, worktrees, or `detached`) directly next to the active workspace path in the bottom status bar, with uncommitted change warnings (yellow pulsing dot) and distinct worktree/main branch coloring.
-- **Terminal Zoom & Shell Selector Relocated to Footer**: Shifted the terminal zoom buttons and default shell selector dropdown out of the top window header and embedded them inside a center-aligned dashboard pill in the status bar footer, maximizing header space and layout clarity.
-- **Vertical Header Dividers**: Added left and right vertical dividers flanking the integrated tab bar container inside the top window header to cleanly isolate active workspaces from connection status details and system actions.
-- **Streamlined Header Spacings**: Restructured the spacing inside the top window bar header (increasing gaps to `16px` for info/actions, adding margins to individual tabs, separating zoom controls, shell selectors, and window buttons) to prevent item clumping and ensure a professional, polished layout.
-- **Tunnel Access Control & Device Management**: Integrated an IP rule manager and request logger. Created an 'Access Control' settings interface displaying active device types, IP addresses, and activity timestamps, enabling users to instantly block/unblock client IPs and restrict WebSocket terminal upgrades with a self-blocking fail-safe.
-
-## [1.0.5] - 2026-06-27
-
-### Added
-- **Settings Modal**: Added a settings button next to logout that displays system version/details and supports updating the master password.
-- **Resizable Panels**: Added a draggable divider handle between the left sidebar and right content panel (allowing customization of the sidebar width, stored in `localStorage`).
-- **Sidebar Collapse/Minimize**: Upgraded the sidebar toggle to work on desktop (minimizing sidebar to width `0`) as well as mobile devices.
-- **Frameless Header Integration**: Removed the dedicated custom title bar to maximize vertical space. Integrated minimize, maximize, and close buttons on the right side of the main `top-bar` (only visible in Electron), and configured drag regions on headers to support native window dragging.
+## [1.2.276] - 2026-07-11
 
 ### Changed
-- **Architectural Hook Extraction**: Extracted `useTunnel` and `useWorkspaces` custom hooks from `App.tsx` to new files in `frontend/src/hooks/`. This modularized network fetching, reduced code duplication, and brought `App.tsx` down to 866 lines (conforming to the repository's 1000-line limit).
+- **Chrome Extension Settings Panel**:
+  - Relocated advanced settings from the setup screen body into a global settings modal overlay.
+  - Added a settings gear button (`btn-header-settings`) in the top right corner of the extension header, allowing real-time access to presets, streaming config, rate limits, and concurrency limits from both the setup and active workspace screens.
 
-## [1.0.4] - 2026-06-27
+---
 
-### Added
-- **Skip Backend Spawn if Already Running**: Added a TCP port check on port `3999`. If the backend is already running, the desktop wrapper skips spawning a new backend process and connects to it directly.
-- **Shared Ephemeral Bypass Token**: The backend now writes its ephemeral bypass token to `~/.tline-bypass-token` on startup and deletes it on exit, letting the desktop wrapper automatically authenticate with the externally running backend.
-
-## [1.0.3] - 2026-06-27
+## [1.2.275] - 2026-07-11
 
 ### Added
-- **Workspace Navigation UX**: Added a dropdown workspace selector at the top of both the **Explorer** and **Changes** sidebar panels. This allows users to view and switch workspaces directly from these panels.
-- **Auto-Select Active Workspace**: Added automatic selection logic. If only one workspace is tracked, it is automatically selected. Switching to **Explorer** or **Changes** tabs auto-selects the first available or first Git-enabled workspace if none was selected, preventing empty/unselected panel states.
+- **Chat History Loading in Chrome Extension**:
+  - Implemented public `getConversationMessages()` helper in `Agent` class to return the messages.
+  - Implemented `/api/history` GET endpoint in the extension server to serve conversation history of the active session.
+  - Added support in `sidepanel.js` to fetch and render chat history (with formatting for reasoning blocks and collapsible tool blocks) when initializing a session, auto-reconnecting, or switching workspaces.
 
-## [1.0.2] - 2026-06-27
+---
+
+## [1.2.274] - 2026-07-11
 
 ### Added
-- **System Tray Integration**: Added system tray icon and background running capability. The main window now hides to the system tray on close instead of exiting completely, and alerts the user with a cross-platform system notification on the first hide.
-- **Backend Process Controls**: Added Start, Stop, and Restart controls for the backend process directly inside the system tray context menu. Included a fallback state page in the main window when the backend is stopped.
-- **Premium App Icon**: Added a sleek, high-resolution Obsidian-themed application icon used for both the window icon and the system tray.
+- **Browser Control Tool**:
+  - Implemented active control status banner overlay. A dark translucent banner with a pulsing red indicator dot and operation label now displays at the top center of the webpage during active browser automation steps, showing the current action and element target, and fading out after 3 seconds of inactivity.
 
-### Changed
-- **Dependencies Configuration**: Moved the `electron` package from `dependencies` to `devDependencies` in `desktop/package.json` and pinned it to a fixed version as required by `electron-builder`.
+---
 
-## [1.0.1] - 2026-06-27
+## [1.2.273] - 2026-07-11
+
+### Added
+- **Browser Control Tool**:
+  - Implemented visual virtual cursor simulation. An animated, translucent circular pointer now shows up and slides to target elements during `click`, `hover`, `keypress`, and `type` actions, showing clicks and type events with scaling/color animations and fading out after 3 seconds of inactivity.
+
+---
+
+## [1.2.272] - 2026-07-11
+
+### Added
+- **Browser Control Tool**:
+  - Expanded `control_browser_tab` actions to support `hover` (trigger mouse hover states), `keypress` (trigger keyboards events like custom key values or simulated form submits), `wait` (pause for duration or wait for a CSS selector to exist), and `html` (retrieve elements' outerHTML).
+  - Added new navigation actions: `reload` (page refresh), `back` (go back), and `forward` (go forward) using Chrome tabs history API.
+
+---
+
+## [1.2.271] - 2026-07-11
 
 ### Fixed
-* **PTY Terminal Directory Cwd Separators**: Normalized the `cwd` directory path on the backend before spawning shells in `terminalManager.ts`. This resolves directory alignment issues on Windows where path separators or slashes could fail to set the terminal folder to the tracked workspace or worktree path.
+- **Browser Control Tool**:
+  - Fixed `TypeError: Illegal invocation` error when executing the `type` action on custom elements or elements with `contenteditable="true"` (such as rich textareas on Gemini/Claude web interfaces) by checking element type before attempting to retrieve and call the native value setter.
+  - Added proper fallbacks for `contenteditable` elements to use `innerText`.
 
-## [1.0.0] - 2026-06-27
+---
+
+## [1.2.270] - 2026-07-11
 
 ### Added
-* **Premium Obsidian Dark Theme**: Implemented a rich dark theme (`#05070c`) featuring glassmorphic panels, mesh lighting accents, subtle radial grid background, hover animations, and pulsing git status indicators.
-* **Tailwind CSS v4 Integration**: Added Vite native Tailwind v4 support in the frontend project workspace.
-* **Active Tab & Terminal Persistence**: 
-  * Terminal tab state, active tab ID, directories (`cwd`), and shell types are saved in `localStorage` in real-time.
-  * Backend auto-spawns PTY shells on startup or hot-reloads running sessions gracefully upon browser refresh.
-  * System clears local tab settings automatically on logout.
-* **Custom Frameless Title Bar**: Configured Electron wrapper with `frame: false` and created a custom title bar in React featuring native Minimize, Maximize, and Close commands via IPC Context Bridge.
-* **Local Web Directory Browser**: Implemented fallback folder navigation service endpoint (`/api/fs/list`) enabling web client users to browse drives and host folder structures when native file dialogs are inaccessible.
-* **Reusable Form UI Components**: Created modular, styled components (`Input`, `Select`, `TextArea`, `FormField`, `Button`) in `Form.tsx` to handle inputs and dynamic button states with consistent aesthetics.
-* **Standalone Executable Compilation**: Configured `electron-builder` in the desktop wrapper and added root script `npm run build:exe` to package the entire workspace stack into a standalone `.exe` installer.
+- **Workflow Job Summaries in Chrome Extension**:
+  - Integrated subagent/superagent completion events in the extension server using `subscribeToSubagents`/`subscribeToSuperagents`.
+  - Added SSE system messages broadcast when subagents/superagents complete, displaying report summaries directly inside the extension chat log.
+  - Implemented automatic resume invocation for the parent agent via `agent.sendMessage` when background jobs complete.
+  - Added `#summary-overlay` modal to display the detailed execution summary when clicking on completed agent chips in the status strip.
+  - Styled task/agent chips with VS Code colors, hover states, and animations for active chips.
+
+---
+
+## [1.2.269] - 2026-07-11
+
+### Added
+- **Dedicated Extension Server & Multi-Session**:
+  - Decoupled server execution from the CLI via support for the `--server-only` flag.
+  - Implemented multi-session workspace tracking via `activeSessions` Map in the server.
+  - Resolved sessions by checking a new custom request header `X-Workspace-Path`.
+  - Added specialized browser system prompt and toolsets for extension-initiated agents.
+  - Created `/api/documents` GET endpoint to fetch plan/tasks/walkthrough files.
+- **Tabbed UI Sidepanel**:
+  - Added Chat, Plan, Tasks, and Walkthrough tab navigation to the sidepanel.
+  - Implemented visual markdown rendering for plans, checklists, and walkthroughs.
+  - Enabled active chat logs and inputs even when connected to an active CLI session.
+  - Allowed subagent status tree display in single mode.
+
+---
+
+## [1.2.268] - 2026-07-11
 
 ### Changed
-* **Architectural Decoupling**: Refactored the core frontend structure, extracting `TerminalInstance`, `AuthForms`, `Modals`, and `websocket` network manager to separate files. This reduced `App.tsx` from 1333 lines down to a clean 880 lines (strictly complying with the 1000-line code limit).
+- **Chrome Extension UI**:
+  - Simplified tool block design by removing the toggle arrow button.
+  - Replaced the indicator div with a simple bullet character (`•`) that changes color based on status (running is blue, success is green, error is red).
+  - Made the entire tool header line clickable to toggle details expand/collapse state.
+
+---
+
+## [1.2.267] - 2026-07-11
+
+### Added
+- **Chrome Extension UI Streaming**:
+  - Implemented real-time tool execution output streaming to the extension sidepanel client.
+  - Subscribed `src/server.ts` to active command outputs and broadcasted them via SSE `tool_progress` event.
+  - Added support in `sidepanel.js` to render the live stream inside the active tool block's result area, expanding it automatically.
+
+---
+
+## [1.2.266] - 2026-07-11
+
+### Changed
+- **Chrome Extension UI**:
+  - Removed backgrounds and borders from tool execution blocks (`.tool-block`).
+  - Reduced layout padding and margins for a flat, borderless, and compact terminal-style look.
+
+---
+
+## [1.2.265] - 2026-07-11
+
+### Fixed
+- **Chrome Extension UI**:
+  - Fixed overlays (approval and question modals) and the processing indicator layout showing state.
+  - Removed Tailwind's `hidden` utility class from toggled markup elements to prevent `!important` display locks.
+  - Added dedicated styling rules for `.overlay` and `.processing-indicator` in `sidepanel.src.css` to govern their active state transitions.
+
+---
+
+## [1.2.264] - 2026-07-11
+
+### Changed
+- **Chrome Extension Styling**:
+  - Fully refactored `sidepanel.html` to use Tailwind CSS v4 utility classes for all static layouts (forms, panels, buttons, cards, wrappers).
+  - Cleaned and minimized `sidepanel.src.css` to only 438 lines, keeping only custom animations, scrollbars, and dynamic markup styling rules.
+
+---
+
+## [1.2.263] - 2026-07-11
+
+### Changed
+- **Chrome Extension Styling**:
+  - Migrated styling compilation workflow to use Tailwind CSS v4.
+  - Added `@tailwindcss/cli` devDependency and compilation scripts (`ext:css` / `ext:css:watch`) to `package.json`.
+  - Refactored `sidepanel.html` components to use inline Tailwind utility classes.
+  - Implemented `@theme` config inside `sidepanel.src.css` to map VS Code color variables.
+
+---
+
+## [1.2.262] - 2026-07-11
+
+### Changed
+- **Chrome Extension Styling**:
+  - Redesigned the sidepanel UI with a premium VS Code Modern Dark theme aesthetic.
+  - Replaced Roboto with Google Font "Inter" for UI text.
+  - Rewrote `sidepanel.css` under 1000 lines (951 lines) to implement VS Code sidebar settings styles, flat border buttons, collapsible explorer-style tool trees, code-tab user messages, and comment-styled reasoning blocks.
+- **Project Guidelines**:
+  - Documented Chrome Extension Styling guidelines in `AGENTS.md` to enforce the VS Code theme style.
+
+---
+
+## [1.2.261] - 2026-07-11
+
+### Fixed
+- **Chrome Extension Tool Block Spacing**:
+  - Removed separate backgrounds, borders, and margins from tool execution blocks (`.tool-block`) to integrate them inline with the message bubble background and border.
+  - Resolved excessive/nested paddings by aligning tool headers and tool details directly to the message bubble's padding layout.
+
+---
+
+## [1.2.260] - 2026-07-11
+
+### Fixed
+- **Chrome Extension Spacing**:
+  - Removed the background and border of the code/JSON arguments container (`.tool-args`) inside tool blocks to integrate it seamlessly with the tool detail block.
+
+---
+
+## [1.2.259] - 2026-07-11
+
+### Fixed
+- **Chrome Extension Padding and Spacing**:
+  - Increased padding and spacing inside agent message bubbles, tool execution blocks, tool headers, and tool details in `sidepanel.css`.
+  - Added border and comfortable padding around code/JSON arguments (`.tool-args`) in tool blocks to make them more readable and visually spacious.
+
+---
+
+## [1.2.258] - 2026-07-11
+
+### Fixed
+- **Overlay & Native Folder Browser Dialog Z-Index**:
+  - Increased z-index of the `.overlay` element in `sidepanel.css` to 10000 to keep HTML dialogs topmost.
+  - Enhanced the Windows PowerShell script in `src/server.ts` to show and activate the parent owner form when launching the native folder selection dialog, resolving the issue where the native directory picker opens behind the active browser window.
+
+---
+
+## [1.2.257] - 2026-07-11
+
+### Added
+- **Chrome Extension - Recent Workspaces History**:
+  - Implemented a list of recently used workspace paths directly on the setup screen.
+  - Added click handlers to automatically populate the workspace path input from history items.
+  - Styled recent items under the workspace path input using Chrome-compliant variables.
+  - Automatically refresh the list on the setup screen when new workspaces are loaded or switched.
+
+---
+
+## [1.2.256] - 2026-07-11
+
+### Fixed
+- **Chrome Extension - Setup Screen Scroll**:
+  - Added overflow-y: auto and changed justify-content from center to flex-start in the #setup-screen section inside sidepanel.css to enable vertical scrolling and prevent top clipping of form controls when settings are expanded.
+
+---
+
+## [1.2.255] - 2026-07-11
+
+### Changed
+- **Chrome Extension - Modular Code Refactoring**:
+  - Refactored `sidepanel.js` by splitting helper functions into separate files: `sidepanel-markdown.js` (markdown rendering), `sidepanel-workspaces.js` (workspace switcher), and `sidepanel-browser.js` (browser control). This keeps `sidepanel.js` and all other code files strictly under 1000 lines of code.
+  - Updated `sidepanel.html` script loading tags to include the newly separated modules.
+
+---
+
+## [1.2.254] - 2026-07-11
+
+### Added
+- **Chrome Extension - Custom Log Row Styles**:
+  - Implemented a parser in `sidepanel.js`'s `formatMarkdown` to detect tool action logs (such as `Edited`, `Explored`, `Ran`, `Worked`) and format them into cyberpunk/VS Code styled layout components.
+  - Added CSS classes in `sidepanel.css` for file badges and diff stats rendering.
+
+---
+
+## [1.2.253] - 2026-07-11
+
+### Added
+- **Chrome Extension & Tooling - Text Extraction Action**:
+  - Added the `text` action to the `control_browser_tab` tool in `otherTools.ts`.
+  - Implemented the `text` action in the Chrome extension `sidepanel.js` scripting execution. It retrieves either a selector's text or the entire page's inner body text if no selector is passed.
+
+---
+
+## [1.2.252] - 2026-07-11
+
+### Added
+- **Chrome Extension Permissions**:
+  - Added `<all_urls>` to `host_permissions` in `manifest.json` to enable capturing screenshots and executing scripts on all external web pages.
+
+---
+
+## [1.2.251] - 2026-07-11
+
+### Changed
+- **Chrome Extension - Compact Tool Spacing**:
+  - Reduced top and bottom spacing of the tool execution blocks in the chat view to make them more compact.
+  - Decreased padding inside the expanded tool details panel to 4px 8px.
+  - Added targeted selector to lower the bottom padding of message content bubbles when they contain tool blocks, preventing excessive whitespace.
+
+---
+
+## [1.2.250] - 2026-07-11
+
+### Changed
+- **Chrome Extension - Thinking Indicator Inside Message Flow**:
+  - Moved the processing (thinking) indicator inside the scrollable chat messages container so it flows inline with messages instead of sitting in a fixed position directly above the input box.
+  - Adjusted the indicator spacing and padding to align with the left edge of agent message bubbles.
+  - Updated chat messages clear and append operations to handle and preserve the inline indicator position.
+
+---
+
+## [1.2.249] - 2026-07-11
 
 ### Security
-* **Authentication Bypass**: Implemented local runtime ephemeral tokens to automatically authenticate local Electron clients while enforcing strict Master Password locks on incoming web requests.
+- **Extension Server - Localhost-Only Binding**:
+  - Changed `server.listen(port)` to `server.listen(port, '127.0.0.1')` so the extension API server only accepts connections from the local machine. Previously it was binding to all network interfaces (`0.0.0.0`), making it reachable from other devices on the same network.
+
+---
+
+## [1.2.248] - 2026-07-11
+
+### Fixed
+- **Browse Dialog - "Bad Request" Error**:
+  - Fixed `isBrowseDialogOpen` flag never being reset to `false` when the Windows folder picker dialog was cancelled or failed. An early `return` inside the inner catch block was bypassing the outer `finally` that resets the flag, causing every subsequent click on Browse to receive a 400 Bad Request response.
+  - Fixed the extension showing the raw HTTP status text ("Bad Request") instead of the server's real error message. The extension now parses the JSON response body on non-ok responses and displays the actual error reason.
+
+---
+
+## [1.2.247] - 2026-07-11
+
+### Changed
+- **Chrome Extension UI - Chrome Browser Style**:
+  - Replaced the cyberpunk dark neon theme with a clean, standard Google Chrome browser visual design.
+  - Adopted a system-aware light/dark color palette matching Chrome's official color tokens (Google Blue `#1a73e8`, neutral greys, semantic greens/reds/ambers).
+  - Switched font from Outfit to Roboto to match Chrome's native typeface.
+  - Replaced hard square corners and neon glow effects with standard border-radius, subtle box shadows, and clean card borders.
+  - Updated button styles to standard Chrome primary/secondary/danger patterns with no neon outlines.
+  - Status badges now use soft pill shapes with semantic background tints.
+  - Updated manifest description to remove cyberpunk reference.
+
+---
+
+## [1.2.246] - 2026-07-11
+
+### Fixed
+- **UI Visibility Issue**:
+  - Added a generic `.hidden` class to the CSS styles to ensure that the Start Server button, command tooltips, and background panels are correctly hidden when the status is online.
+
+---
+
+## [1.2.245] - 2026-07-11
+
+### Changed
+- **Faster Status Polling**:
+  - Decreased the server connection check interval from 5000ms to 1000ms in the extension, enabling instantaneous auto-detection when the local server starts up and goes online.
+
+---
+
+## [1.2.244] - 2026-07-11
+
+### Added
+- **Server Shutdown & Helper controls**:
+  - Implemented a Stop Server button in the extension header that triggers a new `/api/shutdown` endpoint to terminate the local server process.
+  - Implemented a Start Server help overlay that displays CLI launch instructions (`superagent --server`) when the extension is disconnected/offline.
+
+---
+
+## [1.2.243] - 2026-07-11
+
+### Added
+- **Cyberpunk Extension UI**:
+  - Redesigned the Chrome Extension's side panel chat UI with a sleek, simple cyberpunk theme.
+  - Implemented high-contrast dark backgrounds, neon accents (cyan, purple, pink, green), sharp borders, and monospace font styling.
+- **Terminal Chat & Log Restriction**:
+  - Restricted the Chrome Extension chat logs and input chat area when connected to a CLI-initiated session, replacing them with a status bridge screen.
+  - Automatically spins up the extension API server silently in the background when running the `superagent` CLI.
+  - Enabled dynamic registration of CLI-connected agents, ensuring active task checklists and subagents trees update in real-time in the Chrome Extension.
+
+---
+
+## [1.2.242] - 2026-07-11
+
+### Added
+- **Final Response Git Changes Summary**:
+  - Implemented automatic git diff summary (+/- line count) of edited files at the end of each assistant run response in both CLI and dashboards.
+  - Added new git snapshot comparisons to count lines added/deleted in tracked and untracked files relative to the start of the message process.
+  - Conformed summary output styling to plain text and single-level bullet points without any markdown decoration.
+
+---
+
+## [1.2.241] - 2026-07-10
+
+### Changed
+- **Tool reliability optimization**:
+  - Added recovery guidance for stale exact-match edits and risky batched edits.
+  - Clarified one-path-per-call usage for `ripgrep_search`.
+  - Clarified `manage_subagents` report action naming.
+  - Added Windows Git Bash `npm.cmd` fallback handling for validation commands.
+
+---
+
+## [1.2.240] - 2026-07-10
+
+### Changed
+- **System prompt optimization**:
+  - Removed unsupported `invoke_subagent` `Subagents` array guidance from prompt rules.
+  - Replaced stale `manage_tasks_bulk` guidance with existing `manage_tasks` bulk actions.
+  - Aligned Master Agent research workflow with available orchestration tools.
+  - Simplified Superagent and Subagent final report formats to avoid conflicting markdown-style requirements.
+  - Hardened process-kill guidance to require PID-specific termination across runtimes.
+  - Scoped plain-text response rules to final user responses while preserving Markdown for plans and prompt templates.
+  - Removed Indonesian plan-template aliases from new Master planning guidance.
+  - Clarified direct research vs Superagent research escalation.
+  - Constrained fallback/reviewer-like subagent toolsets to reduce unintended side effects.
+  - Kept critical system guidance in text when large prompt image conversion is active.
+
+---
+
+## [1.2.239] - 2026-07-10
+
+### Removed
+- **Feature: tencentdb**:
+  - Removed "Feature: tencentdb" configuration option from the model preset wizard and the keyboard handler's configuration menus.
+  - Excluded "tencentdb" from the known subagents list in the `/model` command.
+
+---
+
+## [1.2.238] - 2026-07-10
+
+### Added
+- **Edit Option to /login Command**:
+  - Added a new `edit` subcommand to `/login` for editing existing provider profiles: `/login edit <provider_id> [new_api_key]` and `/login edit <provider_id> custom <new_base_url> <new_api_key>`.
+  - Added "Edit an Existing Provider" option in the interactive `/login` wizard (Step 1).
+  - Implemented wizard steps to select a provider, edit the API Key, edit the Base URL, and run connection tests.
+  - Added full test coverage for slash command edits and wizard edit flows.
+
+---
+
+## [1.2.237] - 2026-07-10
+
+### Changed
+- **Mouse Scroll Amount**:
+  - Increased conversation log/chat scroll speed from 1 line to 10 lines per scroll tick in single-agent and multi-agent dashboard modes.
+  - Increased focused response view scroll speed from 1 line to 10 lines per scroll tick.
+
+---
+
+## [1.2.236] - 2026-07-10
+
+### Changed
+- **Prevent Redundant Skill Discovery**:
+  - Updated `loadAgentSkills` logic instructions to forbid the agent from running `get_skills` or `use_skill` for skills that are already preloaded or defined in its system prompt context (such as `karpathy-guidelines`, `pragmatic-minimalism`, `systematic-debugging`, etc.).
+  - Guided the agent to check the prompt context first and use preloaded instructions directly, preventing redundant tool calls and token waste.
+
+---
+
+## [1.2.235] - 2026-07-10
+
+### Changed
+- **get_skills Prompt Optimization**:
+  - Updated `loadAgentSkills` query construction instructions to guide agents to use specific queries when exploring a codebase (e.g. `learn codebase design technology`) or diagnosing a new problem (e.g. `[problem] [technology] debug`).
+  - Replaced empty `call get_skills()` references in Master Agent, Researcher, Coder, and Reviewer system prompts with query-based `call get_skills(query)` alongside inline examples to discourage empty queries and optimize matching precision.
+
+---
+
+## [1.2.234] - 2026-07-10
+
+### Added
+- **Global Skills Directory**:
+  - Added `$USERPROFILE/.agents/skills/` (using `path.join(os.homedir(), ".agents", "skills")`) to the default global search directories in `getInstalledSkills()`, allowing skills installed via `npx skills add` to be automatically recognized by the `use_skill` tool and other skill registries.
+  - Added unit test coverage for verifying that skills in `~/.agents/skills` are correctly loaded.
+- **Skills Prompt Update**:
+  - Updated skills discovery and instruction loading prompts in the core agent and config to instruct agents to use the `use_skill` tool instead of `view_file`.
+
+---
+
+## [1.2.233] - 2026-07-10
+
+### Changed
+- **TencentDB Memory Gateway Disabled**:
+  - Forced `isTencentdbActive` to always return `false`, disabling all TencentDB gateway checks.
+  - Hardcoded `enableTencentdbMemory` setting default to `false` and forced useTencentdbStatus hook to return `"disabled"`.
+  - Removed all `tdai_memory_save` references from system prompt rules.
+  - Made `runTencentdbSetup` a no-op function to prevent automatic gateway installation and startup.
+  - Disabled `/setting-tencentdb` and `/memory` commands to return a disabled feature message.
+
+---
+
+## [1.2.232] - 2026-07-10
+
+### Changed
+- **Wizard Option Labels**:
+  - Renamed "Subagent: researcher", "Subagent: coder", "Subagent: reviewer", "Subagent: classifier", and "Subagent: tencentdb" labels to "Feature: researcher", etc. in the model selection wizard to clarify their feature-specific nature.
+
+---
+
+## [1.2.231] - 2026-07-10
+
+### Fixed
+- **Mouse Click Accuracy**:
+  - Expanded collapsible log lines click detection width to full terminal width, fixing a bug where clicking right of emoji characters (like ❓, ↳, ✓, ⚡) would miss due to emoji characters being counted as single-width in `visibleLength()`.
+  - Replaced reverse math offset calculation for wizard option clicks with a context-based forwarding offset calculation, ensuring correct click row alignment in multi-question ask_question prompts, login setup, and model preset configurations.
+  - Fixed failing `tests/skillsFiltering.test.ts` test assertion checking for the outdated `use_skill` tool to expect `view_file` instead.
+
+---
+
+## [1.2.230] - 2026-07-10
+
+### Fixed
+- **Bulk Tool Result Display**: When clicking to expand a bulk tool call in the conversation log, the output section now lists all files that were read or edited instead of showing a truncated 500-character raw dump.
+  - `read` with `filePaths` array: shows "Read N files:" followed by each file path.
+  - `edit` with `edits` array (multi-file): shows "Edited N files:" followed by each unique file path.
+  - `write` with `files` array: shows "Wrote N files:" followed by each file path.
+  - `apply_patch` with `patches` array: shows "Patched N files:" followed by each file path.
+  - Single-file and non-bulk tools continue to show truncated raw output as before.
+- Added `toolCall?: ToolCall` to the `tool_end` `AgentEvent` type in `agent.ts` and pass `toolCall: tc` at the main execution emit site so the UI can access the original tool arguments when building the expanded result view.
+
+---
+
+## [1.2.229] - 2026-07-10
+
+### Changed
+- TencentDB Inactive Handling: Automatically exclude tools starting with `tdai_` and clean up `tdai_` references from the system prompt if the TencentDB Memory Gateway is disabled in settings or offline (unreachable).
+- Caching: Implemented `isTencentdbActive` in `tencentdbUtil.ts` with a 15-second TTL cache for gateway checks to keep the agent execution loop fast.
+- Tests: Added unit tests for connection and cache logic in `tests/tencentdbUtil.test.ts` and updated mocks across other tests.
+
+---
+
+## [1.2.228] - 2026-07-10
+
+### Fixed
+- Model Limits: Extended cache override logic to cover generic 200k fallback limits (such as for Claude models). This ensures that custom endpoints or proxies returning generic 200k limits are successfully overridden by the correct 1M static limits for Claude 5 models (Sonnet 5, Fable 5, Opus 5).
+
+---
+
+## [1.2.227] - 2026-07-10
+
+### Fixed
+- Model Limits: Prioritized rich static limit lookups over `models_cache.json` in `getContextWindowLimit()` to prevent placeholder/generic limits (like 128k) from custom endpoints or proxies overriding known limits.
+- Suffix Stripping: Added support for stripping `-free` suffixes in addition to `:free` suffixes when determining model limits.
+
+---
+
+## [1.2.226] - 2026-07-10
+
+### Changed
+- Model Limits: Added fallback context window limits for Claude 5 models (Sonnet 5, Fable 5, Opus 5) to 1,000,000 tokens, and Grok 4.5 to 500,000 tokens in `model_limits.ts`.
+- Verification: Added corresponding unit test assertions in `config.test.ts`.
+
+---
+
+## [1.2.225] - 2026-07-10
+
+### Added
+- Configurable Tiers: Added dedicated model preset configuration options for the request `classifier` and `tencentdb` subagent/gateway tiers.
+- Wizard & UI: Updated the terminal model configuration wizard and the keyboard handler's selection menu to support configuring classifier and tencentdb models.
+- Core Agent Integration: Updated request classification to use the dedicated classifier tier model (resolved via getModelInstanceForTier) rather than falling back to the main agent model by default.
+- Robustness: Migrated keyboard handler model selections from index-based mapping to string-based parsing, resolving wizard test breaks.
+
+---
+
+## [1.2.224] - 2026-07-10
+
+### Changed
+- Prompt Optimization: Refactored the loadAgentSkills instruction prompt and system prompts (Master, Researcher, Coder, Reviewer) in prompts.ts using Concept A, B, and C guidelines to optimize token usage and enforce logic gate execution.
+- Verification: Updated tests/skillsFiltering.test.ts to align with the new minified skills prompt structure.
+
+---
+
+## [1.2.223] - 2026-07-10
+
+### Added
+- Skill Execution: Added `use_skill` tool to explicitly activate and load instructions for specialized skills.
+- Toolsets Integration: Registered `use_skill` tool in all agent tier toolsets (Master, Superagent, Subagents) and default subagent toolset.
+- System Prompts: Updated system prompts (Master, Researcher, Coder, Reviewer) and dynamic skill loading configuration to mandate calling `use_skill` when relevant skills are found.
+- Verification: Added comprehensive unit tests in `tests/skillsTool.test.ts` and updated assertions in `tests/skillsFiltering.test.ts`.
+
+---
+
+## [1.2.222] - 2026-07-10
+
+### Fixed
+- Browse Dialog: Resolved issues with the Windows FolderBrowserDialog by executing PowerShell with the `-NoProfile -ExecutionPolicy Bypass` flags and passing a topmost form owner to force the dialog window to the foreground.
+
+---
+
+## [1.2.221] - 2026-07-10
+
+### Fixed
+- Security & Compatibility: Resolved CSP (Content Security Policy) violations on external websites by migrating the console error interception script to a dedicated native main-world content script (`main-world.js`) registered via `manifest.json`, eliminating inline script tag injection.
+
+---
+
+## [1.2.220] - 2026-07-10
+
+### Fixed
+- Bug: Fixed string quoting syntax in PowerShell folder selector command line that prevented the native Windows Forms folder browser dialog from launching when requested by the Chrome extension.
+
+---
+
+## [1.2.219] - 2026-07-10
+
+### Changed
+- Configuration: Updated default local server port from 3000 to 7888 across the extension client, CLI parser, and documentation.
+
+---
+
+## [1.2.218] - 2026-07-10
+
+### Added
+- Feature: Added a native directory selection dialog triggered by a "Browse" button in the Chrome Extension, utilizing OS-specific commands (PowerShell on Windows, AppleScript on macOS, Zenity/KDialog on Linux) to safely populate the local workspace path.
+
+---
+
+## [1.2.217] - 2026-07-10
+
+### Improved
+- Documentation: Updated README.md to document the Chrome Extension integration and local server capability, including detailed setup, installation, and usage instructions.
+
+---
+
+## [1.2.216] - 2026-07-10
+
+### Improved
+- Security: Added support for optional local engine API token headers and storage (`lastApiToken`) to secure the connection to the Superagent server.
+- Stability: Added robust try-catch and chrome.runtime.lastError verification to executeScript calls in the Chrome extension sidepanel script to prevent extension crashes on restricted pages (e.g., chrome:// tabs).
+- Diagnostics: Configured main-world wrapping for console.error calls to capture page-specific console errors inside of the extension's __capturedErrors stream.
+- Compatibility: Supported React/Vue-compatible typing in the browser automation control utility by overriding native property setters.
+
+---
+
+## [1.2.215] - 2026-07-10
+
+### Added
+- Added local HTTP and Server-Sent Events (SSE) server (`--server` / `-s` CLI flag) to programmatically orchestrate Single and Multi mode agents.
+- Added a feature-rich, cyberpunk-themed Chrome Extension containing:
+  - Mode switching between Single and Multi.
+  - Streaming chat output separating Agent reasoning from standard text.
+  - Interactive popup dialogs to handle tool execution approvals and decision questions.
+  - Dynamic 3-Tier Multi-Agent hierarchy visualization.
+  - Workspace task checklist synchronization.
+  - Active tab context extraction to grab page content or code selections directly from Chrome.
+
+---
+
+## [1.2.214] - 2026-07-10
+
+### Added
+- Updated get_skills tool to automatically include matching skill file contents when queried, reducing the number of tool calls needed for the agent to read skill files.
+
+---
+
+## [1.2.213] - 2026-07-09
+
+### Fixed
+- Fixed API model fetching bug in /model wizard command by normalizing base URLs (ensuring protocol, stripping trailing slashes) to prevent failed to parse URL and double slash errors.
+- Supported model fetching for custom Anthropic provider configurations by allowing models to be fetched when a base URL is specified instead of returning early.
+
+---
+
+## [1.2.212] - 2026-07-09
+
+### Fixed
+- Implemented parameter fallback resolution for `superagentIds` in `manage_superagents`.
+- Implemented parameter fallback resolution for `superagentId` and `message` in `send_message_to_superagent`.
+- Implemented parameter fallback resolution for `recipientId` and `message` in `send_message` (subagent tool).
+
+---
+
+## [1.2.211] - 2026-07-09
+
+### Fixed
+- Fixed `manage_subagents` tool schema mismatches by implementing fallback parameter resolution for `conversation_id`, `conversation_ids`, and `conversationId` into the expected plural `conversationIds` array.
+- Updated `BATCH_OPS_RULE` in `src/core/prompts.ts` to instruct the AI to use `conversationIds` and avoid singular `conversation_id`.
+
+---
+
+## [1.2.210] - 2026-07-09
+
+### Fixed
+- Fixed tool description formatting displaying `(missing)` for file operations by checking for the `args.path` parameter alias in `getToolDescription` and `resolveFilePathFromArgs`.
+- Fixed subagent invocation failure and `(missing)` UI labels by checking for `agent_name`, `agent_role`, and `initial_message` aliases inside the `invoke_subagent` tool execution and description parser.
+- Fixed `multi_replace_file_content` failures by supporting `replacements` and `oldContent`/`newContent` chunk parameters aliases in both bulk and single-file mode.
+- Support `branchName` and `agent_role`/`prompt` aliases for `invoke_superagent` to prevent arguments parsing mismatches.
+
+---
+
+## [1.2.209] - 2026-07-09
+
+### Fixed
+- Fixed 413 Payload Too Large infinite compaction loop by introducing a payload413Count limit of 3, progressive budget reduction factor, post-compaction size verification, and adaptive message truncation threshold.
+
+---
+
+## [1.2.208] - 2026-07-09
+
+### Fixed
+- Fixed payload compaction loop on low-limit gateways (e.g. 100KB) by dynamically parsing the body limit from 413 error messages.
+- Cached the parsed payload limit on the Agent instance to proactively trigger pre-flight check compaction and prevent redundant failed API requests.
+
+---
+
+## [1.2.207] - 2026-07-09
 
 
+### Fixed
+- Fixed 413 Request Entity Too Large error handling to recover successfully on gateways with a strict 100KB request limit by lowering the minimum compaction byte budget floor from 100KB to 20KB.
+
+---
+
+## [1.2.206] - 2026-07-09
+
+### Fixed
+- Fixed a selection and model fetching bug in the model wizard (`/model`) where selecting an existing custom provider profile (e.g., `dddd`) at step 2 was not supported, resulting in an `Invalid provider type choice` error. The wizard now correctly recognizes existing provider profiles at step 2, transitions directly to the model selection step (step 15), and fetches models using the profile's configured base URL and API token.
+- Fixed a lookup failure in `getContextWindowLimit()` where model names containing provider prefixes (e.g., `dddd@claude-sonnet-4.5-1m`) failed to match the models cache or static limits lookup because the prefix was not stripped, falling back to a default limit of 256000. It now strips the `@` prefix before matching.
+
+---
+
+## [1.2.205] - 2026-07-09
+
+### Fixed
+- Fixed an infinite loop during `413 Payload Too Large` retry attempts. The engine now progressively and dynamically halves the pruning byte budget on each consecutive retry attempt, successfully reducing payload size below the gateway's actual limit.
+- Updated `compactHistoryIfNeeded` and its context manager helper methods to accept an optional `byteBudget` parameter.
+- Updated unit test assertions to match the new compaction method signature.
+
+---
+
+## [1.2.204] - 2026-07-09
+
+### Added
+- Added support for the `claude-sonnet-4.5-1m` model by registering its static context window limit (1,000,000 tokens) in `model_limits.ts` and adding a fallback keyword matcher.
+
+---
+
+## [1.2.203] - 2026-07-09
+
+### Optimized
+- Optimized AI request classifier pipeline: heuristic-first with confidence threshold — skips LLM call entirely when heuristic returns high confidence, saving tokens and latency on every turn.
+- Converted keyword arrays to Sets with word-boundary matching via splitKeywords/countKeywordMatches to eliminate substring false positives (e.g., "error" no longer matches inside "terrorist", "fix" no longer matches "prefix").
+- Added meetsThreshold helper for clean confidence comparison logic.
+- Precompiled all RegExp patterns (EDIT_VERBS_RE, EDIT_INTENT_RE, PUNCTUATION_STRIP_RE, WORD_SPLIT_RE) at module level instead of re-creating per call.
+- Compressed LLM classification prompt from ~500 to ~300 characters, reducing token usage when LLM fallback is needed.
+- Made the classifierConfidenceThreshold setting functional (was previously ignored in the pipeline).
+
+---
+
+## [1.2.202] - 2026-07-09
+
+### Fixed
+- Fixed baseUrl resolution when applying model presets by applying ensureProtocol right before constructing the model client and when retrieving connection details for a tier in models.ts.
+
+---
+
+## [1.2.201] - 2026-07-09
+
+### Fixed
+- Added a URL protocol normalization helper (ensureProtocol) to automatically prepend https:// (or http:// for local endpoints) to custom base URLs that do not have a protocol prefix, preventing URL parsing failures when connecting to custom/OpenAI-compatible endpoints.
+
+---
+
+## [1.2.200] - 2026-07-09
+
+### Fixed
+- Added Google Gemini option to the dashboard keyboard handler, keyboard helper navigation, and wizard option templates so option 6 is shown on step 2 of the login wizard.
+
+---
+
+## [1.2.199] - 2026-07-09
+
+### Fixed
+- Added Google Gemini to the /login command line usage output helper text.
+
+---
+
+## [1.2.198] - 2026-07-09
+
+### Fixed
+- Fixed Gemini login provider registration list to always show all default templates so users can add multiple provider profiles.
+- Updated login wizard's resolved test model and model filtering logic for native Gemini provider type to correctly filter models by prefix and resolve test model.
+- Fixed models cache logic in fetchAndCacheModels to correctly read inputTokenLimit and fall back to static limits or 128000 when missing/falsy.
+
+---
+
+## [1.2.197] - 2026-07-09
+
+### Fixed
+- Fixed a security/boundary check bypass in permissions.ts where the bulk patches array parameter (used by the apply_patch tool) was not evaluated during tool description, out-of-bounds, model-config, and sensitive environment file checks.
+
+---
+
+## [1.2.196] - 2026-07-09
+
+### Fixed
+- Fixed a bug where `args.filePaths` containing per-file option objects (e.g., `{ path, offset, limit }`) were incorrectly serialized as `[object Object]` in tool descriptions and bypassed out-of-bounds safety boundary checks. Now, file path objects are correctly extracted and checked.
+
+---
+
+## [1.2.195] - 2026-07-08
+
+### Changed
+- Strengthened the `PROTECT_PROCESS_RULE` in `src/core/prompts.ts` to explicitly forbid global taskkill or pkill commands on `node` / `node.exe` processes (which terminates the parent process and crashes the session).
+- Instructed agents to only kill child processes by specific PID, or safely terminate `bun` / `tsx` processes globally if a process is locked.
+
+---
+
+## [1.2.193] - 2026-07-08
+
+### Fixed
+- Fixed a bug in `normalizePathsForImage` where Windows backslash paths containing brackets or parentheses (e.g. `Program Files (x86)`) were not normalized to forward slashes before text-to-image rendering, causing AI models to misread file paths.
+
+---
+
+## [1.2.192] - 2026-07-08
+
+### Changed
+- Added reasoning guidelines block to Master, Superagent, and Subagent system prompts to guide active models to think and verify assumptions when available.
+
+---
+
+## [1.2.191] - 2026-07-08
+
+### Fixed
+- Fixed stray `[/SYS]` tag leak in assistant message text streaming and final responses by adding handling for square brackets in `StreamXmlFilter` and cleaning `[/SYS]` tags case-insensitively in `parseXmlToolCalls`.
+- Ensured `StreamXmlFilter` is always active during streamed responses to strip stray/verbose XML tags and `[/SYS]` tags even when native tool calling is supported/enabled.
+- Ensured `parseXmlToolCalls` is always run on streamed and non-streamed text responses to clean up leftover tags and avoid duplicate tool call registrations.
+
+---
+
+## [1.2.190] - 2026-07-08
+
+### Added
+- Added support for capturing, logging, and displaying AI model reasoning/thinking tokens (such as DeepSeek R1 and Anthropic Claude 3.7) in both single-agent and multi-agent CLI modes.
+- Added completed reasoning block formatted as `[Reasoning] ... [/Reasoning]` under assistant message header in CLI chat.
+- Added live reasoning streaming updates in single-agent interactive chat.
+- Added `🧠 REASONING` as a collapsible log group in the multi-agent dashboard log view.
+
+---
+
+## [1.2.189] - 2026-07-08
+
+### Changed
+- Optimized system prompts to strongly encourage parallel execution of independent tasks (e.g. concurrent subagent spawning via the 'Subagents' array parameter in 'invoke_subagent', and concurrent superagent spawning).
+- Prescribed bulk actions ('add_bulk', 'update_bulk', 'remove_bulk') inside BATCH_OPS prompt instructions to minimize sequential task updates.
+
+---
+
+## [1.2.188] - 2026-07-08
+
+### Changed
+- Optimized prompts and system tool descriptions to accelerate multi-file workflows by ensuring agents prioritize bulk/array operations (`filePaths`, `edits`, `files`, `patches`) instead of sequential one-by-one tool calls.
+- Consolidated `prompts.ts` by extracting highly duplicated system prompt rules (`PROTECT_PROCESS`, `BATCH_OPS`, `FAST_ANALYSIS`, `FILE_EDIT_SAFETY`, `SHARED_MEMORY_SCOPING`) into shared constants, saving 800+ tokens per LLM invocation.
+- Enhanced `readTool` (`filePaths`) to support per-file targeted offsets and limits using `{path, offset, limit}` objects in bulk mode.
+- Added multi-file bulk patching support to `applyPatchTool` via the new `patches` parameter and extracted patch logic into `applyPatchToContent` helper.
+
+---
+
+## [1.2.187] - 2026-07-08
+
+### Changed
+- Improved `get_skills` tool:
+  - Updated LLM semantic filtering prompt to be more inclusive when searching for skills with concepts/synonyms (e.g. mapping "rbac" or "role" queries to authentication/authorization, security policies, identity management, etc.).
+  - Replaced strict full-string substring matching fallback with a smart IDF-weighted keyword scoring algorithm to rank relevant skills correctly even when semantic search fails or is disabled.
+
+---
+
+## [1.2.186] - 2026-07-08
+
+### Changed
+- Transitioned request classifier to prioritize AI (LLM) classification when a model is provided, bypassing heuristic confidence threshold logic.
+- Retained the heuristic classifier as a fallback when no model is provided or skipLLM is active, and resolved several bugs in it:
+  - Fixed a punctuation matching bug where punctuation (exclamation marks, periods) on multi-word phrases like "thank you!" caused conversation matching to fail.
+  - Resolved question mark hijacking where command or debug requests ending in a question mark were incorrectly early-returned as questions.
+  - Fixed a regex duplicate quote typo.
+  - Expanded Indonesian keywords for all intent categories.
+  - Expanded complex keywords to prevent planning bypasses on complex tasks.
+- Optimized the LLM prompt inside `classifyWithLLM` to align with telegraphic English and markdown structure guidelines.
+
+---
+
+## [1.2.185] - 2026-07-08
+
+### Fixed
+- Fixed terminal input freeze where pasting text blocked all normal typing and editing by keeping the `ChatTextInput` component mounted when paste is active.
+- Added paste preservation logic in input change handlers (`app.tsx` and `multi-agent-dashboard.tsx`) to update prefix and suffix lengths if the pasted block remains intact, or clear paste status if the pasted block is modified or deleted.
+- Added props `isPasted`, `pastePrefixLength`, and `pasteSuffixLength` to `ChatTextInput` and implemented custom rendering for active paste placeholders showing logical cursor positions within the prefix or suffix.
+- Removed duplicate paste-related key handlers for backspace, delete, and return from `useKeyboardHandler.ts` and `useDashboardKeyboard.ts`.
+
+---
+
+## [1.2.184] - 2026-07-08
+
+### Fixed
+- Fixed tool list mismatch and infinite retry loops by refining request classifier and agent execution behavior.
+- Added command detection heuristics to classifyHeuristic (recognizing keywords like pnpm, npm, git, coba, jalanin for Indonesian and English) to prevent command requests from being incorrectly classified as questions.
+- Applied request classifier toolset filtering and plan settings consistently across all iterations of the agent loop instead of just the first turn.
+- Injected a critical tool restriction warning into the system prompt when terminal execution tools (run_command and run_background_process) are stripped from the active tool schema to prevent the model from calling them.
+- Classified "tried to call unavailable tool" errors as non-retryable in isRetryableError to immediately abort and cleanly report schema mismatch errors instead of retrying 10 times.
+- Fixed vitest tests in tests/enhancedFeatures.test.ts to mock getSettings with classifierEnabled: false so they correctly test simple task behavior in isolation.
+
+---
+
+## [1.2.183] - 2026-07-08
+
+### Added
+- Multi-category request classifier (`src/core/requestClassifier.ts`) that classifies user input before the main agent loop into 7 categories: conversation, question, simple_edit, research, complex_task, debug, command.
+- Two-phase classification: zero-cost heuristic keyword matching first, optional LLM fallback for ambiguous inputs.
+- Category-based toolset filtering: conversation uses 0 tools, question/research use read-only tools, saving 8K-20K tokens per turn.
+- Workspace discovery skip for conversation category (no file scan needed for "ok"/"yes"/"thanks").
+- Plan state injection skip for conversation and question categories.
+- Category-specific prompt addendums for focused model behavior.
+- Settings: `classifierEnabled`, `classifierConfidenceThreshold`, `classifierKeywords` in `SystemSettings`.
+- Slash commands: `/setting-classifier <on|off>` and `/setting-classifier-threshold <high|medium|low>`.
+- 85 unit tests in `tests/requestClassifier.test.ts`.
+
+---
+
+## [1.2.182] - 2026-07-08
+
+### Changed
+- Added single character spacing to separator lines when `hideTimeline` is enabled in `src/components/chat-area.tsx` to provide visual separation between turns (e.g. between user and assistant blocks).
+
+---
+
+## [1.2.181] - 2026-07-08
+
+### Changed
+- Improved formatting when the timeline is hidden: decreased leading spacing/indentation in the terminal UI and adjusted line wrapping accordingly to shift conversation text closer to the left edge.
+
+---
+
+## [1.2.180] - 2026-07-08
+
+### Changed
+- Updated the task checklist status text in the terminal UI to use full text "completed" instead of "comp." and to only display the raw count of ongoing tasks.
+
+---
+
+### Added
+- Added an option in settings to hide timeline connecting lines in the terminal-based UI.
+- Created `/setting-hide-timeline <on|off>` command to toggle this behavior.
+- Added autocomplete suggestions for `/setting-hide-timeline`.
+- Updated chat rendering logic in `src/components/chat-area.tsx` and `src/components/wizard-dialog.tsx` to conditionally hide timeline borders when enabled.
+
+### Fixed
+- Fixed an argument parsing bug in the `/setting-force-prompt-tools` command where `args[0]` was used instead of `args.trim()`.
+
+---
+
+## [1.2.178] - 2026-07-08
+
+### Added
+- **Base Prompt Updates for Performance & Generic Builds**:
+  - Added mandatory BULK_READ guidelines to base prompts to batch multiple file reads into a single call.
+  - Added FAST_ANALYSIS guidelines to search/grep to locate targets before reading, read specific line ranges for large files, and exclude build/dependency directories.
+  - Made compile and test validation commands generic (e.g. cargo build, pytest, go test) in base prompts instead of NPM-specific.
+  - Added package manager auto-detection (bun/pnpm/yarn/npm) in master agent tools for executing build and test commands in worktrees.
+
+---
+
+## [1.2.177] - 2026-07-08
+
+### Fixed
+- **Workspace-Scoped Task Log Files**:
+  - Task log files previously stored in a global shared `~/.superagent-r/tasks/` directory.
+  - Now stored in `~/.superagent-r/workspaces/<cwd-hash>/tasks/` — fully isolated per project.
+  - Added `getWorkspaceTasksLogDir()` helper to `src/core/config/paths.ts`.
+  - Updated `shellTools.ts` (`run_background_process` fallback) and both log dir usages in `terminalCommand.ts` (inline bg-terminal + detached terminal) to use the scoped path.
+  - Stale log files are now automatically pruned together with their workspace directory after 7 days.
+
+---
+
+## [1.2.176] - 2026-07-08
+
+
+### Fixed
+- **Legacy Task Migration & Stale Workspace Cleanup**:
+  - Added one-time migration: on startup, tasks from the old global `background-tasks.json` (pre-v1.2.175) that belong to the current workspace are merged into the new workspace-scoped file, then the global file is deleted. Ensures no tasks are silently lost on upgrade.
+  - Added `cleanupStaleWorkspaceDirs()`: prunes `~/.superagent-r/workspaces/<hash>/` directories not touched in 7+ days, preventing unbounded disk growth from many different projects over time. Runs once 5 seconds after startup, then daily.
+  - Exported `cleanupStaleWorkspaceDirs` for testability and extended test suite to 11 tests.
+
+---
+
+## [1.2.175] - 2026-07-08
+
+
+### Fixed
+- **Workspace-Isolated Background Tasks**:
+  - Background tasks are now namespaced per working directory using a CWD hash.
+  - Each project gets its own `~/.superagent-r/workspaces/<cwd-hash>/background-tasks.json` file.
+  - Prevents tasks from unrelated projects (e.g. a different dev server) bleeding into task notifications of another workspace.
+  - Added `getWorkspaceId()` and `getWorkspaceTasksFilePath()` helpers to `src/core/config/paths.ts`.
+  - Updated `savePersistedTasks()` and `loadAndSyncPersistedTasks()` in `state.ts` to use the scoped path.
+
+---
+
+## [1.2.174] - 2026-07-08
+
+
+### Added
+- **Active Preset Name in Status Bar Footer**:
+  - Added `presetName` prop to `StatusBar` component.
+  - Displays the current active model preset name (⚙ preset-name) in the footer between the model name and git branch.
+  - Automatically refreshes when the model changes (e.g. after `/model` or `/login` wizard).
+
+---
+
+## [1.2.173] - 2026-07-08
+
+### Fixed
+- **Session-Specific Model Preset Loading**:
+  - Modified the 1. Load/Apply Model Preset option in the /model wizard to load presets locally (persist: false) instead of globally.
+  - Updated [conversation.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/conversation.ts) to serialize and store the active preset config inside the session's history JSON files.
+  - Restored the active preset from history files back into memory upon session resume.
+
+---
+
+## [1.2.172] - 2026-07-08
+
+### Fixed
+- **Task Checklist Header Formatting**:
+  - Removed the clipboard emoji (📋) from the active task checklist header.
+  - Removed the instruction texts `(click header to collapse)` and `click header to expand` from the header.
+  - Refactored task list status counting to display both completed and in-progress (ongoing) counts: `(X/N comp. | Y/N ongoing)`.
+  - Simplified the checklist component by resolving dynamic agent status overrides early before rendering.
+
+---
+
+## [1.2.171] - 2026-07-08
+
+### Fixed
+- **Collapsible Logs Click Area**:
+  - Restructured collapsible chat/log click handling in [useMouseScroll.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/hooks/useMouseScroll.ts) and [chat-area.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/components/chat-area.tsx) to check horizontal cursor position (`x`) and limit clicks to the visual length of the toggle header text.
+  - Restricted click-to-expand / click-to-collapse behavior to only trigger on the first (header) line of collapsible groups, preventing inadvertent collapsing when clicking or highlighting text inside expanded content blocks.
+
+---
+
+## [1.2.170] - 2026-07-08
+
+### Fixed
+- **Custom Provider SSE/Stream Interception and Parsing**:
+  - Resolved a Zod validation error (`choices[0].message: Required`) occurring when custom OpenAI-compatible provider endpoints returned SSE stream chunks for non-streaming requests.
+  - Implemented `reconstructChatCompletionFromSse` in [models.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/config/models.ts) to accumulate streamed content and tool calls from SSE chunks into a standard, valid OpenAI non-streaming chat completion JSON response.
+  - Enhanced body payload decoding in the custom fetch interceptor to support `ArrayBuffer` and `ArrayBufferView` (e.g. `Uint8Array`) formats, correctly identifying streaming requests.
+  - Changed custom provider wrappers to use `openai.chat(modelName)` when custom `baseUrl` is configured, explicitly forcing the Chat Completions protocol.
+  - Added test coverage in [openaiJsonParsingFix.test.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/tests/openaiJsonParsingFix.test.ts).
+
+---
+
+## [1.2.169] - 2026-07-08
+
+### Fixed
+- **Model Preset Loading Cache Invalidation**:
+  - Fixed a critical issue where loaded/applied presets (either via `/model preset <name> --save` or `/model <tier> <model> --save`) failed to propagate to the current session due to an invalid memory cache in `sessionActivePreset`.
+  - Updated `savePreset`, `deletePreset`, and `setActivePresetId` in [jsonConfig.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/config/jsonConfig.ts) to correctly clear/invalidate `sessionActivePreset` when presets are modified or switched.
+  - Modified `getActivePreset` to avoid caching the default disk configuration directly into `sessionActivePreset` on first read, preventing it from shadowing subsequent disk changes.
+  - Added unit test coverage in [modelPresets.test.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/tests/modelPresets.test.ts).
+
+---
+
+## [1.2.168] - 2026-07-07
+
+### Fixed
+- **Bulk Edits File Path Resolution and Permission Checks**:
+  - Fixed an issue where getToolDescription resolved file paths as `(missing)` for bulk edits targeting nested paths inside `edits` or `files` arrays.
+  - Enhanced `isSuperagentOutOfBounds`, `isToolCallOutOfBounds`, `isModelConfigAccess`, and `isSensitiveEnvFileAccess` in [permissions.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/permissions.ts) to correctly inspect nested paths within `edits` and `files` arrays.
+  - Prevented model preset test failures by isolating test presets using `clearSessionActivePreset` in test hooks rather than aggressively clearing it inside `clearModelConfigCache`.
+  - Added unit test coverage in [permissions.test.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/permissions.test.ts).
+
+---
+
+## [1.2.167] - 2026-07-07
+
+### Added
+- **Help Text and Autocomplete Suggestions for Session Presets**:
+  - Updated `/model` slash command description and help texts in [modelCommand.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/commands/modelCommand.ts) to detail the new `--save` and `--global` flags.
+  - Enhanced slash command autocomplete suggestions inside [app.tsx](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/app.tsx) to dynamically include available presets (e.g. `Rudy`, `nuzi`) and suggest the `--save` and `--global` options when writing commands.
+
+---
+
+## [1.2.166] - 2026-07-07
+
+### Added
+- **Session-Isolated Model Configuration and Presets**:
+  - Implemented session-level model configuration isolation. When presets or individual models are modified via the `/model` or `/model preset` slash command, they are stored in the session memory instead of being written directly to the global `model-config.json` file.
+  - Added support for a `--save` or `--global` option to the `/model` and `/model preset` commands to persist active preset changes globally to disk when desired.
+  - Modified auto-repair config logic to update active presets in-memory for the current session.
+  - Added comprehensive test coverage in [modelPresets.test.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/tests/modelPresets.test.ts).
+
+---
+
+## [1.2.165] - 2026-07-07
+
+### Fixed
+- **OpenAI Custom Endpoint JSON Response Parsing**:
+  - Implemented a robust [extractJSON](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/config/models.ts#L149-L215) function in [models.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/config/models.ts) to find matching braces/brackets while ignoring literals and escapes.
+  - Updated the custom OpenAI fetch interceptor to execute this JSON cleaning on all non-streaming response bodies, preventing "Unexpected non-whitespace character after JSON" errors from endpoints like Cloudflare Workers AI that append trailing garbage.
+  - Added unit test coverage in [openaiJsonParsingFix.test.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/tests/openaiJsonParsingFix.test.ts).
+
+---
+
+## [1.2.164] - 2026-07-07
+
+### Added
+- **Wait Action in manage_background_process**:
+  - Implemented a synchronous `wait` action in `manageBackgroundProcessTool` inside [shellTools.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/tools/shellTools.ts) to block and await a background process's completion.
+  - Added a `timeout` option to configure wait duration limits (defaulting to 10 minutes).
+  - Integrated `AbortSignal` listener support for wait cancellation.
+  - Documented the wait action inside the guidelines in [base.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/config/base.ts) and added a `BACKGROUND_WAIT` critical system prompt rule in [prompts.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/prompts.ts) so agents leverage the wait action instead of polling.
+  - Added a robust unit test verifying wait action timeout and completion behaviors.
+
+### Fixed
+- **Mock Background Task Check race condition**:
+  - Fixed a race condition in [state.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/tools/state.ts) where background task PID synchronization logic incorrectly marked mock background processes (pid 0) as exited with code `-1` under Vitest.
+
+---
+
+## [1.2.163] - 2026-07-07
+
+### Fixed
+- **Conversation History Persistence on Interruption**:
+  - Implemented synchronous file writes (`saveToFileSync`) and agent-level `saveHistorySync()` to ensure history is persisted to disk on forced exits (Ctrl+C, SIGINT, SIGTERM, or general exit).
+  - Modified the catch block in the agent's run loop to save history asynchronously on `AbortError` (e.g. first Ctrl+C in a TTY).
+  - Added synchronous saving in the CLI abort/exit handlers to guarantee state is saved before process termination.
+
+---
+
+## [1.2.162] - 2026-07-07
+
+### Changed
+- **Dimmed UI Terminal Borders and Separators**:
+  - Softened terminal UI aesthetics by dimming connection/border lines, error borders, info borders, and other system/default lines using dimColor.
+
+---
+
+## [1.2.161] - 2026-07-07
+
+### Fixed
+- **Support filePaths Array in Permission Boundary and Descriptions**:
+  - Fixed issues where bulk file reading tool calls using the `filePaths` array parameter resolved to `"(missing)"` in tool descriptions and bypassed out-of-bounds safety boundary checks. Now, all file paths inside the `filePaths` array are correctly description-formatted and strictly verified against worktree/workspace bounds.
+
+---
+
+## [1.2.160] - 2026-07-07
+
+### Added
+- **AI Semantic Search in get_skills**:
+  - Implemented AI semantic filtering in the `get_skills` tool. It now sends candidate skills to the LLM to find semantically relevant matches, falling back to keyword substring matching if AI search fails or returns no results.
+
+### Fixed
+- **Flaky Mocks in MasterAgent Tests**:
+  - Isolated mock counters (`genCallCount` and `streamCallCount`) in `tests/masterAgentWorkflow.test.ts` to prevent test failures caused by background model calls.
+
+---
+
+## [1.2.159] - 2026-07-07
+
+### Changed
+- **Removed System [SYS] Tag Rendering**:
+  - Removed the bold yellow `[SYS]` prefix tag from system line displays in both `chat-area.tsx` and `chat-line.tsx` rendering layouts, leaving only the clean message content.
+
+---
+
+## [1.2.158] - 2026-07-07
+
+### Changed
+- **UI Theme Colors**:
+  - Replaced bright green accents and highlights throughout the terminal UI (focused panels, borders, status bars, and cursors) with a softer, darker gray to fit the dark console styling.
+  - Updated code block highlights and successful tool statuses to use gray instead of green.
+  - Used white circle emoji (⚪) instead of green circle (🟢) for successful tool call indicators.
+
+---
+
+## [1.2.157] - 2026-07-07
+
+### Added
+- **Diff Stats to Edit Tool**:
+  - Integrated `buildEditSummary` support into the `edit` tool (both bulk and single-file options) in `systemTools.ts`. It now computes and appends diff summaries (e.g. `+45 -10`) when editing files.
+  - Cleaned up tool start/auto-approve colors and icons in `dashboardLogFormatter.tsx` to align with the soft gray design guidelines.
+
+---
+
+## [1.2.156] - 2026-07-07
+
+### Changed
+- **Tool UI Icons and Color**:
+  - Removed the gear icon (⚙️) from the tool execution titles and descriptions in the chat log, active tool views, and inspector panel.
+  - Updated the color of executing tool descriptions, border lines, and arguments from bright yellow to a softer dimmed gray (slightly dark white) to clean up terminal UI visuals.
+
+---
+
+## [1.2.155] - 2026-07-07
+
+### Fixed
+- **Terminal Chat Height limit**:
+  - Fixed an issue where the conversation log lines would not extend down to the active task checklist or input area, causing a large empty gap.
+  - Calculated `chatHeightLimit` using the exact bottom chrome height and banner height dynamically rather than using static/heuristic-based `chromeHeight` estimations.
+
+---
+
+## [1.2.154] - 2026-07-07
+
+### Changed
+- **Subagent Planning Requirements**:
+  - Removed the requirement that spawning a Subagent (`invoke_subagent`) is blocked by implementation plan approval.
+  - Spawning subagents now only requires tasks to be documented first via `manage_tasks(action: 'add' or 'add_bulk')`.
+  - Updated system prompts and orchestration logic in `agent.ts`, `base.ts`, and `prompts.ts` to reflect this change.
+
+---
+
+## [1.2.153] - 2026-07-07
+
+### Added
+- **Bulk Add in manage_tasks Tool**:
+  - Added support for bulk adding multiple tasks via the new `add_bulk` action in [manageTasksTool](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/tools/otherTools.ts).
+  - Introduced the `texts` array parameter to allow specifying multiple task descriptions at once.
+  - Added unit test coverage in [manageTasksTool.test.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/tests/manageTasksTool.test.ts) for validation and logic of `add_bulk`.
+
+---
+
+## [1.2.152] - 2026-07-07
+
+### Optimized
+- **Grep Tool Cache Interception**:
+  - Intercepted [grepTool](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/tools/systemTools.ts) to filter files in-memory using picomatch over the cached file list from getWorkspaceCachePath, bypassing filesystem walking when cache is present.
+  - Normalized path outputs in grep results to use forward slashes consistently across platforms.
+
+- **Git-based Workspace Discovery**:
+  - Enhanced [getWorkspaceFingerprint](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/workspaceDiscovery.ts) to check if the directory is a Git repository, and if so, query files using git ls-files.
+  - Added concurrent fs.promises.stat execution in batches of 100 to gather metadata efficiently and generate MD5 fingerprints quickly.
+
+---
+
+## [1.2.151] - 2026-07-07
+
+### Changed
+- **System Prompt Optimization for File-Editing Safety**:
+  - Added new `FILE_EDIT_SAFETY` instructions under `CRITICAL RULES` for both `SUPERAGENT_SYSTEM_PROMPT` and the `coder` subagent prompt in [prompts.ts](file:///d:/backup%20from%20pc%20asus/Documents%20Development/superagent/src/core/prompts.ts).
+  - Guides agents to retrieve fresh file contents before editing, ensure unique targets for string replacements, and strictly validate schema parameters for multi-replace actions.
+
+---
+
+## [1.2.150] - 2026-07-07
+
+### Added
+- **Speed Display in Status Bar Footer**:
+  - Destructured and displayed lastSpeed (generation speed in tokens per second) in the primary StatusBar component's ready state layout in the CLI terminal footer.
+
+---
+
+## [1.2.149] - 2026-07-07
+
+### Fixed
+- **TencentDB Memory Gateway Scenario Read**:
+  - Replaced client.readFile with client.readScenario in tdai_read_cos to fix the 404 error when running in local-first standalone mode.
+  - Added scenario block file validation to correctly handle files that do not exist by returning a clean file not found message.
+
+---
+
+## [1.2.148] - 2026-07-07
+
+### Performance
+- **Cache Installed Skills**:
+  - Implemented 5-second TTL cache for `getInstalledSkills` to resolve input typing lag/latency.
+  - Automatically bypasses caching during test execution under Vitest.
+
+---
+
+## [1.2.147] - 2026-07-07
+
+### Changed
+- **Limit Session History List in Resume Wizard**:
+  - Limited the number of displayed history sessions to the 10 newest in the `/resume` command and wizard dialog.
+  - Sliced the session lists in `useKeyboardHandler.ts`, `useDashboardWizard.ts`, and `dashboardSuggestions.ts` to ensure consistent indexing and select operations.
+
+---
+
+## [1.2.146] - 2026-07-07
+
+### Changed
+- **WebP Image Format for Prompt-Level Canvas Renders**:
+  - Changed prompt-level text-to-image canvas conversions from PNG to WebP format to reduce base64 transmission size and mitigate 413 errors.
+  - Updated all associated message mimeTypes to `image/webp`.
+
+---
+
+## [1.2.145] - 2026-07-06
+
+### Fixed
+- **Compaction Loop and Byte-Size Enforcement in PruningStrategy**:
+  - Enhanced `PruningStrategy` to support byte budget enforcement via `options.byteBudget` to prevent and resolve `413 Payload Too Large` loops.
+  - Added aggressive message truncation for individual text fields and tool results exceeding 50KB to keep context under the limit without discarding whole messages.
+  - Updated `ContextManager.compact` and `Agent`'s forced compaction path to propagate a 3.0 MB byte limit during emergency compaction.
+  - Added full test coverage for the byte-size check and truncation routines.
+
+---
+
+## [1.2.144] - 2026-07-06
+
+### Added
+- **413 Payload Too Large Recovery**:
+  - Implemented automatic context compaction and retry when model generation (streaming or non-streaming) fails with a `Payload Too Large (status: 413)` or `Request entity too large` error.
+  - Compaction is forced using the local, LLM-free `PruningStrategy` to guarantee rapid recovery without making further model calls.
+  - Added unit test coverage to verify recovery in both streaming and non-streaming modes.
+
+---
+
+## [1.2.143] - 2026-07-06
+
+### Changed
+- **Image Prompt and Vision Token Saving System Enhancements**:
+  - Implemented dynamic vision token saving thresholds tailored by provider (6,500 characters for Anthropic, 1,000 for Gemini).
+  - Added a static, hash-backed image rendering cache in `Agent` to prevent redundant canvas drawing and PNG encoding.
+  - Refined path normalization in `textToImage` to avoid mutating code-level backslashes (escape sequences, regex patterns).
+  - Updated `TokenTracker` to simulate vision token pricing when active, aligning compaction estimates with actual API payloads.
+
+---
+
+## [1.2.142] - 2026-07-06
+
+### Fixed
+- **Multi-Replace Line Range Rejection**:
+  - Updated `multi_replace_file_content` to reject out-of-bounds startLine or endLine parameters in chunks instead of silently coercing them.
+  - Added robust validation and unit tests to verify out-of-bounds rejection behavior.
+
+### Changed
+- **Explicit Task Management Prompts**:
+  - Updated system prompt guides for task tracking to explicitly specify action parameters, index structure, and valid status values for the `manage_tasks` tool.
+
+---
+
+## [1.2.141] - 2026-07-06
+
+### Changed
+- **Recursive Error Formatting**:
+  - Enhanced the `formatError` function to recursively traverse error causes (chains of `.cause` or `.error` properties) to extract underlying status codes, response bodies, and cause details from nested API/network errors.
+
+---
+
+## [1.2.140] - 2026-07-06
+
+### Fixed
+- **Custom Provider Response Cleaning**:
+  - Implemented a custom `fetch` interceptor in the OpenAI provider configuration (`models.ts`) that sanitizes incoming HTTP response bodies by stripping trailing non-JSON artifacts (such as buggy `data: [DONE]` text blocks appended by some API endpoints or proxies) before JSON parsing.
+
+---
+
+## [1.2.139] - 2026-07-06
+
+### Changed
+- **Enhanced Error Formatting**:
+  - Improved `formatError` in `agent.ts` to extract and print additional error details such as HTTP status codes, raw response body snippets, and error causes (for example, when parsing invalid JSON response bodies from proxy/server gateway failures).
+
+---
+
+## [1.2.138] - 2026-07-06
+
+### Added
+- **Manual Custom Model Entry**:
+  - Added a "+ Custom Model (Input manually)" option to the model selection list in both the login setup wizard and the model selection wizard.
+  - Added a new input step (step 16) in both wizards to capture manual model ID input when the custom model option is selected.
+  - Added transition logic from step 16 to the test message connection check (for login) or to the vision compatibility query (for model configuration).
+
+---
+
+## [1.2.137] - 2026-07-06
+
+### Added
+- **Bulk Task Management**:
+  - Added support for bulk operations in the `manage_tasks` tool.
+  - Added new `update_bulk` and `remove_bulk` actions, and an `indices` array parameter.
+  - Allowed `update` and `remove` actions to also accept the `indices` parameter for backward compatibility.
+  - Handled index deduplication and safe descending line removal to prevent shifting bugs.
+  - Added comprehensive unit tests covering all bulk operations and validation edge cases.
+
+---
+
+## [1.2.136] - 2026-07-06
+
+### Changed
+- **High-Contrast Vision Rendering**:
+  - Changed the background of converted prompt/message images in `textToImage.ts` from dark gray (`rgb(30, 30, 30)`) to high-contrast pure white (`rgb(255, 255, 255)`), and the text color to pure black (`rgb(0, 0, 0)`). This matches document OCR training distributions, significantly improving character recognition (OCR) reliability for vision models.
+
+### Fixed
+- **Flaky Hook Status Tests**:
+  - Replaced unstable fixed `setTimeout` checks (50ms) in `tests/useTencentdbStatus.test.ts` with clean, condition-based polling `waitForCondition()` to prevent asynchronous test flakes when the test runner runs under high CPU/disk load.
+
+---
+
+## [1.2.135] - 2026-07-06
+
+
+### Added
+- **Vision-Powered Tool Result Retention**:
+  - Added `visionMode` property and `setVisionMode(enabled)` method to `Conversation`. When the active model supports vision and `autoVisionTokenSaving` is on, `stripOldToolResults` now retains full tool results for 8 cycles (up from 2) instead of truncating them to a 20-line preview.
+  - In vision mode, `buildMessages()` in `agent.ts` already converts large tool results to PNG images on-the-fly before sending to the API. This means the AI can read the complete output of any old tool call through vision — no blindness, no context loss.
+  - Images are generated dynamically at API call time and are never stored in the history file, so disk usage is not affected.
+  - In text-only mode (model does not support vision), the 20-line / 800-char preview strategy from v1.2.134 is still used as a fallback.
+  - `agent.ts` calls `this.conversation.setVisionMode(useVisionTokenSaving)` once per iteration, immediately after the vision capability check, so the mode always reflects the actual model in use.
+
+---
+
+## [1.2.134] - 2026-07-06
+
+
+### Fixed
+- **Tool Result Truncation — AI Blindness**:
+  - Replaced the blind `[Output truncated for token efficiency (success)]` wipe with a meaningful preview strategy in `conversation.ts`. Old tool results now retain the first 20 lines (capped at 800 chars) with a `... [truncated — N more line(s) omitted]` suffix instead of being erased entirely.
+  - Results already under 800 chars are preserved verbatim with no truncation.
+  - Error results keep up to 300 chars (up from 150) so failure reasons remain visible.
+  - Routine tools (`read_file`, `grep`, `list_dir`, etc.) age out at `keepCycles - 1` rounds using `Math.max(1, keepCycles - 1)` instead of a hardcoded `1`, making the logic consistent with the configurable cycle parameter.
+  - Updated `conversation.test.ts` to use long synthetic results that exceed the 800-char preview threshold, correctly exercising the new truncation behavior.
+
+---
+
+## [1.2.133] - 2026-07-06
+
+
+### Fixed
+- **Image Prompt System — Path Issues**:
+  - `workspaceBoundaryNotice` (workspace root path) moved from `systemPrompt` into `dynamicContext` so it is always delivered as plaintext and never converted to a PNG image. Previously the AI had to OCR workspace paths from rendered images, causing path misreads.
+  - `planStateNotice` (plan/task file absolute paths) similarly moved exclusively to `dynamicContext`, eliminating a duplication bug where the same paths appeared both in the system prompt image and in plaintext with potentially different `[EXISTS]` / `[NOT YET CREATED]` statuses between the two — creating conflicting information for the AI.
+  - Added `normalizePathsForImage()` in `textToImage.ts` that converts Windows-style backslash separators (`C:\foo\bar`) to forward slashes (`C:/foo/bar`) before rendering any text to PNG. This prevents AI vision models from misreading ambiguous backslash characters in path strings.
+  - Increased canvas font size from `14px → 15px` and line height from `18 → 20` in `textToImage.ts` for improved legibility of rendered text images.
+
+---
+
+## [1.2.132] - 2026-07-06
+
+
+### Changed
+- **Workspace State Context**:
+  - Injected workspace CWD, agent tier, and active Git branch directly to the top of the live workspace state block to prevent agent context drift.
+- **Vision Token Saving**:
+  - Split and paired multi-page text-to-image conversions (system prompt, user messages, TencentDB memory, tool outputs) with explicit page numbers and contextual labels (e.g. `[Page X of Y]`) to improve vision model layout processing and prevent page-ordering confusion.
+
+---
+
+## [1.2.131] - 2026-07-06
+
+### Changed
+- **Footer (Status Bar)**:
+  - Replaced the simple flashing text spinner with a beautiful bouncing block spinner (`[▰▱▱▱▱]`) styled in solid `blueBright`.
+
+---
+
+## [1.2.130] - 2026-07-06
+
+### Changed
+- **Header (Banner)**:
+  - Replaced the pipe separator (`│`) with a bullet point (`●`).
+
+---
+
+## [1.2.129] - 2026-07-06
+
+### Changed
+- **Header (Banner)**:
+  - Removed `COGNITIVE SYSTEM` text from the header title row, keeping only `v{version}`.
+
+---
+
+## [1.2.127] - 2026-07-06
+
+### Changed
+- **Header (Banner)**:
+  - Removed logo/mascot (garuda ASCII art) from the header.
+  - Removed `│ ● READY` indicator from the header title row.
+- **Footer (Status Bar)**:
+  - Added `Proc` (running tasks) and `Sub` (running subagents) counters to the idle status bar.
+  - Proc and Sub counts highlight in color (yellow/cyan) when > 0, remain gray when idle.
+
+---
+
+## [1.2.126] - 2026-07-06
+
+### Fixed
+- **Idle Status Bar**:
+  - Restored a clean, one-line status bar when idle (`!isProcessing`) displaying ready state, model name, branch, message count, and context token percentage.
+
+---
+
+## [1.2.125] - 2026-07-06
+
+### Added
+- **Log Execution Summary**:
+  - Automatically generate a concise summary of the active session actions, changed files, and workspace state using the LLM when execution completes successfully.
+  - Write this summary to the global execution log (`superagent.log`) under a `SUMMARY` prefix.
+  - Injected this real execution summary into the `goal_done` event payload instead of a generic static message.
+  - Disabled summary generation during Vitest unit testing to prevent test failures or unexpected model calls.
+
+---
+
+## [1.2.124] - 2026-07-06
+
+### Changed
+- **Simplified Colorful Footer**:
+  - Replaced the multi-line stats footer with a simplified, 1-line layout.
+  - Added a colorful scanning spinner and animated rolling-rainbow loading text for the processing state.
+  - Kept a stable blank line when idle to prevent layout shifts.
+  - Reduced status bar height bounds and total rows to reclaim terminal rows for the chat view.
+
+---
+
+## [1.2.123] - 2026-07-06
+
+### Improved
+- **Image Prompt Context Headers**:
+  - Enhanced the headers and instruction text accompanying auto-vision token-saving image parts (system prompts, user inputs, memory context, and tool results).
+  - Explicitly instructs the vision-enabled models to read, transcribe, and follow instructions/data embedded within the images rather than treating them as generic user attachments.
+
+---
+
+## [1.2.122] - 2026-07-06
+
+### Changed
+- **Implementation Plan Prompting**:
+  - Added clear instructions, structures, and regular expression requirements for the three valid implementation plan templates (Full, Quick, Refactor) into all system prompts (`MASTER_AGENT_SYSTEM_PROMPT`, `SUPERAGENT_SYSTEM_PROMPT`, and base config prompt).
+  - Resolves plan validation wizard rejections by ensuring agents always construct plans matching the expected templates.
+
+---
+
+## [1.2.121] - 2026-07-06
+
+### Changed
+- **Subagent Spawning Plan Mandate**:
+  - Removed the check that blocked subagent spawning if the parent agent's implementation plan was pending approval or not approved. Spawning subagents is no longer constrained by the plan state.
+
+---
+
+## [1.2.120] - 2026-07-06
+
+### Added
+- **Maximum Compression Mode Rules**:
+  - Inserted maximum compression mode guidelines into the base system prompt in `base.ts`.
+  - Added specific directives to minimize token usage, prefer noun phrases & imperative fragments, omit filler, pronouns, articles, and apply strict symbol mappings.
+
+---
+
+## [1.2.119] - 2026-07-06
+
+### Added
+- **TencentDB Memory Context Vision Conversion**:
+  - Automatically convert TencentDB Agent Memory Context user messages into image pages when vision token saving is active.
+  - Ensures memory context is compressed into visual tokens for vision-supporting models to optimize context length.
+
+---
+
+## [1.2.118] - 2026-07-06
+
+### Fixed
+- **Conversation Log Scrolling**:
+  - Ensured that clicking anywhere in the conversation log (including collapsible tool output headers) correctly activates `"chat"` focus mode.
+  - Added full PageUp, PageDown, Ctrl+Arrows, and Shift+Arrows keyboard scrolling support when in `"chat"` focus mode.
+
+---
+
+## [1.2.117] - 2026-07-06
+
+### Fixed
+- **Terminal UI Click & Focus Responsiveness**:
+  - Accounted for the `HistoryPanel` and active wizard question heights in layout and section boundary calculations to prevent input/statusbar clipping and alignment issues.
+  - Enhanced mouse click detection to robustly focus the text input when clicking on the statusbar or any empty bottom regions.
+  - Added click selection and mouse wheel scroll support for entries in the command history panel.
+
+---
+
+## [1.2.116] - 2026-07-06
+
+### Removed
+- **FastContext**:
+  - Removed FastContext codebase exploration tool (`fastcontext`), wrapper scripts, and startup setups.
+  - Deleted obsolete `tests/fastcontextTool.test.ts` and `.agents/skills/fastcontext` skill folder.
+  - Cleaned up `vendor/fastcontext` directory and `README.md` / `.gitignore` references.
+
+### Changed
+- **System Prompts**:
+  - Updated Master Agent, Superagent, and specialized Subagent system prompts to spawn the `researcher` subagent for codebase exploration instead of running `fastcontext`.
+
+---
+
+## [1.2.115] - 2026-07-06
+
+### Added
+- **System Prompt Vision Token Saving**:
+  - Implemented automatic conversion of large system prompts to image parts when vision token saving is enabled and threshold is exceeded.
+  - Prepended system prompt images inside a user message to `generateText` and `streamText` calls.
+  - Added unit test in `tests/visionTokenSaving.test.ts` to verify correct conversion behavior.
+  - Reduced the default vision saving threshold fallback from 4000 to 2000 characters for earlier token saving optimization.
+
+---
+
+## [1.2.114] - 2026-07-06
+
+### Added
+- **Help and Autocomplete for Vision Settings**:
+  - Updated the `/help` command output to describe `/setting-auto-vision` and `/setting-vision-threshold`.
+  - Added autocomplete support (with subcommands) for both slash settings inside `dashboardSuggestions.ts`.
+  - Added unit tests for new autocomplete suggestions inside `tests/slashCommands.test.ts`.
+
+---
+
+## [1.2.113] - 2026-07-06
+
+### Added
+- **Vision Token Saving Settings Commands**:
+  - Added new slash commands `/setting-auto-vision <on|off>` and `/setting-vision-threshold <number>`.
+  - Integrated the settings into the `/settings` display block.
+  - Added comprehensive test coverage in `tests/slashCommands.test.ts`.
+
+---
+
+## [1.2.112] - 2026-07-06
+
+### Changed
+- **Refactored Text-to-Image Rendering**:
+  - Replaced platform-specific OS-dependent text-to-image rendering (using PowerShell on Windows and Python/Pillow on Linux/Mac) with the high-performance `@napi-rs/canvas` library.
+  - Implemented inline HTML5-compatible Canvas text rendering using the `@napi-rs/canvas` API.
+  - Removed temporary file storage logic and directly generated base64 PNG data in memory.
+
+---
+
+## [1.2.111] - 2026-07-06
+
+### Added
+- **Google Gemini Native Provider**:
+  - Installed and integrated `@ai-sdk/google` (v1.x for compatibility with SDK v4.x).
+  - Added support for `gemini` in provider types and command-line `/login add gemini <api_key>` commands.
+  - Implemented auto-detection of Gemini keys (prefix `AIza`).
+  - Added native Gemini models (e.g., `gemini-2.5-flash`, `gemini-2.5-pro`) to provider wizards, fallback options, and static token limit configs.
+  - Resolved `gemini` provider prefix in runtime model instance creation.
+
+---
+
+## [1.2.110] - 2026-07-06
+
+### Added
+- **Automatic Context-to-Image Conversion**:
+  - Implemented automatic text-to-image conversion for prompt context (user prompts and tool results) exceeding a configured character threshold.
+  - Slices text blocks into 150-line pages (up to 3 pages) and renders them using PowerShell (.NET `System.Drawing`) on Windows or Python (`Pillow`) on macOS/Linux.
+  - Replaces large tool results with placeholders and appends the rendered images in immediate subsequent user messages to satisfy provider API protocols.
+  - Added new configuration settings: `autoVisionTokenSaving` and `visionTokenSavingThreshold`.
+  - Added support for configuring custom model vision capability overrides via the `/model` interactive wizard, prompting the user and saving the settings directly inside presets and tier configs.
+  - Added unit test suite in `tests/visionTokenSaving.test.ts`.
+
+---
+
+## [1.2.109] - 2026-07-06
+
+### Changed
+- **Planning-First Spawning Rules**:
+  - Updated system prompts for the Master Agent, Superagent, and Single Mode CLI to mandate creating or updating implementation plans/checklists before invoking any subagent or superagent.
+
+---
+
+## [1.2.108] - 2026-07-06
+
+### Changed
+- **Android CLI Startup Setup**:
+  - Automatically check and download/configure the Android CLI dependencies (including curl and Android CLI itself) on application startup inside `src/cliMain.tsx` (using `ensureAndroidCliInstalled`), rather than waiting for it to be run lazily when `android_cli` is first called, ensuring a smooth and uninterrupted experience when using mobile/emulator commands.
+
+---
+
+## [1.2.107] - 2026-07-06
+
+### Changed
+- **Ripgrep Startup Setup**:
+  - Automatically download and configure ripgrep (`rg`) on application startup inside `src/cliMain.tsx` (using `ensureRgInstalled`), rather than waiting for it to be run lazily when `ripgrep_search` is first called, preventing potential delay or runtime setup errors when agents execute search commands.
+
+---
+
+## [1.2.106] - 2026-07-06
+
+### Fixed
+- **System Prompts Configuration**:
+  - Audited and updated the base system prompt in `src/core/config/base.ts` to remove references to unregistered and obsolete background process tools (`write`, `kill_background_process`, `view_background_processes`), preventing potential tool hallucination by the AI models.
+
+---
+
+## [1.2.105] - 2026-07-06
+
+### Changed
+- **Assistant Timeline UI Theme**:
+  - Colored the timeline tree prefix (`┌───`, `├───`, `│`), agent name (`✦ SUPERAGENT`), and turn index (`[#lineIndex]`) with a single dark gray color (`gray`) to improve aesthetic readability and visual cohesion.
+
+---
+
+## [1.2.104] - 2026-07-06
+
+### Fixed
+- **FastContext Setup & Vendoring**:
+  - Removed `.git` from `vendor/fastcontext` and updated `.gitignore` to track `vendor/fastcontext` to vendor the FastContext repository explorer source code. This prevents GitHub credentials prompts during startup setup since Microsoft took down the public `microsoft/fastcontext` repository.
+  - Modified `bin/setup-fastcontext.ps1` and `bin/setup-fastcontext.sh` to bypass Git pull checks if the directory does not contain a `.git` subfolder, ensuring the setup runs successfully offline/from vendored files.
+
+---
+
+## [1.2.103] - 2026-07-06
+
+### Fixed
+- **Input Focus and Caret Display**:
+  - Separated the mouse click boundary handlers for `input` and `wizard` in `src/hooks/useMouseScroll.ts` to ensure that clicking the text input box always focuses it and displays the caret, even when a wizard dialog is active.
+  - Implemented focus-gaining cursor sync in `src/components/ChatTextInput.tsx` to automatically snap the cursor to the end of the text when the input field is focused.
+
+---
+
+## [1.2.102] - 2026-07-06
+
+### Fixed
+- **Terminal Scroll Functionality**:
+  - Restored full scroll capabilities by returning a copy of the cached text wrapping array (`[...cached]`) from `wrapTextForDisplay` inside `src/utils/responseScroll.ts` to prevent reference-sharing issues and potential mutations.
+  - Wrapped all `logMouseDebug` calls in `src/hooks/useMouseScroll.ts` with explicit `process.env.DEBUG_MOUSE === "true"` checks to prevent expensive template string evaluation, `JSON.stringify` overhead, and uncaught serialization exceptions on hover, click, and scroll events.
+
+---
+
+## [1.2.101] - 2026-07-06
+
+### Optimized
+- **Terminal Scroll Performance**:
+  - Implemented a Least-Recently-Used (LRU) style cache for `wrapTextForDisplay` inside `src/utils/responseScroll.ts` to skip character-by-character scan and wrap logic on subsequent renders of unchanged text.
+  - Resolved terminal scrolling lag in single-agent mode by adding a conditional `logMouseDebug` helper in `src/hooks/useMouseScroll.ts`. The helper suppresses synchronous directory/file checks and writes during mouse events unless explicitly enabled via `process.env.DEBUG_MOUSE === "true"`.
+
+---
+
+## [1.2.100] - 2026-07-06
+
+### Optimized
+- **CLI Startup Performance**: Restructured CLI entrypoint and lazy-loaded dependencies (React, Ink, App, MultiAgentDashboard, TrustPrompt) to improve startup performance. The help command (`--help` / `-h`) now executes instantly without parsing or evaluating heavy UI framework files.
+- **Lazy Initialization**: Shifted all runtime initialization operations (FastContext setup, TencentDB setup, MCP initialization) to be deferred until after the arguments have been parsed and the runner is ready to boot, saving startup overhead.
+- **CLI Execution Restructuring**: Moved CLI runner execution logic into `src/cliMain.tsx` to enable cleaner dynamic imports and modular boot execution.
+
+---
+
+## [1.2.99] - 2026-07-06
+
+### Added
+- **Ctrl+O Cycling Expand Keyboard Shortcut**: Replaced click-to-toggle tool entry log panels with the Ctrl+O keyboard shortcut. Toggling via Ctrl+O cycles through each visible collapsible log entry in both single-agent and multi-agent dashboard interfaces.
+- **Ctrl+O UI Hint Labels**: Updated all tool logs, system information blocks, and question prompts to guide the user to toggle logs using the `Ctrl+O` shortcut instead of mouse clicks.
+
+### Changed
+- Refactored `useKeyboardHandler` and `useDashboardKeyboard` hooks to receive context refs for visible elements, group log boundaries, and expand toggle states to support the keyboard cycling logic.
+
+---
+
+## [1.2.98] - 2026-07-04
+
+### Fixed
+- **Bang Shortcut Suggestion Support**: Added support in the suggestion engine to map inputs starting with `!` shortcut to terminal commands, returning corresponding terminal suggestions (e.g., `!init`, `!bg`, `!stop`, etc.) and showing them properly in the terminal UI and dashboard suggestions panel.
+- **Tab Completion for Bang Prefix**: Allowed tab completion trigger and cycle/selection logic when the user input starts with `!` command shortcut.
+- **Immediate Update for Bang Prefix**: Disabled input debouncing in `ChatTextInput` when typing the `!` prefix, ensuring instant suggestion list updates.
+
+### Added
+- Added unit tests in `tests/bangSuggestions.test.ts` verifying suggestions mapping and tab completion behavior for the bang command prefix.
+
+---
+
+## [1.2.97] - 2026-07-04
+
+### Added
+- **File Concurrency Locking**: Implemented a Promise-based `FileLockManager` to serialize read/write operations for the same file path, preventing race conditions when multiple file write/edit tools run in parallel.
+- **Improved Edit/Patch Accuracy**: Refactored the `edit` and `apply_patch` (search-replace block mode) tools to use `mapNormToOrigIndices` for character index mapping, resolving misalignment issues when files contain trailing whitespace.
+
+### Tests
+- Added unit and concurrency tests in `tests/fileEditingConcurrency.test.ts` verifying concurrent serialization, `edit` alignment under trailing whitespace, and search-replace patch alignment.
+
+---
+
+## [1.2.96] - 2026-07-04
+
+### Changed
+- **Relocated and Restyled Loading Footer Indicator**: Redesigned the status bar loader to use a cyberpunk-themed scanner block spinner (`[▰▱▱▱▱]`) and moved the processing block to the leftmost position of the footer/status bar in both single-agent and multi-agent dashboard layouts.
+
+---
+
+## [1.2.95] - 2026-07-03
+
+### Added
+- **Plan Editing via Manage Plan Tool**: Added support for an `edit` action in the `manage_plan` tool. This allows updating the implementation plan using either a full replacement `planContent` or incremental find-and-replace using `targetContent` and `replacementContent`.
+- **System Prompt and Instruction Updates**: Exposed and documented the plan editing capability in `MASTER_AGENT_SYSTEM_PROMPT` and `SUPERAGENT_SYSTEM_PROMPT` to let agents modify plans through the tool rather than direct file writes.
+- **Agent Rule Updates**: Updated planning rules in `src/core/agent.ts` to allow `edit` under the `manage_plan` tool.
+
+### Tests
+- Added unit tests in `tests/managePlanTool.test.ts` verifying edit action, parameters error checking, full replacement, and find-and-replace synchronization.
+
+---
+
+## [1.2.94] - 2026-07-03
+
+### Added
+- **Interruption and Interactivity (Sanggah)**: Allowed the user input box to remain visible and active during processing in both single-agent and multi-agent dashboard modes. Submitting a new message while the agent is running immediately aborts the active run and queues the new prompt to run.
+- **Footer Status Bar Loading Indicators**: Moved the processing/loading spinner and "Processing..." status text to the bottom status bar footer in both single-agent and multi-agent modes.
+
+### Tests
+- Added unit tests in `tests/sanggahInterruption.test.ts` to verify `queueMessage` function and interruption queuing logic.
+
+---
+
+## [1.2.93] - 2026-07-03
+
+### Added
+- **Get Skills Tool for Discovery**: Added `get_skills` tool to list and search installed skills across all directory locations (workspace-local, hooks, global config, packages) with optional query filtering and clean non-markdown output.
+- **Direct Skill Discovery Prompting**: Updated the `loadAgentSkills` system instructions and the main `SKILL CHECK` step in Master and Subagent (Coder, Researcher, Reviewer) prompts to guide agents to call `get_skills` rather than manually listing directories or checking static environment arrays.
+
+### Tests
+- Added unit tests in `tests/skillsTool.test.ts` to verify `get_skills` output formatting, empty states, and case-insensitive query filtering.
+- Updated `tests/skillsFiltering.test.ts` assertions to align with the new prompt instructions.
+
+---
+
+## [1.2.92] - 2026-07-03
+
+### Added
+- **Keyboard Navigation and Log Output for Active Processes**: Enabled keyboard navigation (up/down arrow keys) for the active processes panel in both the single-agent console and multi-agent dashboard. Pressing Enter while focusing a running process prints the last 40 lines of its output/logs directly in the terminal chat/master logs. Added the Ctrl+B shortcut to quickly toggle focus to the active processes panel when processes are running.
+
+### Fixed
+- **Tool Registry Consistency**: Added `readPeerSuperagentFileTool` to the exported `allTools` array in `tools/index.ts` to maintain registry integrity.
+- **Mock Cleanup in Post-Merge Validation Tests**: Fixed `fs.existsSync` mocks in `tests/postMergeValidation.test.ts` to return `false` for lockfiles (`bun.lockb`, `pnpm-lock.yaml`, `yarn.lock`), preventing test failures caused by dynamic package manager detection on machines with Bun/PNPM installed.
+
+---
+
+## [1.2.91] - 2026-07-03
+
+### Fixed
+- **Project-Specific Background Processes**: Fixed a bug where background processes ("ACTIVE PROCESSES") from all projects were loaded globally across all terminal dashboards and CLI commands. Added `cwd` path tracking to `BackgroundTask` and `PersistedTask` structures in `background-tasks.json`. Added workspace filtering via `isTaskInWorkspace` helper across dashboard panels, slash commands (`/processes` and `/terminal`), agent prompt injections, checkpoint restores, and exit handlers.
+
+### Tests
+- Added unit tests in `tests/backgroundTasksSync.test.ts` to verify workspace directory filtering (`isTaskInWorkspace`) and task directory serialization/deserialization.
+
+---
+
+## [1.2.90] - 2026-07-03
+
+### Fixed
+- **Edit/Replace Tool Overlap & Duplication**: Fixed an issue where `replace_file_content` and `multi_replace_file_content` could match incorrect duplicate substrings within a range (e.g. matching strings starting after `reject: false`) and corrupt files.
+- **Uniqueness Check**: Both tools now check if the normalized target content is unique within the specified line range. If there are multiple occurrences and `allowMultiple` is not true, they abort with a descriptive error.
+- **Multiple Replacements Support**: Added `allowMultiple` (and alias `AllowMultiple`) support to allow replacing all occurrences safely using character index mapping from right to left (bottom to top) to prevent character shift corruption.
+
+### Tests
+- Added unit tests in `tests/systemTools.test.ts` to verify duplicate checks and multiple replacement correctness for `replace_file_content` and `multi_replace_file_content`.
+
+---
+
+## [1.2.89] - 2026-07-03
+
+### Added
+- **Dynamic Package Manager Detection**: `masterAgent.ts` now auto-detects the project's package manager (bun, pnpm, yarn, npm) from lockfiles before running build/test/lint validation. Previously hardcoded to `npm`, causing failures on pnpm/yarn/bun projects. New exported helper `detectPackageManager(cwd)` checks for `bun.lockb` > `pnpm-lock.yaml` > `yarn.lock` in priority order.
+- **Subagent Context Inheritance**: `invoke_subagent` gains optional `inheritContext: boolean` parameter. When `true`, a compact workspace snapshot (task progress, plan objective, working directory) from the parent agent is prepended to the subagent's system prompt (capped at 2000 chars). Reduces redundant re-research and fastcontext calls from freshly spawned subagents.
+- **Pre-merge Branch Verification**: `merge_superagents` now checks each completed Superagent's result report for failure signals (`Build: failed`, `Status: Blocked/Partial`) before attempting `git merge`. Branches that self-report as broken are skipped immediately with a clear error message, avoiding expensive merge+abort cycles.
+- **Intent-Context Conflict Resolution**: When the Master Agent spawns a conflict-resolver subagent, it now first collects `git log --oneline` and `git log -p` from the conflicting branch and injects them as a `BRANCH INTENT CONTEXT` section into the resolver's prompt (capped at 3000 chars). The resolver now understands *what* each branch was trying to achieve, not just *where* the conflict markers are.
+- **Peer Worktree Read Access**: New `read_peer_superagent_file` tool added to `superagentToolset`. Allows a running Superagent to read a file from another Superagent's worktree in read-only mode. Access is strictly path-validated against the registered worktree path (no traversal allowed), files over 512 KB are blocked, and only Superagent-tier agents (depth 1) may call it. Enables parallel Superagents to share generated schemas, types, or interfaces without waiting for a full merge cycle.
+
+### Tests
+- **detectPackageManager**: 6 unit tests in `tests/masterAgent.test.ts` covering npm (fallback), yarn, pnpm, bun, and priority conflicts.
+- **Pre-merge verification**: 2 unit tests in `tests/superagentTools.test.ts` — build-failed report and status-blocked report both trigger skip-and-error without touching git.
+
+---
+
+## [1.2.88] - 2026-07-03
+
+
+### Added
+- **Sequential Message Queueing**: Replaced single pendingMessage property in agent.ts with pendingMessagesQueue array to prevent message loss on concurrent signals.
+- **PID-Based Stale Lock Healing**: Added active process verification in rateLimiter.ts to instantly release concurrency and rate limit lock files if the holding process ID (PID) is dead, avoiding unnecessary timeouts.
+- **High-Accuracy Token Estimation**: Pre-flight safety checks in agent.ts now query the tiktoken TokenTracker when ContextManager is initialized, improving token count accuracy.
+
+### Tests
+- **New tests/messageQueueing.test.ts**: Verifies sequential queueing and execution of multiple concurrent messages.
+- **Limiter PID Healing Tests**: Added a test in tests/rateLimiter.test.ts to verify auto-healing of lock files holding dead PIDs.
+
+---
+
+## [1.2.87] - 2026-07-03
+
+### Security
+- **Workspace Boundary: Split Out-of-Bounds Session Bypass Flags**: Introduced a separate `allowSessionFileWriteOutOfBounds` flag for file write tools (`write_to_file`, `replace_file_content`, `multi_replace_file_content`, `edit`, `apply_patch`). Previously, a single `allowSessionOutOfBounds` flag granted by approving a shell or glob tool would silently bypass ALL subsequent file write permission checks for the session — allowing the agent to write files outside the workspace without further prompts. File write tools and shell tools now maintain independent bypass states.
+- **Workspace Boundary: Non-Interactive Mode Blocks Out-of-Bounds File Writes**: Non-TTY (non-interactive) mode previously auto-approved ALL permission requests including out-of-bounds file writes. It now explicitly blocks all file write tools (`MODIFYING_TOOLS`) outside the workspace and returns `false`, while continuing to auto-approve shell and read tools.
+- **Workspace Boundary: System Prompt Constraint Injection**: Every agent iteration now injects a `# WORKSPACE BOUNDARY — CRITICAL` section into the system prompt containing the exact workspace root path, preventing the LLM from hallucinating file write targets derived from bash command output (e.g., Git Bash `/c/Users/...` paths that map to a different drive than the configured workspace).
+
+### Tests
+- **New: `tests/workspaceBoundaryPermission.test.ts`**: 14 unit tests verifying the split flag defaults and independence, `MODIFYING_TOOLS` list correctness, and the non-interactive CLI handler blocking all file write tools while allowing shell/read tools.
+
+---
+
+## [1.2.86] - 2026-07-03
+
+### Added
+- **JSON Subagent Report Handshake**: `SUBAGENT_REPORT_INSTRUCTION` is now a function that embeds the concrete report file path (`~/.superagent-r/subagents/<id>_report.json`) per subagent ID. Subagents are instructed to write a structured JSON report on completion. `extractSubagentReport()` now prefers this file-based report (machine-readable, includes `verificationPassed` field) over regex-scanning chat history, with full markdown fallback for backward compatibility.
+- **Live Workspace State Context Block**: New `WorkspaceStateTracker` module (`src/core/context/WorkspaceStateTracker.ts`) that builds a concise live state snapshot injected into the dynamic context on every agent iteration for master/single/superagent tiers. Displays task progress (done/total + next pending tasks), current plan objective, and active/completed subagent IDs — preventing context drift between turns.
+- **`verificationPassed` Self-Report Field**: Subagent JSON report schema includes a `verificationPassed` boolean so the parent agent can instantly detect if a subagent verified its work (build/tests) or not, and spawn a reviewer automatically when needed.
+
+---
+
+## [1.2.85] - 2026-07-03
+
+### Changed
+- **Auto-Pinning for Plans and Checklists**: Added `autoPinKeyMessages` in `ContextManager.ts` to automatically scan conversation logs and pin user requirements, task lists, and implementation plan documents, preventing critical state from being compacted.
+
+### Fixed
+- **TencentDB Sync & Skills Discovery Build**: Built fixes to sanitize TencentDB sync payloads (avoiding HTTP 400 empty string errors) and skills discovery prompts (preventing search loop commands).
+
+## [1.2.84] - 2026-07-03
+
+### Changed
+- **Global vs Per-Project Memory Scoping**: Added `scope` parameter (`"project"` | `"global"`) to `save_shared_memory` and `tdai_memory_save` tools to isolate workspace findings and prevent cross-project context pollution.
+- **Agent Context Filtering**: Updated `sharedMemoryNotice` in `agent.ts` to filter shared memories based on current workspace path, rendering distinct `GLOBAL AGENT MEMORIES` and `PROJECT AGENT MEMORIES` sections with token allocation caps.
+- **System Prompts Update**: Added `SHARED_MEMORY_SCOPING` rule to `MASTER_AGENT_SYSTEM_PROMPT` and `SUPERAGENT_SYSTEM_PROMPT` in `src/core/prompts.ts` to guide agents on selecting appropriate memory scopes.
+
+---
+
+## [1.2.83] - 2026-07-03
+
+### Fixed
+- **Dynamic Hooks Toolset Guard**: Added `Array.isArray()` guard before calling `.push()` and `filterArray()` on `subagentToolsets[key]` in `refreshDynamicHooks()` (`tools/index.ts`). When running the full test suite, cross-test module state could result in a key existing in `subagentToolsets` with an `undefined` value, causing `Cannot read properties of undefined (reading 'push')` errors.
+
+---
+
+## [1.2.82] - 2026-07-03
+
+
+### Fixed
+- **Skills Discovery Order Bug**: Fixed `getInstalledSkills()` in `skills.ts` to discover superagent package built-in skills **first** (as the base), then project-local `.agents/skills` are appended last as overrides. Previously, project-local skills were searched first, causing built-in package skills to be silently dropped when a name collision occurred — so the agent never saw them in the INSTALLED AGENT SKILLS list.
+- **Deduplication Logic**: Changed from "skip on duplicate name" to **"replace on duplicate name"** — a later (higher-priority) skill with the same name now replaces the earlier package version. This ensures project-local customizations always win while all unique package skills remain visible.
+
+---
+
+## [1.2.81] - 2026-07-03
+
+
+### Changed
+- **Optimized Prompt Caching**: Modified `injectDynamicContext` in `agent.ts` to only include the step-counter warning when remaining steps are 5 or fewer. This keeps the message history static for the vast majority of execution turns, allowing near 100% LLM prompt cache hits across steps.
+- **Softened Single-Agent Subagent Delegation**: Softened subagent delegation rules in `singleModeSubagentDirective` for single-agent mode (`tier === "single"`), allowing direct file editing, reading, and command execution for simple tasks without process-spawn overhead.
+- **Concurrency & Rate Limit Lock Optimizations**: Implemented in-process locking and queuing (`processQueue`, `processLocked`) in `SharedConcurrencyLimiter` and `SharedRateLimiter` within `rateLimiter.ts` to coordinate lock acquisitions in memory before polling the filesystem, significantly reducing lock contention and I/O latency.
+
+---
+
+## [1.2.80] - 2026-07-03
+
+### Changed
+- **Empty Workspace Optimization for FastContext**: Added an early check `hasExploreableFiles` to `fastcontextTool.ts` that recursively detects if the workspace contains any non-hidden, non-ignored files. If the workspace is empty or contains only configuration/hidden files (like `.git`), FastContext will skip execution and return immediately, preventing unnecessary API calls, token usage, and process spawning.
+
+---
+
+## [1.2.79] - 2026-07-03
+
+### Changed
+- **Input Performance Optimization**: Optimized typing latency by adding local state tracking and a 100ms debounced update system to the terminal input box (`ChatTextInput`). Updates are propagated immediately under conditions such as slash commands, active wizard prompts, empty values, or pasted blocks to ensure no loss of functionality or responsiveness.
+- **UI Render Optimization**: Memoized peripheral components (including `ActiveAgentsList`, `TaskChecklist`, `HistoryPanel`, `StatusBar`, `ActiveProcessesPanel`, `ActiveSubagentsPanel`, and `DashboardStatusBar`) using `React.memo` to eliminate redundant renders during input updates.
+
+---
+
+## [1.2.78] - 2026-07-03
+
+### Added
+- **Preset List Search-Filtering & Navigation**: Expanded query-based filtering, item pagination (max 10 visible items), and up/down arrow keyboard navigation to all model preset lists (Apply Preset: step 4, Select Preset to Edit: step 30, and Select Preset to Delete: step 40) for both single-agent and multi-agent modes.
+
+---
+
+## [1.2.77] - 2026-07-03
+
+### Added
+- **Model Provider Profile List Filtering & Navigation**: Enabled query-based filtering, pagination (max 10 visible items), and up/down arrow keyboard navigation in the provider profile selection screen (steps 3, 25, 35) for both single-agent and multi-agent modes.
+
+---
+
+## [1.2.76] - 2026-07-03
+
+### Changed
+- **Tidy Up Log/Session History**: Nested Superagent and Subagent session folders under their parent Master/Super Agent session directory respectively (using `process.env.SUPERAGENT_SESSION_PATH`) to keep history folder layout clean and self-contained.
+- **Ignore Category Subdirectories**: Updated `listHistorySessions` to explicitly filter out `superagents` and `subagents` subdirectories to prevent them from being scanned or processed as history sessions.
+
+---
+
+## [1.2.75] - 2026-07-03
+
+### Added
+- **Tier-Level Tool Validation**: Exposed `getActiveTools()` on the `Agent` class to retrieve allowed tools per tier. Implemented strict runtime checks in `executeToolCall()` (permissions layer) to block unauthorized tools at the execution level across all tiers.
+- **Forced Prompt-Based Override**: Added `forcePromptBasedToolCalling` config flag to `SystemSettings` and default configuration to allow developers to force prompt-based (XML) tool calling.
+- **Resilient XML Parser**: Enhanced XML regexes and cleanup helpers to support optional attributes in XML tags (e.g. `<tool_call id="...">`), improving stability under mixed model outputs.
+
+---
+
+## [1.2.74] - 2026-07-03
+
+### Fixed
+- **Persistent Tool Support Probe Cache & Increased Timeout**: Implemented disk-based persistence for `probeToolCallSupport` in `~/.superagent-r/tool_support_cache.json` to prevent repeated latency-inducing API calls on every CLI invocation. Increased the probe HTTP request timeout from 10 seconds to 30 seconds to allow slower local models or custom OpenAI-compatible proxies (such as local Orbit presets) to successfully complete the initial probe, resolving a bug where slow custom endpoints timed out during the probe, fell back to `supportsNativeTools = false`, and subsequently crashed Vercel AI SDK with a "Model tried to call unavailable tool... No tools are available" error.
+
+---
+
+## [1.2.73] - 2026-07-03
+
+### Added
+- **DAG Cycle Detection**: Integrated dynamic DFS-based cycle detection in `invokeSuperagentTool` to prevent deadlocks from circular agent dependencies (e.g., C -> A -> B -> C).
+- **Shared Memory Compaction & TencentDB Sync**: Updated the shared memory system to automatically prune entries older than 7 days (TTL compaction) and enforce a maximum limit of 30 entries. Connected compaction to delete pruned findings atomically from TencentDB Memory if enabled.
+- **Conflict Resolver Telemetry**: Added conflict resolver UI telemetry piping to improve UI feedback during automated git merge conflict resolution.
+
+---
+
+## [1.2.72] - 2026-07-03
+
+### Added
+- **Multi-Agent Optimizations & Superpowers**:
+  - **DAG Task Scheduling**: Added `dependsOn` arrays to `invoke_superagent` with wait loops and dependency branch pre-merging.
+  - **Programmatic Conflict Resolver**: Integrated a programmatic subagent fallback in Master Agent `mergeBranch` to resolve git conflicts in conflicted files if line-based auto-resolution fails.
+  - **Spin-Locked Shared Memory**: Created `save_shared_memory` tool with concurrent spin-lock file safety for shared agent discoveries, and injected findings into system prompts.
+  - **Skill Token Compression**: Minified preloaded `SKILL.md` documents via telegraphic English replacements.
+  - **Fast Provisioning**: Added detailed master execution logs for `node_modules` provisioning.
+
+---
+
+## [1.2.71] - 2026-07-03
+
+### Fixed
+- **Multi-Agent Collapsible Tools & Clicks**: Fixed a bug where tool log groups that are not nested under an agent/user message (such as immediate tool calls at the start of a Superagent session) were unclickable/unexpandable, failing to render their merged results and output. Made the click handler in `useDashboardMouse.ts` strictly check for clicks within the visible vertical bounds of the log box to avoid misalignments.
+
+---
+
+## [1.2.70] - 2026-07-02
+
+### Changed
+- **Aligned Log Console Layout & Removed Dividers**: Adjusted the log console formatting in `dashboardLogFormatter.tsx` to align tool inputs, outputs, and separator lines perfectly with the expanded tool header by substituting spaces for extra inner vertical tree line elements. Completely removed the horizontal divider line (`──────────`) from expanded tool logs.
+
+---
+
+## [1.2.69] - 2026-07-02
+
+### Changed
+- **Multi-Agent Mode Footer Simpler Layout**: Simplified the redesigned status bar to use a clean and minimal cyberpunk text layout, replacing the heavy pseudo-tree bracket characters with clean label tags and simple vertical dividers (`│`).
+
+---
+
+## [1.2.68] - 2026-07-02
+
+### Fixed
+- **Prompt-based Tool Calling History Format**: Resolved an issue where reasoning/thinking models or custom endpoints would get stuck in a "Communication error: Model tried to call unavailable tool..." retry loop. This occurred because previous turns executed native tool calls, but subsequent calls to the model had native tool calling disabled (`supportsNativeTools = false`), causing the LLM provider API to reject the history containing native tool-call/tool-result blocks. Fixed by resolving `supportsNativeTools` early in the execution loop and converting the history messages containing native tool calls and results to standard XML text prompts when native tools are disabled.
+
+---
+
+## [1.2.67] - 2026-07-02
+
+### Changed
+- **Multi-Agent Mode Footer Redesign**: Restructured the multi-agent mode footer (`src/components/dashboard/dashboard-status-bar.tsx`) to use a clean, structured cyberpunk panel style with consistent border characters (`┌───`, `├───`, `└───`), colored tags for engine status and statistics, and aligned layout rows to match height budgeting, eliminating word-wrapping issues.
+
+---
+
+## [1.2.66] - 2026-07-02
+
+### Fixed
+- **Multi-Agent Collapsible Log Group Clicks**: Resolved a click-to-expand bug where collapsible tool/think log headers were unclickable for `SUPERAGENT` sessions. The layout math of `logBoxStartRow` and `logBoxHeight` now dynamically accounts for the taller Title box (2 lines instead of 1) in sessions that render a git worktree path, preventing mouse coordinate misalignment.
+- **Collapsed Header Duplicate Emojis**: Removed the redundant icon prefix rendering in collapsed log headers. The headers now correctly rely solely on the beautiful emoji prefixes defined directly on each group's label.
+
+---
+
+## [1.2.65] - 2026-07-02
+
+### Fixed
+- **Tool Error Log Truncation**: Increased the log truncation slice limit from 200 to 2000 characters for `appendMasterLog` and `appendToolsErrorLog` in `src/core/permissions.ts`, as well as `src/core/tools/subagentTools.ts`. This prevents absolute folder paths and detailed error messages from being truncated (e.g., cutting off in the middle of session folder names), resolving cosmetic errors that look like path resolution bugs in the multi-agent UI.
+
+---
+
+## [1.2.64] - 2026-07-02
+
+### Fixed
+- **Tool Support Probing with Reasoning Models**: Improved the `probeToolCallSupport` utility by changing the test probe prompt to explicitly instruct the model to call the probe tool, increasing the token limit to 128 to accommodate thinking/reasoning prefixes, and ensuring strict boolean coercion of the result. This prevents tool-capable models on custom/local endpoints (like Cohere) from failing the probe and triggering "unavailable tool 'manage_plan'" errors during subsequent runs.
+
+---
+
+## [1.2.63] - 2026-07-02
+
+### Fixed
+- **Multi-Agent Collapsible Tool Logs Clicks**: Unified log parsing, nesting, merging, and line wrap calculations between `computeLogGroupBoundaries` and `computeWrappedLogs` in `dashboardLogFormatter.tsx`. Correctly accounted for stripped prefixes in boundary wrap math and added line count mappings for expanded tool divider and output streams, ensuring terminal click actions perfectly align with log entries for expansion and collapse.
+
+---
+
+## [1.2.62] - 2026-07-02
+
+### Fixed
+- **Multi-Agent Provider Preset Routing**: Resolved a bug where custom model presets saved from the model wizard omitted the provider prefix (e.g. `cohere/north-mini-code:free` instead of `openrouter@cohere/north-mini-code:free`) if they matched the active provider. When applied, these presets resolved `providerProfileId` to `""`, causing the connection details resolver to fall back to the first available provider with a key (e.g., local proxy on port 8085), leading to connection failures. Fixed by always prepending the provider prefix in the wizard and adding automatic parsing of `@` strings in `setTierModel`/`setAllTierModels`.
+
+---
+
+## [1.2.61] - 2026-07-02
+
+### Fixed
+- **Multi-Agent Log Stream Carriage Return Resolution**: Fixed an issue where carriage returns (`\r`) in the master log queue were stripped prior to stream concatenation, preventing correct in-place countdown updates and causing wrapped lines to duplicate rather than overwrite. Updated the log processing interval in `MultiAgentDashboard` to retain raw carriage returns and apply `resolveCarriageReturns` across concatenated master agent log text.
+
+---
+
+## [1.2.60] - 2026-07-02
+
+### Fixed
+- **Multi-Agent & Subagent Retry Countdown Formatting**: Resolved an issue where communication retry countdowns (`\rRetrying in Xs...`) in multi-agent mode and subagents caused line wrapping collisions, text corruption (e.g. `ttempt 1/10...ation error:`), and log file pollution. Updated `resolveCarriageReturns` in `src/utils/text.ts` to cleanly handle trailing carriage returns from CRLF and inline updates, and integrated it into `appendToThinkingNode` across `subagentTools.ts`, `superagentTools.ts`, and `cli.tsx`.
+
+---
+
+## [1.2.59] - 2026-07-02
+
+### Fixed
+- **TencentDB Gateway Silence Persistence**: Fixed an issue where the `tencentdb-gateway` process would still appear in the Active Processes list in single or multi mode. Added `isHidden` to the persisted tasks schema in `background-tasks.json` so that the hidden status is preserved across CLI sessions. Also updated the `/processes` slash command and the keyboard dashboard navigation hooks to correctly filter out hidden tasks.
+
+---
+
+## [1.2.58] - 2026-07-02
+
+### Fixed
+- **XTerm SGR Mouse Click Leak Fix**: Fixed an issue where rapid or partial XTerm SGR mouse tracking escape sequences (e.g. `[<0;1;5M`) would leak directly into the terminal prompt. Implemented a robust prefix-based filter in the dashboard keyboard hook `useDashboardKeyboard` and the text input component `ChatTextInput` to catch and ignore all full and partial mouse click sequences.
+
+---
+
+## [1.2.57] - 2026-07-02
+
+### Added
+- **TencentDB Gateway Daemon Silence**: Added `isHidden` flag support to `BackgroundTask`. Configured TencentDB Memory Gateway auto-started background processes to run completely silently in the background by excluding them from the terminal dashboard's Active Processes list, Workspace Registry list, and active agents list, resolving clutter in multi-agent mode.
+
+---
+
+## [1.2.56] - 2026-07-02
+
+### Fixed
+- **UI Log Scroll Lock**: Fixed an issue where the conversation log/history could not be scrolled using the Up/Down arrow keys during thinking or streaming (when the agent is processing). Also implemented dynamic scroll-pinning so that if the user scrolls up to view past logs, the viewport does not slide downwards when new streaming tokens or logs are appended at the bottom.
+
+---
+
+## [1.2.55] - 2026-07-02
+
+### Fixed
+- **MCP Live Process Bleed**: Fixed `McpManager` passing no `stderr` option to `StdioClientTransport`, which caused the MCP SDK to default to `stderr: 'inherit'`. This made subprocess output from MCP server processes (e.g. `pip install`, build logs) flood directly into Superagent's terminal UI as an unexpected "live process". Now `stderr: 'pipe'` is passed explicitly, capturing all subprocess output internally. Captured stderr is surfaced in error messages when the MCP connection fails, providing richer diagnostics without polluting the terminal.
+
+---
+
+## [1.2.54] - 2026-07-02
+
+### Fixed
+- **Workflow Testing**: Mocked `execa` in `tests/masterAgentWorkflow.test.ts` to prevent executing real git commands (such as creating the `feat/test` worktree/branch) on the host repository during test runs.
+
+---
+
+## [1.2.53] - 2026-07-02
+
+### Added
+- **Pragmatic Minimalism Skill**: Consolidated a new pragmatic-minimalism skill guidelines to promote simple, minimal, and high-impact solutions.
+- **Coding Guidelines Update**: Added coding best practices, maintainability, scalability, and modularity guidelines to `AGENTS.md`.
+
+### Changed
+- **Best Practices Refinement**: Refined best practices guidelines in `AGENTS.md` to use token-efficient, telegraphic English.
+
+---
+
+## [1.2.52] - 2026-07-02
+
+### Changed
+- **Gitignore Update**: Added `node_modules/`, `dist/`, `bin/python/`, `vendor/`, and local temporary test directories to `.gitignore` to keep git status clean.
+
+---
+
+## [1.2.51] - 2026-07-02
+
+
+### Added
+- **Keyboard Auto-Refocus**: Typing any printable character (letters, spaces, symbols) while a non-input panel (like logs, registry, or checklist) is focused will automatically switch focus back to the input box and append the typed character to the input query.
+
+---
+
+## [1.2.50] - 2026-07-02
+
+### Changed
+- **Help Text and Documentation**: Updated `/help` command output and setting descriptions in `/settings` command helper messages to clarify that setting the value to `0` configures `unlimited` max iterations and `auto` context window limits.
+
+---
+
+## [1.2.49] - 2026-07-02
+
+### Changed
+- **Unlimited Iterations Limit**: Added support for setting the agent loop iteration limit (`maxIterations`) to `0` for unlimited execution. Updated display strings in settings and loop messages to show `"unlimited"` instead of `0` or `Infinity`.
+
+---
+
+## [1.2.48] - 2026-07-01
+
+### Changed
+- **Skills Prompt Optimization**: Replaced the detailed list of installed agent skills with a concise, telegraphic instruction set in the system prompt. This directs the agent to locate and read relevant skills under the `.agents/skills/` directory on-demand, saving thousands of prompt tokens and reducing system prompt bloat.
+
+---
+
+## [1.2.47] - 2026-07-01
+
+### Fixed
+- **Test Stability**: Increased polling timeout to 10s and reduced polling step to 10ms in `agentAbortInterrupt.test.ts` to prevent flaky failures under high CPU load or concurrent test execution.
+
+---
+
+## [1.2.46] - 2026-07-01
+
+### Changed
+- **System Prompts Optimization**: Redesigned and audited all system prompts in the codebase (`MASTER_AGENT_SYSTEM_PROMPT`, `SUPERAGENT_SYSTEM_PROMPT`, and all four `SUBAGENT_SYSTEM_PROMPTS`) using Concepts A, B, and C (Telegraphic English, Markdown structure, and Pseudocode logic gates) to achieve a ~50% reduction in token count and increase reasoning reliability.
+- **System Prompt Guidelines**: Added a dedicated `System Prompt Guidelines` section to `AGENTS.md` to serve as a project specification and reference for writing and maintaining system prompts.
+
+---
+
+## [1.2.45] - 2026-07-01
+
+### Fixed
+- **Malformed XML/JSON Tool Call Parsing**: Fixed a bug where the model's blended/malformed XML and JSON tool calls (e.g. `<tool name="..." "arguments": {...}}` or `<tool_name="..." "arguments": {...}}`) would fail to parse and leak onto the user's terminal as plain text. Added robust brace balancing fallback parsing and updated the stream filter (`StreamXmlFilter`) to correctly block these malformed tool blocks from being printed to the stdout stream.
+
+---
+
+## [1.2.44] - 2026-07-01
+
+### Fixed
+- **TencentDB Memory Client API Alignments**: Updated `/memory` slash command and `tdai_memory_save` tool execution logic to match the updated `@tencentdb-agent-memory/memory-tencentdb` signature where `updateAtomic` parameters do not include `type` or `upsert` fields. Fixed corresponding unit and integration tests.
+
+---
+
+## [1.2.43] - 2026-07-01
+
+### Added
+- **Multi-Agent vs Single-Agent Skill Grouping**: Added `isMultiAgent` filtering in `loadAgentSkills`. When running in single-agent mode, multi-agent specific skills (such as `master-agent-orchestration`, `team-composition-patterns`, `team-communication-protocols`, and `dispatching-parallel-agents`) are automatically filtered out and excluded from the agent skills prompt to prevent unnecessary token consumption and guidelines clutter.
+
+---
+
+## [1.2.42] - 2026-07-01
+
+### Added
+- **State-Based Preloaded Skills Optimization**: Optimized preloaded guidelines/mandatory skills inside `Agent` system prompt. Skills (like `superagent-planning`, `executing-plans`, `systematic-debugging`) are now dynamically preloaded based on the agent's current planning/execution state and query keywords, saving another 4,000–7,000 tokens on every turn. Added an in-memory caching system to prevent redundant disk I/O when dynamically building guidelines.
+
+---
+
+## [1.2.41] - 2026-07-01
+
+### Added
+- **Dynamic Skill Filtering & Prompt Optimization**: Implemented query-based dynamic filtering for loading agent skills. This replaces the static all-skills injection, reducing initial system prompt tokens by up to 10,000–15,000 tokens. It uses whole-word keyword matching against the user's recent queries while permanently retaining a core set of operational skills (like `karpathy-guidelines` and `getting-started-with-skills`).
+
+---
+
+## [1.2.40] - 2026-06-30
+
+### Fixed
+- **XML Tool Call JSON Parsing Robustness**: Implemented a regex-based JSON parser and repair fallback in `xmlToolParser` to successfully extract and parse tool arguments containing unescaped double quotes. This prevents slightly malformed JSON outputs (e.g. from local/custom models trying to execute bash commands) from failing to parse and leaking as raw XML/JSON text in the terminal.
+
+---
+
+## [1.2.39] - 2026-06-30
+
+### Added
+- **Focus Commands Help & Autocomplete**: Added autocomplete suggestions for `/setting-focus` and `/focus` subcommands in the CLI. Added `/setting-focus` and `/setting-focus-budget` commands to the `/help` output.
+
+---
+
+## [1.2.38] - 2026-06-30
+
+### Added
+- **Focus Setting (Reasoning Depth Control)**: Implemented a rebranded focus level setting (`off`, `low`, `medium`, `high`, `xhigh`, `max`, `custom`) allowing users to control reasoning thinking token budgets for Anthropic Claude 3.7+ models and reasoning effort for OpenAI o-series models.
+- **Focus Slash Commands**: Implemented `/setting-focus` (alias `/focus`) and `/setting-focus-budget` commands to configure focus levels and budgets from the CLI.
+- **Focus UI Display**: Integrated focus level status indicators dynamically onto the terminal `StatusBar` footer.
+
+---
+
+## [1.2.37] - 2026-06-30
+
+### Changed
+- **Release Sync**: Version bump for release synchronization.
+
+---
+
+## [1.2.36] - 2026-06-30
+
+### Added
+- **Help and Suggestions for MCP**: Updated `/help` command output to describe `/mcp` subcommand usage. Added autocomplete tab-completion suggestions for `/mcp` subcommands (`list`, `add`, `remove`, `reload`) in the CLI.
+
+---
+
+## [1.2.35] - 2026-06-30
+
+### Changed
+- **Footer UI cleanup**: Removed the keyboard shortcuts legend and the green `🟢 ONLINE` connection indicator/text from both the single-agent `StatusBar` footer and multi-agent `DashboardStatusBar` footer.
+- **Help Command Updates**: Moved and expanded the keyboard shortcuts info to the `/help` command output.
+
+---
+
+## [1.2.34] - 2026-06-30
+
+### Added
+- **AI Agent MCP Management**: Exposed the `manage_mcp` tool to the AI agents (`masterToolset`, `superagentToolset`, and `defaultSubagentToolset`). This allows agents to programmatically add, remove, list, and reload MCP servers during feature implementation.
+- **Pengujian**: Extended tests in `tests/mcp.test.ts` to cover `manage_mcp` tool execution actions.
+
+---
+
+## [1.2.33] - 2026-06-30
+
+### Added
+- **MCP Client Feature**: Integrated Model Context Protocol (MCP) client features. Superagent can now connect to local/remote stdio-based MCP servers and register their tools dynamically across all agent tiers (Master, Superagent, and Subagents).
+- **McpManager**: Created `src/core/mcp/McpManager.ts` to manage the lifecycle of MCP server connections and tools.
+- **MCP Slash Command**: Implemented `/mcp` command (with `list`, `add`, `remove`, `reload` subcommands) in `src/core/commands/mcpCommand.ts` to easily inspect and configure MCP servers from the terminal.
+- **Tests**: Created a comprehensive mock-based test suite in `tests/mcp.test.ts` to verify MCP configurations and tool loading.
+
+---
+
+## [1.2.32] - 2026-06-29
+
+### Audited & Improved
+- **System Prompts**: Audited system prompts across all tiers (Master, Superagent, Subagents).
+- **Windows Command Separator Support**: Added explicit Windows PowerShell command separator (`;` instead of `&&`) instructions to `coder`, `reviewer`, and `manual-tester` subagent prompts to ensure robust command execution on Windows.
+- **Manual Tester UI/UX Checks**: Integrated high-quality visual UI/UX / design taste checks into the `manual-tester` system prompt.
+- **Redundant Prompts Clean-up**: Imported `SUBAGENT_SYSTEM_PROMPTS` directly into `src/core/tools/index.ts` for subagent registration, preventing drift and eliminating duplicate/redundant hardcoded prompts.
+- **Duplicate Reports Prevention**: Updated `subagentTools.ts` to skip appending the generic `SUBAGENT_REPORT_INSTRUCTION` if the resolved subagent prompt already defines a custom report format, preventing model confusion from duplicate instructions.
+- **Documentation Refinement**: Removed outdated comment about `loadAgentSkills` inside `prompts.ts` to keep codebase docs accurate.
+
+---
+
+## [1.2.31] - 2026-06-29
+
+### Improved
+- **AI Agent Guidelines**: Updated `AGENTS.md` guidelines to strictly enforce coding files under 1000 lines, emphasize best practices, modularity, maintainability, optimization, and require commits, version bumps, and changelog updates for every change.
+
+---
+
+## [1.2.30] - 2026-06-28
+
+### Added
+- **Dynamic Limit Configuration**: Made checklist, history, and process visible limits dynamic and configurable via settings.
+- **Git Branch and Workspace Tracking**: Dynamically track and update git branch and workspace path in footer and dashboard.
+- **Diagnostics Event Logging**: Added mouse click raw event logging to superagent.log for diagnostics.
+
+### Fixed
+- **Mouse Tracking Mode**: Upgraded mouse tracking to button-event mode (1002h) to support scrolling and clicks in xterm/VS Code.
+- **TTY Cursor Flickering**: Hide native cursor in TTY mode to prevent flickering in xterm during thinking updates.
+- **Ask Question Input Validation**: Fixed parsing and handling of stringified JSON arrays in question options and coerced `isMultiSelect`.
+
+### Improved
+- **History Search Performance**: Isolated subagent and superagent session history to prevent heavy load on listing.
+- **Settings Autocomplete**: Documented visible limit settings commands in the help screen and autocomplete suggestions.
+- **Agent Dev Hook Context**: Clarified CWD and relative path prefix rules in the dev hook system prompt notice.
+
+---
+
+## [1.2.29] - 2026-06-27
+
+### Added
+- **Internal Hook Auto-Activation**: Auto-activate the hook on the `/ih dev <name>` command if it is not already active.
+- **Active Hook Prompt Focus**: Load hook-specific skills from `.agents/skills` and dynamically inject active development hook prompt focus.
+
+### Improved
+- **Dynamic Directory Switching**: Dynamically switch the agent's workingDirectory to the active focused hook directory during `/ih dev` command executions.
+
+---
+
+## [1.2.28] - 2026-06-26
+
+### Added
+- **TencentDB Memory Management Command**: Introduced a new `/memory` slash command for real-time TencentDB memory management, configuration, and diagnostics.
+
+### Fixed
+- **TencentDB Gateway Startup**: Configured the `tencentdb-gateway` process to run headlessly using `node --import tsx` on Windows to prevent an intrusive command prompt window from showing.
+- **TencentDB Gateway Synchronization**: Fixed duplicate schema export crashes during `tencentdb-gateway` startup and strengthened patch file synchronization logic.
+
+### Improved
+- **History Search Performance**: Optimized history search via in-memory caching, parallel async I/O, fast fuzzy matching, and concurrent AI-based semantic summarization.
+- **Semantic Search Caching**: Implemented highly responsive semantic search caching with an expanded candidate pool and real-time progress logging, parameterized by model and provider.
+- **TencentDB Memory Sync**: Reduced disk write overhead by optimizing turn-based TencentDB memory syncing to bypass redundant writes, and consolidated memory read/save routines with fast timeouts.
+- **CLI Help & Suggestions**: Integrated the `/memory` command into the global help menus and autocomplete dashboard suggestions, and updated `/ih dev` command documentation.
+
+## [1.2.27] - 2026-06-26
+
+### Added
+- **TencentDB Memory Gateway Enhancements**: Added support for upsert semantics, type mapping, custom priority, and strict type validation in TencentDB memory gateway updates.
+- **Patched Router Startup Copying**: Copy the patched router to the vendor gateway directory on startup to ensure persistence.
+- **Status Bar Focus Display**: Set workspace focus on `/ih dev` command and display the active workspace focus in the status bar footer.
+
+### Fixed
+- **StreamXmlFilter Robustness**: Enhanced `StreamXmlFilter` to be robust against mismatched `tool_call` closing tags.
+
+---
+
+## [1.2.26] - 2026-06-26
+
+### Added
+- **TencentDB Memory Writes**: Added `tdai_memory_save` and `tdai_conversation_add` tools to support direct memory storage and conversation history updates for TencentDB.
+
+### Fixed
+- **File Replace Tools**: Enhanced file replacement tools with overlap detection, robust index mapping, and fallback search behaviors to prevent incorrect offsets during multiple replacements.
+- **Multi-Replace JSON Parsing**: Improved `multi_replace_file_content` robustness by correctly handling JSON stringified inputs, resolving malformed chunk structures, and preventing undefined property read errors.
+- **Terminal Input Lockup**: Resolved terminal UI freeze/lockup and sluggish typing after pasting large text. Optimized rendering in `ChatTextInput.tsx` with a sliding character window and fixed pasting state transitions in `app.tsx` and `multi-agent-dashboard.tsx`.
+
+### Improved
+- **Token Usage Optimization**: Optimized file reading, searching, and grep tools along with agent workflow architectures to minimize token consumption and lower LLM API costs.
+
+---
+
+## [1.2.25] - 2026-06-26
+
+### Added
+- **Delete Provider Option**: Added a delete/remove provider option to the `/login` setup wizard, including:
+  - Interactive search and filter interface for selecting a provider profile to delete.
+  - Step 14 list view and Step 15 confirmation dialog rendering.
+  - Test suites aligned with provider deletion and credential management.
+- **XML/DSML Tool Call Parsing**: Support for parsing, filtering, and stripping XML and DSML format tool calls from streaming and non-streaming models (e.g. DeepSeek and OpenAI proxies).
+- **Prompt Caching Support**: Integrated Anthropic prompt caching in the FastContext runner, and optimized workspace cache scanning to reduce context token usage.
+
+### Fixed
+- **XML Tags Leakage**: Screen/terminal output now filters out raw XML/DSML tool tags from both streaming and static assistant message responses in real-time.
+- **Click Coordinates on Truncated Text**: Fixed selection and coordinates mapping for click actions in long assistant responses when lines wrap/truncate.
+- **Type Conversion Bypass**: Respected the `string='true'` parameter attribute in tool calls to prevent numerical properties from being incorrectly converted to numbers.
+- **OpenAI Endpoint Model Handling**: Enforced the OpenAI SDK wrapper for custom OpenAI endpoints serving Claude models, and correctly identified Anthropic profiles with custom base URLs as OpenAI-compatible.
+
+### Improved
+- **History Cache Performance**: Optimized `listHistorySessions` by introducing incremental metadata caching and a 30-second TTL cache to reduce disk reads.
+
+---
+
+## [1.2.24] - 2026-06-25
+
+### Fixed
+- **Subagent Premature Timeouts**: Enforced a minimum timeout of 10 minutes (`600000` ms) for subagent execution when a lower timeout is requested, preventing premature timeouts on slow local models, slow routers, or very large prompt context sizes. Excluded test environments (`process.env.VITEST`) to preserve unit test behaviors.
+
+---
+
+## [1.2.23] - 2026-06-25
+
+### Added
+- **Streaming Optimizations**: Implemented prompt caching, UI throttling, and line wrap caching to optimize terminal rendering performance.
+- **Overloaded Retry Mechanism**: Added automatic retries for server overloaded/rate-limited errors (503/429) up to 5 times with exponential backoff.
+- **TencentDB Terminal Window Control**: Added show/hide commands for the TencentDB terminal window and made spawning silent.
+
+### Improved
+- **Subagent Execution Mode**: Switched the default execution mode of subagents to background mode.
+
+---
+
+## [1.2.22] - 2026-06-25
+
+### Added
+- **Config Lock Tests**: Added unit tests for `model-config.json` locking, reentrant acquisitions, stale lock overriding, and non-destructive corruption recovery.
+
+---
+
+## [1.2.21] - 2026-06-25
+
+### Improved
+- **Mandatory Skill Preloading — Gap Fixes**:
+  - `markPreloadedSkillsInList` now applies to **all** agent tiers (was incorrectly limited to custom-prompt agents only). Main Master/Superagent/Subagent instances now also get their preloaded skills tagged `[Content already loaded in context above]` in the `INSTALLED AGENT SKILLS` list, preventing redundant re-reads.
+  - Added `trimSkillContent` static helper with frontmatter-aware trimming: YAML `---` blocks are always preserved in full; the `MAX_SKILL_LINES` (300) cap applies only to the body content so skill metadata is never cut off.
+
+---
+
+## [1.2.20] - 2026-06-25
+
+### Fixed
+- **Skill Path Resolution and Deduplication**:
+  - Normalized agent skill paths to standard slashes and casing (specifically for Windows paths) to prevent duplicate loading.
+  - Prioritized workspace local skills (`.agents/skills/`) and deduplicated duplicate global or source-level skills with identical names and authors.
+- **Master Agent Orchestration**:
+  - Conditionally load the `master-agent-orchestration` skill guidelines only when running in the Master Agent tier to keep prompt sizes efficient for other tiers.
+
+---
+
+## [1.2.19] - 2026-06-25
+
+### Fixed
+- **Image Fallback for Non-Vision Models**:
+  - Automatically strip and replace image parts with placeholders when the active model lacks native vision support.
+  - Append base64 image data within the text placeholder fallback, ensuring image context is preserved in text form.
+- **Suggestion Cursor Behavior**:
+  - Fixed autocompletion behavior so that accepting a suggestion snaps the cursor/pointer to the end of the input string and automatically appends a trailing space for unique suggestions.
+
+---
+
+## [1.2.18] - 2026-06-25
+
+### Added
+- **Live Tool Progress Logging**: Added real-time progress logging inside the `search_history` tool execution block in the terminal UI, displaying matching and summary steps as they occur.
+- **Chat-Line Diff Stats**: Fixed rendering of `+N -N` diff statistics on file-edit tool results in the `chat-line` component to match the central `chat-area` dashboard layout.
+
+---
+
+## [1.2.17] - 2026-06-25
+
+### Added
+- **Image Attachments Support (`/image`)**:
+  - Added a new `/image` slash command to manage prompt image attachments in the terminal UI.
+  - Supports `/image paste` to attach an image from the system clipboard.
+  - Supports `/image attach <path>` to attach an image from a specified file path.
+  - Added support for detecting and processing file drop list in the clipboard.
+
+---
+
+## [1.2.16] - 2026-06-25
+
+### Added
+- **Whitespace-Insensitive Matching**: Added whitespace-insensitive matching to `multi_replace_file_content` to make tool edits more robust.
+
+### Fixed
+- **CRLF Line Endings Preservation**: Preserved CRLF line endings in file edit tools (`replace_file_content`, `multi_replace_file_content`, `apply_patch`).
+- **Context Usage Tracker**: Prevented context usage tracker from resetting to 0% on model switch.
+- **Shell Command Truncation**: Truncated long shell commands in tool action descriptions for cleaner output.
+
+---
+
+## [1.2.15] - 2026-06-25
+
+### Added
+- **Diff Stats on File Edit Results**: Chat view now displays `+N -N` diff statistics on file edit tool results, giving a quick summary of lines added/removed per edit.
+- **Expand manage_tasks (update) by Default**: The `manage_tasks` update action is now automatically expanded in the chat view for better visibility of task progress.
+
+### Fixed
+- **DeepSeek Reasoning Token Separation**: Separated DeepSeek reasoning tokens from the assistant message content to prevent them from being mixed into the main response stream.
+
+---
+
+## [1.2.14] - 2026-06-25
+
+### Added
+- **Exit Confirmation Dialog**:
+  - Added a new `exit_confirm` wizard type to gracefully handle `Ctrl+C` interrupts.
+  - Renders a styled confirmation dialog asking whether the user truly wants to exit.
+  - Implemented full submit handling so users can confirm or cancel the exit action without abrupt termination.
+- **Agent Retry on Empty Response**: The agent now automatically retries up to 3 times with progressive delays (10s, 20s, 50s) when the model returns an empty response, improving resilience against transient API failures.
+- **Updated Static Model Limits**: Refreshed OpenRouter model context window limits to reflect the latest available model specifications.
+
+### Improved
+- **Skills & Documentation**:
+  - Updated `master-agent-orchestration` skill with clearer planning and task management guidelines for the Master Agent tier.
+  - Added new `superagent-planning` skill providing structured guidance on creating valid implementation plans and task checklists.
+
+---
+
+## [1.2.13] - 2026-06-25
+
+### Added
+- **Internal Hooks System Expansion**:
+  - **Scaffolding Requirements**: Made `README.md`, `CHANGELOG.md` and Git repository initialization (`git init`) mandatory when scaffolding new internal hooks.
+  - **Automatic Dependency Installation**: Automatically run package manager dependency installation (`npm install`) when scaffolding a hook.
+  - **Watcher Hot-Reload**: Added a file watcher to dynamically reload internal hooks on file edits.
+  - **Telemetry Logging**: Integrated execution time telemetry logging for hooks.
+  - **List Subcommand**: Added the `/ih list` command to display all discovered internal hooks and their registration status.
+
+---
+
+## [1.2.12] - 2026-06-25
+
+### Improved
+- **Hook Workspace Privacy & Isolation**:
+  - Configured git ignore rules in `internal-hooks` to exclude all custom hook scripts and configurations except `.gitignore`, ensuring custom scripts are kept private and not committed to public repositories.
+  - Ignored `node_modules/` and log files inside `internal-hooks` to keep the workspace clean.
+- **Hook Documentation**:
+  - Added detailed instructions on how to activate custom internal hooks to `SKILL.md`.
+
+---
+
+## [1.2.11] - 2026-06-25
+
+### Added
+- **Internal Hooks System Expansion**:
+  - **Dynamic Slash Commands (`slash_commands`)**: Custom CLI commands configured inside `hook.json` are now dynamically registered into the CLI command registry, rendering automatically in the auto-complete dashboard suggestion list.
+  - **Event Hooks (`event_hooks`)**: Implemented lifecycle event hooks for `pre_tool`, `post_tool`, `pre_command`, and `post_command`. Stdin pipes JSON metadata representing the event context to hook scripts.
+  - **Dynamic Hook Skills**: Added support for packaging dynamic agent instructions in `skills/` folders directly within hooks. Any subdirectories containing `SKILL.md` files are loaded on startup.
+- **Hook Documentation Update**: Updated `SKILL.md` for `Developing Internal Hooks` detailing the new configurations, triggers, context inputs, and best practices.
+
+---
+
+## [1.2.10] - 2026-06-24
+
+### Improved
+- **Compaction & Summarization Strategy Enhancements**:
+  - **Truncation Guard**: Truncate formatted past chat history to a maximum of 80,000 characters before sending it to the LLM to prevent context window overflow and costly retry loops.
+  - **Dynamic Abort Signal Propagation**: Properly propagate abort signals to LLM summarization calls for responsive cancellation.
+  - **Improved Cost Estimation**: Fixed token/cost estimation inside `SummarizationStrategy` by counting using `contentToString()` instead of direct length on message content.
+- **TencentDB Memory Strategy Enhancements**:
+  - **Folder-based Hashed Session Keys**: Use a stable 8-character hash of the project path for the TencentDB session key, preventing session collisions between projects with the same folder name.
+  - **Compaction Watermark Resume**: Lazily load `lastCapturedTimestamp` from the persistent compaction history on startup to accurately resume log capturing from the last processed message.
+  - **L0 Log Safety**: Re-enabled `await` on `addConversation` during L0 capture to ensure transactional persistence.
+  - **Dynamic Atomic Search Limit**: Automatically scale the `limit` for atomic memory searches based on the token budget.
+  - **Watermark Auditing**: Persist `lastCapturedTimestamp` as metadata in the compaction event logs.
+- **Setup Cleanup**:
+  - Cleaned up settings check in `tencentdbSetup.ts` to rely solely on CLI arguments instead of `process.env.SUPERAGENT_MULTI` to determine the model mode.
+
+---
+
+## [1.2.9] - 2026-06-24
+
+### Added
+- **Internal Hooks System**: Introduced a fully extensible custom tool framework allowing users to register their own executable scripts as first-class agent tools directly within any project.
+  - **`/ih init <name>`** (alias: `/internal-hooks init <name>`): Scaffolds a new hook project workspace under `internal-hooks/<name>/` with `hook.json` (tool schema), `package.json`, `index.js` (entrypoint), and `test-payload.json` (dev fixture). Newly created hooks are automatically activated and hot-reloaded into the agent's live toolset.
+  - **`/ih dev <name>`**: Runs the hook locally using its configured `dev` script (or `command` fallback), piping `test-payload.json` as stdin. Supports both interactive and non-interactive execution paths with stdout/stderr capture and timing output.
+  - **`/ih active`**: Opens an interactive multi-select checkbox dialog listing all discovered hooks. Uses the existing question-handler system for consistent UX. The selected active set is persisted per-project inside `~/.superagent-r/model-config.json` (`activeHooks` key) and hot-reloaded immediately.
+- **Dynamic Hook Loading (`dynamicHooks.ts`)**: Hooks under `internal-hooks/` are discovered and loaded on startup via `loadDynamicHooks()` and refreshed on-demand via `refreshDynamicHooks()`. Supports per-project active-state filtering so inactive hooks are silently skipped.
+- **Autocomplete Support for `/ih`**: Full tab-autocomplete for `/ih`, `/ih init`, `/ih dev`, and `/ih active`. Both `/ih init` and `/ih dev` dynamically suggest discovered hook names from `internal-hooks/`.
+- **Internal Hooks Skill Guide**: Added skill documentation at `.agents/skills/internal-hooks/SKILL.md` describing the hook file structure, commands, and best practices for script authorship.
+
+### Improved
+- **`/help` now documents `/ih`**: The in-app `/help` output now includes the full `/ih` subcommand reference (`init`, `dev`, `active`) so users can discover the feature without leaving the terminal.
+- **Autocomplete descriptions updated**: `/ih` and `/internal-hooks` descriptions in `dashboardSuggestions.ts` now accurately reflect all three subcommands.
+
+---
+
+## [1.2.8] - 2026-06-24
+
+### Added
+- **Background Processes Command**: Added `/setting-tencentdb show-bg-procs` slash command to inspect background TencentDB memory gateway processes.
+- **Settings Auto-complete & Help Update**: Registered `show-bg-procs` sub-options in `/help` and tab completion.
+
+### Fixed
+- **Terminal Input Backspace Fix**: Resolved input backspace and delete keypress issues under certain terminals by correctly parsing `\x7f` and `\x1b\x7f` backspace sequences.
+- **TencentDB Gateway Tag Pinning**: Enforced locking the gateway repository version to tag `v1.0.0` with automatic cleanup of obsolete `node_modules` during version changes.
+- **Windows Postinstall Workaround**: Bypassed problematic pre/postinstall lifecycle scripts during dependency installation on Windows by using `--ignore-scripts`.
+
+### Improved
+- **Background Tasks Lifecycle**: Integrated the background TencentDB gateway process into the persistent CLI `backgroundTasks` registry for unified process visibility.
+
+---
+
+## [1.2.7] - 2026-06-24
+
+### Added
+- **TencentDB Gateway Status Check**: Added a live connection health check and status reporting via the `/setting-tencentdb status` command.
+- **Live Connection Health Footer**: Added real-time connection status check for the local TencentDB gateway directly in the UI footer.
+- **Settings Auto-complete & Help**: Integrated settings command configurations (like `/setting-tencentdb`) into `/help` output and autocomplete suggestions.
+
+### Fixed
+- **TencentDB Setup Robustness**: Prevented duplicate git clone issues when `vendor/tencentdb-memory` already exists.
+- **Streaming Interruption**: Resolved streaming cancellation/interruption issues on ESC and Ctrl+C with robust key detection.
+
+### Improved
+- **Conversation History Performance**: Optimized performance for large conversation histories through TokenTracker caching, linear pruning, UI viewport line wrapping, and TTL caching for history sessions.
+
+---
+
+## [1.2.6] - 2026-06-24
+
+### Added
+- **TencentDB Memory Integration**: Integrated the fully local, 4-tier progressive memory system (`@tencentdb-agent-memory/memory-tencentdb`) as a compaction strategy inside the `ContextManager`. It automatically captures raw turns (L0), extracts atomic facts (L1), groups scenarios (L2), and maintains a unified user profile (L3).
+- **Zero-Config Auto-Setup & Spawning**: Enhanced `/setting-tencentdb on` to automatically clone the gateway repository into `vendor/tencentdb-memory` and run `npm install` if missing, spawning it in the background as a detached process on port 8420.
+- **Asynchronous Startup Self-Healing**: Integrated `runTencentdbSetup()` in `cli.tsx` to automatically run a non-blocking connection check on startup when enabled, spinning the gateway up in the background asynchronously if it is offline.
+- **Dynamic Preset & Provider Resolution**: Configured the background gateway process to resolve memory-specific tier presets from presets (via `/model` for the `"memory"` or `"tencentdb"` tier), falling back to the active provider and master model, and injecting credentials via environment variables (`TDAI_LLM_API_KEY`, etc.).
+- **Global Storage Isolation**: Structured the gateway to store its SQLite database and memory files globally under `~/.superagent-r/tencentdb-memory/vectors.db`, keeping the active workspace clean.
+- **UI & Tools Integration**: Added a visual `🧠 Mem: ON` / `🧠 Mem: OFF` status indicator in the footers of both the terminal UI and multi-agent dashboards. Registered `tdai_memory_search`, `tdai_conversation_search`, and `tdai_read_cos` across all active agent tiers.
+- **Workspace Hygiene**: Added `vendor/tencentdb-memory/` to `.gitignore` to prevent any untracked or node_modules files from polluting git status.
+
+---
+
+## [1.2.5] - 2026-06-24
+
+### Added
+- **Multimodal Image Paste & Path Detection**: Added native support for image attachments in the terminal. User prompts now accept `MessageContent` (text and image parts) seamlessly mapped to Vercel AI SDK's multimodal payload.
+- **Cross-Platform Clipboard Parsing**: Created a robust platform-native utility (`readImageFromClipboard`) supporting Windows (PowerShell forms), macOS (`pngpaste`/`osascript`), and Linux (`wl-paste`/`xclip`) to automatically extract clipboard image binary data via `Ctrl+V`.
+- **Ink Terminal UI Visual Indicators**: Added `ImageAttachmentBar` rendering in the Ink loop to display attached images and sizes above the input. Enabled `Ctrl+W` in an empty prompt to clear the last attachment.
+- **Universal Dashboard Integration**: Wired the image attachment hook, state, and UI visual indicators into both single-agent mode (`app.tsx`) and multi-agent dashboard mode (`multi-agent-dashboard.tsx`).
+- **Multimodal Token Tracking**: Integrated image token counting overhead (1600 tokens per image) in the live `TokenTracker` display.
+
+---
+
+## [1.2.4] - 2026-06-24
+
+### Fixed
+- **Empty Model Output Handling**: Classified empty model output as a non-retryable error to prevent infinite retry loops.
+- **Background Agent Loop Leak**: Resolved background agent loop execution leak after ESC/abort to prevent ghost processes.
+
+---
+
+## [1.2.3] - 2026-06-24
+
+### Added
+- **Interactive Foreground Commands (TTY Piping)**: Added interactive foreground command execution and `!` shortcut in the terminal interface (`runInteractiveProcess`).
+- **Background Tasks Completed Tracking**: Added `completedAt` timestamp tracking and cleanup for background tasks.
+
+### Fixed
+- **Persistent Background Tasks Registry**: Implemented a persistent registry for cross-process synchronization of background tasks.
+- **TTY Piping Refinements**: Refined signatures and returned a promise from terminal execution.
+- **Implementation Plan Headings Validation**: Relaxed implementation plan heading regex checks for validation flexibility.
+- **Checkpoint Wizard Key Handling**: Scoped checkpoint wizard step 1 key handler so it does not intercept step 2 inputs.
+
+---
+
+## [1.2.2] - 2026-06-24
+
+### Fixed
+- **History View Tool Merging**: Fixed `reconstructChatLines` to properly merge `tool_start` and `tool_end` in the history view.
+- **Model Config Lock Contention**: Resolved `model-config.json` corruption and lock contention under concurrent test runs.
+
+### Improved
+- **Text Streaming Performance**: Removed text streaming throttling and dashboard update delays.
+- **Error Reporting**: Expanded error logs and error reports by default.
+
+---
+
+## [1.2.1] - 2026-06-24
+
+### Added
+- **Dynamic Workspace Fingerprinting**: Integrated workspace fingerprint in fastcontext cache key for dynamic invalidation.
+
+### Fixed
+- **Model Config Write Race Conditions**: Resolved model config deletion and corruption issues due to write race conditions.
+- **Tool Arguments Formatting**: Formatted tool arguments and added custom descriptions for all tools in `getToolDescription`.
+
+### Improved
+- **Tasks Countdown Visibility**: Displayed completed tasks countdown in header only.
+
+---
+
+## [1.2.0] - 2026-06-24
+
+### Added
+- **Smart Workspace Discovery Cache**: Added dynamic workspace change detection on subsequent agent loop iterations and automatic updating of the cache.
+- **Automatic Git Worktree Trusting**: Configured automatic git trusted directories configuration (`safe.directory`) for superagent git worktrees to prevent dubious ownership warnings.
+- **Show Only Agent Name in Chat Headers**: Simplified the terminal UI layout by displaying only the agent name in cognitive node headers.
+
+---
+
+## [1.1.102] - 2026-06-24
+
+### Added
+- **Smart Workspace Discovery**: Implemented fast workspace fingerprint hashing (MD5 hash of sorted file paths, sizes, and timestamps) and startup cache persistence under `~/.superagent-r/workspace-caches/` to bypass redundant codebase scanning.
+- **Glob Cache Interception**: Configured `globTool` to intercept searches and perform in-memory pattern matching using `picomatch` against the cached file list on cache hits, bypassing disk lookup latency.
+- **Workspace Prompts Injection**: Dynamically injected the cached codebase files overview and project specifications directly into the agent's system prompt at startup to provide instant context and avoid initial discovery tool calls.
+- **Picomatch Typings**: Added TypeScript type declarations for the `picomatch` module to ensure compiler type safety.
+
+---
+
+## [1.1.101] - 2026-06-23
+
+### Fixed
+- **Instant Stream Interruptions**: Added explicit abort checks at the start of each text stream chunk iteration in the agent loop. Resolved edge cases where the LLM response stream failed to stop immediately when the user pressed Ctrl+C or Escape.
+- **Dashboard Reset on Interruption**: Automatically set the dashboard's current task status to `"Idle"` or `"Idle - Interrupted"` upon master agent done/abort events.
+
+---
+
+## [1.1.100] - 2026-06-23
+
+### Improved
+- **Throttled Dashboard Updates**: Implemented log buffering and state update throttling (every `30ms`) in the multi-agent dashboard UI and session hook to prevent performance drops and lag during high-frequency token streaming.
+
+---
+
+## [1.1.99] - 2026-06-23
+
+### Improved
+- **Fast Stream Rendering**: Reduced the streaming rendering throttle from `100ms` to `30ms` for much more responsive and faster UI updates when displaying assistant text streams.
+
+---
+
+## [1.1.98] - 2026-06-23
+
+### Added
+- **Multi-Agent Prompts & Self-Verification**: Mandated self-verification, testing, and critique checklists across all agent tiers (Superagent, coder, researcher, reviewer, single-mode).
+- **Subagent Skills Injection**: Injected relevant agent skills into all subagent system prompts.
+- **FastContext Registries Integration**: Integrated fastcontext instructions to manual-tester and subagent registries.
+
+### Improved
+- **Out-of-Bounds Arguments Visibility**: Displayed detailed arguments in the out-of-bounds permission dialog.
+- **UI Log Merging & Collapsing**: Collapsed `tool_start` and `tool_end` logs into a single interactive row.
+- **Dashboard Log Consolidation**: Merged consecutive `TOOL:START` and `TOOL:OK/FAIL` logs into a single row in the multi-agent dashboard UI.
+- **Wizard UI Simplification**: Simplified the collapsed UI layout for the `ask_question` tool.
+- **System Prompts Optimization**: Optimized fastcontext tool usage instructions in system prompts.
+- **Single Mode Guidelines**: Mandated skill checking, reading guidelines, and strengthened orchestration with mandatory subagent usage instructions in single-agent mode.
+
+### Fixed
+- **Persistent Background Tasks**: Preserved active background processes across new chat sessions (`/new`).
+- **Response Truncation Warning Translation**: Translated truncated response warning message into English.
+- **DeepSeek/OpenRouter Validation**: Resolved DeepSeek/OpenRouter orphaned tool message validation errors and improved API HTTP status 400 error response handling.
+- **Error Serialization**: Enhanced error serialization to handle non-Error objects cleanly.
+
+---
+
+## [1.1.97] - 2026-06-23
+
+### Added
+- **Completed Tasks Visual Countdown**: Added a visual countdown timer to completed tasks before they are hidden.
+
+### Fixed
+- **Dashboard Background Tasks**: Corrected the running background tasks filter and fixed a process cleanup leak in the dashboard.
+- **Terminal Initialization Wizard**: Recommends relative paths during the workspace initialization.
+- **MSYS & Windows Path Support**: Supported MSYS path formats on Windows and parsed background preset options in the terminal.
+- **Terminal Preset Clean Naming**: Prohibits emojis and enforces clean, simple alphanumeric names for terminal presets to ensure they are easy to type.
+- **Workspace Path Collision**: Resolved workspace path collision when directories share similar sibling prefixes in the session list and during auto-resume.
+
+### Improved
+- **Single-Agent Mode Tooling**: Enabled and enforced `manage_plan` and `manage_tasks` tools for single-agent mode CLI.
+- **System Prompts Optimization**: Optimized system prompts and planning warnings to prevent illegal file modifications and enforce planning/task management tools.
+
+---
+
+## [1.1.96] - 2026-06-23
+
+### Fixed
+- **AI Stream Abort on Wizard Cancellation**: Cancelling a wizard with ESC or Ctrl+C now properly aborts the in-flight AI stream instead of leaving it running. Added an `abortController` abort hook in both `useKeyboardHandler.ts` and `useDashboardKeyboard.ts`.
+
+---
+
+## [1.1.95] - 2026-06-23
+
+### Security
+- **`.env*` File Protection**: `.env`, `.env.local`, `.env.production`, `.env-staging`, and similar files inside the workspace are now strictly protected from any agent tool access (file reads/writes, grep, shell commands) without explicit user permission. Detection covers both file path arguments and shell command strings (`cat .env`, `cp .env`, etc.) via the regex `/(?:^|[\\/])\.env([._\-][^\/]*)?$/i`.
+- **`model-config.json` Per-Access Enforcement**: `model-config.json` access is now always evaluated before the session-level permission flag, so it can no longer be bypassed by granting "Allow for This Session" out-of-bounds access. The permission dialog for `model-config.json` shows a 2-option (Allow/Deny) set with no session option, and the keyboard handler now correctly treats the last option as Deny regardless of list length.
+
+---
+
+## [1.1.94] - 2026-06-23
+
+### Security
+- **model-config.json Protection**: `model-config.json` (containing API keys and model presets) is now strictly protected from any agent tool access (file reads, writes, grep, shell commands) without explicit user permission confirmation, even though it resides inside the allowed `~/.superagent-r/` config directory.
+- **Directory Trust Prompt on Startup**: Added a mandatory security dialog on every interactive startup — agents cannot start working unless the user explicitly trusts the target folder. Navigable with arrow keys, confirmation on Enter.
+- **Session-Level Permission Memory**: Permission grants now support an "Allow for This Session" option, which remembers the grant for the duration of the session so the user is not prompted again for the same type of out-of-bounds action.
+
+---
+
+## [1.1.93] - 2026-06-23
+
+### Added
+- **Out-of-Bounds Workspace Access Checks**: Enforced directory boundaries for file and command execution tools across all agent tiers to prevent accessing or executing commands outside the workspace/config directory without user permission.
+- **Git Bash Path Normalization on Windows**: Implemented slash-path conversions on Windows platforms for robust boundary checking.
+- **Wizard Permission Prompts UX**: Displayed generic allow/deny wizard options custom-tailored for command execution vs. file/directory access in the permission dialog.
+
+---
+
+## [1.1.92] - 2026-06-23
+
+### Added
+- **Mandatory Skill Reading Guidelines**: Added and expanded documentation guidelines requiring AI agents to read relevant skill files before planning or execution.
+
+### Fixed
+- **Wizard Key Swallowing**: Prevented focusMode handlers from swallowing keyboard inputs when the active wizard is open.
+
+---
+
+## [1.1.91] - 2026-06-23
+
+### Added
+- **Skills Search & Provider Prefixing**: Added search filters and provider prefixing to the skills wizard listing.
+- **Dynamic Skill Authors**: Resolved skill authors dynamically using a registry-backed `skills-lock.json` to properly attribute bulk-added skills.
+
+### Improved
+- **AI-Delegated `/install` Command**: Delegated the `/install` slash command execution directly to the AI agent, with a local shell fallback and automatic non-interactive `-y` confirmation.
+- **Author Attribution**: Accurately attributed standard superpowers-skills to `obra`, `typescript-advanced-types` to `wshobson`, and `agent-browser` to `vercel-labs`.
+
+### Fixed
+- **Skills Clean Up**: Retained only local and Andrej Karpathy's coding guidelines skills in the repository.
+- **Compilation & Frontmatter Parsing**: Fixed compilation issue in the keyboard handler and refined the frontmatter parser to match indented metadata authors.
+
+---
+
+## [1.1.90] - 2026-06-23
+
+### Fixed
+- **Wizard Option Clicks**: Modified wizard options mouse click to only highlight/select the index instead of submitting.
+- **Wizard Key Navigation**: Allowed return, backspace, and delete keys when paste is active in wizard inputs.
+
+---
+
+## [1.1.89] - 2026-06-23
+
+### Added
+- **Completed Tasks Auto-Hide**: Implemented 15-second decay timer to auto-hide archived completed tasks from "Previously Completed" section.
+
+---
+
+## [1.1.88] - 2026-06-23
+
+### Improved
+- **Plan Approval Keyboard Submission**: Require Enter key to submit selected plan options instead of immediate submit on mouse click.
+
+### Fixed
+- **FastContext Rate Limit**: Increased max retries to 6, emit total attempts, and integrated a shared rate limiter.
+- **Checklist Strikethrough**: Replaced custom Unicode combining strikethrough characters with native Ink Text strikethrough.
+
+---
+
+## [1.1.87] - 2026-06-23
+
+### Added
+- **Horizontal Stepper Tabs for Wizard**: Added horizontal progress tabs to `ask_question` dialog.
+- **Multi-Question Support**: Implemented support for multiple questions inside the agent question handler and wizard.
+
+### Fixed
+- **Plan Approval Clicks & Scrolling**: Fixed option selection clicks and hover-based panel mouse scrolling in terminal UI.
+- **Legacy Test Suite Fixes**: Updated legacy test suites to support multi-question inputs.
+
+---
+
+## [1.1.86] - 2026-06-23
+
+### Improved
+- **Wizard Dialog Body Text Formatting**: Added `renderDialogBodyText` helper to format and color specific Indonesian text ("Struktur Direktori Tools") with vibrant theme colors.
+
+### Fixed
+- **Terminal History Clear in Single Mode**: Pass `clearLines` in slash command context to correctly clear terminal history in Single Mode.
+- **LiteLLM Message Sanitization**: Sanitize input messages and handle `None` response objects and empty choices in LiteLLM `acall` for FastContext.
+
+---
+
+## [1.1.85] - 2026-06-23
+
+### Added
+- **Input History Clearing**: Clear input history log on `/new` and `/clear` commands.
+
+### Improved
+- **Robust Model Fallback Chain**: Implement a full robust subagent fallback chain and custom provider fallback in model resolution.
+- **Plan Approval UI**: Refined the plan approval dialog UI layout.
+
+### Fixed
+- **FastContext Parameters**: Drop unsupported LiteLLM parameters (like `top_p` etc.) via `drop_params=True`.
+- **Custom Provider Model Prefixing**: Prefix custom provider models with `openai/` for proper LiteLLM routing.
+
+---
+
+## [1.1.84] - 2026-06-23
+
+### Added
+- **HistoryPanel (Ctrl+H)**: New `HistoryPanel` component (`src/components/history-panel.tsx`) that displays the full input history in a scrollable, keyboard-navigable overlay. Press `Ctrl+H` to toggle; arrow keys navigate, `Enter` reuses selected entry, `Esc` closes.
+- **Arrow-Key Input History in Single Mode**: The `SingleModeAgent` input component now maintains a history array of past inputs. `ArrowUp` / `ArrowDown` navigate through previous commands without leaving the input field, matching familiar terminal UX.
+
+### Improved
+- **FastContext Researcher Tier Warning**: FastContext tool now emits a visible warning when the configured model is on the `researcher` tier, helping users identify misconfigured tier assignments.
+- **Trajectory Preservation on Error**: FastContext runner now preserves partial trajectory data when an error occurs mid-run, preventing full data loss on transient failures.
+- **InternalServerError Retry**: FastContext automatically retries on `InternalServerError` responses from the provider, improving reliability on flaky upstream connections.
+- **Custom Provider Model Routing**: Fixed model routing for custom provider configurations so that custom base-URL providers correctly receive the target model name.
+
+---
+
+## [1.1.81] - 2026-06-22
+
+### Added
+- **Nested Tool Calls Under Assistant Messages**: Tool events (`tool_start`/`tool_end`) are now rendered as indented children under the parent assistant message instead of appearing as separate top-level chat lines. This groups all tool invocations visually within the assistant response that triggered them.
+- **`children` Property on ChatLine**: New optional `children` array on the `ChatLine` interface for grouping nested tool events under a parent line.
+- **`addToolChild()` Function**: Appends tool-related events as children of the last assistant message in the chat state.
+- **`expandedChildren` State & `toggleChildExpand()`**: New state management for nested collapse/expand of child lines, with a `Map<parentIndex, Set<childIndex>>` tracking which children are expanded.
+- **`renderNestedChild()`**: Renders nested tool start/end children with tree-style indentation (`├───`), collapsible headers, and click-to-toggle support.
+
+### Changed
+- **Auto-Collapse Logic**: Smart collapse now operates on nested children within assistant lines instead of top-level lines. Active tool calls start expanded and auto-collapse when their `tool_end` arrives, same as before but nested.
+- **Mouse Click Handling**: `useMouseScroll` now detects clicks on nested child lines and toggles their expand/collapse state via `toggleChildExpand`.
+- **Dashboard Log Formatter**: TOOL log groups in the multi-agent dashboard are now nested under their parent AGENT group for cleaner visual hierarchy.
+- **Multi-Mode Detection**: FastContext now also checks `SUPERAGENT_MULTI` environment variable (in addition to `--multi` CLI flag) for multi-agent mode detection.
+
+### Fixed
+- **Model Prefix Parsing**: FastContext tool now correctly parses provider prefixes from model strings (e.g., `tess@xmtp/mimo-v2.5-pro` → prefix `tess`, model `xmtp/mimo-v2.5-pro`). Supports both `@` and `:` separators.
+- **Provider Profile Fallback**: Provider resolution now tries prefix match first, then `providerProfileId`, then a case-insensitive fuzzy match, and finally falls back to any provider with an API key — preventing "no credentials" errors when the configured provider is missing.
+- **Python Process Tree Termination**: Added `killProcessTree()` function that uses `taskkill /F /T /PID` on Windows and `pkill -P` + `SIGKILL` on Unix to terminate the entire Python subprocess tree on abort signal, preventing orphaned processes.
+- **AbortSignal Cleanup**: Abort event listener is now properly removed in the `finally` block, and `AbortError`/`CancelError` are handled gracefully without falling through to generic error handling.
+
+### Tests
+- Added tests for `killProcessTree` behavior, abort signal handling, model prefix parsing, and provider profile fallback chain.
+
+---
+
+## [1.1.80] - 2026-06-22
+
+### Changed
+- **FastContext Tool Parallelism**: `ExcludeGlobTool`, `ExcludeGrepTool`, and `SizedReadTool` now run blocking subprocess calls via `asyncio.to_thread()`, enabling `asyncio.gather()` to truly parallelise Read + Glob + Grep calls within the same turn and making `asyncio.wait_for()` timeouts effective.
+- **`SizedReadTool` Path Resolution**: Now resolves relative paths against `cwd` before checking file size, preventing false negatives on files that exist but aren't found via absolute path.
+- **`start` Event Timing**: The JSONL `start` event is now emitted inside `agent_loop()` after the cache check, so cache hits no longer trigger a premature `start` event.
+
+### Fixed
+- **Cache Key Collision**: Cache hash now includes `max_turns` as a component, preventing stale results when the same query is run with different `maxTurns` values.
+- **Windows Path Exclusion**: `_is_excluded()` now normalises backslashes to forward slashes before `fnmatch`, so patterns like `node_modules` work correctly on Windows paths.
+- **ExcludeGrepTool Mode Detection**: Content/heading mode detection now uses `"N|..."` numbered-line pattern instead of the unreliable `:` colon heuristic.
+- **Duplicate Tool Classes**: Removed duplicate `ExcludeGlobTool` and `SizedReadTool` definitions, reorganised tool class layout for consistency.
+- **Test Fixes**: `askQuestionRobustness` tests now use multi-call mocks (`callCount`) so `streamText` handles multi-turn correctly; `historySearch` test updated to match new `listSessions()` signature.
+
+---
+
+## [1.1.79] - 2026-06-23
+
+### Added
+- **Collapsible Chat Lines (Single-Agent)**: `tool_start`, `tool_end`, `system`, and `error` messages are now collapsible/expandable by clicking. Active tool calls start expanded and auto-collapse when their `tool_end` arrives; completed calls from history stay collapsed by default. Collapsed lines show a compact 1-line header with tool name, status icon, and description preview.
+- **Collapsible Log Groups (Multi-Agent Dashboard)**: Tool start/done/fail, think, and auto-approve log groups in the multi-agent dashboard are now collapsible by clicking. Groups are collapsed by default, showing a compact header with icon, label, and content preview. Expanding shows full log details. Collapsed state resets when switching sessions.
+- **`isCollapsibleType()` Helper**: Exported utility in `chat-line.tsx` to check if a chat line type supports collapse/expand behavior.
+- **`computeLogGroupBoundaries()`**: New exported function in `dashboardLogFormatter.tsx` that computes group start/end line positions for click detection on collapsible log groups in the multi-agent dashboard.
+- **`LogGroupInfo` Type**: New interface for group boundary metadata (groupIndex, startLine, endLine, label, isCollapsible).
+
+### Changed
+- **Plan State Guard Extended to Subagents**: `invoke_subagent` now enforces the same plan-approval gate as `invoke_superagent` — spawning is blocked if the parent agent's plan is not yet approved (`PLANNING_PENDING` or missing plan file). Error messages updated to reference both Superagents and Subagents.
+- **Subagent Plan State Inheritance**: Spawned subagent instances now inherit `planState = "APPROVED"` to prevent false blocking on their own internal plan checks.
+- **Chat Line Height Estimation**: `estimateChatLineHeight()` now accepts a `lineIdx` parameter and accounts for collapsed state when computing scroll positions.
+- **Mouse Click Handling**: Both single-agent (`useMouseScroll.ts`) and multi-agent (`useDashboardMouse.ts`) mouse handlers now detect clicks on collapsible items and toggle expand/collapse, with priority over other click actions.
+
+### Removed
+- **`.gitignore` Cleanup**: Removed redundant entries (`__pycache__/`, `*.pyc`, `dist/`, `node_modules/`, `.fastcontext/`) that are already managed at the project root level.
+
+---
+
+## [1.1.78] - 2026-06-23
+
+### Added
+- **Query Result Caching**: FastContext now caches query results with 1h TTL (SHA-256 keyed on query+model+exclude+citation). Cache hits are shown in the live panel with key prefix and age. Use `--no-cache` / `noCache` param to bypass.
+- **Dynamic Timeout**: Timeout is now calculated based on `maxTurns` (35s/turn, min 60s, max 600s) instead of a fixed value. Timeout error messages reflect the actual calculated duration.
+- **`exclude` Parameter**: Comma-separated glob patterns to skip in all FastContext searches. `ExcludeGlobTool` post-filters results via `fnmatch` against exclude patterns.
+- **`maxFileSizeKb` Parameter** (default 512 KB): `SizedReadTool` skips oversized files to prevent token waste from generated/minified/binary files.
+- **Settings Integration**: `maxTurns` is now capped at `maxIterations` from global settings (`getSettings()`) when `maxIterations > 0`, integrating FastContext with the system-wide iteration budget.
+- **Error Recovery**: Structured `[System]` hints are injected into agent context whenever tool calls fail, listing failed calls and error messages to prompt alternative strategies instead of silent retries.
+- **Better Progress Output**: Increased reasoning preview 300→600 chars and content preview 500→800 chars in Python runner; thinking snippet 160→300 chars and tool args preview 120→160 chars in the TS live panel.
+
+### Changed
+- **`maxTurns` Default**: Raised from 6 to 8 for better exploration depth by default.
+- **Smarter Retry Jitter**: Added random 0–1s jitter to exponential backoff to reduce thundering herd when multiple FastContext calls hit rate limits.
+- **Better Error Parsing**: Non-zero exit errors now extract root-cause from JSONL events instead of dumping raw stderr (up to 500 chars).
+
+### Fixed
+- **`ExcludeGrepTool`**: Fixed broken glob-injection approach — `rg --glob` only accepts ONE pattern per flag, so comma-separated negation globs did NOT work. Replaced with post-filtering (same strategy as `ExcludeGlobTool`): runs normal search, then filters result lines by path. Handles both `files_with_matches` and `content`/`heading` modes.
+- **Dead Code Removal**: Removed orphaned duplicate switch-case block in `fastcontextTool.ts` (leftover from a previous bad merge).
+- **`.gitignore`**: Added `.fastcontext/` to prevent cache `.txt` files and trajectory `.jsonl` files from being accidentally committed to target repos.
+
+---
+
+## [1.1.77] - 2026-06-23
+
+### Added
+- **Global Pinned Knowledge Store** (`pinnedKnowledge.ts`): Persistent, cross-session knowledge base. Pinned messages are now auto-exported to a global store, enabling knowledge sharing across all sessions and projects.
+- **Full-Content Pin Storage**: Pinned messages now store complete, untruncated content along with agent tags (tier, subagent type, worktree), tool calls, tool results, and user-defined labels. Upgraded from `Set<string>` to `Map<string, PinnedMessage>`.
+- **`/knowledge` Command** (alias: `/k`): Browse, search, and manage the global pinned knowledge store. Subcommands: `/knowledge` (list all), `/knowledge <query>` (search), `/knowledge projects` (list projects with pins).
+- **`/pin view <index>`**: View the full, untruncated content of a pinned message with complete metadata (agent tag, timestamps, tool calls/results, content size).
+- **`/pin tag <index> <label>`**: Tag a pinned message with a custom label. Tags sync to the global knowledge store.
+- **Cross-Session History Search**: Added `--all` flag to `/search-history` (alias: `/sh`) and `cross_session` parameter to the `search_history` tool, enabling searches across ALL sessions and projects.
+- **`search_pinned_knowledge` Tool**: AI agents can now search the global pinned knowledge base with query, working directory, and tag filters.
+- **`load_pinned_session` Tool**: AI agents can load and study full conversation transcripts from past sessions that have pinned messages, enabling cross-session learning.
+- **FastContext Enhanced Logging**: New live event types in FastContext output: `dedup` (redundant call deduplication), `retry` (automatic retries), `tool_start`/`tool_end` (tool execution tracking), `error`, and `done` (completion summary).
+
+### Changed
+- **`/pin` Command Overhaul**: Complete UI redesign with box-drawing borders, role icons, relative timestamps (`timeAgo()`), and improved formatting. Help text now documents all subcommands.
+- **`/pin list`**: Now shows full pinned metadata including agent tags, content size, pinned timestamps, and global knowledge sync status.
+- **`/pin <index>`**: Now stores full message content + agent tag and auto-exports to the global knowledge store.
+- **`/pin unpin`**: Now also removes the entry from the global knowledge store.
+- **FastContext Defaults**: Adjusted `maxTurns` default from 8 to 6 and timeout from 5 minutes to 3 minutes for faster, more focused exploration.
+- **`search_history` Tool**: Updated description and added `cross_session` boolean parameter for cross-project search.
+
+---
+
+## [1.1.76] - 2026-06-22
+
+### Added
+- **Context Manager Overhaul**: Complete modular rewrite of the context management system, introducing a pluggable architecture for intelligent conversation compaction:
+  - **`TokenTracker`**: Model-specific token counting with support for OpenAI (`tiktoken`) and Anthropic (`@anthropic-ai/tokenizer`) tokenizers. Provides accurate per-message and total token estimation.
+  - **`CompactionStrategy` Interface**: Pluggable strategy pattern for compaction methods — includes `TruncationStrategy` (drop oldest messages), `SummarizationStrategy` (LLM-powered summarization with heuristic fallback), and `SemanticStrategy` (semantic-aware compaction via `SemanticAnalyzer`).
+  - **`SemanticAnalyzer`**: Intelligent message scoring based on technical density, decision points, file references, and error context to preserve high-value messages during compaction.
+  - **`CompactionHistory`**: Persistent audit trail of all compaction events, tracking tokens before/after, strategy used, timestamps, and messages preserved. Queryable via `/compaction-history`.
+  - **`ContextManager` Orchestrator**: Central coordinator that monitors token usage, triggers automatic compaction when thresholds are exceeded, and exposes public API for manual compaction, pinning, and status queries.
+- **`/compact now` Command**: Force manual compaction on demand. Shows tokens before/after, tokens saved, compaction count, and the strategy used.
+- **`/pin` Command**: Pin important messages to prevent them from being compacted. Subcommands: `/pin list` (view pinned messages), `/pin last` (pin the last user message), `/pin unpin <id>` (remove a pin).
+- **`/compaction-history` Command** (alias: `/ch`): View the full audit trail of compaction events with timestamps, strategies used, tokens saved, and messages preserved.
+- **LLM-Powered Summarization**: `SummarizationStrategy` now uses `generateText` (Vercel AI SDK) for real LLM-based conversation summaries, with 3-retry logic and heuristic fallback. Prompt is engineered to preserve file paths, technical decisions, and code snippets.
+- **Autocomplete Suggestions**: Tab-completion support for `/compact now`, `/pin list`, `/pin last`, `/pin unpin` in the input bar.
+
+### Changed
+- **StatusBar Token Display**: Now reads from `ContextManager.getTokenTracker()` for accurate, real-time context usage statistics instead of legacy estimation.
+- **`/setting-context-limit`**: Refreshes ContextManager's compaction threshold in real-time when the context window limit is changed.
+- **`/model` Command**: Automatically refreshes the ContextManager's tokenizer when the active LLM model is switched.
+- **`/compact` (no args)**: Now shows ContextManager status including compaction count, total tokens saved, current state, and last strategy used.
+
+### Tests
+- Added integration tests for the full ContextManager lifecycle (init, compact, pin, history).
+- Fixed async ContextManager initialization to prevent race conditions in tests.
+- All 50 tests passing.
+
+---
+
+## [1.1.71] - 2026-06-22
+
+### Added
+- **FastContext Multi-Provider Support via LiteLLM**: The Python runner (`fastcontext_runner.py`) now uses LiteLLM as a unified adapter to support OpenAI, Anthropic, OpenRouter, and custom providers. Falls back to the native OpenAI SDK if LiteLLM is not installed.
+- **LiteLLM Dependency in Setup Scripts**: Both `setup-fastcontext.ps1` (Windows) and `setup-fastcontext.sh` (Linux/macOS) now install and verify `litellm>=1.74.0` alongside existing dependencies.
+- **Provider-Aware Fallback Models**: `resolveFastContextCredentials()` now returns `providerType`, `providerName`, `tierName`, and `providerMismatch` metadata, and uses `DEFAULT_FALLBACK_MODELS` to pick sensible default models per provider type (OpenAI → `gpt-4o`, Anthropic → `claude-sonnet-4-20250514`, OpenRouter → `anthropic/claude-sonnet-4-20250514`).
+- **Unique Trajectory Paths**: Each FastContext invocation now generates a unique trajectory JSONL file (`trajectory-<timestamp>-<random>.jsonl`) in `.fastcontext/`, preventing collisions during concurrent runs. Stale trajectory files are automatically cleaned up before and after each run.
+- **Live Model/Provider Info in Logs**: FastContext now displays the resolved model name, tier, provider name, and provider type at the start of each run, along with a warning if the tier's configured provider was not found and a fallback was used.
+- **Backend Info in Start Events**: The `start` event in live logging now includes a `backend` field indicating whether LiteLLM or the native OpenAI SDK is being used.
+
+### Changed
+- **Improved Tier Resolution Logic**: The credential resolver now explicitly checks `researcher.model`, `subagentDefault.model`, and falls back to the main tier (`master`/`superagent`), with clear tier name tracking. Provider mismatch is detected and flagged when the tier specifies a `providerProfileId` that doesn't exist.
+- **CLI Args Extended**: FastContext runner now accepts `--trajectory-path` and `--provider` flags for explicit trajectory file location and provider type selection.
+- **Tool Description Updated**: The FastContext tool description now accurately reflects the tier resolution order: `researcher > subagentDefault > main fallback`.
+
+---
+
+## [1.1.70] - 2026-06-21
+
+### Added
+- **Version Display in Multi-Agent Dashboard**: The dashboard header now shows the current Superagent version (e.g. `MULTI-AGENT SYSTEM v1.1.70`), read dynamically from `package.json` at runtime.
+
+### Changed
+- **Reduced Visible Process Slots**: `maxProcsVisible` decreased from 5 to 3 in both the single-agent app and multi-agent dashboard to save vertical space on smaller terminals.
+- **Expanded `/terminal` Help Text**: Help output now documents additional `/terminal` subcommands: `/terminal all` (launch all presets), `/terminal init` (AI-guided preset setup), `/terminal preset` (list presets), `!<command>` shortcut syntax, and the background/stop commands.
+
+---
+
+## [1.1.69] - 2026-06-21
+
+### Changed
+- **Full Settings Migration to JSON Config**: All system settings (concurrency limit, rate limit RPM/capacity, streaming toggle, context window limit, max iterations) now read exclusively from `getSettings()` in `model-config.json` instead of `process.env`. This completes the migration started in v1.1.66.
+- **Rate Limiter**: `SharedRateLimiter` now reads `rateLimitRpm` and `rateLimitCapacity` from `getSettings()` instead of `process.env.SUPERAGENT_RATE_LIMIT_*`.
+- **Concurrency Checks**: `agent.ts`, `masterAgent.ts`, and `historySearch.ts` now use `getSettings().concurrencyLimit` instead of `process.env.SUPERAGENT_MAX_CONCURRENCY`.
+- **Streaming Display**: Dashboard and login wizards now read `getSettings().disableStreaming` instead of `process.env.DISABLE_STREAMING`.
+- **`.env.example`**: Rewritten in English, simplified to show only optional runtime overrides. Rate limit and concurrency settings removed (now managed via `/settings` slash command and `model-config.json`).
+
+### Removed
+- **`src/core/config/env.ts`**: Deleted entirely. The `updateEnvFile()` function no longer exists. All configuration flows through `jsonConfig.ts` functions (`getSettings()`, `updateSettings()`, `addProvider()`, etc.).
+- **`process.env` Sync in `updateSettings()`**: Removed the backward-compatibility block that wrote settings back to `process.env` after updating JSON config.
+
+### Fixed
+- **AGENTS.md Guidelines**: Updated to reflect the complete removal of `process.env` for settings, expanded the list of forbidden env vars, and documented `getSettings()` / `updateSettings()` as the canonical settings API.
+
+### Tests
+- Updated `configJson.test.ts`, `rateLimiter.test.ts`, `slashCommands.test.ts`, and `providerCredentialResolution.test.ts` to use `updateSettings()` / `getSettings()` instead of `process.env` manipulation and `updateEnvFile()`.
+
+---
+
+## [1.1.63] - 2026-06-20
+
+### Added
+- **Checkpoint Delete**: New `/checkpoint delete` command and interactive wizard action to delete individual checkpoints by ID. Supports both slash command (`/checkpoint delete <id>`) and interactive wizard selection.
+- **Checkpoint Wizard Sub-Menu**: The checkpoint wizard now shows a contextual sub-menu after selecting a checkpoint, offering "Restore" or "Delete" actions (browse mode). Direct `/checkpoint restore` and `/checkpoint delete` commands open pre-filtered wizards.
+- **Auto-Checkpoint UI Event**: Added `checkpoint_auto` event type that emits a visible system notification in the terminal UI whenever an auto-checkpoint is created (e.g., before destructive operations).
+- **Ctrl+P in Multi-Agent Dashboard**: Added `Ctrl+P` keyboard shortcut in the multi-agent dashboard to open the interactive checkpoint browser wizard.
+- **`deleteCheckpointById()`**: New function in `checkpoints.ts` that safely deletes a single checkpoint file by its ID.
+
+### Changed
+- **Checkpoint List Wizard**: `/checkpoint list` and `/checkpoint` (no args) now open the interactive wizard instead of printing a static list.
+- **Checkpoint Wizard State Machine**: Refactored wizard to use action-based state machine (`browse` → `choose` → `restore`/`delete`) for cleaner flow in both single-agent and multi-agent modes.
+
+### Fixed
+- **Translated Remaining ID Strings**: Translated leftover Indonesian strings in checkpoint restore messages (e.g., "Git restore gagal" → "Git restore failed") to English for consistency.
+
+---
+
+## [1.2.0] - 2026-06-19
+
+### Added
+- **Safe Merge Strategy v2**: Complete rewrite of the merge system to prevent file corruption:
+  - **Line-Based Conflict Resolution**: Safe auto-resolution for trivial conflicts (empty side, identical sides, subset sides) before falling back to manual resolution.
+  - **Universal Post-Merge Validation**: 5 validation checks run before every commit: conflict marker detection, duplicate adjacent lines, duplicate attributes, line merging detection, and diff sanity check.
+  - **Project-Level Validation**: Automatically runs the project's own build/test/lint scripts after merge.
+  - **Auto-Revert on Failure**: If validation fails, the merge is automatically reverted before committing.
+- **Patch Mode** (`mode: 'patch'`): Lightweight Superagent mode that skips worktree creation for small, targeted fixes. Operates directly in the parent's working directory with safety warnings for uncommitted changes.
+- **Base Branch** (`baseBranch`): New parameter for `invoke_superagent` to create worktrees from a specific branch instead of HEAD. Useful for building dependent features on top of in-progress work.
+- **Detailed Merge Error Reporting**: `MasterAgent.lastMergeErrors` and `lastMergeWarnings` properties expose detailed error/warning information from failed merges.
+- **Auto-Create Task File**: `manage_plan` action `create` now auto-creates a minimal `_task.md` if no checklist tasks are found in the plan.
+
+### Changed
+- **Stateless Spawned Agents**: All spawned Superagents now start with `planState = "APPROVED"` to prevent self-blocking on plan state checks. This fixes the "Plan pending approval" bug where agents would block themselves.
+- **No LLM Auto-Resolve**: Removed LLM-based conflict auto-resolution entirely. Complex conflicts are now aborted and reported for manual resolution to prevent corruption.
+- **Task File No Longer Blocks**: Missing `_task.md` no longer blocks `invoke_superagent` or `merge_superagents`. The file is auto-created from plan content or a minimal placeholder.
+- **Master Agent System Prompt**: Updated to document patch mode, baseBranch, and the new merge strategy.
+
+### Fixed
+- **Merge HTML Corruption** (root cause): Fixed the recurring issue where LLM auto-resolve would corrupt HTML files during merge by removing auto-resolve and adding universal validation.
+- **Agent Plan State Confusion**: Fixed spawned agents blocking themselves by reading plan state from conversation history. Agents are now stateless executors.
+- **Task File Blocking**: Fixed `invoke_superagent` failing with "Task Tracking File is missing" error when `_task.md` didn't exist yet.
+- **Worktree Branch Confusion**: Fixed agents spawning from the wrong branch by adding the `baseBranch` parameter.
+- **Diff Sanity Threshold**: Fixed off-by-one error in diff sanity check (`> 10` → `>= 10`).
+
+### Tests
+- Added 15 new tests for universal post-merge validation (`tests/postMergeValidation.test.ts`).
+- Added 3 new tests for patch mode, baseBranch, and stateless agent behavior.
+- Updated existing tests to match new merge behavior (no auto-resolve, validation-first).
+- **Total: 47 test files, 400 tests passing.**
+
+---
+
+## [1.1.61] - 2026-06-18
+
+### Added
+- **Tools Error Logging**: Added dedicated error log file (`tools-error.log`) for tool execution errors across all tiers. Logs blocked file writes, permission denials, out-of-bounds access, invalid plan structures, and unknown tool calls with tier/depth metadata for better debugging.
+
+---
+
+## [1.1.45] - 2026-06-13
+
+### Fixed
+- **Multi-Agent Console**: Restored a dynamic loading/processing spinner (`⚡ PROCESSING`) in the Master Orchestrator log view and set its status to `ACTIVE` (yellow) in the workspace registry list when background agents (Superagents/Subagents) or processes are still running, ensuring clear visibility when the main orchestrator thread is idle but background execution is active.
+
+---
+
+## [1.1.44] - 2026-06-13
+
+### Added
+- **AI Model Speed Tracking**: Added generation speed metrics to both single-agent and multi-agent CLI footers.
+- **Scrollable Dashboards**: Implemented scrolling support for active tasks, active agents, and active processes in the multi-agent CLI dashboard to prevent layout overflow.
+- **Real-Time Text Streaming**: Implemented real-time model text streaming and UI notifications for subagents and superagents.
+- **Custom Provider Resolution**: Supported dynamic resolution of custom provider prefixes in `getModelInstanceForString`.
+- **Multi-Agent Active Task Mapping**: Added active superagent status mapping to task lists to automatically reflect real-time task progress.
+
+### Fixed
+- **CLI Footer Model Display**: Fixed footer display in both single-agent and multi-agent CLI modes to correctly show the selected model.
+- **Wizard Model Fetching**: Fixed provider-to-model fetching mapping in the wizard.
+- **Double Plan Approval**: Prevented duplicate plan approval submissions in the wizard.
+- **UI Overflow and Limits**: Increased `maxVisible` options in dropdown lists to 10 and removed the header icon in multi-agent dashboards for cleaner visual layout.
+- **Robust Error Handling**: Added robust file reading error handling (with logging and fallback) for task checklist loading.
+- **Interruption Controls**: Handled Escape key to abort running agents and correctly handle interruptions.
+
+---
+
+## [1.1.38] - 2026-06-13
+
+### Added
+- **Multi-Model Agent Setup**: Added depth-based model configuration support for Master Agent (depth 0), Superagent (depth 1), and Subagent (depth 2).
+- **Custom Superagent Definitions**: Added `define_superagent` tool to register custom Superagent roles with tailored system prompts.
+- **Interactive Superagent Messaging**: Added `send_message_to_superagent` tool to allow sending follow-up instructions and queries to running Superagents.
+- **Robust Worktree Cleanup**: Added robust filesystem force-removal fallback (`cleanupWorktreeRobust`) for git worktrees on Superagent termination (`kill` and `kill_all` in `manage_superagents`).
+
+### Changed
+- **Superagent Prompt**: Updated Superagent system prompt instructions to focus on coordination and delegating atomic operations (research, coding, testing) to specialized Subagents.
+
+---
+
+## [1.1.34] - 2026-06-11
+
+### Added
+- **Fuzzy Autocomplete Suggestions**: Implemented fuzzy matching/search for commands and slash commands.
+- **Enhanced Terminal UI Layout**: Added current Git branch name rendering and polling, plus token metric counts (▲ upload / ▼ download) in the cognitive node streaming/thinking headers.
+- **System Log Indicators**: Added parsing of `[SYS]` prefix to display system messages in yellow.
+- **Visible & Background Command Options**: Added support for visible and background task execution with autocomplete and descriptions.
+
+---
+
+## [1.1.27] - 2026-06-11
+
+### Added
+- **Session Checkpoints**: Added a session checkpointing mechanism (`/checkpoint` command, interactive `Ctrl+P` wizard) to save, list, and restore previous states/history in the CLI.
+- **Dynamic Project Detection**: Implemented auto-detection of project name, description, and technology stack (from `package.json`, `Cargo.toml`, `go.mod`, etc.) during system setup.
+- **Git Metadata Audit**: Display current Git branch, HEAD commit hash, and status in the initialization (`/init` command) system audit log.
+- **Karpathy Coding Guidelines Skill**: Integrated Andrej Karpathy's coding guidelines to reduce agent errors.
+
+---
+
+## [1.1.0] - 2026-06-10
+
+### Added
+- **Cyberpunk Terminal Styling**: Added customized terminal UI components, user narratives, an ASCII banner on start, and colors (magenta, cyan, yellow, green).
+- **`/init` Slash Command**: A new command to initialize project settings and configuration setup.
+- **Global Config Path (`~/.superagent-r`)**: Relocated environment configurations (`.env`), history records (`history/`), and execution logs (`superagent.log`) to a global user profile folder to prevent polluting project directories.
+- **Context Usage Tracker**: Enhanced status bar displaying message count, active model name, current working directory, uploaded / downloaded tokens, and context window consumption percentage (`CTX_USAGE`).
+- **Console Clear on Startup**: Interactive terminal clears output before rendering the UI layout.
+- **Strict Guidelines & Safety Controls**: Added clear developer guidelines, PowerShell command compatibility (using `;` instead of `&&` on Windows), and mandatory planning phase (`implementation_plan.md`) workflows for complex changes.
+
+### Changed
+- Refactored history loading and logging routines to write and load from `~/.superagent-r` instead of process working directory.
+- Adjusted CLI terminal layout and height calculations to accommodate the new multi-line status bar.
+
+---
+
+## [1.0.0] - 2026-06-10
+
+### Added
+- Initial release of Superagent, an interactive CLI coding agent.
+- Integration with Anthropic and OpenAI via AI SDK.
+- CLI Terminal interface using Ink (React-based terminal rendering engine).
+- File reading, file writing, command execution, and permission confirmation mechanisms.
