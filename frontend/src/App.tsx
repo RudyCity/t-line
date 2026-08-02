@@ -982,6 +982,7 @@ export default function App() {
       showWorkspaceModal ||
       showWorktreeModal ||
       showTunnelModal ||
+      showManagerModal ||
       showSettingsModal ||
       showBranchModal ||
       showEditWorkspaceModal ||
@@ -998,6 +999,7 @@ export default function App() {
     showWorkspaceModal,
     showWorktreeModal,
     showTunnelModal,
+    showManagerModal,
     showSettingsModal,
     showBranchModal,
     showEditWorkspaceModal,
@@ -1011,7 +1013,7 @@ export default function App() {
   ]);
 
   // Keyboard Shortcuts
-  const hasModals = showWorkspaceModal || showWorktreeModal || showTunnelModal || showSettingsModal || showBranchModal;
+  const hasModals = showWorkspaceModal || showWorktreeModal || showTunnelModal || showManagerModal || showSettingsModal || showBranchModal;
   useKeyboardShortcuts({
     enabled: isAuthenticated && !hasModals,
     onNewTerminal: () => openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || ''),

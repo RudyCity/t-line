@@ -1,4 +1,11 @@
-"## [1.2.686] - 2026-08-02
+"## [1.2.687] - 2026-08-02
+
+### Fix: Browser Webview Modal Overlay z-index Stacking & Event Masking
+- **Native Webview Event Signal**: Added `showManagerModal` to `isAnyOverlayActive` in `App.tsx` so `tline-hide-native-webview` fires reliably whenever Port Tunnels Manager modal is open.
+- **iframe & Electron Webview Hiding**: Updated `BrowserTab.tsx` to set `pointer-events-none invisible opacity-0` and `visibility: hidden` on `<iframe>` and `<webview>` elements when `forceHideWebview` is true.
+- **Modal Overlay Z-Index**: Increased `.modal-overlay` `z-index` to `9999` in `components.css` to guarantee modals render above all stacked browser viewports.
+
+## [1.2.686] - 2026-08-02
 
 ### Fix: Restore Workspaces and Scripts in Root package.json
 - **Monorepo Restorations**: Restored the `"workspaces"` property in the root `package.json` to link the `backend`, `frontend`, and `desktop-tauri` workspace packages.

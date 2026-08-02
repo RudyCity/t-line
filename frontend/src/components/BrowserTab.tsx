@@ -933,7 +933,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
             } : undefined}
           >
             {/* Actual Inner Viewport Area */}
-            <div className="w-full h-full relative overflow-hidden bg-[var(--bg-main)] rounded-[inherit]">
+            <div className={`w-full h-full relative overflow-hidden bg-[var(--bg-main)] rounded-[inherit] ${forceHideWebview ? 'pointer-events-none invisible opacity-0' : ''}`}>
               {/* Loading progress bar */}
               {isLoading && (
                 <div
@@ -956,26 +956,27 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
                   key={iframeKey}
                   ref={setWebviewEl}
                   src={activeUrl}
-                  className={`absolute inset-0 w-full h-full border-none bg-[var(--bg-main)] ${isResizing ? 'pointer-events-none' : ''}`}
-                  style={{ width: '100%', height: '100%', border: 'none' }}
+                  className={`absolute inset-0 w-full h-full border-none bg-[var(--bg-main)] ${isResizing || forceHideWebview ? 'pointer-events-none' : ''}`}
+                  style={{ width: '100%', height: '100%', border: 'none', visibility: forceHideWebview ? 'hidden' : 'visible' }}
                   allowpopups={true}
                 />
               ) : renderMode === 'tauri-native' ? (
                 <div 
                   ref={containerRef} 
-                  className={`absolute inset-0 w-full h-full bg-[var(--bg-main)] ${isResizing ? 'pointer-events-none' : ''}`}
+                  className={`absolute inset-0 w-full h-full bg-[var(--bg-main)] ${isResizing || forceHideWebview ? 'pointer-events-none' : ''}`}
                 />
               ) : renderMode === 'iframe-local' ? (
                 <iframe 
                   key={iframeKey}
                   ref={iframeRef}
                   src={activeUrl} 
-                  className={`absolute border-none bg-[var(--bg-main)] ${isResizing ? 'pointer-events-none' : ''}`}
+                  className={`absolute border-none bg-[var(--bg-main)] ${isResizing || forceHideWebview ? 'pointer-events-none' : ''}`}
                   style={{
                     width: `${100 / zoomFactor}%`,
                     height: `${100 / zoomFactor}%`,
                     transform: `scale(${zoomFactor})`,
                     transformOrigin: 'top left',
+                    visibility: forceHideWebview ? 'hidden' : 'visible',
                   }}
                   title="App Preview"
                   onLoad={finishLoadingBar}
