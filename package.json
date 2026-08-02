@@ -1,13 +1,25 @@
 {
   "name": "superagent",
-  "version": "1.2.685",
+  "version": "1.2.686",
   "description": "Interactive terminal-based AI coding assistant",
   "type": "module",
   "bin": {
     "superagent": "./dist/cli.js"
   },
+  "workspaces": [
+    "backend",
+    "frontend",
+    "desktop-tauri"
+  ],
   "scripts": {
     "dev": "tsx src/cli.tsx",
+    "dev:backend": "node dev.cjs backend",
+    "dev:frontend": "node dev.cjs frontend",
+    "dev:tauri": "node dev.cjs tauri",
+    "build:backend": "bun run --filter backend build",
+    "build:frontend": "bun run --filter frontend build",
+    "build:tauri": "bun run build:frontend && bun run build:backend && bun run --filter desktop-tauri copy-assets && bun run --filter desktop-tauri tauri build",
+    "build:exe": "bun run build:tauri",
     "prebuild": "node -e \"const p=require('./package.json');console.log('Building ' + p.name + '@' + p.version)\"",
     "build": "tsc",
     "start": "node dist/cli.js",

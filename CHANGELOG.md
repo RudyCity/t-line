@@ -1,4 +1,11 @@
-"## [1.2.685] - 2026-08-02
+"## [1.2.686] - 2026-08-02
+
+### Fix: Restore Workspaces and Scripts in Root package.json
+- **Monorepo Restorations**: Restored the `"workspaces"` property in the root `package.json` to link the `backend`, `frontend`, and `desktop-tauri` workspace packages.
+- **Backend Spawning**: Restored the missing `"dev:backend"`, `"dev:frontend"`, and other custom scripts inside root `package.json` to allow the Tauri app to spawn the backend dev server.
+- **ES Modules Compatibility**: Renamed `dev.js` to `dev.cjs` and updated all scripts in `package.json` to reference `dev.cjs`. This prevents the `ReferenceError: require is not defined in ES module scope` crash since the root folder is configured with `"type": "module"`.
+
+## [1.2.685] - 2026-08-02
 
 ### Fix: Tauri Application Initialization Panic
 - **Tauri Config**: Restored the missing `plugins.updater` configuration block in `tauri.conf.json` to prevent the `invalid type: null, expected struct Config` panic on startup when initializing the updater plugin.
