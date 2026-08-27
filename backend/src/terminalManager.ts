@@ -253,7 +253,8 @@ export class TerminalManager {
         '-p', ssh.port.toString(),
         '-o', 'StrictHostKeyChecking=accept-new',
         `${ssh.user}@${ssh.host}`,
-        `cd "${ssh.remotePath.replace(/"/g, '\\"')}" ; exec \\$SHELL -l || exec bash || exec sh`
+        '--', 'bash', '-c',
+        `cd ${JSON.stringify(ssh.remotePath)} && exec $SHELL -l`
       ];
       normalizedCwd = os.homedir();
     } else {

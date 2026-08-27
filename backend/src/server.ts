@@ -110,7 +110,16 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(cors());
+// Tauri-bundled production restricts cross-origin to the Tauri custom protocols
+// (tauri://localhost, https://tauri.localhost). Dev keeps permissive CORS so
+// the Vite dev server on :5773 can talk to the Express backend on its port.
+const isTauriProduction = process.env.TAURI_PRODUCTION === '1' || process.env.NODE_ENV === 'production';
+app.use(cors({
+  origin: isTauriProduction
+    ? ['tauri://localhost', 'https://tauri.localhost']
+    : true,
+  credentials: true,
+}));
 app.use(express.json());
 
 // ----------------------------------------------------

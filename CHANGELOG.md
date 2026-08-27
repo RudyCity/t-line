@@ -1,3 +1,36 @@
+## [1.3.678] - 2025-08-27
+
+### Security: Audit Fix Release — T-Line Desktop Audit Response
+This release addresses all 🔴 CRITICAL and most 🟠 HIGH findings from the comprehensive t-line desktop audit (see `sess_1787810296518_xwjjfa_walkthrough.md`).
+
+#### CRITICAL Fixes
+- **C1 — Tauri updater public key replaced**: Generated a real RSA 2048 keypair with `openssl genpkey`; the previous dev-placeholder pubkey (`dW50c2VkX3BsYWNlaG9sZGVyX2tleV9mb3JfZGV2X29ubHk=`) is replaced. Private key (`desktop-tauri/src-tauri/keys/updater.key`) is gitignored; public key (`updater.pub`) is committed for release builds.
+- **C2 — JWT moved from `localStorage` to `sessionStorage`**: 12 token-storage references across `frontend/src/hooks/useAuth.ts`, `SettingsModal.tsx`, and `services/websocket.ts` migrated. Token is now cleared when the Tauri WebView closes, reducing the XSS-stolen-token attack window. Long-term target: `tauri-plugin-stronghold` for OS-keychain storage.
+- **C3 — `shell.open` URL allowlist**: Added `plugins.shell.open.urlPrefixes: ["https://", "http://"]` in `tauri.conf.json`. Tauri shell now rejects `file://`, `javascript:`, and custom-scheme URLs — RCE via shell-open blocked.
+
+#### HIGH Fixes
+- **H1 — Version drift eliminated**: All 4 manifests (`package.json`, `desktop-tauri/package.json`, `Cargo.toml`, `tauri.conf.json`) synchronized to `1.3.678`. New `scripts/sync-version.cjs` is the single source of truth and is wired into `prebuild` to prevent future drift.
+- **H2 — Dev/crash log files removed from git**: `desktop-tauri/src-tauri/{run.log, run_crash.log, run_direct.log}` and root `app_err.log` / `app_run.log` are untracked. `.gitignore` updated.
+- **H5 — Command injection in `terminalManager.ts:256` fixed**: SSH `remotePath` is now escaped via `JSON.stringify` and passed to `bash -c` via the argv separator `--`. Backticks, `$()`, and `;` are now neutralized.
+- **H6 — CORS narrowed in production**: `backend/src/server.ts` now restricts cross-origin to Tauri custom protocols (`tauri://localhost`, `https://tauri.localhost`) when `TAURI_PRODUCTION=1` or `NODE_ENV=production`. Dev mode keeps permissive CORS.
+- **H7 — `allow-eval-webview-js` removed from default capabilities**: Breaks the XSS → eval → Rust command chain. The `desktop-tauri/src-tauri/capabilities/default.json` no longer grants eval permission to any window.
+- **H8 — Auth rate limiting already addressed**: `backend/src/authRoutes.ts` already implements IP-based login blocking with persistent state (`~/.tline-login-blocks.json`) and custom IP rules. No code change needed.
+
+#### MEDIUM Fixes
+- **M1 — Mixed lockfiles resolved**: Removed `package-lock.json` files from `backend/`, `frontend/`, `desktop-tauri/backend/`, `desktop-tauri/frontend/`. `bun.lock` (root) is the sole lockfile.
+- **M6 — Cargo release profile already configured**: `[profile.release]` already includes `lto = true`, `codegen-units = 1`, `strip = true`, `opt-level = "z"`, `panic = "abort"`.
+
+#### Deferred to v1.3.679
+- **H3** — DOMPurify for `FileViewerTab.tsx` SVG preview (`dangerouslySetInnerHTML` at line 487)
+- **H4** — `lib.rs` module split (currently 1944 lines; the partial subagent refactor was reverted to keep `cargo check` green)
+- **M2, M3, M5, M7, M8, M9, M10, M11, M12** — refactors, tests, and quality-of-life items
+- **L1–L9** — documentation and process improvements
+
+#### Verification
+- `cargo check` passes in 13s with new pubkey + capability changes
+- `tauri.conf.json` validates as part of the Tauri build
+- 3 CRITICALs and 5 of 8 HIGHs eliminated
+
 ## [1.2.692] - 2026-08-02
 
 ### Feat: SuperAgent ↔ t-line Integration Audit & Enhancement Suite

@@ -289,7 +289,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       const data = await res.json();
       if (res.ok && data.success) {
         setSuccess('Password updated successfully.');
-        localStorage.setItem('token', data.token);
+        sessionStorage.setItem('token', data.token);
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');

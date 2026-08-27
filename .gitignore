@@ -24,6 +24,16 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 *.log
+# Keep changelog (it's a real file, not a log)
+!CHANGELOG.md
+# Dev/crash logs from local tauri runs
+desktop-tauri/src-tauri/run*.log
+app_*.log
+
+# Tauri updater private keys (public key is safe to commit)
+desktop-tauri/src-tauri/keys/*.key
+desktop-tauri/src-tauri/keys/*.pem
+desktop-tauri/src-tauri/keys/*.pub.b64
 
 # Editor configurations
 .vscode/

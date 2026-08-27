@@ -19,13 +19,13 @@ class TerminalWebSocketManager {
   }
 
   constructor() {
-    this.token = localStorage.getItem('token') || '';
+    this.token = sessionStorage.getItem('token') || '';
     // Check if token in query string (Electron bypass setup)
     const urlParams = getRuntimeSearchParams();
     const urlToken = urlParams.get('token');
     if (urlToken) {
       this.token = urlToken;
-      localStorage.setItem('token', urlToken);
+      sessionStorage.setItem('token', urlToken);
     }
   }
 

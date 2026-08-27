@@ -15,11 +15,11 @@ export function useAuth() {
       const urlParams = getRuntimeSearchParams();
       const urlToken = urlParams.get('token');
       if (urlToken) {
-        localStorage.setItem('token', urlToken);
+        sessionStorage.setItem('token', urlToken);
         wsManager.setToken(urlToken);
       }
 
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       
       // 1. Check setup status
       const setupRes = await fetch('/api/auth/setup-status');
@@ -40,7 +40,7 @@ export function useAuth() {
         if (verifyData.valid) {
           setIsAuthenticated(true);
         } else {
-          localStorage.removeItem('token');
+          sessionStorage.removeItem('token');
         }
       }
     } catch (e) {
@@ -65,7 +65,7 @@ export function useAuth() {
       });
       const data = await res.json();
       if (data.success) {
-        localStorage.setItem('token', data.token);
+        sessionStorage.setItem('token', data.token);
         wsManager.setToken(data.token);
         setIsAuthenticated(true);
         setSetupRequired(false);
@@ -88,7 +88,7 @@ export function useAuth() {
       });
       const data = await res.json();
       if (data.success) {
-        localStorage.setItem('token', data.token);
+        sessionStorage.setItem('token', data.token);
         wsManager.setToken(data.token);
         setIsAuthenticated(true);
       } else {
@@ -104,7 +104,7 @@ export function useAuth() {
     setTerminalInstances: React.Dispatch<React.SetStateAction<Record<string, any>>>,
     setActiveTabId: (id: string) => void
   ) => {
-    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
     localStorage.removeItem('tline-tabs-v2');
     localStorage.removeItem('tline-terminal-instances-v2');
     localStorage.removeItem('tline-active-tab-id');
@@ -137,7 +137,7 @@ export function useAuth() {
                                urlStr.includes('/api/auth/setup-status');
         
         if (!isAuthEndpoint) {
-          const oldToken = localStorage.getItem('token');
+          const oldToken = sessionStorage.getItem('token');
           let tokenUpdated = false;
           let newToken = '';
 
@@ -152,7 +152,7 @@ export function useAuth() {
                 const tokenParam = urlObj.searchParams.get('token');
                 if (tokenParam && tokenParam !== oldToken) {
                   newToken = tokenParam;
-                  localStorage.setItem('token', newToken);
+                  sessionStorage.setItem('token', newToken);
                   wsManager.setToken(newToken);
                   wsManager.reconnect();
                   tokenUpdated = true;
@@ -176,7 +176,7 @@ export function useAuth() {
           } else {
             // 3. Fallback to logout
             console.warn(`Unauthorized request to ${urlStr}. Logging out.`);
-            localStorage.removeItem('token');
+            sessionStorage.removeItem('token');
             wsManager.disconnect();
             setIsAuthenticated(false);
           }

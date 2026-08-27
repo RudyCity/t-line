@@ -41,7 +41,6 @@
     "allow-start-backend-command",
     "allow-get-app-url",
     "allow-open-webview-devtools",
-    "allow-eval-webview-js",
     "allow-get-webview-url",
     "allow-create-detached-window",
     "allow-close-detached-window",
