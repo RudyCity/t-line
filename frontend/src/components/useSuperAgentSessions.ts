@@ -384,9 +384,20 @@ export function useSuperAgentSessions(workspace: string) {
     activeSessionIdRef.current = activeSessionId;
   }, [activeSessionId]);
 
+  // Cap the in-memory message list to avoid unbounded growth during long sessions.
+  // A 30-min agent session can produce 5,000-20,000 messages; the cap keeps the
+  // React tree at ~500 entries (~5-15 MB) regardless of session length. Older
+  // messages stay on the backend and are re-loaded via loadMoreMessages().
+  const MAX_IN_MEMORY_MESSAGES = 500;
+
   const setMessagesWithRef = useCallback((val: React.SetStateAction<SuperAgentMessage[]>) => {
     loadedMessagesSessionIdRef.current = activeSessionIdRef.current;
-    setMessages(val);
+    setMessages(prev => {
+      const next = typeof val === 'function' ? (val as (p: SuperAgentMessage[]) => SuperAgentMessage[])(prev) : val;
+      if (!Array.isArray(next) || next.length <= MAX_IN_MEMORY_MESSAGES) return next;
+      // Keep the most recent N (so the user always sees the latest context).
+      return next.slice(-MAX_IN_MEMORY_MESSAGES);
+    });
   }, []);
 
   // Initial Sync from Backend on switch/mount

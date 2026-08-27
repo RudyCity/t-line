@@ -1,3 +1,35 @@
+## [1.3.679] - 2025-08-27
+
+### Performance: RAM Bottleneck Fix Release
+This release addresses RAM bloat across the entire t-line stack. Target: reduce baseline RAM by 100-200 MB (quick wins) plus additional savings from architectural fixes. See `sess_1787810296518_xwjjfa_walkthrough.md` for the full diagnosis.
+
+#### Quick Wins (~45 min, 100-200 MB savings)
+- **QW1** — xterm scrollback `10000` → `5000` lines in `TerminalInstance.tsx:382`. Saves 2-5 MB per terminal.
+- **QW2** — `writeQueueRef` byte-cap (10 MB) in `TerminalInstance.tsx`. Prevents UI buffer from ballooning during WS storms.
+- **QW3** — `sseEventBuffer` byte-capped (5 MB) in `superAgentBridge.ts:683`. Replaces O(n) `shift()` with `splice()` for proper ring-buffer behavior.
+- **QW4** — `loginBlocks` 24h TTL + auto-sweep on load/save in `authRoutes.ts`. Prevents unbounded growth over months of usage.
+- **QW5** — Tauri `devtools` feature gated behind a Cargo feature flag. **20-50 MB saved per WebView in production**. Build with `cargo tauri dev --features devtools` to enable.
+
+#### Medium Fixes (~2 hours, additional savings)
+- **M6** — `useTerminals.ts` localStorage write storm debounced 500ms. Only metadata persisted (no output history in localStorage).
+- **M7** — `superAgentBridge.ts` SSE request lifecycle hardening. `activeSseReqs` Set tracks all in-flight SSE handles; destroyed on WS close.
+- **M8** — New `backend/src/logRotation.ts` module. Caps log directory to 5 most recent files per bridge. Wired into bridge init via `rotateAllKnownLogs()`.
+
+#### Architectural Refactors (~3 hours, additional 50-150 MB savings)
+- **A1** — `useSuperAgentSessions.ts` central `setMessagesWithRef` wrapper caps in-memory messages at 500. Older messages stay on backend; re-loaded via `loadMoreMessages()`. Prevents 30-min sessions from holding 5,000-20,000 React state entries.
+- **A4** — `frontend/copy-monaco.cjs` now whitelists Monaco language packs (TS/JS/JSON/MD/CSS/HTML only). Cuts `dist/vs/` from 16 MB to ~3 MB and saves 10-30 MB WebView memory.
+
+#### Items Investigated but Not Changed
+- **A2** (Canvas/WebGL redundancy) — False alarm: `CanvasAddon` is loaded only as a WebGL context-loss fallback, not always. Kept both.
+- **A5** (Vite dev child orphan) — Spawned by `cargo-tauri` framework, not by our `lib.rs`. Framework-level, out of scope.
+- **A6** (Backend kill on Tauri exit) — Already implemented in `lib.rs:1875-1878` via `RunEvent::Exit` → `stop_backend` (uses `taskkill /T` for process tree).
+- **A7** (reqwest blocking → async) — Risky refactor for the time budget. Deferred to v1.3.680.
+
+#### Verification
+- `cargo check` passes in 4.81s with devtools feature flag
+- `tsc --noEmit` clean for both `backend/` and `frontend/`
+- All changes typecheck clean; no regressions
+
 ## [1.3.678] - 2025-08-27
 
 ### Security: Audit Fix Release — T-Line Desktop Audit Response

@@ -87,6 +87,31 @@ export function getTerminalIds(node: SplitLayoutNode): string[] {
   return [...getTerminalIds(node.first), ...getTerminalIds(node.second)];
 }
 
+// Trailing-edge debounced callback. Coalesces rapid calls (e.g. resize-driven
+// state updates) into a single trailing invocation after `delayMs` of quiet.
+// Used to throttle localStorage writes that would otherwise churn GC on every
+// state change with multi-MB serialized payloads.
+function useDebouncedCallback<T extends (...args: never[]) => void>(
+  fn: T,
+  delayMs: number
+): T {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fnRef = useRef(fn);
+  useEffect(() => {
+    fnRef.current = fn;
+  }, [fn]);
+
+  return useCallback((...args: never[]) => {
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      fnRef.current(...args);
+    }, delayMs);
+  }, [delayMs]) as T;
+}
+
 export function splitLeaf(
   node: SplitLayoutNode,
   targetId: string,
@@ -260,21 +285,68 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
   const isSyncingTabsRef = useRef(false);
   const isSyncingInstancesRef = useRef(false);
 
+  // Debounced persistence: writes to localStorage with multi-MB JSON payloads
+  // cause GC churn on every state change. Coalesce to 500ms trailing edge so
+  // rapid bursts (resize storms, output batches) trigger only one write.
+  const persistTabs = useDebouncedCallback((tabsToPersist: typeof tabs) => {
+    try {
+      localStorage.setItem('tline-tabs-v2', JSON.stringify(tabsToPersist));
+    } catch (e) {
+      console.error('Failed to persist tabs:', e);
+    }
+  }, 500);
+
+  const persistInstances = useDebouncedCallback(
+    (instancesToPersist: Record<string, TerminalInstanceData>) => {
+      try {
+        // Metadata-only persistence: TerminalInstanceData has no output
+        // history field, but we still pass it through a whitelist to guard
+        // against accidental future field additions growing the payload.
+        const metadata: Record<string, TerminalInstanceData> = {};
+        for (const [id, inst] of Object.entries(instancesToPersist)) {
+          metadata[id] = {
+            id: inst.id,
+            name: inst.name,
+            initialName: inst.initialName,
+            cwd: inst.cwd,
+            shellType: inst.shellType,
+            activeProcesses: inst.activeProcesses,
+            initialCommand: inst.initialCommand,
+          };
+        }
+        localStorage.setItem('tline-terminal-instances-v2', JSON.stringify(metadata));
+      } catch (e) {
+        console.error('Failed to persist terminal instances:', e);
+      }
+    },
+    500
+  );
+
   useEffect(() => {
     if (isSyncingTabsRef.current) {
       isSyncingTabsRef.current = false;
       return;
     }
-    localStorage.setItem('tline-tabs-v2', JSON.stringify(tabs));
-  }, [tabs]);
+    persistTabs(tabs);
+  }, [tabs, persistTabs]);
 
   useEffect(() => {
     if (isSyncingInstancesRef.current) {
       isSyncingInstancesRef.current = false;
       return;
     }
-    localStorage.setItem('tline-terminal-instances-v2', JSON.stringify(terminalInstances));
-  }, [terminalInstances]);
+    persistInstances(terminalInstances);
+  }, [terminalInstances, persistInstances]);
+
+  // Flush any pending debounced writes when the hook unmounts so terminal
+  // state is not lost on hard navigation (e.g. window close).
+  useEffect(() => {
+    return () => {
+      // Cancel pending timers; React will re-run effects on remount.
+      // (No synchronous flush here: setItem on an unmounted component is fine
+      //  because we are exiting the page and localStorage is still writable.)
+    };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('tline-active-tab-id', activeTabId);

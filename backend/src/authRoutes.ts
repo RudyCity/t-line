@@ -34,16 +34,33 @@ export function saveIpRules() {
 }
 
 const LOGIN_BLOCKS_FILE = path.join(os.homedir(), '.tline-login-blocks.json');
+// Blocks expire after 24h so the on-disk map cannot grow forever
+// across long-running deployments.
+const LOGIN_BLOCK_TTL_MS = 24 * 60 * 60 * 1000;
+
+function sweepExpiredLoginBlocks(): void {
+  const now = Date.now();
+  for (const [ip, block] of Object.entries(loginBlocks)) {
+    if (now - block.blockedAt > LOGIN_BLOCK_TTL_MS) {
+      delete loginBlocks[ip];
+    }
+  }
+}
+
 export let loginBlocks: Record<string, { blockedAt: number; attempts: number }> = {};
 try {
   if (fs.existsSync(LOGIN_BLOCKS_FILE)) {
     loginBlocks = JSON.parse(fs.readFileSync(LOGIN_BLOCKS_FILE, 'utf8'));
+    sweepExpiredLoginBlocks();
   }
 } catch (e) {
   console.error('Failed to load login blocks:', e);
 }
 
 export function saveLoginBlocks() {
+  // Drop expired entries before persisting so the on-disk file
+  // stays small and stale blocks don't survive restarts.
+  sweepExpiredLoginBlocks();
   try {
     fs.writeFileSync(LOGIN_BLOCKS_FILE, JSON.stringify(loginBlocks, null, 2));
   } catch (e) {

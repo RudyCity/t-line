@@ -23,18 +23,53 @@ if (fs.existsSync(localSrcDir)) {
   }
 }
 
+// Whitelist of Monaco language files to copy. The full monaco-editor package
+// ships 50+ language bundles (abap, apex, azcli, bat, bicep, cameligo, clojure,
+// ...) that t-line never displays. Restricting to the languages we actually
+// use cuts the bundled `vs/` directory from ~16 MB to ~3 MB and saves 10-30 MB
+// of WebView memory per app instance. Add a language to this set if the file
+// viewer needs to syntax-highlight it.
+const ALLOWED_LANGUAGE_PREFIXES = new Set([
+  'typescript', 'javascript', 'javascript_.', // typescript, javascript, typescript.js
+  'json', 'jsonc', 'json-mode',
+  'markdown', 'css', 'html',
+  'typescript-mode', 'javascript-mode', 'css-mode', 'html-mode',
+  'tsx', 'jsx',
+]);
+// Always copy: editor core, base utilities, language contribution registry
+const ALWAYS_COPY = new Set([
+  'editor', 'base', 'basic-languages', 'language',
+  '_commonjsHelpers', 'monaco.contribution',
+  'assets',
+  'loader', 'nls', 'standalone',
+]);
+
+function shouldCopyFile(filename) {
+  if (ALWAYS_COPY.has(filename)) return true;
+  const base = filename.split('-')[0].split('.')[0]; // e.g. "typescript" from "typescript-XYZ.js"
+  if (ALLOWED_LANGUAGE_PREFIXES.has(base)) return true;
+  if (ALLOWED_LANGUAGE_PREFIXES.has(filename.replace(/\.js$/, ''))) return true;
+  return false;
+}
+
 function copyDirSync(src, dest) {
   fs.mkdirSync(dest, { recursive: true });
   let entries = fs.readdirSync(src, { withFileTypes: true });
 
   for (let entry of entries) {
+    if (entry.isDirectory() && !ALWAYS_COPY.has(entry.name)) {
+      // Only recurse into directories that are in ALWAYS_COPY (e.g. editor/)
+      continue;
+    }
     let srcPath = path.join(src, entry.name);
     let destPath = path.join(dest, entry.name);
 
     if (entry.isDirectory()) {
       copyDirSync(srcPath, destPath);
     } else {
-      fs.copyFileSync(srcPath, destPath);
+      if (shouldCopyFile(entry.name)) {
+        fs.copyFileSync(srcPath, destPath);
+      }
     }
   }
 }

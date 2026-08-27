@@ -112,7 +112,14 @@ export function TerminalInstance({
 
   // Write buffer queue to throttle incoming WebSocket data chunks and prevent UI blocking
   const writeQueueRef = useRef<string[]>([]);
+  const writeQueueBytesRef = useRef<number>(0);
   const writeIntervalRef = useRef<number | null>(null);
+
+  // Cap the queued data so a server storm cannot balloon the JS heap.
+  // 10 MB worth of chunks is well beyond one render frame's needs;
+  // any data that floods in faster than we can render is dropped oldest-first
+  // so the terminal stays responsive to the most recent output.
+  const MAX_WRITE_QUEUE_BYTES = 10 * 1024 * 1024; // 10 MB
 
   // Flush data to terminal using requestAnimationFrame-backed processing loop
   const flushWriteQueue = useCallback(() => {
@@ -120,6 +127,7 @@ export function TerminalInstance({
     if (term && writeQueueRef.current.length > 0) {
       const batch = writeQueueRef.current.join('');
       writeQueueRef.current = [];
+      writeQueueBytesRef.current = 0;
       term.write(batch);
     }
     writeIntervalRef.current = null;
@@ -133,7 +141,20 @@ export function TerminalInstance({
       return;
     }
 
+    // Enforce byte cap: drop oldest chunks until the new one fits.
+    if (writeQueueBytesRef.current + data.length > MAX_WRITE_QUEUE_BYTES) {
+      while (
+        writeQueueRef.current.length > 0 &&
+        writeQueueBytesRef.current + data.length > MAX_WRITE_QUEUE_BYTES
+      ) {
+        const dropped = writeQueueRef.current.shift();
+        if (dropped === undefined) break;
+        writeQueueBytesRef.current -= dropped.length;
+      }
+    }
+
     writeQueueRef.current.push(data);
+    writeQueueBytesRef.current += data.length;
     if (writeIntervalRef.current === null) {
       writeIntervalRef.current = requestAnimationFrame(flushWriteQueue);
     }
@@ -379,7 +400,7 @@ export function TerminalInstance({
       fontWeightBold: 'bold',
       lineHeight: 1.2,
       letterSpacing: 0,
-      scrollback: 10000,
+      scrollback: 5000,
       scrollOnUserInput: true,
       fastScrollModifier: 'shift',
       fastScrollSensitivity: 5,

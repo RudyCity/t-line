@@ -6,8 +6,14 @@ import { spawn, execSync } from 'child_process';
 import WebSocket from 'ws';
 import { getInputHistory, saveInputHistory } from './sessionManager';
 import { loadMergedPresets } from './presetUtils';
+import { rotateAllKnownLogs } from './logRotation';
 
 const SUPERAGENT_LOG_FILE = path.join(os.homedir(), '.tline-superagent.log');
+
+// Bound on-disk log size at module init. Without this, the per-process log
+// files in the user's home directory can grow to hundreds of MB over weeks
+// of use. See backend/src/logRotation.ts for the rotation strategy.
+rotateAllKnownLogs();
 
 // Log message to a dedicated file
 export function logToSuperAgentFile(message: string) {
@@ -610,10 +616,16 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
   const initialSessionId = parsedUrl.searchParams.get('sessionId') || undefined;
 
   let sseReq: http.ClientRequest | null = null;
-let sseReconnectTimeout: NodeJS.Timeout | null = null;
+  // Track all SSE handles opened for this WS client so a single disconnect
+  // can deterministically destroy every outstanding request. Without this,
+  // orphaned http.ClientRequests can hold sockets + parser state past WS close.
+  const activeSseReqs = new Set<http.ClientRequest>();
+  let sseReconnectTimeout: NodeJS.Timeout | null = null;
 let sseReconnectAttempts = 0;
 const SSE_EVENT_BUFFER_LIMIT = 200;
+const SSE_EVENT_BUFFER_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const sseEventBuffer: Array<{ id: number; payload: string }> = [];
+let sseEventBufferBytes = 0;
 let sseEventCounter = 0;
 let lastSseEventIdRef = 0;
 let replayCursor = 0;
@@ -625,6 +637,7 @@ let suppressBufferWrite = false;
     if (isClosed || ws.readyState !== WebSocket.OPEN) return;
     if (sseReq) {
       try { sseReq.destroy(); } catch {}
+      activeSseReqs.delete(sseReq);
       sseReq = null;
     }
     const lastBufferedEventId = lastSseEventIdRef;
@@ -636,6 +649,7 @@ let suppressBufferWrite = false;
       hostname: '127.0.0.1',
       port: 7888,
       path: ssePath,
+
       method: 'GET',
       headers: {
         'Accept': 'text/event-stream',
@@ -643,6 +657,7 @@ let suppressBufferWrite = false;
         ...(lastBufferedEventId > 0 ? { 'Last-Event-ID': String(lastBufferedEventId) } : {})
       }
     }, (res) => {
+      // Successful response: the request is now tracked until 'close' fires.
       // Reset connectionAttempts on successful connection
       connectionAttempts = 0;
       sseReconnectAttempts = 0;
@@ -681,8 +696,22 @@ let suppressBufferWrite = false;
             sseEventCounter += 1;
             lastSseEventIdRef = sseEventCounter;
             sseEventBuffer.push({ id: sseEventCounter, payload: dataStr });
-            if (sseEventBuffer.length > SSE_EVENT_BUFFER_LIMIT) {
-              sseEventBuffer.shift();
+            sseEventBufferBytes += Buffer.byteLength(dataStr, 'utf8');
+            // Trim when either the event count or the byte budget is exceeded.
+            // Use splice() of the oldest 10% in a single O(n) call instead of
+            // O(n) per shift(), which scales poorly when a single huge event
+            // arrives (e.g. 100KB+ payloads). The replay cursor on the consumer
+            // side filters by `e.id > replayEventId`, so dropping old events is
+            // safe — late-joining clients simply resume from the next available id.
+            if (
+              sseEventBuffer.length > SSE_EVENT_BUFFER_LIMIT ||
+              sseEventBufferBytes > SSE_EVENT_BUFFER_MAX_BYTES
+            ) {
+              const dropN = Math.max(1, Math.floor(sseEventBuffer.length * 0.1));
+              const dropped = sseEventBuffer.splice(0, dropN);
+              for (const evt of dropped) {
+                sseEventBufferBytes -= Buffer.byteLength(evt.payload, 'utf8');
+              }
             }
           }
 
@@ -747,6 +776,16 @@ let suppressBufferWrite = false;
       }
     });
 
+    // Track this SSE handle so a WS disconnect can destroy every outstanding
+    // request, not just the latest one. The Set is auto-pruned when the
+    // request emits 'close' (normal end, error, or destroy).
+    if (sseReq) {
+      const trackedReq: http.ClientRequest = sseReq;
+      activeSseReqs.add(trackedReq);
+      trackedReq.on('close', () => {
+        activeSseReqs.delete(trackedReq);
+      });
+    }
     sseReq.end();
   }
 
@@ -888,7 +927,18 @@ let suppressBufferWrite = false;
     console.log('[WS-Agent] Client disconnected');
     isClosed = true;
     if (sseReq) {
-      sseReq.destroy();
+      try { sseReq.destroy(); } catch {}
+      sseReq = null;
+    }
+    // Destroy any other SSE handles that may still be in flight (reconnect
+    // races, abandoned requests, etc.) and clear the tracking set.
+    for (const req of activeSseReqs) {
+      try { req.destroy(); } catch {}
+    }
+    activeSseReqs.clear();
+    if (sseReconnectTimeout) {
+      clearTimeout(sseReconnectTimeout);
+      sseReconnectTimeout = null;
     }
   });
 }

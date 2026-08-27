@@ -50,3 +50,7 @@ frontend/public/vs/
 # Graphify outputs
 graphify-out/
 .graphifyignore
+*.untracked: src/core/
+
+# Unrelated superagent CLI files accidentally created
+src/core/
