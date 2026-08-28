@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "1.3.679"
+version = "1.3.680"
 description = "A Tauri App"
 authors = ["you"]
 license = ""
@@ -26,7 +26,10 @@ tauri-plugin-log = "2"
 sysinfo = "0.30"
 tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2"
-reqwest = { version = "0.13", features = ["blocking"] }
+# Use ureq (sync) instead of reqwest (which pulls in tokio via "blocking" feature).
+# ureq is a small, dependency-light synchronous HTTP client — no async runtime overhead,
+# no conflict with Tauri's own runtime. RAM savings: ~5-15 MB.
+ureq = { version = "2.10", default-features = false, features = ["tls"] }
 
 [features]
 # Default features are empty so production builds (`cargo tauri build`)

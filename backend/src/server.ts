@@ -551,7 +551,24 @@ server.on('upgrade', (request, socket, head) => {
     return;
   }
 
-  const token = urlParams.searchParams.get('token');
+  // Prefer authenticating via the Sec-WebSocket-Protocol subprotocol header
+  // so the bearer token is never exposed in the URL (query params leak via
+  // server access logs, browser history, and reverse proxies). The expected
+  // client format is: `new WebSocket(url, ['tline-bearer', token])`, which
+  // causes the browser to send `Sec-WebSocket-Protocol: tline-bearer, <token>`.
+  // Fall back to the legacy `?token=` query param for backward compatibility
+  // with older client builds that have not yet adopted the subprotocol.
+  const protocolHeader = request.headers['sec-websocket-protocol'];
+  const protocols = typeof protocolHeader === 'string'
+    ? protocolHeader.split(',').map((p) => p.trim())
+    : [];
+  let token: string | null = null;
+  if (protocols.length >= 2 && protocols[0] === 'tline-bearer') {
+    token = protocols[1];
+  }
+  if (!token) {
+    token = urlParams.searchParams.get('token');
+  }
 
   if (!token || !verifySocketToken(token)) {
     socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');

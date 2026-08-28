@@ -53,7 +53,16 @@ class TerminalWebSocketManager {
     console.log('Connecting terminal WebSocket to:', wsUrl);
 
     try {
-      this.ws = new WebSocket(wsUrl);
+      // Authenticate via the Sec-WebSocket-Protocol subprotocol header so the
+      // bearer token is never exposed in URLs (query params leak via server
+      // access logs, browser history, and proxies). The backend reads the
+      // token from `sec-websocket-protocol` first and falls back to the
+      // `?token=` query param for backward compatibility with older clients.
+      if (this.token) {
+        this.ws = new WebSocket(wsUrl, ['tline-bearer', this.token]);
+      } else {
+        this.ws = new WebSocket(wsUrl);
+      }
 
       this.ws.onopen = () => {
         console.log('Terminal WebSocket Connected.');

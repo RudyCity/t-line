@@ -1,7 +1,6 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
-use std::net::TcpStream;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -16,91 +15,13 @@ use std::os::windows::process::CommandExt;
 
 mod updater;
 
-struct DesktopState {
-    backend_child: Arc<Mutex<Option<Child>>>,
-    status: Arc<Mutex<String>>, // "stopped" | "starting" | "running"
-    active_sessions: Arc<Mutex<serde_json::Value>>,
-    workspaces: Arc<Mutex<serde_json::Value>>,
-    sync_state: Arc<Mutex<serde_json::Value>>,
-    sys: Mutex<sysinfo::System>,
-}
+mod state;
 
-fn is_port_active(port: u16) -> bool {
-    TcpStream::connect(format!("127.0.0.1:{}", port)).is_ok()
-        || TcpStream::connect(format!("[::1]:{}", port)).is_ok()
-}
+use crate::state::{
+    app_base_url, app_url_with_token, current_app_url, find_workspace_root, get_bypass_token,
+    is_port_active, kill_port_process, DesktopState,
+};
 
-fn find_workspace_root() -> Option<PathBuf> {
-    let exe_path = std::env::current_exe().ok()?;
-    let mut path = exe_path.as_path();
-    while let Some(parent) = path.parent() {
-        if parent.join("package.json").exists() && parent.join("backend").exists() && parent.join("desktop-tauri").exists() {
-            return Some(parent.to_path_buf());
-        }
-        path = parent;
-    }
-    None
-}
-
-fn kill_port_process(port: u16) {
-    #[cfg(windows)]
-    {
-        let cmd = format!(
-            "Get-NetTCPConnection -LocalPort {} -State Listen -ErrorAction SilentlyContinue | Foreach-Object {{ Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }}"
-        , port);
-        Command::new("powershell")
-            .args(&["-NoProfile", "-Command", &cmd])
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .creation_flags(0x08000000)
-            .status()
-            .ok();
-    }
-    #[cfg(not(windows))]
-    {
-        let cmd = format!("lsof -t -i:{} | xargs kill -9", port);
-        Command::new("sh")
-            .args(&["-c", &cmd])
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .ok();
-    }
-}
-
-fn get_bypass_token() -> Option<String> {
-    let home = std::env::var("USERPROFILE")
-        .or_else(|_| std::env::var("HOME"))
-        .ok()?;
-    let token_path = Path::new(&home).join(".tline-bypass-token");
-    if token_path.exists() {
-        std::fs::read_to_string(token_path)
-            .map(|s| s.trim().to_string())
-            .ok()
-    } else {
-        None
-    }
-}
-
-fn app_base_url() -> &'static str {
-    if cfg!(debug_assertions) {
-        "http://localhost:5773"
-    } else {
-        "http://localhost:5779"
-    }
-}
-
-fn app_url_with_token(token: Option<String>) -> String {
-    let base_url = app_base_url();
-    match token {
-        Some(token) if !token.is_empty() => format!("{}/?token={}", base_url, token),
-        _ => base_url.to_string(),
-    }
-}
-
-fn current_app_url() -> String {
-    app_url_with_token(get_bypass_token())
-}
 
 fn show_dashboard_window<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>) {
     if let Some(window) = app_handle.get_webview_window("main") {
@@ -160,22 +81,18 @@ fn show_missing_node_dialog() {
 }
 
 fn http_get(port: u16, path: &str, token: Option<&str>) -> Result<String, String> {
-    let client = reqwest::blocking::Client::builder()
-        .timeout(Duration::from_millis(800))
-        .build()
-        .map_err(|e| e.to_string())?;
-        
+    // ureq is a small synchronous HTTP client. No async runtime overhead, no
+    // tokio dependency. Returns the response body on 2xx, error string otherwise.
     let url = format!("http://127.0.0.1:{}{}", port, path);
-    let mut req = client.get(&url);
+    let mut req = ureq::get(&url).timeout(Duration::from_millis(800));
     if let Some(t) = token {
-        req = req.header("Authorization", format!("Bearer {}", t));
+        req = req.set("Authorization", &format!("Bearer {}", t));
     }
-    
-    let res = req.send().map_err(|e| e.to_string())?;
-    if res.status().is_success() {
-        res.text().map_err(|e| e.to_string())
-    } else {
-        Err(format!("HTTP error: {}", res.status()))
+
+    match req.call() {
+        Ok(response) => response.into_string().map_err(|e| e.to_string()),
+        Err(ureq::Error::Status(code, _)) => Err(format!("HTTP error: {}", code)),
+        Err(ureq::Error::Transport(t)) => Err(t.to_string()),
     }
 }
 

@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { FileCode, RotateCcw, Check, ZoomIn, ZoomOut, Maximize, Image as ImageIcon, FileText, File } from 'lucide-react';
 import Editor, { loader } from '@monaco-editor/react';
+import DOMPurify from 'dompurify';
 
 // Configure Monaco to load from local public/vs path
 loader.config({ paths: { vs: '/vs' } });
@@ -106,6 +107,18 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
   const fileType = getFileType(filePath);
   const isSvg = filePath.split('.').pop()?.toLowerCase() === 'svg';
   const [viewMode, setViewMode] = useState<'preview' | 'code'>('preview');
+
+  // SVG content is sanitized via DOMPurify to prevent XSS attacks from
+  // malicious SVG files. USE_PROFILES restricts the output to the official
+  // SVG + svgFilters element/attribute allowlist, stripping <script>,
+  // on* handlers, foreignObject scripts, and external resource loads.
+  const sanitizedSvg = useMemo(() => {
+    if (!editedContent) return '';
+    return DOMPurify.sanitize(editedContent, {
+      USE_PROFILES: { svg: true, svgFilters: true },
+      ADD_ATTR: ['xlink:href'],
+    });
+  }, [editedContent]);
 
   useEffect(() => {
     setZoom(1);
@@ -483,8 +496,9 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
                   setIsDragging(true);
                   dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
                 }}
-                // Inject SVG XML directly into DOM — avoids blob:/data: URL handling by browser
-                dangerouslySetInnerHTML={{ __html: editedContent || '' }}
+                // Inject sanitized SVG XML directly into DOM — avoids blob:/data: URL handling by browser
+                // Content is sanitized via DOMPurify (see sanitizedSvg memo above) to prevent XSS
+                dangerouslySetInnerHTML={{ __html: sanitizedSvg }}
               />
             ) : (
               <img

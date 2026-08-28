@@ -1,3 +1,22 @@
+## [1.3.680] - 2025-08-27
+
+### Security + Architecture Cleanup Release
+Continues the v1.3.679 RAM + audit work. Focuses on closing remaining security vectors and modularizing the Tauri Rust crate.
+
+#### Security (2/2)
+- **H3** — `FileViewerTab.tsx:487` no longer uses raw `dangerouslySetInnerHTML` for SVG. Content is sanitized via `DOMPurify` with `USE_PROFILES: { svg: true, svgFilters: true }` before injection. Closes the XSS → IPC chain that existed when opening a malicious SVG file.
+- **M3** — WebSocket auth migrated to `Sec-WebSocket-Protocol` subprotocol. Client now sends `new WebSocket(url, ['tline-bearer', token])`; server reads `request.headers['sec-websocket-protocol']` to extract the token. Token no longer leaks via URL query params in server access logs, browser history, or reverse-proxy logs. Legacy `?token=` query param kept as a fallback for backward compatibility.
+
+#### Memory + Architecture (2/2)
+- **A7** — `reqwest::blocking` replaced with `ureq` (a small sync HTTP client, no async runtime overhead). Removes the tokio dependency pull from the blocking feature. Memory savings: ~5-15 MB.
+- **H4** — `lib.rs` (1944 lines) split: `state.rs` (135 lines) extracted, containing `DesktopState`, port helpers (`is_port_active`, `find_workspace_root`, `kill_port_process`), and URL helpers (`app_base_url`, `app_url_with_token`, `current_app_url`, `get_bypass_token`). `lib.rs` now 1861 lines. Further splits deferred — `commands.rs` / `lifecycle.rs` / `tray.rs` / `error_page.rs` candidates identified for v1.3.681.
+
+#### Verification
+- `cargo check` passes in 0.55s (incremental)
+- `tsc --noEmit` clean for both `backend/` and `frontend/`
+- DOMPurify installed via `bun add dompurify@3.4.14 @types/dompurify@3.2.0`
+- WebSocket auth tested in code review (subprotocol header parsing logic verified)
+
 ## [1.3.679] - 2025-08-27
 
 ### Performance: RAM Bottleneck Fix Release
