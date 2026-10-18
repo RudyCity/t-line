@@ -103,14 +103,20 @@ export function verifyMasterPassword(password: string): boolean {
 // Generate JWT token
 export function generateToken(payload: object): string {
   const config = loadConfig();
-  const secret = config?.jwtSecret || 'temp-secret-fallback';
+  const secret = config?.jwtSecret;
+  if (!secret || secret.trim().length < 32) {
+    throw new Error('JWT secret is not configured. Complete setup before issuing tokens.');
+  }
   return jwt.sign(payload, secret, { expiresIn: '7d' });
 }
 
 // Verify JWT token
 export function verifyToken(token: string): any {
   const config = loadConfig();
-  const secret = config?.jwtSecret || 'temp-secret-fallback';
+  const secret = config?.jwtSecret;
+  if (!secret || secret.trim().length < 32) {
+    return null;
+  }
   try {
     return jwt.verify(token, secret);
   } catch (e) {

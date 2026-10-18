@@ -1,3 +1,22 @@
+## [1.3.681] - 2026-10-18
+
+### SuperAgent Integration Security Hardening
+
+#### Security and Session Isolation
+- Moved SuperAgent console WebSocket authentication to the `tline-bearer` subprotocol and removed bearer credentials from console and terminal WebSocket URLs.
+- Removed the static JWT secret fallback; token creation now fails closed and verification rejects missing or weak secrets.
+- Bound SuperAgent session resolution to session ID, client mode, and workspace; initialization rejects conflicting workspace/mode reuse with HTTP 409.
+- Stopped writing raw prompts and bypass-token values to logs.
+- Scoped prompt-history persistence and memory-search requests to the active workspace.
+- Added JWT fail-closed regression tests and fixed the root test command to run frontend and auth test suites.
+
+#### Verification
+- T-Line backend build passes.
+- T-Line frontend production build passes with existing CSS syntax, dynamic-import, and bundle-size warnings.
+- Root test command passes: 11 tests (9 frontend, 2 auth).
+- SuperAgent `bun x tsc --noEmit` passes.
+- Runtime restart/E2E verification and dedicated session-isolation tests remain open; see `docs/plans/2026-10-18-tline-superagent-hardening-plan.md`.
+
 ## [1.3.680] - 2025-08-27
 
 ### Security + Architecture Cleanup Release

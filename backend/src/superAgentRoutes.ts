@@ -124,9 +124,15 @@ router.get('/tasks', async (req, res) => {
 
 // RMemory & Long-term Memory REST Proxy
 router.get('/memory/search', async (req, res) => {
+  const workspace = (req.query.workspace as string) || (req.headers['x-workspace-path'] as string) || '';
   const query = (req.query.query as string) || '';
   const scope = (req.query.scope as string) || 'all';
-  const data = await proxyToSuperAgent(`/api/memory/search?query=${encodeURIComponent(query)}&scope=${encodeURIComponent(scope)}`, { memories: [] });
+  const data = await proxyToSuperAgent(
+    `/api/memory/search?query=${encodeURIComponent(query)}&scope=${encodeURIComponent(scope)}`,
+    { memories: [] },
+    workspace,
+    3000
+  );
   res.json(data);
 });
 

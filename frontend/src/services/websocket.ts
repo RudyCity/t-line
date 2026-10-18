@@ -49,7 +49,7 @@ class TerminalWebSocketManager {
       host = host.slice(0, -5) + ':5779';
     }
 
-    const wsUrl = `${protocol}//${host}/?token=${encodeURIComponent(this.token)}`;
+    const wsUrl = `${protocol}//${host}/`;
     console.log('Connecting terminal WebSocket to:', wsUrl);
 
     try {

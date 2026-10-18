@@ -476,15 +476,17 @@ export function SuperAgentConsole({
     }
 
     const token = localStorage.getItem('token') || '';
-    const wsUrl = `${protocol}//${host}/api/superagent?workspace=${encodeURIComponent(workspace)}&agentMode=${agentMode}&customArgs=${encodeURIComponent(customArgs)}&sessionId=${encodeURIComponent(activeSessionId)}&token=${encodeURIComponent(token)}`;
+    const wsUrl = `${protocol}//${host}/api/superagent?workspace=${encodeURIComponent(workspace)}&agentMode=${encodeURIComponent(agentMode)}&customArgs=${encodeURIComponent(customArgs)}&sessionId=${encodeURIComponent(activeSessionId)}`;
 
     if (wsRef.current && activeWsUrlRef.current === wsUrl && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
       return;
     }
 
     activeWsUrlRef.current = wsUrl;
-    console.log('[SuperAgent] Connecting to bridge:', wsUrl);
-    const socket = new WebSocket(wsUrl);
+    console.log('[SuperAgent] Connecting to bridge:', `${protocol}//${host}/api/superagent`, { workspace: workspace || 'Default', agentMode });
+    const socket = token
+      ? new WebSocket(wsUrl, ['tline-bearer', token])
+      : new WebSocket(wsUrl);
 
     socket.onopen = () => {
       console.log(`[SuperAgent WS] Connection established. Workspace: ${workspace || 'Default'}`);

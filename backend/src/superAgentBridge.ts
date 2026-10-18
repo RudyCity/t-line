@@ -803,11 +803,10 @@ let suppressBufferWrite = false;
 
       if (actionType === 'prompt') {
         const text = parsed.text || '';
-        const msgPrompt = `Prompt (${workspacePath}): ${text}`;
-        console.log(`[WS-Agent] ${msgPrompt}`);
-        logToSuperAgentFile(`[WS-Agent] ${msgPrompt}`);
-        logSuperAgentEvent('prompt', { text, workspace: workspacePath });
-        await saveCliPromptHistory(text);
+        console.log(`[WS-Agent] Prompt received (${workspacePath}, ${text.length} chars)`);
+        logToSuperAgentFile(`[WS-Agent] Prompt received (${workspacePath}, ${text.length} chars)`);
+        logSuperAgentEvent('prompt', { length: text.length, workspace: workspacePath });
+        await saveCliPromptHistory(text, workspacePath);
 
         // Ensure SuperAgent server process is running
         await new Promise<void>((resolve) => {

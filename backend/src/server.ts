@@ -940,7 +940,7 @@ process.on('SIGTERM', () => { closeSessionDb(); process.exit(0); });
 server.listen(port, () => {
   console.log(`========================================`);
   console.log(`t-line Workspace Server running on port ${port}`);
-  console.log(`Bypass Token: ${localBypassToken}`);
+  console.log('Local bypass token initialized; token value intentionally omitted.');
   console.log(`========================================`);
   updateWorkspaceWatchers();
   // Pre-warm the SuperAgent server so it is ready before the first WS connection.

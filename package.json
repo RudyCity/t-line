@@ -1,6 +1,6 @@
 {
   "name": "superagent",
-  "version": "1.3.680",
+  "version": "1.3.681",
   "description": "Interactive terminal-based AI coding assistant",
   "type": "module",
   "bin": {
@@ -24,7 +24,7 @@
     "prebuild": "node scripts/sync-version.cjs",
     "build": "tsc",
     "start": "node dist/cli.js",
-    "test": "vitest run",
+    "test": "cd frontend && bun x vitest run --config vite.config.ts && cd .. && bun x vitest run --environment node tests/auth.test.ts",
     "verify:extension-js": "node scripts/verify-extension-js.mjs",
     "verify:all": "bun run build && bun run verify:extension-js && bun run test",
     "ext:css": "tailwindcss -i chrome-extension/sidepanel.src.css -o chrome-extension/sidepanel.css",
