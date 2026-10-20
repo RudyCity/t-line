@@ -6,6 +6,7 @@ import { sendSuperAgentRequest } from './superAgentBridge';
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
 import { fetchParityReadAction, PARITY_READ_ACTIONS, type ParityReadAction } from './superAgentParityBridge';
 import { streamTlineTaskEvents } from './superAgentTaskEvents';
+import { forwardTaskCancel } from './superAgentTaskCancel';
 import motionProxyRouter from './motionProxy';
 import { getWorkspaceSessions, getSessionMessages } from './sessionManager';
 
@@ -19,6 +20,21 @@ router.use('/motion', motionProxyRouter);
 
 /** SSE relay with exact session identity, authenticated and bounded to local SuperAgent. */
 router.get('/tasks/events', streamTlineTaskEvents);
+
+/** Fixed-path, opt-in, two-stage operator cancellation. No generic command proxy. */
+router.post('/tasks/cancel/:action', async (req, res) => {
+  const action = req.params.action;
+  if (action !== 'prepare' && action !== 'confirm') {
+    res.status(404).json({ success: false, error: 'Unknown task control action.' });
+    return;
+  }
+  const body = req.body || {};
+  const result = await forwardTaskCancel(action, {
+    workspace: body.workspace, sessionId: body.sessionId,
+    jobId: body.jobId, challenge: body.challenge,
+  });
+  res.status(result.status).json(result.payload);
+});
 
 /** Typed, read-only desktop actions. No generic upstream URL or method proxy. */
 router.get('/parity/:action', async (req, res) => {

@@ -1,3 +1,14 @@
+## [1.3.694] - 2026-10-20
+
+### SuperAgent CLI ↔ TLine Opt-in Task Cancellation (Increment 6B)
+
+- Added an explicitly disabled-by-default, workspace-operator two-phase cancel endpoint for CLI Bridge jobs with an active process handle owned by the same SuperAgent runtime.
+- Fixed-path backend POST proxy uses the server-side service token, verifies exact registered workspace and active TLine chat session, and never accepts arbitrary PID or shell input.
+- A 30-second one-use challenge binds workspace, session, job, PID, start time and revision; the server rechecks the process before forwarding the cancellation request to the existing CLI Bridge handler.
+- TLine displays Cancel controls only when both operator actions appear in the live capability manifest and requires user confirmation before sending a request.
+- Existing CLI Bridge jobs lack trusted creator-chat provenance: enabling the local workspace-operator switch may authorize cancellation of another CLI session's job in the **same workspace**. Keep disabled on multi-user or untrusted workspaces. Retry remains unsupported.
+- Added policy, token replay, workspace isolation, frontend confirmation and fixed-path proxy regression tests. No real task was cancelled; live Tauri E2E remains pending.
+
 ## [1.3.693] - 2026-10-20
 
 ### Motion Studio Interactive Keyframe Timeline

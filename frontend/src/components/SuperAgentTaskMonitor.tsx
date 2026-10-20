@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Activity, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { fetchTlineTaskSnapshot, type TlineTask } from './SuperAgentTaskSnapshot';
 import { checkTaskSseCapability, readTaskSseStream } from './SuperAgentTaskEvents';
+import { getTaskCancelCapability, requestTaskCancellation } from './SuperAgentTaskControls';
 import { getAuthHeader } from './SuperAgentConsoleUtils';
 
 type Props = { workspace: string; sessionId: string };
@@ -16,6 +17,34 @@ export function SuperAgentTaskMonitor({ workspace, sessionId }: Props) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [transport, setTransport] = useState<'polling' | 'sse'>('polling');
   const [replayNotice, setReplayNotice] = useState('');
+  const [cancelAllowed, setCancelAllowed] = useState(false);
+  const [cancelBusy, setCancelBusy] = useState('');
+  const [cancelNotice, setCancelNotice] = useState('');
+
+  useEffect(() => {
+    setCancelAllowed(false);
+    setCancelNotice('');
+    setCancelBusy('');
+    if (!open || !workspace || !sessionId) return;
+    const abort = new AbortController();
+    getTaskCancelCapability(workspace, getAuthHeader, fetch, abort.signal)
+      .then(enabled => { if (!abort.signal.aborted) setCancelAllowed(enabled); })
+      .catch(() => { if (!abort.signal.aborted) setCancelAllowed(false); });
+    return () => abort.abort();
+  }, [open, workspace, sessionId, refreshKey]);
+
+  const cancelTask = async (jobId: string) => {
+    if (!cancelAllowed || cancelBusy || !workspace || !sessionId) return;
+    if (!window.confirm('Request cancellation of CLI task ' + jobId +
+      '? This may interrupt edits or leave partial artifacts.')) return;
+    setCancelBusy(jobId);
+    setCancelNotice('');
+    try {
+      setCancelNotice(await requestTaskCancellation(workspace, sessionId, jobId, getAuthHeader));
+    } catch (e) {
+      setCancelNotice('Cancellation denied: ' + (e instanceof Error ? e.message : String(e)));
+    } finally { setCancelBusy(''); }
+  };
 
   useEffect(() => {
     // Scope observations to the current workspace and console session.
@@ -132,6 +161,10 @@ export function SuperAgentTaskMonitor({ workspace, sessionId }: Props) {
           </div>
           {error && <div className="text-amber-400 py-1" role="status">{error}</div>}
           {replayNotice && <div className="text-amber-400 py-1" role="status">{replayNotice}</div>}
+          {cancelAllowed && <div className="text-[var(--text-muted)] py-1">
+            Workspace-operator CLI cancellation enabled. Only runtime-owned jobs can be stopped.
+          </div>}
+          {cancelNotice && <div className="text-amber-400 py-1" role="status">{cancelNotice}</div>}
           {incomplete.length > 0 && <div className="text-amber-400 py-1">Partial snapshot: {incomplete.join(', ')} unavailable</div>}
           {!error && tasks.length === 0 && <div className="text-[var(--text-muted)] py-1">No retained CLI, daemon, or Muse tasks in this workspace.</div>}
           {tasks.map(task => (
@@ -141,6 +174,14 @@ export function SuperAgentTaskMonitor({ workspace, sessionId }: Props) {
               <span className="truncate flex-1" title={task.taskId}>{task.taskId}</span>
               <span className="text-[var(--text-muted)] shrink-0">{task.status}</span>
               <span className="text-[var(--text-muted)] shrink-0" title="Status proof">{task.evidence}</span>
+              {cancelAllowed && task.channel === 'cli' && task.status === 'running' && (
+                <button type="button" disabled={Boolean(cancelBusy)}
+                  className="text-amber-400 hover:underline disabled:opacity-50"
+                  aria-label={'Cancel task ' + task.taskId}
+                  onClick={() => { void cancelTask(task.taskId); }}>
+                  {cancelBusy === task.taskId ? 'Requesting…' : 'Cancel…'}
+                </button>
+              )}
             </div>
           ))}
         </div>

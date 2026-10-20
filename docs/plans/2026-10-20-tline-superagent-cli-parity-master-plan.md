@@ -40,7 +40,9 @@ Audited the actual repositories rather than equating a UI button to working supp
 - [x] Add authenticated task SSE streaming, event IDs and bounded replay while the same SuperAgent process is running, with explicit replay-gap reset.
 - [x] Persist bounded, sanitized observed task SSE snapshots locally across restarts; resume only events that were actually sampled.
 - [ ] Add a source-native durable task transition ledger for changes when no SSE listener is connected; no claim of complete downtime reconstruction.
-- [ ] Add authorized cancel/retry adapters with ownership, workspace, session and trusted out-of-band approval verification.
+- [x] Add opt-in workspace-operator, two-step cancellation of runtime-owned CLI Bridge processes, requiring active TLine session and interactive desktop confirmation. Default off; no creator-session attestation for legacy jobs.
+- [ ] Add independent owner/creator identity and trusted out-of-band approval for multi-user workspaces; only then consider enabling cancel by default.
+- [ ] Add idempotent retry with artifact-claim checks and explicit permission to launch a new CLI process.
 - [ ] Add UI for `/daemon` (schedule, logs, cancel), `/gateway`, `/motion`, `/macro`, `/mp`, `/skills`.
 - [ ] Bring `/memory` and `/history` workflow semantics in line with CLI, with workspace-backed sessions.
 - [ ] Implement multi-project/worktree authorization, progress visualization, review/approval and CLI agent handoff.
@@ -53,6 +55,32 @@ Audited the actual repositories rather than equating a UI button to working supp
 - [ ] Add motion editor/artifact routing, desktop media resources and e2e user workflows.
 - [ ] Add parity gates comparing CLI command/API capability IDs to T-Line UI routes and tests on every PR.
 - [ ] Add performance/regression coverage for SSE reconnect, rapid workspace switching and concurrent agents.
+
+## Increment 6B: opt-in workspace operator task cancel
+
+- **Default disabled.** Set `SUPERAGENT_TLINE_WORKSPACE_CANCEL=1` in the
+  SuperAgent server's environment and restart that service explicitly to
+  enable. The capability manifest advertises `tasks.cancel.prepare` and
+  `tasks.cancel.confirm` only when enabled. TLine hides Cancel controls
+  otherwise and requires explicit local user confirmation.
+- The fixed two-phase POST actions resolve an authorized registered workspace
+  and an exact active TLine chat session. Only CLI Bridge jobs with an active
+  process handle **owned by the current SuperAgent runtime**, exact canonical
+  workspace ownership, and unchanged process/job state can be cancelled.
+  There is no arbitrary command or PID parameter. A random one-use permit
+  expires after 30 seconds; the second request revalidates ownership before
+  forwarding to the CLI Bridge's existing cancellation mechanism.
+- This is a **local workspace-operator policy**, not proof that the current
+  chat originally created the job. Existing CLI Bridge jobs do not store
+  trusted TLine creator-session provenance. Do **not** enable the setting
+  for an untrusted or multi-user shared workspace. A user-level UI dialog
+  is an explicit local confirmation, not independent cryptographic approval.
+- Cancellation returns `requested` only; the monitor must observe terminal
+  status to verify the process stopped. No retry, daemon-stop, Muse-stop or
+  killing arbitrary PIDs is exposed. No live task was cancelled in tests.
+- Tests cover workspace and runtime ownership, idempotent grants, TTL,
+  state-change detection, backend service-token forwarding, and frontend
+  capability negotiation. Live Tauri end-to-end is still unverified.
 
 ## Increment 6A: persisted observed task journal across server restarts
 
