@@ -80,7 +80,11 @@ export function SuperAgentTaskMonitor({ workspace, sessionId }: Props) {
             setReplayNotice(event.reason === 'initial-connection' ? '' :
               'Replay history unavailable; latest task state was resynchronized.');
           } else if (event.type === 'warning') {
-            setReplayNotice('Task event source temporarily unavailable.');
+            setReplayNotice(event.reason === 'restart-observation-gap'
+              ? 'Recovered saved observations after restart; transitions while offline cannot be reconstructed.'
+              : event.reason === 'ledger-unavailable'
+                ? 'Live task updates still work, but disk event history is unavailable on this server.'
+                : 'Task event source temporarily unavailable.');
           }
         }, { lastEventId, signal: abort.signal });
       } catch {

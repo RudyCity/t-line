@@ -2,7 +2,7 @@
 
 Date: 2026-10-20
 Target: SuperAgent CLI source (`../superagent`, branch `main`) → T-Line React/Tauri desktop (`t-line`, branch `main`)
-Status: **Increment 5 implemented (authenticated SSE task updates and bounded process-local event ID replay); full feature parity NOT achieved.**
+Status: **Increment 6A implemented (locally persisted observed-task SSE journal with restart recovery); full feature parity NOT achieved.**
 
 ## Baseline findings
 
@@ -38,7 +38,8 @@ Audited the actual repositories rather than equating a UI button to working supp
 - [ ] Implement authorized write/execute adapters for MCP/tools, selfdev, Muse, and Telegram only with explicit per-operation scope and approvals.
 - [x] Implement read-only workspace-scoped retained CLI/daemon/Muse task snapshots and cursor-based conditional polling; stale snapshots are discarded on workspace/session switch.
 - [x] Add authenticated task SSE streaming, event IDs and bounded replay while the same SuperAgent process is running, with explicit replay-gap reset.
-- [ ] Add durable task transition ledger spanning restarts; server SSE records only observed snapshots, not all intermediate source transitions.
+- [x] Persist bounded, sanitized observed task SSE snapshots locally across restarts; resume only events that were actually sampled.
+- [ ] Add a source-native durable task transition ledger for changes when no SSE listener is connected; no claim of complete downtime reconstruction.
 - [ ] Add authorized cancel/retry adapters with ownership, workspace, session and trusted out-of-band approval verification.
 - [ ] Add UI for `/daemon` (schedule, logs, cancel), `/gateway`, `/motion`, `/macro`, `/mp`, `/skills`.
 - [ ] Bring `/memory` and `/history` workflow semantics in line with CLI, with workspace-backed sessions.
@@ -52,6 +53,30 @@ Audited the actual repositories rather than equating a UI button to working supp
 - [ ] Add motion editor/artifact routing, desktop media resources and e2e user workflows.
 - [ ] Add parity gates comparing CLI command/API capability IDs to T-Line UI routes and tests on every PR.
 - [ ] Add performance/regression coverage for SSE reconnect, rapid workspace switching and concurrent agents.
+
+## Increment 6A: persisted observed task journal across server restarts
+
+- SuperAgent persists only allowlisted task snapshot metadata from the already
+  existing SSE journal. Files live under the local user config root
+  `~/.superagent-r/tline-task-ledger/` (hashed per-workspace/session filename,
+  no raw workspace path in filename). Per-file mode is 0600 where supported,
+  directory mode 0700. Unexpected task properties, credentials and chat
+  session IDs are excluded from the durable representation.
+- Each persisted scope holds at most 64 previously observed snapshots, with
+  an upper file size limit of 2 MiB; at most 64 most-recently-written scopes
+  are retained. Files older than 24 hours are rejected. Writes replace files
+  atomically; malformed/oversized/foreign-scope journals are ignored.
+- A restarted server can recover previously *observed* event IDs and resume
+  from one of them in an authenticated matching TLine session. It emits a
+  `restart-observation-gap` warning to make it clear that source transitions
+  while offline cannot be reconstructed. When disk persistence fails, SSE
+  continues in memory but sends `ledger-unavailable`; the UI displays both
+  warnings distinctly.
+- This is deliberately NOT a source-native durable task transition ledger.
+  No native Tauri E2E has yet been confirmed; the running server must reload
+  the newly committed code to use this increment. Existing CLI bridge process
+  cancellation/retry remains behind CLI authorization; TLine buttons/actions
+  are not exposed until per-task ownership and owner approval are verified.
 
 ## Increment 5: streaming task snapshots with bounded replay
 

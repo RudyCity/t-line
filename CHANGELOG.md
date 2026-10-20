@@ -1,3 +1,14 @@
+## [1.3.691] - 2026-10-20
+
+### SuperAgent TLine Persistent Observed-Event Replay (Increment 6A)
+
+- Persist observed, read-only task SSE snapshots in bounded, per-workspace/session journals under the SuperAgent local user config directory.
+- Recover previously recorded event IDs across SuperAgent restarts without presenting unsampled offline task transitions as replayed history; show an explicit restart observation-gap warning.
+- Store an allowlisted metadata projection only: no chat session IDs, raw workspace paths, credentials, prompts, log content or arbitrary source fields.
+- On persistence failure, continue memory-based live SSE while warning users that durable history is unavailable.
+- Added corrupt-file, expiry, foreign-scope, restart, redaction and replay regression coverage. CLI task cancellation/retry is still not exposed via the desktop.
+- Live SuperAgent API access was verified separately; the new durability code still requires a controlled backend reload.
+
 ## [1.3.690] - 2026-10-20
 
 ### Motion Studio Zoom and Pan Navigation
