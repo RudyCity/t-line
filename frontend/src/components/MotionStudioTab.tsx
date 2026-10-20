@@ -12,6 +12,7 @@ import {
   type MotionProperty, type MotionProjectSummary,
 } from '../services/motionStudioApi';
 import { evaluateLayer, fpsOf, frameLabel, makeKeyframeTrack } from '../services/motionScene';
+import { MotionCanvas } from './MotionCanvas';
 
 interface Props { workspacePath: string; isActive: boolean }
 type PropertyDraft = { field: MotionProperty; value: string };
@@ -20,49 +21,13 @@ const action = 'inline-flex items-center gap-1.5 rounded border border-[var(--bo
 const primary = 'inline-flex items-center gap-1.5 rounded bg-[var(--color-primary)] px-3 py-2 text-xs font-semibold text-white hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50';
 const idle = new Set<MotionJob['status']>(['completed', 'failed', 'cancelled', 'interrupted']);
 
-function MotionCanvas({ project, frame, selectedLayer, onSelectLayer }: {
-  project: MotionProject; frame: number; selectedLayer: string | null; onSelectLayer: (id: string) => void;
-}) {
-  const scene = project.composition;
-  return (
-    <svg
-      role="img" aria-label={'Motion preview frame ' + frame}
-      width="100%" viewBox={`0 0 ${scene.width} ${scene.height}`}
-      className="block max-h-full rounded shadow-2xl" style={{ aspectRatio: scene.width + '/' + scene.height }}
-    >
-      <rect width={scene.width} height={scene.height} fill={scene.background} />
-      {scene.layers.map(layer => {
-        const values = evaluateLayer(layer, frame);
-        const transform = `rotate(${values.rotation} ${values.x + layer.width / 2} ${values.y + layer.height / 2})`;
-        const selected = selectedLayer === layer.id;
-        return (
-          <g key={layer.id} onClick={() => onSelectLayer(layer.id)} className="cursor-pointer">
-            {layer.kind === 'rect' ? (
-              <rect x={values.x} y={values.y} width={layer.width} height={layer.height}
-                fill={layer.fill} opacity={values.opacity} transform={transform} />
-            ) : (
-              <text x={values.x} y={values.y + layer.fontSize} fontSize={layer.fontSize}
-                fontFamily={layer.fontFamily} fill={layer.fill} opacity={values.opacity}
-                transform={transform}>{layer.text}</text>
-            )}
-            {selected && (
-              <rect x={values.x} y={values.y} width={layer.width} height={layer.height}
-                transform={transform} fill="none" stroke="var(--color-primary)" strokeWidth={Math.max(2, scene.width / 480)}
-                strokeDasharray="10 5" pointerEvents="none" />
-            )}
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
 export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [projects, setProjects] = useState<MotionProjectSummary[]>([]);
   const [project, setProject] = useState<MotionProject | null>(null);
   const [selectedId, setSelectedId] = useState('');
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null);
   const [frame, setFrame] = useState(0);
+  const [canvasSnapping, setCanvasSnapping] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [creating, setCreating] = useState(false);
   const [projectName, setProjectName] = useState('');
@@ -399,12 +364,24 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
 
             <div className="flex min-h-[250px] min-w-0 flex-col">
               <div className="flex items-center justify-between px-4 py-2 text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                <span>Composition · {project.composition.width} × {project.composition.height}</span>
-                <span>{fps.toFixed(2)} fps</span>
+                <span title="Drag to move · corner handle resizes rectangles · upper handle rotates · arrows nudge · Alt+arrows rotate · Ctrl+arrows resize rectangles">
+                  Composition · {project.composition.width} × {project.composition.height}
+                </span>
+                <div className="flex items-center gap-3">
+                  <label className="inline-flex cursor-pointer items-center gap-2 normal-case tracking-normal">
+                    <input type="checkbox" aria-label="Snap canvas position to grid and center" checked={canvasSnapping}
+                      onChange={event => setCanvasSnapping(event.target.checked)} className="accent-[var(--color-primary)]" />
+                    Snap 10px
+                  </label>
+                  <span>{fps.toFixed(2)} fps</span>
+                </div>
               </div>
               <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[var(--bg-card)] p-4 md:p-8">
                 <div className="w-full max-w-[1000px]" data-testid="motion-canvas">
-                  <MotionCanvas project={project} frame={frame} selectedLayer={selectedLayer} onSelectLayer={setSelectedLayer} />
+                  <MotionCanvas key={project.id + ':' + project.revision} project={project} frame={frame}
+                    selectedLayer={selectedLayer} isActive={isActive} busy={busy} snapping={canvasSnapping}
+                    onSelectLayer={setSelectedLayer} onStopPlayback={() => setPlaying(false)}
+                    onEdit={(edits, note) => applyEditorEdits(edits, note)} />
                 </div>
               </div>
               <div className="flex items-center gap-3 border-t border-[var(--border-color)] px-3 py-3">

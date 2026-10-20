@@ -1,3 +1,13 @@
+## [1.3.689] - 2026-10-20
+
+### Motion Studio Direct Canvas Manipulation
+
+- Added pointer-captured on-canvas dragging for built-in text and rectangle layers, plus rotation handles and rectangle resize handles with live preview, snap-to-grid and center-alignment guides.
+- Position and rotation updates persist through revision-checked server edits; existing position animation tracks gain a keyframe at the active frame. Rectangle sizing uses the guarded composition edit and retains Undo/Redo history.
+- Added keyboard nudge, rotate and resize controls, pointer cancellation safety, out-of-date revision checks, and pure coordinate math with schema-range clamps.
+- Added dedicated canvas pointer/geometry tests alongside Motion Studio regression coverage. Frontend TypeScript, backend TypeScript, Vitest and production Vite build passed; pre-existing CSS and bundle-size warnings remain.
+- Native Tauri end-to-end, text font parity, advanced rotated-object resize, zoom/pan, audio and asset editing remain future release gates. No SuperAgent/Hermes process was restarted.
+
 ## [1.3.688] - 2026-10-20
 
 ### TLine ↔ SuperAgent Task SSE Streaming (Increment 5)

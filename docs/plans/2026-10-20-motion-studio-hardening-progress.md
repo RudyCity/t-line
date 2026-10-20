@@ -35,3 +35,13 @@ Avoid staging or overwriting unrelated T-Line CLI parity, Hermes, MCP OAuth or c
 - UI polling reuses existing job activity refresh; older SuperAgent versions without the endpoint continue to work without scheduler metadata.
 - Motion frontend and backend proxy tests cover scheduler read access and the visible capacity display. The SuperAgent scheduler suite tests contention, waiting-job cancellation, queue saturation and refusal to steal a worker's slot.
 - This is a developer preview: there is no automatic lock recovery, restart-resilient FIFO broker or real Tauri end-to-end verification yet. Do not restart Hermes workers without coordination.
+
+## Native Canvas Direct Manipulation (2026-10-20)
+
+- Replaced static SVG scene drawing with a dedicated `MotionCanvas` React component and pure coordinate/transform utilities. This is a workspace-bound, declarative canvas: scene text is never executed as HTML, and the editor shares the existing server revision guard.
+- Pointer-captured gestures now support dragging text/rectangle layer positions, rotation handles, and bottom-right resize handles for non-rotated rectangles. Layer values update in the preview during the gesture and are saved as a *single* edit transaction when the pointer is released. Cancel/lost capture, changed scene revision/frame, changed selection, busy editor and inactive tab all avoid saving stale gestures.
+- A visible Snap 10px switch controls grid snapping, center-line alignment guides and 15-degree rotation snapping. Canvas math converts client coordinates to composition units and clamps values to server schema bounds.
+- Dragging a property already animated by a timeline track creates/updates the current-frame keyframe rather than silently discarding animation. Unanimated positions/rotation use `set-property`; rectangle dimensions use guarded `replace-composition`, preserving the undo/redo stack.
+- The focusable canvas supports arrow-key nudge (Shift for larger steps), Alt+left/right rotation and Ctrl+arrows rectangle sizing. Both pointer and keyboard operations are covered by dedicated React/Vitest tests.
+- Validation: 54/54 frontend regression tests passed across 12 suites, backend/frontend TypeScript checks and the Vite production build passed. Warnings remain in the pre-existing CSS minification/bundle-size pipeline.
+- **Remaining:** native Tauri real-device smoke, rich text/font parity, resize handles for rotated/text objects, asset/audio layers, multi-scene editing, zoom/pan and more advanced transform affordances. This does not declare production readiness.
