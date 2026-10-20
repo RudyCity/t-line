@@ -25,10 +25,10 @@ const task = (id: string) => ({
   sessionId: null, status: 'running' as const, evidence: 'unverified' as const,
   authorization: 'workspace_scoped', notification: 'not_configured', updatedAt: Date.now(),
 });
-const snapshot = (id: string) => ({
+const snapshot = (id: string, cancelEligible = false) => ({
   snapshot: { success: true as const, schemaVersion: 1 as const,
     scope: 'workspace' as const, source: 'bounded-polling' as const,
-    changed: true, cursor: 'a'.repeat(64), tasks: [task(id)],
+    changed: true, cursor: 'a'.repeat(64), tasks: [{ ...task(id), cancelEligible }],
     total: 1, incompleteSources: [], replaySupported: false as const },
   negotiated: true as const,
 });
@@ -70,7 +70,7 @@ describe('SuperAgentTaskMonitor UI', () => {
 
   it('hides task cancel by default and requires a direct user confirmation when operator enables it', async () => {
     const id = 'clj_1792480000000_deadbeef';
-    vi.mocked(fetchTlineTaskSnapshot).mockResolvedValue(snapshot(id));
+    vi.mocked(fetchTlineTaskSnapshot).mockResolvedValue(snapshot(id, true));
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     const { rerender } = render(<SuperAgentTaskMonitor workspace="D:/mine" sessionId="sess_owner" />);
     fireEvent.click(screen.getByRole('button', { name: /Cross-channel tasks/ }));

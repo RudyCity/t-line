@@ -174,7 +174,7 @@ export function SuperAgentTaskMonitor({ workspace, sessionId }: Props) {
               <span className="truncate flex-1" title={task.taskId}>{task.taskId}</span>
               <span className="text-[var(--text-muted)] shrink-0">{task.status}</span>
               <span className="text-[var(--text-muted)] shrink-0" title="Status proof">{task.evidence}</span>
-              {cancelAllowed && task.channel === 'cli' && task.status === 'running' && (
+              {cancelAllowed && task.channel === 'cli' && task.status === 'running' && task.cancelEligible === true && (
                 <button type="button" disabled={Boolean(cancelBusy)}
                   className="text-amber-400 hover:underline disabled:opacity-50"
                   aria-label={'Cancel task ' + task.taskId}

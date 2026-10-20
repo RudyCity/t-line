@@ -2,7 +2,7 @@
 
 Date: 2026-10-20
 Target: SuperAgent CLI source (`../superagent`, branch `main`) → T-Line React/Tauri desktop (`t-line`, branch `main`)
-Status: **Increment 6A implemented (locally persisted observed-task SSE journal with restart recovery); full feature parity NOT achieved.**
+Status: **Increment 6C implemented (trusted creator-session provenance and creator-only cancellation); full feature parity NOT achieved.**
 
 ## Baseline findings
 
@@ -41,7 +41,8 @@ Audited the actual repositories rather than equating a UI button to working supp
 - [x] Persist bounded, sanitized observed task SSE snapshots locally across restarts; resume only events that were actually sampled.
 - [ ] Add a source-native durable task transition ledger for changes when no SSE listener is connected; no claim of complete downtime reconstruction.
 - [x] Add opt-in workspace-operator, two-step cancellation of runtime-owned CLI Bridge processes, requiring active TLine session and interactive desktop confirmation. Default off; no creator-session attestation for legacy jobs.
-- [ ] Add independent owner/creator identity and trusted out-of-band approval for multi-user workspaces; only then consider enabling cancel by default.
+- [x] Record server-internal TLine creator-session provenance on newly launched CLI Bridge delegation jobs, restrict cancel to exact creator chat, and hide other jobs' cancel controls.
+- [ ] Add independent per-user identity and trusted out-of-band approval for multi-user workspaces; cancel remains default OFF until then.
 - [ ] Add idempotent retry with artifact-claim checks and explicit permission to launch a new CLI process.
 - [ ] Add UI for `/daemon` (schedule, logs, cancel), `/gateway`, `/motion`, `/macro`, `/mp`, `/skills`.
 - [ ] Bring `/memory` and `/history` workflow semantics in line with CLI, with workspace-backed sessions.
@@ -55,6 +56,38 @@ Audited the actual repositories rather than equating a UI button to working supp
 - [ ] Add motion editor/artifact routing, desktop media resources and e2e user workflows.
 - [ ] Add parity gates comparing CLI command/API capability IDs to T-Line UI routes and tests on every PR.
 - [ ] Add performance/regression coverage for SSE reconnect, rapid workspace switching and concurrent agents.
+
+## Increment 6C: trusted TLine creator provenance and safe retry boundary
+
+- SuperAgent now wraps `/api/chat` and initial prompt agent execution in
+  internal AsyncLocalStorage provenance **only for a validated TLine session**.
+  The CLI Bridge's background job creation reads that trusted context, checks
+  the canonical workspace, and records `creator: {clientMode, sessionId,
+  workspace}` on the existing immutable job shard. CLI/MCP/tool calls without
+  that trusted context never acquire TLine provenance from user arguments.
+- Two independent asynchronous TLine sessions keep separate creator context.
+  Cancellation now requires an **exact creator-session match**, in addition
+  to all Increment 6B process, workspace, one-use challenge and revision
+  checks. Legacy tasks and jobs originating from CLI/MCP sessions have no
+  creator provenance and are deliberately **not cancelable from TLine**.
+- Workspace task snapshots include a boolean `cancelEligible` hint computed
+  per requesting session and server opt-in setting. Other sessions' task IDs
+  may remain visible in read-only workspace summaries, but their creator
+  identities are not returned and their Cancel buttons are hidden. The
+  mutation endpoint reauthorizes independently; the hint never grants rights.
+- These changes reduce accidental cross-chat interference but do not provide
+  independent user-account identity or authenticated out-of-band approval.
+  `SUPERAGENT_TLINE_WORKSPACE_CANCEL=1` **remains disabled by default**, and
+  should not be enabled on an untrusted or multi-user desktop server.
+- Safe retry is **not** exposed yet: the existing CLI Bridge persisted job
+  metadata intentionally does not store the original launch prompt or the
+  complete execution arguments. Guessing those would cause unintended work
+  or duplicate side effects. Next increment requires a revision-checked
+  replay recipe, explicit fresh task authorisation, idempotency lease and
+  verification of artifact/output claims before any second process is spawned.
+- Unit and integration tests cover asynchronous context isolation, actual
+  delegate job creation and persisted provenance, legacy/foreign session
+  cancellation denial, and UI eligibility display.
 
 ## Increment 6B: opt-in workspace operator task cancel
 

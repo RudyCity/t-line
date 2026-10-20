@@ -1,3 +1,13 @@
+## [1.3.695] - 2026-10-20
+
+### TLine ↔ SuperAgent Creator-Session Job Ownership (Increment 6C)
+
+- CLI Bridge jobs launched from an authenticated TLine chat now inherit server-internal asynchronous creator provenance, recorded in the durable job metadata shard.
+- Opt-in cancellation requires the original TLine creator session, in addition to workspace ownership, live runtime process handle and two-phase confirmation. Legacy and unrelated CLI/MCP jobs are not cancelable through the desktop.
+- Task snapshots expose a minimal per-session `cancelEligible` indicator, without leaking creator identities. The desktop only shows Cancel for eligible tasks, and the server always rechecks independently.
+- Async context, true CLI background-process creation and persisted ownership, foreign sessions and missing provenance, and UI gating are covered by regression tests.
+- Retry remains blocked: the existing job record has no safe, complete replay recipe. A future implementation needs explicit task reauthorization, idempotency claims and artifact checks before launch.
+
 ## [1.3.694] - 2026-10-20
 
 ### SuperAgent CLI ↔ TLine Opt-in Task Cancellation (Increment 6B)
