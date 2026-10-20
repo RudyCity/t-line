@@ -1,0 +1,103 @@
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor, cleanup } from '@testing-library/react';
+import { MotionStudioTab } from '../MotionStudioTab';
+import { motionStudioApi, type MotionProject } from '../../services/motionStudioApi';
+import { evaluateLayer, evaluateTrack, makeKeyframeTrack } from '../../services/motionScene';
+
+vi.mock('../../services/motionStudioApi', () => ({
+  motionStudioApi: {
+    list: vi.fn(), inspect: vi.fn(), create: vi.fn(), edit: vi.fn(),
+    jobs: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(),
+  },
+}));
+const id = 'motion-' + 'a'.repeat(20);
+const fixture = (name = 'Product intro'): MotionProject => ({
+  schemaVersion: 1, id, workspaceRoot: 'D:/projects/studio', name, revision: 1,
+  createdAt: '2026-10-20T00:00:00.000Z', updatedAt: '2026-10-20T00:00:00.000Z',
+  composition: {
+    width: 1920, height: 1080, fps: { numerator: 30, denominator: 1 },
+    durationFrames: 90, background: '#171B28',
+    layers: [{ id: 'title', kind: 'text', text: 'Product intro', x: 120, y: 200,
+      width: 1600, height: 100, rotation: 0, opacity: 1, fill: '#FFFFFF',
+      fontSize: 70, fontFamily: 'Arial', tracks: [{ property: 'opacity', keyframes: [
+        { frame: 0, value: 0, easing: 'easeInOut' }, { frame: 30, value: 1 },
+      ] }],
+    }],
+  },
+});
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(motionStudioApi.list).mockResolvedValue([{ id, name: 'Product intro', revision: 1 }]);
+  vi.mocked(motionStudioApi.inspect).mockResolvedValue(fixture());
+  vi.mocked(motionStudioApi.jobs).mockResolvedValue([]);
+  vi.mocked(motionStudioApi.create).mockResolvedValue(fixture());
+  vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, _rev, operations) => {
+    const next = fixture();
+    next.revision = 2;
+    if (operations[0].type === 'set-text') {
+      const layer = next.composition.layers[0];
+      if (layer.kind === 'text') layer.text = operations[0].text;
+    }
+    return next;
+  });
+});
+afterEach(() => { cleanup(); vi.useRealTimers(); });
+
+describe('Motion Studio scene evaluation', () => {
+  it('matches step and smooth interpolation and sorts inserted keyframes', () => {
+    const layer = fixture().composition.layers[0];
+    expect(evaluateLayer(layer, 0).opacity).toBe(0);
+    expect(evaluateLayer(layer, 15).opacity).toBeCloseTo(0.5);
+    expect(evaluateLayer(layer, 30).opacity).toBe(1);
+    expect(evaluateTrack({ property: 'x', keyframes: [
+      { frame: 0, value: 2, easing: 'step' }, { frame: 30, value: 9 },
+    ] }, 15)).toBe(2);
+    expect(makeKeyframeTrack(layer, 'opacity', 15, 0.4).keyframes.map(value => value.frame)).toEqual([0, 15, 30]);
+  });
+});
+
+describe('Native T-Line Motion Studio editor', () => {
+  it('loads a workspace-owned scene and saves revision-checked text edits', async () => {
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    expect(await screen.findByText('Choose a scene to edit')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    expect(await screen.findByDisplayValue('Product intro')).toBeInTheDocument();
+    expect(screen.getByTestId('motion-canvas')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Text'), { target: { value: 'New campaign' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save text' }));
+    await waitFor(() => {
+      expect(motionStudioApi.edit).toHaveBeenCalledWith('D:/projects/studio', id, 1, [
+        { type: 'set-text', layerId: 'title', text: 'New campaign' },
+      ]);
+    });
+    expect(await screen.findByText('Scene revision 2 saved')).toBeInTheDocument();
+  });
+
+  it('starts detached render with a pinned project ID and handles render-job status', async () => {
+    vi.mocked(motionStudioApi.render).mockResolvedValue({
+      id: 'motionjob-' + 'b'.repeat(24), projectId: id, revision: 1,
+      status: 'queued', framesCompleted: 0, profile: { frameCount: 90, width: 640, height: 360 },
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    await screen.findByTestId('motion-canvas');
+    fireEvent.change(screen.getByLabelText('Current frame'), { target: { value: 25 } });
+    expect(screen.getByText('0.83s · F25')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Render MP4' }));
+    await waitFor(() => expect(motionStudioApi.render).toHaveBeenCalledWith('D:/projects/studio', id, 640));
+    expect(await screen.findByText('Render queued at revision 1')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+  });
+
+  it('does not resurrect a pending workspace response after unmount', async () => {
+    let resolveList: ((value: { id: string; name: string; revision: number }[]) => void) | undefined;
+    vi.mocked(motionStudioApi.list).mockImplementation(() =>
+      new Promise(resolve => { resolveList = resolve; }));
+    const result = render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    result.unmount();
+    await act(async () => { resolveList?.([{ id, name: 'Old scene', revision: 1 }]); });
+    expect(motionStudioApi.inspect).not.toHaveBeenCalled();
+  });
+});

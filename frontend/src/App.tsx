@@ -20,7 +20,8 @@ import {
   Zap,
   Globe,
   ExternalLink,
-  Lock
+  Lock,
+  Clapperboard
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
 import { FileViewerTab } from './components/FileViewerTab';
@@ -30,6 +31,7 @@ import BrowserTab from './components/BrowserTab';
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
 import { LazyWorkspaceAddModal as WorkspaceAddModal, LazyWorktreeAddModal as WorktreeAddModal, LazyTunnelSetupModal as TunnelSetupModal, LazySettingsModal as SettingsModal, LazyShortcutHelpModal as ShortcutHelpModal, LazyConfirmModal as ConfirmModal, LazyWorkspaceEditModal as WorkspaceEditModal, LazySavePromptModal as SavePromptModal, LazySelectGridModal as SelectGridModal, LazyPortTunnelsManagerModal as PortTunnelsManagerModal } from './components/LazyModals';
 import { SuperAgentConsole } from './components/SuperAgentConsole';
+import { MotionStudioTab } from './components/MotionStudioTab';
 
 interface SavedPrompt {
   id: string;
@@ -415,6 +417,7 @@ export default function App() {
     openDiffTab,
     openBrowserTab,
     openAgentTab,
+    openMotionTab,
     openGridTab,
     closeTerminal,
     closePane,
@@ -2028,7 +2031,9 @@ export default function App() {
                       className={`mobile-tab-item ${isActive ? 'mobile-tab-active' : ''}`}
                       onClick={() => handleTabClick(t)}
                     >
-                      {t.type === 'file' ? (
+                      {t.type === 'motion' ? (
+                        <Clapperboard size={11} className="shrink-0" />
+                      ) : t.type === 'file' ? (
                         <FileCode size={11} className="shrink-0" />
                       ) : t.type === 'diff' ? (
                         <GitCompare size={11} className="shrink-0" />
@@ -2195,7 +2200,9 @@ export default function App() {
                             onMouseLeave={handleTabMouseLeave}
                             onContextMenu={(e) => handleTabContextMenu(e, t.id)}
                           >
-                            {t.type === 'file' ? (
+                            {t.type === 'motion' ? (
+                              <Clapperboard size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
+                            ) : t.type === 'file' ? (
                               <FileCode size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                             ) : t.type === 'diff' ? (
                               <GitCompare size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? '#4ade80' : 'var(--text-muted)' }} />
@@ -2260,6 +2267,17 @@ export default function App() {
                     style={{ marginLeft: '6px' }}
                   >
                     <Globe size={14} />
+                  </button>
+                  {/* Motion Studio native editor, scoped to the selected workspace */}
+                  <button
+                    className="action-btn shrink-0"
+                    onClick={() => openMotionTab(panelWorkspace?.id)}
+                    disabled={!panelWorkspace?.id}
+                    title="Open Motion Studio"
+                    aria-label="Open Motion Studio"
+                    style={{ marginLeft: '6px' }}
+                  >
+                    <Clapperboard size={14} />
                   </button>
                   {/* SuperAgent Panel button */}
                   <button
@@ -2390,6 +2408,7 @@ export default function App() {
               workspaces={workspaces}
               panelWorktreePath={panelWorktreePath}
               openAgentTab={openAgentTab}
+              openMotionTab={openMotionTab}
             />
             
           ) : (
@@ -2414,6 +2433,16 @@ export default function App() {
                     setTabs(prev => prev.map(t => t.id === tab.id ? { ...t, url: newUrl } : t));
                   }}
                 />
+              ))}
+
+              {/* Native Motion Studio tabs remain workspace-pinned across sidebar navigation. */}
+              {tabs.filter(tab => tab.type === 'motion' && !tab.isDetached).map(tab => (
+                <div key={tab.id} className="h-full w-full" style={{ display: tab.id === activeTabId ? 'block' : 'none' }}>
+                  <MotionStudioTab
+                    isActive={tab.id === activeTabId}
+                    workspacePath={workspaces.find(item => item.id === tab.workspaceId)?.path || ''}
+                  />
+                </div>
               ))}
 
               {/* SuperAgent console tabs stay mounted continuously so background execution and WS stay alive on tab switches */}
@@ -2512,6 +2541,9 @@ export default function App() {
                       onRefreshTerminal={refreshTerminal}
                     />
                   );
+                } else if (activeTab.type === 'motion') {
+                  // MotionStudioTab is handled by the persistent mapping above
+                  tabElement = null;
                 } else if (activeTab.type === 'agent') {
                   // SuperAgentConsole is handled by persistent mapping above
                   tabElement = null;

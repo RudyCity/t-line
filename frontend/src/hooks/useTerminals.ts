@@ -61,7 +61,7 @@ export type SplitLayoutNode =
 export interface TabData {
   id: string;
   name: string;
-  type: 'terminal' | 'file' | 'diff' | 'grid' | 'browser' | 'agent';
+  type: 'terminal' | 'file' | 'diff' | 'grid' | 'browser' | 'agent' | 'motion';
   filePath?: string;
   url?: string;
   // For 'diff' type tabs
@@ -663,6 +663,22 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
       return [...prev, newTab];
     });
   }, [onTerminalOpen]);
+  const openMotionTab = useCallback((workspaceId?: string) => {
+    if (!workspaceId) return;
+    setTabs(prev => {
+      const existing = prev.find(tab => tab.type === 'motion' && tab.workspaceId === workspaceId && !tab.isDetached);
+      if (existing) {
+        setActiveTabId(existing.id);
+        onTerminalOpen?.();
+        return prev;
+      }
+      const id = 'motion-' + Date.now();
+      setActiveTabId(id);
+      onTerminalOpen?.();
+      return [...prev, { id, name: 'Motion Studio', type: 'motion', workspaceId }];
+    });
+  }, [onTerminalOpen]);
+
   const closeTerminal = useCallback((tabId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
 
@@ -1015,6 +1031,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     openDiffTab,
     openBrowserTab,
     openAgentTab,
+    openMotionTab,
     openGridTab,
     closeTerminal,
     closePane,

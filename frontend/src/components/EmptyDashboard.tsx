@@ -10,6 +10,7 @@ export interface EmptyDashboardProps {
   workspaces: WorkspaceInfo[];
   panelWorktreePath?: string | null;
   openAgentTab?: (workspaceId?: string) => void;
+  openMotionTab?: (workspaceId?: string) => void;
 }
 
 export function EmptyDashboard({
@@ -19,7 +20,8 @@ export function EmptyDashboard({
   panelWorkspace,
   workspaces,
   panelWorktreePath,
-  openAgentTab
+  openAgentTab,
+  openMotionTab
 }: EmptyDashboardProps): React.JSX.Element {
   return (
     <div className="welcome-card-outer">
@@ -82,6 +84,20 @@ export function EmptyDashboard({
           >
             Open Terminal
           </button>
+          {openMotionTab && (
+            <button
+              type="button"
+              className="px-4 py-2 rounded-lg text-xs font-semibold transition-colors border cursor-pointer"
+              style={{ borderColor: 'var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-main)' }}
+              disabled={!(panelWorkspace || workspaces[0])}
+              onClick={() => {
+                const target = panelWorkspace || workspaces[0];
+                if (!target) return;
+                if (!panelWorkspace) setPanelWorkspace(target);
+                openMotionTab(target.id);
+              }}
+            >Open Motion Studio</button>
+          )}
           {openAgentTab && (
             <button 
               className="px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-150 active:scale-98 cursor-pointer border" 

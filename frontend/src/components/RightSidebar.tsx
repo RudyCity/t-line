@@ -52,7 +52,7 @@ interface RightSidebarProps {
   setDefaultShell: (val: string) => void;
   handleZoomIn: () => void;
   handleZoomOut: () => void;
-  activeTabType?: 'terminal' | 'file' | 'diff' | 'grid' | 'browser' | 'agent' | null;
+  activeTabType?: 'terminal' | 'file' | 'diff' | 'grid' | 'browser' | 'agent' | 'motion' | null;
   onRefreshTerminal?: () => void;
   // Tunnel (from footer right section)
   tunnelStatus: MultiTunnelStatus;

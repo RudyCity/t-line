@@ -1,3 +1,14 @@
+## [1.3.684] - 2026-10-20
+
+### Motion Studio Native Scene Editor (Developer Preview)
+
+- Added the T-Line Motion Studio native workspace tab, accessible from both the tab toolbar and the empty dashboard; tabs are keyed to workspace and remain mounted when switching views.
+- Added a typed authenticated Motion API client and a safe React SVG canvas evaluator for v1 text/rectangle layers, step/easeInOut keyframes, composition FPS and frame scrub/playback.
+- Added layer inspector, revision-guarded text and numeric property updates, revision-checked keyframe edits, basic timeline markers, asynchronous MP4 rendering status/cancellation, and a 64-MB bounded authenticated video blob preview/download.
+- Handles stale scene-selection responses, project/workspace switching, missing authentication and revision conflicts without executing external scene HTML or untrusted script.
+- New Motion editor/API unit tests passed; full frontend tests passed (20/20); frontend/backend TypeScript checks and frontend Vite production build passed. Existing CSS minification and large-chunk warnings remain.
+- Not yet complete: audio, layer insertion/removal, visual drag editing, per-layer duration, isolated Tauri E2E, true streamable video player, live service identity/restart test, or crash-safe render recovery. No running SuperAgent processes were restarted.
+
 ## [1.3.683] - 2026-10-20
 
 ### SuperAgent CLI ↔ T-Line Feature Parity (Increment 1)
