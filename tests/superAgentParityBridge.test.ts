@@ -6,7 +6,7 @@ describe('authenticated T-Line read-only parity bridge', () => {
   it('allowlists only declared GET endpoints and rejects unknown action/workspace', async () => {
     expect(Object.keys(PARITY_READ_ACTIONS).sort()).toEqual([
       'capabilities', 'daemon.status', 'gateway.status', 'mcp.status',
-      'muse.status', 'selfdev.status', 'tools.catalog',
+      'muse.status', 'selfdev.status', 'tasks.snapshot', 'tools.catalog',
     ]);
     const unknown = await fetchParityReadAction('shell.exec' as any, 'C:/project', { headers: { Authorization: 'Bearer fake' } });
     expect(unknown.status).toBe(400);
@@ -44,6 +44,28 @@ describe('authenticated T-Line read-only parity bridge', () => {
       await new Promise<void>(r => server.close(() => r()));
     }
   });
+  it('forwards only a validated opaque cursor to the fixed tasks.snapshot route', async () => {
+    const captured: string[] = [];
+    const server = createServer((req, res) => {
+      captured.push(String(req.url));
+      res.end(JSON.stringify({ success: true, schemaVersion: 1, scope: 'workspace' }));
+    });
+    try {
+      await new Promise<void>(r => server.listen(0, '127.0.0.1', r));
+      const opts = { port: (server.address() as any).port,
+        headers: { Authorization: 'Bearer backend' }, cursor: 'a'.repeat(64) };
+      const ok = await fetchParityReadAction('tasks.snapshot', 'D:/workspace', opts);
+      expect(ok.status).toBe(200);
+      expect(captured[0]).toBe('/api/tline/inspect/tasks.snapshot?workspace=D%3A%2Fworkspace&cursor=' + opts.cursor);
+      const invalid = await fetchParityReadAction('tasks.snapshot', 'D:/workspace',
+        { ...opts, cursor: 'junk/../leak' });
+      expect(invalid.status).toBe(400);
+      const injected = await fetchParityReadAction('daemon.status', 'D:/workspace', opts);
+      expect(injected.status).toBe(400);
+      expect(captured).toHaveLength(1);
+    } finally { await new Promise<void>(r => server.close(() => r())); }
+  });
+
   it('fails closed if capability endpoint returns a different product or unsupported schema', async () => {
     const server = createServer((_req, res) => res.end(JSON.stringify({ server: 'not-superagent', schemaVersion: 1, commands: [] })));
     try {

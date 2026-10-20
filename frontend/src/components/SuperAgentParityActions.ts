@@ -3,7 +3,7 @@
  * Never forwards slash text to chat, shell or a generic HTTP proxy.
  */
 type AuthHeaders = () => Record<string, string>;
-export type ParityCommand = { action: 'daemon.status' | 'gateway.status' | 'mcp.status' | 'tools.catalog' | 'selfdev.status' | 'muse.status' | 'capabilities'; raw: string };
+export type ParityCommand = { action: 'daemon.status' | 'gateway.status' | 'mcp.status' | 'tools.catalog' | 'selfdev.status' | 'muse.status' | 'tasks.snapshot' | 'capabilities'; raw: string };
 
 export function parseParityCommand(text: string): ParityCommand | null {
   const trimmed = text.trim().toLowerCase();
@@ -19,6 +19,8 @@ export function parseParityCommand(text: string): ParityCommand | null {
   ] as const) {
     if (trimmed === prefix || trimmed.startsWith(prefix + ' ')) return { action, raw: trimmed };
   }
+  if (trimmed === '/tasks' || /^\/tasks\s/.test(trimmed))
+    return { action: 'tasks.snapshot', raw: trimmed };
   if (trimmed === '/parity') return { action: 'capabilities', raw: trimmed };
   return null;
 }
@@ -42,6 +44,7 @@ export async function runParityCommand(
     'tools.catalog': ['/tools', '/tools list'],
     'selfdev.status': ['/selfdev', '/selfdev status'],
     'muse.status': ['/muse status'],
+    'tasks.snapshot': ['/tasks', '/tasks status'],
   };
   if (parsed.action in inspectionForms && !inspectionForms[parsed.action].includes(parsed.raw)) {
     return `Only read-only ${inspectionForms[parsed.action].join(' or ')} is available in T-Line. No mutation was sent.`;
@@ -69,6 +72,20 @@ export async function runParityCommand(
     const response = await request(base + parsed.action + suffix, { headers: header });
     if (!response.ok) return `SuperAgent ${parsed.action} failed (HTTP ${response.status}).`;
     const body = await response.json();
+    if (parsed.action === 'tasks.snapshot') {
+      if (body?.success !== true || body.scope !== 'workspace' ||
+          body.schemaVersion !== 1 || !Array.isArray(body.tasks)) {
+        return 'Invalid workspace task snapshot response.';
+      }
+      const visible = body.tasks.slice(0, 20);
+      return ['Workspace tasks (' + body.total + ' retained; CLI, daemon, Muse):',
+        ...visible.map((task: any) => `- ${String(task.channel).slice(0, 15)} ${String(task.taskId).slice(0, 100)}: ${String(task.status).slice(0, 30)} (evidence: ${String(task.evidence).slice(0, 30)})`),
+        ...(body.total > visible.length ? ['More tasks available in the task monitor.'] : []),
+        ...(Array.isArray(body.incompleteSources) && body.incompleteSources.length
+          ? ['Incomplete sources: ' + body.incompleteSources.join(', ')] : []),
+        'Polling snapshot only; no event replay or cancellation.',
+      ].join('\n');
+    }
     if (parsed.action === 'mcp.status') {
       if (body?.success !== true || !Array.isArray(body.servers)) return 'Invalid MCP inspection response.';
       return ['MCP servers (runtime-global, read-only): ' + body.servers.length,

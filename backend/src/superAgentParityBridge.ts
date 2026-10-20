@@ -14,6 +14,7 @@ export const PARITY_READ_ACTIONS = {
   'tools.catalog': '/api/tline/inspect/tools.catalog',
   'selfdev.status': '/api/tline/inspect/selfdev.status',
   'muse.status': '/api/tline/inspect/muse.status',
+  'tasks.snapshot': '/api/tline/inspect/tasks.snapshot',
 } as const;
 export type ParityReadAction = keyof typeof PARITY_READ_ACTIONS;
 
@@ -25,7 +26,7 @@ export interface ParityReadResponse {
 export async function fetchParityReadAction(
   action: ParityReadAction,
   workspace: string,
-  options: { port?: number; headers?: Record<string, string> } = {},
+  options: { port?: number; headers?: Record<string, string>; cursor?: string } = {},
 ): Promise<ParityReadResponse> {
   const pathname = PARITY_READ_ACTIONS[action];
   if (!pathname) return { status: 400, payload: { error: 'Unsupported parity action.' } };
@@ -37,7 +38,11 @@ export async function fetchParityReadAction(
     return { status: 503, payload: { error: 'SuperAgent service token unavailable. Authenticated desktop capabilities cannot be queried.' } };
   }
   const port = options.port ?? 7888;
-  const url = pathname + '?workspace=' + encodeURIComponent(workspace);
+  if (options.cursor && (action !== 'tasks.snapshot' || !/^[0-9a-f]{64}$/.test(options.cursor))) {
+    return { status: 400, payload: { error: 'Invalid task cursor.' } };
+  }
+  const url = pathname + '?workspace=' + encodeURIComponent(workspace) +
+    (options.cursor ? '&cursor=' + encodeURIComponent(options.cursor) : '');
   return new Promise((resolve) => {
     let settled = false;
     const done = (v: ParityReadResponse) => { if (!settled) { settled = true; resolve(v); } };

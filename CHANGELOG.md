@@ -1,3 +1,13 @@
+## [1.3.687] - 2026-10-20
+
+### SuperAgent CLI ↔ TLine Retained Task Monitor (Increment 4)
+
+- Added an authenticated workspace-scoped read-only task snapshot endpoint to SuperAgent, projecting existing CLI delegate, daemon run and Muse task records without a second job runner.
+- Added bounded snapshot cursors (per workspace and process generation), metadata-only output, incomplete-source indicators and conditional responses when unchanged. No durable SSE replay or remote process liveness is claimed.
+- Added a collapsible TLine Cross-channel Tasks monitor, polling every 3.5s only while open, resetting on workspace/session changes, and resynchronizing after reconnect or process restart.
+- Added `/tasks status` for an explicit one-shot task inspection and prohibited `/tasks cancel`/mutation via the read-only command path.
+- Added cross-workspace, cursor-validation, upstream proxy and capability-negotiation regression tests. Live desktop E2E still requires an updated active SuperAgent process; no existing services were restarted.
+
 ## [1.3.686] - 2026-10-20
 
 ### SuperAgent CLI ↔ T-Line Inspection Parity (Increment 3)

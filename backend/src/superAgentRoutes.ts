@@ -24,7 +24,9 @@ router.get('/parity/:action', async (req, res) => {
     return;
   }
   const workspace = typeof req.query.workspace === 'string' ? req.query.workspace : '';
-  const result = await fetchParityReadAction(action as ParityReadAction, workspace);
+  const cursor = action === 'tasks.snapshot' && typeof req.query.cursor === 'string'
+    ? req.query.cursor : undefined;
+  const result = await fetchParityReadAction(action as ParityReadAction, workspace, { cursor });
   res.status(result.status).json(result.payload);
 });
 

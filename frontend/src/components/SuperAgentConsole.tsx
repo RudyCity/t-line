@@ -7,6 +7,7 @@ import { parseParityCommand, runParityCommand } from './SuperAgentParityActions'
 import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSidebar';
 import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
 import { ActiveTasksBar, ChecklistTaskItem } from './ActiveTasksBar';
+import { SuperAgentTaskMonitor } from './SuperAgentTaskMonitor';
 import { SuperAgentInputContainer } from './SuperAgentInputContainer';
 import { SuperAgentSettingsMenu } from './SuperAgentSettingsMenu';
 import { SessionIdBadge } from './SessionIdBadge';
@@ -750,6 +751,11 @@ export function SuperAgentConsole({
       command: item.command, argsHelp: item.argsHelp, description: item.description,
       action: () => { void handleSend(item.example); },
     })),
+    {
+      command: '/tasks', argsHelp: '[status]',
+      description: 'Read workspace CLI / daemon / Muse task statuses (read-only)',
+      action: (args?: string) => { void handleSend('/tasks ' + (args || 'status')); },
+    },
     // Dynamically inject installed skills as /skill-* commands
     ...installedSkills.map(skill => {
       const slug = skill.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -1203,6 +1209,10 @@ export function SuperAgentConsole({
               <span>Ke Bawah</span>
             </button>
           )}
+
+          {/* Workspace-scoped retained CLI / daemon / Muse task monitor. */}
+          <SuperAgentTaskMonitor key={workspace + '::' + activeSessionId}
+            workspace={workspace} sessionId={activeSessionId} />
 
           {/* Active Tasks Widget — pinned above input, outside scroll area */}
           <ActiveTasksBar

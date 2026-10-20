@@ -2,7 +2,7 @@
 
 Date: 2026-10-20
 Target: SuperAgent CLI source (`../superagent`, branch `main`) → T-Line React/Tauri desktop (`t-line`, branch `main`)
-Status: **Increment 3 implemented (credential-free MCP/tool discovery, workspace-scoped selfdev/Muse inspection); full feature parity NOT achieved.**
+Status: **Increment 4 implemented (workspace-scoped CLI/daemon/Muse task snapshots with reconnect-safe polling); full feature parity NOT achieved.**
 
 ## Baseline findings
 
@@ -36,7 +36,8 @@ Audited the actual repositories rather than equating a UI button to working supp
 - [x] First real read-only desktop command adapters: `/daemon status`, `/gateway status` and `/parity` server capability inspection. Reject unsupported subcommands before any upstream request.
 - [x] Add read-only, typed desktop inspection adapters for `/mcp list`, `/tools list`, `/selfdev status` and `/muse status`; all mutation subcommands remain CLI-only.
 - [ ] Implement authorized write/execute adapters for MCP/tools, selfdev, Muse, and Telegram only with explicit per-operation scope and approvals.
-- [ ] Implement async task streaming/cancel/retry with session-scoped event IDs and replay semantics.
+- [x] Implement read-only workspace-scoped retained CLI/daemon/Muse task snapshots and cursor-based conditional polling; stale snapshots are discarded on workspace/session switch.
+- [ ] Add true async event streaming and durable event IDs/replay, plus authorized task cancel/retry. Polling snapshots do not provide historical event replay.
 - [ ] Add UI for `/daemon` (schedule, logs, cancel), `/gateway`, `/motion`, `/macro`, `/mp`, `/skills`.
 - [ ] Bring `/memory` and `/history` workflow semantics in line with CLI, with workspace-backed sessions.
 - [ ] Implement multi-project/worktree authorization, progress visualization, review/approval and CLI agent handoff.
@@ -49,6 +50,36 @@ Audited the actual repositories rather than equating a UI button to working supp
 - [ ] Add motion editor/artifact routing, desktop media resources and e2e user workflows.
 - [ ] Add parity gates comparing CLI command/API capability IDs to T-Line UI routes and tests on every PR.
 - [ ] Add performance/regression coverage for SSE reconnect, rapid workspace switching and concurrent agents.
+
+## Increment 4: retained task snapshots and desktop monitor
+
+- SuperAgent adds the `tasks.snapshot` read-only action to the authenticated
+  TLine capability manifest and implements `GET /api/tline/inspect/tasks.snapshot`.
+  The handler requires a validated registered workspace and an active TLine
+  session. Source data is projected from the existing CLI delegate store,
+  daemon run ledger and current Muse task; there is **no second task engine**.
+- Filtering uses canonical filesystem workspace ownership; daemon ledger is
+  pre-filtered by exact workspace path and verified again. CLI delegation
+  respects `delegateJobVisibleToWorkspace`; Muse task session ID is included
+  only when it matches the querying chat's session. No foreign workspace
+  IDs, log output, command arguments, artifact paths or policy JSON are sent.
+- Each snapshot contains at most 60 task metadata records, plus one SHA-256
+  cursor bound to the running server generation. When the client sends the same
+  cursor and nothing changed, `changed:false` omits the tasks array.
+  After a server restart or reconnection a new cursor triggers **full resync**.
+  If a source fails, `incompleteSources` reports the specific unavailable
+  subsystem instead of claiming its tasks were successful or absent.
+- TLine uses the allowlisted, authenticated `tasks.snapshot` GET proxy with a
+  64-character hex cursor validator. `/tasks status` reads a one-shot view.
+  An optional collapsible task monitor polls every 3.5s **only while open**,
+  suspends while the page is hidden, cancels in-flight requests on workspace
+  or chat session changes, and renegotiates capability after a failure.
+- Task evidence remains `verified`, `unverified`, `failed` or
+  `not_applicable` as projected by the existing task sources. Polling does not
+  prove OS process liveness, cannot replay intermediate transitions, and does
+  not implement SSE resume, cancellation or task retry.
+- No service was restarted or CLI workspace process terminated. Live Tauri E2E
+  is pending an updated SuperAgent runtime with the new endpoint.
 
 ## Increment 3: safe MCP/tool/SelfDev/Muse observation
 
