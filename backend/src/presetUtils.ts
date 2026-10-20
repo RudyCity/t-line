@@ -6,6 +6,8 @@
  * reads and writes go through the SuperAgent REST API.
  */
 
+import { getSuperAgentServiceHeaders } from './superAgentAuth';
+
 const SUPERAGENT_BASE = 'http://127.0.0.1:7888';
 const DEFAULT_TIMEOUT_MS = 5000;
 
@@ -22,7 +24,7 @@ async function saRequest<T>(
   try {
     const res = await fetch(`${SUPERAGENT_BASE}${path}`, {
       method,
-      headers: body ? { 'Content-Type': 'application/json' } : {},
+      headers: { ...getSuperAgentServiceHeaders(), ...(body ? { 'Content-Type': 'application/json' } : {}) },
       body: body ? JSON.stringify(body) : undefined,
       signal: controller.signal
     });

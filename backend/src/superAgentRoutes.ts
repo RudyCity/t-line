@@ -3,12 +3,17 @@ import { Router } from 'express';
 import http from 'http';
 import { authMiddleware } from './auth';
 import { sendSuperAgentRequest } from './superAgentBridge';
+import { getSuperAgentServiceHeaders } from './superAgentAuth';
+import motionProxyRouter from './motionProxy';
 import { getWorkspaceSessions, getSessionMessages } from './sessionManager';
 
 const router = Router();
 
 // Apply authMiddleware globally to all routes in this router
 router.use(authMiddleware);
+
+// Binary Motion streaming and scoped JSON endpoints use a dedicated backend proxy.
+router.use('/motion', motionProxyRouter);
 
 // End-to-End Unified Logging Endpoint
 router.post("/log", (req, res) => {
@@ -25,7 +30,7 @@ function proxyToSuperAgent(pathName: string, fallback: any, workspace?: string, 
     const url = workspace
       ? `http://127.0.0.1:7888${pathName}${separator}workspace=${encodeURIComponent(workspace)}`
       : `http://127.0.0.1:7888${pathName}`;
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = getSuperAgentServiceHeaders();
     if (workspace) headers['x-workspace-path'] = workspace;
     if (body) headers['Content-Type'] = 'application/json';
 

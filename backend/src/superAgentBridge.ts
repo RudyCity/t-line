@@ -7,6 +7,7 @@ import WebSocket from 'ws';
 import { getInputHistory, saveInputHistory } from './sessionManager';
 import { loadMergedPresets } from './presetUtils';
 import { rotateAllKnownLogs } from './logRotation';
+import { getSuperAgentServiceHeaders } from './superAgentAuth';
 
 const SUPERAGENT_LOG_FILE = path.join(os.homedir(), '.tline-superagent.log');
 
@@ -89,6 +90,7 @@ function pingPort7888(): Promise<boolean> {
       port: 7888,
       path: '/api/instances',
       method: 'GET',
+      headers: getSuperAgentServiceHeaders(),
       timeout: 1500
     }, (res) => {
       res.resume();
@@ -527,7 +529,8 @@ async function initializeSuperAgentSession(workspacePath: string, mode: string, 
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(postData),
         'x-workspace-path': workspacePath,
-        'x-client-mode': 'tline'
+        'x-client-mode': 'tline',
+        ...getSuperAgentServiceHeaders()
       }
     }, (res) => {
       let data = '';
@@ -560,7 +563,8 @@ export function sendSuperAgentRequest(pathName: string, payload: any, workspaceP
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(postData),
         'x-workspace-path': workspacePath,
-        'x-client-mode': 'tline'
+        'x-client-mode': 'tline',
+        ...getSuperAgentServiceHeaders()
       },
       timeout: timeoutMs
     }, (res) => {
@@ -654,6 +658,7 @@ let suppressBufferWrite = false;
       headers: {
         'Accept': 'text/event-stream',
         'x-workspace-path': workspacePath,
+        ...getSuperAgentServiceHeaders(),
         ...(lastBufferedEventId > 0 ? { 'Last-Event-ID': String(lastBufferedEventId) } : {})
       }
     }, (res) => {

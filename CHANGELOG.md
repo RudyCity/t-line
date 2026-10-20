@@ -1,3 +1,13 @@
+## [1.3.682] - 2026-10-20
+
+### SuperAgent Motion Studio Bridge and Authenticated Media Proxy
+
+- Added a dedicated `/api/superagent/motion/*` backend proxy, mounted after T-Line's existing authentication middleware. It forwards workspace identity through both header and query and preserves JSON status codes and MP4 HEAD/GET/Range streaming semantics.
+- Added a backend-only SuperAgent service token loader bound to port 7888, with malformed/stale metadata rejected. Forwarded this bearer token from the bridge's status probe, session init, commands, SSE, REST proxy, and preset utility; tokens stay out of frontend URLs, browser storage, and logs.
+- Constrained upstream Motion paths and methods, bounded JSON payload size, refused conflicting workspace selectors, and preserved media `Content-Range`, `ETag`, `Content-Length`, `Accept-Ranges` and `Content-Type` with backpressure and disconnect cleanup.
+- Added backend proxy and credential-loader tests. Verified backend TypeScript build and HTTP smoke tests against a mock upstream. Live local SuperAgent authenticated `/api/instances` returned 200; `/api/motion` returned 404 because the running server had not been restarted onto the new Motion code. No automatic restart was triggered.
+- Updated version manifests to 1.3.682. Native MotionStudioTab, full live media integration and packaged Windows runtime remain future release gates.
+
 ## [1.3.681] - 2026-10-18
 
 ### SuperAgent Integration Security Hardening
