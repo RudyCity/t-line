@@ -69,6 +69,11 @@ describe('T-Line Motion proxy and service authentication', () => {
     const scheduler = await fetch(base + '/scheduler?workspace=allowed-root');
     expect(scheduler.status).toBe(200);
     expect((await scheduler.json()).url).toContain('/api/motion/scheduler');
+    const storage = await fetch(base + '/storage?workspace=allowed-root');
+    expect(storage.status).toBe(200);
+    expect((await storage.json()).url).toContain('/api/motion/storage');
+    expect((await fetch(base + '/storage?workspace=allowed-root', { method: 'POST' })).status).toBe(404);
+    expect((await fetch(base + '/storage?workspace=unknown')).status).toBe(403);
     expect(metadata.url).toContain('workspace=allowed-root');
     expect(JSON.stringify(metadata)).not.toContain(serviceKey);
     const assetId = 'asset-' + 'c'.repeat(64);

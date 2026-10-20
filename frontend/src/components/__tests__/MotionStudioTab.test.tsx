@@ -7,7 +7,7 @@ import { evaluateLayer, evaluateTrack, makeKeyframeTrack } from '../../services/
 vi.mock('../../services/motionStudioApi', () => ({
   motionStudioApi: {
     list: vi.fn(), inspect: vi.fn(), create: vi.fn(), edit: vi.fn(),
-    jobs: vi.fn(), scheduler: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
+    jobs: vi.fn(), scheduler: vi.fn(), storage: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
   },
 }));
 const id = 'motion-' + 'a'.repeat(20);
@@ -34,6 +34,10 @@ beforeEach(() => {
   vi.mocked(motionStudioApi.scheduler).mockResolvedValue({
     maxConcurrentRenders: 2, queueLimit: 12, queued: 1, active: 1,
     slots: [{ slot: 0, jobId: 'motionjob-' + 'b'.repeat(24), state: 'claimed_unverified' }, { slot: 1, state: 'free' }],
+  });
+  vi.mocked(motionStudioApi.storage).mockResolvedValue({
+    jobs: { total: 3, queued: 0, running: 1, completed: 2, failed: 0, cancelled: 0, interrupted: 0 },
+    completedArtifactBytes: 1048576, maintenance: { minAgeDays: 7, candidates: 0, blockedIds: [], reclaimableBytes: 0 },
   });
   vi.mocked(motionStudioApi.create).mockResolvedValue(fixture());
   vi.mocked(motionStudioApi.loadImageUrl).mockResolvedValue('blob:test-motion-image');
@@ -192,9 +196,12 @@ describe('Native T-Line Motion Studio editor', () => {
     await screen.findByTestId('motion-canvas');
     fireEvent.change(screen.getByLabelText('Current frame'), { target: { value: 25 } });
     expect(screen.getByText('0.83s · F25')).toBeInTheDocument();
+    expect(screen.getByText(/3 jobs/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Render resolution')).toHaveValue('640');
+    fireEvent.change(screen.getByLabelText('Render resolution'), { target: { value: '1920' } });
     fireEvent.click(screen.getByRole('button', { name: 'Render MP4' }));
-    await waitFor(() => expect(motionStudioApi.render).toHaveBeenCalledWith('D:/projects/studio', id, 640));
-    expect(await screen.findByText('Render queued at revision 1')).toBeInTheDocument();
+    await waitFor(() => expect(motionStudioApi.render).toHaveBeenCalledWith('D:/projects/studio', id, 1920));
+    expect(await screen.findByText('Render queued at revision 1 · 1920px wide')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 

@@ -100,3 +100,12 @@ Avoid staging or overwriting unrelated T-Line CLI parity, Hermes, MCP OAuth or c
 - Timeline audio previews use the current frame for per-clip start offsets, gain, fade in and fade out. A monotonic elapsed-time visual clock reduces frame drift. Browser volume above 1 and WebView autoplay restrictions mean live audio is best effort, not identical to AAC render output.
 - Tests cover envelope bounds, scope/auth protection, waveform seek, individual clip timing/gain/pause, rational playback clock, full frontend and proxy suites, and Vite production build.
 - Remaining: packaged Tauri end-to-end A/V synchronization, Web Audio mixing with sample-accurate timing, audio metering, longer PCM tracks, mastering and visual export parity.
+
+## Motion storage diagnostics, safe retention and selectable Full HD (2026-10-21)
+
+- Native Motion Studio now calls authenticated, workspace-scoped GET /api/superagent/motion/storage, proxied read-only to SuperAgent GET /api/motion/storage using T-Line's existing server-only token and workspace policy. POST access is rejected.
+- Header displays total render jobs, metadata-reported completed-video disk usage, and old cleanup candidate count. The view gracefully degrades against older SuperAgent servers without the storage endpoint.
+- An explicit render width selector offers **640px preview, 1280px HD, and 1920px Full HD** while preserving the existing revision-pinned job render path. This is a width preset, not 4K or arbitrary timeline video support.
+- React Motion Studio component tests and backend proxy tests validate UI and authorization behavior. Backend/frontend TypeScript and production Vite bundle builds pass with existing CSS/chunk warnings.
+- Underlying engine retains a 1,800-frame cap. Larger render output may exceed T-Line preview's existing 64 MB in-memory blob limit; streaming/download without materializing the entire video remains a separate workflow.
+- No packaged/installed Tauri live end-to-end run has been performed. Older SuperAgent servers will return 404 for storage reads; the T-Line UI handles this without blocking editing.

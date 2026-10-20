@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import {
   motionStudioApi, type MotionJob, type MotionProject, type MotionLayer, type MotionEdit, type MotionSchedulerStatus,
-  type MotionProperty, type MotionProjectSummary,
+  type MotionProperty, type MotionProjectSummary, type MotionStorageStatus,
 } from '../services/motionStudioApi';
 import { evaluateLayer, fpsOf, frameLabel, makeKeyframeTrack } from '../services/motionScene';
 import { MotionCanvas } from './MotionCanvas';
@@ -43,6 +43,8 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [success, setSuccess] = useState('');
   const [jobs, setJobs] = useState<MotionJob[]>([]);
   const [scheduler, setScheduler] = useState<MotionSchedulerStatus | null>(null);
+  const [storage, setStorage] = useState<MotionStorageStatus | null>(null);
+  const [renderWidth, setRenderWidth] = useState<640 | 1280 | 1920>(640);
   const [activeJobId, setActiveJobId] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
@@ -73,15 +75,18 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     setProject(null); setSelectedId(''); setSelectedLayer(null); setFrame(0);
     setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
-    setScheduler(null);
+    setScheduler(null); setStorage(null);
     setUndoStack([]); setRedoStack([]);
     const refresh = async () => {
       try {
         const [list, existingJobs] = await Promise.all([motionStudioApi.list(workspacePath), motionStudioApi.jobs(workspacePath)]);
         // Older SuperAgent builds lack scheduler information; editor remains usable.
-        const capacity = await motionStudioApi.scheduler(workspacePath).catch(() => null);
+        const [capacity, storageInfo] = await Promise.all([
+          motionStudioApi.scheduler(workspacePath).catch(() => null),
+          motionStudioApi.storage(workspacePath).catch(() => null),
+        ]);
         if (!mounted.current || version.current !== sequence) return;
-        setProjects(list); setJobs(existingJobs); setScheduler(capacity);
+        setProjects(list); setJobs(existingJobs); setScheduler(capacity); setStorage(storageInfo);
         const latest = existingJobs.find(job => job.status === 'completed') || existingJobs[0];
         setActiveJobId(latest?.id || '');
       } catch (cause) {
@@ -377,10 +382,10 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const render = () => {
     if (!project) return;
     void operation(async () => {
-      const started = await motionStudioApi.render(workspacePath, project.id, 640);
+      const started = await motionStudioApi.render(workspacePath, project.id, renderWidth);
       if (started.status === 'failed') throw new Error(started.error || 'Could not start render worker');
       setJobs(prev => [started, ...prev.filter(item => item.id !== started.id)]);
-      setActiveJobId(started.id); setSuccess('Render queued at revision ' + started.revision);
+      setActiveJobId(started.id); setSuccess('Render queued at revision ' + started.revision + ' · ' + renderWidth + 'px wide');
     });
   };
 
@@ -398,6 +403,10 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
           {scheduler && <span role="status" className="rounded border border-[var(--border-color)] px-2 py-1 font-mono text-[10px] text-[var(--text-muted)]" title="Workspace render queue and rendering capacity">
             Queue {scheduler.queued}/{scheduler.queueLimit} · Render {scheduler.slots.filter(item => item.state === 'claimed_unverified').length}/{scheduler.maxConcurrentRenders}
           </span>}
+          {storage && <span role="status" className="rounded border border-[var(--border-color)] px-2 py-1 font-mono text-[10px] text-[var(--text-muted)]"
+            title="Read-only workspace render storage; existing completed exports are preserved">
+            {storage.jobs.total} jobs · {(storage.completedArtifactBytes / (1024 * 1024)).toFixed(1)} MB · {storage.maintenance.candidates} old cleanup candidates
+          </span>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <label className="sr-only" htmlFor="motion-project-picker">Motion project</label>
@@ -410,6 +419,13 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
           <button className={action} onClick={() => setCreating(value => !value)} aria-expanded={creating}><Plus size={13} /> New</button>
           <button className={action} disabled={!project || busy || undoStack.length === 0} aria-label="Undo scene change" onClick={() => restoreHistory('undo')}><Undo2 size={13} /> Undo</button>
           <button className={action} disabled={!project || busy || redoStack.length === 0} aria-label="Redo scene change" onClick={() => restoreHistory('redo')}><Redo2 size={13} /> Redo</button>
+          <label htmlFor="motion-render-width" className="sr-only">Render resolution</label>
+          <select id="motion-render-width" aria-label="Render resolution" className={control + ' w-auto'} value={renderWidth}
+            onChange={event => setRenderWidth(Number(event.target.value) as 640 | 1280 | 1920)} disabled={busy}>
+            <option value={640}>640px preview</option>
+            <option value={1280}>1280px HD</option>
+            <option value={1920}>1920px Full HD</option>
+          </select>
           <button className={primary} onClick={render} disabled={!project || busy}><Film size={14} /> Render MP4</button>
         </div>
       </header>
