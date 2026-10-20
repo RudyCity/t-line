@@ -79,6 +79,26 @@ describe('Native T-Line Motion Studio editor', () => {
     expect(await screen.findByText('Text saved · revision 2')).toBeInTheDocument();
   });
 
+  it('zooms, pans and resets the viewport without modifying a scene revision', async () => {
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    await screen.findByTestId('motion-canvas');
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in Motion canvas' }));
+    expect(screen.getByLabelText('Motion canvas zoom')).toHaveTextContent('125%');
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle Motion canvas pan mode' }));
+    expect(screen.getByRole('button', { name: 'Toggle Motion canvas pan mode' })).toHaveAttribute('aria-pressed', 'true');
+    const viewport = screen.getByTestId('motion-viewport');
+    fireEvent.pointerDown(viewport, { pointerId: 5, button: 0, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(viewport, { pointerId: 5, clientX: 120, clientY: 135 });
+    fireEvent.pointerUp(viewport, { pointerId: 5 });
+    expect(screen.getByTestId('motion-canvas').getAttribute('style')).toContain('translate(20px, 35px)');
+    fireEvent.click(screen.getByRole('button', { name: 'Reset Motion canvas view' }));
+    expect(screen.getByLabelText('Motion canvas zoom')).toHaveTextContent('100%');
+    expect(screen.getByTestId('motion-canvas').getAttribute('style')).toContain('translate(0px, 0px)');
+    expect(motionStudioApi.edit).not.toHaveBeenCalled();
+  });
+
   it('starts detached render with a pinned project ID and handles render-job status', async () => {
     vi.mocked(motionStudioApi.render).mockResolvedValue({
       id: 'motionjob-' + 'b'.repeat(24), projectId: id, revision: 1,

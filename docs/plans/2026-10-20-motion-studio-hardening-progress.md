@@ -45,3 +45,10 @@ Avoid staging or overwriting unrelated T-Line CLI parity, Hermes, MCP OAuth or c
 - The focusable canvas supports arrow-key nudge (Shift for larger steps), Alt+left/right rotation and Ctrl+arrows rectangle sizing. Both pointer and keyboard operations are covered by dedicated React/Vitest tests.
 - Validation: 54/54 frontend regression tests passed across 12 suites, backend/frontend TypeScript checks and the Vite production build passed. Warnings remain in the pre-existing CSS minification/bundle-size pipeline.
 - **Remaining:** native Tauri real-device smoke, rich text/font parity, resize handles for rotated/text objects, asset/audio layers, multi-scene editing, zoom/pan and more advanced transform affordances. This does not declare production readiness.
+
+## Zoom and Pan Canvas Navigation (2026-10-20)
+
+- Added bounded 25–400% zoom, cursor-anchored mouse wheel scaling, fit/reset and explicit Pan mode or middle-button viewport dragging in T-Line native Motion Studio.
+- Viewport state is local to the editor, resets when switching projects/workspaces and never alters the authoritative project revision. SVG hit testing uses the actual transformed canvas rectangle so pointer drag remains consistent at variable zoom.
+- Pure viewport math and editor interaction tests included; frontend 58/58, both TypeScript checks, and Vite production bundle pass.
+- Real packaged Tauri interactions, audio/media tools, and advanced rotated-object sizing remain unverified.

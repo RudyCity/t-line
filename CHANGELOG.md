@@ -1,3 +1,12 @@
+## [1.3.690] - 2026-10-20
+
+### Motion Studio Zoom and Pan Navigation
+
+- Added local editor zoom controls (25–400%), cursor-anchored wheel zoom, fit/reset, and middle-mouse or explicit Pan-mode drag navigation.
+- Kept viewport transformations out of revision-checked scene data. The existing SVG pointer interactions continue to operate against the rendered canvas bounding rectangle, including after pan and zoom.
+- Added pure viewport coordinate tests and native editor zoom/pan/reset interaction tests. Full frontend test suite passed (58/58), frontend/backend TypeScript checks passed, and the Vite production build completed with existing CSS and bundle-size warnings.
+- No SuperAgent daemon restart or Hermes changes. Real Tauri device testing and renderer font/media parity remain release gates.
+
 ## [1.3.689] - 2026-10-20
 
 ### Motion Studio Direct Canvas Manipulation

@@ -13,6 +13,7 @@ import {
 } from '../services/motionStudioApi';
 import { evaluateLayer, fpsOf, frameLabel, makeKeyframeTrack } from '../services/motionScene';
 import { MotionCanvas } from './MotionCanvas';
+import { DEFAULT_MOTION_VIEWPORT, panMotionViewport, zoomMotionViewport, type MotionViewport } from '../services/motionViewport';
 
 interface Props { workspacePath: string; isActive: boolean }
 type PropertyDraft = { field: MotionProperty; value: string };
@@ -28,6 +29,9 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null);
   const [frame, setFrame] = useState(0);
   const [canvasSnapping, setCanvasSnapping] = useState(true);
+  const [viewport, setViewport] = useState<MotionViewport>(DEFAULT_MOTION_VIEWPORT);
+  const [panMode, setPanMode] = useState(false);
+  const panGesture = useRef<{ pointerId: number; x: number; y: number } | null>(null);
   const [playing, setPlaying] = useState(false);
   const [creating, setCreating] = useState(false);
   const [projectName, setProjectName] = useState('');
@@ -62,6 +66,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     const sequence = ++version.current;
     selectionSeq.current++;
     setProject(null); setSelectedId(''); setSelectedLayer(null); setFrame(0);
+    setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
     setScheduler(null);
     setUndoStack([]); setRedoStack([]);
@@ -87,6 +92,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     const selectedSequence = ++selectionSeq.current;
     if (!selectedId || !workspacePath) { setProject(null); return; }
     setProject(null); setSelectedLayer(null); setFrame(0); setPlaying(false);
+    setViewport(DEFAULT_MOTION_VIEWPORT); panGesture.current = null;
     setUndoStack([]); setRedoStack([]);
     setActiveJobId(jobs.find(item => item.projectId === selectedId)?.id || '');
     motionStudioApi.inspect(workspacePath, selectedId)
@@ -373,13 +379,50 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
                       onChange={event => setCanvasSnapping(event.target.checked)} className="accent-[var(--color-primary)]" />
                     Snap 10px
                   </label>
+                  <button type="button" className={action} aria-label="Zoom out Motion canvas" onClick={() => setViewport(previous => zoomMotionViewport(previous, previous.zoom / 1.25, { x: 0, y: 0 }, { left: -1, top: -1, width: 2, height: 2 }))}>−</button>
+                  <span aria-label="Motion canvas zoom" className="font-mono">{Math.round(viewport.zoom * 100)}%</span>
+                  <button type="button" className={action} aria-label="Zoom in Motion canvas" onClick={() => setViewport(previous => zoomMotionViewport(previous, previous.zoom * 1.25, { x: 0, y: 0 }, { left: -1, top: -1, width: 2, height: 2 }))}>+</button>
+                  <button type="button" className={action} aria-label="Reset Motion canvas view" onClick={() => setViewport(DEFAULT_MOTION_VIEWPORT)}>Fit</button>
+                  <button type="button" className={panMode ? primary : action} aria-label="Toggle Motion canvas pan mode" aria-pressed={panMode} onClick={() => setPanMode(v => !v)}>Pan</button>
                   <span>{fps.toFixed(2)} fps</span>
                 </div>
               </div>
-              <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[var(--bg-card)] p-4 md:p-8">
-                <div className="w-full max-w-[1000px]" data-testid="motion-canvas">
+              <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[var(--bg-card)] p-4 md:p-8"
+                data-testid="motion-viewport"
+                onWheel={event => {
+                  if (!isActive) return;
+                  event.preventDefault();
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  setViewport(previous => zoomMotionViewport(previous,
+                    previous.zoom * (event.deltaY < 0 ? 1.12 : 1 / 1.12),
+                    { x: event.clientX, y: event.clientY }, rect));
+                }}
+                onPointerDown={event => {
+                  if (!isActive || (event.button !== 1 && !(panMode && event.button === 0))) return;
+                  panGesture.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+                  event.currentTarget.setPointerCapture?.(event.pointerId);
+                  event.stopPropagation(); event.preventDefault();
+                }}
+                onPointerMove={event => {
+                  const pending = panGesture.current;
+                  if (!pending || pending.pointerId !== event.pointerId) return;
+                  setViewport(previous => panMotionViewport(previous, {
+                    x: event.clientX - pending.x, y: event.clientY - pending.y,
+                  }));
+                  panGesture.current = { pointerId: pending.pointerId, x: event.clientX, y: event.clientY };
+                }}
+                onPointerUp={event => {
+                  if (panGesture.current?.pointerId !== event.pointerId) return;
+                  panGesture.current = null;
+                  event.currentTarget.releasePointerCapture?.(event.pointerId);
+                }}
+                onPointerCancel={() => { panGesture.current = null; }}
+                onLostPointerCapture={() => { panGesture.current = null; }}
+              >
+                <div className="w-full max-w-[1000px]" data-testid="motion-canvas"
+                  style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`, transformOrigin: 'center center' }}>
                   <MotionCanvas key={project.id + ':' + project.revision} project={project} frame={frame}
-                    selectedLayer={selectedLayer} isActive={isActive} busy={busy} snapping={canvasSnapping}
+                    selectedLayer={selectedLayer} isActive={isActive} busy={busy || panMode} snapping={canvasSnapping}
                     onSelectLayer={setSelectedLayer} onStopPlayback={() => setPlaying(false)}
                     onEdit={(edits, note) => applyEditorEdits(edits, note)} />
                 </div>
