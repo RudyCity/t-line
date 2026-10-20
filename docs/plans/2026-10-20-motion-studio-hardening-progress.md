@@ -76,3 +76,12 @@ Avoid staging or overwriting unrelated T-Line CLI parity, Hermes, MCP OAuth or c
 - The canvas obtains authenticated PNG bytes and exposes only short-lived Blob URLs to SVG `image` elements. URLs are revoked on project/workspace/revision change, unmount, and late responses. There are no external image URLs.
 - T-Line backend Motion proxy allowlists image POST and id-bound GET/HEAD; JSON upload cap is 1.6 MB to accommodate base64 for a 1 MB source. Tests cover auth routing, signed URLs not leaking service credentials, preview type/size checks and revision-checked image insertion.
 - Still pending: asset library browsing/cleanup, large image import, audio/video media layers, crop/masks, native Tauri E2E, and full preview/export font parity. Version/changelog files are owned by a concurrent T-Line change and intentionally excluded from this Motion-only commit.
+
+
+## Authenticated Native Audio Track (2026-10-20)
+
+- Added `MotionAudioPanel` to T-Line with authenticated local WAV import/replace, start-frame and volume fields, revision-checked Save/Remove, and an optional Blob-backed WAV player. The player previews the source clip, not a live mixed timeline; final AAC timing is applied at render.
+- Browser uploads only the WAV payload, not an OS file path. Backend Motion proxy explicitly allowlists `/audio` POST (3 MB bounded JSON) and hash-ID GET/HEAD, and carries a server-only SuperAgent token behind registered local-workspace enforcement. Browser access uses the T-Line auth token and temporary object URLs which are revoked on project/workspace change.
+- Schema v1 now supports one `composition.audio` (assetId, startFrame, volume) entry alongside visual layers. T-Line Undo/Redo uses the existing `set-audio` revisioned edit transaction; missing/malformed/foreign audio fails closed.
+- Tested audio UI, editor revision integration, authenticated client transport and proxy, plus SuperAgent real H.264 + AAC rendering. T-Line frontend 94/94 tests, backend proxy tests and Vite production build passed, with existing CSS/chunk warnings.
+- Remaining: multiple clips, MP3/FLAC ingest, mixer, waveform/timeline A/V preview sync, packaged desktop E2E. Concurrent T-Line release files are intentionally not touched by this Motion-only increment.

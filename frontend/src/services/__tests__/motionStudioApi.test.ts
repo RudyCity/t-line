@@ -52,6 +52,29 @@ describe('Motion Studio authenticated client', () => {
     await expect(motionStudioApi.loadImageUrl('D:/studio', '../../secret')).rejects.toThrow('Invalid Motion asset');
   });
 
+  it('authorizes bounded WAV uploads and authenticated audio Blob responses', async () => {
+    const audioId = 'audio-' + 'd'.repeat(64);
+    const payload = new Uint8Array(64).fill(100);
+    const file = new File([payload], 'beat.wav', { type: 'audio/wav' });
+    Object.defineProperty(file, 'arrayBuffer', { value: async () => payload.buffer });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: audioId, seconds: 1, bytes: 64 }), {
+        status: 201, headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(payload, {
+        status: 200, headers: { 'Content-Type': 'audio/wav' },
+      }));
+    const objectUrl = vi.fn().mockReturnValue('blob:audio-test');
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(URL, 'createObjectURL').mockImplementation(objectUrl);
+    await expect(motionStudioApi.uploadAudio('D:/studio', file)).resolves.toMatchObject({ id: audioId });
+    const [uploadPath, uploadInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(uploadPath).toContain('/audio?workspace=');
+    expect(uploadInit.headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    expect(await motionStudioApi.loadAudioUrl('D:/studio', audioId)).toBe('blob:audio-test');
+    await expect(motionStudioApi.loadAudioUrl('D:/studio', '../secret')).rejects.toThrow('Invalid Motion audio');
+  });
+
   it('requires login and rejects invalid scene identifiers before calling the API', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);

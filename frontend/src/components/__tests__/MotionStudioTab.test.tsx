@@ -7,7 +7,7 @@ import { evaluateLayer, evaluateTrack, makeKeyframeTrack } from '../../services/
 vi.mock('../../services/motionStudioApi', () => ({
   motionStudioApi: {
     list: vi.fn(), inspect: vi.fn(), create: vi.fn(), edit: vi.fn(),
-    jobs: vi.fn(), scheduler: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(),
+    jobs: vi.fn(), scheduler: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(),
   },
 }));
 const id = 'motion-' + 'a'.repeat(20);
@@ -37,6 +37,7 @@ beforeEach(() => {
   });
   vi.mocked(motionStudioApi.create).mockResolvedValue(fixture());
   vi.mocked(motionStudioApi.loadImageUrl).mockResolvedValue('blob:test-motion-image');
+  vi.mocked(motionStudioApi.loadAudioUrl).mockResolvedValue('blob:test-motion-audio');
   vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, _rev, operations) => {
     const next = fixture();
     next.revision = 2;
@@ -110,6 +111,28 @@ describe('Native T-Line Motion Studio editor', () => {
       }) },
     ]));
     expect(await screen.findByText('Keyframe deleted · revision 3')).toBeInTheDocument();
+  });
+
+  it('imports an authenticated WAV and adds a revision-guarded audio timeline track', async () => {
+    const assetId = 'audio-' + 'e'.repeat(64);
+    vi.mocked(motionStudioApi.uploadAudio).mockResolvedValue({ id: assetId, bytes: 120, seconds: 1, channels: 1, sampleRate: 16000 });
+    vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, base, edits) => {
+      const next = fixture(); next.revision = base + 1;
+      if (edits[0].type === 'set-audio' && edits[0].audio) next.composition.audio = edits[0].audio;
+      return next;
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    await screen.findByTestId('motion-canvas');
+    const file = new File([new Uint8Array(120)], 'beat.wav', { type: 'audio/wav' });
+    fireEvent.change(screen.getByLabelText('Select Motion WAV'), { target: { files: [file] } });
+    await waitFor(() => expect(motionStudioApi.uploadAudio).toHaveBeenCalledWith('D:/projects/studio', file));
+    await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith('D:/projects/studio', id, 1, [
+      { type: 'set-audio', audio: { assetId, startFrame: 0, volume: 1 } },
+    ]));
+    expect(await screen.findByText('Audio imported · revision 2')).toBeInTheDocument();
+    await waitFor(() => expect(motionStudioApi.loadAudioUrl).toHaveBeenCalledWith('D:/projects/studio', assetId));
   });
 
   it('imports an authenticated image asset and inserts a revision-checked image layer', async () => {

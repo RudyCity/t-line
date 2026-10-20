@@ -9,6 +9,8 @@ const permitted = [
   /^\/scheduler$/,
   /^\/assets$/,
   /^\/assets\/asset-[a-f0-9]{64}$/,
+  /^\/audio$/,
+  /^\/audio\/audio-[a-f0-9]{64}$/,
   /^\/projects\/motion-[a-f0-9]{20}(?:\/edits|\/render)?$/,
   /^\/jobs$/,
   /^\/jobs\/motionjob-[a-f0-9]{24}(?:\/cancel|\/recovery|\/artifact)?$/,
@@ -17,9 +19,11 @@ const permitted = [
 function allowedRoute(method: string, pathname: string): boolean {
   if (!permitted.some(pattern => pattern.test(pathname))) return false;
   if (method === 'GET') return !pathname.endsWith('/edits') && !pathname.endsWith('/render') && !pathname.endsWith('/cancel');
-  if (method === 'HEAD') return pathname.endsWith('/artifact') || /^\/assets\/asset-[a-f0-9]{64}$/.test(pathname);
+  if (method === 'HEAD') return pathname.endsWith('/artifact') || /^\/assets\/asset-[a-f0-9]{64}$/.test(pathname) ||
+    /^\/audio\/audio-[a-f0-9]{64}$/.test(pathname);
   if (method === 'POST') {
-    return pathname === '/projects' || pathname === '/assets' || pathname.endsWith('/edits') || pathname.endsWith('/render') || pathname.endsWith('/cancel');
+    return pathname === '/projects' || pathname === '/assets' || pathname === '/audio' ||
+      pathname.endsWith('/edits') || pathname.endsWith('/render') || pathname.endsWith('/cancel');
   }
   return false;
 }
@@ -70,7 +74,7 @@ export function createMotionProxyRouter(options: MotionProxyOptions = {}): Route
       return;
     }
     const body = ['POST', 'PUT', 'PATCH'].includes(req.method) ? Buffer.from(JSON.stringify(req.body ?? {}), 'utf8') : null;
-    if (body && body.length > (route === '/assets' ? 1_600_000 : 1_000_000)) {
+    if (body && body.length > (route === '/audio' ? 3_000_000 : route === '/assets' ? 1_600_000 : 1_000_000)) {
       res.status(413).json({ error: 'Motion JSON payload too large' });
       return;
     }

@@ -14,13 +14,15 @@ export interface MotionTextLayer extends BaseMotionLayer {
 export interface MotionRectLayer extends BaseMotionLayer { kind: 'rect' }
 export interface MotionImageLayer extends BaseMotionLayer { kind: 'image'; assetId: string }
 export type MotionLayer = MotionTextLayer | MotionRectLayer | MotionImageLayer;
+export interface MotionAudioTrack { assetId: string; startFrame: number; volume: number }
+export interface MotionAudioAsset { id: string; bytes: number; sampleRate: number; channels: number; seconds: number }
 export interface MotionProject {
   schemaVersion: 1; id: string; workspaceRoot: string; name: string;
   revision: number; createdAt: string; updatedAt: string;
   composition: {
     width: number; height: number;
     fps: { numerator: number; denominator: number };
-    durationFrames: number; background: string; layers: MotionLayer[];
+    durationFrames: number; background: string; audio?: MotionAudioTrack; layers: MotionLayer[];
   };
 }
 export interface MotionProjectSummary { id: string; name: string; revision: number }
@@ -31,7 +33,8 @@ export type MotionEdit =
   | { type: 'add-layer'; layer: MotionLayer; index?: number }
   | { type: 'remove-layer'; layerId: string }
   | { type: 'move-layer'; layerId: string; toIndex: number }
-  | { type: 'replace-composition'; composition: MotionProject['composition'] };
+  | { type: 'replace-composition'; composition: MotionProject['composition'] }
+  | { type: 'set-audio'; audio: MotionAudioTrack | null };
 export interface MotionSchedulerStatus {
   maxConcurrentRenders: number;
   queueLimit: number;
@@ -50,6 +53,11 @@ export interface MotionJob {
 const projectIdPattern = /^motion-[0-9a-f]{20}$/;
 const jobIdPattern = /^motionjob-[0-9a-f]{24}$/;
 const assetIdPattern = /^asset-[a-f0-9]{64}$/;
+const audioIdPattern = /^audio-[a-f0-9]{64}$/;
+function assertAudioId(id: string): string {
+  if (!audioIdPattern.test(id)) throw new Error('Invalid Motion audio identifier');
+  return id;
+}
 function assertAssetId(id: string): string {
   if (!assetIdPattern.test(id)) throw new Error('Invalid Motion asset identifier');
   return id;
@@ -103,6 +111,24 @@ export const motionStudioApi = {
     const blob = await response.blob();
     if (blob.type !== 'image/png' || blob.size < 24 || blob.size > 1024 * 1024) throw new Error('Invalid Motion asset response');
     return URL.createObjectURL(blob);
+  },
+  /** Only canonical WAV PCM16 assets are accepted, not file paths or remote URLs. */
+  async uploadAudio(workspace: string, file: File): Promise<MotionAudioAsset> {
+    if (file.size < 46 || file.size > 2 * 1024 * 1024) throw new Error('Motion WAV must be 2 MB or smaller');
+    if (!['audio/wav', 'audio/wave', 'audio/x-wav'].includes(file.type)) throw new Error('Choose a PCM16 WAV audio file');
+    const data = new Uint8Array(await file.arrayBuffer());
+    let binary = '';
+    for (let i = 0; i < data.length; i += 8192) binary += String.fromCharCode(...data.subarray(i, i + 8192));
+    return json(workspace, '/audio', { method: 'POST', body: JSON.stringify({ base64: btoa(binary) }) });
+  },
+  async loadAudioUrl(workspace: string, id: string): Promise<string> {
+    const response = await motionFetch(workspace, '/audio/' + assertAudioId(id));
+    const data = await response.blob();
+    if (data.size < 46 || data.size > 2 * 1024 * 1024 ||
+      !['audio/wav', 'audio/wave', 'audio/x-wav'].includes(data.type)) {
+      throw new Error('Invalid Motion WAV response');
+    }
+    return URL.createObjectURL(data);
   },
   list: (workspace: string) => json<MotionProjectSummary[]>(workspace, '/projects'),
   inspect: (workspace: string, id: string) => json<MotionProject>(workspace, '/projects/' + assertId(id)),

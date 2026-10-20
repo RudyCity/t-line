@@ -14,6 +14,7 @@ import {
 import { evaluateLayer, fpsOf, frameLabel, makeKeyframeTrack } from '../services/motionScene';
 import { MotionCanvas } from './MotionCanvas';
 import { MotionTimeline } from './MotionTimeline';
+import { MotionAudioPanel } from './MotionAudioPanel';
 import { DEFAULT_MOTION_VIEWPORT, panMotionViewport, zoomMotionViewport, type MotionViewport } from '../services/motionViewport';
 
 interface Props { workspacePath: string; isActive: boolean }
@@ -250,6 +251,27 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
         setSelectedLayer(next.composition.layers[0]?.id ?? null);
       }
       setSuccess((direction === 'undo' ? 'Undo' : 'Redo') + ' · revision ' + next.revision);
+    });
+  };
+
+  const importAudio = (file: File) => {
+    if (!project || busy) return;
+    if (file.size < 46 || file.size > 2 * 1024 * 1024) {
+      message('Motion WAV must be 2 MB or smaller'); return;
+    }
+    const current = project;
+    const selectedSequence = selectionSeq.current;
+    void operation(async () => {
+      const asset = await motionStudioApi.uploadAudio(workspacePath, file);
+      if (selectedSequence !== selectionSeq.current) return;
+      const next = await motionStudioApi.edit(workspacePath, current.id, current.revision, [{
+        type: 'set-audio', audio: { assetId: asset.id, startFrame: 0, volume: 1 },
+      }]);
+      if (selectedSequence !== selectionSeq.current) return;
+      setUndoStack(previous => [...previous.slice(-19), structuredClone(current.composition)]);
+      setRedoStack([]);
+      setProject(next);
+      setSuccess('Audio imported · revision ' + next.revision);
     });
   };
 
@@ -566,6 +588,9 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
             </aside>
           </div>
 
+          <MotionAudioPanel project={project} workspacePath={workspacePath}
+            busy={busy} isActive={isActive} onUpload={importAudio}
+            onEdit={(edits, note) => applyEditorEdits(edits, note)} onError={message} />
           <MotionTimeline project={project} currentFrame={frame} selectedLayer={selectedLayer}
             busy={busy} isActive={isActive} onFrame={next => { setPlaying(false); setFrame(next); }}
             onLayer={setSelectedLayer} onEdit={(edits, note) => applyEditorEdits(edits, note)}
