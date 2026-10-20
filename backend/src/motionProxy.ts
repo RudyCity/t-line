@@ -6,6 +6,7 @@ import { isRegisteredMotionWorkspace, ensureMotionWorkspaceTrusted } from './mot
 const permitted = [
   /^\/$/,
   /^\/projects$/,
+  /^\/scheduler$/,
   /^\/projects\/motion-[a-f0-9]{20}(?:\/edits|\/render)?$/,
   /^\/jobs$/,
   /^\/jobs\/motionjob-[a-f0-9]{24}(?:\/cancel|\/recovery|\/artifact)?$/,

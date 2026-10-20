@@ -8,7 +8,7 @@ import {
   Pause, Play, Plus, RefreshCw, Save, Square, Type, X, Trash2, ArrowUp, ArrowDown, Undo2, Redo2,
 } from 'lucide-react';
 import {
-  motionStudioApi, type MotionJob, type MotionProject, type MotionLayer, type MotionEdit,
+  motionStudioApi, type MotionJob, type MotionProject, type MotionLayer, type MotionEdit, type MotionSchedulerStatus,
   type MotionProperty, type MotionProjectSummary,
 } from '../services/motionStudioApi';
 import { evaluateLayer, fpsOf, frameLabel, makeKeyframeTrack } from '../services/motionScene';
@@ -70,6 +70,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [jobs, setJobs] = useState<MotionJob[]>([]);
+  const [scheduler, setScheduler] = useState<MotionSchedulerStatus | null>(null);
   const [activeJobId, setActiveJobId] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
   const [undoStack, setUndoStack] = useState<MotionProject['composition'][]>([]);
@@ -97,12 +98,15 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     selectionSeq.current++;
     setProject(null); setSelectedId(''); setSelectedLayer(null); setFrame(0);
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
+    setScheduler(null);
     setUndoStack([]); setRedoStack([]);
     const refresh = async () => {
       try {
         const [list, existingJobs] = await Promise.all([motionStudioApi.list(workspacePath), motionStudioApi.jobs(workspacePath)]);
+        // Older SuperAgent builds lack scheduler information; editor remains usable.
+        const capacity = await motionStudioApi.scheduler(workspacePath).catch(() => null);
         if (!mounted.current || version.current !== sequence) return;
-        setProjects(list); setJobs(existingJobs);
+        setProjects(list); setJobs(existingJobs); setScheduler(capacity);
         const latest = existingJobs.find(job => job.status === 'completed') || existingJobs[0];
         setActiveJobId(latest?.id || '');
       } catch (cause) {
@@ -152,8 +156,13 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     let cancelled = false;
     const tick = async () => {
       try {
-        const result = await motionStudioApi.jobs(workspacePath);
-        if (!cancelled && mounted.current) setJobs(result);
+        const [result, capacity] = await Promise.all([
+          motionStudioApi.jobs(workspacePath), motionStudioApi.scheduler(workspacePath).catch(() => null),
+        ]);
+        if (!cancelled && mounted.current) {
+          setJobs(result);
+          if (capacity) setScheduler(capacity);
+        }
       } catch (cause) {
         if (!cancelled) message(cause instanceof Error ? cause.message : String(cause));
       }
@@ -320,6 +329,9 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
             <p className="max-w-[220px] truncate text-[10px] text-[var(--text-muted)]" title={workspacePath}>{workspacePath}</p>
           </div>
           {project && <span className="rounded border border-[var(--border-color)] px-2 py-1 font-mono text-[10px] text-[var(--text-muted)]">r{project.revision}</span>}
+          {scheduler && <span role="status" className="rounded border border-[var(--border-color)] px-2 py-1 font-mono text-[10px] text-[var(--text-muted)]" title="Workspace render queue and rendering capacity">
+            Queue {scheduler.queued}/{scheduler.queueLimit} · Render {scheduler.slots.filter(item => item.state === 'claimed_unverified').length}/{scheduler.maxConcurrentRenders}
+          </span>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <label className="sr-only" htmlFor="motion-project-picker">Motion project</label>

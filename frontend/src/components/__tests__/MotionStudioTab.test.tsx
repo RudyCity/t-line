@@ -7,7 +7,7 @@ import { evaluateLayer, evaluateTrack, makeKeyframeTrack } from '../../services/
 vi.mock('../../services/motionStudioApi', () => ({
   motionStudioApi: {
     list: vi.fn(), inspect: vi.fn(), create: vi.fn(), edit: vi.fn(),
-    jobs: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(),
+    jobs: vi.fn(), scheduler: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(),
   },
 }));
 const id = 'motion-' + 'a'.repeat(20);
@@ -31,6 +31,10 @@ beforeEach(() => {
   vi.mocked(motionStudioApi.list).mockResolvedValue([{ id, name: 'Product intro', revision: 1 }]);
   vi.mocked(motionStudioApi.inspect).mockResolvedValue(fixture());
   vi.mocked(motionStudioApi.jobs).mockResolvedValue([]);
+  vi.mocked(motionStudioApi.scheduler).mockResolvedValue({
+    maxConcurrentRenders: 2, queueLimit: 12, queued: 1, active: 1,
+    slots: [{ slot: 0, jobId: 'motionjob-' + 'b'.repeat(24), state: 'claimed_unverified' }, { slot: 1, state: 'free' }],
+  });
   vi.mocked(motionStudioApi.create).mockResolvedValue(fixture());
   vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, _rev, operations) => {
     const next = fixture();
@@ -61,6 +65,7 @@ describe('Native T-Line Motion Studio editor', () => {
   it('loads a workspace-owned scene and saves revision-checked text edits', async () => {
     render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
     expect(await screen.findByText('Choose a scene to edit')).toBeInTheDocument();
+    expect(screen.getByText(/Queue 1\/12/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
     expect(await screen.findByDisplayValue('Product intro')).toBeInTheDocument();
     expect(screen.getByTestId('motion-canvas')).toBeInTheDocument();

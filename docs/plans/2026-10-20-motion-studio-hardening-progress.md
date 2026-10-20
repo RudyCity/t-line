@@ -27,3 +27,11 @@ Status: Developer preview; not production certified.
 5. Text/font visual parity across frontend preview and FFmpeg export, and true long-form authenticated streaming above the current 64 MB editor blob cap.
 
 Avoid staging or overwriting unrelated T-Line CLI parity, Hermes, MCP OAuth or concurrent changelog/version changes when committing this increment.
+
+## Bounded Render Scheduler UI (2026-10-20)
+
+- The T-Line Motion proxy now allows the read-only, authenticated `/api/motion/scheduler` endpoint, after the same local workspace-registration and trusted-directory checks.
+- Native Motion Studio displays workspace queue occupancy and the number of claimed render slots. The service reports a default two concurrent renders (configurable 1–4) and a pending queue capacity of twelve.
+- UI polling reuses existing job activity refresh; older SuperAgent versions without the endpoint continue to work without scheduler metadata.
+- Motion frontend and backend proxy tests cover scheduler read access and the visible capacity display. The SuperAgent scheduler suite tests contention, waiting-job cancellation, queue saturation and refusal to steal a worker's slot.
+- This is a developer preview: there is no automatic lock recovery, restart-resilient FIFO broker or real Tauri end-to-end verification yet. Do not restart Hermes workers without coordination.

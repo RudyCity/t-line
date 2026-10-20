@@ -31,6 +31,13 @@ export type MotionEdit =
   | { type: 'remove-layer'; layerId: string }
   | { type: 'move-layer'; layerId: string; toIndex: number }
   | { type: 'replace-composition'; composition: MotionProject['composition'] };
+export interface MotionSchedulerStatus {
+  maxConcurrentRenders: number;
+  queueLimit: number;
+  queued: number;
+  active: number;
+  slots: Array<{ slot: number; jobId?: string; state: string }>;
+}
 export interface MotionJob {
   id: string; projectId: string; revision: number;
   status: 'queued' | 'preparing' | 'rendering' | 'validating' | 'completed' | 'failed' | 'cancelled' | 'interrupted';
@@ -86,6 +93,7 @@ export const motionStudioApi = {
   render: (workspace: string, id: string, width = 640) =>
     json<MotionJob>(workspace, '/projects/' + assertId(id) + '/render', { method: 'POST', body: JSON.stringify({ width }) }),
   jobs: (workspace: string) => json<MotionJob[]>(workspace, '/jobs'),
+  scheduler: (workspace: string) => json<MotionSchedulerStatus>(workspace, '/scheduler'),
   status: (workspace: string, id: string) => json<MotionJob>(workspace, '/jobs/' + assertId(id, true)),
   cancel: (workspace: string, id: string) => json<{ cancellationRequested: boolean }>(workspace, '/jobs/' + assertId(id, true) + '/cancel', { method: 'POST', body: '{}' }),
   /** Authorize media via T-Line, then use an ephemeral object URL. Never put bearer credentials in <video src>. */

@@ -66,6 +66,9 @@ describe('T-Line Motion proxy and service authentication', () => {
     expect(list.status).toBe(200);
     const metadata = await list.json();
     expect(metadata.workspace).toBe('allowed-root');
+    const scheduler = await fetch(base + '/scheduler?workspace=allowed-root');
+    expect(scheduler.status).toBe(200);
+    expect((await scheduler.json()).url).toContain('/api/motion/scheduler');
     expect(metadata.url).toContain('workspace=allowed-root');
     expect(JSON.stringify(metadata)).not.toContain(serviceKey);
     const created = await fetch(base + '/projects?workspace=allowed-root', {
