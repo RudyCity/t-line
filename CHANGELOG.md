@@ -1,3 +1,13 @@
+## [1.3.692] - 2026-10-20
+
+### Motion Studio Rotated Rectangle Resize
+
+- Enabled pointer resize handles for rotated rectangles, mapping world-space pointer movement into the layer's rotated local axes while anchoring the opposite corner.
+- Dimension edits preserve animated position tracks at the active frame: resize, position correction and keyframe insertion are persisted in one revision-checked composition transaction.
+- Corrected the live rotation-handle position during resize and updated canvas discoverability copy.
+- Added regression tests for 0°, 30°, 45°, 90°, 135°, 180° and -90° rotations, opposite-corner anchoring, pointer-based 90° resize and animated position preservation. The full frontend suite passed 68/68 tests, frontend/backend TypeScript checks passed, and the Vite production build completed with existing CSS/bundle warnings.
+- No SuperAgent daemon restart, Hermes changes or native Tauri E2E certification.
+
 ## [1.3.691] - 2026-10-20
 
 ### SuperAgent TLine Persistent Observed-Event Replay (Increment 6A)

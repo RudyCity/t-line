@@ -370,7 +370,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
 
             <div className="flex min-h-[250px] min-w-0 flex-col">
               <div className="flex items-center justify-between px-4 py-2 text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                <span title="Drag to move · corner handle resizes rectangles · upper handle rotates · arrows nudge · Alt+arrows rotate · Ctrl+arrows resize rectangles">
+                <span title="Drag to move · corner handle resizes rotated rectangles · upper handle rotates · arrows nudge · Alt+arrows rotate · Ctrl+arrows resize rectangles">
                   Composition · {project.composition.width} × {project.composition.height}
                 </span>
                 <div className="flex items-center gap-3">

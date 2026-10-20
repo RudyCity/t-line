@@ -44,6 +44,34 @@ export function resizedCanvasDimensions(
     height: Math.max(1, Math.min(100_000, quantize(original.height + current.y - start.y))),
   };
 }
+/**
+ * Resize a rectangle along its rotated local X/Y axes while the opposite
+ * (top-left) corner remains fixed in world coordinates.
+ */
+export function resizedRotatedRectangle(
+  start: CanvasPoint, current: CanvasPoint,
+  original: Pick<CanvasPreview, 'x' | 'y' | 'width' | 'height' | 'rotation'>,
+  snapping: boolean,
+): Pick<CanvasPreview, 'x' | 'y' | 'width' | 'height'> {
+  const radians = original.rotation * Math.PI / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const dx = current.x - start.x;
+  const dy = current.y - start.y;
+  const localX = cos * dx + sin * dy;
+  const localY = -sin * dx + cos * dy;
+  const dimensions = resizedCanvasDimensions(
+    { x: 0, y: 0 }, { x: localX, y: localY }, original, snapping,
+  );
+  const changeW = dimensions.width - original.width;
+  const changeH = dimensions.height - original.height;
+  // Rotation is around layer center, so changing dimensions moves the
+  // unrotated top-left property even when world top-left is anchored.
+  const x = original.x + ((cos - 1) * changeW - sin * changeH) / 2;
+  const y = original.y + (sin * changeW + (cos - 1) * changeH) / 2;
+  const round = (value: number) => Math.round(value * 100) / 100;
+  return { ...dimensions, x: limit(round(x)), y: limit(round(y)) };
+}
 export function rotatedCanvasAngle(
   start: CanvasPoint, current: CanvasPoint, center: CanvasPoint,
   initialDegrees: number, snapping: boolean,
@@ -74,6 +102,15 @@ export function transformMotionEdits(
       const target = composition.layers.find(item => item.id === layerId)!;
       target.width = width;
       target.height = height;
+      for (const property of ['x', 'y'] as const) {
+        const value = values[property];
+        if (value === undefined || !Number.isFinite(value) ||
+            value < -100_000 || value > 100_000 ||
+            Math.abs(value - evaluated[property]) < 0.001) continue;
+        const position = target.tracks.findIndex(track => track.property === property);
+        if (position >= 0) target.tracks[position] = makeKeyframeTrack(layer, property, frame, value);
+        else target[property] = value;
+      }
       edits.push({ type: 'replace-composition', composition });
       return edits;
     }

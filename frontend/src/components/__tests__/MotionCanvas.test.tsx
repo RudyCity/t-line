@@ -55,6 +55,30 @@ describe('Motion Canvas native pointer interaction', () => {
       ] }) },
     ], 'Rectangle resized on canvas');
   });
+  it('keeps the rotated opposite corner anchored when dragging its resize handle', () => {
+    const onEdit = vi.fn();
+    const rotated = {
+      ...project,
+      composition: { ...project.composition, layers: [{ ...project.composition.layers[0], rotation: 90 }] },
+    };
+    render(<MotionCanvas project={rotated} frame={0} selectedLayer="block" isActive busy={false}
+      snapping onEdit={onEdit} onSelectLayer={vi.fn()} onStopPlayback={vi.fn()} />);
+    const svg = screen.getByRole('img', { name: /Motion preview frame/ });
+    vi.spyOn(svg, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, width: 960, height: 540, bottom: 540, right: 960, x: 0, y: 0, toJSON: () => ({}),
+    });
+    const handle = screen.getByRole('button', { name: 'Resize selected rectangle' });
+    expect(handle.getAttribute('x')).toBe('140');
+    expect(handle.getAttribute('y')).toBe('240');
+    fireEvent.pointerDown(handle, { pointerId: 9, button: 0, clientX: 75, clientY: 125 });
+    fireEvent.pointerMove(svg, { pointerId: 9, clientX: 75, clientY: 145 });
+    fireEvent.pointerUp(svg, { pointerId: 9, clientX: 75, clientY: 145 });
+    expect(onEdit).toHaveBeenCalledWith([
+      { type: 'replace-composition', composition: expect.objectContaining({ layers: [
+        expect.objectContaining({ id: 'block', x: 80, y: 120, width: 240, height: 100, rotation: 90 }),
+      ] }) },
+    ], 'Rectangle resized on canvas');
+  });
   it('rotates a layer through its visible transform handle', () => {
     const { svg, onEdit } = mounted();
     const handle = screen.getByRole('button', { name: 'Rotate selected layer' });

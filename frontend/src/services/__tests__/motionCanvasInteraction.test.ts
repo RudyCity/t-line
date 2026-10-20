@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clientToMotionPoint, draggedCanvasPosition, resizedCanvasDimensions, rotatedCanvasAngle, transformMotionEdits } from '../motionCanvasInteraction';
+import { clientToMotionPoint, draggedCanvasPosition, resizedCanvasDimensions, resizedRotatedRectangle, rotatedCanvasAngle, transformMotionEdits } from '../motionCanvasInteraction';
 import type { MotionProject } from '../motionStudioApi';
 
 function scene(): MotionProject {
@@ -54,6 +54,58 @@ describe('Motion canvas coordinate and transform safety', () => {
     } });
     expect(project.composition.layers[0].width).toBe(200);
     expect(() => transformMotionEdits(project, 'animated', 0, { width: 0 })).toThrow('Invalid canvas layer size');
+  });
+  it('resizes at 90 degrees in local axes without moving the opposite world corner', () => {
+    const original = { x: 100, y: 100, width: 200, height: 100, rotation: 90 };
+    const resized = resizedRotatedRectangle({ x: 150, y: 250 }, { x: 150, y: 290 }, original, true);
+    expect(resized).toEqual({ x: 80, y: 120, width: 240, height: 100 });
+    const worldCorner = (item: typeof original) => ({
+      x: item.x + item.width / 2 - Math.cos(item.rotation * Math.PI / 180) * item.width / 2
+        + Math.sin(item.rotation * Math.PI / 180) * item.height / 2,
+      y: item.y + item.height / 2 - Math.sin(item.rotation * Math.PI / 180) * item.width / 2
+        - Math.cos(item.rotation * Math.PI / 180) * item.height / 2,
+    });
+    expect(worldCorner({ ...original, ...resized }).x).toBeCloseTo(worldCorner(original).x, 4);
+    expect(worldCorner({ ...original, ...resized }).y).toBeCloseTo(worldCorner(original).y, 4);
+  });
+  it.each([0, 30, 45, 90, 135, 180, -90])(
+    'keeps the world-space opposite corner stable at %i degrees', rotation => {
+      const original = { x: 320, y: 240, width: 280, height: 170, rotation };
+      const rotated = resizedRotatedRectangle(
+        { x: 100, y: 100 }, { x: 140, y: 120 }, original, false,
+      );
+      const topLeft = (item: typeof original) => {
+        const theta = item.rotation * Math.PI / 180;
+        const c = Math.cos(theta), si = Math.sin(theta);
+        return {
+          x: item.x + item.width / 2 - c * item.width / 2 + si * item.height / 2,
+          y: item.y + item.height / 2 - si * item.width / 2 - c * item.height / 2,
+        };
+      };
+      expect(topLeft({ ...original, ...rotated }).x).toBeCloseTo(topLeft(original).x, 1);
+      expect(topLeft({ ...original, ...rotated }).y).toBeCloseTo(topLeft(original).y, 1);
+    },
+  );
+  it('commits rotated resize dimensions and animated anchor offsets in one scene revision', () => {
+    const project = scene();
+    const layer = project.composition.layers[0];
+    layer.rotation = 90;
+    layer.tracks.push({ property: 'y', keyframes: [{ frame: 0, value: 150 }, { frame: 30, value: 190 }] });
+    const snapshot = resizedRotatedRectangle(
+      { x: 100, y: 100 }, { x: 100, y: 140 },
+      { x: 200, y: 170, width: 200, height: 100, rotation: 90 }, false,
+    );
+    const edits = transformMotionEdits(project, layer.id, 15, snapshot);
+    expect(edits).toHaveLength(1);
+    expect(edits[0].type).toBe('replace-composition');
+    if (edits[0].type !== 'replace-composition') return;
+    const target = edits[0].composition.layers[0];
+    expect(target.width).toBe(240);
+    expect(target.height).toBe(100);
+    expect(target.tracks.find(track => track.property === 'x')?.keyframes.find(k => k.frame === 15)?.value).toBe(180);
+    expect(target.tracks.find(track => track.property === 'y')?.keyframes.find(k => k.frame === 15)?.value).toBe(190);
+    expect(layer.tracks.find(track => track.property === 'x')?.keyframes).toHaveLength(2);
+    expect(layer.tracks.find(track => track.property === 'y')?.keyframes).toHaveLength(2);
   });
   it('preserves animated x track and writes its active-frame keyframe, keeping y as base', () => {
     const project = scene();

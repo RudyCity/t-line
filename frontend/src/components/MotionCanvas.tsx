@@ -1,12 +1,12 @@
 /* Hallmark · pre-emit critique: P4 H5 E5 S5 R5 V4
- * Motion Studio canvas: pointer-captured, revision-guarded move/rotate interactions.
+ * Motion Studio canvas: pointer-captured, revision-guarded move/rotate/resize interactions.
  * Reuses application tokens and declarative SVG scene nodes; never evaluates scene markup.
  */
 import { useRef, useState, type PointerEvent as ReactPointerEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { MotionEdit, MotionLayer, MotionProject } from '../services/motionStudioApi';
 import { evaluateLayer } from '../services/motionScene';
 import {
-  clientToMotionPoint, draggedCanvasPosition, resizedCanvasDimensions, rotatedCanvasAngle,
+  clientToMotionPoint, draggedCanvasPosition, resizedRotatedRectangle, rotatedCanvasAngle,
   transformMotionEdits, type CanvasPoint, type CanvasPreview, type MotionCanvasMode,
 } from '../services/motionCanvasInteraction';
 
@@ -32,7 +32,7 @@ function snapPreview(
   gesture: Gesture, point: CanvasPoint, snapping: boolean,
 ): CanvasPreview {
   if (gesture.mode === 'resize') {
-    return { ...gesture.original, ...resizedCanvasDimensions(gesture.start, point, gesture.original, snapping) };
+    return { ...gesture.original, ...resizedRotatedRectangle(gesture.start, point, gesture.original, snapping) };
   }
   if (gesture.mode === 'rotate') {
     return {
@@ -195,17 +195,17 @@ export function MotionCanvas({
         const cy = values.y + (values.height ?? layer.height) / 2;
         const theta = values.rotation * Math.PI / 180;
         const handle = {
-          x: cx + Math.sin(theta) * (layer.height / 2 + 32),
-          y: cy - Math.cos(theta) * (layer.height / 2 + 32),
+          x: cx + Math.sin(theta) * (values.height / 2 + 32),
+          y: cy - Math.cos(theta) * (values.height / 2 + 32),
         };
         return (
           <g key={layer.id + '-handles'} aria-label="Transform handles">
             <line x1={cx} y1={cy} x2={handle.x} y2={handle.y}
               stroke="var(--color-primary)" strokeWidth={Math.max(2, scene.width / 480)} pointerEvents="none" />
-            {layer.kind === 'rect' && Math.abs(values.rotation) < 0.001 && (
+            {layer.kind === 'rect' && (
               <rect role="button" aria-label="Resize selected rectangle" tabIndex={0}
-                x={values.x + (values.width ?? layer.width) - 10}
-                y={values.y + (values.height ?? layer.height) - 10}
+                x={cx + Math.cos(theta) * (values.width / 2) - Math.sin(theta) * (values.height / 2) - 10}
+                y={cy + Math.sin(theta) * (values.width / 2) + Math.cos(theta) * (values.height / 2) - 10}
                 width={20} height={20} rx={3}
                 fill="var(--bg-card)" stroke="var(--color-primary)" strokeWidth={Math.max(2, scene.width / 480)}
                 onPointerDown={event => start(event, layer, 'resize')} className="cursor-nwse-resize" />

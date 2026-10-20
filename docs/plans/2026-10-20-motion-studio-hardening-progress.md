@@ -52,3 +52,11 @@ Avoid staging or overwriting unrelated T-Line CLI parity, Hermes, MCP OAuth or c
 - Viewport state is local to the editor, resets when switching projects/workspaces and never alters the authoritative project revision. SVG hit testing uses the actual transformed canvas rectangle so pointer drag remains consistent at variable zoom.
 - Pure viewport math and editor interaction tests included; frontend 58/58, both TypeScript checks, and Vite production bundle pass.
 - Real packaged Tauri interactions, audio/media tools, and advanced rotated-object sizing remain unverified.
+
+## Rotated Rectangle Resize (2026-10-20)
+
+- T-Line native Motion Canvas now exposes a resize handle at the transformed bottom-right world position for rotated rectangles, including 90-degree and arbitrary-angle rotations.
+- Drag deltas are projected into the rectangle's rotated local axes; width/height and x/y update so the opposite world-space corner remains anchored. Snapping applies to local dimensions rather than screen axes.
+- Existing revision-guarded `replace-composition` transactions include active-frame keyframe updates for animated x/y tracks, preserving position animation and Undo/Redo semantics.
+- Tested seven rotation values, browser pointer resize, and preservation of animated position tracks. Frontend 68/68 tests, frontend/backend TypeScript checks, and Vite production build passed.
+- Live Tauri desktop E2E, image/audio/video ingestion, and text/font visual parity remain outstanding; no Hermes process was restarted.
