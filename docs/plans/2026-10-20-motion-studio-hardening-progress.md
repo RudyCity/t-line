@@ -85,3 +85,10 @@ Avoid staging or overwriting unrelated T-Line CLI parity, Hermes, MCP OAuth or c
 - Schema v1 now supports one `composition.audio` (assetId, startFrame, volume) entry alongside visual layers. T-Line Undo/Redo uses the existing `set-audio` revisioned edit transaction; missing/malformed/foreign audio fails closed.
 - Tested audio UI, editor revision integration, authenticated client transport and proxy, plus SuperAgent real H.264 + AAC rendering. T-Line frontend 94/94 tests, backend proxy tests and Vite production build passed, with existing CSS/chunk warnings.
 - Remaining: multiple clips, MP3/FLAC ingest, mixer, waveform/timeline A/V preview sync, packaged desktop E2E. Concurrent T-Line release files are intentionally not touched by this Motion-only increment.
+
+## Multi-track WAV Mixer UI (2026-10-20)
+
+- Native Motion Studio now supports four individually editable audio clips with frame start offset, gain, fade-in and fade-out frame controls, independent WAV Blob previews, per-clip Save/Remove and bounded Add WAV.
+- New audio imports append to existing `composition.audioTracks`, migrating legacy `composition.audio` through one revision-checked `set-audio-tracks` update. Individual changes preserve other clips. Undo/Redo of composition snapshots continues to operate against server-validated audio references.
+- Verified isolation of clip 2, invalid frame values, fifth-clip guard and native Motion Studio import, alongside an actual two-clip H.264+AAC render and backward-compatible single-clip engine.
+- Remaining: waveform UI, synced mixed-audio playback while scrubbing, audio mastering and mobile/native packaged Tauri smoke. Current per-clip preview plays source WAV in isolation.

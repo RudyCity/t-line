@@ -118,7 +118,7 @@ describe('Native T-Line Motion Studio editor', () => {
     vi.mocked(motionStudioApi.uploadAudio).mockResolvedValue({ id: assetId, bytes: 120, seconds: 1, channels: 1, sampleRate: 16000 });
     vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, base, edits) => {
       const next = fixture(); next.revision = base + 1;
-      if (edits[0].type === 'set-audio' && edits[0].audio) next.composition.audio = edits[0].audio;
+      if (edits[0].type === 'set-audio-tracks') next.composition.audioTracks = edits[0].audioTracks;
       return next;
     });
     render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
@@ -129,7 +129,7 @@ describe('Native T-Line Motion Studio editor', () => {
     fireEvent.change(screen.getByLabelText('Select Motion WAV'), { target: { files: [file] } });
     await waitFor(() => expect(motionStudioApi.uploadAudio).toHaveBeenCalledWith('D:/projects/studio', file));
     await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith('D:/projects/studio', id, 1, [
-      { type: 'set-audio', audio: { assetId, startFrame: 0, volume: 1 } },
+      { type: 'set-audio-tracks', audioTracks: [{ assetId, startFrame: 0, volume: 1 }] },
     ]));
     expect(await screen.findByText('Audio imported · revision 2')).toBeInTheDocument();
     await waitFor(() => expect(motionStudioApi.loadAudioUrl).toHaveBeenCalledWith('D:/projects/studio', assetId));

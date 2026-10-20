@@ -1,3 +1,13 @@
+## [1.3.697] - 2026-10-20
+
+### Motion Studio: Multi-Track WAV Mixing and Clip Fades
+
+- Expanded Motion Studio from a single source WAV to up to four independently adjustable audio clips, with per-clip start frame, gain, fade-in and fade-out controls, source preview, Save and Remove.
+- Newly imported audio now appends via revision-checked `set-audio-tracks`; legacy single-clip scenes migrate on the first multi-audio edit while retaining Undo/Redo.
+- The SuperAgent media pipeline mixes all workspace-verified PCM16 inputs in FFmpeg, applying individual gain, start offsets and numeric fades before generating a single AAC stream with H.264 MP4. Preserves single audio/no-audio exports.
+- Added schema, compatibility, invalid-input, true two-clip MP4 render and native UI regression coverage. Both TypeScript builds and Vite production build passed; longstanding CSS/chunk warnings remain.
+- Still preview/development quality: actual Tauri media playback E2E, waveform, synchronized mixed preview and limiter/mastering not yet certified.
+
 ## [1.3.696] - 2026-10-20
 
 ### SuperAgent ↔ TLine Creator-Confirmed New-Instruction Retry (Increment 6D)

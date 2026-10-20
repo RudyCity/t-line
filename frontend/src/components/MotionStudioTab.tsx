@@ -256,6 +256,9 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
 
   const importAudio = (file: File) => {
     if (!project || busy) return;
+    const currentTracks = project.composition.audioTracks ??
+      (project.composition.audio ? [project.composition.audio] : []);
+    if (currentTracks.length >= 4) { message('Motion scenes support up to 4 audio clips'); return; }
     if (file.size < 46 || file.size > 2 * 1024 * 1024) {
       message('Motion WAV must be 2 MB or smaller'); return;
     }
@@ -265,7 +268,9 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
       const asset = await motionStudioApi.uploadAudio(workspacePath, file);
       if (selectedSequence !== selectionSeq.current) return;
       const next = await motionStudioApi.edit(workspacePath, current.id, current.revision, [{
-        type: 'set-audio', audio: { assetId: asset.id, startFrame: 0, volume: 1 },
+        type: 'set-audio-tracks', audioTracks: [
+          ...currentTracks, { assetId: asset.id, startFrame: 0, volume: 1 },
+        ],
       }]);
       if (selectedSequence !== selectionSeq.current) return;
       setUndoStack(previous => [...previous.slice(-19), structuredClone(current.composition)]);

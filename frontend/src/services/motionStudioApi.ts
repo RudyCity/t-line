@@ -14,7 +14,9 @@ export interface MotionTextLayer extends BaseMotionLayer {
 export interface MotionRectLayer extends BaseMotionLayer { kind: 'rect' }
 export interface MotionImageLayer extends BaseMotionLayer { kind: 'image'; assetId: string }
 export type MotionLayer = MotionTextLayer | MotionRectLayer | MotionImageLayer;
-export interface MotionAudioTrack { assetId: string; startFrame: number; volume: number }
+export interface MotionAudioTrack {
+  assetId: string; startFrame: number; volume: number; fadeInFrames?: number; fadeOutFrames?: number;
+}
 export interface MotionAudioAsset { id: string; bytes: number; sampleRate: number; channels: number; seconds: number }
 export interface MotionProject {
   schemaVersion: 1; id: string; workspaceRoot: string; name: string;
@@ -22,7 +24,7 @@ export interface MotionProject {
   composition: {
     width: number; height: number;
     fps: { numerator: number; denominator: number };
-    durationFrames: number; background: string; audio?: MotionAudioTrack; layers: MotionLayer[];
+    durationFrames: number; background: string; audio?: MotionAudioTrack; audioTracks?: MotionAudioTrack[]; layers: MotionLayer[];
   };
 }
 export interface MotionProjectSummary { id: string; name: string; revision: number }
@@ -34,7 +36,8 @@ export type MotionEdit =
   | { type: 'remove-layer'; layerId: string }
   | { type: 'move-layer'; layerId: string; toIndex: number }
   | { type: 'replace-composition'; composition: MotionProject['composition'] }
-  | { type: 'set-audio'; audio: MotionAudioTrack | null };
+  | { type: 'set-audio'; audio: MotionAudioTrack | null }
+  | { type: 'set-audio-tracks'; audioTracks: MotionAudioTrack[] };
 export interface MotionSchedulerStatus {
   maxConcurrentRenders: number;
   queueLimit: number;

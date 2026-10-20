@@ -26,13 +26,54 @@ describe('Motion WAV timeline controls', () => {
     fireEvent.change(screen.getByLabelText('Audio volume'), { target: { value: '0.55' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save audio' }));
     expect(onEdit).toHaveBeenCalledWith([{
-      type: 'set-audio', audio: { assetId: audioId, startFrame: 18, volume: 0.55 },
+      type: 'set-audio-tracks', audioTracks: [{ assetId: audioId, startFrame: 18,
+        volume: 0.55, fadeInFrames: 0, fadeOutFrames: 0 }],
     }], 'Audio timing updated');
     fireEvent.change(screen.getByLabelText('Audio start frame'), { target: { value: '91' } });
     expect(screen.getByRole('button', { name: 'Save audio' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Remove audio' }));
-    expect(onEdit).toHaveBeenCalledWith([{ type: 'set-audio', audio: null }], 'Audio removed');
+    expect(onEdit).toHaveBeenCalledWith([{ type: 'set-audio-tracks', audioTracks: [] }], 'Audio removed');
   });
+  it('adjusts the second clip and preserves the first with independent fade values', async () => {
+    // No fetched-media completion is needed for form semantics.
+    vi.mocked(motionStudioApi.loadAudioUrl).mockImplementation(() => new Promise(() => {}));
+    const onEdit = vi.fn();
+    const twoClips: MotionProject = { ...scene, composition: {
+      ...scene.composition, audio: undefined, audioTracks: [
+        { assetId: audioId, startFrame: 10, volume: 1 },
+        { assetId: 'audio-' + 'a'.repeat(64), startFrame: 20, volume: 0.5 },
+      ],
+    } };
+    render(<MotionAudioPanel {...common} project={twoClips} onEdit={onEdit}
+      onUpload={vi.fn()} onError={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText('Audio start frame 2'), { target: { value: '35' } });
+    fireEvent.change(screen.getByLabelText('Audio fade in frames 2'), { target: { value: '4' } });
+    fireEvent.change(screen.getByLabelText('Audio fade out frames 2'), { target: { value: '5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save audio 2' }));
+    expect(onEdit).toHaveBeenCalledWith([
+      { type: 'set-audio-tracks', audioTracks: [
+        { assetId: audioId, startFrame: 10, volume: 1 },
+        { assetId: 'audio-' + 'a'.repeat(64), startFrame: 35, volume: 0.5,
+          fadeInFrames: 4, fadeOutFrames: 5 },
+      ] },
+    ], 'Audio timing updated');
+    fireEvent.click(screen.getByRole('button', { name: 'Remove audio 2' }));
+    expect(onEdit).toHaveBeenCalledWith([{
+      type: 'set-audio-tracks', audioTracks: [{ assetId: audioId, startFrame: 10, volume: 1 }],
+    }], 'Audio removed');
+  });
+  it('disables uploading a fifth clip', () => {
+    vi.mocked(motionStudioApi.loadAudioUrl).mockImplementation(() => new Promise(() => {}));
+    const many: MotionProject = { ...scene, composition: {
+      ...scene.composition, audio: undefined,
+      audioTracks: Array.from({ length: 4 }, (_, index) =>
+        ({ assetId: 'audio-' + String(index).repeat(64), startFrame: 0, volume: 1 })),
+    } };
+    render(<MotionAudioPanel {...common} project={many} onEdit={vi.fn()}
+      onUpload={vi.fn()} onError={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Add WAV' })).toBeDisabled();
+  });
+
   it('accepts local WAV file selection without leaking local paths', () => {
     const onUpload = vi.fn();
     const silent = { ...scene, composition: { ...scene.composition, audio: undefined } };
@@ -41,6 +82,6 @@ describe('Motion WAV timeline controls', () => {
     const file = new File([new Uint8Array(64)], 'music.wav', { type: 'audio/wav' });
     fireEvent.change(screen.getByLabelText('Select Motion WAV'), { target: { files: [file] } });
     expect(onUpload).toHaveBeenCalledWith(file);
-    expect(screen.getByText(/One WAV track/)).toBeInTheDocument();
+    expect(screen.getByText(/Up to four PCM16 WAV tracks/)).toBeInTheDocument();
   });
 });
