@@ -1,0 +1,378 @@
+{
+  "generatedFrom": "SuperAgent src/core/commands/*.ts",
+  "warning": "Source inventory only; local UI handlers are not proven equivalent to CLI behavior. CLI-only commands are not executable through the T-Line slash-command bridge.",
+  "commands": [
+    {
+      "command": "/agents",
+      "description": "List active subagents and defined subagent types",
+      "sourceFile": "src/core/commands/agentCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/checkpoint",
+      "description": "Manage checkpoints to save/restore conversation state",
+      "sourceFile": "src/core/commands/sessionCommands.ts",
+      "tlineHandler": "local-ui-handler"
+    },
+    {
+      "command": "/compact",
+      "description": "Show conversation summary or force compaction",
+      "sourceFile": "src/core/commands/compactCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/compaction-history",
+      "description": "View compaction audit trail",
+      "sourceFile": "src/core/commands/compactionHistoryCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/daemon",
+      "description": "Manage the autonomous background daemon & cron scheduler",
+      "sourceFile": "src/core/commands/daemonCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/exit",
+      "description": "Exit the app",
+      "sourceFile": "src/core/commands/coreCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/gateway",
+      "description": "Manage the omnichannel messaging gateway (Telegram, Discord, Slack, Webhooks)",
+      "sourceFile": "src/core/commands/gatewayCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/goal",
+      "description": "Activate Goal Mode for long-running overnight tasks",
+      "sourceFile": "src/core/commands/agentCommands.ts",
+      "tlineHandler": "local-ui-handler"
+    },
+    {
+      "command": "/help",
+      "description": "Show this help",
+      "sourceFile": "src/core/commands/coreCommands.ts",
+      "tlineHandler": "local-ui-handler"
+    },
+    {
+      "command": "/history",
+      "description": "Manage SQLite history database (export session, backup database, migrate legacy files)",
+      "sourceFile": "src/core/commands/sessionCommands.ts",
+      "tlineHandler": "local-ui-handler"
+    },
+    {
+      "command": "/image",
+      "description": "Manage prompt image attachments (e.g. /image paste, /image attach <path>)",
+      "sourceFile": "src/core/commands/coreCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/init",
+      "description": "Initialize project (Git setup, agents.md generation, system audit)",
+      "sourceFile": "src/core/commands/coreCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/install",
+      "description": "Install a skill from skills.sh (e.g. /install vercel-labs/skills/find-skills)",
+      "sourceFile": "src/core/commands/skillCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/internal-hooks",
+      "description": "Initialize, run a local development loop, or toggle active status for custom internal hook tools.",
+      "sourceFile": "src/core/commands/internalHooksCommand.ts",
+      "tlineHandler": "local-ui-handler"
+    },
+    {
+      "command": "/knowledge",
+      "description": "Browse and search the global pinned knowledge store (cross-session)",
+      "sourceFile": "src/core/commands/sessionCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/login",
+      "description": "Manage and authenticate provider profiles (add, list, remove, edit)",
+      "sourceFile": "src/core/commands/loginCommand.ts",
+      "tlineHandler": "local-ui-handler"
+    },
+    {
+      "command": "/macro",
+      "description": "Manage and run browser macro presets. Subcommands: list, run <name> [arg=val], delete <name>",
+      "sourceFile": "src/core/commands/macroCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/mcp",
+      "description": "Manage MCP (Model Context Protocol) servers. Subcommands: list, add, remove, reload",
+      "sourceFile": "src/core/commands/mcpCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/memory",
+      "description": "Manage and inspect RMemory long-term memory",
+      "sourceFile": "src/core/commands/memoryCommand.ts",
+      "tlineHandler": "local-ui-handler"
+    },
+    {
+      "command": "/mode",
+      "description": "View or switch active operational mode (e.g. /mode implement, /mode ask, /mode debug)",
+      "sourceFile": "src/core/commands/modeCommand.ts",
+      "tlineHandler": "local-ui-handler"
+    },
+    {
+      "command": "/model",
+      "description": "Set or list active AI models (e.g. /model openai/gpt-4o [--save])",
+      "sourceFile": "src/core/commands/modelCommand.ts",
+      "tlineHandler": "local-ui-handler"
+    },
+    {
+      "command": "/motion",
+      "description": "Create, edit and render Motion Studio video previews in the active workspace",
+      "sourceFile": "src/core/commands/motionCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/mp",
+      "description": "Quick-switch model preset (e.g. /mp fast, /mp default). Shortcut: /mp-<name>",
+      "sourceFile": "src/core/commands/mpCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/muse",
+      "description": "Coordinate with remote AI agent (Muse) over Cloudflare Tunnel / WebSocket or Telegram",
+      "sourceFile": "src/core/commands/museCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/new",
+      "description": "Start new session (clear history & screen)",
+      "sourceFile": "src/core/commands/coreCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/peer",
+      "description": "Inspect another terminal session",
+      "sourceFile": "src/core/commands/sessionCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/pin",
+      "description": "Pin an important message to prevent it from being compacted",
+      "sourceFile": "src/core/commands/pinCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/processes",
+      "description": "List running background processes",
+      "sourceFile": "src/core/commands/agentCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/resume",
+      "description": "Resume a conversation session from history via wizard dialog",
+      "sourceFile": "src/core/commands/sessionCommands.ts",
+      "tlineHandler": "local-ui-handler"
+    },
+    {
+      "command": "/search-history",
+      "description": "Search conversation history. Use --all to search across ALL sessions/projects. Use --debug to show live AI matching steps.",
+      "sourceFile": "src/core/commands/sessionCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/selfdev",
+      "description": "Inspect, distill, review, and manage self-development behavioral lessons",
+      "sourceFile": "src/core/commands/selfdevCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/server",
+      "description": "Manage SuperAgent REST/SSE server exposure and its Cloudflare tunnel",
+      "sourceFile": "src/core/commands/serverCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/session",
+      "description": "Manage session history: list, export <id>, clear --empty",
+      "sourceFile": "src/core/commands/sessionCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/setting-advisor",
+      "description": "Configure the Real-Time Execution Advisor (on/off, thresholds, features)",
+      "sourceFile": "src/core/commands/settingsCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/setting-capacity",
+      "description": "Set rate limit capacity",
+      "sourceFile": "src/core/commands/settingsCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/setting-checklist-limit",
+      "description": "Set maximum visible items in active task checklist",
+      "sourceFile": "src/core/commands/settingsCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/setting-classifier",
+      "description": "Enable, disable, or pre-download the multi-category request classifier model",
+      "sourceFile": "src/core/commands/settingsCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/setting-classifier-threshold",
+      "description": "Set the minimum heuristic confidence level to skip LLM classification (high|medium|low)",
+      "sourceFile": "src/core/commands/settingsCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/setting-concurrency",
+      "description": "Set LLM concurrency limit",
+      "sourceFile": "src/core/commands/settingsCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/setting-context-limit",
+      "description": "Set custom context window limit (0 = auto)",
+      "sourceFile": "src/core/commands/settingsCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/setting-force-prompt-tools",
+      "description": "Force prompt-based (XML) tool calling even if the model/endpoint supports native tools",
+      "sourceFile": "src/core/commands/settingsCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/setting-hide-timeline",
+      "description": "Hide or show the timeline lines connecting conversation turns",
+      "sourceFile": "src/core/commands/settingsCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/setting-history-limit",
+      "description": "Set maximum visible completed items in checklist history",
+      "sourceFile": "src/core/commands/settingsCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/setting-max-iterations",
+      "description": "Set max agent loop iterations",
+      "sourceFile": "src/core/commands/settingsCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/setting-procs-limit",
+      "description": "Set maximum visible items in active background processes panel",
+      "sourceFile": "src/core/commands/settingsCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/setting-rmemory",
+      "description": "Configure RMemory memory settings (enable/disable, provider, model, dimensions, download)",
+      "sourceFile": "src/core/commands/settingsCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/setting-rpm",
+      "description": "Set rate limit RPM",
+      "sourceFile": "src/core/commands/settingsCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/setting-streaming",
+      "description": "Enable or disable streaming",
+      "sourceFile": "src/core/commands/settingsCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/settings",
+      "description": "Show current settings (rate limit, concurrency, streaming, focus, etc.)",
+      "sourceFile": "src/core/commands/settingsCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/setup",
+      "description": "Run the interactive provider and initial setup wizard",
+      "sourceFile": "src/core/commands/coreCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/skills",
+      "description": "List all installed agent skills, track stats, or synthesize new skills",
+      "sourceFile": "src/core/commands/skillCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/ssh",
+      "description": "Manage SSH workspace settings (expand boundary, view status)",
+      "sourceFile": "src/core/commands/sshCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/status",
+      "description": "Show aggregated status for Telegram, MCP servers, and all SuperAgent tunnels",
+      "sourceFile": "src/core/commands/serviceStatusCommand.ts",
+      "tlineHandler": "local-ui-handler"
+    },
+    {
+      "command": "/steer",
+      "description": "Interrupt and steer/redirect the agent with feedback or counter-instructions",
+      "sourceFile": "src/core/commands/coreCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/stop",
+      "description": "Stop/interrupt current work, or stop all managed service connections and tunnels with /stop all",
+      "sourceFile": "src/core/commands/coreCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/telegram",
+      "description": "Manage direct Telegram bot/group integration without steering Muse or managing tunnels",
+      "sourceFile": "src/core/commands/telegramCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/terminal",
+      "description": "Run a command or preset in a new window or background",
+      "sourceFile": "src/core/commands/terminalCommand.ts",
+      "tlineHandler": "local-ui-handler"
+    },
+    {
+      "command": "/tools",
+      "description": "List, search, and describe available AI tools (/tools [list|describe <name>|search <query>])",
+      "sourceFile": "src/core/commands/coreCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/tunnel",
+      "description": "Manage Cloudflare quick tunnels (list, start [--https] [--mcp] [--mcp-port <n>] [--mcp-auth <mode>], stop, status, restart)",
+      "sourceFile": "src/core/commands/museCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/workspace",
+      "description": "Manage project workspaces and workspace chains via interactive wizard",
+      "sourceFile": "src/core/commands/workspaceCommand.ts",
+      "tlineHandler": "local-ui-handler"
+    },
+    {
+      "command": "/worktree",
+      "description": "Manage Git worktrees (list, prune, remove)",
+      "sourceFile": "src/core/commands/agentCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/yolo",
+      "description": "Toggle YOLO mode (scoped: project & 1 parent level; full: unrestricted system-wide)",
+      "sourceFile": "src/core/commands/coreCommands.ts",
+      "tlineHandler": "cli-only"
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+import cliCatalog from '../generated/superagentCliCatalog.json';
+
 export interface SlashCommand {
   command: string;
   description: string;
@@ -17,6 +19,32 @@ interface CommandContext {
   setConnectTrigger: React.Dispatch<React.SetStateAction<number>>;
   handleSend: (prompt?: string) => Promise<void> | void;
   handleAbort: () => void;
+  notifyUnsupported: (command: string) => void;
+}
+
+export const CLI_COMMAND_PARITY = cliCatalog.commands;
+const CLI_ONLY = new Map(
+  CLI_COMMAND_PARITY.filter(cmd => cmd.tlineHandler === 'cli-only')
+    .map(cmd => [cmd.command.toLowerCase(), cmd])
+);
+
+/** CLI source commands that do not yet have a T-Line desktop handler. */
+const UNIMPLEMENTED_UI_FORWARDERS = new Set([
+  '/model', '/login', '/checkpoint', '/history', '/hallmark', '/goal',
+  '/procs', '/terminal', '/memory', '/internal-hooks', '/focus',
+  '/browser', '/grill-me', '/teamwork-preview', '/learn'
+]);
+export function isCliOnlyCommand(input: string): boolean {
+  const name = input.trim().split(/\s+/, 1)[0].toLowerCase();
+  return CLI_ONLY.has(name) || UNIMPLEMENTED_UI_FORWARDERS.has(name);
+}
+
+export function getCliOnlySuggestions(onUnsupported: (command: string) => void): SlashCommand[] {
+  return [...CLI_ONLY.values()].map(cmd => ({
+    command: cmd.command,
+    description: `CLI only — ${cmd.description}`,
+    action: () => onUnsupported(cmd.command),
+  }));
 }
 
 export const BUILTIN_COMMAND_DESCRIPTIONS: Record<string, string> = {
@@ -72,7 +100,8 @@ export function getSlashCommands({
   setWorkspace,
   setConnectTrigger,
   handleSend,
-  handleAbort
+  handleAbort,
+  notifyUnsupported
 }: CommandContext): SlashCommand[] {
   return [
     {
@@ -83,7 +112,7 @@ export function getSlashCommands({
           ...prev,
           {
             role: 'system',
-            text: 'SuperAgent Commands:\n' +
+            text: `T-Line command menu (CLI source contains ${CLI_COMMAND_PARITY.length} static commands; ${CLI_ONLY.size} names lack local desktop handlers):\n` +
               Object.entries(BUILTIN_COMMAND_DESCRIPTIONS)
                 .map(([cmd, desc]) => `${cmd} - ${desc}`)
                 .join('\n')
@@ -96,7 +125,7 @@ export function getSlashCommands({
       description: BUILTIN_COMMAND_DESCRIPTIONS['/model'],
       argsHelp: '[model-id|preset]',
       action: (args?: string) => {
-        if (args) handleSend(`/model ${args}`);
+        if (args) notifyUnsupported('/model');
       }
     },
     {
@@ -153,7 +182,7 @@ export function getSlashCommands({
       description: BUILTIN_COMMAND_DESCRIPTIONS['/login'],
       argsHelp: '[add|list|remove]',
       action: (args?: string) => {
-        if (args) handleSend(`/login ${args}`);
+        if (args) notifyUnsupported('/login');
       }
     },
     {
@@ -161,7 +190,7 @@ export function getSlashCommands({
       description: BUILTIN_COMMAND_DESCRIPTIONS['/checkpoint'],
       argsHelp: '[list|restore|delete]',
       action: (args?: string) => {
-        if (args) handleSend(`/checkpoint ${args}`);
+        if (args) notifyUnsupported('/checkpoint');
       }
     },
     {
@@ -169,22 +198,22 @@ export function getSlashCommands({
       description: BUILTIN_COMMAND_DESCRIPTIONS['/history'],
       argsHelp: '[stats|tag|export|backup|migrate|clean]',
       action: (args?: string) => {
-        if (args) handleSend(`/history ${args}`);
+        if (args) notifyUnsupported('/history');
       }
     },
     {
       command: '/hallmark',
       description: BUILTIN_COMMAND_DESCRIPTIONS['/hallmark'],
       argsHelp: '[redesign|audit|study]',
-      action: (args?: string) => {
-        handleSend(`/hallmark ${args || ''}`.trim());
+      action: () => {
+        notifyUnsupported('/hallmark');
       }
     },
     {
       command: '/goal',
       description: BUILTIN_COMMAND_DESCRIPTIONS['/goal'],
       action: () => {
-        handleSend('/goal');
+        notifyUnsupported('/goal');
       }
     },
     {
@@ -192,7 +221,7 @@ export function getSlashCommands({
       description: BUILTIN_COMMAND_DESCRIPTIONS['/procs'],
       argsHelp: '[stop|stop all]',
       action: (args?: string) => {
-        if (args) handleSend(`/procs ${args}`);
+        if (args) notifyUnsupported('/procs');
       }
     },
     {
@@ -200,7 +229,7 @@ export function getSlashCommands({
       description: BUILTIN_COMMAND_DESCRIPTIONS['/terminal'],
       argsHelp: '[init|bg|stop|all|preset]',
       action: (args?: string) => {
-        if (args) handleSend(`/terminal ${args}`);
+        if (args) notifyUnsupported('/terminal');
       }
     },
     {
@@ -208,7 +237,7 @@ export function getSlashCommands({
       description: BUILTIN_COMMAND_DESCRIPTIONS['/memory'],
       argsHelp: '[status|sync|search|add|delete]',
       action: (args?: string) => {
-        if (args) handleSend(`/memory ${args}`);
+        if (args) notifyUnsupported('/memory');
       }
     },
     {
@@ -216,7 +245,7 @@ export function getSlashCommands({
       description: BUILTIN_COMMAND_DESCRIPTIONS['/internal-hooks'],
       argsHelp: '[init|dev|list|active]',
       action: (args?: string) => {
-        if (args) handleSend(`/internal-hooks ${args}`);
+        if (args) notifyUnsupported('/internal-hooks');
       }
     },
     {
@@ -224,7 +253,7 @@ export function getSlashCommands({
       description: BUILTIN_COMMAND_DESCRIPTIONS['/focus'],
       argsHelp: '[off|low|medium|high|max]',
       action: (args?: string) => {
-        if (args) handleSend(`/focus ${args}`);
+        if (args) notifyUnsupported('/focus');
       }
     },
     {
@@ -287,28 +316,28 @@ export function getSlashCommands({
       command: '/browser',
       description: BUILTIN_COMMAND_DESCRIPTIONS['/browser'],
       action: () => {
-        handleSend('/browser');
+        notifyUnsupported('/browser');
       }
     },
     {
       command: '/grill-me',
       description: BUILTIN_COMMAND_DESCRIPTIONS['/grill-me'],
       action: () => {
-        handleSend('/grill-me');
+        notifyUnsupported('/grill-me');
       }
     },
     {
       command: '/teamwork-preview',
       description: BUILTIN_COMMAND_DESCRIPTIONS['/teamwork-preview'],
       action: () => {
-        handleSend('/teamwork-preview');
+        notifyUnsupported('/teamwork-preview');
       }
     },
     {
       command: '/learn',
       description: BUILTIN_COMMAND_DESCRIPTIONS['/learn'],
       action: () => {
-        handleSend('/learn');
+        notifyUnsupported('/learn');
       }
     }
   ];

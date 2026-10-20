@@ -1,3 +1,14 @@
+## [1.3.683] - 2026-10-20
+
+### SuperAgent CLI ↔ T-Line Feature Parity (Increment 1)
+
+- Added a reproducible CLI command source inventory and drift-check script, detecting 62 statically registered CLI command names and 49 without matching T-Line local handlers at the initial audit.
+- Added CLI-only suggestions and explicit unsupported notices; missing CLI commands are no longer quietly treated as normal AI chat prompts.
+- Fixed legacy slash-command self-forwarding that could recursively re-enter T-Line's prompt handler. Native support still requires individual typed adapters.
+- Added opt-in launch from an explicitly configured, previously built SuperAgent checkout via `TLINE_SUPERAGENT_SOURCE_DIR`; default bunx behavior is retained.
+- Added command-parity and runtime-path validation tests; documented outstanding session, tool/MCP, daemon, gateway, Muse, selfdev, Motion Studio and Tauri gaps in `docs/plans/2026-10-20-tline-superagent-cli-parity-master-plan.md`.
+- Does not claim feature parity or T-Line desktop CDP integration readiness.
+
 ## [1.3.682] - 2026-10-20
 
 ### SuperAgent Motion Studio Bridge and Authenticated Media Proxy

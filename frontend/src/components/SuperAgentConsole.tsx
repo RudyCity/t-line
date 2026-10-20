@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 
 import { PermissionCard, QuestionCard, PlanCard, TokenUsageCard, PendingPermission, PendingQuestion, TokenUsageData } from './SuperAgentInteractiveCards';
-import { getSlashCommands, getSubCommands, SlashCommand } from './SuperAgentCommands';
+import { getSlashCommands, getSubCommands, getCliOnlySuggestions, isCliOnlyCommand, SlashCommand } from './SuperAgentCommands';
 import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSidebar';
 import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
 import { ActiveTasksBar, ChecklistTaskItem } from './ActiveTasksBar';
@@ -599,6 +599,14 @@ export function SuperAgentConsole({
       const cmdName = parts[0];
       const cmdArgs = prompt.slice(cmdName.length).trim();
       const match = slashCommands.find(c => c.command.toLowerCase() === cmdName.toLowerCase());
+      if (isCliOnlyCommand(cmdName)) {
+        setInput('');
+        setMessages(prev => [...prev, {
+          role: 'system',
+          text: `${cmdName} exists in SuperAgent CLI source, but T-Line does not yet provide a native desktop action for it. Open a SuperAgent CLI terminal to run it. Nothing was dispatched.`
+        }]);
+        return;
+      }
       if (match) {
         setInput('');
         setAttachments([]);
@@ -691,7 +699,19 @@ export function SuperAgentConsole({
       setWorkspace,
       setConnectTrigger,
       handleSend,
-      handleAbort
+      handleAbort,
+      notifyUnsupported: command => {
+        setMessages(prev => [...prev, {
+          role: 'system',
+          text: `${command} is not available as a native T-Line desktop command. Use SuperAgent CLI; no command has been executed.`
+        }]);
+      }
+    }),
+    ...getCliOnlySuggestions(command => {
+      setMessages(prev => [...prev, {
+        role: 'system',
+        text: `${command} is currently CLI-only. Open SuperAgent CLI in a terminal; T-Line has no desktop execution adapter for it yet.`
+      }]);
     }),
     // Dynamically inject installed skills as /skill-* commands
     ...installedSkills.map(skill => {

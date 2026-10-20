@@ -8,6 +8,7 @@ import { getInputHistory, saveInputHistory } from './sessionManager';
 import { loadMergedPresets } from './presetUtils';
 import { rotateAllKnownLogs } from './logRotation';
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
+import { selectSuperAgentLaunch } from './superAgentRuntime';
 
 const SUPERAGENT_LOG_FILE = path.join(os.homedir(), '.tline-superagent.log');
 
@@ -213,11 +214,21 @@ function spawnSuperAgentProcess(opts: {
 }): void {
   const { agentMode, customArgs, cwd, label, onReady, onFail } = opts;
 
-  const spawnArgs = ['x', 'superagent', '--server', '--client-mode', 'tline'];
-  if (agentMode === 'multi') spawnArgs.push('--multi');
-  if (customArgs && customArgs.trim()) spawnArgs.push(...customArgs.trim().split(/\s+/));
-
+  let launch;
+  try {
+    const extraArgs = customArgs && customArgs.trim() ? customArgs.trim().split(/\s+/) : [];
+    launch = selectSuperAgentLaunch(process.env.TLINE_SUPERAGENT_SOURCE_DIR, agentMode, extraArgs);
+  } catch (error: any) {
+    isStartingSuperAgent = false;
+    autoSuperAgentProcess = null;
+    const message = String(error?.message || error);
+    onFail(message);
+    drainPendingCallbacks(new Error(message));
+    return;
+  }
+  const spawnArgs = launch.args;
   const { cmd: bunCmd, spawnEnv } = getCachedBunEnv();
+  logToSuperAgentFile(`[Runtime] Selected ${launch.runtime} ${launch.version || 'version not yet verified'}`);
   const msgSpawning = `Spawning: ${bunCmd} ${spawnArgs.join(' ')} (cwd: ${cwd})`;
   console.log(`[${label}] ${msgSpawning}`);
   logToSuperAgentFile(`[${label}] ${msgSpawning}`);
