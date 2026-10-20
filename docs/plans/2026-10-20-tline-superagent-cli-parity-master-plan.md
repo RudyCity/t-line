@@ -2,7 +2,7 @@
 
 Date: 2026-10-20
 Target: SuperAgent CLI source (`../superagent`, branch `main`) → T-Line React/Tauri desktop (`t-line`, branch `main`)
-Status: **Increment 2 implemented (runtime capability contract, two read-only CLI workflows and identity probe); full feature parity NOT achieved.**
+Status: **Increment 3 implemented (credential-free MCP/tool discovery, workspace-scoped selfdev/Muse inspection); full feature parity NOT achieved.**
 
 ## Baseline findings
 
@@ -34,7 +34,8 @@ Audited the actual repositories rather than equating a UI button to working supp
 
 **P1 — functional feature parity (not just autocomplete)**
 - [x] First real read-only desktop command adapters: `/daemon status`, `/gateway status` and `/parity` server capability inspection. Reject unsupported subcommands before any upstream request.
-- [ ] Add typed, authorized desktop adapters for `/mcp`, `/tools`, `/selfdev`, `/muse` and `/telegram`.
+- [x] Add read-only, typed desktop inspection adapters for `/mcp list`, `/tools list`, `/selfdev status` and `/muse status`; all mutation subcommands remain CLI-only.
+- [ ] Implement authorized write/execute adapters for MCP/tools, selfdev, Muse, and Telegram only with explicit per-operation scope and approvals.
 - [ ] Implement async task streaming/cancel/retry with session-scoped event IDs and replay semantics.
 - [ ] Add UI for `/daemon` (schedule, logs, cancel), `/gateway`, `/motion`, `/macro`, `/mp`, `/skills`.
 - [ ] Bring `/memory` and `/history` workflow semantics in line with CLI, with workspace-backed sessions.
@@ -48,6 +49,29 @@ Audited the actual repositories rather than equating a UI button to working supp
 - [ ] Add motion editor/artifact routing, desktop media resources and e2e user workflows.
 - [ ] Add parity gates comparing CLI command/API capability IDs to T-Line UI routes and tests on every PR.
 - [ ] Add performance/regression coverage for SSE reconnect, rapid workspace switching and concurrent agents.
+
+## Increment 3: safe MCP/tool/SelfDev/Muse observation
+
+- SuperAgent registers `GET /api/tline/inspect/:action` for the exact
+  `mcp.status`, `tools.catalog`, `selfdev.status`, and `muse.status` actions.
+  Requests must come through the existing server authorization and resolve to
+  a registered workspace **with an active TLine session**. No CLI command,
+  shell command, or remote task is started by these endpoints.
+- MCP shows names, transport, connectivity and tool **counts** only, never
+  environment variables, endpoint headers, URL credentials or command args.
+  MCP config is server-runtime-global; it is not misrepresented as isolated
+  per workspace. Tool catalog lists names only, without arguments.
+- Selfdev reports workspace-specific counters and non-secret configuration
+  flags. Muse reports active task metadata only when its workspace matches
+  the caller; completion evidence is unverified, not assumed successful.
+- TLine expands the authenticated allowlisted GET proxy and slash suggestions,
+  while refusing `/mcp reload`, `/selfdev disable`, `/muse stop`,
+  `/tools run`, and other mutation forms before any network call.
+- Cross-workspace and credential-redaction unit tests were added. Live Tauri
+  E2E still needs an updated running SuperAgent; no server was restarted.
+- Offline source-parity scanner numbers (62 static command names, 49 without
+  matching historical TLine source handlers) describe source *handlers*, not
+  the additional API status adapters; these are counted separately.
 
 ## Increment 2: live typed read-only actions
 

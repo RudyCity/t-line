@@ -19,10 +19,10 @@ describe('T-Line / SuperAgent CLI command parity guard', () => {
   it('shows an explicit warning instead of sending a CLI-only command', () => {
     const warned = vi.fn();
     const suggestions = getCliOnlySuggestions(warned);
-    const item = suggestions.find(s => s.command === '/selfdev');
+    const item = suggestions.find(s => s.command === '/telegram');
     expect(item?.description).toMatch(/CLI only/);
     item?.action?.();
-    expect(warned).toHaveBeenCalledWith('/selfdev');
+    expect(warned).toHaveBeenCalledWith('/telegram');
   });
 
   it('legacy slash actions do not reenter handleSend recursively', () => {

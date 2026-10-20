@@ -737,6 +737,19 @@ export function SuperAgentConsole({
       description: 'Read live SuperAgent gateway status',
       action: (args?: string) => { void handleSend('/gateway ' + (args || 'status')); },
     },
+    ...([
+      { command: '/mcp', argsHelp: '[list|status]',
+        description: 'Inspect configured MCP server connectivity (read-only)', example: '/mcp list' },
+      { command: '/tools', argsHelp: '[list]',
+        description: 'List current SuperAgent tool names (read-only)', example: '/tools list' },
+      { command: '/selfdev', argsHelp: '[status]',
+        description: 'Inspect workspace selfdev metrics (read-only)', example: '/selfdev status' },
+      { command: '/muse', argsHelp: '[status]',
+        description: 'Inspect workspace Muse task status (read-only)', example: '/muse status' },
+    ]).map(item => ({
+      command: item.command, argsHelp: item.argsHelp, description: item.description,
+      action: () => { void handleSend(item.example); },
+    })),
     // Dynamically inject installed skills as /skill-* commands
     ...installedSkills.map(skill => {
       const slug = skill.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');

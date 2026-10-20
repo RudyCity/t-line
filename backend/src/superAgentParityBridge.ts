@@ -10,6 +10,10 @@ export const PARITY_READ_ACTIONS = {
   'daemon.status': '/api/daemon/status',
 
   'gateway.status': '/api/gateway/status',
+  'mcp.status': '/api/tline/inspect/mcp.status',
+  'tools.catalog': '/api/tline/inspect/tools.catalog',
+  'selfdev.status': '/api/tline/inspect/selfdev.status',
+  'muse.status': '/api/tline/inspect/muse.status',
 } as const;
 export type ParityReadAction = keyof typeof PARITY_READ_ACTIONS;
 

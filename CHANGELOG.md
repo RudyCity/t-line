@@ -1,3 +1,12 @@
+## [1.3.686] - 2026-10-20
+
+### SuperAgent CLI ↔ T-Line Inspection Parity (Increment 3)
+
+- Added read-only `/mcp list`, `/tools list`, `/selfdev status`, and `/muse status` to the SuperAgent desktop console, backed by typed and allowlisted HTTP inspections.
+- Each inspection requires SuperAgent's registered workspace and active TLine session. MCP server names and tool counts are runtime-global; selfdev metrics and Muse task snapshots are workspace-scoped. Credential and task-content fields are withheld.
+- Mutation commands remain unsupported. Tool execution, MCP reload, selfdev changes and Muse stop/steer are not invoked by these adapters.
+- Added tests for metadata sanitization, workspace isolation, runtime API negotiation, and refusal of unsafe subcommands. Live Tauri E2E and restart of existing SuperAgent service remain pending.
+
 ## [1.3.685] - 2026-10-20
 
 ### SuperAgent CLI ↔ T-Line Capability Contract (Increment 2)

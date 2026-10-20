@@ -13,7 +13,7 @@ describe('T-Line read-only slash commands', () => {
     expect(parseParityCommand('/daemon status')?.action).toBe('daemon.status');
     expect(parseParityCommand('/gateway')?.action).toBe('gateway.status');
     expect(parseParityCommand('/parity')?.action).toBe('capabilities');
-    expect(parseParityCommand('/tools')).toBeNull();
+    expect(parseParityCommand('/tools')?.action).toBe('tools.catalog');
   });
   it('negotiates capabilities before reading daemon status', async () => {
     const request = vi.fn()
