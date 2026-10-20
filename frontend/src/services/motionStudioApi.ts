@@ -4,7 +4,7 @@ export type MotionEasing = 'linear' | 'step' | 'easeInOut';
 export interface MotionKeyframe { frame: number; value: number; easing?: MotionEasing }
 export interface MotionTrack { property: MotionProperty; keyframes: MotionKeyframe[] }
 export interface BaseMotionLayer {
-  id: string; kind: 'text' | 'rect'; x: number; y: number;
+  id: string; kind: 'text' | 'rect' | 'image'; x: number; y: number;
   width: number; height: number; rotation: number; opacity: number;
   fill: string; tracks: MotionTrack[];
 }
@@ -12,7 +12,8 @@ export interface MotionTextLayer extends BaseMotionLayer {
   kind: 'text'; text: string; fontSize: number; fontFamily: string;
 }
 export interface MotionRectLayer extends BaseMotionLayer { kind: 'rect' }
-export type MotionLayer = MotionTextLayer | MotionRectLayer;
+export interface MotionImageLayer extends BaseMotionLayer { kind: 'image'; assetId: string }
+export type MotionLayer = MotionTextLayer | MotionRectLayer | MotionImageLayer;
 export interface MotionProject {
   schemaVersion: 1; id: string; workspaceRoot: string; name: string;
   revision: number; createdAt: string; updatedAt: string;
@@ -48,6 +49,11 @@ export interface MotionJob {
 }
 const projectIdPattern = /^motion-[0-9a-f]{20}$/;
 const jobIdPattern = /^motionjob-[0-9a-f]{24}$/;
+const assetIdPattern = /^asset-[a-f0-9]{64}$/;
+function assertAssetId(id: string): string {
+  if (!assetIdPattern.test(id)) throw new Error('Invalid Motion asset identifier');
+  return id;
+}
 const base = '/api/superagent/motion';
 
 function assertId(id: string, job = false): string {
@@ -82,6 +88,22 @@ async function json<T>(workspace: string, path: string, init?: RequestInit): Pro
   return (await motionFetch(workspace, path, init)).json() as Promise<T>;
 }
 export const motionStudioApi = {
+  /** Accepts image bytes only; browser paths never cross the API boundary. */
+  async uploadImage(workspace: string, file: File): Promise<{ id: string; bytes: number; width: number; height: number }> {
+    if (file.size < 24 || file.size > 1024 * 1024) throw new Error('Motion image must be 1 MB or smaller');
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw new Error('Choose a PNG, JPEG, or WebP image');
+    const data = new Uint8Array(await file.arrayBuffer());
+    // Chunked encoding avoids argument-length limits on desktop browsers.
+    let binary = '';
+    for (let i = 0; i < data.length; i += 8192) binary += String.fromCharCode(...data.subarray(i, i + 8192));
+    return json(workspace, '/assets', { method: 'POST', body: JSON.stringify({ base64: btoa(binary) }) });
+  },
+  async loadImageUrl(workspace: string, id: string): Promise<string> {
+    const response = await motionFetch(workspace, '/assets/' + assertAssetId(id));
+    const blob = await response.blob();
+    if (blob.type !== 'image/png' || blob.size < 24 || blob.size > 1024 * 1024) throw new Error('Invalid Motion asset response');
+    return URL.createObjectURL(blob);
+  },
   list: (workspace: string) => json<MotionProjectSummary[]>(workspace, '/projects'),
   inspect: (workspace: string, id: string) => json<MotionProject>(workspace, '/projects/' + assertId(id)),
   create: (workspace: string, name: string) =>

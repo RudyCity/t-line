@@ -7,6 +7,7 @@ describe('Motion Studio authenticated client', () => {
   });
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
     localStorage.removeItem('token');
   });
   it('passes T-Line auth with workspace routing and no secret in URLs', async () => {
@@ -26,6 +27,31 @@ describe('Motion Studio authenticated client', () => {
     await expect(motionStudioApi.loadPreview('D:/studio', 'motionjob-' + 'a'.repeat(24))).rejects.toThrow('64 MB');
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+  it('uploads bounded image data with T-Line authorization and downloads authenticated Blob previews', async () => {
+    const assetId = 'asset-' + 'b'.repeat(64);
+    const payload = new Uint8Array(40).fill(123);
+    const file = new File([payload], 'image.png', { type: 'image/png' });
+    Object.defineProperty(file, 'arrayBuffer', { value: async () => payload.buffer });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: assetId, width: 10, height: 4, bytes: 40 }), {
+        status: 201, headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(payload, {
+        status: 200, headers: { 'Content-Type': 'image/png' },
+      }));
+    const objectUrl = vi.fn().mockReturnValue('blob:motion-test');
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(URL, 'createObjectURL').mockImplementation(objectUrl);
+    await expect(motionStudioApi.uploadImage('D:/studio', file)).resolves.toMatchObject({ id: assetId });
+    const [uploadPath, uploadInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(uploadPath).toContain('/assets?workspace=');
+    expect(uploadInit.headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    expect(JSON.parse(uploadInit.body as string).base64).toBe(btoa(String.fromCharCode(...payload)));
+    expect(await motionStudioApi.loadImageUrl('D:/studio', assetId)).toBe('blob:motion-test');
+    expect(objectUrl).toHaveBeenCalledTimes(1);
+    await expect(motionStudioApi.loadImageUrl('D:/studio', '../../secret')).rejects.toThrow('Invalid Motion asset');
+  });
+
   it('requires login and rejects invalid scene identifiers before calling the API', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);

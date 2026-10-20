@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle, ChevronDown, Clapperboard, Film, Layers3, Loader2,
-  Pause, Play, Plus, RefreshCw, Save, Square, Type, X, Trash2, ArrowUp, ArrowDown, Undo2, Redo2,
+  Pause, Play, Plus, RefreshCw, Save, Square, Type, X, Trash2, ArrowUp, ArrowDown, Undo2, Redo2, Image as ImageIcon,
 } from 'lucide-react';
 import {
   motionStudioApi, type MotionJob, type MotionProject, type MotionLayer, type MotionEdit, type MotionSchedulerStatus,
@@ -43,6 +43,8 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [scheduler, setScheduler] = useState<MotionSchedulerStatus | null>(null);
   const [activeJobId, setActiveJobId] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
+  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [undoStack, setUndoStack] = useState<MotionProject['composition'][]>([]);
   const [redoStack, setRedoStack] = useState<MotionProject['composition'][]>([]);
   const [draftText, setDraftText] = useState('');
@@ -105,6 +107,32 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
         if (mounted.current && sequence === version.current && selectedSequence === selectionSeq.current) message(cause instanceof Error ? cause.message : String(cause));
       });
   }, [selectedId, workspacePath, message]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const urls: string[] = [];
+    const ids = [...new Set((project?.composition.layers ?? []).filter(item => item.kind === 'image').map(item => item.assetId))];
+    setImageUrls({});
+    if (ids.length) {
+      void Promise.all(ids.map(async id => {
+        const url = await motionStudioApi.loadImageUrl(workspacePath, id);
+        if (cancelled) {
+          URL.revokeObjectURL?.(url);
+          return [id, ''] as const;
+        }
+        urls.push(url);
+        return [id, url] as const;
+      })).then(pairs => {
+        if (!cancelled && mounted.current) setImageUrls(Object.fromEntries(pairs));
+      }).catch(cause => {
+        if (!cancelled) message(cause instanceof Error ? cause.message : String(cause));
+      });
+    }
+    return () => {
+      cancelled = true;
+      for (const url of urls) URL.revokeObjectURL?.(url);
+    };
+  }, [workspacePath, project?.id, project?.revision, message]);
 
   const layer = useMemo(() => project?.composition.layers.find(item => item.id === selectedLayer) || null, [project, selectedLayer]);
   const job = jobs.find(item => item.id === activeJobId) || null;
@@ -222,6 +250,37 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
         setSelectedLayer(next.composition.layers[0]?.id ?? null);
       }
       setSuccess((direction === 'undo' ? 'Undo' : 'Redo') + ' · revision ' + next.revision);
+    });
+  };
+
+  const importImage = (file?: File) => {
+    if (!file || !project || busy) return;
+    if (file.size > 1024 * 1024 || file.size < 24) { message('Motion images must be 1 MB or smaller'); return; }
+    const current = project;
+    const selectedSequence = selectionSeq.current;
+    void operation(async () => {
+      const asset = await motionStudioApi.uploadImage(workspacePath, file);
+      const layerId = 'layer-' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+      const scale = Math.min(1, 600 / Math.max(asset.width, asset.height));
+      const width = Math.max(1, Math.round(asset.width * scale));
+      const height = Math.max(1, Math.round(asset.height * scale));
+      const layer: MotionLayer = {
+        kind: 'image', id: layerId, assetId: asset.id,
+        x: (current.composition.width - width) / 2,
+        y: (current.composition.height - height) / 2,
+        width, height, rotation: 0, opacity: 1, fill: '#FFFFFF', tracks: [],
+      };
+      // Don't edit an old project if selection changed while file upload ran.
+      if (selectedSequence !== selectionSeq.current) return;
+      const next = await motionStudioApi.edit(workspacePath, current.id, current.revision, [
+        { type: 'add-layer', layer },
+      ]);
+      if (selectedSequence !== selectionSeq.current) return;
+      setUndoStack(prev => [...prev.slice(-19), structuredClone(current.composition)]);
+      setRedoStack([]);
+      setProject(next);
+      setSelectedLayer(layerId);
+      setSuccess('Image imported · revision ' + next.revision);
     });
   };
 
@@ -349,6 +408,15 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
               <div className="flex flex-wrap items-center gap-1 border-b border-[var(--border-color)] p-2">
                 <button className={action} disabled={busy} onClick={() => insertLayer('text')} aria-label="Add text layer"><Type size={12} /> Text</button>
                 <button className={action} disabled={busy} onClick={() => insertLayer('rect')} aria-label="Add rectangle layer"><Square size={12} /> Rect</button>
+                <button className={action} disabled={busy} onClick={() => imageInputRef.current?.click()}
+                  aria-label="Import image layer"><ImageIcon size={12} /> Image</button>
+                <input ref={imageInputRef} type="file" hidden aria-label="Select Motion image"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={event => {
+                    const file = event.currentTarget.files?.[0];
+                    event.currentTarget.value = '';
+                    importImage(file);
+                  }} />
               </div>
               <div className="flex flex-wrap items-center gap-1 p-2">
                 <button className={action} aria-label="Move layer up" disabled={busy || !layer || project.composition.layers[0]?.id === layer.id} onClick={() => reorderLayer(-1)}><ArrowUp size={13} /></button>
@@ -360,7 +428,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
                   <button key={item.id} onClick={() => setSelectedLayer(item.id)}
                     className={'mb-1 flex w-full items-center gap-2 rounded px-3 py-2 text-left text-xs focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] ' +
                       (item.id === selectedLayer ? 'bg-[var(--color-primary)]/15 text-[var(--text-main)]' : 'text-[var(--text-muted)] hover:bg-[var(--surface-overlay-hover)]')}>
-                    {item.kind === 'text' ? <Type size={14} /> : <Square size={14} />}
+                    {item.kind === 'text' ? <Type size={14} /> : item.kind === 'image' ? <ImageIcon size={14} /> : <Square size={14} />}
                     <span className="min-w-0 flex-1 truncate">{item.kind === 'text' ? item.text || item.id : item.id}</span>
                     <span className="font-mono text-[10px] opacity-60">{index + 1}</span>
                   </button>
@@ -422,7 +490,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
               >
                 <div className="w-full max-w-[1000px]" data-testid="motion-canvas"
                   style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`, transformOrigin: 'center center' }}>
-                  <MotionCanvas key={project.id + ':' + project.revision} project={project} frame={frame}
+                  <MotionCanvas key={project.id + ':' + project.revision} project={project} frame={frame} assetUrls={imageUrls}
                     selectedLayer={selectedLayer} isActive={isActive} busy={busy || panMode} snapping={canvasSnapping}
                     onSelectLayer={setSelectedLayer} onStopPlayback={() => setPlaying(false)}
                     onEdit={(edits, note) => applyEditorEdits(edits, note)} />

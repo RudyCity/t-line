@@ -71,6 +71,18 @@ describe('T-Line Motion proxy and service authentication', () => {
     expect((await scheduler.json()).url).toContain('/api/motion/scheduler');
     expect(metadata.url).toContain('workspace=allowed-root');
     expect(JSON.stringify(metadata)).not.toContain(serviceKey);
+    const assetId = 'asset-' + 'c'.repeat(64);
+    const uploaded = await fetch(base + '/assets?workspace=allowed-root', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ base64: 'QUJDREVGR0g=' }),
+    });
+    expect(uploaded.status).toBe(201);
+    expect((await uploaded.json()).url).toContain('/api/motion/assets?workspace=allowed-root');
+    const loaded = await fetch(base + '/assets/' + assetId + '?workspace=allowed-root');
+    expect(loaded.status).toBe(200);
+    const checked = await fetch(base + '/assets/' + assetId + '?workspace=allowed-root', { method: 'HEAD' });
+    expect(checked.status).toBe(200);
+    expect((await fetch(base + '/assets/' + assetId + '?workspace=unknown')).status).toBe(403);
     const created = await fetch(base + '/projects?workspace=allowed-root', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Motion Demo' }),
     });

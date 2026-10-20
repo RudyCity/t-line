@@ -67,3 +67,12 @@ Avoid staging or overwriting unrelated T-Line CLI parity, Hermes, MCP OAuth or c
 - Added `motionTimelineEdits.ts` pure, schema-compatible operations. Frame collisions, fractional or out-of-range frames and missing tracks are rejected. Preserves existing keyframe values/easing, immutable sorting and current scene revision.
 - Deletion of the final keyframe removes its entire track through revision-guarded composition replacement; ordinary changes use `set-track`. T-Line's existing optimistic revision workflow and local Undo/Redo handle both.
 - Added isolated, cancellation/revision and frontend-to-API integration tests. Live Tauri verification and cross-process persistence under real SuperAgent sessions remain pending.
+
+
+## Native Motion Image Import (2026-10-20)
+
+- T-Line Motion Studio now includes an `Import image` control accepting local PNG/JPEG/WebP files (up to 1 MB). The browser sends the encoded file to its authenticated T-Line backend; the server-only proxy forwards it after registered-workspace and trusted-directory checks. Raw operating-system paths and SuperAgent credentials never enter the scene.
+- The upload returns an immutable workspace-owned PNG asset ID, used in a revision-checked `add-layer` edit. The editor centers the image, exposes it as a selectable layer with existing positioning/opacity/rotation tracks and preserves the scene's undo/redo history.
+- The canvas obtains authenticated PNG bytes and exposes only short-lived Blob URLs to SVG `image` elements. URLs are revoked on project/workspace/revision change, unmount, and late responses. There are no external image URLs.
+- T-Line backend Motion proxy allowlists image POST and id-bound GET/HEAD; JSON upload cap is 1.6 MB to accommodate base64 for a 1 MB source. Tests cover auth routing, signed URLs not leaking service credentials, preview type/size checks and revision-checked image insertion.
+- Still pending: asset library browsing/cleanup, large image import, audio/video media layers, crop/masks, native Tauri E2E, and full preview/export font parity. Version/changelog files are owned by a concurrent T-Line change and intentionally excluded from this Motion-only commit.

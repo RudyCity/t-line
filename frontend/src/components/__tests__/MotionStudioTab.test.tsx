@@ -7,7 +7,7 @@ import { evaluateLayer, evaluateTrack, makeKeyframeTrack } from '../../services/
 vi.mock('../../services/motionStudioApi', () => ({
   motionStudioApi: {
     list: vi.fn(), inspect: vi.fn(), create: vi.fn(), edit: vi.fn(),
-    jobs: vi.fn(), scheduler: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(),
+    jobs: vi.fn(), scheduler: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(),
   },
 }));
 const id = 'motion-' + 'a'.repeat(20);
@@ -36,6 +36,7 @@ beforeEach(() => {
     slots: [{ slot: 0, jobId: 'motionjob-' + 'b'.repeat(24), state: 'claimed_unverified' }, { slot: 1, state: 'free' }],
   });
   vi.mocked(motionStudioApi.create).mockResolvedValue(fixture());
+  vi.mocked(motionStudioApi.loadImageUrl).mockResolvedValue('blob:test-motion-image');
   vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, _rev, operations) => {
     const next = fixture();
     next.revision = 2;
@@ -109,6 +110,31 @@ describe('Native T-Line Motion Studio editor', () => {
       }) },
     ]));
     expect(await screen.findByText('Keyframe deleted · revision 3')).toBeInTheDocument();
+  });
+
+  it('imports an authenticated image asset and inserts a revision-checked image layer', async () => {
+    const assetId = 'asset-' + 'a'.repeat(64);
+    vi.mocked(motionStudioApi.uploadImage).mockResolvedValue({ id: assetId, width: 80, height: 45, bytes: 170 });
+    vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, baseRevision, ops) => {
+      const next = fixture(); next.revision = baseRevision + 1;
+      if (ops[0].type === 'add-layer') next.composition.layers.push(ops[0].layer);
+      return next;
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    await screen.findByTestId('motion-canvas');
+    const file = new File([new Uint8Array(170)], 'photo.png', { type: 'image/png' });
+    fireEvent.change(screen.getByLabelText('Select Motion image'), { target: { files: [file] } });
+    await waitFor(() => expect(motionStudioApi.uploadImage).toHaveBeenCalledWith('D:/projects/studio', file));
+    await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith('D:/projects/studio', id, 1, [
+      expect.objectContaining({ type: 'add-layer', layer: expect.objectContaining({
+        kind: 'image', assetId, width: 80, height: 45,
+      }) }),
+    ]));
+    expect(await screen.findByText('Image imported · revision 2')).toBeInTheDocument();
+    await waitFor(() => expect(motionStudioApi.loadImageUrl).toHaveBeenCalledWith('D:/projects/studio', assetId));
+    expect(screen.getByTestId('motion-canvas').querySelector('image')).toHaveAttribute('href', 'blob:test-motion-image');
   });
 
   it('zooms, pans and resets the viewport without modifying a scene revision', async () => {

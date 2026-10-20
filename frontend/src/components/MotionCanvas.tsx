@@ -12,6 +12,7 @@ import {
 
 interface MotionCanvasProps {
   project: MotionProject;
+  assetUrls?: Record<string, string>;
   frame: number;
   selectedLayer: string | null;
   isActive: boolean;
@@ -46,7 +47,7 @@ function snapPreview(
   };
 }
 export function MotionCanvas({
-  project, frame, selectedLayer, isActive, busy, snapping,
+  project, frame, selectedLayer, isActive, busy, snapping, assetUrls = {},
   onSelectLayer, onStopPlayback, onEdit,
 }: MotionCanvasProps) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -173,6 +174,16 @@ export function MotionCanvas({
             {layer.kind === 'rect' ? (
               <rect x={values.x} y={values.y} width={values.width ?? layer.width} height={values.height ?? layer.height}
                 fill={layer.fill} opacity={values.opacity} transform={transform} />
+            ) : layer.kind === 'image' ? (
+              assetUrls[layer.assetId] ? (
+                <image x={values.x} y={values.y} width={values.width ?? layer.width}
+                  height={values.height ?? layer.height} href={assetUrls[layer.assetId]}
+                  preserveAspectRatio="none" opacity={values.opacity} transform={transform} />
+              ) : (
+                <rect x={values.x} y={values.y} width={values.width ?? layer.width}
+                  height={values.height ?? layer.height} fill="var(--bg-card)"
+                  stroke="var(--border-color)" transform={transform} />
+              )
             ) : (
               <text x={values.x} y={values.y + layer.fontSize} fontSize={layer.fontSize}
                 fontFamily={layer.fontFamily} fill={layer.fill} opacity={values.opacity}
