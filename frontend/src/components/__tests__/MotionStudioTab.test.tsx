@@ -79,6 +79,38 @@ describe('Native T-Line Motion Studio editor', () => {
     expect(await screen.findByText('Text saved · revision 2')).toBeInTheDocument();
   });
 
+  it('persists timeline easing and keyframe removal using revision-checked server edits', async () => {
+    vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, base, edits) => {
+      const project = fixture();
+      project.revision = base + 1;
+      if (edits[0].type === 'set-track') {
+        project.composition.layers[0].tracks = [edits[0].track];
+      }
+      if (edits[0].type === 'replace-composition') project.composition = edits[0].composition;
+      return project;
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    await screen.findByTestId('motion-canvas');
+    fireEvent.click(screen.getByRole('button', { name: 'title opacity frame 0' }));
+    fireEvent.change(screen.getByLabelText('Outgoing easing'), { target: { value: 'step' } });
+    await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith('D:/projects/studio', id, 1, [
+      { type: 'set-track', layerId: 'title', track: expect.objectContaining({
+        property: 'opacity', keyframes: [expect.objectContaining({ frame: 0, easing: 'step' }), expect.any(Object)],
+      }) },
+    ]));
+    await screen.findByText('Keyframe easing updated · revision 2');
+    fireEvent.click(screen.getByRole('button', { name: 'title opacity frame 30' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete keyframe' }));
+    await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith('D:/projects/studio', id, 2, [
+      { type: 'set-track', layerId: 'title', track: expect.objectContaining({
+        property: 'opacity', keyframes: [expect.objectContaining({ frame: 0, easing: 'step' })],
+      }) },
+    ]));
+    expect(await screen.findByText('Keyframe deleted · revision 3')).toBeInTheDocument();
+  });
+
   it('zooms, pans and resets the viewport without modifying a scene revision', async () => {
     render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
     await screen.findByText('Choose a scene to edit');

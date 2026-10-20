@@ -13,6 +13,7 @@ import {
 } from '../services/motionStudioApi';
 import { evaluateLayer, fpsOf, frameLabel, makeKeyframeTrack } from '../services/motionScene';
 import { MotionCanvas } from './MotionCanvas';
+import { MotionTimeline } from './MotionTimeline';
 import { DEFAULT_MOTION_VIEWPORT, panMotionViewport, zoomMotionViewport, type MotionViewport } from '../services/motionViewport';
 
 interface Props { workspacePath: string; isActive: boolean }
@@ -497,31 +498,10 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
             </aside>
           </div>
 
-          <div className="shrink-0 border-t border-[var(--border-color)] bg-[var(--bg-sidebar)]" aria-label="Motion timeline">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-color)] px-3 py-2">
-              <span className="text-xs font-semibold">Timeline <span className="font-normal text-[var(--text-muted)]">· {totalFrames} frames</span></span>
-              <span className="text-[10px] text-[var(--text-muted)]">Click a marker to jump to its frame</span>
-            </div>
-            <div className="max-h-[145px] overflow-y-auto px-3 py-2">
-              {project.composition.layers.map(item => (
-                <div key={item.id} className="flex min-h-[29px] items-center gap-2 text-[10px]">
-                  <button className="w-24 shrink-0 truncate text-left text-[var(--text-muted)] hover:text-[var(--text-main)]"
-                    onClick={() => setSelectedLayer(item.id)}>{item.id}</button>
-                  <div className="relative h-5 min-w-0 flex-1 rounded bg-[var(--bg-card)]">
-                    {item.tracks.flatMap(track => track.keyframes.map(key => (
-                      <button key={track.property + key.frame} aria-label={`${item.id} ${track.property} frame ${key.frame}`}
-                        title={`${track.property}: ${key.value} at frame ${key.frame}`}
-                        className="absolute top-1.5 h-2 w-2 -translate-x-1/2 rotate-45 border border-[var(--text-main)] bg-[var(--color-primary)]"
-                        style={{ left: (key.frame / Math.max(1, totalFrames - 1) * 100) + '%' }}
-                        onClick={() => { setFrame(key.frame); setSelectedLayer(item.id); setPlaying(false); }} />
-                    )))}
-                    <div aria-hidden="true" className="pointer-events-none absolute top-0 h-full w-px bg-[var(--text-main)]"
-                      style={{ left: (frame / Math.max(1, totalFrames - 1) * 100) + '%' }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <MotionTimeline project={project} currentFrame={frame} selectedLayer={selectedLayer}
+            busy={busy} isActive={isActive} onFrame={next => { setPlaying(false); setFrame(next); }}
+            onLayer={setSelectedLayer} onEdit={(edits, note) => applyEditorEdits(edits, note)}
+            onError={message} />
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-color)] bg-[var(--bg-sidebar)] px-3 py-2" aria-label="Render jobs">
             <div className="flex min-w-0 items-center gap-2 text-[11px]">
               <Film size={13} className="text-[var(--color-primary)]" />

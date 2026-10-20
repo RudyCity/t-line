@@ -1,3 +1,13 @@
+## [1.3.693] - 2026-10-20
+
+### Motion Studio Interactive Keyframe Timeline
+
+- Replaced the read-only timeline with a native per-layer property track editor. Diamond markers now support pointer-captured frame retiming; a selected keyframe exposes precise frame editing, outgoing easing and deletion.
+- Existing server `set-track` operations persist moves, easing changes and ordinary keyframe deletion using revision checks. Removing the last keyframe deletes the whole track through a `replace-composition` transaction, retaining valid v1 scene schema and editor Undo/Redo.
+- Retiming preserves values and easing, sorts frames and rejects out-of-range values or frame collisions. Interrupted pointer gestures and stale project revisions do not submit changes.
+- Added pure keyframe-operation tests, component pointer/keyboard tests, cancellation and revision regressions, plus Motion Studio-to-API editing coverage.
+- Rendering remains limited to declarative text/rect layers; live Tauri interaction testing, audio/image assets and production long-video streaming remain pending.
+
 ## [1.3.692] - 2026-10-20
 
 ### Motion Studio Rotated Rectangle Resize

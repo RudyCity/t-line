@@ -60,3 +60,10 @@ Avoid staging or overwriting unrelated T-Line CLI parity, Hermes, MCP OAuth or c
 - Existing revision-guarded `replace-composition` transactions include active-frame keyframe updates for animated x/y tracks, preserving position animation and Undo/Redo semantics.
 - Tested seven rotation values, browser pointer resize, and preservation of animated position tracks. Frontend 68/68 tests, frontend/backend TypeScript checks, and Vite production build passed.
 - Live Tauri desktop E2E, image/audio/video ingestion, and text/font visual parity remain outstanding; no Hermes process was restarted.
+
+## Interactive Keyframe Timeline (2026-10-20)
+
+- Added `MotionTimeline.tsx` with separate lanes per animated layer property, selectable keyframe markers, drag-to-retime interactions and editing controls for exact frame position, outgoing segment easing (`linear`, `step`, `easeInOut`) and keyframe deletion.
+- Added `motionTimelineEdits.ts` pure, schema-compatible operations. Frame collisions, fractional or out-of-range frames and missing tracks are rejected. Preserves existing keyframe values/easing, immutable sorting and current scene revision.
+- Deletion of the final keyframe removes its entire track through revision-guarded composition replacement; ordinary changes use `set-track`. T-Line's existing optimistic revision workflow and local Undo/Redo handle both.
+- Added isolated, cancellation/revision and frontend-to-API integration tests. Live Tauri verification and cross-process persistence under real SuperAgent sessions remain pending.
