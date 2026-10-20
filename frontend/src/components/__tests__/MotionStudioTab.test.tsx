@@ -7,7 +7,7 @@ import { evaluateLayer, evaluateTrack, makeKeyframeTrack } from '../../services/
 vi.mock('../../services/motionStudioApi', () => ({
   motionStudioApi: {
     list: vi.fn(), inspect: vi.fn(), create: vi.fn(), edit: vi.fn(),
-    jobs: vi.fn(), scheduler: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
+    jobs: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
   },
 }));
 const id = 'motion-' + 'a'.repeat(20);
@@ -34,6 +34,10 @@ beforeEach(() => {
   vi.mocked(motionStudioApi.scheduler).mockResolvedValue({
     maxConcurrentRenders: 2, queueLimit: 12, queued: 1, active: 1,
     slots: [{ slot: 0, jobId: 'motionjob-' + 'b'.repeat(24), state: 'claimed_unverified' }, { slot: 1, state: 'free' }],
+  });
+  vi.mocked(motionStudioApi.supervisor).mockResolvedValue({
+    mode: 'opt-in-fifo', queuedSupervised: 2, occupied: 0, maxConcurrentRenders: 2,
+    leader: 'claimed_unverified', automaticRecoveryOfRenderingJobs: false,
   });
   vi.mocked(motionStudioApi.queueRecovery).mockResolvedValue({
     minAgeSeconds: 30, queued: 2, eligible: 1, blocked: 1,
@@ -204,13 +208,19 @@ describe('Native T-Line Motion Studio editor', () => {
     await screen.findByTestId('motion-canvas');
     fireEvent.change(screen.getByLabelText('Current frame'), { target: { value: 25 } });
     expect(screen.getByText('0.83s · F25')).toBeInTheDocument();
+    expect(screen.getByText(/FIFO 2 queued/)).toBeInTheDocument();
     expect(screen.getByText(/3 jobs/)).toBeInTheDocument();
     expect(screen.getByText(/Queue recovery: 1 eligible · 1 blocked/)).toBeInTheDocument();
     expect(screen.getByLabelText('Render resolution')).toHaveValue('640');
     fireEvent.change(screen.getByLabelText('Render resolution'), { target: { value: '1920' } });
     fireEvent.click(screen.getByRole('button', { name: 'Render MP4' }));
-    await waitFor(() => expect(motionStudioApi.render).toHaveBeenCalledWith('D:/projects/studio', id, 1920));
+    await waitFor(() => expect(motionStudioApi.render).toHaveBeenCalledWith('D:/projects/studio', id, 1920, false));
     expect(await screen.findByText('Render queued at revision 1 · 1920px wide')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Use FIFO supervisor'));
+    expect(screen.getByLabelText('Use FIFO supervisor')).toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Render MP4' }));
+    await waitFor(() => expect(motionStudioApi.render).toHaveBeenCalledWith('D:/projects/studio', id, 1920, true));
+    expect(await screen.findByText(/awaiting separate SuperAgent FIFO supervisor/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 

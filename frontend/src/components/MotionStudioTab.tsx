@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import {
   motionStudioApi, type MotionJob, type MotionProject, type MotionLayer, type MotionEdit, type MotionSchedulerStatus,
-  type MotionProperty, type MotionProjectSummary, type MotionStorageStatus, type MotionQueueRecovery,
+  type MotionProperty, type MotionProjectSummary, type MotionStorageStatus, type MotionQueueRecovery, type MotionSupervisorStatus,
 } from '../services/motionStudioApi';
 import { evaluateLayer, fpsOf, frameLabel, makeKeyframeTrack } from '../services/motionScene';
 import { MotionCanvas } from './MotionCanvas';
@@ -43,6 +43,8 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [success, setSuccess] = useState('');
   const [jobs, setJobs] = useState<MotionJob[]>([]);
   const [scheduler, setScheduler] = useState<MotionSchedulerStatus | null>(null);
+  const [supervisor, setSupervisor] = useState<MotionSupervisorStatus | null>(null);
+  const [supervisedRender, setSupervisedRender] = useState(false);
   const [storage, setStorage] = useState<MotionStorageStatus | null>(null);
   const [queueRecovery, setQueueRecovery] = useState<MotionQueueRecovery | null>(null);
   const [renderWidth, setRenderWidth] = useState<640 | 1280 | 1920>(640);
@@ -76,19 +78,21 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     setProject(null); setSelectedId(''); setSelectedLayer(null); setFrame(0);
     setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
-    setScheduler(null); setStorage(null); setQueueRecovery(null);
+    setScheduler(null); setSupervisor(null); setSupervisedRender(false);
+    setStorage(null); setQueueRecovery(null);
     setUndoStack([]); setRedoStack([]);
     const refresh = async () => {
       try {
         const [list, existingJobs] = await Promise.all([motionStudioApi.list(workspacePath), motionStudioApi.jobs(workspacePath)]);
         // Older SuperAgent builds lack scheduler information; editor remains usable.
-        const [capacity, storageInfo, recoveryInfo] = await Promise.all([
+        const [capacity, storageInfo, recoveryInfo, supervisorInfo] = await Promise.all([
           motionStudioApi.scheduler(workspacePath).catch(() => null),
           motionStudioApi.storage(workspacePath).catch(() => null),
           motionStudioApi.queueRecovery(workspacePath).catch(() => null),
+          motionStudioApi.supervisor(workspacePath).catch(() => null),
         ]);
         if (!mounted.current || version.current !== sequence) return;
-        setProjects(list); setJobs(existingJobs); setScheduler(capacity); setStorage(storageInfo); setQueueRecovery(recoveryInfo);
+        setProjects(list); setJobs(existingJobs); setScheduler(capacity); setStorage(storageInfo); setQueueRecovery(recoveryInfo); setSupervisor(supervisorInfo);
         const latest = existingJobs.find(job => job.status === 'completed') || existingJobs[0];
         setActiveJobId(latest?.id || '');
       } catch (cause) {
@@ -384,10 +388,12 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const render = () => {
     if (!project) return;
     void operation(async () => {
-      const started = await motionStudioApi.render(workspacePath, project.id, renderWidth);
+      const started = await motionStudioApi.render(workspacePath, project.id, renderWidth, supervisedRender);
       if (started.status === 'failed') throw new Error(started.error || 'Could not start render worker');
       setJobs(prev => [started, ...prev.filter(item => item.id !== started.id)]);
-      setActiveJobId(started.id); setSuccess('Render queued at revision ' + started.revision + ' · ' + renderWidth + 'px wide');
+      setActiveJobId(started.id);
+      setSuccess('Render queued at revision ' + started.revision + ' · ' + renderWidth + 'px wide' +
+        (supervisedRender ? ' · awaiting separate SuperAgent FIFO supervisor' : ''));
     });
   };
 
@@ -402,6 +408,10 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
             <p className="max-w-[220px] truncate text-[10px] text-[var(--text-muted)]" title={workspacePath}>{workspacePath}</p>
           </div>
           {project && <span className="rounded border border-[var(--border-color)] px-2 py-1 font-mono text-[10px] text-[var(--text-muted)]">r{project.revision}</span>}
+          {supervisor && <span role="status" className="rounded border border-[var(--border-color)] px-2 py-1 font-mono text-[10px] text-[var(--text-muted)]"
+            title="Opt-in FIFO supervisor is a separate SuperAgent process; this status never starts one">
+            FIFO {supervisor.queuedSupervised} queued · {supervisor.leader === 'claimed_unverified' ? 'claim present (unverified)' : supervisor.leader === 'free' ? 'not running' : 'unsafe claim'}
+          </span>}
           {scheduler && <span role="status" className="rounded border border-[var(--border-color)] px-2 py-1 font-mono text-[10px] text-[var(--text-muted)]" title="Workspace render queue and rendering capacity">
             Queue {scheduler.queued}/{scheduler.queueLimit} · Render {scheduler.slots.filter(item => item.state === 'claimed_unverified').length}/{scheduler.maxConcurrentRenders}
           </span>}
@@ -423,13 +433,14 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
             {projects.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select>
           <button className={action} onClick={() => void operation(async () => {
-            const [_, latestJobs, latestScheduler, latestStorage, latestRecovery] = await Promise.all([
+            const [_, latestJobs, latestScheduler, latestStorage, latestRecovery, latestSupervisor] = await Promise.all([
               refreshProjects(), motionStudioApi.jobs(workspacePath),
               motionStudioApi.scheduler(workspacePath).catch(() => null),
               motionStudioApi.storage(workspacePath).catch(() => null),
               motionStudioApi.queueRecovery(workspacePath).catch(() => null),
+              motionStudioApi.supervisor(workspacePath).catch(() => null),
             ]);
-            setJobs(latestJobs); setScheduler(latestScheduler); setStorage(latestStorage); setQueueRecovery(latestRecovery);
+            setJobs(latestJobs); setScheduler(latestScheduler); setStorage(latestStorage); setQueueRecovery(latestRecovery); setSupervisor(latestSupervisor);
             if (selectedId) setProject(await motionStudioApi.inspect(workspacePath, selectedId));
           })} disabled={busy} aria-label="Refresh Motion projects"><RefreshCw size={13} /></button>
           <button className={action} onClick={() => setCreating(value => !value)} aria-expanded={creating}><Plus size={13} /> New</button>
@@ -442,6 +453,12 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
             <option value={1280}>1280px HD</option>
             <option value={1920}>1920px Full HD</option>
           </select>
+          <label className="inline-flex items-center gap-1 text-[11px] text-[var(--text-muted)]"
+            title="Opt-in FIFO mode requires a separately running SuperAgent motion supervisor --watch process">
+            <input type="checkbox" aria-label="Use FIFO supervisor" checked={supervisedRender}
+              onChange={event => setSupervisedRender(event.target.checked)} disabled={busy || !supervisor} />
+            FIFO
+          </label>
           <button className={primary} onClick={render} disabled={!project || busy}><Film size={14} /> Render MP4</button>
         </div>
       </header>

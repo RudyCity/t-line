@@ -7,6 +7,7 @@ const permitted = [
   /^\/$/,
   /^\/projects$/,
   /^\/scheduler$/,
+  /^\/supervisor$/,
   /^\/storage$/,
   /^\/queue-recovery$/,
   /^\/assets$/,

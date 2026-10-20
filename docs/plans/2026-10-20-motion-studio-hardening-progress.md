@@ -117,3 +117,11 @@ Avoid staging or overwriting unrelated T-Line CLI parity, Hermes, MCP OAuth or c
 - This is intentionally inspection-only. Operators can use SuperAgent motion queue-recovery and motion dispatch-queue --apply from CLI after verifying any active process identity; the T-Line browser must not issue remote worker starts or lock deletion.
 - Older SuperAgent daemon versions may not implement this endpoint; the UI treats this optional request as unavailable and preserves regular scene editing without a warning cascade.
 - Source-level React/Express tests validate the summary UI, authentication policy and HTTP method boundaries; packaged live Tauri E2E is still a separate release gate.
+
+## Opt-in SuperAgent FIFO render supervisor (2026-10-21)
+
+- T-Line Motion Studio preserves the default immediate render behavior and adds a separate FIFO checkbox for queue-only render requests. The scene revision and selected 640/1280/1920 output width stay pinned by SuperAgent.
+- With FIFO checked, the authenticated server-side Motion proxy forwards supervised=true in the existing render request. The job is saved without automatically spawning a worker and needs a separately running SuperAgent motion supervisor --watch process (or explicitly invoked --once cycle).
+- An additional read-only authenticated GET /api/superagent/motion/supervisor proxy exposes queued supervised count and unverified leader claim; POST and unauthorized workspace paths are rejected. The UI neither starts/stops the supervisor nor tries to steal a stale leader lease.
+- Older SuperAgent builds without the supervisor endpoint safely fall back to immediate-only editing because the FIFO checkbox is disabled until capabilities can be read.
+- Motion component, proxy and TypeScript tests cover the opt-in transport/status. Packaged Tauri live verification and crash recovery of active encoders remain separate release gates.

@@ -49,6 +49,13 @@ export interface MotionStorageStatus {
   completedArtifactBytes: number;
   maintenance: { minAgeDays: number; candidates: number; blockedIds: string[]; reclaimableBytes: number };
 }
+export interface MotionSupervisorStatus {
+  mode: 'opt-in-fifo';
+  queuedSupervised: number; occupied: number; maxConcurrentRenders: number;
+  oldestWaitingJobId?: string; blockedReason?: string;
+  leader: 'free' | 'claimed_unverified' | 'unsafe_or_unreadable';
+  automaticRecoveryOfRenderingJobs: false;
+}
 export interface MotionSchedulerStatus {
   maxConcurrentRenders: number;
   queueLimit: number;
@@ -57,7 +64,7 @@ export interface MotionSchedulerStatus {
   slots: Array<{ slot: number; jobId?: string; state: string }>;
 }
 export interface MotionJob {
-  id: string; projectId: string; revision: number;
+  id: string; projectId: string; revision: number; dispatchMode?: 'supervised';
   status: 'queued' | 'preparing' | 'rendering' | 'validating' | 'completed' | 'failed' | 'cancelled' | 'interrupted';
   framesCompleted: number;
   profile: { frameCount: number; width: number; height: number };
@@ -154,10 +161,12 @@ export const motionStudioApi = {
     json<MotionProject>(workspace, '/projects/' + assertId(id) + '/edits', {
       method: 'POST', body: JSON.stringify({ baseRevision, edits }),
     }),
-  render: (workspace: string, id: string, width = 640) =>
-    json<MotionJob>(workspace, '/projects/' + assertId(id) + '/render', { method: 'POST', body: JSON.stringify({ width }) }),
+  render: (workspace: string, id: string, width = 640, supervised = false) =>
+    json<MotionJob>(workspace, '/projects/' + assertId(id) + '/render',
+      { method: 'POST', body: JSON.stringify({ width, supervised }) }),
   jobs: (workspace: string) => json<MotionJob[]>(workspace, '/jobs'),
   scheduler: (workspace: string) => json<MotionSchedulerStatus>(workspace, '/scheduler'),
+  supervisor: (workspace: string) => json<MotionSupervisorStatus>(workspace, '/supervisor'),
   storage: (workspace: string) => json<MotionStorageStatus>(workspace, '/storage'),
   queueRecovery: (workspace: string) => json<MotionQueueRecovery>(workspace, '/queue-recovery'),
   status: (workspace: string, id: string) => json<MotionJob>(workspace, '/jobs/' + assertId(id, true)),
