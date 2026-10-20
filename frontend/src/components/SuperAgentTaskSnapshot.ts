@@ -15,6 +15,7 @@ export interface TlineTask {
   updatedAt: number;
   /** Server-provided hint; never replaces mutation endpoint authorization. */
   cancelEligible?: boolean;
+  retryEligible?: boolean;
 }
 export interface TaskSnapshot {
   success: true;

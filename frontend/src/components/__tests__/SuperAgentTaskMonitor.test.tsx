@@ -4,6 +4,7 @@ import { SuperAgentTaskMonitor } from '../SuperAgentTaskMonitor';
 import { fetchTlineTaskSnapshot } from '../SuperAgentTaskSnapshot';
 import { checkTaskSseCapability, readTaskSseStream } from '../SuperAgentTaskEvents';
 import { getTaskCancelCapability, requestTaskCancellation } from '../SuperAgentTaskControls';
+import { getTaskRetryCapability, requestTaskRetry } from '../SuperAgentTaskRetry';
 
 vi.mock('../SuperAgentTaskSnapshot', () => ({
   fetchTlineTaskSnapshot: vi.fn(),
@@ -15,6 +16,10 @@ vi.mock('../SuperAgentTaskEvents', () => ({
 vi.mock('../SuperAgentTaskControls', () => ({
   getTaskCancelCapability: vi.fn(),
   requestTaskCancellation: vi.fn(),
+}));
+vi.mock('../SuperAgentTaskRetry', () => ({
+  getTaskRetryCapability: vi.fn(),
+  requestTaskRetry: vi.fn(),
 }));
 vi.mock('../SuperAgentConsoleUtils', () => ({
   getAuthHeader: () => ({ Authorization: 'Bearer test' }),
@@ -38,6 +43,8 @@ beforeEach(() => {
   vi.mocked(readTaskSseStream).mockResolvedValue();
   vi.mocked(getTaskCancelCapability).mockResolvedValue(false);
   vi.mocked(requestTaskCancellation).mockResolvedValue('Cancellation requested.');
+  vi.mocked(getTaskRetryCapability).mockResolvedValue(false);
+  vi.mocked(requestTaskRetry).mockResolvedValue('New attempt requested.');
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
@@ -90,6 +97,32 @@ describe('SuperAgentTaskMonitor UI', () => {
     vi.mocked(getTaskCancelCapability).mockResolvedValue(false);
     rerender(<SuperAgentTaskMonitor workspace="D:/other" sessionId="sess_new" />);
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Cancel task ' + id })).toBeNull());
+  });
+
+  it('shows new-attempt control only with server eligibility and requires new instruction', async () => {
+    const id = 'clj_1792480000000_deadbeef';
+    vi.mocked(fetchTlineTaskSnapshot).mockResolvedValue({
+      ...snapshot(id),
+      snapshot: { ...snapshot(id).snapshot, tasks: [{
+        ...task(id), status: 'failed', evidence: 'failed', retryEligible: true,
+      }] },
+    });
+    const prompt = vi.spyOn(window, 'prompt').mockReturnValue(
+      'Create the missing output artifact in the current workspace.');
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<SuperAgentTaskMonitor workspace="D:/project" sessionId="sess_creator" />);
+    fireEvent.click(screen.getByRole('button', { name: /Cross-channel tasks/ }));
+    await waitFor(() => expect(screen.getByText(id)).toBeTruthy());
+    expect(screen.queryByRole('button', { name: 'Retry task ' + id })).toBeNull();
+    vi.mocked(getTaskRetryCapability).mockResolvedValue(true);
+    fireEvent.click(screen.getByRole('button', { name: /Refresh task monitor/ }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Retry task ' + id })).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Retry task ' + id }));
+    expect(prompt).toHaveBeenCalledOnce();
+    await waitFor(() => expect(requestTaskRetry).toHaveBeenCalledOnce());
+    expect(vi.mocked(requestTaskRetry).mock.calls[0].slice(0, 4))
+      .toEqual(['D:/project', 'sess_creator', id, 'Create the missing output artifact in the current workspace.']);
+    expect(confirm).not.toHaveBeenCalled(); // Confirmation belongs to typed retry client, not UI.
   });
 
   it('discards a stale snapshot when the workspace changes before the response arrives', async () => {

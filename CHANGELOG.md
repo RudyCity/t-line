@@ -1,3 +1,14 @@
+## [1.3.696] - 2026-10-20
+
+### SuperAgent ↔ TLine Creator-Confirmed New-Instruction Retry (Increment 6D)
+
+- Added **OFF-by-default** `tasks.retry.prepare` / `tasks.retry.confirm` under `SUPERAGENT_TLINE_TASK_RETRY=1`, independently gated from the cancellation feature.
+- Only the originating authenticated TLine session may launch a new Codex/Claude CLI Bridge attempt for an `artifact_verification_failed` task with complete unchanged/missing artifact evidence. All source-artifact paths and fingerprints are rechecked before confirmation.
+- No old prompt or arbitrary process flags are replayed. The desktop asks for a NEW instruction and a second user confirmation, while the server uses a one-use 45-second challenge and a durable exclusive source-job claim.
+- Only one new attempt is claimable per original job across crashes and concurrent processes. The claim stores a prompt digest, not prompt contents; ambiguous launch results fail closed and require manual inspection.
+- The Cross-channel Task Monitor shows New attempt only when both the live capability and per-session `retryEligible` hint permit it. No tests execute a real retry job and no SuperAgent service was restarted.
+- Added backend policy, atomic-claim and race-condition tests, frontend approval/response validation, and fixed-path proxy coverage. Full desktop E2E and general task replay remain pending.
+
 ## [1.3.695] - 2026-10-20
 
 ### TLine ↔ SuperAgent Creator-Session Job Ownership (Increment 6C)

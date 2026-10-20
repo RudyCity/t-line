@@ -3,6 +3,7 @@ import { Activity, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { fetchTlineTaskSnapshot, type TlineTask } from './SuperAgentTaskSnapshot';
 import { checkTaskSseCapability, readTaskSseStream } from './SuperAgentTaskEvents';
 import { getTaskCancelCapability, requestTaskCancellation } from './SuperAgentTaskControls';
+import { getTaskRetryCapability, requestTaskRetry } from './SuperAgentTaskRetry';
 import { getAuthHeader } from './SuperAgentConsoleUtils';
 
 type Props = { workspace: string; sessionId: string };
@@ -18,15 +19,24 @@ export function SuperAgentTaskMonitor({ workspace, sessionId }: Props) {
   const [transport, setTransport] = useState<'polling' | 'sse'>('polling');
   const [replayNotice, setReplayNotice] = useState('');
   const [cancelAllowed, setCancelAllowed] = useState(false);
+  const [retryAllowed, setRetryAllowed] = useState(false);
+  const [retryBusy, setRetryBusy] = useState('');
+  const [retryNotice, setRetryNotice] = useState('');
   const [cancelBusy, setCancelBusy] = useState('');
   const [cancelNotice, setCancelNotice] = useState('');
 
   useEffect(() => {
     setCancelAllowed(false);
+    setRetryAllowed(false);
+    setRetryNotice('');
+    setRetryBusy('');
     setCancelNotice('');
     setCancelBusy('');
     if (!open || !workspace || !sessionId) return;
     const abort = new AbortController();
+    getTaskRetryCapability(workspace, getAuthHeader, fetch, abort.signal)
+      .then(enabled => { if (!abort.signal.aborted) setRetryAllowed(enabled); })
+      .catch(() => { if (!abort.signal.aborted) setRetryAllowed(false); });
     getTaskCancelCapability(workspace, getAuthHeader, fetch, abort.signal)
       .then(enabled => { if (!abort.signal.aborted) setCancelAllowed(enabled); })
       .catch(() => { if (!abort.signal.aborted) setCancelAllowed(false); });
@@ -44,6 +54,22 @@ export function SuperAgentTaskMonitor({ workspace, sessionId }: Props) {
     } catch (e) {
       setCancelNotice('Cancellation denied: ' + (e instanceof Error ? e.message : String(e)));
     } finally { setCancelBusy(''); }
+  };
+
+  const retryTask = async (jobId: string) => {
+    if (!retryAllowed || retryBusy || cancelBusy || !workspace || !sessionId) return;
+    const instruction = window.prompt('Enter a NEW instruction for this CLI task (not a replay of the old prompt):');
+    if (instruction === null) return;
+    setRetryBusy(jobId);
+    setRetryNotice('');
+    try {
+      const outcome = await requestTaskRetry(
+        workspace, sessionId, jobId, instruction, getAuthHeader,
+        description => window.confirm(description));
+      setRetryNotice(outcome);
+    } catch (e) {
+      setRetryNotice('Retry denied: ' + (e instanceof Error ? e.message : String(e)));
+    } finally { setRetryBusy(''); }
   };
 
   useEffect(() => {
@@ -165,6 +191,7 @@ export function SuperAgentTaskMonitor({ workspace, sessionId }: Props) {
             Workspace-operator CLI cancellation enabled. Only runtime-owned jobs can be stopped.
           </div>}
           {cancelNotice && <div className="text-amber-400 py-1" role="status">{cancelNotice}</div>}
+          {retryNotice && <div className="text-amber-400 py-1" role="status">{retryNotice}</div>}
           {incomplete.length > 0 && <div className="text-amber-400 py-1">Partial snapshot: {incomplete.join(', ')} unavailable</div>}
           {!error && tasks.length === 0 && <div className="text-[var(--text-muted)] py-1">No retained CLI, daemon, or Muse tasks in this workspace.</div>}
           {tasks.map(task => (
@@ -174,6 +201,15 @@ export function SuperAgentTaskMonitor({ workspace, sessionId }: Props) {
               <span className="truncate flex-1" title={task.taskId}>{task.taskId}</span>
               <span className="text-[var(--text-muted)] shrink-0">{task.status}</span>
               <span className="text-[var(--text-muted)] shrink-0" title="Status proof">{task.evidence}</span>
+              {retryAllowed && task.channel === 'cli' && task.status === 'failed' &&
+                task.retryEligible === true && (
+                <button type="button" disabled={Boolean(retryBusy || cancelBusy)}
+                  className="text-amber-400 hover:underline disabled:opacity-50"
+                  aria-label={'Retry task ' + task.taskId}
+                  onClick={() => { void retryTask(task.taskId); }}>
+                  {retryBusy === task.taskId ? 'Preparing…' : 'New attempt…'}
+                </button>
+              )}
               {cancelAllowed && task.channel === 'cli' && task.status === 'running' && task.cancelEligible === true && (
                 <button type="button" disabled={Boolean(cancelBusy)}
                   className="text-amber-400 hover:underline disabled:opacity-50"

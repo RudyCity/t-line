@@ -7,6 +7,7 @@ import { getSuperAgentServiceHeaders } from './superAgentAuth';
 import { fetchParityReadAction, PARITY_READ_ACTIONS, type ParityReadAction } from './superAgentParityBridge';
 import { streamTlineTaskEvents } from './superAgentTaskEvents';
 import { forwardTaskCancel } from './superAgentTaskCancel';
+import { forwardTlineRetry } from './superAgentTaskRetry';
 import motionProxyRouter from './motionProxy';
 import { getWorkspaceSessions, getSessionMessages } from './sessionManager';
 
@@ -32,6 +33,21 @@ router.post('/tasks/cancel/:action', async (req, res) => {
   const result = await forwardTaskCancel(action, {
     workspace: body.workspace, sessionId: body.sessionId,
     jobId: body.jobId, challenge: body.challenge,
+  });
+  res.status(result.status).json(result.payload);
+});
+
+/** Fresh user-instruction retry. Fixed paths only, never a generic CLI proxy. */
+router.post('/tasks/retry/:stage', async (req, res) => {
+  const stage = req.params.stage;
+  if (stage !== 'prepare' && stage !== 'confirm') {
+    res.status(404).json({ success: false, error: 'Unknown retry stage.' });
+    return;
+  }
+  const data = req.body || {};
+  const result = await forwardTlineRetry(stage, {
+    workspace: data.workspace, sessionId: data.sessionId, jobId: data.jobId,
+    prompt: data.prompt, challenge: data.challenge,
   });
   res.status(result.status).json(result.payload);
 });

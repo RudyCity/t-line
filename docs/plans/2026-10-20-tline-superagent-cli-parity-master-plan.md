@@ -2,7 +2,7 @@
 
 Date: 2026-10-20
 Target: SuperAgent CLI source (`../superagent`, branch `main`) → T-Line React/Tauri desktop (`t-line`, branch `main`)
-Status: **Increment 6C implemented (trusted creator-session provenance and creator-only cancellation); full feature parity NOT achieved.**
+Status: **Increment 6D implemented (opt-in explicit new-instruction CLI retry, creator authorization, artifact verification and once-only claim); full feature parity NOT achieved.**
 
 ## Baseline findings
 
@@ -43,7 +43,8 @@ Audited the actual repositories rather than equating a UI button to working supp
 - [x] Add opt-in workspace-operator, two-step cancellation of runtime-owned CLI Bridge processes, requiring active TLine session and interactive desktop confirmation. Default off; no creator-session attestation for legacy jobs.
 - [x] Record server-internal TLine creator-session provenance on newly launched CLI Bridge delegation jobs, restrict cancel to exact creator chat, and hide other jobs' cancel controls.
 - [ ] Add independent per-user identity and trusted out-of-band approval for multi-user workspaces; cancel remains default OFF until then.
-- [ ] Add idempotent retry with artifact-claim checks and explicit permission to launch a new CLI process.
+- [x] Add narrowly scoped, opt-in creator-confirmed new-instruction retry for artifact-verification failures, with a once-only disk claim and source artifact re-verification.
+- [ ] Add an operator-audited retry recipe system for other failure types only after explicit per-user identity, reliable side-effect attestation and safe re-execution checks.
 - [ ] Add UI for `/daemon` (schedule, logs, cancel), `/gateway`, `/motion`, `/macro`, `/mp`, `/skills`.
 - [ ] Bring `/memory` and `/history` workflow semantics in line with CLI, with workspace-backed sessions.
 - [ ] Implement multi-project/worktree authorization, progress visualization, review/approval and CLI agent handoff.
@@ -56,6 +57,42 @@ Audited the actual repositories rather than equating a UI button to working supp
 - [ ] Add motion editor/artifact routing, desktop media resources and e2e user workflows.
 - [ ] Add parity gates comparing CLI command/API capability IDs to T-Line UI routes and tests on every PR.
 - [ ] Add performance/regression coverage for SSE reconnect, rapid workspace switching and concurrent agents.
+
+## Increment 6D: bounded, once-only retry as an explicitly new CLI instruction
+
+- Two additional fixed server actions: `tasks.retry.prepare` and
+  `tasks.retry.confirm`, advertised only with
+  `SUPERAGENT_TLINE_TASK_RETRY=1`. Cancel remains independently opt-in;
+  both flags are OFF by default. Exact authenticated TLine workspace and
+  creator chat are required. Unknown CLI tools and arbitrary shell/PIDs
+  are never accepted from the retry request.
+- Eligible source job is **only** a creator-owned Codex/Claude CLI delegation
+  with terminal `verification_failed`, completion
+  `artifact_verification_failed`, at least one original expectedArtifact,
+  complete proof metadata, and no prior created/updated artifacts. Recompute
+  the SHA-256/missing status of each declared output before preparation and
+  confirmation. Changed or ambiguous artifacts, cancelled/crashed jobs with
+  unknown side effects, legacy jobs and successful jobs all fail closed.
+- No original prompt or arguments are replayed or persisted. TLine asks the
+  user for a **NEW** instruction and obtains confirmation after a 45-second
+  one-time challenge is issued. The resulting new CLI Bridge task receives a
+  new job ID and reacquires the source job's expected output paths using the
+  existing cross-process claim system.
+- An atomic create-only disk claim named `tline-retry-once.claim` lives
+  inside the original job's immutable shard directory and prevents multiple
+  attempts across retries, crashes, and parallel SuperAgent processes.
+  The file records source ID/revision, claim timestamp and *prompt SHA-256*,
+  never the prompt text, secrets or binary args. Claims are not automatically
+  removed on launch ambiguity, so follow-up is an explicit operator audit,
+  not automatic duplicate execution.
+- UI `New attempt…` appears only when the capability manifest and
+  server-authored `retryEligible` hint are both present. Server authority
+  is independently reverified on every mutation.
+- Limitations: this is **NOT** a generic replay of old CLI tasks and does
+  not attest hidden side effects outside the declared artifacts. No
+  complete user-account identity/out-of-band approval exists; leave disabled
+  on shared/untrusted desktops. Tauri E2E and live CLI launch are not claimed;
+  no real job was retried during automated tests.
 
 ## Increment 6C: trusted TLine creator provenance and safe retry boundary
 
