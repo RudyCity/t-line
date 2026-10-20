@@ -1,3 +1,13 @@
+## [1.3.685] - 2026-10-20
+
+### SuperAgent CLI ↔ T-Line Capability Contract (Increment 2)
+
+- SuperAgent exposes an authenticated versioned runtime capability manifest, distinguishing CLI commands from actual HTTP-operable actions.
+- T-Line adds read-only `/parity`, `/daemon status` and `/gateway status`, using a narrow authenticated server-only GET proxy and capability negotiation. Unsupported daemon job listings and gateway mutations remain CLI-only.
+- Hardened detection of port 7888: a valid JSON SuperAgent ping is required, and occupied unauthorized/unrelated services are not treated as compatible or automatically terminated.
+- Added CLI/server capability contract, HTTP proxy, port occupancy, and UI read-only command regression tests.
+- Desktop E2E with an updated running SuperAgent service is still pending.
+
 ## [1.3.684] - 2026-10-20
 
 ### Motion Studio Native Scene Editor (Developer Preview)

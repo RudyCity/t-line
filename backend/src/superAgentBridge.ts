@@ -9,6 +9,7 @@ import { loadMergedPresets } from './presetUtils';
 import { rotateAllKnownLogs } from './logRotation';
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
 import { selectSuperAgentLaunch } from './superAgentRuntime';
+import { probeSuperAgentPort } from './superAgentPortProbe';
 
 const SUPERAGENT_LOG_FILE = path.join(os.homedir(), '.tline-superagent.log');
 
@@ -85,22 +86,7 @@ export function forceKillPort7888() {
 }
 
 function pingPort7888(): Promise<boolean> {
-  return new Promise((resolve) => {
-    const req = http.request({
-      hostname: '127.0.0.1',
-      port: 7888,
-      path: '/api/instances',
-      method: 'GET',
-      headers: getSuperAgentServiceHeaders(),
-      timeout: 1500
-    }, (res) => {
-      res.resume();
-      resolve(res.statusCode !== undefined);
-    });
-    req.on('error', () => resolve(false));
-    req.on('timeout', () => { req.destroy(); resolve(false); });
-    req.end();
-  });
+  return probeSuperAgentPort().then(state => state === 'compatible');
 }
 
 /** Callbacks queued while a spawn is in progress. Fired once server is ready or failed. */
@@ -431,8 +417,16 @@ function ensureSuperAgentServer(
   console.log('[WS-Agent][debug] ensureSuperAgentServer: acquired startup lock');
 
   // Before spawning, ping port 7888 — it may already be running externally.
-  pingPort7888().then((alreadyRunning) => {
-    if (alreadyRunning) {
+  probeSuperAgentPort().then((portState) => {
+    if (portState === 'occupied') {
+      const message = 'Port 7888 is occupied by an unverified or unauthorized HTTP service. Refusing to launch or terminate a process.';
+      logToSuperAgentFile('[WS-Agent] ' + message);
+      isStartingSuperAgent = false;
+      ws.send(JSON.stringify({ type: 'status', text: message }));
+      drainPendingCallbacks(new Error(message));
+      return;
+    }
+    if (portState === 'compatible') {
       const msgAlready = 'SuperAgent server already running on port 7888. Skipping spawn.';
       console.log(`[WS-Agent] ${msgAlready}`);
       logToSuperAgentFile(`[WS-Agent] ${msgAlready}`);
@@ -489,8 +483,15 @@ export function startSuperAgentEager(agentMode: string = 'single', customArgs: s
   isStartingSuperAgent = true;
   console.log('[WS-Agent][debug] startSuperAgentEager: acquired startup lock');
 
-  pingPort7888().then((alreadyRunning) => {
-    if (alreadyRunning) {
+  probeSuperAgentPort().then((portState) => {
+    if (portState === 'occupied') {
+      const message = 'Port 7888 is occupied by an unverified/unauthorized service. Eager startup refused; no process terminated.';
+      logToSuperAgentFile('[WS-Agent-Eager] ' + message);
+      isStartingSuperAgent = false;
+      drainPendingCallbacks(new Error(message));
+      return;
+    }
+    if (portState === 'compatible') {
       const msgEager = 'SuperAgent server already running on port 7888 (eager check). Skipping spawn.';
       console.log(`[WS-Agent] ${msgEager}`);
       logToSuperAgentFile(`[WS-Agent] ${msgEager}`);

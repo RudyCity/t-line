@@ -40,7 +40,8 @@ export function isCliOnlyCommand(input: string): boolean {
 }
 
 export function getCliOnlySuggestions(onUnsupported: (command: string) => void): SlashCommand[] {
-  return [...CLI_ONLY.values()].map(cmd => ({
+  return [...CLI_ONLY.values()].filter(cmd =>
+    cmd.command !== '/daemon' && cmd.command !== '/gateway').map(cmd => ({
     command: cmd.command,
     description: `CLI only — ${cmd.description}`,
     action: () => onUnsupported(cmd.command),

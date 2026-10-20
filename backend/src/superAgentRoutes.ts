@@ -4,6 +4,7 @@ import http from 'http';
 import { authMiddleware } from './auth';
 import { sendSuperAgentRequest } from './superAgentBridge';
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
+import { fetchParityReadAction, PARITY_READ_ACTIONS, type ParityReadAction } from './superAgentParityBridge';
 import motionProxyRouter from './motionProxy';
 import { getWorkspaceSessions, getSessionMessages } from './sessionManager';
 
@@ -14,6 +15,18 @@ router.use(authMiddleware);
 
 // Binary Motion streaming and scoped JSON endpoints use a dedicated backend proxy.
 router.use('/motion', motionProxyRouter);
+
+/** Typed, read-only desktop actions. No generic upstream URL or method proxy. */
+router.get('/parity/:action', async (req, res) => {
+  const action = req.params.action;
+  if (!Object.prototype.hasOwnProperty.call(PARITY_READ_ACTIONS, action)) {
+    res.status(404).json({ error: 'Unknown desktop parity capability.' });
+    return;
+  }
+  const workspace = typeof req.query.workspace === 'string' ? req.query.workspace : '';
+  const result = await fetchParityReadAction(action as ParityReadAction, workspace);
+  res.status(result.status).json(result.payload);
+});
 
 // End-to-End Unified Logging Endpoint
 router.post("/log", (req, res) => {

@@ -2,7 +2,7 @@
 
 Date: 2026-10-20
 Target: SuperAgent CLI source (`../superagent`, branch `main`) → T-Line React/Tauri desktop (`t-line`, branch `main`)
-Status: **Increment 1 implemented; full feature parity NOT achieved.**
+Status: **Increment 2 implemented (runtime capability contract, two read-only CLI workflows and identity probe); full feature parity NOT achieved.**
 
 ## Baseline findings
 
@@ -28,11 +28,12 @@ Audited the actual repositories rather than equating a UI button to working supp
 - [x] Reject attempts to run unimplemented CLI slash commands as if they were normal AI chat prompts.
 - [x] Replace legacy recursive slash-command forwarding with explicit unsupported notifications (existing actual local UI actions remain untouched).
 - [x] Opt-in T-Line local CLI runtime selection: `TLINE_SUPERAGENT_SOURCE_DIR` picks a validated *built* local SuperAgent package rather than relying on bunx; invalid path fails closed.
-- [ ] Expose a server-owned runtime capability manifest (commands, supported API operations, schema/version) through an authenticated SuperAgent endpoint, then retire source-code scanning as the sole truth.
-- [ ] Strictly identify the process on 127.0.0.1:7888 before declaring it a compatible SuperAgent server or changing its process lifecycle.
+- [x] Add an authenticated SuperAgent capability manifest at `GET /api/tline/capabilities` with live CLI registry, schema/version and a separate read-only HTTP action allowlist. The source scanner remains for offline autocomplete fallback.
+- [x] Change T-Line's port probe from accepting *any* HTTP status on port 7888 to verifying an authorized, versioned JSON `/api/ping` response. Occupied-but-unverified ports are not treated as ready or free, and are never automatically terminated.
 - [ ] Reconcile workspace, session ID, mode and active-provider changes before reconnect/restart; never kill unmanaged processes.
 
 **P1 — functional feature parity (not just autocomplete)**
+- [x] First real read-only desktop command adapters: `/daemon status`, `/gateway status` and `/parity` server capability inspection. Reject unsupported subcommands before any upstream request.
 - [ ] Add typed, authorized desktop adapters for `/mcp`, `/tools`, `/selfdev`, `/muse` and `/telegram`.
 - [ ] Implement async task streaming/cancel/retry with session-scoped event IDs and replay semantics.
 - [ ] Add UI for `/daemon` (schedule, logs, cancel), `/gateway`, `/motion`, `/macro`, `/mp`, `/skills`.
@@ -47,6 +48,29 @@ Audited the actual repositories rather than equating a UI button to working supp
 - [ ] Add motion editor/artifact routing, desktop media resources and e2e user workflows.
 - [ ] Add parity gates comparing CLI command/API capability IDs to T-Line UI routes and tests on every PR.
 - [ ] Add performance/regression coverage for SSE reconnect, rapid workspace switching and concurrent agents.
+
+## Increment 2: live typed read-only actions
+
+- SuperAgent: authenticated `GET /api/tline/capabilities` exposes live command
+  names and aliases, but explicitly marks these as CLI-only. A separate HTTP
+  allowlist currently contains just `daemon.status` and `gateway.status`.
+- T-Line: `GET /api/superagent/parity/:action?workspace=...` verifies server-side
+  bearer availability, only accepts declared read-only paths, validates the
+  manifest shape, preserves non-2xx HTTP status, limits response to 1 MiB, and
+  requires workspace context.
+- UI: `/parity`, `/daemon status`, `/gateway status` use manifest negotiation
+  and typed requests independently of LLM/model presets. No prompt or arbitrary
+  slash command is sent to SuperAgent. `/daemon jobs/runs` and gateway writes
+  remain intentionally unsupported because daemon state is global and missing
+  workspace authorization would expose other workspaces.
+- T-Line port probing now requires an authenticated, parseable SuperAgent
+  `/api/ping` response with a version. Ports occupied by unrelated or
+  unauthorized HTTP servers fail closed instead of triggering blind startup.
+- Unit tests cover server command registry contract, backend proxy restrictions,
+  port identity/occupancy and frontend command negotiation.
+- **Live server restart and full Tauri E2E are not performed.** Running services
+  may still use an older build without the new capability endpoint; in that
+  situation the UI explicitly reports unsupported runtime version.
 
 ## Increment 1 developer instructions
 

@@ -3,6 +3,7 @@ import { WorkspaceInfo } from '../hooks/useTerminals';
 
 import { PermissionCard, QuestionCard, PlanCard, TokenUsageCard, PendingPermission, PendingQuestion, TokenUsageData } from './SuperAgentInteractiveCards';
 import { getSlashCommands, getSubCommands, getCliOnlySuggestions, isCliOnlyCommand, SlashCommand } from './SuperAgentCommands';
+import { parseParityCommand, runParityCommand } from './SuperAgentParityActions';
 import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSidebar';
 import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
 import { ActiveTasksBar, ChecklistTaskItem } from './ActiveTasksBar';
@@ -599,6 +600,12 @@ export function SuperAgentConsole({
       const cmdName = parts[0];
       const cmdArgs = prompt.slice(cmdName.length).trim();
       const match = slashCommands.find(c => c.command.toLowerCase() === cmdName.toLowerCase());
+      if (parseParityCommand(prompt)) {
+        setInput('');
+        const output = await runParityCommand(prompt, workspace, getAuthHeader);
+        setMessages(prev => [...prev, { role: 'system', text: output }]);
+        return;
+      }
       if (isCliOnlyCommand(cmdName)) {
         setInput('');
         setMessages(prev => [...prev, {
@@ -713,6 +720,23 @@ export function SuperAgentConsole({
         text: `${command} is currently CLI-only. Open SuperAgent CLI in a terminal; T-Line has no desktop execution adapter for it yet.`
       }]);
     }),
+    {
+      command: '/parity',
+      description: 'Inspect live SuperAgent runtime capabilities (read-only)',
+      action: () => { void handleSend('/parity'); },
+    },
+    {
+      command: '/daemon',
+      argsHelp: '[status]',
+      description: 'Read live SuperAgent daemon status',
+      action: (args?: string) => { void handleSend('/daemon ' + (args || 'status')); },
+    },
+    {
+      command: '/gateway',
+      argsHelp: '[status]',
+      description: 'Read live SuperAgent gateway status',
+      action: (args?: string) => { void handleSend('/gateway ' + (args || 'status')); },
+    },
     // Dynamically inject installed skills as /skill-* commands
     ...installedSkills.map(skill => {
       const slug = skill.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
