@@ -71,7 +71,7 @@ describe('Native T-Line Motion Studio editor', () => {
         { type: 'set-text', layerId: 'title', text: 'New campaign' },
       ]);
     });
-    expect(await screen.findByText('Scene revision 2 saved')).toBeInTheDocument();
+    expect(await screen.findByText('Text saved · revision 2')).toBeInTheDocument();
   });
 
   it('starts detached render with a pinned project ID and handles render-job status', async () => {
@@ -89,6 +89,28 @@ describe('Native T-Line Motion Studio editor', () => {
     await waitFor(() => expect(motionStudioApi.render).toHaveBeenCalledWith('D:/projects/studio', id, 640));
     expect(await screen.findByText('Render queued at revision 1')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+  });
+
+  it('adds a rectangle and undoes the layer insertion with revision guard', async () => {
+    vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, base, ops) => {
+      const next = fixture();
+      next.revision = base + 1;
+      if (ops[0].type === 'add-layer') next.composition.layers.push(ops[0].layer);
+      if (ops[0].type === 'replace-composition') next.composition = ops[0].composition;
+      return next;
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    await screen.findByTestId('motion-canvas');
+    fireEvent.click(screen.getByRole('button', { name: 'Add rectangle layer' }));
+    await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith('D:/projects/studio', id, 1,
+      [expect.objectContaining({ type: 'add-layer', layer: expect.objectContaining({ kind: 'rect' }) })]));
+    await screen.findByText('Layer added · revision 2');
+    fireEvent.click(screen.getByRole('button', { name: 'Undo scene change' }));
+    await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith('D:/projects/studio', id, 2,
+      [{ type: 'replace-composition', composition: expect.objectContaining({ layers: expect.any(Array) }) }]));
+    expect(await screen.findByText('Undo · revision 3')).toBeInTheDocument();
   });
 
   it('does not resurrect a pending workspace response after unmount', async () => {

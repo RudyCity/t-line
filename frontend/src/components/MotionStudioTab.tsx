@@ -5,10 +5,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle, ChevronDown, Clapperboard, Film, Layers3, Loader2,
-  Pause, Play, Plus, RefreshCw, Save, Square, Type, X,
+  Pause, Play, Plus, RefreshCw, Save, Square, Type, X, Trash2, ArrowUp, ArrowDown, Undo2, Redo2,
 } from 'lucide-react';
 import {
-  motionStudioApi, type MotionJob, type MotionProject,
+  motionStudioApi, type MotionJob, type MotionProject, type MotionLayer, type MotionEdit,
   type MotionProperty, type MotionProjectSummary,
 } from '../services/motionStudioApi';
 import { evaluateLayer, fpsOf, frameLabel, makeKeyframeTrack } from '../services/motionScene';
@@ -72,6 +72,8 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [jobs, setJobs] = useState<MotionJob[]>([]);
   const [activeJobId, setActiveJobId] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
+  const [undoStack, setUndoStack] = useState<MotionProject['composition'][]>([]);
+  const [redoStack, setRedoStack] = useState<MotionProject['composition'][]>([]);
   const [draftText, setDraftText] = useState('');
   const [propertyDraft, setPropertyDraft] = useState<PropertyDraft>({ field: 'x', value: '0' });
   const mounted = useRef(true);
@@ -95,6 +97,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     selectionSeq.current++;
     setProject(null); setSelectedId(''); setSelectedLayer(null); setFrame(0);
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
+    setUndoStack([]); setRedoStack([]);
     const refresh = async () => {
       try {
         const [list, existingJobs] = await Promise.all([motionStudioApi.list(workspacePath), motionStudioApi.jobs(workspacePath)]);
@@ -115,6 +118,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     const selectedSequence = ++selectionSeq.current;
     if (!selectedId || !workspacePath) { setProject(null); return; }
     setProject(null); setSelectedLayer(null); setFrame(0); setPlaying(false);
+    setUndoStack([]); setRedoStack([]);
     setActiveJobId(jobs.find(item => item.projectId === selectedId)?.id || '');
     motionStudioApi.inspect(workspacePath, selectedId)
       .then(next => {
@@ -198,14 +202,78 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     setCreating(false); setProjectName(''); setSelectedId(created.id); setSuccess('New Motion project created');
   });
 
-  const saveText = () => {
-    if (!project || layer?.kind !== 'text' || draftText === layer.text) return;
+  const applyEditorEdits = (edits: MotionEdit[], note: string, focus?: string | null) => {
+    if (!project || busy) return;
+    const before = structuredClone(project.composition);
+    const selectedSequence = selectionSeq.current;
+    void operation(async () => {
+      const next = await motionStudioApi.edit(workspacePath, project.id, project.revision, edits);
+      if (selectedSequence !== selectionSeq.current) return;
+      setUndoStack(prev => [...prev.slice(-19), before]);
+      setRedoStack([]);
+      setProject(next);
+      if (focus !== undefined) setSelectedLayer(focus);
+      setSuccess(note + ' · revision ' + next.revision);
+    });
+  };
+
+  const restoreHistory = (direction: 'undo' | 'redo') => {
+    if (!project || busy) return;
+    const from = direction === 'undo' ? undoStack : redoStack;
+    const target = from[from.length - 1];
+    if (!target) return;
+    const before = structuredClone(project.composition);
+    const selectedSequence = selectionSeq.current;
     void operation(async () => {
       const next = await motionStudioApi.edit(workspacePath, project.id, project.revision, [
-        { type: 'set-text', layerId: layer.id, text: draftText },
+        { type: 'replace-composition', composition: structuredClone(target) },
       ]);
-      setProject(next); setSuccess('Scene revision ' + next.revision + ' saved');
+      if (selectedSequence !== selectionSeq.current) return;
+      if (direction === 'undo') {
+        setUndoStack(prev => prev.slice(0, -1));
+        setRedoStack(prev => [...prev.slice(-19), before]);
+      } else {
+        setRedoStack(prev => prev.slice(0, -1));
+        setUndoStack(prev => [...prev.slice(-19), before]);
+      }
+      setProject(next);
+      if (!next.composition.layers.some(item => item.id === selectedLayer)) {
+        setSelectedLayer(next.composition.layers[0]?.id ?? null);
+      }
+      setSuccess((direction === 'undo' ? 'Undo' : 'Redo') + ' · revision ' + next.revision);
     });
+  };
+
+  const insertLayer = (kind: MotionLayer['kind']) => {
+    if (!project) return;
+    const id = 'layer-' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+    const common = {
+      id, x: 120, y: 160, width: 480, height: 130,
+      rotation: 0, opacity: 1, fill: kind === 'text' ? '#FFFFFF' : '#4C80EE', tracks: [],
+    };
+    const layer: MotionLayer = kind === 'text'
+      ? { ...common, kind: 'text', text: 'New text', fontFamily: 'Arial', fontSize: 64 }
+      : { ...common, kind: 'rect' };
+    applyEditorEdits([{ type: 'add-layer', layer }], 'Layer added', id);
+  };
+
+  const reorderLayer = (delta: number) => {
+    if (!project || !selectedLayer) return;
+    const index = project.composition.layers.findIndex(item => item.id === selectedLayer);
+    const toIndex = index + delta;
+    if (index < 0 || toIndex < 0 || toIndex >= project.composition.layers.length) return;
+    applyEditorEdits([{ type: 'move-layer', layerId: selectedLayer, toIndex }], 'Layer reordered');
+  };
+
+  const removeSelectedLayer = () => {
+    if (!project || !selectedLayer) return;
+    const nextSelected = project.composition.layers.find(item => item.id !== selectedLayer)?.id ?? null;
+    applyEditorEdits([{ type: 'remove-layer', layerId: selectedLayer }], 'Layer removed', nextSelected);
+  };
+
+  const saveText = () => {
+    if (!project || layer?.kind !== 'text' || draftText === layer.text) return;
+    applyEditorEdits([{ type: 'set-text', layerId: layer.id, text: draftText }], 'Text saved');
   };
 
   const saveProperty = () => {
@@ -214,12 +282,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     const { field } = propertyDraft;
     const range = field === 'opacity' ? [0, 1] : field === 'rotation' ? [-36000, 36000] : [-100000, 100000];
     if (!Number.isFinite(value) || value < range[0] || value > range[1]) { message('Property value is outside the supported range'); return; }
-    void operation(async () => {
-      const next = await motionStudioApi.edit(workspacePath, project.id, project.revision, [
-        { type: 'set-property', layerId: layer.id, property: field, value },
-      ]);
-      setProject(next); setSuccess('Base property updated in revision ' + next.revision);
-    });
+    applyEditorEdits([{ type: 'set-property', layerId: layer.id, property: field, value }], 'Base property updated');
   };
 
   const keyframe = () => {
@@ -232,12 +295,8 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     const range = field === 'opacity' ? [0, 1] : field === 'rotation' ? [-36000, 36000] : [-100000, 100000];
     if (value < range[0] || value > range[1]) { message('Keyframe value is outside supported range'); return; }
     const track = makeKeyframeTrack(layer, field, frame, value);
-    void operation(async () => {
-      const next = await motionStudioApi.edit(workspacePath, project.id, project.revision, [
-        { type: 'set-track', layerId: layer.id, track },
-      ]);
-      setProject(next); setSuccess(`Keyframe set at ${frame} · previous value ${evaluated[field].toFixed(2)}`);
-    });
+    applyEditorEdits([{ type: 'set-track', layerId: layer.id, track }],
+      `Keyframe set at ${frame} · previous value ${evaluated[field].toFixed(2)}`);
   };
 
   const render = () => {
@@ -271,6 +330,8 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
           </select>
           <button className={action} onClick={() => void operation(async () => { await refreshProjects(); if (selectedId) setProject(await motionStudioApi.inspect(workspacePath, selectedId)); })} disabled={busy} aria-label="Refresh Motion projects"><RefreshCw size={13} /></button>
           <button className={action} onClick={() => setCreating(value => !value)} aria-expanded={creating}><Plus size={13} /> New</button>
+          <button className={action} disabled={!project || busy || undoStack.length === 0} aria-label="Undo scene change" onClick={() => restoreHistory('undo')}><Undo2 size={13} /> Undo</button>
+          <button className={action} disabled={!project || busy || redoStack.length === 0} aria-label="Redo scene change" onClick={() => restoreHistory('redo')}><Redo2 size={13} /> Redo</button>
           <button className={primary} onClick={render} disabled={!project || busy}><Film size={14} /> Render MP4</button>
         </div>
       </header>
@@ -301,6 +362,15 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
           <div className="grid min-h-0 flex-1 grid-cols-1 overflow-auto lg:grid-cols-[205px_minmax(0,1fr)_245px]">
             <aside className="min-h-0 border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] lg:overflow-y-auto lg:border-b-0 lg:border-r" aria-label="Motion layers">
               <div className="flex items-center gap-2 border-b border-[var(--border-color)] px-3 py-3 text-xs font-semibold"><Layers3 size={14} /> Layers ({project.composition.layers.length})</div>
+              <div className="flex flex-wrap items-center gap-1 border-b border-[var(--border-color)] p-2">
+                <button className={action} disabled={busy} onClick={() => insertLayer('text')} aria-label="Add text layer"><Type size={12} /> Text</button>
+                <button className={action} disabled={busy} onClick={() => insertLayer('rect')} aria-label="Add rectangle layer"><Square size={12} /> Rect</button>
+              </div>
+              <div className="flex flex-wrap items-center gap-1 p-2">
+                <button className={action} aria-label="Move layer up" disabled={busy || !layer || project.composition.layers[0]?.id === layer.id} onClick={() => reorderLayer(-1)}><ArrowUp size={13} /></button>
+                <button className={action} aria-label="Move layer down" disabled={busy || !layer || project.composition.layers[project.composition.layers.length - 1]?.id === layer.id} onClick={() => reorderLayer(1)}><ArrowDown size={13} /></button>
+                <button className={action} aria-label="Delete selected layer" disabled={busy || !layer} onClick={removeSelectedLayer}><Trash2 size={13} /></button>
+              </div>
               <div className="p-2">
                 {project.composition.layers.map((item, index) => (
                   <button key={item.id} onClick={() => setSelectedLayer(item.id)}
@@ -311,7 +381,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
                     <span className="font-mono text-[10px] opacity-60">{index + 1}</span>
                   </button>
                 ))}
-                <p className="px-3 py-2 text-[10px] leading-4 text-[var(--text-muted)]">Layer insertion and removal are not available in the v1 server API.</p>
+                <p className="px-3 py-2 text-[10px] leading-4 text-[var(--text-muted)]">Select a layer, then reorder, edit, or animate it.</p>
               </div>
             </aside>
 

@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { Router, type Request, type Response } from 'express';
 import { readSuperAgentServiceToken } from './superAgentAuth';
+import { isRegisteredMotionWorkspace, ensureMotionWorkspaceTrusted } from './motionWorkspaceAccess';
 
 const permitted = [
   /^\/$/,
@@ -28,6 +29,8 @@ const forwardedResponseHeaders = [
 interface MotionProxyOptions {
   upstreamPort?: number;
   serviceToken?: () => string | null;
+  isAuthorizedWorkspace?: (workspace: string) => boolean;
+  ensureTrust?: (workspace: string, token: string, port: number) => Promise<void>;
 }
 
 /**
@@ -37,7 +40,7 @@ interface MotionProxyOptions {
  */
 export function createMotionProxyRouter(options: MotionProxyOptions = {}): Router {
   const router = Router();
-  router.use((req: Request, res: Response) => {
+  router.use(async (req: Request, res: Response) => {
     const route = req.path || '/';
     if (!allowedRoute(req.method, route)) {
       res.status(404).json({ error: 'Motion route not found' });
@@ -54,6 +57,10 @@ export function createMotionProxyRouter(options: MotionProxyOptions = {}): Route
       return;
     }
     const workspace = queryWorkspace || headerWorkspace;
+    if (!(options.isAuthorizedWorkspace ?? isRegisteredMotionWorkspace)(workspace)) {
+      res.status(403).json({ error: 'Workspace is not registered as a local T-Line workspace' });
+      return;
+    }
     const token = (options.serviceToken ?? readSuperAgentServiceToken)();
     if (!token) {
       res.status(503).json({ error: 'SuperAgent service token unavailable' });
@@ -62,6 +69,12 @@ export function createMotionProxyRouter(options: MotionProxyOptions = {}): Route
     const body = ['POST', 'PUT', 'PATCH'].includes(req.method) ? Buffer.from(JSON.stringify(req.body ?? {}), 'utf8') : null;
     if (body && body.length > 1_000_000) {
       res.status(413).json({ error: 'Motion JSON payload too large' });
+      return;
+    }
+    try {
+      await (options.ensureTrust ?? ensureMotionWorkspaceTrusted)(workspace, token, options.upstreamPort ?? 7888);
+    } catch {
+      res.status(503).json({ error: 'Could not authorize the selected workspace in SuperAgent' });
       return;
     }
     const targetPath = '/api/motion' + (route === '/' ? '' : route) + '?workspace=' + encodeURIComponent(workspace);

@@ -54,7 +54,10 @@ describe('T-Line Motion proxy and service authentication', () => {
     const upstreamPort = await listen(upstream);
     const app = express();
     app.use(express.json());
-    app.use('/api/superagent/motion', createMotionProxyRouter({ upstreamPort, serviceToken: () => serviceKey }));
+    app.use('/api/superagent/motion', createMotionProxyRouter({ upstreamPort, serviceToken: () => serviceKey,
+      isAuthorizedWorkspace: workspace => workspace === 'allowed-root' || workspace === 'one',
+      ensureTrust: async () => {},
+    }));
     const server = http.createServer(app);
     const port = await listen(server);
     const base = 'http://127.0.0.1:' + port + '/api/superagent/motion';
@@ -82,7 +85,7 @@ describe('T-Line Motion proxy and service authentication', () => {
 
   it('fails closed without service metadata or for a forbidden proxy path', async () => {
     const app = express();
-    app.use('/api/superagent/motion', createMotionProxyRouter({ serviceToken: () => null }));
+    app.use('/api/superagent/motion', createMotionProxyRouter({ serviceToken: () => null, isAuthorizedWorkspace: () => true }));
     const port = await listen(http.createServer(app));
     const base = 'http://127.0.0.1:' + port + '/api/superagent/motion';
     expect((await fetch(base + '/projects?workspace=local')).status).toBe(503);
