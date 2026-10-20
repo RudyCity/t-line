@@ -5,6 +5,7 @@ import { authMiddleware } from './auth';
 import { sendSuperAgentRequest } from './superAgentBridge';
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
 import { fetchParityReadAction, PARITY_READ_ACTIONS, type ParityReadAction } from './superAgentParityBridge';
+import { streamTlineTaskEvents } from './superAgentTaskEvents';
 import motionProxyRouter from './motionProxy';
 import { getWorkspaceSessions, getSessionMessages } from './sessionManager';
 
@@ -15,6 +16,9 @@ router.use(authMiddleware);
 
 // Binary Motion streaming and scoped JSON endpoints use a dedicated backend proxy.
 router.use('/motion', motionProxyRouter);
+
+/** SSE relay with exact session identity, authenticated and bounded to local SuperAgent. */
+router.get('/tasks/events', streamTlineTaskEvents);
 
 /** Typed, read-only desktop actions. No generic upstream URL or method proxy. */
 router.get('/parity/:action', async (req, res) => {

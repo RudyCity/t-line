@@ -2,9 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, cleanup } from '@testing-library/react';
 import { SuperAgentTaskMonitor } from '../SuperAgentTaskMonitor';
 import { fetchTlineTaskSnapshot } from '../SuperAgentTaskSnapshot';
+import { checkTaskSseCapability, readTaskSseStream } from '../SuperAgentTaskEvents';
 
 vi.mock('../SuperAgentTaskSnapshot', () => ({
   fetchTlineTaskSnapshot: vi.fn(),
+}));
+vi.mock('../SuperAgentTaskEvents', () => ({
+  checkTaskSseCapability: vi.fn(),
+  readTaskSseStream: vi.fn(),
 }));
 vi.mock('../SuperAgentConsoleUtils', () => ({
   getAuthHeader: () => ({ Authorization: 'Bearer test' }),
@@ -22,7 +27,11 @@ const snapshot = (id: string) => ({
     total: 1, incompleteSources: [], replaySupported: false as const },
   negotiated: true as const,
 });
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.mocked(checkTaskSseCapability).mockRejectedValue(new Error('SSE unavailable'));
+  vi.mocked(readTaskSseStream).mockResolvedValue();
+});
 afterEach(() => cleanup());
 
 describe('SuperAgentTaskMonitor UI', () => {
@@ -34,6 +43,22 @@ describe('SuperAgentTaskMonitor UI', () => {
     await waitFor(() => expect(screen.getByText('job-my-project')).toBeTruthy());
     expect(screen.getByText('unverified')).toBeTruthy();
     expect(vi.mocked(fetchTlineTaskSnapshot).mock.calls[0][0]).toBe('D:/my');
+  });
+
+  it('renders SSE frames and stops snapshot polling while streaming is connected', async () => {
+    vi.mocked(fetchTlineTaskSnapshot).mockResolvedValue(snapshot('polling-initial'));
+    vi.mocked(checkTaskSseCapability).mockResolvedValue();
+    vi.mocked(readTaskSseStream).mockImplementation(async (_workspace, _session, _auth, onEvent, opts) => {
+      onEvent({ type: 'snapshot', id: 'c'.repeat(16) + '.1', snapshot: {
+        ...snapshot('live-from-sse').snapshot,
+      } });
+      await new Promise<void>(resolve => opts?.signal?.addEventListener('abort', () => resolve(), { once: true }));
+    });
+    render(<SuperAgentTaskMonitor workspace="D:/my" sessionId="chat1" />);
+    fireEvent.click(screen.getByRole('button', { name: /Cross-channel tasks/ }));
+    await waitFor(() => expect(screen.getByText('live-from-sse')).toBeTruthy());
+    expect(screen.getByText(/SSE live, bounded replay/)).toBeTruthy();
+    expect(vi.mocked(readTaskSseStream).mock.calls[0][1]).toBe('chat1');
   });
 
   it('discards a stale snapshot when the workspace changes before the response arrives', async () => {

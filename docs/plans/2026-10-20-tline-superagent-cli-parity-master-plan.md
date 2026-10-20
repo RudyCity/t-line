@@ -2,7 +2,7 @@
 
 Date: 2026-10-20
 Target: SuperAgent CLI source (`../superagent`, branch `main`) → T-Line React/Tauri desktop (`t-line`, branch `main`)
-Status: **Increment 4 implemented (workspace-scoped CLI/daemon/Muse task snapshots with reconnect-safe polling); full feature parity NOT achieved.**
+Status: **Increment 5 implemented (authenticated SSE task updates and bounded process-local event ID replay); full feature parity NOT achieved.**
 
 ## Baseline findings
 
@@ -37,7 +37,9 @@ Audited the actual repositories rather than equating a UI button to working supp
 - [x] Add read-only, typed desktop inspection adapters for `/mcp list`, `/tools list`, `/selfdev status` and `/muse status`; all mutation subcommands remain CLI-only.
 - [ ] Implement authorized write/execute adapters for MCP/tools, selfdev, Muse, and Telegram only with explicit per-operation scope and approvals.
 - [x] Implement read-only workspace-scoped retained CLI/daemon/Muse task snapshots and cursor-based conditional polling; stale snapshots are discarded on workspace/session switch.
-- [ ] Add true async event streaming and durable event IDs/replay, plus authorized task cancel/retry. Polling snapshots do not provide historical event replay.
+- [x] Add authenticated task SSE streaming, event IDs and bounded replay while the same SuperAgent process is running, with explicit replay-gap reset.
+- [ ] Add durable task transition ledger spanning restarts; server SSE records only observed snapshots, not all intermediate source transitions.
+- [ ] Add authorized cancel/retry adapters with ownership, workspace, session and trusted out-of-band approval verification.
 - [ ] Add UI for `/daemon` (schedule, logs, cancel), `/gateway`, `/motion`, `/macro`, `/mp`, `/skills`.
 - [ ] Bring `/memory` and `/history` workflow semantics in line with CLI, with workspace-backed sessions.
 - [ ] Implement multi-project/worktree authorization, progress visualization, review/approval and CLI agent handoff.
@@ -50,6 +52,33 @@ Audited the actual repositories rather than equating a UI button to working supp
 - [ ] Add motion editor/artifact routing, desktop media resources and e2e user workflows.
 - [ ] Add parity gates comparing CLI command/API capability IDs to T-Line UI routes and tests on every PR.
 - [ ] Add performance/regression coverage for SSE reconnect, rapid workspace switching and concurrent agents.
+
+## Increment 5: streaming task snapshots with bounded replay
+
+- SuperAgent adds the `tasks.events` capability and
+  `GET /api/tline/tasks/events?workspace=...&sessionId=...` over SSE.
+  A valid authenticated request must resolve the **exact active TLine
+  session**, same workspace and client mode; the stream closes if session
+  authority disappears. At most 24 concurrent SSE listeners are accepted.
+- A process-local event journal retains 64 observed task snapshot changes
+  per workspace + chat session and at most 64 scopes for 10 minutes of
+  inactivity. IDs use random per-process generation and a monotonically
+  increasing sequence. `Last-Event-ID` resumes **only** from a retained
+  event in the same session. Missing/expired/foreign IDs trigger explicit
+  `reset` and the latest full snapshot, never a false claim of replay.
+- Events are observed from the existing task sources every three seconds
+  **while the stream is connected**. The event journal is not a durable
+  source-emitted event log: task transitions occurring while no watcher
+  samples them, or before/after restart, cannot be reconstructed.
+- TLine provides an authenticated, fixed-path SSE relay that keeps the
+  upstream bearer token server-side. The task monitor negotiates SSE,
+  consumes streamed events with a bounded parser, persists only in-memory
+  resume ID for reconnect, and falls back to conditional snapshot polling
+  if an older server lacks `tasks.events`.
+- Task mutation, cancellation, retry, and arbitrary command execution are
+  still deliberately unsupported, pending explicit per-source authorization
+  and an independent owner-approval handshake. Actual Tauri runtime E2E
+  remains to be validated after a controlled service upgrade.
 
 ## Increment 4: retained task snapshots and desktop monitor
 

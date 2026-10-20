@@ -1,3 +1,13 @@
+## [1.3.688] - 2026-10-20
+
+### TLine ↔ SuperAgent Task SSE Streaming (Increment 5)
+
+- Added read-only authenticated `tasks.events` SSE capability with strict TLine session ID and workspace checks, bounded concurrent streams, and event IDs with a 64-record process-local replay journal.
+- TLine relays SSE through its authenticated Express backend using server-side credentials only, validates workspace/session/resume IDs, and closes upstream requests on client disconnect.
+- Task monitor now negotiates the SSE capability, consumes streaming task updates, displays replay-reset warnings, and automatically falls back to the existing 3.5-second snapshot polling if SSE is unavailable.
+- Event replay is **bounded and process-local**, not a durable ledger: old/unknown IDs explicitly trigger a reset and full snapshot, and transitions while no sampler is connected may be missed. Task cancel/retry remains blocked until scoped authorization/approval is implemented.
+- Added tests for event sequencing, replay gaps, isolation, SSE framing/authorization and fallback. No running SuperAgent services were restarted.
+
 ## [1.3.687] - 2026-10-20
 
 ### SuperAgent CLI ↔ TLine Retained Task Monitor (Increment 4)
