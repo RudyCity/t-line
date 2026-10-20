@@ -109,3 +109,11 @@ Avoid staging or overwriting unrelated T-Line CLI parity, Hermes, MCP OAuth or c
 - React Motion Studio component tests and backend proxy tests validate UI and authorization behavior. Backend/frontend TypeScript and production Vite bundle builds pass with existing CSS/chunk warnings.
 - Underlying engine retains a 1,800-frame cap. Larger render output may exceed T-Line preview's existing 64 MB in-memory blob limit; streaming/download without materializing the entire video remains a separate workflow.
 - No packaged/installed Tauri live end-to-end run has been performed. Older SuperAgent servers will return 404 for storage reads; the T-Line UI handles this without blocking editing.
+
+## Read-only queued render recovery diagnostics (2026-10-21)
+
+- The native editor now reads a separate authenticated GET /api/superagent/motion/queue-recovery endpoint through the T-Line server-only SuperAgent bearer proxy. Arbitrary methods and unregistered workspaces remain blocked; POST to the recovery route is not allowed.
+- The Motion header presents eligible and blocked persisted queue counts when nonzero. The existing Refresh action now refreshes render jobs, scheduler status, storage and queued-job recovery together.
+- This is intentionally inspection-only. Operators can use SuperAgent motion queue-recovery and motion dispatch-queue --apply from CLI after verifying any active process identity; the T-Line browser must not issue remote worker starts or lock deletion.
+- Older SuperAgent daemon versions may not implement this endpoint; the UI treats this optional request as unavailable and preserves regular scene editing without a warning cascade.
+- Source-level React/Express tests validate the summary UI, authentication policy and HTTP method boundaries; packaged live Tauri E2E is still a separate release gate.

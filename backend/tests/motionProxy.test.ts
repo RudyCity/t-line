@@ -72,6 +72,11 @@ describe('T-Line Motion proxy and service authentication', () => {
     const storage = await fetch(base + '/storage?workspace=allowed-root');
     expect(storage.status).toBe(200);
     expect((await storage.json()).url).toContain('/api/motion/storage');
+    const queueRecovery = await fetch(base + '/queue-recovery?workspace=allowed-root');
+    expect(queueRecovery.status).toBe(200);
+    expect((await queueRecovery.json()).url).toContain('/api/motion/queue-recovery');
+    expect((await fetch(base + '/queue-recovery?workspace=allowed-root', { method: 'POST' })).status).toBe(404);
+    expect((await fetch(base + '/queue-recovery?workspace=unknown')).status).toBe(403);
     expect((await fetch(base + '/storage?workspace=allowed-root', { method: 'POST' })).status).toBe(404);
     expect((await fetch(base + '/storage?workspace=unknown')).status).toBe(403);
     expect(metadata.url).toContain('workspace=allowed-root');

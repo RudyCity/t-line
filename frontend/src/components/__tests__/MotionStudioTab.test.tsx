@@ -7,7 +7,7 @@ import { evaluateLayer, evaluateTrack, makeKeyframeTrack } from '../../services/
 vi.mock('../../services/motionStudioApi', () => ({
   motionStudioApi: {
     list: vi.fn(), inspect: vi.fn(), create: vi.fn(), edit: vi.fn(),
-    jobs: vi.fn(), scheduler: vi.fn(), storage: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
+    jobs: vi.fn(), scheduler: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
   },
 }));
 const id = 'motion-' + 'a'.repeat(20);
@@ -34,6 +34,14 @@ beforeEach(() => {
   vi.mocked(motionStudioApi.scheduler).mockResolvedValue({
     maxConcurrentRenders: 2, queueLimit: 12, queued: 1, active: 1,
     slots: [{ slot: 0, jobId: 'motionjob-' + 'b'.repeat(24), state: 'claimed_unverified' }, { slot: 1, state: 'free' }],
+  });
+  vi.mocked(motionStudioApi.queueRecovery).mockResolvedValue({
+    minAgeSeconds: 30, queued: 2, eligible: 1, blocked: 1,
+    items: [
+      { jobId: 'motionjob-' + 'b'.repeat(24), createdAt: '2026-10-20T00:00:00Z', state: 'eligible' },
+      { jobId: 'motionjob-' + 'c'.repeat(24), createdAt: '2026-10-20T00:00:00Z', state: 'blocked', reason: 'worker claim exists' },
+    ],
+    warning: 'Read-only; inspection only',
   });
   vi.mocked(motionStudioApi.storage).mockResolvedValue({
     jobs: { total: 3, queued: 0, running: 1, completed: 2, failed: 0, cancelled: 0, interrupted: 0 },
@@ -197,6 +205,7 @@ describe('Native T-Line Motion Studio editor', () => {
     fireEvent.change(screen.getByLabelText('Current frame'), { target: { value: 25 } });
     expect(screen.getByText('0.83s · F25')).toBeInTheDocument();
     expect(screen.getByText(/3 jobs/)).toBeInTheDocument();
+    expect(screen.getByText(/Queue recovery: 1 eligible · 1 blocked/)).toBeInTheDocument();
     expect(screen.getByLabelText('Render resolution')).toHaveValue('640');
     fireEvent.change(screen.getByLabelText('Render resolution'), { target: { value: '1920' } });
     fireEvent.click(screen.getByRole('button', { name: 'Render MP4' }));

@@ -39,6 +39,11 @@ export type MotionEdit =
   | { type: 'replace-composition'; composition: MotionProject['composition'] }
   | { type: 'set-audio'; audio: MotionAudioTrack | null }
   | { type: 'set-audio-tracks'; audioTracks: MotionAudioTrack[] };
+export interface MotionQueueRecovery {
+  minAgeSeconds: number; queued: number; eligible: number; blocked: number;
+  items: Array<{ jobId: string; createdAt: string; state: 'eligible' | 'blocked'; reason?: string }>;
+  warning: string;
+}
 export interface MotionStorageStatus {
   jobs: { total: number; queued: number; running: number; completed: number; failed: number; cancelled: number; interrupted: number };
   completedArtifactBytes: number;
@@ -154,6 +159,7 @@ export const motionStudioApi = {
   jobs: (workspace: string) => json<MotionJob[]>(workspace, '/jobs'),
   scheduler: (workspace: string) => json<MotionSchedulerStatus>(workspace, '/scheduler'),
   storage: (workspace: string) => json<MotionStorageStatus>(workspace, '/storage'),
+  queueRecovery: (workspace: string) => json<MotionQueueRecovery>(workspace, '/queue-recovery'),
   status: (workspace: string, id: string) => json<MotionJob>(workspace, '/jobs/' + assertId(id, true)),
   cancel: (workspace: string, id: string) => json<{ cancellationRequested: boolean }>(workspace, '/jobs/' + assertId(id, true) + '/cancel', { method: 'POST', body: '{}' }),
   /** Authorize media via T-Line, then use an ephemeral object URL. Never put bearer credentials in <video src>. */

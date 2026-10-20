@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import {
   motionStudioApi, type MotionJob, type MotionProject, type MotionLayer, type MotionEdit, type MotionSchedulerStatus,
-  type MotionProperty, type MotionProjectSummary, type MotionStorageStatus,
+  type MotionProperty, type MotionProjectSummary, type MotionStorageStatus, type MotionQueueRecovery,
 } from '../services/motionStudioApi';
 import { evaluateLayer, fpsOf, frameLabel, makeKeyframeTrack } from '../services/motionScene';
 import { MotionCanvas } from './MotionCanvas';
@@ -44,6 +44,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [jobs, setJobs] = useState<MotionJob[]>([]);
   const [scheduler, setScheduler] = useState<MotionSchedulerStatus | null>(null);
   const [storage, setStorage] = useState<MotionStorageStatus | null>(null);
+  const [queueRecovery, setQueueRecovery] = useState<MotionQueueRecovery | null>(null);
   const [renderWidth, setRenderWidth] = useState<640 | 1280 | 1920>(640);
   const [activeJobId, setActiveJobId] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
@@ -75,18 +76,19 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     setProject(null); setSelectedId(''); setSelectedLayer(null); setFrame(0);
     setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
-    setScheduler(null); setStorage(null);
+    setScheduler(null); setStorage(null); setQueueRecovery(null);
     setUndoStack([]); setRedoStack([]);
     const refresh = async () => {
       try {
         const [list, existingJobs] = await Promise.all([motionStudioApi.list(workspacePath), motionStudioApi.jobs(workspacePath)]);
         // Older SuperAgent builds lack scheduler information; editor remains usable.
-        const [capacity, storageInfo] = await Promise.all([
+        const [capacity, storageInfo, recoveryInfo] = await Promise.all([
           motionStudioApi.scheduler(workspacePath).catch(() => null),
           motionStudioApi.storage(workspacePath).catch(() => null),
+          motionStudioApi.queueRecovery(workspacePath).catch(() => null),
         ]);
         if (!mounted.current || version.current !== sequence) return;
-        setProjects(list); setJobs(existingJobs); setScheduler(capacity); setStorage(storageInfo);
+        setProjects(list); setJobs(existingJobs); setScheduler(capacity); setStorage(storageInfo); setQueueRecovery(recoveryInfo);
         const latest = existingJobs.find(job => job.status === 'completed') || existingJobs[0];
         setActiveJobId(latest?.id || '');
       } catch (cause) {
@@ -403,6 +405,11 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
           {scheduler && <span role="status" className="rounded border border-[var(--border-color)] px-2 py-1 font-mono text-[10px] text-[var(--text-muted)]" title="Workspace render queue and rendering capacity">
             Queue {scheduler.queued}/{scheduler.queueLimit} · Render {scheduler.slots.filter(item => item.state === 'claimed_unverified').length}/{scheduler.maxConcurrentRenders}
           </span>}
+          {queueRecovery && (queueRecovery.eligible > 0 || queueRecovery.blocked > 0) && <span role="status"
+            className="rounded border border-[var(--border-color)] px-2 py-1 font-mono text-[10px] text-[var(--text-muted)]"
+            title="Read-only recovery diagnosis. Use the SuperAgent CLI and inspect worker identity before any queued job redispatch.">
+            Queue recovery: {queueRecovery.eligible} eligible · {queueRecovery.blocked} blocked
+          </span>}
           {storage && <span role="status" className="rounded border border-[var(--border-color)] px-2 py-1 font-mono text-[10px] text-[var(--text-muted)]"
             title="Read-only workspace render storage; existing completed exports are preserved">
             {storage.jobs.total} jobs · {(storage.completedArtifactBytes / (1024 * 1024)).toFixed(1)} MB · {storage.maintenance.candidates} old cleanup candidates
@@ -415,7 +422,16 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
             <option value="">Select a project</option>
             {projects.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select>
-          <button className={action} onClick={() => void operation(async () => { await refreshProjects(); if (selectedId) setProject(await motionStudioApi.inspect(workspacePath, selectedId)); })} disabled={busy} aria-label="Refresh Motion projects"><RefreshCw size={13} /></button>
+          <button className={action} onClick={() => void operation(async () => {
+            const [_, latestJobs, latestScheduler, latestStorage, latestRecovery] = await Promise.all([
+              refreshProjects(), motionStudioApi.jobs(workspacePath),
+              motionStudioApi.scheduler(workspacePath).catch(() => null),
+              motionStudioApi.storage(workspacePath).catch(() => null),
+              motionStudioApi.queueRecovery(workspacePath).catch(() => null),
+            ]);
+            setJobs(latestJobs); setScheduler(latestScheduler); setStorage(latestStorage); setQueueRecovery(latestRecovery);
+            if (selectedId) setProject(await motionStudioApi.inspect(workspacePath, selectedId));
+          })} disabled={busy} aria-label="Refresh Motion projects"><RefreshCw size={13} /></button>
           <button className={action} onClick={() => setCreating(value => !value)} aria-expanded={creating}><Plus size={13} /> New</button>
           <button className={action} disabled={!project || busy || undoStack.length === 0} aria-label="Undo scene change" onClick={() => restoreHistory('undo')}><Undo2 size={13} /> Undo</button>
           <button className={action} disabled={!project || busy || redoStack.length === 0} aria-label="Redo scene change" onClick={() => restoreHistory('redo')}><Redo2 size={13} /> Redo</button>

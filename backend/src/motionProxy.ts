@@ -8,6 +8,7 @@ const permitted = [
   /^\/projects$/,
   /^\/scheduler$/,
   /^\/storage$/,
+  /^\/queue-recovery$/,
   /^\/assets$/,
   /^\/assets\/asset-[a-f0-9]{64}$/,
   /^\/audio$/,
