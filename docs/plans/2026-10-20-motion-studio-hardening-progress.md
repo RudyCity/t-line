@@ -92,3 +92,11 @@ Avoid staging or overwriting unrelated T-Line CLI parity, Hermes, MCP OAuth or c
 - New audio imports append to existing `composition.audioTracks`, migrating legacy `composition.audio` through one revision-checked `set-audio-tracks` update. Individual changes preserve other clips. Undo/Redo of composition snapshots continues to operate against server-validated audio references.
 - Verified isolation of clip 2, invalid frame values, fifth-clip guard and native Motion Studio import, alongside an actual two-clip H.264+AAC render and backward-compatible single-clip engine.
 - Remaining: waveform UI, synced mixed-audio playback while scrubbing, audio mastering and mobile/native packaged Tauri smoke. Current per-clip preview plays source WAV in isolation.
+
+## Waveform and Frame-Synchronized Audio Preview (2026-10-20)
+
+- SuperAgent adds hash-validated PCM16 waveform envelope lookup, returning only 96 bounded numeric peak values over workspace-gated HTTP. T-Line explicitly allowlists this GET route through its authenticated service-token proxy.
+- The T-Line mixer visualizes each clip in declarative SVG with a timeline-relative playhead. Clicking its waveform stops playback and seeks to the corresponding project frame; source WAV players remain separate from timeline audio players.
+- Timeline audio previews use the current frame for per-clip start offsets, gain, fade in and fade out. A monotonic elapsed-time visual clock reduces frame drift. Browser volume above 1 and WebView autoplay restrictions mean live audio is best effort, not identical to AAC render output.
+- Tests cover envelope bounds, scope/auth protection, waveform seek, individual clip timing/gain/pause, rational playback clock, full frontend and proxy suites, and Vite production build.
+- Remaining: packaged Tauri end-to-end A/V synchronization, Web Audio mixing with sample-accurate timing, audio metering, longer PCM tracks, mastering and visual export parity.

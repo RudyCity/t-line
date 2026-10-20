@@ -11,6 +11,7 @@ const permitted = [
   /^\/assets\/asset-[a-f0-9]{64}$/,
   /^\/audio$/,
   /^\/audio\/audio-[a-f0-9]{64}$/,
+  /^\/audio\/audio-[a-f0-9]{64}\/waveform$/,
   /^\/projects\/motion-[a-f0-9]{20}(?:\/edits|\/render)?$/,
   /^\/jobs$/,
   /^\/jobs\/motionjob-[a-f0-9]{24}(?:\/cancel|\/recovery|\/artifact)?$/,

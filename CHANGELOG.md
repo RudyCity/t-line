@@ -1,3 +1,13 @@
+## [1.3.698] - 2026-10-20
+
+### Motion Studio: Waveform and Frame-Synchronized Audio Preview
+
+- Added authorized workspace WAV waveform lookup and a bounded 96-peak visual envelope for every audio clip in Motion Studio, with clickable seek and a scene-relative playhead.
+- Added an independent preview player per clip that follows the timeline start offset, gain and fade ramps while retaining separate source-WAV playback controls. HTML audio preview gain is capped at 1 while FFmpeg export can use up to 2.
+- Replaced increment-per-tick scene playback with an elapsed-time frame clock to reduce drift when timers are late.
+- Extended SuperAgent HTTP, T-Line proxy/client, waveform component, frame clock and audio synchronization regressions. Existing CSS/chunk-size build warnings remain.
+- WebView autoplay/precision and packaged Tauri audio E2E are not yet certified. No daemon restart or remote push.
+
 ## [1.3.697] - 2026-10-20
 
 ### Motion Studio: Multi-Track WAV Mixing and Clip Fades

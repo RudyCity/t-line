@@ -7,7 +7,7 @@ import { evaluateLayer, evaluateTrack, makeKeyframeTrack } from '../../services/
 vi.mock('../../services/motionStudioApi', () => ({
   motionStudioApi: {
     list: vi.fn(), inspect: vi.fn(), create: vi.fn(), edit: vi.fn(),
-    jobs: vi.fn(), scheduler: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(),
+    jobs: vi.fn(), scheduler: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
   },
 }));
 const id = 'motion-' + 'a'.repeat(20);
@@ -38,6 +38,7 @@ beforeEach(() => {
   vi.mocked(motionStudioApi.create).mockResolvedValue(fixture());
   vi.mocked(motionStudioApi.loadImageUrl).mockResolvedValue('blob:test-motion-image');
   vi.mocked(motionStudioApi.loadAudioUrl).mockResolvedValue('blob:test-motion-audio');
+  vi.mocked(motionStudioApi.loadAudioWaveform).mockResolvedValue({ peaks: Array(96).fill(0.4), seconds: 1, channels: 1, sampleRate: 16000 });
   vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, _rev, operations) => {
     const next = fixture();
     next.revision = 2;

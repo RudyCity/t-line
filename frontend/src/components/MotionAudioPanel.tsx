@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import type { MotionAudioTrack, MotionEdit, MotionProject } from '../services/motionStudioApi';
+import type { MotionAudioTrack, MotionEdit, MotionProject, MotionWaveform } from '../services/motionStudioApi';
+import { motionClipAtFrame, syncMotionAudioElement } from '../services/motionAudioSync';
 import { motionStudioApi } from '../services/motionStudioApi';
 
 interface Props {
@@ -7,12 +8,16 @@ interface Props {
   onUpload: (file: File) => void;
   onEdit: (edits: MotionEdit[], note: string) => void;
   onError: (message: string) => void;
+  frame?: number;
+  playing?: boolean;
+  onSeekFrame?: (frame: number) => void;
 }
 interface ClipProps {
   clip: MotionAudioTrack; index: number; durationFrames: number;
   workspacePath: string; busy: boolean; isActive: boolean;
   onSave: (clip: MotionAudioTrack) => void; onRemove: () => void;
   onError: (message: string) => void;
+  frame: number; fps: number; playing: boolean; onSeekFrame?: (frame: number) => void;
 }
 const field = 'rounded border border-[var(--border-color)] bg-[var(--bg-main)] px-2 py-1 text-[var(--text-main)]';
 const button = 'rounded border border-[var(--border-color)] bg-[var(--bg-card)] px-3 py-1.5 text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] disabled:opacity-40';
@@ -20,12 +25,16 @@ const numberInput = (value: string, min: number, max: number, whole = false) =>
   value.trim().length > 0 && Number.isFinite(Number(value)) &&
   (!whole || Number.isSafeInteger(Number(value))) && Number(value) >= min && Number(value) <= max;
 
-function MotionAudioClip({ clip, index, durationFrames, workspacePath, busy, isActive, onSave, onRemove, onError }: ClipProps) {
+function MotionAudioClip({ clip, index, durationFrames, workspacePath, busy, isActive, onSave, onRemove, onError,
+  frame, fps, playing, onSeekFrame }: ClipProps) {
   const [start, setStart] = useState(String(clip.startFrame));
   const [volume, setVolume] = useState(String(clip.volume));
   const [fadeIn, setFadeIn] = useState(String(clip.fadeInFrames ?? 0));
   const [fadeOut, setFadeOut] = useState(String(clip.fadeOutFrames ?? 0));
   const [preview, setPreview] = useState('');
+  const [waveform, setWaveform] = useState<MotionWaveform | null>(null);
+  const [sourceSeconds, setSourceSeconds] = useState(0);
+  const syncedAudioRef = useRef<HTMLAudioElement>(null);
   useEffect(() => {
     setStart(String(clip.startFrame)); setVolume(String(clip.volume));
     setFadeIn(String(clip.fadeInFrames ?? 0)); setFadeOut(String(clip.fadeOutFrames ?? 0));
@@ -43,6 +52,31 @@ function MotionAudioClip({ clip, index, durationFrames, workspacePath, busy, isA
       if (ownedUrl) URL.revokeObjectURL?.(ownedUrl);
     };
   }, [workspacePath, clip.assetId, onError]);
+  useEffect(() => {
+    let cancelled = false;
+    setWaveform(null);
+    void motionStudioApi.loadAudioWaveform(workspacePath, clip.assetId).then(result => {
+      if (cancelled) return;
+      if (!Array.isArray(result.peaks) || result.peaks.length < 8 || result.peaks.length > 256 ||
+        result.peaks.some(peak => !Number.isFinite(peak) || peak < 0 || peak > 1) ||
+        !Number.isFinite(result.seconds) || result.seconds <= 0 || result.seconds > 30) {
+        throw new Error('Invalid Motion waveform');
+      }
+      setWaveform(result);
+    }).catch(error => {
+      if (!cancelled) onError(error instanceof Error ? error.message : String(error));
+    });
+    return () => { cancelled = true; };
+  }, [workspacePath, clip.assetId, onError]);
+  useEffect(() => {
+    const media = syncedAudioRef.current;
+    if (!media || !preview) return;
+    syncMotionAudioElement(media, clip, frame, fps, waveform?.seconds ?? sourceSeconds, playing && isActive);
+  }, [preview, clip, frame, fps, waveform?.seconds, sourceSeconds, playing, isActive]);
+  useEffect(() => () => {
+    const media = syncedAudioRef.current;
+    if (media && !media.paused) media.pause();
+  }, []);
   const valid = numberInput(start, 0, durationFrames - 1, true) &&
     numberInput(volume, 0, 2) && numberInput(fadeIn, 0, durationFrames, true) &&
     numberInput(fadeOut, 0, durationFrames, true);
@@ -82,13 +116,47 @@ function MotionAudioClip({ clip, index, durationFrames, workspacePath, busy, isA
         onClick={() => onSave(next)}>{'Save audio' + suffix}</button>
       <button className={button} type="button" disabled={busy || !isActive}
         onClick={onRemove}>{'Remove audio' + suffix}</button>
-      {preview ? <audio controls aria-label={'Motion WAV preview' + suffix}
-        preload="none" src={preview} className="h-8 w-[175px]" /> : null}
+      {waveform && (
+        <button type="button" className="relative h-[42px] w-full overflow-hidden rounded border border-[var(--border-color)] bg-[var(--bg-main)]"
+          aria-label={'Seek audio waveform clip ' + (index + 1)}
+          disabled={!isActive || busy || !onSeekFrame}
+          title="Click the waveform to scrub to a scene frame"
+          onClick={event => {
+            if (!onSeekFrame) return;
+            const bounds = event.currentTarget.getBoundingClientRect();
+            if (bounds.width <= 0) return;
+            const ratio = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width));
+            onSeekFrame(Math.min(durationFrames - 1, clip.startFrame + Math.round(ratio * waveform.seconds * fps)));
+          }}>
+          <svg viewBox={'0 0 ' + waveform.peaks.length + ' 32'} preserveAspectRatio="none"
+            role="img" aria-label={'Waveform clip ' + (index + 1)} className="h-full w-full">
+            {waveform.peaks.map((peak, i) => (
+              <rect key={i} x={i} y={16 - Math.max(0.8, peak * 14)} width={0.75}
+                height={Math.max(1.6, peak * 28)} fill="var(--color-primary)" />
+            ))}
+            {(() => {
+              const progress = motionClipAtFrame(clip, frame, fps, waveform.seconds);
+              return progress.active ? <line x1={progress.sourceSeconds / waveform.seconds * waveform.peaks.length}
+                y1={0} x2={progress.sourceSeconds / waveform.seconds * waveform.peaks.length} y2={32}
+                stroke="var(--text-main)" strokeWidth={0.8} /> : null;
+            })()}
+          </svg>
+        </button>
+      )}
+      {preview ? <>
+        <audio controls aria-label={'Motion WAV preview' + suffix}
+          preload="none" src={preview} className="h-8 w-[175px]" />
+        <audio ref={syncedAudioRef} src={preview} preload="auto"
+          aria-label={'Synchronized audio clip ' + (index + 1)}
+          onLoadedMetadata={event => setSourceSeconds(event.currentTarget.duration)} />
+      </> : null}
     </div>
   );
 }
 
-export function MotionAudioPanel({ project, workspacePath, busy, isActive, onUpload, onEdit, onError }: Props) {
+export function MotionAudioPanel({ project, workspacePath, busy, isActive, onUpload, onEdit, onError,
+  frame = 0, playing = false, onSeekFrame }: Props) {
+  const fps = project.composition.fps.numerator / project.composition.fps.denominator;
   const clips = project.composition.audioTracks ??
     (project.composition.audio ? [project.composition.audio] : []);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -116,6 +184,7 @@ export function MotionAudioPanel({ project, workspacePath, busy, isActive, onUpl
           <MotionAudioClip key={index + ':' + clip.assetId} clip={clip} index={index}
             durationFrames={project.composition.durationFrames} workspacePath={workspacePath}
             busy={busy} isActive={isActive} onError={onError}
+            frame={frame} fps={fps} playing={playing} onSeekFrame={onSeekFrame}
             onSave={value => update(clips.map((existing, i) => index === i ? value : existing), 'Audio timing updated')}
             onRemove={() => update(clips.filter((_, i) => index !== i), 'Audio removed')} />
         ))}

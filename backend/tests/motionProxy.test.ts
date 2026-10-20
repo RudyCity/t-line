@@ -91,6 +91,9 @@ describe('T-Line Motion proxy and service authentication', () => {
     expect(uploadedAudio.status).toBe(201);
     expect((await uploadedAudio.json()).url).toContain('/api/motion/audio?workspace=allowed-root');
     expect((await fetch(base + '/audio/' + audioId + '?workspace=allowed-root')).status).toBe(200);
+    expect((await fetch(base + '/audio/' + audioId + '/waveform?workspace=allowed-root')).status).toBe(200);
+    expect((await fetch(base + '/audio/' + audioId + '/waveform?workspace=unknown')).status).toBe(403);
+    expect((await fetch(base + '/audio/' + audioId + '/waveform?workspace=allowed-root', { method: 'POST' })).status).toBe(404);
     expect((await fetch(base + '/audio/' + audioId + '?workspace=allowed-root', { method: 'HEAD' })).status).toBe(200);
     expect((await fetch(base + '/audio/' + audioId + '?workspace=unknown')).status).toBe(403);
     const created = await fetch(base + '/projects?workspace=allowed-root', {

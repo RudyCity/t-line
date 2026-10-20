@@ -1,9 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MotionAudioPanel } from '../MotionAudioPanel';
 import { motionStudioApi, type MotionProject } from '../../services/motionStudioApi';
 
-vi.mock('../../services/motionStudioApi', () => ({ motionStudioApi: { loadAudioUrl: vi.fn() } }));
+vi.mock('../../services/motionStudioApi', () => ({ motionStudioApi: { loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn() } }));
 const audioId = 'audio-' + 'f'.repeat(64);
 const scene: MotionProject = {
   schemaVersion: 1, id: 'motion-' + 'd'.repeat(20), name: 'Audio Scene',
@@ -14,9 +14,32 @@ const scene: MotionProject = {
     audio: { assetId: audioId, startFrame: 10, volume: 1 },
   },
 };
+beforeEach(() => {
+  // Avoid late async React updates in tests that only exercise controls.
+  vi.mocked(motionStudioApi.loadAudioWaveform).mockImplementation(() => new Promise(() => {}));
+});
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
+const waveform = { peaks: Array(96).fill(0.4), seconds: 1, sampleRate: 16000, channels: 1 };
+const envelope = { peaks: Array.from({ length: 96 }, (_, i) => (i % 5) / 5),
+  seconds: 1, sampleRate: 16000, channels: 1 };
+vi.mocked(motionStudioApi.loadAudioWaveform).mockResolvedValue(envelope);
 const common = { project: scene, workspacePath: 'D:/studio', busy: false, isActive: true };
 describe('Motion WAV timeline controls', () => {
+  it('draws a bounded waveform and seeks to the corresponding composition frame', async () => {
+    vi.mocked(motionStudioApi.loadAudioUrl).mockResolvedValue('blob:test-audio');
+    vi.mocked(motionStudioApi.loadAudioWaveform).mockResolvedValue(waveform);
+    const onSeekFrame = vi.fn();
+    render(<MotionAudioPanel {...common} frame={20} onSeekFrame={onSeekFrame}
+      onEdit={vi.fn()} onUpload={vi.fn()} onError={vi.fn()} />);
+    const seek = await screen.findByRole('button', { name: 'Seek audio waveform clip 1' });
+    expect(screen.getByRole('img', { name: 'Waveform clip 1' }).querySelectorAll('rect')).toHaveLength(96);
+    vi.spyOn(seek, 'getBoundingClientRect').mockReturnValue({
+      left: 100, top: 0, right: 300, bottom: 40, width: 200, height: 40,
+      x: 100, y: 0, toJSON: () => ({}),
+    });
+    fireEvent.click(seek, { clientX: 200 });
+    expect(onSeekFrame).toHaveBeenCalledWith(25);
+  });
   it('edits timing and volume through guarded scene operations', async () => {
     vi.mocked(motionStudioApi.loadAudioUrl).mockResolvedValue('blob:test-audio');
     const onEdit = vi.fn();

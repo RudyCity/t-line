@@ -18,6 +18,7 @@ export interface MotionAudioTrack {
   assetId: string; startFrame: number; volume: number; fadeInFrames?: number; fadeOutFrames?: number;
 }
 export interface MotionAudioAsset { id: string; bytes: number; sampleRate: number; channels: number; seconds: number }
+export interface MotionWaveform { peaks: number[]; seconds: number; sampleRate: number; channels: number }
 export interface MotionProject {
   schemaVersion: 1; id: string; workspaceRoot: string; name: string;
   revision: number; createdAt: string; updatedAt: string;
@@ -133,6 +134,8 @@ export const motionStudioApi = {
     }
     return URL.createObjectURL(data);
   },
+  loadAudioWaveform: (workspace: string, id: string) =>
+    json<MotionWaveform>(workspace, '/audio/' + assertAudioId(id) + '/waveform'),
   list: (workspace: string) => json<MotionProjectSummary[]>(workspace, '/projects'),
   inspect: (workspace: string, id: string) => json<MotionProject>(workspace, '/projects/' + assertId(id)),
   create: (workspace: string, name: string) =>

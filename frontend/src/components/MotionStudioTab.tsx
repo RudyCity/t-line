@@ -15,6 +15,7 @@ import { evaluateLayer, fpsOf, frameLabel, makeKeyframeTrack } from '../services
 import { MotionCanvas } from './MotionCanvas';
 import { MotionTimeline } from './MotionTimeline';
 import { MotionAudioPanel } from './MotionAudioPanel';
+import { motionPlaybackFrame } from '../services/motionTimelineClock';
 import { DEFAULT_MOTION_VIEWPORT, panMotionViewport, zoomMotionViewport, type MotionViewport } from '../services/motionViewport';
 
 interface Props { workspacePath: string; isActive: boolean }
@@ -147,9 +148,16 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
 
   useEffect(() => {
     if (!playing || !isActive || !project) return;
-    const timer = window.setInterval(() => setFrame(prev => (prev + 1) % project.composition.durationFrames), 1000 / fps);
+    const startedAt = performance.now();
+    const startFrame = frame;
+    const durationFrames = project.composition.durationFrames;
+    const timer = window.setInterval(() => setFrame(
+      motionPlaybackFrame(startFrame, performance.now() - startedAt, fps, durationFrames),
+    ), Math.min(50, 1000 / fps));
     return () => window.clearInterval(timer);
-  }, [playing, isActive, fps, project]);
+    // Deliberately restart the playback clock only on a play toggle or new scene,
+    // not on each frame state update.
+  }, [playing, isActive, fps, project?.id, project?.composition.durationFrames]);
 
   useEffect(() => {
     const active = jobs.some(item => !idle.has(item.status));
@@ -594,7 +602,8 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
           </div>
 
           <MotionAudioPanel project={project} workspacePath={workspacePath}
-            busy={busy} isActive={isActive} onUpload={importAudio}
+            busy={busy} isActive={isActive} frame={frame} playing={playing}
+            onSeekFrame={next => { setPlaying(false); setFrame(next); }} onUpload={importAudio}
             onEdit={(edits, note) => applyEditorEdits(edits, note)} onError={message} />
           <MotionTimeline project={project} currentFrame={frame} selectedLayer={selectedLayer}
             busy={busy} isActive={isActive} onFrame={next => { setPlaying(false); setFrame(next); }}
