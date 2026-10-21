@@ -36,6 +36,7 @@ beforeEach(() => {
   });
   vi.mocked(motionStudioApi.capabilities).mockResolvedValue({ capabilities: {
     aiPromptDirector: 'short-text-motion-preview', aiSemanticRevision: true,
+    aiWorkspaceMedia: 'uploaded-image-wav',
   } });
   vi.mocked(motionStudioApi.list).mockResolvedValue([{ id, name: 'Product intro', revision: 1 }]);
   vi.mocked(motionStudioApi.inspect).mockResolvedValue(fixture());
@@ -252,16 +253,59 @@ describe('Native T-Line Motion Studio editor', () => {
     fireEvent.change(screen.getByLabelText('Motion prompt'), { target: { value: 'Buat video promosi Laris' } });
     fireEvent.click(screen.getByRole('button', { name: 'Generate with AI' }));
     await waitFor(() => expect(motionStudioApi.generate).toHaveBeenCalledWith(
-      'D:/projects/studio', 'Buat video promosi Laris', 640,
+      'D:/projects/studio', 'Buat video promosi Laris', 640, {},
     ));
     expect(await screen.findByText(/AI Motion created revision 2/)).toBeInTheDocument();
     expect(screen.getByText('Buat video promosi Laris')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Motion prompt'), { target: { value: 'Percepat animasi teks' } });
     fireEvent.click(screen.getByRole('button', { name: 'Revise with AI' }));
     await waitFor(() => expect(motionStudioApi.revise).toHaveBeenCalledWith(
-      'D:/projects/studio', id, 'Percepat animasi teks', 640,
+      'D:/projects/studio', id, 'Percepat animasi teks', 640, {},
     ));
     expect(screen.getByText('Percepat animasi teks')).toBeInTheDocument();
+  });
+
+  it('uploads attached image and WAV assets before AI generation and resets them after success', async () => {
+    const imageId = 'asset-' + 'a'.repeat(64);
+    const audioId = 'audio-' + 'b'.repeat(64);
+    vi.mocked(motionStudioApi.uploadImage).mockResolvedValue({ id: imageId, width: 200, height: 100, bytes: 200 });
+    vi.mocked(motionStudioApi.uploadAudio).mockResolvedValue({
+      id: audioId, sampleRate: 16000, channels: 1, seconds: 1, bytes: 300,
+    });
+    const newJob = { id: 'motionjob-' + 'f'.repeat(24), projectId: id, revision: 2,
+      status: 'queued' as const, framesCompleted: 0, profile: { frameCount: 90, width: 640, height: 360 } };
+    vi.mocked(motionStudioApi.generate).mockResolvedValue({
+      project: { ...fixture(), revision: 2 }, job: newJob, outline: ['Produk baru'], limitations: [],
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    const image = new File([new Uint8Array(32)], 'logo.png', { type: 'image/png' });
+    const audio = new File([new Uint8Array(50)], 'music.wav', { type: 'audio/wav' });
+    fireEvent.change(screen.getByLabelText('Attach motion image'), { target: { files: [image] } });
+    await waitFor(() => expect(motionStudioApi.uploadImage).toHaveBeenCalledWith('D:/projects/studio', image));
+    expect(await screen.findByText(/Image: logo.png/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Attach motion WAV'), { target: { files: [audio] } });
+    await waitFor(() => expect(motionStudioApi.uploadAudio).toHaveBeenCalledWith('D:/projects/studio', audio));
+    expect(await screen.findByText(/WAV: music.wav/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Prompt audio gain'), { target: { value: '0.6' } });
+    fireEvent.change(screen.getByLabelText('Motion prompt'), { target: { value: 'Buat video dengan logo dan musik' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Generate with AI' }));
+    await waitFor(() => expect(motionStudioApi.generate).toHaveBeenCalledWith(
+      'D:/projects/studio', 'Buat video dengan logo dan musik', 640,
+      { imageAssetId: imageId, audioAssetId: audioId, audioGain: 0.6 },
+    ));
+    expect(screen.queryByText(/Image: logo.png/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/WAV: music.wav/)).not.toBeInTheDocument();
+  });
+
+  it('disables attachments for older SuperAgent servers instead of silently omitting media', async () => {
+    vi.mocked(motionStudioApi.capabilities).mockResolvedValue({
+      capabilities: { aiPromptDirector: 'short-text-motion-preview' },
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    expect(await screen.findByText(/Media attachments require an updated SuperAgent server/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Attach motion image')).toBeDisabled();
+    expect(screen.getByLabelText('Attach motion WAV')).toBeDisabled();
   });
 
   it('leaves manual editor usable when the connected SuperAgent server lacks Motion Director', async () => {

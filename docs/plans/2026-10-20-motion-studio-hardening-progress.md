@@ -142,3 +142,11 @@ T-Line Motion Studio now reads SuperAgent Motion Director's deterministic qualit
 The backend proxy allowlist permits only GET for quality and continues to deny POST/foreign workspace. Client types now include MotionQualityIssue/Report and an optional quality field on generated results. Frontend UI and service tests cover the quality display and authorized endpoint. The SuperAgent engine has new allowlisted AI motion presets slide-left, slide-up, tilt, fade and scene transitions cut/crossfade; all animations remain in the existing editable declarative Motion v1 schema.
 
 This is not yet a professional visual reviewer or automated media/music generation. Real connected provider and packaged Tauri end-to-end qualification remain outstanding.
+
+## Phase B2 — User-uploaded prompt media in T-Line Motion Studio (2026-10-21)
+
+Users can now attach a workspace image/logo and PCM16 WAV file next to the Motion Director prompt, before any Motion scene exists. Existing authenticated T-Line proxy upload endpoints validate media format, file bytes and selected workspace; the browser passes only immutable hash IDs through the prompt generation/revision requests and never accesses the host filesystem or forwards service credentials. The UI shows filename/length and supports remove/re-attach, audio gain selection, and automatically clears successful prompt attachments. Failed requests retain attachments for retry.
+
+The feature is gated on SuperAgent reporting aiWorkspaceMedia=uploaded-image-wav. Older connected daemons continue to show the manual Motion editor and may support prompt text, but cannot silently drop attached media IDs from unsupported endpoints. Workspace changes reset staged media; in-flight upload completion is ignored if the workspace/session has changed.
+
+The revised Motion Studio client supports an optional media object for prompt generation/revision and forwards it only inside workspace-authenticated JSON body. Frontend unit tests cover actual upload control actions, attached ID/gain propagation, cleanup after success, and older-server feature gating. Existing backend proxy endpoints for image, WAV, generate and revise continue to require authorized workspaces. This supports user-supplied media only; it is not TTS, music generation, remote stock search or auto soundtrack looping.

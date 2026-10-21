@@ -26,13 +26,21 @@ describe('Motion Studio authenticated client', () => {
     }));
     vi.stubGlobal('fetch', fetchMock);
     await motionStudioApi.quality('D:/studio', motionId);
-    await motionStudioApi.generate('D:/studio', 'Buat video promo', 640);
-    await motionStudioApi.revise('D:/studio', motionId, 'Bikin transisinya lebih cepat', 1280);
+    await motionStudioApi.generate('D:/studio', 'Buat video promo', 640, {
+      imageAssetId: 'asset-' + 'b'.repeat(64), audioAssetId: 'audio-' + 'c'.repeat(64), audioGain: 0.6,
+    });
+    await motionStudioApi.revise('D:/studio', motionId, 'Bikin transisinya lebih cepat', 1280, {
+      audioAssetId: 'audio-' + 'd'.repeat(64),
+    });
     expect(fetchMock.mock.calls[0][0]).toContain('/projects/' + motionId + '/quality?workspace=');
     expect(fetchMock.mock.calls[1][0]).toContain('/generate?workspace=');
     expect(fetchMock.mock.calls[2][0]).toContain('/projects/' + motionId + '/revise?workspace=');
     expect(JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string)).toMatchObject({
-      prompt: 'Buat video promo', width: 640,
+      prompt: 'Buat video promo', width: 640, imageAssetId: 'asset-' + 'b'.repeat(64),
+      audioAssetId: 'audio-' + 'c'.repeat(64), audioGain: 0.6,
+    });
+    expect(JSON.parse((fetchMock.mock.calls[2][1] as RequestInit).body as string)).toMatchObject({
+      audioAssetId: 'audio-' + 'd'.repeat(64),
     });
     expect((fetchMock.mock.calls[2][1] as RequestInit).headers).toMatchObject({
       Authorization: 'Bearer tline-only-token',

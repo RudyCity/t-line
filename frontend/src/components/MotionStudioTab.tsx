@@ -40,6 +40,10 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [projectName, setProjectName] = useState('');
   const [motionPrompt, setMotionPrompt] = useState('');
   const [directorAvailable, setDirectorAvailable] = useState(false);
+  const [directorMediaAvailable, setDirectorMediaAvailable] = useState(false);
+  const [promptImage, setPromptImage] = useState<{ id: string; name: string } | null>(null);
+  const [promptAudio, setPromptAudio] = useState<{ id: string; name: string; seconds: number } | null>(null);
+  const [promptAudioGain, setPromptAudioGain] = useState(1);
   const [promptHistory, setPromptHistory] = useState<Array<{ prompt: string; response: string }>>([]);
   const [quality, setQuality] = useState<MotionQualityReport | null>(null);
   const [busy, setBusy] = useState(false);
@@ -80,7 +84,8 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     const sequence = ++version.current;
     selectionSeq.current++;
     setProject(null); setSelectedId(''); setSelectedLayer(null); setFrame(0);
-    setMotionPrompt(''); setPromptHistory([]); setDirectorAvailable(false); setQuality(null);
+    setMotionPrompt(''); setPromptHistory([]); setDirectorAvailable(false); setDirectorMediaAvailable(false);
+    setPromptImage(null); setPromptAudio(null); setPromptAudioGain(1); setQuality(null);
     setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
     setScheduler(null); setSupervisor(null); setSupervisedRender(false);
@@ -100,6 +105,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
         if (!mounted.current || version.current !== sequence) return;
         setProjects(list); setJobs(existingJobs); setScheduler(capacity); setStorage(storageInfo); setQueueRecovery(recoveryInfo); setSupervisor(supervisorInfo);
         setDirectorAvailable(Boolean(motionInfo?.capabilities?.aiPromptDirector));
+        setDirectorMediaAvailable(motionInfo?.capabilities?.aiWorkspaceMedia === 'uploaded-image-wav');
         const latest = existingJobs.find(job => job.status === 'completed') || existingJobs[0];
         setActiveJobId(latest?.id || '');
       } catch (cause) {
@@ -401,14 +407,38 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
       `Keyframe set at ${frame} · previous value ${evaluated[field].toFixed(2)}`);
   };
 
+  const attachDirectorFile = (kind: 'image' | 'audio', file?: File) => {
+    if (!file || busy || !directorMediaAvailable) return;
+    const workspaceVersion = version.current;
+    void operation(async () => {
+      if (kind === 'image') {
+        const uploaded = await motionStudioApi.uploadImage(workspacePath, file);
+        if (!mounted.current || version.current !== workspaceVersion) return;
+        setPromptImage({ id: uploaded.id, name: file.name });
+        setSuccess('Image ready for the next AI Motion prompt');
+      } else {
+        const uploaded = await motionStudioApi.uploadAudio(workspacePath, file);
+        if (!mounted.current || version.current !== workspaceVersion) return;
+        setPromptAudio({ id: uploaded.id, name: file.name, seconds: uploaded.seconds });
+        setSuccess('WAV ready for the next AI Motion prompt');
+      }
+    });
+  };
+
   const submitMotionPrompt = () => {
     const prompt = motionPrompt.trim();
     if (!prompt || busy || !directorAvailable) return;
     const targetId = selectedId;
+    const workspaceVersion = version.current;
+    const media = {
+      ...(promptImage ? { imageAssetId: promptImage.id } : {}),
+      ...(promptAudio ? { audioAssetId: promptAudio.id, audioGain: promptAudioGain } : {}),
+    };
     void operation(async () => {
       const generated = targetId
-        ? await motionStudioApi.revise(workspacePath, targetId, prompt, renderWidth)
-        : await motionStudioApi.generate(workspacePath, prompt, renderWidth);
+        ? await motionStudioApi.revise(workspacePath, targetId, prompt, renderWidth, media)
+        : await motionStudioApi.generate(workspacePath, prompt, renderWidth, media);
+      if (!mounted.current || version.current !== workspaceVersion) return;
       if (generated.job.status === 'failed') throw new Error(generated.job.error || 'Motion render could not start');
       setProjects(await motionStudioApi.list(workspacePath));
       setSelectedId(generated.project.id);
@@ -421,7 +451,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
         prompt, response: generated.outline.join(' · ') +
           (generated.limitations.length ? ' · ' + generated.limitations.join('; ') : ''),
       }]);
-      setMotionPrompt('');
+      setMotionPrompt(''); setPromptImage(null); setPromptAudio(null); setPromptAudioGain(1);
       setSuccess('AI Motion created revision ' + generated.project.revision + ' · MP4 rendering started');
     });
   };
@@ -526,8 +556,35 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
             <Film size={14} /> {busy ? 'Agent working…' : selectedId ? 'Revise with AI' : 'Generate with AI'}
           </button>
         </form>
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-muted)]" aria-label="Motion prompt attachments">
+          <label className={action + ' cursor-pointer'}>
+            <ImageIcon size={13} /> Attach image/logo
+            <input type="file" aria-label="Attach motion image" accept="image/png,image/jpeg,image/webp"
+              className="sr-only" disabled={busy || !directorMediaAvailable}
+              onChange={event => { attachDirectorFile('image', event.target.files?.[0]); event.target.value = ''; }} />
+          </label>
+          <label className={action + ' cursor-pointer'}>
+            <Film size={13} /> Attach WAV soundtrack
+            <input type="file" aria-label="Attach motion WAV" accept=".wav,audio/wav,audio/x-wav"
+              className="sr-only" disabled={busy || !directorMediaAvailable}
+              onChange={event => { attachDirectorFile('audio', event.target.files?.[0]); event.target.value = ''; }} />
+          </label>
+          {promptImage && <span title={promptImage.id}>Image: {promptImage.name}
+            <button type="button" aria-label="Remove prompt image" className="ml-1 underline"
+              onClick={() => setPromptImage(null)} disabled={busy}>Remove</button>
+          </span>}
+          {promptAudio && <span title={promptAudio.id}>WAV: {promptAudio.name} ({promptAudio.seconds.toFixed(1)}s)
+            <button type="button" aria-label="Remove prompt audio" className="ml-1 underline"
+              onClick={() => setPromptAudio(null)} disabled={busy}>Remove</button>
+          </span>}
+          {promptAudio && <label>Audio gain
+            <input type="number" aria-label="Prompt audio gain" min={0} max={2} step={0.1}
+              className={control + ' ml-1 w-16'} disabled={busy} value={promptAudioGain}
+              onChange={event => setPromptAudioGain(Number(event.target.value))} />
+          </label>}
+        </div>
         <p className="mt-2 text-[11px] text-[var(--text-muted)]">
-          {directorAvailable ? 'AI uses the configured SuperAgent model. Audio generation, external footage, stock photos and 3D effects are not supported yet.' : 'AI Motion Director needs an updated SuperAgent server with prompt support. The manual editor remains available.'} Select “Select a project” to start a new video.
+          {directorAvailable ? 'AI uses the configured SuperAgent model. Attach existing images or PCM16 WAV (1 MB image / 2 MB WAV); audio synthesis, footage and 3D are not supported.' : 'AI Motion Director needs an updated SuperAgent server with prompt support. The manual editor remains available.'} {!directorMediaAvailable && directorAvailable ? ' Media attachments require an updated SuperAgent server.' : ''} Select “Select a project” to start a new video.
         </p>
       </div>
       {project && quality && (
