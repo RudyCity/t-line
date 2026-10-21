@@ -43,7 +43,12 @@
     ],
     "category": "DeveloperTool",
     "shortDescription": "T-Line Workspace Manager",
-    "longDescription": "T-Line is the desktop version of SuperAgent, an interactive AI coding assistant."
+    "longDescription": "T-Line is the desktop version of SuperAgent, an interactive AI coding assistant.",
+    "resources": {
+      "../backend/dist/": "backend/dist/",
+      "../backend/node_modules/": "backend/node_modules/",
+      "../backend/package.json": "backend/package.json"
+    }
   },
   "plugins": {
     "shell": {

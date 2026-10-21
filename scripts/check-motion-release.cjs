@@ -3,6 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
+const { inspectInstaller } = require("./check-tauri-bundle.cjs");
 
 const root = path.resolve(__dirname, "..");
 const strict = process.argv.includes("--strict");
@@ -57,6 +58,12 @@ function check() {
         ? "Found a local release app.exe, but its source revision/signature and installed runtime are unverified"
         : "No release app.exe found; run bun run build:tauri on Windows"),
     checkAudit(),
+    { gate: "windows-nsis-backend-payload", ...(() => {
+      const inspected = inspectInstaller();
+      return { status: inspected.status, explanation: inspected.description };
+    })() },
+    item("node-runtime-prerequisite", "unverified",
+      "Rust currently launches system Node.js; verify installed Node LTS on target computer or bundle approved runtime"),
     item("live-vision-provider", "unverified", "Requires authorized provider/image input and observed user E2E"),
     item("live-piper-model", "unverified", "Requires installed Piper, licensed local voice and real narration E2E"),
     item("tauri-installed-smoke", "unverified", "Requires installer, WebView2, token/auth and real workspace/media playback"),

@@ -21,14 +21,21 @@ function copyDirSync(src, dest) {
 // Clean and copy
 try {
   console.log('Copying backend assets for Tauri...');
+  const lockfile = path.join(__dirname, 'backend', 'package-lock.json');
+  if (!fs.existsSync(lockfile)) {
+    throw new Error('Desktop backend production lockfile is required for reproducible packaging');
+  }
+  const lockedDependencies = fs.readFileSync(lockfile);
   if (fs.existsSync(path.join(__dirname, 'backend'))) {
     fs.rmSync(path.join(__dirname, 'backend'), { recursive: true, force: true });
   }
+  fs.mkdirSync(path.join(__dirname, 'backend'), { recursive: true });
+  fs.writeFileSync(lockfile, lockedDependencies);
   copyDirSync(path.join(__dirname, '..', 'backend', 'dist'), path.join(__dirname, 'backend', 'dist'));
   fs.copyFileSync(path.join(__dirname, '..', 'backend', 'package.json'), path.join(__dirname, 'backend', 'package.json'));
 
   console.log('Installing production dependencies for backend...');
-  execSync('npm install --omit=dev', {
+  execSync('npm ci --omit=dev', {
     cwd: path.join(__dirname, 'backend'),
     stdio: 'inherit'
   });

@@ -1,4 +1,4 @@
-import { createProxyMiddleware } from 'http-proxy-middleware';
+import { createPreviewProxy } from './securePreviewProxy';
 import zlib from 'zlib';
 import path from 'path';
 import fs from 'fs';
@@ -24,12 +24,20 @@ const rewriteSetCookie = (cookieStr: string): string => {
   return parts.join('; ');
 };
 
-const isValidTabId = (id: any): boolean => {
-  return typeof id === 'string' && id.length > 0 && id !== 'null' && id !== 'undefined';
-};
+const isValidTabId = (id: any): boolean =>
+  typeof id === 'string' && /^[a-zA-Z0-9_.:-]{1,128}$/.test(id) &&
+  id !== 'null' && id !== 'undefined';
 
+// Proxy destinations are absolute origins, not paths, credentials or non-HTTP schemes.
 const isValidTarget = (target: any): boolean => {
-  return typeof target === 'string' && target.length > 0 && target !== 'null' && target !== 'undefined' && target.startsWith('http');
+  if (typeof target !== 'string' || target.length < 8 || target.length > 2048 ||
+      [...target].some(c => c.charCodeAt(0) <= 32 || c === '<' || c === '>' || c === '"' || c === "'")) return false;
+  try {
+    const url = new URL(target);
+    return (url.protocol === 'http:' || url.protocol === 'https:') &&
+      Boolean(url.hostname) && !url.username && !url.password &&
+      url.pathname === '/' && url.search === '' && url.hash === '';
+  } catch { return false; }
 };
 
 const sanitizeHeaders = (proxyHeaders: any, req?: any) => {
@@ -150,19 +158,17 @@ const sanitizeHeaders = (proxyHeaders: any, req?: any) => {
   return headers;
 };
 
-export const previewProxy = createProxyMiddleware({
+export const previewProxy = createPreviewProxy({
   pathFilter: (path, req) => {
     // Only proxy if request path begins with /api/preview-proxy
     const url = (req as any).originalUrl || req.url || path;
-    return url.startsWith('/api/preview-proxy');
+    const pathname = new URL(url, 'http://preview.local').pathname;
+    return pathname === '/api/preview-proxy' || pathname.startsWith('/api/preview-proxy/');
   },
   target: 'http://localhost',
   changeOrigin: true,
   secure: false, // Support self-signed certificates and dev https setups
   ws: true,
-  pathRewrite: {
-    '^/api/preview-proxy': '',
-  },
   router: (req) => {
     try {
       const urlParams = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
@@ -306,25 +312,45 @@ export const previewProxy = createProxyMiddleware({
     proxyRes: (proxyRes, req, res) => {
       const contentType = proxyRes.headers['content-type'] || '';
       if (contentType.includes('text/html')) {
-        let body = Buffer.from([]);
-        proxyRes.on('data', (chunk) => {
-          body = Buffer.concat([body, chunk]);
+        const maxHtmlBytes = 4 * 1024 * 1024;
+        let usedBytes = 0;
+        let aborted = false;
+        const chunks: Buffer[] = [];
+        proxyRes.on('error', () => {
+          if (!res.headersSent) res.writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' });
+          if (!res.writableEnded) res.end('Preview upstream disconnected');
+        });
+        proxyRes.on('data', (chunk: Buffer) => {
+          if (aborted) return;
+          usedBytes += chunk.length;
+          if (usedBytes > maxHtmlBytes) {
+            aborted = true;
+            res.writeHead(413, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end('Preview HTML exceeds 4 MB');
+            proxyRes.destroy();
+            return;
+          }
+          chunks.push(chunk);
         });
         proxyRes.on('end', () => {
+          if (aborted) return;
+          const body = Buffer.concat(chunks, usedBytes);
           const contentEncoding = proxyRes.headers['content-encoding'] || '';
           let decompressedBody = body;
           try {
             if (contentEncoding.includes('gzip')) {
-              decompressedBody = zlib.gunzipSync(body);
+              decompressedBody = zlib.gunzipSync(body, { maxOutputLength: maxHtmlBytes });
             } else if (contentEncoding.includes('deflate')) {
-              decompressedBody = zlib.inflateSync(body);
+              decompressedBody = zlib.inflateSync(body, { maxOutputLength: maxHtmlBytes });
             } else if (contentEncoding.includes('br')) {
-              decompressedBody = zlib.brotliDecompressSync(body);
+              decompressedBody = zlib.brotliDecompressSync(body, { maxOutputLength: maxHtmlBytes });
             }
-          } catch (decompressError) {
-            console.error('[Preview Proxy] Failed to decompress body:', decompressError);
+            if (decompressedBody.length > maxHtmlBytes) throw new Error('HTML too large');
+          } catch {
+            res.writeHead(413, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end('Preview HTML cannot be decoded within 4 MB limit');
+            return;
           }
-
           let html = decompressedBody.toString('utf8');
 
           // Strip http-equiv="content-security-policy" meta tags case-insensitively
@@ -334,8 +360,8 @@ export const previewProxy = createProxyMiddleware({
           const activeTarget = (isValidTabId(activeTabId) ? tabProxyTargets.get(activeTabId) : null) || currentProxyTarget;
           
           // Escape strings safely to prevent XSS injection into script block
-          const safeTabId = JSON.stringify(activeTabId);
-          const safeTarget = JSON.stringify(activeTarget);
+          const safeTabId = JSON.stringify(activeTabId).replace(/</g, '\\u003c');
+          const safeTarget = JSON.stringify(activeTarget).replace(/</g, '\\u003c');
 
           const baseTag = `<base href="/api/preview-proxy/">`;
           // Inject the current proxy target as a global variable so the helper script
