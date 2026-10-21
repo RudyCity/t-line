@@ -7,7 +7,12 @@ import os from 'node:os';
  * token server-side. Never send this token to the renderer or include it in URLs.
  */
 export function readSuperAgentServiceToken(
-  infoFile = path.join(os.homedir(), '.superagent-r', 'server-info-7888.json'),
+  infoFile = path.join(
+    process.env.SUPERAGENT_CONFIG_DIR?.trim()
+      ? path.resolve(process.env.SUPERAGENT_CONFIG_DIR.trim())
+      : path.join(os.homedir(), '.superagent-r'),
+    'server-info-7888.json'
+  ),
 ): string | null {
   try {
     const stat = fs.lstatSync(infoFile);
