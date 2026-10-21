@@ -338,14 +338,31 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     persistInstances(terminalInstances);
   }, [terminalInstances, persistInstances]);
 
-  // Flush any pending debounced writes when the hook unmounts so terminal
-  // state is not lost on hard navigation (e.g. window close).
+  // A hard reload can occur before the trailing 500ms persistence timer.
+  // Save the latest tab and PTY metadata on pagehide without terminating PTYs.
+  const latestTabsRef = useRef(tabs);
+  const latestInstancesRef = useRef(terminalInstances);
+  latestTabsRef.current = tabs;
+  latestInstancesRef.current = terminalInstances;
   useEffect(() => {
-    return () => {
-      // Cancel pending timers; React will re-run effects on remount.
-      // (No synchronous flush here: setItem on an unmounted component is fine
-      //  because we are exiting the page and localStorage is still writable.)
+    const flushForNavigation = () => {
+      try {
+        localStorage.setItem('tline-tabs-v2', JSON.stringify(latestTabsRef.current));
+        const snapshot: Record<string, TerminalInstanceData> = {};
+        for (const [id, inst] of Object.entries(latestInstancesRef.current)) {
+          snapshot[id] = {
+            id: inst.id, name: inst.name, initialName: inst.initialName,
+            cwd: inst.cwd, shellType: inst.shellType,
+            activeProcesses: inst.activeProcesses, initialCommand: inst.initialCommand
+          };
+        }
+        localStorage.setItem('tline-terminal-instances-v2', JSON.stringify(snapshot));
+      } catch (error) {
+        console.warn('Failed to persist terminal metadata on reload:', error);
+      }
     };
+    window.addEventListener('pagehide', flushForNavigation);
+    return () => window.removeEventListener('pagehide', flushForNavigation);
   }, []);
 
   useEffect(() => {

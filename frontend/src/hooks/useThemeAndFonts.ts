@@ -198,6 +198,28 @@ export function useThemeAndFonts() {
     localStorage.setItem('tline-font-mono-weight', weight);
   };
 
+  // Loading thirty font families on initial HTML paint blocks low-memory
+  // WebViews. Fetch only a saved/selected non-default font when needed.
+  useEffect(() => {
+    const requested = [
+      fontSans === 'Geist Sans' ? 'Geist' : fontSans,
+      fontMono
+    ];
+    const localFonts = new Set([
+      'System', 'SF Pro', 'SF Mono', 'Courier New', 'Cascadia Code', 'Hack',
+      'Outfit', 'JetBrains Mono'
+    ]);
+    for (const name of requested) {
+      if (localFonts.has(name) || document.querySelector('link[data-tline-font="' + name + '"]')) continue;
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.setAttribute('data-tline-font', name);
+      const family = encodeURIComponent(name).replace(/%20/g, '+');
+      link.href = 'https://fonts.googleapis.com/css2?family=' + family + ':wght@400;700&display=swap';
+      document.head.appendChild(link);
+    }
+  }, [fontSans, fontMono]);
+
   useEffect(() => {
     const root = document.documentElement;
     const preset = THEMES[theme] || THEMES.default;

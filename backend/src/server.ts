@@ -1,3 +1,5 @@
+import { createProcessScanCache } from './processScanCache';
+import { createSyncStateStore } from './syncStateStore';
 import { mapWithConcurrency } from './mapWithConcurrency';
 import express from 'express';
 import http from 'http';
@@ -435,12 +437,12 @@ app.get('/api/system/version', (_req, res) => {
 
 // Centralized tab and quick-launch state sync
 const SYNC_FILE = path.join(os.homedir(), '.tline-sync.json');
+const syncStateStore = createSyncStateStore(SYNC_FILE);
 
-app.get('/api/sync/state', authMiddleware, (req, res) => {
+app.get('/api/sync/state', authMiddleware, async (_req, res) => {
   try {
-    if (fs.existsSync(SYNC_FILE)) {
-      const data = fs.readFileSync(SYNC_FILE, 'utf8');
-      const parsed = JSON.parse(data);
+    const parsed = await syncStateStore.read() as any;
+    if (parsed) {
       if (parsed.tabs && Array.isArray(parsed.tabs)) {
         parsed.tabs = parsed.tabs.map((t: any) => {
           if (t.type === 'browser' && t.url) {
@@ -462,7 +464,7 @@ app.get('/api/sync/state', authMiddleware, (req, res) => {
   }
 });
 
-app.post('/api/sync/state', authMiddleware, (req, res) => {
+app.post('/api/sync/state', authMiddleware, async (req, res) => {
   try {
     const { tabs, terminalInstances, savedPrompts } = req.body;
     const state = {
@@ -470,7 +472,7 @@ app.post('/api/sync/state', authMiddleware, (req, res) => {
       terminalInstances: terminalInstances || {},
       savedPrompts: savedPrompts || []
     };
-    fs.writeFileSync(SYNC_FILE, JSON.stringify(state, null, 2), 'utf8');
+    const changed = await syncStateStore.save(state);
 
     // Broadcast updated state to all connected clients
     const payload = JSON.stringify({
@@ -478,9 +480,11 @@ app.post('/api/sync/state', authMiddleware, (req, res) => {
       type: 'sync_update',
       state
     });
-    for (const ws of activeWebSockets) {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(payload);
+    if (changed) {
+      for (const ws of activeWebSockets) {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(payload);
+        }
       }
     }
 
@@ -589,6 +593,7 @@ server.on('upgrade', (request, socket, head) => {
   });
 });
 
+const cachedActiveProcesses = createProcessScanCache(getActiveProcessesForPid, 3000);
 const activeWebSockets = new Set<WebSocket>();
 const fsWatchers = new Map<string, fs.FSWatcher>();
 // One filesystem rebuild may touch thousands of files. Broadcast a single
@@ -724,7 +729,7 @@ wss.on('connection', (ws: WebSocket) => {
       try {
         const pid = terminal.getPid();
         if (pid) {
-          const activeProcesses = await getActiveProcessesForPid(pid);
+          const activeProcesses = await cachedActiveProcesses(pid);
           const stateStr = JSON.stringify(activeProcesses);
           if (stateStr !== lastActiveStateStr) {
             lastActiveStateStr = stateStr;
@@ -890,7 +895,7 @@ wss.on('connection', (ws: WebSocket) => {
         if (term) {
           const pid = term.getPid();
           if (pid) {
-            getActiveProcessesForPid(pid).catch(() => {});
+            cachedActiveProcesses(pid).catch(() => {});
             try { term.getProcessName(); } catch (e) {}
           }
         }

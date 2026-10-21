@@ -99,11 +99,36 @@ const TerminalCard = React.memo(function TerminalCard({
   onRefreshTerminal,
   getWorkspaceForPath
 }: TerminalCardProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [wasVisible, setWasVisible] = useState(() => Boolean(term.initialCommand));
+  // Quick Launch commands must execute immediately even if the card was
+  // appended outside the scroll viewport. Keep the renderer alive afterward.
+  useEffect(() => {
+    if (term.initialCommand) setWasVisible(true);
+  }, [term.initialCommand]);
+  useEffect(() => {
+    if (wasVisible) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setWasVisible(true);
+      return;
+    }
+    const element = cardRef.current;
+    if (!element) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        setWasVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '200px' });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [wasVisible]);
   const ws = getWorkspaceForPath(term.cwd);
   const pids = term.activeProcesses || [];
   
   return (
     <div 
+      ref={cardRef}
       className={`grid-terminal-card ${isFocused ? 'focused' : ''}`}
       onClick={() => setFocusedTermId(termId)}
       style={{ height: `${cardHeight}px` }}
@@ -177,7 +202,7 @@ const TerminalCard = React.memo(function TerminalCard({
 
       {/* Card Body (Interactive Terminal) */}
       <div className="grid-card-body">
-        <TerminalInstance
+        {(wasVisible || isFocused || Boolean(term.initialCommand)) ? <TerminalInstance
           key={term.id}
           tab={term as any}
           active={wsConnected}
@@ -200,7 +225,7 @@ const TerminalCard = React.memo(function TerminalCard({
           handleZoomIn={handleZoomIn}
           handleZoomOut={handleZoomOut}
           onRefreshTerminal={onRefreshTerminal}
-        />
+        /> : <div className="flex h-full items-center justify-center text-xs opacity-60">Terminal renders when visible</div>}
       </div>
 
       {/* Card Footer (Running processes summary) */}

@@ -705,6 +705,23 @@ export function WorkspaceList({
     });
   }, [workspaces, search]);
 
+  // Group process badges once per terminal metadata update, rather than
+  // rescanning every PTY for every card render and dropdown interaction.
+  const processIndex = useMemo(() => {
+    const index = new Map<string, ActiveProcessSummary[]>();
+    const terminals = Object.values(terminalInstances);
+    for (const workspace of workspaces) {
+      const processes: ActiveProcessSummary[] = [];
+      for (const instance of terminals) {
+        if (instance?.cwd && isPathInWorktree(instance.cwd, workspace.path) && instance.activeProcesses?.length) {
+          processes.push(...instance.activeProcesses);
+        }
+      }
+      index.set(workspace.id, processes);
+    }
+    return index;
+  }, [workspaces, terminalInstances]);
+
   return (
     <div className="workspace-list-root">
       {/* ── Search bar ── */}
@@ -743,7 +760,7 @@ export function WorkspaceList({
             const hasDirtyChanges = totalDirty > 0;
             const isDropdownOpen = openDropdownId === w.id;
 
-            const runningProcesses = getRunningProcessesForPath(w.path, terminalInstances);
+            const runningProcesses = processIndex.get(w.id) || [];
             const hasRunning = runningProcesses.length > 0;
             const isClaudeActive = runningProcesses.some(p => p.isClaude);
             const isGeminiActive = runningProcesses.some(p => p.isGemini);
@@ -776,6 +793,9 @@ export function WorkspaceList({
                   isDimmed ? 'ws-card-dimmed' : ''
                 }`}
                 onClick={() => onWorkspaceClick(w.id)}
+                style={!isActive && !isDropdownOpen && displayedWorkspaces.length > 12
+                  ? { contentVisibility: 'auto', containIntrinsicSize: 'auto 96px' }
+                  : undefined}
               >
                 {/* Header row */}
                 <div className="flex items-center justify-between gap-2">

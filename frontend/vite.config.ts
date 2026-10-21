@@ -21,7 +21,12 @@ export default defineConfig({
       output: {
         manualChunks: {
           monaco: ['@monaco-editor/react'],
-          vendor: ['react', 'react-dom', 'lucide-react', '@visx/shape', '@xterm/addon-canvas', '@xterm/addon-fit', '@xterm/addon-webgl', '@xterm/xterm']
+          vendor: ['react', 'react-dom', 'lucide-react', '@visx/shape'],
+          'terminal-vendor': [
+            '@xterm/xterm', '@xterm/addon-canvas', '@xterm/addon-fit',
+            '@xterm/addon-webgl', '@xterm/addon-image', '@xterm/addon-search',
+            '@xterm/addon-unicode11', '@xterm/addon-web-links'
+          ]
         }
       }
     }

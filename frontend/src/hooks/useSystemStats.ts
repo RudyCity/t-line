@@ -28,7 +28,11 @@ export function useSystemStats(isAuthenticated: boolean) {
       return;
     }
 
+    let disposed = false;
+    let inFlight = false;
     const fetchStats = async () => {
+      if (disposed || inFlight || document.hidden) return;
+      inFlight = true;
       try {
         const res = await fetch('/api/system/stats', {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -58,18 +62,36 @@ export function useSystemStats(isAuthenticated: boolean) {
           }
         }
 
-        setSystemStats({
-          ...data,
-          desktop
+        if (disposed) return;
+        const next: SystemStats = { ...data, desktop };
+        setSystemStats(prev => {
+          if (prev &&
+              Math.abs(prev.backend.rss - next.backend.rss) < 4 * 1024 * 1024 &&
+              Math.abs(prev.backend.heapUsed - next.backend.heapUsed) < 4 * 1024 * 1024 &&
+              Math.abs(prev.system.free - next.system.free) < 16 * 1024 * 1024 &&
+              Math.abs((prev.desktop?.desktopTotal || 0) - (next.desktop?.desktopTotal || 0)) < 4 * 1024 * 1024) {
+            return prev;
+          }
+          return next;
         });
       } catch (e) {
-        logFetchError('Error fetching system stats', e);
+        if (!disposed) logFetchError('Error fetching system stats', e);
+      } finally {
+        inFlight = false;
       }
     };
 
-    fetchStats();
-    const interval = setInterval(fetchStats, 5000);
-    return () => clearInterval(interval);
+    void fetchStats();
+    // Visibility-aware and shared in-flight requests avoid overlapping native
+    // memory probes; small fluctuations need not repaint the entire dashboard.
+    const interval = setInterval(() => { void fetchStats(); }, 15000);
+    const onVisibility = () => { if (!document.hidden) void fetchStats(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      disposed = true;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [isAuthenticated]);
 
   return systemStats;

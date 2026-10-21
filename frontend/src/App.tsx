@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, Fragment, useRef, Suspense } from 'react';
+import { useState, useEffect, useMemo, Fragment, useRef, Suspense, lazy, type ComponentProps } from 'react';
 import { 
   Folder, 
   Plus, 
@@ -24,14 +24,43 @@ import {
   Clapperboard
 } from 'lucide-react';
 import { wsManager } from './services/websocket';
-import { FileViewerTab } from './components/FileViewerTab';
-import { DiffViewerTab } from './components/DiffViewerTab';
-import { TerminalGridTab } from './components/TerminalGridTab';
-import BrowserTab from './components/BrowserTab';
+
+
+
+
 import { SetupSecurityForm, LoginForm } from './components/AuthForms';
 import { LazyWorkspaceAddModal as WorkspaceAddModal, LazyWorktreeAddModal as WorktreeAddModal, LazyTunnelSetupModal as TunnelSetupModal, LazySettingsModal as SettingsModal, LazyShortcutHelpModal as ShortcutHelpModal, LazyConfirmModal as ConfirmModal, LazyWorkspaceEditModal as WorkspaceEditModal, LazySavePromptModal as SavePromptModal, LazySelectGridModal as SelectGridModal, LazyPortTunnelsManagerModal as PortTunnelsManagerModal } from './components/LazyModals';
-import { SuperAgentConsole } from './components/SuperAgentConsole';
-import { MotionStudioTab } from './components/MotionStudioTab';
+
+
+
+const LazyFileViewerTab = lazy(() => import('./components/FileViewerTab').then(m => ({ default: m.FileViewerTab })));
+function FileViewerTab(props: ComponentProps<typeof LazyFileViewerTab>) {
+  return <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-slate-400" role="status">Loading FileViewerTab...</div>}><LazyFileViewerTab {...props} /></Suspense>;
+}
+const LazyDiffViewerTab = lazy(() => import('./components/DiffViewerTab').then(m => ({ default: m.DiffViewerTab })));
+function DiffViewerTab(props: ComponentProps<typeof LazyDiffViewerTab>) {
+  return <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-slate-400" role="status">Loading DiffViewerTab...</div>}><LazyDiffViewerTab {...props} /></Suspense>;
+}
+const LazyTerminalGridTab = lazy(() => import('./components/TerminalGridTab').then(m => ({ default: m.TerminalGridTab })));
+function TerminalGridTab(props: ComponentProps<typeof LazyTerminalGridTab>) {
+  return <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-slate-400" role="status">Loading TerminalGridTab...</div>}><LazyTerminalGridTab {...props} /></Suspense>;
+}
+const LazyBrowserTab = lazy(() => import('./components/BrowserTab'));
+function BrowserTab(props: ComponentProps<typeof LazyBrowserTab>) {
+  return <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-slate-400" role="status">Loading BrowserTab...</div>}><LazyBrowserTab {...props} /></Suspense>;
+}
+const LazySuperAgentConsole = lazy(() => import('./components/SuperAgentConsole').then(m => ({ default: m.SuperAgentConsole })));
+function SuperAgentConsole(props: ComponentProps<typeof LazySuperAgentConsole>) {
+  return <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-slate-400" role="status">Loading SuperAgentConsole...</div>}><LazySuperAgentConsole {...props} /></Suspense>;
+}
+const LazyMotionStudioTab = lazy(() => import('./components/MotionStudioTab').then(m => ({ default: m.MotionStudioTab })));
+function MotionStudioTab(props: ComponentProps<typeof LazyMotionStudioTab>) {
+  return <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-slate-400" role="status">Loading MotionStudioTab...</div>}><LazyMotionStudioTab {...props} /></Suspense>;
+}
+const LazySplitLayoutRenderer = lazy(() => import('./components/SplitLayoutRenderer').then(m => ({ default: m.SplitLayoutRenderer })));
+function SplitLayoutRenderer(props: ComponentProps<typeof LazySplitLayoutRenderer>) {
+  return <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-slate-400" role="status">Loading SplitLayoutRenderer...</div>}><LazySplitLayoutRenderer {...props} /></Suspense>;
+}
 
 interface SavedPrompt {
   id: string;
@@ -50,7 +79,7 @@ import { useTabUiHandlers } from './hooks/useTabUiHandlers';
 import { useAuth } from './hooks/useAuth';
 import { useTerminals, WorkspaceInfo, TabData, getTerminalIds } from './hooks/useTerminals';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-import { SplitLayoutRenderer } from './components/SplitLayoutRenderer';
+
 import { Footer } from './components/Footer';
 import { TabsDropdown } from './components/TabsDropdown';
 import { EmptyDashboard } from './components/EmptyDashboard';
@@ -66,6 +95,7 @@ import { TPlusLogo } from './components/TPlusLogo';
 import { TabTooltip, TabContextMenu } from './components/TabUiComponents';
 import { NewTerminalButton } from './components/NewTerminalButton';
 import { getRuntimeSearchParams } from './utils/runtimeQuery';
+import { reconcileTabs, reconcileTerminalInstances } from './utils/syncReconcile';
 import { shellForDigit, getShellMeta, isCustomShell } from './utils/shellUtils';
 
 function normalizeLayout(node: any): any {
@@ -298,6 +328,7 @@ export default function App() {
   // Lazy-mount tracking: only add a BrowserTab to the DOM the first time it becomes active.
   // This prevents native WebView2 instances from being created for every browser tab upfront.
   const [mountedBrowserTabIds, setMountedBrowserTabIds] = useState<Set<string>>(new Set());
+  const [mountedDeferredTabIds, setMountedDeferredTabIds] = useState<Set<string>>(new Set());
 
   // Active panel state: 'workspaces' | 'explorer' | 'changes' | 'checkpoints'
   const [activePanel, setActivePanel] = useState<'workspaces' | 'explorer' | 'changes' | 'checkpoints' | 'tabs'>('workspaces');
@@ -446,6 +477,24 @@ export default function App() {
       });
     }
   }, [activeTabId, tabs]);
+
+  // Keep editor and agent tabs alive once visited, but avoid constructing
+  // Monaco, Motion canvases and agent consoles for inactive restored tabs.
+  useEffect(() => {
+    const active = tabs.find(tab => tab.id === activeTabId);
+    if (!active || !['file', 'agent', 'motion'].includes(active.type)) return;
+    setMountedDeferredTabIds(prev => {
+      if (prev.has(active.id)) return prev;
+      return new Set([...prev, active.id]);
+    });
+  }, [activeTabId, tabs]);
+  useEffect(() => {
+    const available = new Set(tabs.map(tab => tab.id));
+    setMountedDeferredTabIds(prev => {
+      const next = new Set([...prev].filter(id => available.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [tabs]);
 
   // Prune mountedBrowserTabIds when a browser tab is closed
   useEffect(() => {
@@ -1209,29 +1258,14 @@ export default function App() {
 
           // Update React states
           if (state.tabs && Array.isArray(state.tabs)) {
-            setTabs(prev => {
-              return state.tabs.map((newTab: any) => {
-                const existing = prev.find(t => t.id === newTab.id);
-                return {
-                  ...newTab,
-                  isDetached: existing ? !!existing.isDetached : false
-                };
-              });
-            });
+            setTabs(prev => reconcileTabs(prev, state.tabs));
           }
           if (state.terminalInstances && typeof state.terminalInstances === 'object') {
             // Strip initialCommand from all instances coming from remote sync.
             // initialCommand is ephemeral (one-shot) and must never be re-applied
             // to a terminal that is being reattached/synced — doing so would cause
             // the shell command to re-execute every time the session reconnects.
-            const sanitizedInstances = Object.fromEntries(
-              Object.entries(state.terminalInstances).map(([id, inst]: [string, any]) => {
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                const { initialCommand: _dropped, ...rest } = inst;
-                return [id, rest];
-              })
-            );
-            setTerminalInstances(sanitizedInstances);
+            setTerminalInstances(prev => reconcileTerminalInstances(prev, state.terminalInstances));
           }
           if (state.savedPrompts && Array.isArray(state.savedPrompts)) {
             setSavedPrompts(state.savedPrompts);
@@ -1390,29 +1424,14 @@ export default function App() {
         const data = await res.json();
         // Update states only if they are not empty or exist
         if (data.tabs && Array.isArray(data.tabs)) {
-          setTabs(prev => {
-            return data.tabs.map((newTab: any) => {
-              const existing = prev.find(t => t.id === newTab.id);
-              return {
-                ...newTab,
-                isDetached: existing ? !!existing.isDetached : false
-              };
-            });
-          });
+          setTabs(prev => reconcileTabs(prev, data.tabs));
         }
         if (data.terminalInstances && typeof data.terminalInstances === 'object') {
           // Strip initialCommand from all instances restored from the server.
           // initialCommand is ephemeral (one-shot, used only at terminal creation time).
           // Re-applying it after a session restore/reconnect would cause the shell
           // command to fire again in every terminal that was opened via Quick Launch.
-          const sanitizedInstances = Object.fromEntries(
-            Object.entries(data.terminalInstances).map(([id, inst]: [string, any]) => {
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
-              const { initialCommand: _dropped, ...rest } = inst;
-              return [id, rest];
-            })
-          );
-          setTerminalInstances(sanitizedInstances);
+          setTerminalInstances(prev => reconcileTerminalInstances(prev, data.terminalInstances));
         }
         if (data.savedPrompts && Array.isArray(data.savedPrompts)) {
           setSavedPrompts(data.savedPrompts);
@@ -2445,7 +2464,7 @@ export default function App() {
               ))}
 
               {/* Native Motion Studio tabs remain workspace-pinned across sidebar navigation. */}
-              {tabs.filter(tab => tab.type === 'motion' && !tab.isDetached).map(tab => (
+              {tabs.filter(tab => tab.type === 'motion' && !tab.isDetached && mountedDeferredTabIds.has(tab.id)).map(tab => (
                 <div key={tab.id} className="h-full w-full" style={{ display: tab.id === activeTabId ? 'block' : 'none' }}>
                   <MotionStudioTab
                     isActive={tab.id === activeTabId}
@@ -2455,7 +2474,7 @@ export default function App() {
               ))}
 
               {/* SuperAgent console tabs stay mounted continuously so background execution and WS stay alive on tab switches */}
-              {tabs.filter(t => t.type === 'agent' && !t.isDetached).map(tab => (
+              {tabs.filter(t => t.type === 'agent' && !t.isDetached && mountedDeferredTabIds.has(t.id)).map(tab => (
                 <div
                   key={tab.id}
                   className="w-full h-full"
@@ -2476,7 +2495,7 @@ export default function App() {
               ))}
 
               {/* File viewer tabs stay mounted continuously so that edits are preserved and switching is instant */}
-              {tabs.filter(t => t.type === 'file').map(tab => (
+              {tabs.filter(t => t.type === 'file' && mountedDeferredTabIds.has(t.id)).map(tab => (
                 <div
                   key={tab.id}
                   className="w-full h-full"

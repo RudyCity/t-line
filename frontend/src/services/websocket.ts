@@ -1,9 +1,11 @@
+import { enqueueOutbound, type QueuedOutboundMessage } from './outboundQueue';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 
 class TerminalWebSocketManager {
   private ws: WebSocket | null = null;
   private listeners = new Map<string, (data: any) => void>();
-  private messageQueue: string[] = [];
+  private messageQueue: QueuedOutboundMessage[] = [];
+  private lastQueueWarning = 0;
   private token: string = '';
   private onConnectionChange: (connected: boolean) => void = () => {};
   private reconnectAttempts: number = 0;
@@ -74,8 +76,8 @@ class TerminalWebSocketManager {
         this.onConnectionChange(true);
         // Flush queue
         while (this.messageQueue.length > 0) {
-          const msg = this.messageQueue.shift();
-          if (msg && this.ws) this.ws.send(msg);
+          const queued = this.messageQueue.shift();
+          if (queued && this.ws) this.ws.send(queued.text);
         }
       };
 
@@ -158,7 +160,23 @@ class TerminalWebSocketManager {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(message);
     } else {
-      this.messageQueue.push(message);
+      let type: string | undefined;
+      let id: string | undefined;
+      try {
+        const parsed = JSON.parse(message);
+        type = parsed.type;
+        id = parsed.id;
+      } catch { /* malformed legacy message: still bounded */ }
+      if (!enqueueOutbound(this.messageQueue, { text: message, kind: type, id })) {
+        const now = Date.now();
+        if (now - this.lastQueueWarning > 3000) {
+          this.lastQueueWarning = now;
+          console.warn('[Terminal] WebSocket offline queue full; message refused.');
+          window.dispatchEvent(new CustomEvent('tline-toast', {
+            detail: { message: 'Terminal offline buffer is full. Check the connection before typing further.' }
+          }));
+        }
+      }
     }
   }
 }
