@@ -48,6 +48,7 @@ function checkAudit() {
   return parseAudit(result.stdout);
 }
 function check() {
+  const bundle = inspectInstaller();
   const release = path.join(root, "desktop-tauri", "src-tauri", "target", "release", "app.exe");
   const gates = [
     item("frontend-backend-build", "unverified", "Run bun run build:frontend and bun run build:backend on this revision"),
@@ -58,12 +59,10 @@ function check() {
         ? "Found a local release app.exe, but its source revision/signature and installed runtime are unverified"
         : "No release app.exe found; run bun run build:tauri on Windows"),
     checkAudit(),
-    { gate: "windows-nsis-backend-payload", ...(() => {
-      const inspected = inspectInstaller();
-      return { status: inspected.status, explanation: inspected.description };
-    })() },
-    item("node-runtime-prerequisite", "unverified",
-      "Rust currently launches system Node.js; verify installed Node LTS on target computer or bundle approved runtime"),
+    item("windows-nsis-backend-payload", bundle.status, bundle.description),
+    item("bundled-node-runtime", bundle.status === "pass" ? "pass" : bundle.status,
+      bundle.status === "pass" ? "Installer provides byte-verified, licensed Node.js executable running without system PATH" :
+      "Bundled Node.js must be verified before Windows production distribution"),
     item("live-vision-provider", "unverified", "Requires authorized provider/image input and observed user E2E"),
     item("live-piper-model", "unverified", "Requires installed Piper, licensed local voice and real narration E2E"),
     item("tauri-installed-smoke", "unverified", "Requires installer, WebView2, token/auth and real workspace/media playback"),

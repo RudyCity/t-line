@@ -54,3 +54,6 @@ graphify-out/
 
 # Unrelated superagent CLI files accidentally created
 src/core/
+
+# Build-generated redistributable Node.js executable and licensing assets
+/desktop-tauri/node-runtime/

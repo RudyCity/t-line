@@ -206,3 +206,13 @@ P1 installer repair: bundle resources explicitly include ../backend/dist/, ../ba
 - Smoke from the extracted NSIS loaded SQLite 3.53.2 in memory and resolved the HTTP proxy module. This is not an installed desktop/WebView2 login or Motion render acceptance test.
 - Backend production dependency audit: zero known npm production vulnerabilities in 129 audited packages after migration; no force-fix or unsupported dependency downgrade.
 - Remaining release gates intentionally fail closed: system Node.js prerequisite on clean machines, installed Tauri/WebView2 workspace-auth and video playback, signing/updater trust, connected vision model/Piper E2E, and stress/fault resilience.
+
+### P1 clean-machine runtime closure: embedded Node.js (2026-10-21)
+
+The Windows NSIS installer now includes a separately staged licensed Node.js runtime (node-runtime/node.exe and its unmodified distribution LICENSE). The copy-assets step sources the real Node executable from the build machine, checks it is a supported Node.js release, requires the distribution license, copies both only to ignored build artifacts, and executes the copy to confirm the staged runtime version. No Node executable or third-party license binary is committed to the Git repository.
+
+The Tauri Rust launcher resolves node-runtime/node.exe from the installed Resource directory before falling back to system Node in development/older portable builds. The eager pre-Tauri system-node-only check was moved into the Tauri setup phase so a clean machine can load bundled resources first. This removes the external Node.js prerequisite for the packaged Windows executable without changing the active user's background service.
+
+A Windows NSIS installer of 36,059,454 bytes was built with bundled Node.js 24.13.0. The installer was selectively extracted and its Node binary was launched with an empty system PATH; it printed v24.13.0. Both the extracted runtime and LICENSE matched staging bytes exactly. The automated Tauri bundle checker now extracts and byte-compares these assets, verifies the Node executable runs without PATH, and fails if any resource is missing. The release checker records a passing bundled-node-runtime gate when all checks pass.
+
+Important: bundled Node.js removes an installation prerequisite, but Node itself has its own security update lifecycle separate from npm audit. Keep the binary and licensing information updated for each release. Installer GUI startup, WebView2, real workspace authentication, live SuperAgent Motion rendering, code signing and updater verification still require clean-Windows installed-app smoke and certification.

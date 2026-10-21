@@ -40,6 +40,10 @@ try {
     stdio: 'inherit'
   });
 
+  // Bundle an independently licensed Node.js runtime for clean Windows installs.
+  // The launcher prefers the verified bundled runtime over any host PATH entry.
+  require('./prepare-node-runtime.js').prepareNodeRuntime(__dirname);
+
   // Remove .bin folder to completely avoid symlinks
   const binPath = path.join(__dirname, 'backend', 'node_modules', '.bin');
   if (fs.existsSync(binPath)) {

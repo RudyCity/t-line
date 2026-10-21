@@ -45,6 +45,27 @@ fn is_node_installed() -> bool {
         .unwrap_or(false)
 }
 
+// Use the licensed Node binary shipped with the Tauri installer when present.
+// Fall back to system Node only for developer or older portable distributions.
+fn available_node_runtime(app: &tauri::AppHandle) -> Option<PathBuf> {
+    #[cfg(target_os = "windows")]
+    let binary = "node-runtime/node.exe";
+    #[cfg(not(target_os = "windows"))]
+    let binary = "node-runtime/node";
+    for resource in [binary.to_string(), format!("_up_/{}", binary)] {
+        if let Ok(candidate) = app.path().resolve(&resource, tauri::path::BaseDirectory::Resource) {
+            if candidate.is_file() {
+                return Some(candidate);
+            }
+        }
+    }
+    if is_node_installed() {
+        Some(PathBuf::from("node"))
+    } else {
+        None
+    }
+}
+
 fn show_missing_node_dialog() {
     #[cfg(target_os = "windows")]
     {
@@ -1046,7 +1067,11 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
                         let path_str = path.to_string_lossy();
                         let clean_path = path_str.strip_prefix(r"\\?\").unwrap_or(&path_str);
                         println!("[tauri] Spawning node with script: {}", clean_path);
-                        let mut cmd = Command::new("node");
+                        let Some(node_runtime) = available_node_runtime(&app_handle_clone) else {
+                            eprintln!("[tauri] Neither bundled nor system Node.js is available.");
+                            return;
+                        };
+                        let mut cmd = Command::new(node_runtime);
                         cmd.arg("--max-old-space-size=64")
                             .arg("--expose-gc")
                             .arg(clean_path)
@@ -1625,11 +1650,6 @@ fn get_memory_usage(state: tauri::State<'_, DesktopState>) -> Result<serde_json:
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    if !is_node_installed() {
-        show_missing_node_dialog();
-        std::process::exit(1);
-    }
-
     let backend_child: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
 
     let state = DesktopState {
@@ -1672,6 +1692,10 @@ pub fn run() {
             }
 
             let app_handle = app.handle().clone();
+            if available_node_runtime(&app_handle).is_none() {
+                show_missing_node_dialog();
+                return Err("Neither bundled nor system Node.js is available for T-Line".into());
+            }
             let state_ref = app.state::<DesktopState>();
 
             let menu = build_tray_menu(&app_handle, state_ref.inner())

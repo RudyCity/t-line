@@ -13,7 +13,9 @@ function inspectListing(output) {
   const native = /backend\/node_modules\/better-sqlite3\/build\/release\/better_sqlite3\.node(?:\s|$)/m.test(paths);
   const dependencies = /backend\/node_modules\/http-proxy\/package\.json(?:\s|$)/m.test(paths);
   const manifest = /backend\/package\.json(?:\s|$)/m.test(paths);
-  return { server, native, dependencies, manifest };
+  const nodeRuntime = /node-runtime\/node\.exe(?:\s|$)/m.test(paths);
+  const nodeLicense = /node-runtime\/license(?:\s|$)/m.test(paths);
+  return { server, native, dependencies, manifest, nodeRuntime, nodeLicense };
 }
 function available7z() {
   const common = process.platform === "win32"
@@ -53,11 +55,17 @@ function inspectInstaller() {
   const staging = compareStagedBackend();
   if (staging.length) return { status: "blocked", description:
     "Staged backend differs from the current build: " + staging.join(", ") };
+  const nodeRuntime = path.join(root, "desktop-tauri", "node-runtime", "node.exe");
+  const nodeLicense = path.join(root, "desktop-tauri", "node-runtime", "LICENSE");
+  if (!fs.existsSync(nodeRuntime) || !fs.existsSync(nodeLicense)) {
+    return { status: "blocked", description: "Bundled Node.js runtime and license are required" };
+  }
   const mapping = config.bundle?.resources;
   const expected = {
     "../backend/dist/": "backend/dist/",
     "../backend/node_modules/": "backend/node_modules/",
     "../backend/package.json": "backend/package.json",
+    "../node-runtime/": "node-runtime/",
   };
   const mapped = Object.entries(expected).every(([key, value]) => mapping?.[key] === value);
   if (!mapped) return { status: "blocked", description: "Tauri bundle missing explicit backend resources mapping" };
@@ -82,6 +90,8 @@ function inspectInstaller() {
       "backend/dist/previewProxy.js",
       "backend/dist/securePreviewProxy.js",
       "backend/package.json",
+      "node-runtime/node.exe",
+      "node-runtime/LICENSE",
     ];
     const archive = spawnSync(available7z(), [
       "x", "-y", "-o" + temp, exe, ...relative,
@@ -89,15 +99,23 @@ function inspectInstaller() {
     if (archive.error || archive.status !== 0) return { status: "unverified", description:
       "Cannot extract installer backend to verify source bytes" };
     const mismatched = relative.filter(file => {
-      const from = path.join(root, file.replaceAll("/", path.sep));
+      const from = path.join(root, ...(file.startsWith("node-runtime/") ? ["desktop-tauri"] : []),
+        file.replaceAll("/", path.sep));
       const extracted = path.join(temp, file.replaceAll("/", path.sep));
       return !fs.existsSync(from) || !fs.existsSync(extracted) ||
         !fs.readFileSync(from).equals(fs.readFileSync(extracted));
     });
     if (mismatched.length) return { status: "blocked", description:
-      "NSIS backend differs from current compiled source: " + mismatched.join(", ") };
+      "NSIS backend/runtime differs from current compiled source: " + mismatched.join(", ") };
+    // Verify the installer runtime is executable without any globally installed node.exe.
+    const embeddedNode = path.join(temp, "node-runtime", "node.exe");
+    const node = spawnSync(embeddedNode, ["-v"], { timeout: 12000, encoding: "utf8",
+      env: { ...process.env, PATH: "" }, windowsHide: true });
+    if (node.status !== 0 || !/^v\d+\.\d+\.\d+/.test(node.stdout.trim())) {
+      return { status: "blocked", description: "Bundled Node.js cannot start without system PATH" };
+    }
     return { status: "pass", description:
-      "NSIS contains byte-matched backend, native SQLite, HTTP proxy dependency and manifest (installed-app E2E still needed)" };
+      "NSIS contains byte-matched backend, licensed Node.js runtime, native SQLite, and HTTP proxy (installed-app E2E still needed)" };
   } finally {
     try { fs.rmSync(temp, { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }); }
     catch { /* no status change; temp cleanup may be delayed by Windows antivirus */ }

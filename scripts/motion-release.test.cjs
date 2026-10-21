@@ -47,10 +47,14 @@ test("requires backend and native runtime in real NSIS archive listing", () => {
     '2026-10-21 ....A _up_/backend/node_modules/better-sqlite3/build/Release/better_sqlite3.node',
     '2026-10-21 ....A _up_/backend/node_modules/http-proxy/package.json',
     '2026-10-21 ....A _up_/backend/package.json',
+    '2026-10-21 ....A node-runtime/node.exe',
+    '2026-10-21 ....A node-runtime/LICENSE',
   ].join(String.fromCharCode(10));
   assert.deepEqual(inspectListing(valid), {
-    server: true, native: true, dependencies: true, manifest: true,
+    server: true, native: true, dependencies: true, manifest: true, nodeRuntime: true, nodeLicense: true,
   });
   assert.equal(inspectListing("2026-10-21 ....A app.exe").server, false);
   assert.equal(inspectListing("2026-10-21 ....A app.exe").native, false);
+  assert.equal(inspectListing("2026-10-21 ....A app.exe").nodeRuntime, false);
+  assert.equal(inspectListing("2026-10-21 ....A app.exe").nodeLicense, false);
 });
