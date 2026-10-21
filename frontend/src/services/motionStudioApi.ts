@@ -42,8 +42,17 @@ export type MotionEdit =
 export interface MotionCapabilities {
   capabilities?: { aiPromptDirector?: string; aiSemanticRevision?: boolean };
 }
+export interface MotionQualityIssue {
+  severity: 'warning' | 'error'; code: string; scene: number; message: string;
+}
+export interface MotionQualityReport {
+  passed: boolean;
+  samples: Array<{ frame: number; scene: number; visibleHeadlines: string[] }>;
+  issues: MotionQualityIssue[];
+}
 export interface MotionDirectorResult {
   project: MotionProject; job: MotionJob; outline: string[]; limitations: string[];
+  quality?: MotionQualityReport;
 }
 export interface MotionQueueRecovery {
   minAgeSeconds: number; queued: number; eligible: number; blocked: number;
@@ -162,6 +171,8 @@ export const motionStudioApi = {
     json<MotionWaveform>(workspace, '/audio/' + assertAudioId(id) + '/waveform'),
   list: (workspace: string) => json<MotionProjectSummary[]>(workspace, '/projects'),
   inspect: (workspace: string, id: string) => json<MotionProject>(workspace, '/projects/' + assertId(id)),
+  quality: (workspace: string, id: string) =>
+    json<MotionQualityReport>(workspace, '/projects/' + assertId(id) + '/quality'),
   create: (workspace: string, name: string) =>
     json<MotionProject>(workspace, '/projects', { method: 'POST', body: JSON.stringify({ name }) }),
   edit: (workspace: string, id: string, baseRevision: number, edits: MotionEdit[]) =>

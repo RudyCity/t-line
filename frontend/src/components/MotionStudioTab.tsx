@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import {
   motionStudioApi, type MotionJob, type MotionProject, type MotionLayer, type MotionEdit, type MotionSchedulerStatus,
-  type MotionProperty, type MotionProjectSummary, type MotionStorageStatus, type MotionQueueRecovery, type MotionSupervisorStatus,
+  type MotionProperty, type MotionProjectSummary, type MotionStorageStatus, type MotionQueueRecovery, type MotionSupervisorStatus, type MotionQualityReport,
 } from '../services/motionStudioApi';
 import { evaluateLayer, fpsOf, frameLabel, makeKeyframeTrack } from '../services/motionScene';
 import { MotionCanvas } from './MotionCanvas';
@@ -41,6 +41,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [motionPrompt, setMotionPrompt] = useState('');
   const [directorAvailable, setDirectorAvailable] = useState(false);
   const [promptHistory, setPromptHistory] = useState<Array<{ prompt: string; response: string }>>([]);
+  const [quality, setQuality] = useState<MotionQualityReport | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -79,7 +80,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     const sequence = ++version.current;
     selectionSeq.current++;
     setProject(null); setSelectedId(''); setSelectedLayer(null); setFrame(0);
-    setMotionPrompt(''); setPromptHistory([]); setDirectorAvailable(false);
+    setMotionPrompt(''); setPromptHistory([]); setDirectorAvailable(false); setQuality(null);
     setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
     setScheduler(null); setSupervisor(null); setSupervisedRender(false);
@@ -218,6 +219,15 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
       if (current) URL.revokeObjectURL(current);
     };
   }, [workspacePath, job?.id, job?.status, job?.artifact?.sha256, message]);
+
+  useEffect(() => {
+    if (!workspacePath || !project) { setQuality(null); return; }
+    let cancelled = false;
+    void motionStudioApi.quality(workspacePath, project.id)
+      .then(report => { if (!cancelled) setQuality(report); })
+      .catch(() => { if (!cancelled) setQuality(null); });
+    return () => { cancelled = true; };
+  }, [workspacePath, project?.id, project?.revision]);
 
   const operation = async (run: () => Promise<void>) => {
     setBusy(true); setError(''); setSuccess('');
@@ -403,6 +413,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
       setProjects(await motionStudioApi.list(workspacePath));
       setSelectedId(generated.project.id);
       setProject(generated.project); setSelectedLayer(null);
+      if (generated.quality) setQuality(generated.quality);
       setUndoStack([]); setRedoStack([]);
       setJobs(prev => [generated.job, ...prev.filter(item => item.id !== generated.job.id)]);
       setActiveJobId(generated.job.id);
@@ -519,6 +530,24 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
           {directorAvailable ? 'AI uses the configured SuperAgent model. Audio generation, external footage, stock photos and 3D effects are not supported yet.' : 'AI Motion Director needs an updated SuperAgent server with prompt support. The manual editor remains available.'} Select “Select a project” to start a new video.
         </p>
       </div>
+      {project && quality && (
+        <details className="border-b border-[var(--border-color)] px-4 py-2 text-xs" aria-label="Motion quality checks">
+          <summary className="cursor-pointer font-medium">
+            Quality checks · {quality.passed ? 'Structure OK' : 'Needs attention'}
+            {quality.issues.length > 0 ? ' · ' + quality.issues.length + ' finding(s)' : ' · no warnings'}
+            <span className="ml-2 font-normal text-[var(--text-muted)]">(frame sampling, not AI vision review)</span>
+          </summary>
+          <div className="mt-2 text-[var(--text-muted)]">
+            Sampled {quality.samples.length} scene midpoint(s).
+            {quality.issues.length === 0 ? ' No structural/readability problems detected.' : null}
+          </div>
+          {quality.issues.map((issue, index) => (
+            <div key={index} className="mt-1 text-[var(--text-muted)]">
+              {issue.severity.toUpperCase()} · {issue.code} · scene {issue.scene + 1}: {issue.message}
+            </div>
+          ))}
+        </details>
+      )}
       {creating && (
         <form className="flex flex-wrap items-center gap-2 border-b border-[var(--border-color)] px-4 py-3" onSubmit={event => { event.preventDefault(); if (projectName.trim()) createProject(); }}>
           <label className="text-xs" htmlFor="motion-name">Project name</label>

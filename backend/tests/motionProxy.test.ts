@@ -131,6 +131,13 @@ describe('T-Line Motion proxy and service authentication', () => {
     expect((await fetch(base + '/generate?workspace=allowed-root')).status).toBe(404);
     expect((await fetch(base + '/projects/' + motionId + '/revise?workspace=allowed-root')).status).toBe(404);
     expect((await fetch(base + '/generate?workspace=foreign', { method: 'POST', body: '{}' })).status).toBe(403);
+    const quality = await fetch(base + '/projects/' + motionId + '/quality?workspace=allowed-root');
+    expect(quality.status).toBe(200);
+    expect((await quality.json()).url).toContain('/api/motion/projects/' + motionId + '/quality');
+    expect((await fetch(base + '/projects/' + motionId + '/quality?workspace=foreign')).status).toBe(403);
+    expect((await fetch(base + '/projects/' + motionId + '/quality?workspace=allowed-root', {
+      method: 'POST',
+    })).status).toBe(404);
     const artifact = '/jobs/motionjob-' + 'a'.repeat(24) + '/artifact?workspace=allowed-root';
     const range = await fetch(base + artifact, { headers: { Range: 'bytes=0-3' } });
     expect(range.status).toBe(206);

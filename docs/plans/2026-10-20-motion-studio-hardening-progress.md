@@ -134,3 +134,11 @@ Avoid staging or overwriting unrelated T-Line CLI parity, Hermes, MCP OAuth or c
 - Added a read-only capability handshake to detect updated SuperAgent servers. When the connected daemon lacks aiPromptDirector support, the AI generate control is disabled with an explanatory message while the manual editor continues functioning.
 - Added UI, API-client and backend-proxy tests covering prompt-to-generation, semantic revision, authenticated workspace routing, invalid project paths, unsupported old servers and disabled controls.
 - Developer-preview scope is limited to short editable text/shape animations. Real configured-model quality, packaged Tauri end-to-end, persisted prompt history, visual quality assessment, audio/TTS/music and video footage generation remain future release gates. No active SuperAgent daemon or unrelated session was restarted.
+
+## Phase B1 — Motion creative presets and deterministic design QA (2026-10-21)
+
+T-Line Motion Studio now reads SuperAgent Motion Director's deterministic quality report through an authenticated, read-only workspace-scoped GET route: /projects/MOTION_ID/quality. The report is refreshed on project/revision changes and displayed as an expandable Quality checks section next to the AI prompt interface. It distinguishes structural pass/fail from warnings and shows which scene is affected by text overflow, low contrast, or invisible titles. The report explicitly says frame sampling, not AI vision review. On older SuperAgent servers without a quality endpoint, the UI omits the report safely without disrupting editing.
+
+The backend proxy allowlist permits only GET for quality and continues to deny POST/foreign workspace. Client types now include MotionQualityIssue/Report and an optional quality field on generated results. Frontend UI and service tests cover the quality display and authorized endpoint. The SuperAgent engine has new allowlisted AI motion presets slide-left, slide-up, tilt, fade and scene transitions cut/crossfade; all animations remain in the existing editable declarative Motion v1 schema.
+
+This is not yet a professional visual reviewer or automated media/music generation. Real connected provider and packaged Tauri end-to-end qualification remain outstanding.

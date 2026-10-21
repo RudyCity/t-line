@@ -25,17 +25,20 @@ describe('Motion Studio authenticated client', () => {
       status: 202, headers: { 'Content-Type': 'application/json' },
     }));
     vi.stubGlobal('fetch', fetchMock);
+    await motionStudioApi.quality('D:/studio', motionId);
     await motionStudioApi.generate('D:/studio', 'Buat video promo', 640);
     await motionStudioApi.revise('D:/studio', motionId, 'Bikin transisinya lebih cepat', 1280);
-    expect(fetchMock.mock.calls[0][0]).toContain('/generate?workspace=');
-    expect(fetchMock.mock.calls[1][0]).toContain('/projects/' + motionId + '/revise?workspace=');
-    expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)).toMatchObject({
+    expect(fetchMock.mock.calls[0][0]).toContain('/projects/' + motionId + '/quality?workspace=');
+    expect(fetchMock.mock.calls[1][0]).toContain('/generate?workspace=');
+    expect(fetchMock.mock.calls[2][0]).toContain('/projects/' + motionId + '/revise?workspace=');
+    expect(JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string)).toMatchObject({
       prompt: 'Buat video promo', width: 640,
     });
-    expect((fetchMock.mock.calls[1][1] as RequestInit).headers).toMatchObject({
+    expect((fetchMock.mock.calls[2][1] as RequestInit).headers).toMatchObject({
       Authorization: 'Bearer tline-only-token',
     });
     expect(() => motionStudioApi.revise('D:/studio', '../secret', 'change')).toThrow('Invalid Motion');
+    expect(() => motionStudioApi.quality('D:/studio', '../secret')).toThrow('Invalid Motion');
   });
 
   it('rejects media larger than 64 MB before downloading it', async () => {

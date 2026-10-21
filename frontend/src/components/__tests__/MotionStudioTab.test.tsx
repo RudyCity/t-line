@@ -7,7 +7,7 @@ import { evaluateLayer, evaluateTrack, makeKeyframeTrack } from '../../services/
 vi.mock('../../services/motionStudioApi', () => ({
   motionStudioApi: {
     list: vi.fn(), inspect: vi.fn(), create: vi.fn(), edit: vi.fn(),
-    jobs: vi.fn(), capabilities: vi.fn(), generate: vi.fn(), revise: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
+    jobs: vi.fn(), capabilities: vi.fn(), quality: vi.fn(), generate: vi.fn(), revise: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
   },
 }));
 const id = 'motion-' + 'a'.repeat(20);
@@ -28,6 +28,12 @@ const fixture = (name = 'Product intro'): MotionProject => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(motionStudioApi.quality).mockResolvedValue({
+    passed: true,
+    samples: [{ frame: 45, scene: 0, visibleHeadlines: ['Product intro'] }],
+    issues: [{ severity: 'warning', code: 'low-contrast-subtitle', scene: 0,
+      message: 'Accent may be hard to read' }],
+  });
   vi.mocked(motionStudioApi.capabilities).mockResolvedValue({ capabilities: {
     aiPromptDirector: 'short-text-motion-preview', aiSemanticRevision: true,
   } });
@@ -115,6 +121,9 @@ describe('Native T-Line Motion Studio editor', () => {
     await screen.findByText('Choose a scene to edit');
     fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
     await screen.findByTestId('motion-canvas');
+    expect(await screen.findByText(/Quality checks · Structure OK/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Quality checks · Structure OK/));
+    expect(screen.getByText(/low-contrast-subtitle/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'title opacity frame 0' }));
     fireEvent.change(screen.getByLabelText('Outgoing easing'), { target: { value: 'step' } });
     await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith('D:/projects/studio', id, 1, [
