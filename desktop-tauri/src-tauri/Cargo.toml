@@ -30,6 +30,7 @@ tauri-plugin-updater = "2"
 # ureq is a small, dependency-light synchronous HTTP client — no async runtime overhead,
 # no conflict with Tauri's own runtime. RAM savings: ~5-15 MB.
 ureq = { version = "2.10", default-features = false, features = ["tls"] }
+ring = "0.17"
 
 [features]
 # Default features are empty so production builds (`cargo tauri build`)

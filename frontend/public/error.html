@@ -448,23 +448,13 @@
         }
 
         function checkBackendHealth() {
-            return fetch('http://127.0.0.1:5779/api/health', { cache: 'no-store' })
-                .then(res => {
-                    if (!res.ok) {
-                        throw new Error('Backend returned ' + res.status);
-                    }
-                    return true;
-                });
+            return window.__TAURI__.core.invoke('get_app_url');
         }
 
         async function loadApp() {
-            try {
-                const appUrl = await window.__TAURI__.core.invoke('get_app_url');
-                window.location.href = appUrl || APP_URL;
-            } catch (err) {
-                console.error(err);
-                window.location.href = APP_URL;
-            }
+            const appUrl = await checkBackendHealth();
+            if (!appUrl) throw new Error('Backend identity not verified');
+            window.location.href = appUrl;
         }
 
         function retryConnection() {
@@ -486,7 +476,10 @@
                 checkBackendHealth()
                     .then(() => {
                         clearInterval(interval);
-                        loadApp();
+                        loadApp().catch(() => {
+                            setStatus('Backend identity not verified. No navigation performed.');
+                            setButtonsDisabled(false);
+                        });
                     })
                     .catch(() => {
                         if (attempts >= 20) {

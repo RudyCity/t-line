@@ -2,6 +2,7 @@ import { Router, Request } from 'express';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { registerBackendIdentity } from './backendIdentity';
 import {
   isSetupRequired,
   setupMasterPassword,
@@ -112,6 +113,9 @@ export interface AccessLog {
 }
 
 export let recentAccesses: AccessLog[] = [];
+
+// Proof-of-possession endpoint shares no bearer token with callers.
+registerBackendIdentity(router, localBypassToken);
 
 // Auth API Endpoints
 router.get('/auth/setup-status', (req, res) => {

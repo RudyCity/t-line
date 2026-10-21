@@ -14,12 +14,15 @@ use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState}
 use std::os::windows::process::CommandExt;
 
 mod updater;
+mod backend_identity;
 
 mod state;
 
+use backend_identity::{decide_port, verify_local_backend, PortDecision};
+
 use crate::state::{
-    app_base_url, app_url_with_token, current_app_url, find_workspace_root, get_bypass_token,
-    is_port_active, kill_port_process, DesktopState,
+    app_base_url, app_url_with_token, find_workspace_root, get_bypass_token,
+    is_port_active, DesktopState,
 };
 
 
@@ -147,6 +150,8 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
     let status = state.status.lock().unwrap().clone();
     let status_label = format!("t-line: {}", match status.as_str() {
         "running" => "Running",
+        "connected" => "Connected (external backend)",
+        "error" => "Port conflict / Error",
         "starting" => "Starting...",
         "stopping" => "Stopping...",
         _ => "Stopped",
@@ -169,7 +174,7 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
     menu.append(&PredefinedMenuItem::separator(app_handle)?)?;
 
     // Start / Stop / Restart Backend
-    let start_enabled = status == "stopped";
+    let start_enabled = status == "stopped" || status == "error";
     let running_enabled = status == "running";
 
     let start_item = MenuItemBuilder::with_id("start_backend", "Start Backend")
@@ -188,7 +193,7 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
     menu.append(&restart_item)?;
 
     // Add active sessions if running
-    if status == "running" {
+    if status == "running" || status == "connected" {
         let sessions = state.active_sessions.lock().unwrap().clone();
         let workspaces_val = state.workspaces.lock().unwrap().clone();
 
@@ -874,23 +879,15 @@ fn build_error_page_html(app_url: &str) -> String {
                     }
 
                     function checkBackendHealth() {
-                        return fetch('http://127.0.0.1:5779/api/health', { cache: 'no-store' })
-                            .then(res => {
-                                if (!res.ok) {
-                                    throw new Error('Backend returned ' + res.status);
-                                }
-                                return true;
-                            });
+                        // The Rust side validates the per-session HMAC before
+                        // returning an application URL to privileged WebView code.
+                        return window.__TAURI__.core.invoke('get_app_url');
                     }
 
                     async function loadApp() {
-                        try {
-                            const appUrl = await window.__TAURI__.core.invoke('get_app_url');
-                            window.location.href = appUrl || APP_URL;
-                        } catch (err) {
-                            console.error(err);
-                            window.location.href = APP_URL;
-                        }
+                        const appUrl = await checkBackendHealth();
+                        if (!appUrl) throw new Error('Backend identity not verified');
+                        window.location.href = appUrl;
                     }
 
                     function retryConnection() {
@@ -912,7 +909,10 @@ fn build_error_page_html(app_url: &str) -> String {
                             checkBackendHealth()
                                 .then(() => {
                                     clearInterval(interval);
-                                    loadApp();
+                                    loadApp().catch(() => {
+                                        setStatus('Backend identity not verified. No navigation performed.');
+                                        setButtonsDisabled(false);
+                                    });
                                 })
                                 .catch(() => {
                                     if (attempts >= 20) {
@@ -969,9 +969,25 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
     let port = 5779;
     let is_dev = cfg!(debug_assertions);
     let state = app_handle.state::<DesktopState>();
-    
+    {
+        let mut guard = state.backend_child.lock().unwrap();
+        if let Some(child) = guard.as_mut() {
+            match child.try_wait() {
+                Ok(Some(_)) => { guard.take(); }
+                _ => {
+                    println!("[tauri] An owned backend child is already active; refusing duplicate spawn.");
+                    return;
+                }
+            }
+        }
+    }
+
     {
         let mut status_guard = state.status.lock().unwrap();
+        if matches!(status_guard.as_str(), "starting" | "running" | "connected" | "stopping") {
+            println!("[tauri] Backend lifecycle already active; refusing duplicate start.");
+            return;
+        }
         *status_guard = "starting".to_string();
     }
     
@@ -987,23 +1003,25 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
     thread::spawn(move || {
         let mut bypass_token = get_bypass_token();
 
-        let mut backend_verified = false;
-        if is_port_active(port) {
-            if let Some(ref token) = bypass_token {
-                if http_get(port, "/api/workspaces", Some(token)).is_ok() {
-                    backend_verified = true;
+        // Authenticate with a nonce HMAC; do not send bearer credentials
+        // to an arbitrary process merely because it listens on this port.
+        let occupied = is_port_active(port);
+        let backend_verified = occupied && verify_local_backend(port, bypass_token.as_deref());
+        if decide_port(occupied, backend_verified) == PortDecision::RefuseOccupied {
+            eprintln!("[tauri] Port {} is occupied by an unverified process; refusing to terminate it.", port);
+            let state = app_handle_clone.state::<DesktopState>();
+            *state.status.lock().unwrap() = "error".to_string();
+            if let Some(tray) = app_handle_clone.tray_by_id("main_tray") {
+                if let Ok(menu) = build_tray_menu(&app_handle_clone, &state) {
+                    let _ = tray.set_menu(Some(menu));
                 }
             }
+            show_error_page(&app_handle_clone);
+            return;
         }
-
         if backend_verified {
-            println!("[tauri] Backend is already running and authenticated on port {}. Connecting directly...", port);
+            println!("[tauri] Verified existing T-Line backend on port {}; attaching without ownership.", port);
         } else {
-            if is_port_active(port) {
-                println!("[tauri] Port {} is active but backend is unauthenticated or unresponsive. Killing existing process...", port);
-                kill_port_process(port);
-                thread::sleep(Duration::from_millis(500));
-            }
             println!("[tauri] Spawning backend process...");
             
             let log_file_path = if let Ok(app_data) = app_handle_clone.path().app_data_dir() {
@@ -1190,7 +1208,8 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
         let start_time = Instant::now();
         let mut server_ready = false;
         while start_time.elapsed() < Duration::from_secs(15) {
-            if is_port_active(port) {
+            bypass_token = get_bypass_token();
+            if verify_local_backend(port, bypass_token.as_deref()) {
                 server_ready = true;
                 break;
             }
@@ -1200,8 +1219,8 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
         if server_ready {
             {
                 let state = app_handle_clone.state::<DesktopState>();
-                let mut status_guard = state.status.lock().unwrap();
-                *status_guard = "running".to_string();
+                let owned = state.backend_child.lock().unwrap().is_some();
+                *state.status.lock().unwrap() = if owned { "running" } else { "connected" }.to_string();
             }
             if let Some(tray) = app_handle_clone.tray_by_id("main_tray") {
                 let state = app_handle_clone.state::<DesktopState>();
@@ -1210,19 +1229,10 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
                 }
             }
 
-            if bypass_token.is_none() {
-                for _ in 0..5 {
-                    bypass_token = get_bypass_token();
-                    if bypass_token.is_some() {
-                        break;
-                    }
-                    thread::sleep(Duration::from_millis(200));
-                }
-            }
-
             let url = app_url_with_token(bypass_token);
 
-            println!("[tauri] Server ready. Loading URL: {}", url);
+            // Never print the URL: it contains the ephemeral bypass token.
+            println!("[tauri] Verified backend ready; loading authenticated desktop view.");
 
             if let Some(main_window) = app_handle_clone.get_webview_window("main") {
                 main_window.navigate(tauri::Url::parse(&url).unwrap()).ok();
@@ -1253,46 +1263,35 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
 
 fn stop_backend(state: &DesktopState) {
     let mut guard = state.backend_child.lock().unwrap();
-    if let Some(child) = guard.take() {
-        println!("[tauri] Terminating backend process tree...");
+    if let Some(mut child) = guard.take() {
+        // Only a child handle retained by this Tauri instance may be stopped.
         #[cfg(windows)]
         {
-            let pid = child.id();
-            if let Ok(mut cmd) = Command::new("taskkill")
-                .args(&["/pid", &pid.to_string(), "/f", "/t"])
-                .creation_flags(0x08000000)
-                .spawn()
-            {
-                let _ = cmd.wait();
+            if matches!(child.try_wait(), Ok(None)) {
+                let pid = child.id();
+                let tree_stopped = Command::new("taskkill")
+                    .args(&["/pid", &pid.to_string(), "/f", "/t"])
+                    .creation_flags(0x08000000)
+                    .status()
+                    .is_ok_and(|status| status.success());
+                if !tree_stopped {
+                    // Fallback still operates on the owned child handle only.
+                    let _ = child.kill();
+                }
+                let _ = child.wait();
             }
         }
         #[cfg(not(windows))]
         {
-            let mut c = child;
-            let _ = c.kill();
-            let _ = c.wait();
+            if matches!(child.try_wait(), Ok(None)) {
+                let _ = child.kill();
+                let _ = child.wait();
+            }
         }
+    } else {
+        println!("[tauri] No owned backend process; attached/external backend was not touched.");
     }
-
-    // Fallback: make sure the port is actually free
-    if is_port_active(5779) {
-        println!("[tauri] Port 5779 is still active. Killing any process on port 5779...");
-        kill_port_process(5779);
-    }
-
-    // Wait up to 2 seconds for port 5779 to be freed
-    let start = Instant::now();
-    while start.elapsed() < Duration::from_secs(2) {
-        if !is_port_active(5779) {
-            break;
-        }
-        thread::sleep(Duration::from_millis(100));
-    }
-    
-    {
-        let mut status_guard = state.status.lock().unwrap();
-        *status_guard = "stopped".to_string();
-    }
+    *state.status.lock().unwrap() = "stopped".to_string();
 }
 
 fn stop_backend_async(app_handle: tauri::AppHandle) {
@@ -1355,13 +1354,16 @@ fn poll_backend(app_handle: tauri::AppHandle) {
             thread::sleep(Duration::from_secs(3));
             
             let token = get_bypass_token();
-            let running = is_port_active(port);
+            let running = verify_local_backend(port, token.as_deref());
+            let owned = state.backend_child.lock().unwrap().is_some();
             
             let mut status_changed = false;
             let mut sessions_changed = false;
             
             let new_status = if running {
-                "running".to_string()
+                if owned { "running" } else { "connected" }.to_string()
+            } else if is_port_active(port) {
+                "error".to_string()
             } else {
                 "stopped".to_string()
             };
@@ -1373,7 +1375,7 @@ fn poll_backend(app_handle: tauri::AppHandle) {
             
             let status_to_apply = if current_status == "starting" {
                 if running {
-                    "running".to_string()
+                    new_status.clone()
                 } else {
                     "starting".to_string()
                 }
@@ -1397,7 +1399,7 @@ fn poll_backend(app_handle: tauri::AppHandle) {
                 }
             }
 
-            if status_to_apply == "running" {
+            if status_to_apply == "running" || status_to_apply == "connected" {
                 let token_str = token.as_deref();
                 let sessions_res = http_get(port, "/api/terminals/active", token_str);
                 let workspaces_res = http_get(port, "/api/workspaces", token_str);
@@ -1467,8 +1469,13 @@ fn start_backend_command(app: tauri::AppHandle) {
 }
 
 #[tauri::command]
-fn get_app_url() -> String {
-    current_app_url()
+fn get_app_url() -> Result<String, String> {
+    let token = get_bypass_token();
+    if verify_local_backend(5779, token.as_deref()) {
+        Ok(app_url_with_token(token))
+    } else {
+        Err("Port 5779 is not an authenticated T-Line backend".to_string())
+    }
 }
 
 #[tauri::command]
@@ -1845,9 +1852,9 @@ mod tests {
         let html = build_error_page_html("http://localhost:5779");
 
         assert!(html.contains("function retryConnection()"));
-        assert!(html.contains("fetch('http://127.0.0.1:5779/api/health'"));
+        assert!(html.contains("return window.__TAURI__.core.invoke('get_app_url')"));
         assert!(html.contains("const APP_URL = 'http://localhost:5779'"));
-        assert!(html.contains("window.location.href = APP_URL"));
+        assert!(!html.contains("window.location.href = APP_URL"));
     }
 
     #[test]
@@ -1855,7 +1862,8 @@ mod tests {
         let html = build_error_page_html("http://localhost:5779");
 
         assert!(html.contains("__TAURI__.core.invoke('get_app_url')"));
-        assert!(html.contains("window.location.href = appUrl || APP_URL"));
+        assert!(html.contains("window.location.href = appUrl"));
+        assert!(!html.contains("window.location.href = appUrl || APP_URL"));
     }
 
     #[test]

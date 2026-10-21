@@ -11,11 +11,8 @@
 
 use std::net::TcpStream;
 use std::path::{Path, PathBuf};
-use std::process::{Child, Stdio};
+use std::process::Child;
 use std::sync::{Arc, Mutex};
-
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
 
 /// Shared application state held by Tauri. Every Tauri command takes
 /// `tauri::State<'_, DesktopState>` and reads/writes fields through the
@@ -23,7 +20,7 @@ use std::os::windows::process::CommandExt;
 pub struct DesktopState {
     /// Handle to the bundled Node.js backend process. Killed on Tauri exit.
     pub backend_child: Arc<Mutex<Option<Child>>>,
-    /// Lifecycle state: "stopped" | "starting" | "running" | "error".
+    /// Lifecycle state: "stopped" | "starting" | "running" (owned) | "connected" (external) | "error".
     pub status: Arc<Mutex<String>>,
     /// Cached snapshot of active terminal sessions, mirrored from the backend.
     pub active_sessions: Arc<Mutex<serde_json::Value>>,
@@ -59,35 +56,6 @@ pub fn find_workspace_root() -> Option<PathBuf> {
         path = parent;
     }
     None
-}
-
-/// Forcibly kills whatever process is bound to `port`. On Windows this uses
-/// PowerShell's `Get-NetTCPConnection` + `Stop-Process` to kill the process
-/// tree. On Unix, `lsof` + `kill -9` is used as a fallback.
-pub fn kill_port_process(port: u16) {
-    #[cfg(windows)]
-    {
-        let cmd = format!(
-            "Get-NetTCPConnection -LocalPort {} -State Listen -ErrorAction SilentlyContinue | Foreach-Object {{ Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }}"
-        , port);
-        let _ = std::process::Command::new("powershell")
-            .args(&["-NoProfile", "-Command", &cmd])
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .creation_flags(0x08000000)
-            .status()
-            .ok();
-    }
-    #[cfg(unix)]
-    {
-        let cmd = format!("lsof -t -i:{} | xargs kill -9", port);
-        let _ = std::process::Command::new("sh")
-            .args(&["-c", &cmd])
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .ok();
-    }
 }
 
 /// Reads the per-machine bypass token from `~/.tline-bypass-token`. This
@@ -127,9 +95,4 @@ pub fn app_url_with_token(token: Option<String>) -> String {
         Some(token) if !token.is_empty() => format!("{}/?token={}", base_url, token),
         _ => base_url.to_string(),
     }
-}
-
-/// Convenience: `app_url_with_token(get_bypass_token())`.
-pub fn current_app_url() -> String {
-    app_url_with_token(get_bypass_token())
 }
