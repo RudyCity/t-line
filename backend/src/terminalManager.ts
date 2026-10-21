@@ -4,72 +4,9 @@ import path from 'path';
 import fs from 'fs';
 import { isSSHPath, parseSSHPath } from './sshHelpers';
 
-let pty: any = null;
-try {
-  pty = require('node-pty');
-  console.log('Successfully loaded native node-pty for pseudo-terminal support.');
-
-  // Monkeypatch node-pty to prevent AttachConsole errors on Windows when cleaning up terminals.
-  if (os.platform() === 'win32') {
-    try {
-      const windowsPtyAgentPath = require.resolve('node-pty/lib/windowsPtyAgent');
-      const { WindowsPtyAgent } = require(windowsPtyAgentPath);
-      if (WindowsPtyAgent && WindowsPtyAgent.prototype) {
-        const child_process = require('child_process');
-
-        WindowsPtyAgent.prototype._getConsoleProcessList = function () {
-          const _this = this;
-          return new Promise((resolve) => {
-            let resolved = false;
-            const safeResolve = (list: number[]) => {
-              if (resolved) return;
-              resolved = true;
-              clearTimeout(timeout);
-              resolve(list);
-            };
-
-            const agentPath = path.join(
-              path.dirname(windowsPtyAgentPath),
-              'conpty_console_list_agent'
-            );
-
-            const agent = child_process.fork(
-              agentPath,
-              [_this._innerPid.toString()],
-              { silent: true }
-            );
-
-            agent.on('message', (message: any) => {
-              if (message && message.consoleProcessList) {
-                safeResolve(message.consoleProcessList);
-              }
-            });
-
-            agent.on('exit', () => {
-              safeResolve([_this._innerPid]);
-            });
-
-            agent.on('error', () => {
-              safeResolve([_this._innerPid]);
-            });
-
-            const timeout = setTimeout(() => {
-              try {
-                agent.kill();
-              } catch (e) {}
-              safeResolve([_this._innerPid]);
-            }, 2000);
-          });
-        };
-        console.log('Successfully monkeypatched node-pty conpty_console_list_agent to prevent AttachConsole errors.');
-      }
-    } catch (e) {
-      console.warn('Failed to monkeypatch node-pty console process list helper:', e);
-    }
-  }
-} catch (e) {
-  console.warn('Native node-pty not available. Falling back to child_process.spawn.');
-}
+// Production PTYs use Bun's native Terminal/ConPTY runtime, which works
+// under Windows without node-pty's Node-specific native add-on.
+const bunRuntime: any = (globalThis as any).Bun;
 
 function killProcessTree(pid: number): void {
   if (!pid) return;
@@ -95,45 +32,85 @@ export interface ITerminal {
   getProcessName(): string;
 }
 
-// ── node-pty based terminal ────────────────────────────────
-class PtyTerminal implements ITerminal {
-  private ptyProcess: any;
+// ── Bun native pseudo-terminal (Windows ConPTY, POSIX openpty) ───────
+class BunTerminal implements ITerminal {
+  private process: any;
+  private decoder = new TextDecoder();
+  private dataCallbacks = new Set<(data: string) => void>();
+  private exitCallbacks = new Set<(code: number) => void>();
+  private initialOutput: string[] = [];
+  private initialLength = 0;
+  private exitedCode: number | null = null;
+  private processName: string;
 
   constructor(shell: string, args: string[], cwd: string, cols: number, rows: number) {
-    this.ptyProcess = pty.spawn(shell, args, {
-      name: 'xterm-color',
-      cols: cols || 80,
-      rows: rows || 24,
+    if (!bunRuntime?.spawn) {
+      throw new Error('Bun runtime with native PTY support is required for interactive terminals');
+    }
+    this.processName = path.basename(shell);
+    this.process = bunRuntime.spawn([shell, ...args], {
       cwd: cwd || os.homedir(),
-      env: process.env as Record<string, string>,
-      useConpty: true
+      env: process.env,
+      terminal: {
+        cols: Math.max(1, cols || 80),
+        rows: Math.max(1, rows || 24),
+        name: 'xterm-256color',
+        data: (_terminal: unknown, bytes: Uint8Array) => {
+          const chunk = this.decoder.decode(bytes, { stream: true });
+          if (!chunk) return;
+          if (this.dataCallbacks.size === 0) {
+            this.initialOutput.push(chunk);
+            this.initialLength += chunk.length;
+            while (this.initialLength > 256 * 1024 && this.initialOutput.length) {
+              this.initialLength -= this.initialOutput.shift()!.length;
+            }
+          } else {
+            for (const callback of this.dataCallbacks) callback(chunk);
+          }
+        }
+      }
+    });
+    this.process.exited.then((code: number) => {
+      this.exitedCode = code;
+      const remaining = this.decoder.decode();
+      if (remaining) {
+        for (const callback of this.dataCallbacks) callback(remaining);
+      }
+      for (const callback of this.exitCallbacks) callback(code);
+      try { this.process.terminal?.close(); } catch { /* already disposed */ }
+    }, (error: Error) => {
+      console.error('[PTY] Bun terminal process failed:', error);
+      this.exitedCode = 1;
+      for (const callback of this.exitCallbacks) callback(1);
     });
   }
 
-  write(data: string): void { this.ptyProcess.write(data); }
-
+  write(data: string): void { this.process.terminal?.write(data); }
   resize(cols: number, rows: number): void {
-    try { this.ptyProcess.resize(cols, rows); } catch (e) {
-      console.error('Error resizing pty:', e);
+    try { this.process.terminal?.resize(Math.max(1, cols), Math.max(1, rows)); }
+    catch (error) { console.error('Error resizing Bun terminal:', error); }
+  }
+  onData(cb: (data: string) => void): void {
+    this.dataCallbacks.add(cb);
+    if (this.initialOutput.length) {
+      const buffered = this.initialOutput.join('');
+      this.initialOutput = [];
+      this.initialLength = 0;
+      cb(buffered);
     }
   }
-
-  onData(cb: (data: string) => void): void { this.ptyProcess.onData(cb); }
-
   onExit(cb: (code: number) => void): void {
-    this.ptyProcess.onExit(({ exitCode }: { exitCode: number }) => cb(exitCode));
+    this.exitCallbacks.add(cb);
+    if (this.exitedCode !== null) cb(this.exitedCode);
   }
-
   kill(): void {
     const pid = this.getPid();
-    if (pid) {
-      killProcessTree(pid);
-    } else {
-      try { this.ptyProcess.kill(); } catch (e) {}
-    }
+    if (pid) killProcessTree(pid);
+    else try { this.process.kill(); } catch { /* process ended */ }
+    try { this.process.terminal?.close(); } catch { /* already closed */ }
   }
-  getPid(): number { return this.ptyProcess.pid; }
-  getProcessName(): string { return this.ptyProcess.process; }
+  getPid(): number { return this.process.pid || 0; }
+  getProcessName(): string { return this.processName; }
 }
 
 // ── child_process.spawn fallback ──────────────────────────
@@ -285,12 +262,9 @@ export class TerminalManager {
 
     console.log(`[PTY] Spawning PTY terminal: id=${id}, shell=${shell}, args=${JSON.stringify(args)}, cwd=${normalizedCwd}, size=${cols}x${rows}`);
 
-    let terminal: ITerminal;
-    if (pty) {
-      terminal = new PtyTerminal(shell, args, normalizedCwd, cols, rows);
-    } else {
-      terminal = new SpawnTerminal(shell, args, normalizedCwd);
-    }
+    const terminal: ITerminal = bunRuntime?.spawn
+      ? new BunTerminal(shell, args, normalizedCwd, cols, rows)
+      : new SpawnTerminal(shell, args, normalizedCwd);
 
     this.terminals.set(id, terminal);
 

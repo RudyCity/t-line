@@ -112,6 +112,17 @@ function drainPendingCallbacks(err?: Error) {
  */
 function resolveBunEnv(): { cmd: string; spawnEnv: NodeJS.ProcessEnv } {
   const isWin = os.platform() === 'win32';
+  // Installed T-Line ships its own Bun binary. Reuse this exact executable
+  // when launching SuperAgent, even on PCs with no global Bun or Node.
+  const bundled = process.env.TLINE_BUN_RUNTIME
+    || ((process.versions as any).bun ? process.execPath : '');
+  if (bundled && fs.existsSync(bundled)) {
+    const dir = path.dirname(bundled);
+    const patchedPath = dir + path.delimiter + (process.env.PATH || '');
+    return { cmd: bundled, spawnEnv: {
+      ...process.env, PATH: patchedPath, TLINE_BUN_RUNTIME: bundled
+    } };
+  }
 
   const msgPlatform = `resolveBunEnv() — platform=${os.platform()}`;
   console.log(`[WS-Agent][debug] ${msgPlatform}`);

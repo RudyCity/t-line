@@ -18,7 +18,7 @@ use std::sync::{Arc, Mutex};
 /// `tauri::State<'_, DesktopState>` and reads/writes fields through the
 /// interior-mutability wrappers.
 pub struct DesktopState {
-    /// Handle to the bundled Node.js backend process. Killed on Tauri exit.
+    /// Handle to the bundled Bun backend process. Killed on Tauri exit.
     pub backend_child: Arc<Mutex<Option<Child>>>,
     /// Lifecycle state: "stopped" | "starting" | "running" (owned) | "connected" (external) | "error".
     pub status: Arc<Mutex<String>>,

@@ -1023,7 +1023,7 @@ export const SavePromptModal: React.FC<SavePromptModalProps> = ({
         <FormField label="Command / Prompt to run">
           <Input 
             type="text" 
-            placeholder="e.g. npm run dev" 
+            placeholder="e.g. bun run dev"
             value={command}
             onChange={(e) => setCommand(e.target.value)}
             required

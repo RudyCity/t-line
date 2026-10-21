@@ -3,25 +3,28 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const os = require("node:os");
+
 const root = path.resolve(__dirname, "..");
 const configPath = path.join(root, "desktop-tauri", "src-tauri", "tauri.conf.json");
-const version = JSON.parse(fs.readFileSync(configPath, "utf8")).version;
-const exe = path.join(root, "desktop-tauri", "src-tauri", "target", "release", "bundle", "nsis", "t-line_" + version + "_x64-setup.exe");
+const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+const exe = path.join(root, "desktop-tauri", "src-tauri", "target", "release", "bundle",
+  "nsis", "t-line_" + config.version + "_x64-setup.exe");
+
 function inspectListing(output) {
   const paths = output.replace(/\\/g, "/").toLowerCase();
-  const server = /(?:^|[\s/])backend\/dist\/server\.js(?:\s|$)/m.test(paths);
-  const native = /backend\/node_modules\/better-sqlite3\/build\/release\/better_sqlite3\.node(?:\s|$)/m.test(paths);
-  const dependencies = /backend\/node_modules\/http-proxy\/package\.json(?:\s|$)/m.test(paths);
-  const manifest = /backend\/package\.json(?:\s|$)/m.test(paths);
-  const nodeRuntime = /node-runtime\/node\.exe(?:\s|$)/m.test(paths);
-  const nodeLicense = /node-runtime\/license(?:\s|$)/m.test(paths);
-  return { server, native, dependencies, manifest, nodeRuntime, nodeLicense };
+  return {
+    server: /(?:^|[\s/])backend\/dist\/server\.js(?:\s|$)/m.test(paths),
+    dependencies: /backend\/node_modules\/http-proxy\/package\.json(?:\s|$)/m.test(paths),
+    manifest: /backend\/package\.json(?:\s|$)/m.test(paths),
+    bunRuntime: /bun-runtime\/bun\.exe(?:\s|$)/m.test(paths),
+    bunLicense: /bun-runtime\/license\.md(?:\s|$)/m.test(paths)
+  };
 }
 function available7z() {
-  const common = process.platform === "win32"
+  const candidates = process.platform === "win32"
     ? ["C:\\Program Files\\7-Zip\\7z.exe", "C:\\Program Files (x86)\\7-Zip\\7z.exe"]
     : ["/usr/bin/7z", "/usr/local/bin/7z"];
-  return common.find(fs.existsSync) ?? "7z";
+  return candidates.find(fs.existsSync) ?? "7z";
 }
 function compareStagedBackend() {
   const source = path.join(root, "backend", "dist");
@@ -50,80 +53,129 @@ function compareStagedBackend() {
       !fs.readFileSync(manifest).equals(fs.readFileSync(packagedManifest))) failures.push("package.json");
   return failures;
 }
+
+/** Real ConPTY smoke with no Node/npm/global Bun on the PATH. */
+function verifyBundledBun(binary) {
+  const executable = path.resolve(binary);
+  const code = `
+    const shell = require('node:path').join(process.env.SystemRoot || 'C:\\\\Windows', 'System32', 'cmd.exe');
+    let buffer = '';
+    const p = Bun.spawn([shell, '/d', '/c', 'echo', 'BUN_BUNDLE_PTY_OK'], {
+      terminal: {
+        cols: 80, rows: 24,
+        data(_terminal, bytes) { buffer += new TextDecoder().decode(bytes); }
+      }
+    });
+    const timeout = setTimeout(() => { p.kill(); process.exit(8); }, 5000);
+    p.exited.then(exit => {
+      clearTimeout(timeout);
+      p.terminal?.close();
+      if (exit === 0 && buffer.includes('BUN_BUNDLE_PTY_OK')) {
+        process.stdout.write('BUN_BUNDLE_PTY_OK');
+        process.exit(0);
+      }
+      console.error('Native terminal smoke failed', exit, buffer.slice(-300));
+      process.exit(9);
+    });
+  `;
+  const result = spawnSync(executable, ["-e", code], {
+    encoding: "utf8", timeout: 15000,
+    env: { ...process.env, PATH: "" }, windowsHide: true,
+  });
+  return result.status === 0 && result.stdout?.includes("BUN_BUNDLE_PTY_OK");
+}
+
 function inspectInstaller() {
-  const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-  const staging = compareStagedBackend();
-  if (staging.length) return { status: "blocked", description:
-    "Staged backend differs from the current build: " + staging.join(", ") };
-  const nodeRuntime = path.join(root, "desktop-tauri", "node-runtime", "node.exe");
-  const nodeLicense = path.join(root, "desktop-tauri", "node-runtime", "LICENSE");
-  if (!fs.existsSync(nodeRuntime) || !fs.existsSync(nodeLicense)) {
-    return { status: "blocked", description: "Bundled Node.js runtime and license are required" };
+  const staged = compareStagedBackend();
+  if (staged.length) return { status: "blocked", description:
+    "Staged backend differs from current build: " + staged.join(", ") };
+  const bunDir = path.join(root, "desktop-tauri", "bun-runtime");
+  const binary = path.join(bunDir, "bun.exe");
+  const license = path.join(bunDir, "LICENSE.md");
+  if (!fs.existsSync(binary) || !fs.existsSync(license)) {
+    return { status: "blocked", description: "Bundled Bun runtime and license are required" };
+  }
+  if (process.platform === "win32" && !verifyBundledBun(binary)) {
+    return { status: "blocked", description: "Staged Bun runtime cannot launch an interactive Windows PTY without global PATH" };
   }
   const mapping = config.bundle?.resources;
   const expected = {
     "../backend/dist/": "backend/dist/",
     "../backend/node_modules/": "backend/node_modules/",
     "../backend/package.json": "backend/package.json",
-    "../node-runtime/": "node-runtime/",
+    "../bun-runtime/": "bun-runtime/"
   };
-  const mapped = Object.entries(expected).every(([key, value]) => mapping?.[key] === value);
-  if (!mapped) return { status: "blocked", description: "Tauri bundle missing explicit backend resources mapping" };
-  if (!fs.existsSync(exe)) return { status: "blocked", description: "No Windows NSIS installer has been generated" };
-  if (fs.statSync(exe).mtimeMs < fs.statSync(configPath).mtimeMs) {
-    return { status: "blocked", description: "Existing NSIS installer is older than resource configuration" };
+  if (!Object.entries(expected).every(([key, value]) => mapping?.[key] === value)) {
+    return { status: "blocked", description: "Tauri bundle missing explicit Bun/backend resources mapping" };
+  }
+  if (!fs.existsSync(exe)) {
+    return { status: "blocked", description: "No Windows NSIS installer has been generated for Bun" };
+  }
+  const installerTime = fs.statSync(exe).mtimeMs;
+  const nativeRoot = path.join(root, "desktop-tauri", "src-tauri");
+  const sourceFiles = [
+    configPath,
+    path.join(nativeRoot, "Cargo.toml"),
+    path.join(nativeRoot, "build.rs")
+  ];
+  const enumerateRust = (dir) => {
+    for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, item.name);
+      if (item.isDirectory()) enumerateRust(file);
+      else if (item.isFile() && file.endsWith(".rs")) sourceFiles.push(file);
+    }
+  };
+  enumerateRust(path.join(nativeRoot, "src"));
+  const changedAfterInstaller = sourceFiles.filter(file => fs.statSync(file).mtimeMs > installerTime);
+  if (changedAfterInstaller.length) {
+    return { status: "blocked", description:
+      "Windows installer predates native Rust/config source: " +
+      changedAfterInstaller.map(file => path.relative(root, file)).slice(0, 4).join(", ") };
   }
   const listing = spawnSync(available7z(), ["l", "-ba", exe], {
-    encoding: "utf8", timeout: 20000, maxBuffer: 8 * 1024 * 1024, windowsHide: true,
+    encoding: "utf8", timeout: 22000, maxBuffer: 10 * 1024 * 1024, windowsHide: true
   });
-  if (listing.status !== 0) return { status: "unverified", description: "Cannot inspect NSIS archive: 7-Zip unavailable or failed" };
+  if (listing.status !== 0) {
+    return { status: "unverified", description: "7-Zip cannot inspect NSIS archive" };
+  }
   const payload = inspectListing(listing.stdout);
-  const missing = Object.entries(payload).filter(([, found]) => !found).map(([name]) => name);
+  const missing = Object.entries(payload).filter(([, value]) => !value).map(([name]) => name);
   if (missing.length) return { status: "blocked", description:
-    "NSIS archive missing backend payload: " + missing.join(", ") };
-  // Do not compare timestamps from successive deterministic builds: TypeScript and
-  // Vite regularly rewrite unchanged outputs. Compare the actual installer bytes.
-  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "tline-nsis-verify-"));
+    "NSIS archive missing Bun/backend resources: " + missing.join(", ") };
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "tline-bun-nsis-"));
   try {
     const relative = [
-      "backend/dist/server.js",
-      "backend/dist/previewProxy.js",
-      "backend/dist/securePreviewProxy.js",
-      "backend/package.json",
-      "node-runtime/node.exe",
-      "node-runtime/LICENSE",
+      "backend/dist/server.js", "backend/dist/previewProxy.js",
+      "backend/dist/securePreviewProxy.js", "backend/package.json",
+      "bun-runtime/bun.exe", "bun-runtime/LICENSE.md"
     ];
-    const archive = spawnSync(available7z(), [
-      "x", "-y", "-o" + temp, exe, ...relative,
-    ], { encoding: "utf8", timeout: 40000, maxBuffer: 2 * 1024 * 1024, windowsHide: true });
-    if (archive.error || archive.status !== 0) return { status: "unverified", description:
-      "Cannot extract installer backend to verify source bytes" };
+    const extracted = spawnSync(available7z(), ["x", "-y", "-o" + temp, exe, ...relative], {
+      encoding: "utf8", timeout: 45000, maxBuffer: 2 * 1024 * 1024, windowsHide: true
+    });
+    if (extracted.status !== 0) {
+      return { status: "unverified", description: "Cannot extract Bun runtime/compiled backend to verify bytes" };
+    }
     const mismatched = relative.filter(file => {
-      const from = path.join(root, ...(file.startsWith("node-runtime/") ? ["desktop-tauri"] : []),
+      const source = path.join(root, ...(file.startsWith("bun-runtime/") ? ["desktop-tauri"] : []),
         file.replaceAll("/", path.sep));
-      const extracted = path.join(temp, file.replaceAll("/", path.sep));
-      return !fs.existsSync(from) || !fs.existsSync(extracted) ||
-        !fs.readFileSync(from).equals(fs.readFileSync(extracted));
+      const installed = path.join(temp, file.replaceAll("/", path.sep));
+      return !fs.existsSync(source) || !fs.existsSync(installed) ||
+        !fs.readFileSync(source).equals(fs.readFileSync(installed));
     });
     if (mismatched.length) return { status: "blocked", description:
-      "NSIS backend/runtime differs from current compiled source: " + mismatched.join(", ") };
-    // Verify the installer runtime is executable without any globally installed node.exe.
-    const embeddedNode = path.join(temp, "node-runtime", "node.exe");
-    const node = spawnSync(embeddedNode, ["-v"], { timeout: 12000, encoding: "utf8",
-      env: { ...process.env, PATH: "" }, windowsHide: true });
-    if (node.status !== 0 || !/^v\d+\.\d+\.\d+/.test(node.stdout.trim())) {
-      return { status: "blocked", description: "Bundled Node.js cannot start without system PATH" };
+      "NSIS backend/Bun differs from compiled source: " + mismatched.join(", ") };
+    if (process.platform === "win32" && !verifyBundledBun(path.join(temp, "bun-runtime", "bun.exe"))) {
+      return { status: "blocked", description: "Extracted Bun runtime failed native ConPTY without global PATH" };
     }
     return { status: "pass", description:
-      "NSIS contains byte-matched backend, licensed Node.js runtime, native SQLite, and HTTP proxy (installed-app E2E still needed)" };
+      "NSIS contains byte-matched Bun runtime, license and backend with verified native Windows PTY (installed app E2E still required)" };
   } finally {
-    try { fs.rmSync(temp, { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }); }
-    catch { /* no status change; temp cleanup may be delayed by Windows antivirus */ }
+    try { fs.rmSync(temp, { recursive: true, force: true, maxRetries: 3, retryDelay: 250 }); } catch {}
   }
 }
 if (require.main === module) {
   const status = inspectInstaller();
-  process.stdout.write(JSON.stringify(status, null, 2) + "\n");
+  console.log(JSON.stringify(status, null, 2));
   if (status.status !== "pass") process.exitCode = 1;
 }
-module.exports = { inspectListing, inspectInstaller };
+module.exports = { inspectListing, inspectInstaller, verifyBundledBun };

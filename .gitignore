@@ -57,3 +57,6 @@ src/core/
 
 # Build-generated redistributable Node.js executable and licensing assets
 /desktop-tauri/node-runtime/
+
+# Build-generated licensed Bun runtime executable; upstream notices are tracked separately.
+/desktop-tauri/bun-runtime/

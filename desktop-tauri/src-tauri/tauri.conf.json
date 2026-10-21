@@ -48,7 +48,7 @@
       "../backend/dist/": "backend/dist/",
       "../backend/node_modules/": "backend/node_modules/",
       "../backend/package.json": "backend/package.json",
-      "../node-runtime/": "node-runtime/"
+      "../bun-runtime/": "bun-runtime/"
     }
   },
   "plugins": {

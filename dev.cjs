@@ -1,7 +1,6 @@
 const { spawn } = require('child_process');
 const net = require('net');
 
-const isBun = true;
 const runner = 'bun';
 
 const target = process.argv[2]; // 'backend', 'frontend', 'tauri', or undefined (both)
@@ -64,9 +63,7 @@ async function main() {
       console.log('[t-line] Backend dev server is already running on port 5779.');
     } else {
       console.log('[t-line] Starting backend dev server...');
-      const backendArgs = isBun 
-        ? ['run', '--cwd', 'backend', 'dev'] 
-        : ['run', 'dev', '--workspace=backend'];
+      const backendArgs = ['run', '--cwd', 'backend', 'dev'];
       const backend = spawn(runner, backendArgs, { stdio: 'inherit', shell: true });
       processes.push(backend);
       backend.on('exit', (code) => {
@@ -82,9 +79,7 @@ async function main() {
       console.log('[t-line] Frontend dev server is already running on port 5773.');
     } else {
       console.log('[t-line] Starting frontend dev server...');
-      const frontendArgs = isBun 
-        ? ['run', '--cwd', 'frontend', 'dev'] 
-        : ['run', 'dev', '--workspace=frontend'];
+      const frontendArgs = ['run', '--cwd', 'frontend', 'dev'];
       const frontend = spawn(runner, frontendArgs, { stdio: 'inherit', shell: true });
       processes.push(frontend);
       frontend.on('exit', (code) => {
@@ -96,9 +91,7 @@ async function main() {
 
   if (runTauri) {
     console.log('[t-line] Starting Tauri dev...');
-    const tauriArgs = isBun
-      ? ['run', '--cwd', 'desktop-tauri', 'tauri', 'dev']
-      : ['run', 'tauri', 'dev', '--workspace=desktop-tauri'];
+    const tauriArgs = ['run', '--cwd', 'desktop-tauri', 'tauri', 'dev'];
     const tauri = spawn(runner, tauriArgs, { stdio: 'inherit', shell: true });
     processes.push(tauri);
     tauri.on('exit', (code) => {

@@ -13,9 +13,22 @@ function probeBinary(command, args = ["-version"]) {
   const result = spawnSync(command, args, { encoding: "utf8", timeout: 10000 });
   return !result.error && result.status === 0;
 }
-function parseAudit(output) {
+function parseAudit(output, format = "npm") {
   try {
     const report = JSON.parse(output);
+    if (format === "bun") {
+      if (typeof report !== "object" || Array.isArray(report) || report === null) throw new Error("invalid Bun audit output");
+      const vulnerabilities = Object.entries(report)
+        .flatMap(([pkg, entries]) => {
+          if (!Array.isArray(entries)) throw new Error("malformed Bun advisory list");
+          return entries.filter(a => ["high", "critical"].includes(a.severity))
+            .map(a => pkg + ": " + (a.url || a.id || "advisory"));
+        });
+      return item("production-backend-dependencies", vulnerabilities.length ? "blocked" : "pass",
+        vulnerabilities.length
+          ? vulnerabilities.length + " high/critical Bun audit advisory item(s): " + vulnerabilities.join(", ")
+          : "Bun audit reports no high/critical advisory for pinned production dependencies");
+    }
     const counts = report.metadata?.vulnerabilities;
     if (!counts) throw new Error("missing vulnerability summary");
     const names = Object.entries(report.vulnerabilities || {})
@@ -23,30 +36,29 @@ function parseAudit(output) {
       .map(([name]) => name);
     const severe = Number(counts.high || 0) + Number(counts.critical || 0);
     return item("production-backend-dependencies", severe ? "blocked" : "pass",
-      severe ? `${severe} high/critical advisory item(s): ${names.join(", ")}` :
+      severe ? severe + " high/critical advisory item(s): " + names.join(", ") :
         "No high/critical advisory currently reported for production dependencies");
   } catch (error) {
     return item("production-backend-dependencies", "unverified",
-      "Unable to parse npm audit response; registry access and lockfile must be verified");
+      "Unable to parse dependency audit response; registry access and lockfile must be verified");
   }
 }
 function checkAudit() {
-  // The command is a fixed literal, not derived from request or environment input.
-  // cmd.exe executes npm.cmd safely without Node's deprecated shell:true argument forwarding.
-  const command = process.platform === "win32" ? (process.env.ComSpec || "cmd.exe") : "npm";
-  const args = process.platform === "win32"
-    ? ["/d", "/s", "/c", "npm.cmd audit --omit=dev --json"]
-    : ["audit", "--omit=dev", "--json"];
-  const result = spawnSync(command, args, {
+  const { resolveBuildBun } = require("../desktop-tauri/prepare-bun-runtime.js");
+  let runtime;
+  try { runtime = resolveBuildBun(); }
+  catch (error) { return item("production-backend-dependencies", "unverified", String(error.message)); }
+  const result = spawnSync(runtime, ["audit", "--json"], {
     cwd: path.join(root, "desktop-tauri", "backend"), encoding: "utf8",
-    timeout: 30000, maxBuffer: 2 * 1024 * 1024, shell: false, windowsHide: true,
+    timeout: 35000, maxBuffer: 4 * 1024 * 1024, shell: false, windowsHide: true
   });
   if (result.error || !result.stdout?.trim()) {
     return item("production-backend-dependencies", "unverified",
-      "npm audit could not complete: " + String(result.error?.message ?? result.stderr ?? "").slice(0, 140));
+      "Bun audit could not complete: " + String(result.error?.message ?? result.stderr ?? "").slice(0, 150));
   }
-  return parseAudit(result.stdout);
+  return parseAudit(result.stdout, "bun");
 }
+
 function check() {
   const bundle = inspectInstaller();
   const release = path.join(root, "desktop-tauri", "src-tauri", "target", "release", "app.exe");
@@ -60,9 +72,9 @@ function check() {
         : "No release app.exe found; run bun run build:tauri on Windows"),
     checkAudit(),
     item("windows-nsis-backend-payload", bundle.status, bundle.description),
-    item("bundled-node-runtime", bundle.status === "pass" ? "pass" : bundle.status,
-      bundle.status === "pass" ? "Installer provides byte-verified, licensed Node.js executable running without system PATH" :
-      "Bundled Node.js must be verified before Windows production distribution"),
+    item("bundled-bun-runtime", bundle.status === "pass" ? "pass" : bundle.status,
+      bundle.status === "pass" ? "Installer provides byte-verified Bun executable and native ConPTY running without global PATH" :
+      "Bundled Bun with Windows ConPTY must be verified before Windows production distribution"),
     item("live-vision-provider", "unverified", "Requires authorized provider/image input and observed user E2E"),
     item("live-piper-model", "unverified", "Requires installed Piper, licensed local voice and real narration E2E"),
     item("tauri-installed-smoke", "unverified", "Requires installer, WebView2, token/auth and real workspace/media playback"),

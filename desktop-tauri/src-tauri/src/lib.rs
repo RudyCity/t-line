@@ -35,73 +35,58 @@ fn show_dashboard_window<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>) {
     }
 }
 
-fn is_node_installed() -> bool {
-    let mut cmd = Command::new("node");
-    cmd.arg("--version")
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
+fn is_bun_installed() -> bool {
+    let mut command = Command::new("bun");
+    command.arg("--version").stdout(Stdio::null()).stderr(Stdio::null());
     #[cfg(windows)]
     {
-        cmd.creation_flags(0x08000000);
+        command.creation_flags(0x08000000);
     }
-    cmd.status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+    command.status().is_ok_and(|result| result.success())
 }
 
-// Use the licensed Node binary shipped with the Tauri installer when present.
-// Fall back to system Node only for developer or older portable distributions.
-fn available_node_runtime(app: &tauri::AppHandle) -> Option<PathBuf> {
-    #[cfg(target_os = "windows")]
-    let binary = "node-runtime/node.exe";
-    #[cfg(not(target_os = "windows"))]
-    let binary = "node-runtime/node";
-    for resource in [binary.to_string(), format!("_up_/{}", binary)] {
+/// Prefer the Bun runtime bundled with the application. Global Bun is
+/// supported for development but not required for installed Windows builds.
+fn available_bun_runtime(app: &tauri::AppHandle) -> Option<PathBuf> {
+    #[cfg(windows)]
+    let binary = "bun-runtime/bun.exe";
+    #[cfg(not(windows))]
+    let binary = "bun-runtime/bun";
+    for resource in [binary.to_owned(), format!("_up_/{}", binary)] {
         if let Ok(candidate) = app.path().resolve(&resource, tauri::path::BaseDirectory::Resource) {
-            if candidate.is_file() {
-                return Some(candidate);
-            }
+            if candidate.is_file() { return Some(candidate); }
         }
     }
-    if is_node_installed() {
-        Some(PathBuf::from("node"))
-    } else {
-        None
+    if let Some(home) = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")) {
+        let candidate = PathBuf::from(home).join(".bun").join("bin")
+            .join(if cfg!(windows) { "bun.exe" } else { "bun" });
+        if candidate.is_file() { return Some(candidate); }
     }
+    if is_bun_installed() { Some(PathBuf::from("bun")) } else { None }
 }
 
-fn show_missing_node_dialog() {
-    #[cfg(target_os = "windows")]
+fn show_missing_bun_dialog() {
+    #[cfg(windows)]
     {
-        Command::new("powershell")
-            .args(&[
-                "-Command",
-                "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show('Node.js is not installed. Please install Node.js (LTS version) to run t-line.', 'Node.js Required', 'OK', 'Error')"
+        let _ = Command::new("powershell")
+            .args([
+                "-NoProfile", "-Command",
+                "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show('Bun runtime is missing. Install Bun or reinstall T-Line with bundled Bun.', 'Bun Required', 'OK', 'Error')"
             ])
             .creation_flags(0x08000000)
-            .status()
-            .ok();
+            .status();
     }
     #[cfg(target_os = "macos")]
     {
-        Command::new("osascript")
-            .args(&[
-                "-e",
-                "display dialog \"Node.js is not installed. Please install Node.js to run t-line.\" with title \"Node.js Required\" buttons {\"OK\"} default button \"OK\" with icon stop"
-            ])
-            .status()
-            .ok();
+        let _ = Command::new("osascript")
+            .args(["-e", "display dialog \"Bun is required to run T-Line.\" buttons {\"OK\"}"])
+            .status();
     }
     #[cfg(target_os = "linux")]
     {
-        Command::new("zenity")
-            .args(&[
-                "--error",
-                "--text", "Node.js is not installed. Please install Node.js to run t-line.",
-                "--title", "Node.js Required"
-            ])
-            .status()
-            .ok();
+        let _ = Command::new("zenity")
+            .args(["--error", "--text", "Bun runtime is required to run T-Line"])
+            .status();
     }
 }
 
@@ -1052,7 +1037,7 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
         if backend_verified {
             println!("[tauri] Verified existing T-Line backend on port {}; attaching without ownership.", port);
         } else {
-            println!("[tauri] Spawning backend process...");
+            println!("[tauri] Spawning Bun backend process...");
             
             let log_file_path = if let Ok(app_data) = app_handle_clone.path().app_data_dir() {
                 std::fs::create_dir_all(&app_data).ok();
@@ -1066,26 +1051,17 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
             if is_dev {
                 if let Some(ws_root) = find_workspace_root() {
                     println!("[tauri] Dev mode: Spawning dev backend from workspace root: {:?}", ws_root);
-                    #[cfg(windows)]
-                    {
-                        child = Command::new("cmd")
-                            .args(&["/c", "npm run dev:backend"])
+                    if let Some(bun_runtime) = available_bun_runtime(&app_handle_clone) {
+                        let mut command = Command::new(bun_runtime);
+                        command.args(["--cwd", "backend", "run", "dev"])
                             .current_dir(&ws_root)
                             .stdout(Stdio::piped())
-                            .stderr(Stdio::piped())
-                            .creation_flags(0x08000000)
-                            .spawn()
-                            .ok();
-                    }
-                    #[cfg(not(windows))]
-                    {
-                        child = Command::new("npm")
-                            .args(&["run", "dev:backend"])
-                            .current_dir(&ws_root)
-                            .stdout(Stdio::piped())
-                            .stderr(Stdio::piped())
-                            .spawn()
-                            .ok();
+                            .stderr(Stdio::piped());
+                        #[cfg(windows)]
+                        {
+                            command.creation_flags(0x08000000);
+                        }
+                        child = command.spawn().ok();
                     }
                 }
             }
@@ -1114,16 +1090,15 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
                     Some(path) => {
                         let path_str = path.to_string_lossy();
                         let clean_path = path_str.strip_prefix(r"\\?\").unwrap_or(&path_str);
-                        println!("[tauri] Spawning node with script: {}", clean_path);
-                        let Some(node_runtime) = available_node_runtime(&app_handle_clone) else {
-                            eprintln!("[tauri] Neither bundled nor system Node.js is available.");
+                        println!("[tauri] Spawning Bun backend with script: {}", clean_path);
+                        let Some(bun_runtime) = available_bun_runtime(&app_handle_clone) else {
+                            eprintln!("[tauri] Neither bundled nor system Bun is available.");
                             return;
                         };
-                        let mut cmd = Command::new(node_runtime);
-                        cmd.arg("--max-old-space-size=64")
-                            .arg("--expose-gc")
-                            .arg(clean_path)
+                        let mut cmd = Command::new(&bun_runtime);
+                        cmd.arg(clean_path)
                             .env("PORT", port.to_string())
+                            .env("TLINE_BUN_RUNTIME", bun_runtime.as_os_str())
                             .stdout(Stdio::piped())
                             .stderr(Stdio::piped());
                         #[cfg(windows)]
@@ -1180,7 +1155,7 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
         }
 
         // In dev mode the webview navigates to Vite (port 5773). spawn_backend
-        // only started the Node backend on 5779, leaving 5773 dead and the
+        // only started the Bun backend on 5779, leaving 5773 dead and the
         // webview blank. Launch the Vite dev server here and wait for it.
         if is_dev {
             // Wait up to 3 seconds for Vite to start if it was spawned by dev.js
@@ -1197,24 +1172,17 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
             if !vite_active {
                 if let Some(ws_root) = find_workspace_root() {
                     println!("[tauri] Dev mode: Spawning Vite dev server from workspace root: {:?}", ws_root);
-                    #[cfg(windows)]
-                    {
-                        let _ = Command::new("cmd")
-                            .args(&["/c", "npm", "run", "dev:frontend"])
+                    if let Some(bun_runtime) = available_bun_runtime(&app_handle_clone) {
+                        let mut command = Command::new(bun_runtime);
+                        command.args(["--cwd", "frontend", "run", "dev"])
                             .current_dir(&ws_root)
                             .stdout(Stdio::null())
-                            .stderr(Stdio::null())
-                            .creation_flags(0x08000000)
-                            .spawn();
-                    }
-                    #[cfg(not(windows))]
-                    {
-                        let _ = Command::new("npm")
-                            .args(&["run", "dev:frontend"])
-                            .current_dir(&ws_root)
-                            .stdout(Stdio::null())
-                            .stderr(Stdio::null())
-                            .spawn();
+                            .stderr(Stdio::null());
+                        #[cfg(windows)]
+                        {
+                            command.creation_flags(0x08000000);
+                        }
+                        let _ = command.spawn();
                     }
                 } else {
                     eprintln!("[tauri] Dev mode: could not locate workspace root; skipping Vite spawn.");
@@ -1754,9 +1722,9 @@ pub fn run() {
             }
 
             let app_handle = app.handle().clone();
-            if available_node_runtime(&app_handle).is_none() {
-                show_missing_node_dialog();
-                return Err("Neither bundled nor system Node.js is available for T-Line".into());
+            if available_bun_runtime(&app_handle).is_none() {
+                show_missing_bun_dialog();
+                return Err("Neither bundled nor system Bun is available for T-Line".into());
             }
             let state_ref = app.state::<DesktopState>();
 

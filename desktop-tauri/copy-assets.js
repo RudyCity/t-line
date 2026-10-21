@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 
 function copyDirSync(src, dest) {
   fs.mkdirSync(dest, { recursive: true });
@@ -21,9 +21,9 @@ function copyDirSync(src, dest) {
 // Clean and copy
 try {
   console.log('Copying backend assets for Tauri...');
-  const lockfile = path.join(__dirname, 'backend', 'package-lock.json');
+  const lockfile = path.join(__dirname, 'backend', 'bun.lock');
   if (!fs.existsSync(lockfile)) {
-    throw new Error('Desktop backend production lockfile is required for reproducible packaging');
+    throw new Error('Desktop backend Bun lockfile must be committed for reproducible packaging');
   }
   const lockedDependencies = fs.readFileSync(lockfile);
   if (fs.existsSync(path.join(__dirname, 'backend'))) {
@@ -34,15 +34,20 @@ try {
   copyDirSync(path.join(__dirname, '..', 'backend', 'dist'), path.join(__dirname, 'backend', 'dist'));
   fs.copyFileSync(path.join(__dirname, '..', 'backend', 'package.json'), path.join(__dirname, 'backend', 'package.json'));
 
-  console.log('Installing production dependencies for backend...');
-  execSync('npm ci --omit=dev', {
-    cwd: path.join(__dirname, 'backend'),
-    stdio: 'inherit'
+  // Both dependency installation and runtime execution must use Bun. The
+  // dedicated lockfile makes the staged package independent of the monorepo
+  // root workspace lock and blocks unreviewed production version drift.
+  const { resolveBuildBun } = require('./prepare-bun-runtime.js');
+  const bunExecutable = resolveBuildBun();
+  console.log('Installing pinned backend production dependencies with Bun...');
+  execFileSync(bunExecutable, ['install', '--frozen-lockfile', '--production'], {
+    cwd: path.join(__dirname, 'backend'), stdio: 'inherit',
+    env: { ...process.env, CI: 'true' },
   });
 
-  // Bundle an independently licensed Node.js runtime for clean Windows installs.
-  // The launcher prefers the verified bundled runtime over any host PATH entry.
-  require('./prepare-node-runtime.js').prepareNodeRuntime(__dirname);
+  // Bundle the pinned-license Bun runtime for clean Windows installs.
+  // The launcher uses this verified Bun binary without relying on a host installation.
+  require('./prepare-bun-runtime.js').prepareBunRuntime(__dirname);
 
   // Remove .bin folder to completely avoid symlinks
   const binPath = path.join(__dirname, 'backend', 'node_modules', '.bin');

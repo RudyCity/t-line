@@ -920,7 +920,7 @@ wss.on('connection', (ws: WebSocket) => {
 // SuperAgent Agent WebSocket Server handler
 agentWss.on('connection', handleSuperAgentConnection);
 
-// Periodic garbage collection to keep memory usage low (triggered if node --expose-gc is enabled)
+// Periodic garbage collection to keep memory usage low (triggered when Bun/Node exposes global.gc)
 if (typeof global.gc === 'function') {
   const gcFn = global.gc;
   setInterval(() => {
@@ -951,5 +951,7 @@ server.listen(port, () => {
   updateWorkspaceWatchers();
   // Pre-warm the SuperAgent server so it is ready before the first WS connection.
   // Uses the global process singleton — subsequent WS handlers will see it's already up.
-  startSuperAgentEager();
+  if (process.env.TLINE_SKIP_SUPERAGENT_AUTOSTART !== '1') {
+    startSuperAgentEager();
+  }
 });

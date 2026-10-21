@@ -456,7 +456,7 @@ export const previewProxy = createPreviewProxy({
             <div class="card">
               <span class="icon">🌐</span>
               <h1>Web Preview Offline</h1>
-              <p>Pratinjau web saat ini offline di <strong>${currentProxyTarget}</strong>.<br><br>Jalankan server pengembangan Anda (seperti <code>npm run dev</code>) di terminal, lalu klik tombol di bawah.</p>
+              <p>Pratinjau web saat ini offline di <strong>${currentProxyTarget}</strong>.<br><br>Jalankan server pengembangan Anda (seperti <code>bun run dev</code>) di terminal, lalu klik tombol di bawah.</p>
               <button class="btn" onclick="window.location.reload()">Segarkan Koneksi</button>
             </div>
           </body>
