@@ -229,6 +229,13 @@ export default function App() {
 
   // Unified Alert/Confirm Dialog State via hook
   const { confirmDialog, showAlert, showConfirm } = useConfirmDialog();
+  // Native WebView2 overlays float over HTML modals on Windows. Hide browser
+  // overlays while a confirmation dialog is active so the user can respond.
+  useEffect(() => {
+    if (!confirmDialog?.show) return;
+    window.dispatchEvent(new CustomEvent('tline-hide-native-webview', { detail: { hide: true } }));
+    return () => { window.dispatchEvent(new CustomEvent('tline-hide-native-webview', { detail: { hide: false } })); };
+  }, [confirmDialog?.show]);
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [rightMenuOpen, setRightMenuOpen] = useState<boolean>(false);
   const [showShortcutModal, setShowShortcutModal] = useState<boolean>(false);
@@ -599,13 +606,17 @@ export default function App() {
     setActiveTabIdRef.current = setActiveTabId;
   }, [setActiveTabId]);
 
-  // Listen for terminal selection and tab control events from system tray
+  // Tray actions must be handled by the dashboard window only. Detached
+  // browser/editor windows mount App too; duplicate listeners could close the
+  // same PTY or tab more than once.
   useEffect(() => {
+    if (detachedTabId) return;
     if ((window as any).__TAURI__?.event?.listen) {
       let unlistenSelectTerminal: (() => void) | null = null;
       let unlistenSelectTab: (() => void) | null = null;
       let unlistenCloseTab: (() => void) | null = null;
       let unlistenCloseBulkTabs: (() => void) | null = null;
+      let disposed = false;
 
       const setupListeners = async () => {
         try {
@@ -656,6 +667,7 @@ export default function App() {
             }
           );
 
+          if (disposed) { unlistenSelectTerminal?.(); return; }
           unlistenSelectTab = await (window as any).__TAURI__.event.listen(
             'select-tab',
             async (event: any) => {
@@ -672,6 +684,7 @@ export default function App() {
             }
           );
 
+          if (disposed) { unlistenSelectTab?.(); return; }
           unlistenCloseTab = await (window as any).__TAURI__.event.listen(
             'close-tab',
             async (event: any) => {
@@ -680,32 +693,48 @@ export default function App() {
             }
           );
 
+          if (disposed) { unlistenCloseTab?.(); return; }
           unlistenCloseBulkTabs = await (window as any).__TAURI__.event.listen(
             'close-bulk-tabs',
             async (event: any) => {
               const { tabIds } = event.payload;
               if (Array.isArray(tabIds)) {
-                for (const tabId of tabIds) {
-                  closeTerminalRef.current(tabId);
-                }
+                // The tray menu can be stale by the time the user clicks it.
+                // Only act on existing tabs, and require a confirmation before
+                // closing a potentially large set of running terminals.
+                const openTabs = new Set(tabsRef.current.map(tab => tab.id));
+                const selected = [...new Set(tabIds.filter((id: unknown): id is string =>
+                  typeof id === 'string' && openTabs.has(id)))];
+                if (!selected.length) return;
+                showConfirm(
+                  'Close tabs from system tray?',
+                  'Close ' + selected.length + ' tab(s)? Running terminal sessions in these tabs may be stopped.',
+                  () => {
+                    for (const tabId of selected) closeTerminalRef.current(tabId);
+                  },
+                  'danger',
+                  'Close Tabs'
+                );
               }
             }
           );
+          if (disposed) unlistenCloseBulkTabs?.();
         } catch (err) {
-          console.error('Failed to setup Tauri tray listeners:', err);
+          if (!disposed) console.error('Failed to setup Tauri tray listeners:', err);
         }
       };
 
       setupListeners();
 
       return () => {
+        disposed = true;
         if (unlistenSelectTerminal) unlistenSelectTerminal();
         if (unlistenSelectTab) unlistenSelectTab();
         if (unlistenCloseTab) unlistenCloseTab();
         if (unlistenCloseBulkTabs) unlistenCloseBulkTabs();
       };
     }
-  }, []);
+  }, [detachedTabId, showConfirm]);
 
   // --- Detached Tab Effects ---
   useEffect(() => {

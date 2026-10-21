@@ -15,6 +15,7 @@ use std::os::windows::process::CommandExt;
 
 mod updater;
 mod backend_identity;
+mod tray_logic;
 
 mod state;
 
@@ -120,12 +121,6 @@ fn http_get(port: u16, path: &str, token: Option<&str>) -> Result<String, String
     }
 }
 
-fn is_path_under_workspace(path: &str, ws_path: &str) -> bool {
-    let p1 = path.replace("\\", "/").to_lowercase();
-    let p2 = ws_path.replace("\\", "/").to_lowercase();
-    p1 == p2 || p1.starts_with(&format!("{}/", p2))
-}
-
 fn is_paths_equal(path1: &str, path2: &str) -> bool {
     path1.replace("\\", "/").to_lowercase() == path2.replace("\\", "/").to_lowercase()
 }
@@ -170,6 +165,8 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
     // Show Dashboard
     let show_item = MenuItemBuilder::with_id("show", "Show Dashboard").build(app_handle)?;
     menu.append(&show_item)?;
+    let hide_item = MenuItemBuilder::with_id("hide", "Hide Dashboard").build(app_handle)?;
+    menu.append(&hide_item)?;
 
     menu.append(&PredefinedMenuItem::separator(app_handle)?)?;
 
@@ -198,7 +195,8 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
         let workspaces_val = state.workspaces.lock().unwrap().clone();
 
         if let (Some(sessions_arr), Some(workspaces_arr)) = (sessions.as_array(), workspaces_val.as_array()) {
-            if !sessions_arr.is_empty() {
+            let visible_sessions = tray_logic::displayed_sessions(sessions_arr);
+            if !visible_sessions.is_empty() {
                 menu.append(&PredefinedMenuItem::separator(app_handle)?)?;
                 
                 let active_label = MenuItemBuilder::with_id("sessions_header", "Active PTY Sessions:")
@@ -207,7 +205,7 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
                 menu.append(&active_label)?;
 
                 // Map workspaces to their paths for lookup
-                for ws in workspaces_arr {
+                for (ws_index, ws) in workspaces_arr.iter().enumerate() {
                     let ws_name = ws.get("name").and_then(|v| v.as_str()).unwrap_or("Unnamed Workspace");
                     let ws_path = ws.get("path").and_then(|v| v.as_str()).unwrap_or("");
                     if ws_path.is_empty() {
@@ -216,15 +214,16 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
 
                     // Find terminal sessions belonging to this workspace
                     let mut ws_terms = Vec::new();
-                    for t in sessions_arr {
+                    for t in &visible_sessions {
                         let t_cwd = t.get("cwd").and_then(|v| v.as_str()).unwrap_or("");
-                        if is_path_under_workspace(t_cwd, ws_path) {
-                            ws_terms.push(t);
+                        if tray_logic::best_workspace_index(t_cwd, workspaces_arr) == Some(ws_index) {
+                            ws_terms.push(*t);
                         }
                     }
 
                     if !ws_terms.is_empty() {
-                        let mut submenu_builder = SubmenuBuilder::new(app_handle, format!("{} ({})", ws_name, ws_terms.len()));
+                        let ws_name_display: String = ws_name.chars().filter(|c| !c.is_control()).take(44).collect();
+                        let mut submenu_builder = SubmenuBuilder::new(app_handle, format!("{} ({})", ws_name_display, ws_terms.len()));
                         
                         for t in ws_terms {
                             let pid = t.get("pid").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -255,22 +254,14 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
                     }
                 }
 
-                // Orphan/Other sessions
-                let mut orphan_terms = Vec::new();
-                for t in sessions_arr {
-                    let t_cwd = t.get("cwd").and_then(|v| v.as_str()).unwrap_or("");
-                    let mut has_ws = false;
-                    for ws in workspaces_arr {
-                        let ws_path = ws.get("path").and_then(|v| v.as_str()).unwrap_or("");
-                        if !ws_path.is_empty() && is_path_under_workspace(t_cwd, ws_path) {
-                            has_ws = true;
-                            break;
-                        }
-                    }
-                    if !has_ws {
-                        orphan_terms.push(t);
-                    }
-                }
+                // Sessions without a matching project only; nested workspaces
+                // are already assigned to their closest matching root.
+                let orphan_terms: Vec<_> = visible_sessions.iter().copied()
+                    .filter(|t| {
+                        let cwd = t.get("cwd").and_then(|v| v.as_str()).unwrap_or("");
+                        tray_logic::best_workspace_index(cwd, workspaces_arr).is_none()
+                    })
+                    .collect();
 
                 if !orphan_terms.is_empty() {
                     let mut submenu_builder = SubmenuBuilder::new(app_handle, format!("Other Sessions ({})", orphan_terms.len()));
@@ -284,6 +275,12 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
                     }
                     let submenu = submenu_builder.build()?;
                     menu.append(&submenu)?;
+                }
+                if sessions_arr.len() > visible_sessions.len() {
+                    let omitted = sessions_arr.len() - visible_sessions.len();
+                    menu.append(&MenuItemBuilder::with_id(
+                        "more_sessions", format!("{} additional/duplicate sessions: open Dashboard", omitted)
+                    ).enabled(false).build(app_handle)?)?;
                 }
             }
         }
@@ -334,7 +331,8 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
                 let build_tab_submenu = |app_handle: &tauri::AppHandle<R>, tab: &serde_json::Value, emoji: &str| -> Result<tauri::menu::Submenu<R>, tauri::Error> {
                     let id = tab.get("id").and_then(|v| v.as_str()).unwrap_or("");
                     let name = tab.get("name").and_then(|v| v.as_str()).unwrap_or("Unnamed Tab");
-                    let submenu_title = format!("{} {}", emoji, name);
+                    let truncated: String = name.chars().filter(|c| !c.is_control()).take(54).collect();
+                    let submenu_title = format!("{} {}", emoji, truncated);
                     
                     SubmenuBuilder::new(app_handle, submenu_title)
                         .item(&MenuItemBuilder::with_id(format!("focus_tab_{}", id), "Focus Tab").build(app_handle)?)
@@ -346,13 +344,21 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
 
                 if !agent_tabs.is_empty() {
                     let mut cat_builder = SubmenuBuilder::new(app_handle, format!("🤖 Agents ({})", agent_tabs.len()));
-                    for tab in &agent_tabs {
+                    for tab in agent_tabs.iter().take(tray_logic::MAX_VISIBLE_TABS_PER_CATEGORY) {
                         if let Ok(sub) = build_tab_submenu(app_handle, tab, "🤖") {
                             cat_builder = cat_builder.item(&sub);
                         }
                     }
+                    if agent_ids.len() > tray_logic::MAX_VISIBLE_TABS_PER_CATEGORY {
+                        let omitted = agent_ids.len() - tray_logic::MAX_VISIBLE_TABS_PER_CATEGORY;
+                        cat_builder = cat_builder.item(
+                            &MenuItemBuilder::with_id("more_agent_tabs",
+                                format!("{} more tabs: open Dashboard", omitted))
+                                .enabled(false).build(app_handle)?
+                        );
+                    }
                     if agent_ids.len() > 1 {
-                        let bulk_id = format!("close_bulk_ids_{}", agent_ids.join(","));
+                        let bulk_id = "close_bulk_agents";
                         cat_builder = cat_builder.separator();
                         if let Ok(bulk_item) = MenuItemBuilder::with_id(bulk_id, "❌ Close All Agents").build(app_handle) {
                             cat_builder = cat_builder.item(&bulk_item);
@@ -365,13 +371,21 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
 
                 if !browser_tabs.is_empty() {
                     let mut cat_builder = SubmenuBuilder::new(app_handle, format!("🌐 Browsers ({})", browser_tabs.len()));
-                    for tab in &browser_tabs {
+                    for tab in browser_tabs.iter().take(tray_logic::MAX_VISIBLE_TABS_PER_CATEGORY) {
                         if let Ok(sub) = build_tab_submenu(app_handle, tab, "🌐") {
                             cat_builder = cat_builder.item(&sub);
                         }
                     }
+                    if browser_ids.len() > tray_logic::MAX_VISIBLE_TABS_PER_CATEGORY {
+                        let omitted = browser_ids.len() - tray_logic::MAX_VISIBLE_TABS_PER_CATEGORY;
+                        cat_builder = cat_builder.item(
+                            &MenuItemBuilder::with_id("more_browser_tabs",
+                                format!("{} more tabs: open Dashboard", omitted))
+                                .enabled(false).build(app_handle)?
+                        );
+                    }
                     if browser_ids.len() > 1 {
-                        let bulk_id = format!("close_bulk_ids_{}", browser_ids.join(","));
+                        let bulk_id = "close_bulk_browsers";
                         cat_builder = cat_builder.separator();
                         if let Ok(bulk_item) = MenuItemBuilder::with_id(bulk_id, "❌ Close All Browsers").build(app_handle) {
                             cat_builder = cat_builder.item(&bulk_item);
@@ -384,13 +398,21 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
 
                 if !terminal_tabs.is_empty() {
                     let mut cat_builder = SubmenuBuilder::new(app_handle, format!("💻 Terminals ({})", terminal_tabs.len()));
-                    for tab in &terminal_tabs {
+                    for tab in terminal_tabs.iter().take(tray_logic::MAX_VISIBLE_TABS_PER_CATEGORY) {
                         if let Ok(sub) = build_tab_submenu(app_handle, tab, "💻") {
                             cat_builder = cat_builder.item(&sub);
                         }
                     }
+                    if terminal_ids.len() > tray_logic::MAX_VISIBLE_TABS_PER_CATEGORY {
+                        let omitted = terminal_ids.len() - tray_logic::MAX_VISIBLE_TABS_PER_CATEGORY;
+                        cat_builder = cat_builder.item(
+                            &MenuItemBuilder::with_id("more_terminal_tabs",
+                                format!("{} more tabs: open Dashboard", omitted))
+                                .enabled(false).build(app_handle)?
+                        );
+                    }
                     if terminal_ids.len() > 1 {
-                        let bulk_id = format!("close_bulk_ids_{}", terminal_ids.join(","));
+                        let bulk_id = "close_bulk_terminals";
                         cat_builder = cat_builder.separator();
                         if let Ok(bulk_item) = MenuItemBuilder::with_id(bulk_id, "❌ Close All Terminals").build(app_handle) {
                             cat_builder = cat_builder.item(&bulk_item);
@@ -403,13 +425,21 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
 
                 if !other_tabs.is_empty() {
                     let mut cat_builder = SubmenuBuilder::new(app_handle, format!("📄 Files & Diffs ({})", other_tabs.len()));
-                    for tab in &other_tabs {
+                    for tab in other_tabs.iter().take(tray_logic::MAX_VISIBLE_TABS_PER_CATEGORY) {
                         if let Ok(sub) = build_tab_submenu(app_handle, tab, "📄") {
                             cat_builder = cat_builder.item(&sub);
                         }
                     }
+                    if other_ids.len() > tray_logic::MAX_VISIBLE_TABS_PER_CATEGORY {
+                        let omitted = other_ids.len() - tray_logic::MAX_VISIBLE_TABS_PER_CATEGORY;
+                        cat_builder = cat_builder.item(
+                            &MenuItemBuilder::with_id("more_other_tabs",
+                                format!("{} more tabs: open Dashboard", omitted))
+                                .enabled(false).build(app_handle)?
+                        );
+                    }
                     if other_ids.len() > 1 {
-                        let bulk_id = format!("close_bulk_ids_{}", other_ids.join(","));
+                        let bulk_id = "close_bulk_other";
                         cat_builder = cat_builder.separator();
                         if let Ok(bulk_item) = MenuItemBuilder::with_id(bulk_id, "❌ Close All Files").build(app_handle) {
                             cat_builder = cat_builder.item(&bulk_item);
@@ -421,7 +451,7 @@ fn build_tray_menu<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, state: &
                 }
 
                 if all_ids.len() > 1 {
-                    let bulk_id = format!("close_bulk_ids_{}", all_ids.join(","));
+                    let bulk_id = "close_bulk_all";
                     active_tabs_submenu.append(&PredefinedMenuItem::separator(app_handle)?)?;
                     active_tabs_submenu.append(&MenuItemBuilder::with_id(bulk_id, "❌ Close All Tabs").build(app_handle)?)?;
                 }
@@ -1337,18 +1367,21 @@ fn restart_backend_async(app_handle: tauri::AppHandle) {
     });
 }
 
-fn restart_desktop_app() {
-    if let Ok(current_exe) = std::env::current_exe() {
-        Command::new(current_exe).spawn().ok();
-        std::process::exit(0);
-    }
+fn restart_desktop_app(app_handle: &tauri::AppHandle) {
+    // The Tauri-managed restart emits normal Exit events, releases the
+    // single-instance lock and preserves OS-native restart lifecycle.
+    // Manual spawning before exiting can be captured by our own singleton.
+    app_handle.request_restart();
 }
 
 fn poll_backend(app_handle: tauri::AppHandle) {
     let port = 5779;
     thread::spawn(move || {
         let state = app_handle.state::<DesktopState>();
-        let mut last_state_str = String::new();
+        let mut last_sessions = String::new();
+        let mut last_workspaces = String::new();
+        let mut last_sync = String::new();
+        let mut next_workspace_refresh = Instant::now();
         
         loop {
             thread::sleep(Duration::from_secs(3));
@@ -1400,38 +1433,60 @@ fn poll_backend(app_handle: tauri::AppHandle) {
             }
 
             if status_to_apply == "running" || status_to_apply == "connected" {
+                // PTY sessions and tab selection are cheap and change often.
+                // Workspace metadata may spawn numerous Git commands: fetching
+                // all projects every three seconds made the tray a major CPU
+                // and disk I/O contributor, even while the main window hid.
                 let token_str = token.as_deref();
-                let sessions_res = http_get(port, "/api/terminals/active", token_str);
-                let workspaces_res = http_get(port, "/api/workspaces", token_str);
-                let sync_res = http_get(port, "/api/sync/state", token_str);
-                
-                if let (Ok(sessions_body), Ok(workspaces_body), Ok(sync_body)) = (sessions_res, workspaces_res, sync_res) {
-                    if let (Ok(sessions_json), Ok(workspaces_json), Ok(sync_json)) = (
-                        serde_json::from_str::<serde_json::Value>(&sessions_body),
-                        serde_json::from_str::<serde_json::Value>(&workspaces_body),
-                        serde_json::from_str::<serde_json::Value>(&sync_body)
-                    ) {
-                        let current_state_str = format!("{}{}{}", sessions_body, workspaces_body, sync_body);
-                        if current_state_str != last_state_str {
-                            last_state_str = current_state_str;
-                            
-                            {
-                                let mut sessions_guard = state.active_sessions.lock().unwrap();
-                                *sessions_guard = sessions_json;
+                if let Ok(body) = http_get(port, "/api/terminals/active", token_str) {
+                    if body != last_sessions {
+                        if let Ok(snapshot) = serde_json::from_str::<serde_json::Value>(&body) {
+                            if snapshot.is_array() {
+                                *state.active_sessions.lock().unwrap() = snapshot;
+                                last_sessions = body;
+                                sessions_changed = true;
                             }
-                            {
-                                let mut workspaces_guard = state.workspaces.lock().unwrap();
-                                *workspaces_guard = workspaces_json;
-                            }
-                            {
-                                let mut sync_guard = state.sync_state.lock().unwrap();
-                                *sync_guard = sync_json;
-                            }
-                            sessions_changed = true;
                         }
                     }
                 }
+                if let Ok(body) = http_get(port, "/api/sync/state", token_str) {
+                    if body != last_sync {
+                        if let Ok(snapshot) = serde_json::from_str::<serde_json::Value>(&body) {
+                            if snapshot.get("tabs").is_some_and(|value| value.is_array()) {
+                                *state.sync_state.lock().unwrap() = snapshot;
+                                last_sync = body;
+                                sessions_changed = true;
+                            }
+                        }
+                    }
+                }
+                if Instant::now() >= next_workspace_refresh {
+                    let mut valid_snapshot = false;
+                    if let Ok(body) = http_get(port, "/api/workspaces", token_str) {
+                        if let Ok(snapshot) = serde_json::from_str::<serde_json::Value>(&body) {
+                            if snapshot.is_array() {
+                                valid_snapshot = true;
+                                if body != last_workspaces {
+                                    *state.workspaces.lock().unwrap() = snapshot;
+                                    last_workspaces = body;
+                                    sessions_changed = true;
+                                }
+                            }
+                        }
+                    }
+                    // Retry quickly after transient HTTP/JSON errors; defer
+                    // expensive Git-backed workspace scans only on success.
+                    next_workspace_refresh = Instant::now() +
+                        Duration::from_secs(if valid_snapshot { 21 } else { 3 });
+                }
             } else {
+                // A fresh backend must not inherit menu snapshots from a
+                // previous process. Retry workspace fetch immediately after
+                // the next successfully authenticated connection.
+                last_sessions.clear();
+                last_sync.clear();
+                last_workspaces.clear();
+                next_workspace_refresh = Instant::now();
                 let mut sessions_guard = state.active_sessions.lock().unwrap();
                 let mut workspaces_guard = state.workspaces.lock().unwrap();
                 let mut sync_guard = state.sync_state.lock().unwrap();
@@ -1720,6 +1775,10 @@ pub fn run() {
                         app_handle.exit(0);
                     } else if id_str == "show" {
                         show_dashboard_window(app_handle);
+                    } else if id_str == "hide" {
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            let _ = window.hide();
+                        }
                     } else if id_str == "start_backend" {
                         spawn_backend(app_handle.clone());
                     } else if id_str == "stop_backend" {
@@ -1727,9 +1786,7 @@ pub fn run() {
                     } else if id_str == "restart_backend" {
                         restart_backend_async(app_handle.clone());
                     } else if id_str == "restart_desktop" {
-                        let state = app_handle.state::<DesktopState>();
-                        stop_backend(&state);
-                        restart_desktop_app();
+                        restart_desktop_app(app_handle);
                     } else if id_str.starts_with("pid_") {
                         if let Some(pid_str) = id_str.strip_prefix("pid_") {
                             if let Ok(pid) = pid_str.parse::<u64>() {
@@ -1773,14 +1830,20 @@ pub fn run() {
                             }
                             app_handle.emit("close-tab", CloseTabPayload { tab_id: tab_id.to_string() }).ok();
                         }
-                    } else if id_str.starts_with("close_bulk_ids_") {
-                        if let Some(ids_csv) = id_str.strip_prefix("close_bulk_ids_") {
-                            let tab_ids: Vec<String> = ids_csv.split(',').map(|s| s.to_string()).collect();
+                    } else if let Some(category) = id_str.strip_prefix("close_bulk_") {
+                        let state = app_handle.state::<DesktopState>();
+                        let snapshot = state.sync_state.lock().unwrap().clone();
+                        let tab_ids = tray_logic::bulk_tab_ids(&snapshot, category);
+                        if !tab_ids.is_empty() {
                             #[derive(Clone, serde::Serialize)]
                             struct CloseBulkPayload {
                                 #[serde(rename = "tabIds")]
                                 tab_ids: Vec<String>,
                             }
+                            // Show the confirmation in the main React UI. Bulk
+                            // deletion from a hidden tray must not silently
+                            // terminate many active sessions.
+                            show_dashboard_window(app_handle);
                             app_handle.emit("close-bulk-tabs", CloseBulkPayload { tab_ids }).ok();
                         }
                     }
