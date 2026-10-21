@@ -38,6 +38,9 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [playing, setPlaying] = useState(false);
   const [creating, setCreating] = useState(false);
   const [projectName, setProjectName] = useState('');
+  const [motionPrompt, setMotionPrompt] = useState('');
+  const [directorAvailable, setDirectorAvailable] = useState(false);
+  const [promptHistory, setPromptHistory] = useState<Array<{ prompt: string; response: string }>>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -76,6 +79,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     const sequence = ++version.current;
     selectionSeq.current++;
     setProject(null); setSelectedId(''); setSelectedLayer(null); setFrame(0);
+    setMotionPrompt(''); setPromptHistory([]); setDirectorAvailable(false);
     setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
     setScheduler(null); setSupervisor(null); setSupervisedRender(false);
@@ -85,14 +89,16 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
       try {
         const [list, existingJobs] = await Promise.all([motionStudioApi.list(workspacePath), motionStudioApi.jobs(workspacePath)]);
         // Older SuperAgent builds lack scheduler information; editor remains usable.
-        const [capacity, storageInfo, recoveryInfo, supervisorInfo] = await Promise.all([
+        const [capacity, storageInfo, recoveryInfo, supervisorInfo, motionInfo] = await Promise.all([
           motionStudioApi.scheduler(workspacePath).catch(() => null),
           motionStudioApi.storage(workspacePath).catch(() => null),
           motionStudioApi.queueRecovery(workspacePath).catch(() => null),
           motionStudioApi.supervisor(workspacePath).catch(() => null),
+          motionStudioApi.capabilities(workspacePath).catch(() => null),
         ]);
         if (!mounted.current || version.current !== sequence) return;
         setProjects(list); setJobs(existingJobs); setScheduler(capacity); setStorage(storageInfo); setQueueRecovery(recoveryInfo); setSupervisor(supervisorInfo);
+        setDirectorAvailable(Boolean(motionInfo?.capabilities?.aiPromptDirector));
         const latest = existingJobs.find(job => job.status === 'completed') || existingJobs[0];
         setActiveJobId(latest?.id || '');
       } catch (cause) {
@@ -385,6 +391,30 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
       `Keyframe set at ${frame} · previous value ${evaluated[field].toFixed(2)}`);
   };
 
+  const submitMotionPrompt = () => {
+    const prompt = motionPrompt.trim();
+    if (!prompt || busy || !directorAvailable) return;
+    const targetId = selectedId;
+    void operation(async () => {
+      const generated = targetId
+        ? await motionStudioApi.revise(workspacePath, targetId, prompt, renderWidth)
+        : await motionStudioApi.generate(workspacePath, prompt, renderWidth);
+      if (generated.job.status === 'failed') throw new Error(generated.job.error || 'Motion render could not start');
+      setProjects(await motionStudioApi.list(workspacePath));
+      setSelectedId(generated.project.id);
+      setProject(generated.project); setSelectedLayer(null);
+      setUndoStack([]); setRedoStack([]);
+      setJobs(prev => [generated.job, ...prev.filter(item => item.id !== generated.job.id)]);
+      setActiveJobId(generated.job.id);
+      setPromptHistory(prev => [...prev.slice(-9), {
+        prompt, response: generated.outline.join(' · ') +
+          (generated.limitations.length ? ' · ' + generated.limitations.join('; ') : ''),
+      }]);
+      setMotionPrompt('');
+      setSuccess('AI Motion created revision ' + generated.project.revision + ' · MP4 rendering started');
+    });
+  };
+
   const render = () => {
     if (!project) return;
     void operation(async () => {
@@ -462,6 +492,33 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
           <button className={primary} onClick={render} disabled={!project || busy}><Film size={14} /> Render MP4</button>
         </div>
       </header>
+      <div className="border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] px-4 py-4" aria-label="AI Motion Director">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="text-sm font-semibold">AI Motion Director</div>
+          <span className="text-[11px] text-[var(--text-muted)]">Prompt → editable storyboard → MP4 · short text/shape preview</span>
+        </div>
+        {promptHistory.length > 0 && <div className="mb-3 max-h-28 space-y-2 overflow-y-auto text-xs" aria-label="Motion prompt history">
+          {promptHistory.map((entry, index) => <div key={index} className="rounded border border-[var(--border-color)] px-3 py-2">
+            <div className="font-medium">{entry.prompt}</div>
+            <div className="mt-1 text-[var(--text-muted)]">{entry.response}</div>
+          </div>)}
+        </div>}
+        <form className="flex flex-wrap items-end gap-2" onSubmit={event => { event.preventDefault(); submitMotionPrompt(); }}>
+          <label className="min-w-[220px] flex-1 text-xs" htmlFor="motion-director-prompt">
+            {selectedId ? 'Describe a revision to this motion' : 'Describe the motion you want to create'}
+            <textarea id="motion-director-prompt" aria-label="Motion prompt"
+              className={control + ' mt-1 min-h-[72px] w-full resize-y'} rows={2} maxLength={2000}
+              value={motionPrompt} onChange={event => setMotionPrompt(event.target.value)}
+              placeholder="Buat video promosi produk 15 detik, modern, background gelap dan teks animasi..." disabled={busy} />
+          </label>
+          <button className={primary} type="submit" disabled={busy || !directorAvailable || !motionPrompt.trim()}>
+            <Film size={14} /> {busy ? 'Agent working…' : selectedId ? 'Revise with AI' : 'Generate with AI'}
+          </button>
+        </form>
+        <p className="mt-2 text-[11px] text-[var(--text-muted)]">
+          {directorAvailable ? 'AI uses the configured SuperAgent model. Audio generation, external footage, stock photos and 3D effects are not supported yet.' : 'AI Motion Director needs an updated SuperAgent server with prompt support. The manual editor remains available.'} Select “Select a project” to start a new video.
+        </p>
+      </div>
       {creating && (
         <form className="flex flex-wrap items-center gap-2 border-b border-[var(--border-color)] px-4 py-3" onSubmit={event => { event.preventDefault(); if (projectName.trim()) createProject(); }}>
           <label className="text-xs" htmlFor="motion-name">Project name</label>

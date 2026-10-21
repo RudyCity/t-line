@@ -115,6 +115,22 @@ describe('T-Line Motion proxy and service authentication', () => {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Motion Demo' }),
     });
     expect(created.status).toBe(201);
+    const generated = await fetch(base + '/generate?workspace=allowed-root', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: 'Video promo Laris', width: 640 }),
+    });
+    expect(generated.status).toBe(201);
+    expect((await generated.json()).url).toContain('/api/motion/generate?workspace=allowed-root');
+    const motionId = 'motion-' + 'a'.repeat(20);
+    const revised = await fetch(base + '/projects/' + motionId + '/revise?workspace=allowed-root', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: 'Make title shorter', width: 640 }),
+    });
+    expect(revised.status).toBe(201);
+    expect((await revised.json()).url).toContain('/api/motion/projects/' + motionId + '/revise');
+    expect((await fetch(base + '/generate?workspace=allowed-root')).status).toBe(404);
+    expect((await fetch(base + '/projects/' + motionId + '/revise?workspace=allowed-root')).status).toBe(404);
+    expect((await fetch(base + '/generate?workspace=foreign', { method: 'POST', body: '{}' })).status).toBe(403);
     const artifact = '/jobs/motionjob-' + 'a'.repeat(24) + '/artifact?workspace=allowed-root';
     const range = await fetch(base + artifact, { headers: { Range: 'bytes=0-3' } });
     expect(range.status).toBe(206);

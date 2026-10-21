@@ -39,6 +39,12 @@ export type MotionEdit =
   | { type: 'replace-composition'; composition: MotionProject['composition'] }
   | { type: 'set-audio'; audio: MotionAudioTrack | null }
   | { type: 'set-audio-tracks'; audioTracks: MotionAudioTrack[] };
+export interface MotionCapabilities {
+  capabilities?: { aiPromptDirector?: string; aiSemanticRevision?: boolean };
+}
+export interface MotionDirectorResult {
+  project: MotionProject; job: MotionJob; outline: string[]; limitations: string[];
+}
 export interface MotionQueueRecovery {
   minAgeSeconds: number; queued: number; eligible: number; blocked: number;
   items: Array<{ jobId: string; createdAt: string; state: 'eligible' | 'blocked'; reason?: string }>;
@@ -117,6 +123,7 @@ async function json<T>(workspace: string, path: string, init?: RequestInit): Pro
   return (await motionFetch(workspace, path, init)).json() as Promise<T>;
 }
 export const motionStudioApi = {
+  capabilities: (workspace: string) => json<MotionCapabilities>(workspace, '/'),
   /** Accepts image bytes only; browser paths never cross the API boundary. */
   async uploadImage(workspace: string, file: File): Promise<{ id: string; bytes: number; width: number; height: number }> {
     if (file.size < 24 || file.size > 1024 * 1024) throw new Error('Motion image must be 1 MB or smaller');
@@ -164,6 +171,14 @@ export const motionStudioApi = {
   render: (workspace: string, id: string, width = 640, supervised = false) =>
     json<MotionJob>(workspace, '/projects/' + assertId(id) + '/render',
       { method: 'POST', body: JSON.stringify({ width, supervised }) }),
+  generate: (workspace: string, prompt: string, width = 640) =>
+    json<MotionDirectorResult>(workspace, '/generate', {
+      method: 'POST', body: JSON.stringify({ prompt, width }),
+    }),
+  revise: (workspace: string, motionId: string, prompt: string, width = 640) =>
+    json<MotionDirectorResult>(workspace, '/projects/' + assertId(motionId) + '/revise', {
+      method: 'POST', body: JSON.stringify({ prompt, width }),
+    }),
   jobs: (workspace: string) => json<MotionJob[]>(workspace, '/jobs'),
   scheduler: (workspace: string) => json<MotionSchedulerStatus>(workspace, '/scheduler'),
   supervisor: (workspace: string) => json<MotionSupervisorStatus>(workspace, '/supervisor'),

@@ -125,3 +125,12 @@ Avoid staging or overwriting unrelated T-Line CLI parity, Hermes, MCP OAuth or c
 - An additional read-only authenticated GET /api/superagent/motion/supervisor proxy exposes queued supervised count and unverified leader claim; POST and unauthorized workspace paths are rejected. The UI neither starts/stops the supervisor nor tries to steal a stale leader lease.
 - Older SuperAgent builds without the supervisor endpoint safely fall back to immediate-only editing because the FIFO checkbox is disabled until capabilities can be read.
 - Motion component, proxy and TypeScript tests cover the opt-in transport/status. Packaged Tauri live verification and crash recovery of active encoders remain separate release gates.
+
+## AI Motion Director prompt-first vertical slice (2026-10-21)
+
+- Added an always-visible natural-language prompt input in MotionStudioTab. Without a selected project it creates a new editable Motion project through SuperAgent; with a selected project it requests bounded semantic revisions through the configured SuperAgent AI model. User does not need a Motion ID, JSON editor, FFmpeg command or separate FIFO supervisor.
+- The existing 640/1280/1920px selection controls the immediate detached MP4 render profile for both generate/revise workflows. The scene/timeline/manual editor, job progress and authenticated preview remain available.
+- Added authenticated client generate/revise calls and narrow server-only POST proxy allowlist. The proxy retains trusted workspace checks and never forwards desktop user credentials to SuperAgent; service authorization is server-only. AI planner calls have a 120s upstream timeout (SuperAgent provider timeout 90s).
+- Added a read-only capability handshake to detect updated SuperAgent servers. When the connected daemon lacks aiPromptDirector support, the AI generate control is disabled with an explanatory message while the manual editor continues functioning.
+- Added UI, API-client and backend-proxy tests covering prompt-to-generation, semantic revision, authenticated workspace routing, invalid project paths, unsupported old servers and disabled controls.
+- Developer-preview scope is limited to short editable text/shape animations. Real configured-model quality, packaged Tauri end-to-end, persisted prompt history, visual quality assessment, audio/TTS/music and video footage generation remain future release gates. No active SuperAgent daemon or unrelated session was restarted.

@@ -19,6 +19,25 @@ describe('Motion Studio authenticated client', () => {
     expect(url).not.toContain('tline-only-token');
     expect(init.headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
   });
+  it('sends prompt and revision through authorized T-Line routes, not arbitrary URLs', async () => {
+    const motionId = 'motion-' + 'a'.repeat(20);
+    const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ project: { id: motionId } }), {
+      status: 202, headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    await motionStudioApi.generate('D:/studio', 'Buat video promo', 640);
+    await motionStudioApi.revise('D:/studio', motionId, 'Bikin transisinya lebih cepat', 1280);
+    expect(fetchMock.mock.calls[0][0]).toContain('/generate?workspace=');
+    expect(fetchMock.mock.calls[1][0]).toContain('/projects/' + motionId + '/revise?workspace=');
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)).toMatchObject({
+      prompt: 'Buat video promo', width: 640,
+    });
+    expect((fetchMock.mock.calls[1][1] as RequestInit).headers).toMatchObject({
+      Authorization: 'Bearer tline-only-token',
+    });
+    expect(() => motionStudioApi.revise('D:/studio', '../secret', 'change')).toThrow('Invalid Motion');
+  });
+
   it('rejects media larger than 64 MB before downloading it', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, {
       status: 200, headers: { 'Content-Length': String(70 * 1024 * 1024) },

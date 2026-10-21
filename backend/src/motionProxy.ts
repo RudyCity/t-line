@@ -7,6 +7,7 @@ const permitted = [
   /^\/$/,
   /^\/projects$/,
   /^\/scheduler$/,
+  /^\/generate$/,
   /^\/supervisor$/,
   /^\/storage$/,
   /^\/queue-recovery$/,
@@ -15,19 +16,19 @@ const permitted = [
   /^\/audio$/,
   /^\/audio\/audio-[a-f0-9]{64}$/,
   /^\/audio\/audio-[a-f0-9]{64}\/waveform$/,
-  /^\/projects\/motion-[a-f0-9]{20}(?:\/edits|\/render)?$/,
+  /^\/projects\/motion-[a-f0-9]{20}(?:\/edits|\/render|\/revise)?$/,
   /^\/jobs$/,
   /^\/jobs\/motionjob-[a-f0-9]{24}(?:\/cancel|\/recovery|\/artifact)?$/,
 ];
 
 function allowedRoute(method: string, pathname: string): boolean {
   if (!permitted.some(pattern => pattern.test(pathname))) return false;
-  if (method === 'GET') return !pathname.endsWith('/edits') && !pathname.endsWith('/render') && !pathname.endsWith('/cancel');
+  if (method === 'GET') return !pathname.endsWith('/edits') && !pathname.endsWith('/render') && !pathname.endsWith('/revise') && pathname !== '/generate' && !pathname.endsWith('/cancel');
   if (method === 'HEAD') return pathname.endsWith('/artifact') || /^\/assets\/asset-[a-f0-9]{64}$/.test(pathname) ||
     /^\/audio\/audio-[a-f0-9]{64}$/.test(pathname);
   if (method === 'POST') {
-    return pathname === '/projects' || pathname === '/assets' || pathname === '/audio' ||
-      pathname.endsWith('/edits') || pathname.endsWith('/render') || pathname.endsWith('/cancel');
+    return pathname === '/projects' || pathname === '/generate' || pathname === '/assets' || pathname === '/audio' ||
+      pathname.endsWith('/edits') || pathname.endsWith('/render') || pathname.endsWith('/revise') || pathname.endsWith('/cancel');
   }
   return false;
 }
@@ -103,7 +104,8 @@ export function createMotionProxyRouter(options: MotionProxyOptions = {}): Route
     }
     const upstream = http.request({
       hostname: '127.0.0.1', port: options.upstreamPort ?? 7888,
-      path: targetPath, method: req.method, headers, timeout: 30_000,
+      path: targetPath, method: req.method, headers,
+      timeout: route === '/generate' || route.endsWith('/revise') ? 120_000 : 30_000,
     }, reply => {
       const safeHeaders: Record<string, string> = {};
       for (const name of forwardedResponseHeaders) {

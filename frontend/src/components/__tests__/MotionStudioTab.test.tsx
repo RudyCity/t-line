@@ -7,7 +7,7 @@ import { evaluateLayer, evaluateTrack, makeKeyframeTrack } from '../../services/
 vi.mock('../../services/motionStudioApi', () => ({
   motionStudioApi: {
     list: vi.fn(), inspect: vi.fn(), create: vi.fn(), edit: vi.fn(),
-    jobs: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
+    jobs: vi.fn(), capabilities: vi.fn(), generate: vi.fn(), revise: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
   },
 }));
 const id = 'motion-' + 'a'.repeat(20);
@@ -28,6 +28,9 @@ const fixture = (name = 'Product intro'): MotionProject => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(motionStudioApi.capabilities).mockResolvedValue({ capabilities: {
+    aiPromptDirector: 'short-text-motion-preview', aiSemanticRevision: true,
+  } });
   vi.mocked(motionStudioApi.list).mockResolvedValue([{ id, name: 'Product intro', revision: 1 }]);
   vi.mocked(motionStudioApi.inspect).mockResolvedValue(fixture());
   vi.mocked(motionStudioApi.jobs).mockResolvedValue([]);
@@ -222,6 +225,44 @@ describe('Native T-Line Motion Studio editor', () => {
     await waitFor(() => expect(motionStudioApi.render).toHaveBeenCalledWith('D:/projects/studio', id, 1920, true));
     expect(await screen.findByText(/awaiting separate SuperAgent FIFO supervisor/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+  });
+
+  it('generates from a natural-language brief and revises through the same prompt area', async () => {
+    const newJob = { id: 'motionjob-' + 'f'.repeat(24), projectId: id, revision: 2,
+      status: 'queued' as const, framesCompleted: 0, profile: { frameCount: 90, width: 640, height: 360 } };
+    const revisedProject = { ...fixture(), revision: 2 };
+    vi.mocked(motionStudioApi.generate).mockResolvedValue({
+      project: revisedProject, job: newJob, outline: ['Laris cepat'], limitations: ['Preview text only'],
+    });
+    vi.mocked(motionStudioApi.revise).mockResolvedValue({
+      project: { ...fixture(), revision: 3 }, job: { ...newJob, revision: 3 },
+      outline: ['Laris cepat!'], limitations: [],
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Motion prompt'), { target: { value: 'Buat video promosi Laris' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Generate with AI' }));
+    await waitFor(() => expect(motionStudioApi.generate).toHaveBeenCalledWith(
+      'D:/projects/studio', 'Buat video promosi Laris', 640,
+    ));
+    expect(await screen.findByText(/AI Motion created revision 2/)).toBeInTheDocument();
+    expect(screen.getByText('Buat video promosi Laris')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Motion prompt'), { target: { value: 'Percepat animasi teks' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Revise with AI' }));
+    await waitFor(() => expect(motionStudioApi.revise).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 'Percepat animasi teks', 640,
+    ));
+    expect(screen.getByText('Percepat animasi teks')).toBeInTheDocument();
+  });
+
+  it('leaves manual editor usable when the connected SuperAgent server lacks Motion Director', async () => {
+    vi.mocked(motionStudioApi.capabilities).mockRejectedValue(new Error('404'));
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    expect(await screen.findByText(/needs an updated SuperAgent server/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Motion prompt'), { target: { value: 'Buat video' } });
+    expect(screen.getByRole('button', { name: 'Generate with AI' })).toBeDisabled();
+    expect(screen.getByLabelText('Select Motion project')).toBeEnabled();
+    expect(motionStudioApi.generate).not.toHaveBeenCalled();
   });
 
   it('adds a rectangle and undoes the layer insertion with revision guard', async () => {
