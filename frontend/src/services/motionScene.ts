@@ -9,7 +9,9 @@ export function evaluateTrack(track: MotionTrack, frame: number): number {
     const left = keys[index - 1], right = keys[index];
     if (frame <= right.frame) {
       const t = (frame - left.frame) / (right.frame - left.frame);
-      const eased = left.easing === 'step' ? 0 : left.easing === 'easeInOut' ? t * t * (3 - 2 * t) : t;
+      const u = t - 1;
+      const eased = left.easing === 'step' ? 0 : left.easing === 'easeInOut' ? t * t * (3 - 2 * t) :
+        left.easing === 'easeOutBack' ? 1 + 2.70158 * u * u * u + 1.70158 * u * u : t;
       return left.value + (right.value - left.value) * eased;
     }
   }

@@ -31,7 +31,8 @@ export function moveMotionKeyframe(
 export function easeMotionKeyframe(
   project: MotionProject, layerId: string, property: MotionProperty, frame: number, easing: MotionEasing,
 ): MotionEdit[] {
-  if (!(['linear', 'step', 'easeInOut'] as const).includes(easing)) throw new Error('Unsupported keyframe easing');
+  if (!(['linear', 'step', 'easeInOut', 'easeOutBack'] as const).includes(easing)) throw new Error('Unsupported keyframe easing');
+  if (property === 'opacity' && easing === 'easeOutBack') throw new Error('Overshoot easing cannot affect opacity');
   const track = trackFor(project, layerId, property);
   const current = existingFrame(track, frame);
   if ((current.easing ?? 'linear') === easing) return [];

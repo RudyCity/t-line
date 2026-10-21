@@ -7,7 +7,7 @@ import { evaluateLayer, evaluateTrack, makeKeyframeTrack } from '../../services/
 vi.mock('../../services/motionStudioApi', () => ({
   motionStudioApi: {
     list: vi.fn(), inspect: vi.fn(), create: vi.fn(), edit: vi.fn(),
-    jobs: vi.fn(), capabilities: vi.fn(), quality: vi.fn(), generate: vi.fn(), revise: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
+    jobs: vi.fn(), capabilities: vi.fn(), quality: vi.fn(), loadFrameSnapshot: vi.fn(), generate: vi.fn(), revise: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
   },
 }));
 const id = 'motion-' + 'a'.repeat(20);
@@ -91,6 +91,26 @@ describe('Motion Studio scene evaluation', () => {
 });
 
 describe('Native T-Line Motion Studio editor', () => {
+  it('renders and revokes authorized raster frame samples only when supported', async () => {
+    vi.mocked(motionStudioApi.capabilities).mockResolvedValue({ capabilities: {
+      aiPromptDirector: 'short-text-motion-preview',
+      authenticatedFrameSnapshots: true, aiAspectRatios: ['16:9', '1:1', '9:16'],
+    } });
+    vi.mocked(motionStudioApi.loadFrameSnapshot).mockResolvedValue('blob:sample-45');
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    expect(await screen.findByLabelText('Motion aspect ratio')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Motion aspect ratio'), { target: { value: '9:16' } });
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    expect(await screen.findByText(/Quality checks · Structure OK/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Quality checks · Structure OK/));
+    fireEvent.click(screen.getByRole('button', { name: 'Review actual rendered frames' }));
+    await waitFor(() => expect(motionStudioApi.loadFrameSnapshot).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 45,
+    ));
+    expect(await screen.findByAltText('Rendered frame 45')).toHaveAttribute('src', 'blob:sample-45');
+  });
+
   it('loads a workspace-owned scene and saves revision-checked text edits', async () => {
     render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
     expect(await screen.findByText('Choose a scene to edit')).toBeInTheDocument();

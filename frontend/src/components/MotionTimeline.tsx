@@ -14,7 +14,7 @@ interface Props {
   onEdit: (edits: MotionEdit[], note: string) => void; onError: (message: string) => void;
 }
 const btn = 'rounded border border-[var(--border-color)] bg-[var(--bg-card)] px-2 py-1 text-[11px] text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] disabled:opacity-40';
-const easingNames: MotionEasing[] = ['linear', 'step', 'easeInOut'];
+const easingNames: MotionEasing[] = ['linear', 'step', 'easeInOut', 'easeOutBack'];
 
 export function MotionTimeline({ project, currentFrame, selectedLayer, busy, isActive, onFrame, onLayer, onEdit, onError }: Props) {
   const [selected, setSelected] = useState<Selected | null>(null);

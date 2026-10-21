@@ -48,6 +48,12 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [directorSceneImagesAvailable, setDirectorSceneImagesAvailable] = useState(false);
   const [directorAudioLoopAvailable, setDirectorAudioLoopAvailable] = useState(false);
   const [directorVoiceoverAvailable, setDirectorVoiceoverAvailable] = useState(false);
+  const [directorAspectAvailable, setDirectorAspectAvailable] = useState(false);
+  const [directorSnapshotAvailable, setDirectorSnapshotAvailable] = useState(false);
+  const [directorAutoNarration, setDirectorAutoNarration] = useState(false);
+  const [motionSnapshots, setMotionSnapshots] = useState<Array<{ frame: number; url: string }>>([]);
+  const motionSnapshotsRef = useRef<Array<{ frame: number; url: string }>>([]);
+  const [promptAspectRatio, setPromptAspectRatio] = useState<'16:9' | '1:1' | '9:16'>('16:9');
   const [promptVoiceover, setPromptVoiceover] = useState('');
   const [promptVoiceoverGain, setPromptVoiceoverGain] = useState(1);
   const [promptHistory, setPromptHistory] = useState<Array<{ prompt: string; response: string }>>([]);
@@ -93,6 +99,8 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     setMotionPrompt(''); setPromptHistory([]); setDirectorAvailable(false); setDirectorMediaAvailable(false);
     setPromptImages([]); setPromptAudio(null); setPromptAudioGain(1); setPromptAudioLoop(false);
     setDirectorSceneImagesAvailable(false); setDirectorAudioLoopAvailable(false); setDirectorVoiceoverAvailable(false);
+    setDirectorAspectAvailable(false); setPromptAspectRatio('16:9');
+    setDirectorSnapshotAvailable(false); setDirectorAutoNarration(false);
     setPromptVoiceover(''); setPromptVoiceoverGain(1); setQuality(null);
     setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
@@ -117,6 +125,8 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
         setDirectorSceneImagesAvailable((motionInfo?.capabilities?.aiSceneImagesMax ?? 0) >= 3);
         setDirectorAudioLoopAvailable(motionInfo?.capabilities?.aiAudioLoop === true);
         setDirectorVoiceoverAvailable(motionInfo?.capabilities?.localVoiceoverConfigured === true);
+        setDirectorAspectAvailable(motionInfo?.capabilities?.aiAspectRatios?.includes('9:16') === true);
+        setDirectorSnapshotAvailable(motionInfo?.capabilities?.authenticatedFrameSnapshots === true);
         const latest = existingJobs.find(job => job.status === 'completed') || existingJobs[0];
         setActiveJobId(latest?.id || '');
       } catch (cause) {
@@ -452,12 +462,51 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     });
   };
 
+  useEffect(() => {
+    motionSnapshotsRef.current.forEach(item => URL.revokeObjectURL?.(item.url));
+    motionSnapshotsRef.current = [];
+    setMotionSnapshots([]);
+    return () => {
+      motionSnapshotsRef.current.forEach(item => URL.revokeObjectURL?.(item.url));
+      motionSnapshotsRef.current = [];
+    };
+  }, [project?.id, project?.revision, workspacePath]);
+
+  const loadDirectorSnapshots = () => {
+    if (!project || !quality || !directorSnapshotAvailable || busy) return;
+    const id = project.id, revision = project.revision, workspaceVersion = version.current;
+    void operation(async () => {
+      const frames = [...new Set(quality.samples.map(sample => sample.frame))].slice(0, 3);
+      const urls: Array<{ frame: number; url: string }> = [];
+      try {
+        for (const frame of frames) {
+          urls.push({ frame, url: await motionStudioApi.loadFrameSnapshot(workspacePath, id, frame) });
+        }
+        if (!mounted.current || workspaceVersion !== version.current) {
+          urls.forEach(item => URL.revokeObjectURL?.(item.url));
+          return;
+        }
+        const latest = await motionStudioApi.inspect(workspacePath, id);
+        if (latest.revision !== revision) throw new Error('Project changed while collecting frame snapshots');
+        motionSnapshotsRef.current.forEach(item => URL.revokeObjectURL?.(item.url));
+        motionSnapshotsRef.current = urls;
+        setMotionSnapshots(urls);
+      } catch (error) {
+        urls.forEach(item => URL.revokeObjectURL?.(item.url));
+        throw error;
+      }
+    });
+  };
+
   const submitMotionPrompt = () => {
     const prompt = motionPrompt.trim();
     if (!prompt || busy || !directorAvailable) return;
     const targetId = selectedId;
     const workspaceVersion = version.current;
     const media = {
+      ...(!targetId && directorAspectAvailable ? { aspectRatio: promptAspectRatio } : {}),
+      ...(!targetId && directorVoiceoverAvailable && directorAutoNarration ?
+        { autoNarrateScenes: true } : {}),
       ...(promptImages.length === 1 ? { imageAssetId: promptImages[0].id } : {}),
       ...(promptImages.length > 1 ? { sceneImageAssetIds: promptImages.map(item => item.id) } : {}),
       ...(promptAudio ? { audioAssetId: promptAudio.id, audioGain: promptAudioGain,
@@ -483,7 +532,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
           (generated.limitations.length ? ' · ' + generated.limitations.join('; ') : ''),
       }]);
       setMotionPrompt(''); setPromptImages([]); setPromptAudio(null); setPromptAudioGain(1);
-      setPromptAudioLoop(false); setPromptVoiceover(''); setPromptVoiceoverGain(1);
+      setPromptAudioLoop(false); setPromptVoiceover(''); setPromptVoiceoverGain(1); setDirectorAutoNarration(false);
       setSuccess('AI Motion created revision ' + generated.project.revision + ' · MP4 rendering started');
     });
   };
@@ -588,6 +637,16 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
             <Film size={14} /> {busy ? 'Agent working…' : selectedId ? 'Revise with AI' : 'Generate with AI'}
           </button>
         </form>
+        {!selectedId && directorAspectAvailable && <label className="mb-2 inline-flex items-center gap-2 text-xs">
+          Video format
+          <select aria-label="Motion aspect ratio" className={control + ' w-40'} disabled={busy}
+            value={promptAspectRatio}
+            onChange={event => setPromptAspectRatio(event.target.value as '16:9' | '1:1' | '9:16')}>
+            <option value="16:9">Landscape 16:9</option>
+            <option value="1:1">Square 1:1</option>
+            <option value="9:16">Portrait 9:16</option>
+          </select>
+        </label>}
         <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-muted)]" aria-label="Motion prompt attachments">
           <label className={action + ' cursor-pointer'}>
             <ImageIcon size={13} /> Attach image(s) / logo
@@ -622,13 +681,19 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
               onChange={event => setPromptAudioGain(Number(event.target.value))} />
           </label>}
         </div>
+        {directorVoiceoverAvailable && !selectedId && <label className="mt-2 inline-flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
+          <input type="checkbox" aria-label="Automatically narrate scenes" checked={directorAutoNarration}
+            onChange={event => { setDirectorAutoNarration(event.target.checked); if (event.target.checked) setPromptVoiceover(''); }}
+            disabled={busy} />
+          Generate narration from scene scripts (local Piper required)
+        </label>}
         {directorVoiceoverAvailable && promptVoiceover.trim() && <label className="mt-2 inline-flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
           Voice-over gain
           <input type="number" aria-label="Motion voice-over gain" min={0} max={2} step={0.1}
             className={control + ' w-16'} disabled={busy} value={promptVoiceoverGain}
             onChange={event => setPromptVoiceoverGain(Number(event.target.value))} />
         </label>}
-        {directorVoiceoverAvailable && <label className="mt-2 block text-[11px] text-[var(--text-muted)]">
+        {directorVoiceoverAvailable && !directorAutoNarration && <label className="mt-2 block text-[11px] text-[var(--text-muted)]">
           Narration / voice-over (local Piper)
           <textarea className={control + ' mt-1 w-full resize-y'} rows={2} maxLength={220}
             aria-label="Motion voice-over script" disabled={busy} value={promptVoiceover}
@@ -646,6 +711,17 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
             {quality.issues.length > 0 ? ' · ' + quality.issues.length + ' finding(s)' : ' · no warnings'}
             <span className="ml-2 font-normal text-[var(--text-muted)]">(frame sampling, not AI vision review)</span>
           </summary>
+          {directorSnapshotAvailable && <button type="button" className={action + ' mt-2'}
+            onClick={loadDirectorSnapshots} disabled={busy}>
+            Review actual rendered frames
+          </button>}
+          {motionSnapshots.length > 0 && <div className="mt-2 grid grid-cols-3 gap-2" aria-label="Rendered Motion frame samples">
+            {motionSnapshots.map(sample => <figure key={sample.frame}>
+              <img alt={'Rendered frame ' + sample.frame} src={sample.url}
+                className="max-h-40 w-full object-contain" />
+              <figcaption>Frame {sample.frame}</figcaption>
+            </figure>)}
+          </div>}
           <div className="mt-2 text-[var(--text-muted)]">
             Sampled {quality.samples.length} scene midpoint(s).
             {quality.issues.length === 0 ? ' No structural/readability problems detected.' : null}

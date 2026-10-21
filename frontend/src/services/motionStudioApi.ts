@@ -1,6 +1,6 @@
 /** Typed Motion Studio v1 contract. The SuperAgent server remains authoritative. */
 export type MotionProperty = 'x' | 'y' | 'opacity' | 'rotation';
-export type MotionEasing = 'linear' | 'step' | 'easeInOut';
+export type MotionEasing = 'linear' | 'step' | 'easeInOut' | 'easeOutBack';
 export interface MotionKeyframe { frame: number; value: number; easing?: MotionEasing }
 export interface MotionTrack { property: MotionProperty; keyframes: MotionKeyframe[] }
 export interface BaseMotionLayer {
@@ -15,7 +15,7 @@ export interface MotionRectLayer extends BaseMotionLayer { kind: 'rect' }
 export interface MotionImageLayer extends BaseMotionLayer { kind: 'image'; assetId: string }
 export type MotionLayer = MotionTextLayer | MotionRectLayer | MotionImageLayer;
 export interface MotionAudioTrack {
-  assetId: string; startFrame: number; volume: number; fadeInFrames?: number; fadeOutFrames?: number; loop?: boolean;
+  assetId: string; startFrame: number; volume: number; fadeInFrames?: number; fadeOutFrames?: number; loop?: boolean; role?: 'music' | 'voiceover';
 }
 export interface MotionAudioAsset { id: string; bytes: number; sampleRate: number; channels: number; seconds: number }
 export interface MotionWaveform { peaks: number[]; seconds: number; sampleRate: number; channels: number }
@@ -40,7 +40,7 @@ export type MotionEdit =
   | { type: 'set-audio'; audio: MotionAudioTrack | null }
   | { type: 'set-audio-tracks'; audioTracks: MotionAudioTrack[] };
 export interface MotionCapabilities {
-  capabilities?: { aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean };
+  capabilities?: { aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean };
 }
 export interface MotionQualityIssue {
   severity: 'warning' | 'error'; code: string; scene: number; message: string;
@@ -52,7 +52,7 @@ export interface MotionQualityReport {
 }
 export interface MotionDirectorMedia {
   imageAssetId?: string; sceneImageAssetIds?: string[]; audioAssetId?: string; audioGain?: number; audioLoop?: boolean;
-  voiceoverText?: string; voiceoverGain?: number;
+  voiceoverText?: string; voiceoverGain?: number; autoNarrateScenes?: boolean; aspectRatio?: '16:9' | '1:1' | '9:16';
 }
 export interface MotionDirectorResult {
   project: MotionProject; job: MotionJob; outline: string[]; limitations: string[];
@@ -177,6 +177,15 @@ export const motionStudioApi = {
   inspect: (workspace: string, id: string) => json<MotionProject>(workspace, '/projects/' + assertId(id)),
   quality: (workspace: string, id: string) =>
     json<MotionQualityReport>(workspace, '/projects/' + assertId(id) + '/quality'),
+  async loadFrameSnapshot(workspace: string, id: string, frame: number): Promise<string> {
+    if (!Number.isSafeInteger(frame) || frame < 0 || frame > 216000) throw new Error('Invalid Motion snapshot frame');
+    const response = await motionFetch(workspace, '/projects/' + assertId(id) + '/frames/' + frame + '.png');
+    const blob = await response.blob();
+    if (blob.type !== 'image/png' || blob.size < 50 || blob.size > 2 * 1024 * 1024) {
+      throw new Error('Invalid Motion frame snapshot');
+    }
+    return URL.createObjectURL(blob);
+  },
   create: (workspace: string, name: string) =>
     json<MotionProject>(workspace, '/projects', { method: 'POST', body: JSON.stringify({ name }) }),
   edit: (workspace: string, id: string, baseRevision: number, edits: MotionEdit[]) =>

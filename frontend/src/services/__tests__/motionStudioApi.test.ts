@@ -67,6 +67,19 @@ describe('Motion Studio authenticated client', () => {
     });
   });
 
+  it('limits authenticated rendered frame snapshots to PNG and known Motion IDs', async () => {
+    const id = 'motion-' + 'b'.repeat(20);
+    const png = { type: 'image/png', size: 128 } as Blob;
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, blob: async () => png });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview-frame');
+    expect(await motionStudioApi.loadFrameSnapshot('D:/studio', id, 45)).toBe('blob:preview-frame');
+    expect(fetchMock.mock.calls[0][0]).toContain('/projects/' + id + '/frames/45.png');
+    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    await expect(motionStudioApi.loadFrameSnapshot('D:/studio', id, -1)).rejects.toThrow('frame');
+    await expect(motionStudioApi.loadFrameSnapshot('D:/studio', '../secret', 45)).rejects.toThrow('identifier');
+  });
+
   it('rejects media larger than 64 MB before downloading it', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, {
       status: 200, headers: { 'Content-Length': String(70 * 1024 * 1024) },
