@@ -4,6 +4,7 @@ import { TabData } from '../hooks/useTerminals';
 import BrowserDevTools, { ConsoleErrorLog, InspectedElement } from './BrowserDevTools';
 import { determineRenderMode, getCleanUrl, openInSystemBrowser, getFriendlyName, getHelperStatusColorClass as getHelperStatusColorClassUtil, getHelperStatusText as getHelperStatusTextUtil, getPollWebviewJs } from './browserUrlUtils';
 import { useBrowserListeners } from '../hooks/useBrowserListeners';
+import { getNativeNavigationJs, shouldPollNativeWebview } from './browserRuntimeUtils';
 import BrowserNavigationBar from './BrowserNavigationBar';
 import { useBrowserStorageAndHistory } from '../hooks/useBrowserStorageAndHistory';
 import { ConfirmModal } from './Modals';
@@ -19,6 +20,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   const [urlInput, setUrlInput] = useState(tab.url || '');
   const [activeUrl, setActiveUrl] = useState(tab.url || '');
   const activeUrlRef = useRef(activeUrl);
+  const nativeNavigationGraceUntilRef = useRef(0);
   useEffect(() => {
     activeUrlRef.current = activeUrl;
   }, [activeUrl]);
@@ -64,10 +66,11 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   const [loadProgress, setLoadProgress] = useState(0);
   const loadProgressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // webviewActive: true when the tab is currently the active tab AND should have a live WebView2.
-  // When the tab goes inactive, we destroy the WebView2 overlay to free RAM.
-  // When it becomes active again, the WebView2 is recreated from the saved URL.
+  // Lazily create once on activation; hide/show native WebView2 on switches.
+  // Closing it on every switch resets login, SPA, scroll and browser state.
   const [webviewActive, setWebviewActive] = useState(isActive);
+  const [nativeError, setNativeError] = useState<string | null>(null);
+  const [nativeGeneration, setNativeGeneration] = useState(0);
 
   const isActiveRef = useRef(isActive);
   const [forceHideWebview, setForceHideWebview] = useState(false);
@@ -86,27 +89,16 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   useEffect(() => {
     const webview = tauriWebviewRef.current;
     if (useTauriWebview && webview && renderMode === 'tauri-native') {
-      if (isActive && !forceHideWebview && !showBookmarksDropdown && !showHistoryDropdown && !showAddBookmarkPopover) {
+      if (isActive && !nativeError && !forceHideWebview && !showBookmarksDropdown && !showHistoryDropdown && !showAddBookmarkPopover) {
         webview.show().catch(() => {});
       } else {
         webview.hide().catch(() => {});
       }
     }
-  }, [isActive, forceHideWebview, showBookmarksDropdown, showHistoryDropdown, showAddBookmarkPopover, useTauriWebview, renderMode]);
-
-  const rafIdRef = useRef<number | null>(null);
+  }, [isActive, nativeError, forceHideWebview, showBookmarksDropdown, showHistoryDropdown, showAddBookmarkPopover, useTauriWebview, renderMode]);
 
   const destroyWebview = (webview: any) => {
     if (!webview) return;
-    try {
-      const label = webview.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
-      if (label && (window as any).__TAURI__?.core?.invoke) {
-        (window as any).__TAURI__.core.invoke('eval_webview_js', {
-          label,
-          js: 'window.stop(); try { window.location.href = "about:blank"; } catch(e){}'
-        }).catch(() => {});
-      }
-    } catch (_) {}
     webview.close().catch((err: any) => {
       const errMsg = String(err);
       if (!errMsg.includes('webview not found')) {
@@ -131,22 +123,9 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
 
   useEffect(() => {
     isActiveRef.current = isActive;
-    if (isActive) {
-      // Bring WebView2 back to life when this tab gains focus
-      setWebviewActive(true);
-    } else {
-      // Suspend WebView2 when tab loses focus: destroy it to release RAM.
-      // The URL is already stored in activeUrl so it will be restored on next activation.
-      const webview = tauriWebviewRef.current;
-      if (webview) {
-        tauriWebviewRef.current = null;
-        const sessionStorageKey = 'tline-active-webview-label-' + tab.id;
-        sessionStorage.removeItem(sessionStorageKey);
-        destroyWebview(webview);
-      }
-      setWebviewActive(false);
-    }
-  }, [isActive, tab.id]);
+    if (isActive) setWebviewActive(true);
+    // Native browser is only destroyed on tab close/unmount.
+  }, [isActive]);
 
   // Synchronize dynamic name changes for tab component
   useEffect(() => {
@@ -158,12 +137,14 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
 
   // Track last synchronized bounds to avoid redundant IPC calls to Tauri webview
   const lastBoundsRef = useRef<{ left: number; top: number; width: number; height: number } | null>(null);
+  const boundsBusyRef = useRef(false);
 
   // Sync native Tauri webview bounds to containerRef rect
   const syncWebviewBounds = async () => {
     const container = containerRef.current;
     const webview = tauriWebviewRef.current;
-    if (!container || !webview || !isActiveRef.current) return;
+    if (!container || !webview || !isActiveRef.current || boundsBusyRef.current) return;
+    boundsBusyRef.current = true;
     try {
       const { LogicalPosition, LogicalSize } = await import('@tauri-apps/api/dpi');
       const r = container.getBoundingClientRect();
@@ -183,8 +164,14 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       
       await webview.setPosition(new LogicalPosition(r.left, r.top)).catch(() => {});
       await webview.setSize(new LogicalSize(r.width, r.height)).catch(() => {});
-      lastBoundsRef.current = { left: r.left, top: r.top, width: r.width, height: r.height };
-    } catch (_) {}
+      if (tauriWebviewRef.current === webview) {
+        lastBoundsRef.current = { left: r.left, top: r.top, width: r.width, height: r.height };
+      }
+    } catch (_) {
+      // Transient native resizing errors may recover on the next layout event.
+    } finally {
+      boundsBusyRef.current = false;
+    }
   };
 
   // Window resize + ResizeObserver + DevTools height listener: keep native webview bounds synchronized.
@@ -204,7 +191,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, [useTauriWebview, renderMode, webviewActive, devtoolsHeight, isDevtoolsCollapsed, deviceMode]);
+  }, [useTauriWebview, renderMode, webviewActive, isActive, devtoolsHeight, isDevtoolsCollapsed, deviceMode]);
 
   // Lifecycle of native Webview overlay in Tauri environment.
   // Re-runs whenever webviewActive toggles: creates on true, cleans up on false/unmount.
@@ -218,9 +205,9 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
 
     const initWebview = async () => {
       try {
+        setNativeError(null);
         const { Webview } = await import('@tauri-apps/api/webview');
         const { getCurrentWindow } = await import('@tauri-apps/api/window');
-        const { LogicalPosition, LogicalSize } = await import('@tauri-apps/api/dpi');
 
         const currentWindow = getCurrentWindow();
         let closedOld = false;
@@ -254,6 +241,11 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
         if (!active || !container) return;
 
         const rect = container.getBoundingClientRect();
+        if (rect.width < 1 || rect.height < 1) {
+          setNativeError('Browser surface is not ready. Switch back or retry.');
+          return;
+        }
+        lastBoundsRef.current = null;
         const uniqueLabel = 'browser-webview-' + tab.id + '-' + Math.random().toString(36).substring(2, 9);
         sessionStorage.setItem(sessionStorageKey, uniqueLabel);
 
@@ -268,7 +260,9 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
         tauriWebviewRef.current = webviewInstance;
 
         webviewInstance.once('tauri://error', (err: any) => {
+          if (!active) return;
           console.error('[BrowserTab] Native webview error:', err);
+          setNativeError('The native browser failed to start. Retry to recreate this browser tab.');
           if (webviewInstance) {
             webviewInstance.close().catch(() => {});
           }
@@ -281,59 +275,20 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
 
         if (!active || !containerRef.current || !webviewInstance || tauriWebviewRef.current !== webviewInstance) return;
 
-        if (isActiveRef.current) {
+        if (isActiveRef.current && !nativeError) {
           await webviewInstance.show().catch(() => {});
         } else {
           await webviewInstance.hide().catch(() => {});
         }
 
-        let lastRect = { left: 0, top: 0, width: 0, height: 0 };
-        let consecutiveErrorCount = 0;
-        const updateLoop = async () => {
-          if (!active || !containerRef.current || !webviewInstance || tauriWebviewRef.current !== webviewInstance) return;
-
-          if (!isActiveRef.current) {
-            if (active && tauriWebviewRef.current === webviewInstance) {
-              rafIdRef.current = requestAnimationFrame(updateLoop);
-            }
-            return;
-          }
-
-          const container = containerRef.current;
-          if (!container) return;
-
-          const r = container.getBoundingClientRect();
-
-          if (
-            Math.abs(r.left - lastRect.left) > 0.5 ||
-            Math.abs(r.top - lastRect.top) > 0.5 ||
-            Math.abs(r.width - lastRect.width) > 0.5 ||
-            Math.abs(r.height - lastRect.height) > 0.5
-          ) {
-            try {
-              await webviewInstance.setPosition(new LogicalPosition(r.left, r.top));
-              await webviewInstance.setSize(new LogicalSize(r.width, r.height));
-              lastRect = { left: r.left, top: r.top, width: r.width, height: r.height };
-              consecutiveErrorCount = 0;
-            } catch (err) {
-              if (!active || tauriWebviewRef.current !== webviewInstance) return;
-              const errMsg = String(err);
-              if (errMsg.includes('webview not found')) return;
-              consecutiveErrorCount++;
-              if (consecutiveErrorCount <= 5) {
-                console.warn('[BrowserTab] Failed to sync webview bounds:', err);
-              }
-            }
-          }
-
-          if (active && tauriWebviewRef.current === webviewInstance) {
-            rafIdRef.current = requestAnimationFrame(updateLoop);
-          }
-        };
-
-        updateLoop();
+        // ResizeObserver and window resize listeners replace the old per-frame
+        // IPC loop that ran at 60 fps even while nothing moved.
+        void syncWebviewBounds();
       } catch (err) {
-        console.error('[BrowserTab] Tauri Webview initialization failed:', err);
+        if (active) {
+          console.error('[BrowserTab] Tauri Webview initialization failed:', err);
+          setNativeError('Browser initialization failed. Retry this tab to recover.');
+        }
       }
     };
 
@@ -341,20 +296,17 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
 
     return () => {
       active = false;
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
-      }
       tauriWebviewRef.current = null;
-      sessionStorage.removeItem(sessionStorageKey);
-      if (webviewInstance) {
-        destroyWebview(webviewInstance);
+      if (!webviewInstance || sessionStorage.getItem(sessionStorageKey) === webviewInstance.label) {
+        sessionStorage.removeItem(sessionStorageKey);
       }
+      if (webviewInstance) destroyWebview(webviewInstance);
     };
-  }, [useTauriWebview, tab.id, renderMode, webviewActive]);
+  }, [useTauriWebview, tab.id, renderMode, webviewActive, nativeGeneration]);
 
   // Stable ref so the hook can call handleReload even though it's defined below
   const handleReloadRef = useRef<(forceBypassCache?: boolean) => void>(() => {});
+  const navigateNativeRef = useRef<(url: string) => void>(() => {});
 
   // Call useBrowserStorageAndHistory custom hook — must be called BEFORE any effects that use zoomFactor
   const {
@@ -387,7 +339,8 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     renderMode,
     webviewActive,
     onUpdateTabUrl,
-    handleReload: (...args) => handleReloadRef.current(...args)
+    handleReload: (...args) => handleReloadRef.current(...args),
+    navigateNative: url => navigateNativeRef.current(url)
   });
 
   // Listen to console messages if in Electron and using webview
@@ -557,44 +510,47 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   useEffect(() => {
     if (!useTauriWebview || renderMode !== 'tauri-native' || !webviewActive) return;
 
-    let timer: ReturnType<typeof setInterval> | null = null;
-    let isSubscribed = true;
-
-    const pollUrl = () => {
-      if (!isSubscribed) return;
-      const webview = tauriWebviewRef.current;
-      if (!webview) return;
-      
-      const activeLabel = webview.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
-      if (activeLabel && (window as any).__TAURI__?.core?.invoke) {
-        const jsCode = getPollWebviewJs(tab.id, zoomFactor);
-        (window as any).__TAURI__.core.invoke('eval_webview_js', { label: activeLabel, js: jsCode }).catch(() => {});
-
-        (window as any).__TAURI__.core.invoke('get_webview_url', { label: activeLabel })
-          .then((liveUrl: string) => {
-            if (!isSubscribed || !liveUrl) return;
-            const cleanUrl = getCleanUrl(liveUrl);
-            if (cleanUrl && !cleanUrl.startsWith('blob:') && cleanUrl !== 'about:blank' && cleanUrl !== activeUrlRef.current) {
-              setUrlInput(cleanUrl);
-              setActiveUrl(cleanUrl);
-              onUpdateTabUrl?.(cleanUrl);
-              if (onUpdateTabName) {
-                try {
-                  const hostname = new URL(cleanUrl).hostname;
-                  onUpdateTabName(`Preview: ${hostname}`);
-                } catch (_) {}
-              }
-            }
-          })
-          .catch(() => {});
+    let subscribed = true;
+    let inFlight = false;
+    const pollUrl = async () => {
+      if (!subscribed || !shouldPollNativeWebview(isActiveRef.current, document.hidden, inFlight)) return;
+      const nativeWebview = tauriWebviewRef.current;
+      const invoke = (window as any).__TAURI__?.core?.invoke;
+      if (!nativeWebview || !invoke) return;
+      const label = nativeWebview.label;
+      if (!label) return;
+      inFlight = true;
+      try {
+        // Only poll a visible tab, and never overlap IPC requests.
+        // The injection sets up preview helpers and reports URL changes.
+        await invoke('eval_webview_js', { label, js: getPollWebviewJs(tab.id, zoomFactor) });
+        const liveUrl: string = await invoke('get_webview_url', { label });
+        if (!subscribed || !isActiveRef.current || nativeWebview !== tauriWebviewRef.current || !liveUrl) return;
+        const cleanUrl = getCleanUrl(liveUrl);
+        // During host-initiated navigation, the old URL can still be reported
+        // while WebView2 is loading the new destination. Do not roll the URL
+        // bar and persisted tab state back to that stale value.
+        if (Date.now() < nativeNavigationGraceUntilRef.current) return;
+        if (cleanUrl && !cleanUrl.startsWith('blob:') && cleanUrl !== 'about:blank' &&
+            cleanUrl !== activeUrlRef.current) {
+          activeUrlRef.current = cleanUrl;
+          setUrlInput(cleanUrl);
+          setActiveUrl(cleanUrl);
+          onUpdateTabUrl?.(cleanUrl);
+          if (onUpdateTabName) {
+            try { onUpdateTabName('Preview: ' + new URL(cleanUrl).hostname); } catch (_) {}
+          }
+        }
+      } catch (_) {
+        // Old/destroyed Webview2 during navigation or close: never retry in a tight loop.
+      } finally {
+        inFlight = false;
       }
     };
-
-    timer = setInterval(pollUrl, 500);
-
+    const timer = setInterval(() => { void pollUrl(); }, 1500);
     return () => {
-      isSubscribed = false;
-      if (timer) clearInterval(timer);
+      subscribed = false;
+      clearInterval(timer);
     };
   }, [useTauriWebview, renderMode, webviewActive, tab.id, zoomFactor, onUpdateTabUrl, onUpdateTabName]);
 
@@ -637,6 +593,9 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
         (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js }).catch(() => {});
       }
       setTimeout(finishLoadingBar, 1500);
+    } else if (useTauriWebview && renderMode === 'tauri-native') {
+      setNativeGeneration(value => value + 1);
+      setTimeout(finishLoadingBar, 250);
     } else if (useElectronWebview && webviewEl && renderMode === 'electron-webview') {
       try {
         if (forceBypassCache) {
@@ -651,16 +610,27 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   handleReloadRef.current = handleReload;
 
   const navigateWebview = (targetUrl: string) => {
-    if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
-      const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
-      if (activeLabel) {
-        (window as any).__TAURI__?.core?.invoke('eval_webview_js', {
-          label: activeLabel,
-          js: `window.location.href = "${targetUrl}"`
-        }).catch(() => {});
-      }
+    if (!useTauriWebview || renderMode !== 'tauri-native') return;
+    const webview = tauriWebviewRef.current;
+    if (!webview) return;
+    try {
+      const js = getNativeNavigationJs(targetUrl);
+      const label = webview.label;
+      if (!label) return;
+      nativeNavigationGraceUntilRef.current = Date.now() + 4000;
+      (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label, js })
+        .catch((error: unknown) => {
+          nativeNavigationGraceUntilRef.current = 0;
+          console.warn('[BrowserTab] Navigation failed:', error);
+          setNativeError('Navigation failed. Retry or reload the browser tab.');
+        });
+    } catch (error) {
+      console.warn('[BrowserTab] Invalid browser URL:', error);
+      setNativeError('This URL scheme is not supported in the embedded browser.');
     }
   };
+
+  navigateNativeRef.current = navigateWebview;
 
   const handleNavigate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -669,12 +639,24 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     if (!/^https?:\/\//i.test(target) && !/^file:\/\//i.test(target)) {
       target = 'http://' + target;
     }
+    try {
+      const parsed = new URL(target);
+      if (!['http:', 'https:', 'file:'].includes(parsed.protocol)) {
+        throw new Error('Unsupported navigation protocol');
+      }
+      target = parsed.href;
+    } catch (_) {
+      setNativeError('Please enter a valid HTTP, HTTPS, or local file URL.');
+      return;
+    }
+    setNativeError(null);
     setUrlInput(target);
-    
+
     const isSameUrl = target === activeUrl;
     if (isSameUrl) {
       handleReload();
     } else {
+      activeUrlRef.current = target;
       setActiveUrl(target);
       onUpdateTabUrl?.(target);
       navigateWebview(target);
@@ -964,7 +946,15 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
                 <div 
                   ref={containerRef} 
                   className={`absolute inset-0 w-full h-full bg-[var(--bg-main)] ${isResizing || forceHideWebview ? 'pointer-events-none' : ''}`}
-                />
+                >
+                  {nativeError && (
+                    <div role="alert" className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[var(--bg-main)] p-5 text-center">
+                      <p className="text-sm text-red-300">{nativeError}</p>
+                      <button type="button" className="rounded-md bg-purple-600 px-3 py-2 text-xs text-white"
+                        onClick={() => setNativeGeneration(value => value + 1)}>Retry Browser</button>
+                    </div>
+                  )}
+                </div>
               ) : renderMode === 'iframe-local' ? (
                 <iframe 
                   key={iframeKey}

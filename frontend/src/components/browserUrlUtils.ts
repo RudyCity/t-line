@@ -173,8 +173,9 @@ export const getPollWebviewJs = (tabId: string, zoomFactor: number): string => {
       if (document.documentElement && document.documentElement.style.zoom !== "${zoomFactor}") {
         document.documentElement.style.zoom = "${zoomFactor}";
       }
-      if (document.body && document.body.style.zoom !== "${zoomFactor}") {
-        document.body.style.zoom = "${zoomFactor}";
+      // Avoid applying zoom twice: html and body compounded the scale.
+      if (document.body && document.body.style.zoom) {
+        document.body.style.zoom = "";
       }
 
       // Intercept target="_blank" links and window.open for Tauri native mode

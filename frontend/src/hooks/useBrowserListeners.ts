@@ -38,6 +38,8 @@ export function useBrowserListeners({
   // Listen to postMessage from the iframe (local mode fallback)
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      // Ignore spoofed preview messages from unrelated tabs or iframe sources.
+      if (!iframeRef.current?.contentWindow || event.source !== iframeRef.current.contentWindow) return;
       if (!event.data || typeof event.data !== 'object') return;
       const { type, payload } = event.data;
       if (type === 'tline-ready') {

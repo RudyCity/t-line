@@ -15,6 +15,7 @@ interface UseBrowserStorageAndHistoryProps {
   webviewActive: boolean;
   onUpdateTabUrl?: (url: string) => void;
   handleReload: (forceBypassCache?: boolean) => void;
+  navigateNative?: (url: string) => void;
 }
 
 export function useBrowserStorageAndHistory({
@@ -29,7 +30,8 @@ export function useBrowserStorageAndHistory({
   renderMode,
   webviewActive,
   onUpdateTabUrl,
-  handleReload
+  handleReload,
+  navigateNative
 }: UseBrowserStorageAndHistoryProps) {
   // Zoom State
   const [zoomFactor, setZoomFactor] = useState(1.0);
@@ -97,7 +99,7 @@ export function useBrowserStorageAndHistory({
       if (activeLabel) {
         const jsCode = `try {
           if (document.documentElement) document.documentElement.style.zoom = "${zoomFactor}";
-          if (document.body) document.body.style.zoom = "${zoomFactor}";
+          if (document.body) document.body.style.zoom = "";
         } catch(e) {}`;
         (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js: jsCode }).catch(() => {});
       }
@@ -193,7 +195,7 @@ export function useBrowserStorageAndHistory({
   };
 
   const deleteCookie = async (name: string) => {
-    const js = `document.cookie = "${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"`;
+    const js = 'document.cookie = ' + JSON.stringify(name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;');
     if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
       const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tabId);
       if (activeLabel) {
@@ -217,7 +219,7 @@ export function useBrowserStorageAndHistory({
   };
 
   const deleteLocalStorage = async (key: string) => {
-    const js = `localStorage.removeItem("${key}")`;
+    const js = 'localStorage.removeItem(' + JSON.stringify(key) + ')';
     if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
       const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tabId);
       if (activeLabel) {
@@ -248,6 +250,7 @@ export function useBrowserStorageAndHistory({
     } else {
       setActiveUrl(url);
       onUpdateTabUrl?.(url);
+      navigateNative?.(url);
     }
   };
 
@@ -259,6 +262,7 @@ export function useBrowserStorageAndHistory({
     } else {
       setActiveUrl(url);
       onUpdateTabUrl?.(url);
+      navigateNative?.(url);
     }
   };
 
