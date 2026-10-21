@@ -56,10 +56,17 @@ export function useGitStatus(panelWorkspace: WorkspaceInfo | null, panelWorktree
 
   useEffect(() => {
     if (!panelWorkspace || !panelWorkspace.isGit) return;
-    const interval = setInterval(() => {
-      fetchGitStatus(false);
-    }, 5000);
-    return () => clearInterval(interval);
+    // File-watch events trigger immediate refresh while active; avoid spawning
+    // Git every five seconds in a hidden window.
+    const poll = () => {
+      if (!document.hidden) void fetchGitStatus(false);
+    };
+    const interval = setInterval(poll, 10000);
+    document.addEventListener('visibilitychange', poll);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', poll);
+    };
   }, [panelWorkspace, panelWorktreePath, fetchGitStatus]);
 
   return {

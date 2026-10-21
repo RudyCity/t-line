@@ -872,17 +872,26 @@ export default function App() {
 
   const [fsChangeTrigger, setFsChangeTrigger] = useState<number>(0);
 
-  // Global WebSocket listener for file system changes
+  // Git builds can emit hundreds of watcher notifications in one second.
+  // Coalesce their workspace, status and explorer refreshes into one batch.
   useEffect(() => {
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastRefreshedAt = 0;
     wsManager.subscribe('global', (payload) => {
-      if (payload.type === 'fs-change') {
-        fetchGitStatus(false);
-        fetchWorkspaces();
+      if (payload.type !== 'fs-change' || refreshTimer !== null) return;
+      const delay = Math.max(850, 2000 - (Date.now() - lastRefreshedAt));
+      refreshTimer = setTimeout(() => {
+        lastRefreshedAt = Date.now();
+        refreshTimer = null;
+        if (document.hidden) return;
+        void fetchGitStatus(false);
+        void fetchWorkspaces();
         setFsChangeTrigger(prev => prev + 1);
-      }
+      }, delay);
     });
     return () => {
       wsManager.removeListener('global');
+      if (refreshTimer !== null) clearTimeout(refreshTimer);
     };
   }, [fetchGitStatus, fetchWorkspaces]);
 

@@ -1,3 +1,4 @@
+import { mapWithConcurrency } from './mapWithConcurrency';
 import express from 'express';
 import http from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -222,7 +223,7 @@ app.use('/api', authRouter);
 app.get('/api/workspaces', authMiddleware, async (req, res) => {
   try {
     const configs = getWorkspaces();
-    const workspaceInfos = await Promise.all(configs.map(w => getWorkspaceInfo(w)));
+    const workspaceInfos = await mapWithConcurrency(configs, 4, getWorkspaceInfo);
     res.json(workspaceInfos);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -590,22 +591,22 @@ server.on('upgrade', (request, socket, head) => {
 
 const activeWebSockets = new Set<WebSocket>();
 const fsWatchers = new Map<string, fs.FSWatcher>();
-const fileChangeDebounceTimers = new Map<string, NodeJS.Timeout>();
+// One filesystem rebuild may touch thousands of files. Broadcast a single
+// coalesced refresh per window rather than scheduling a timer per pathname.
+let fileChangeRefreshTimer: NodeJS.Timeout | null = null;
+let latestChangedFile = '';
 
 function handleFileChange(filename: string) {
-  const existingTimer = fileChangeDebounceTimers.get(filename);
-  if (existingTimer) clearTimeout(existingTimer);
-  
-  const timer = setTimeout(() => {
-    fileChangeDebounceTimers.delete(filename);
+  latestChangedFile = filename;
+  if (fileChangeRefreshTimer) return;
+  fileChangeRefreshTimer = setTimeout(() => {
+    fileChangeRefreshTimer = null;
     clearWorkspaceCache();
-    const payload = JSON.stringify({ id: 'global', type: 'fs-change', filename });
+    const payload = JSON.stringify({ id: 'global', type: 'fs-change', filename: latestChangedFile });
     for (const ws of activeWebSockets) {
       if (ws.readyState === WebSocket.OPEN) ws.send(payload);
     }
-  }, 300);
-  
-  fileChangeDebounceTimers.set(filename, timer);
+  }, 600);
 }
 
 async function updateWorkspaceWatchers() {

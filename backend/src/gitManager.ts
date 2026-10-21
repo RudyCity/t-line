@@ -1,3 +1,4 @@
+import { mapWithConcurrency } from './mapWithConcurrency';
 import { execFile } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -227,23 +228,46 @@ async function isWorktreeDirty(worktreePath: string): Promise<{ isDirty: boolean
 }
 
 const infoCache = new Map<string, { info: WorkspaceInfo; timestamp: number }>();
-const INFO_CACHE_TTL_MS = 8000; // 8 seconds (spans the 5s polling loop to prevent multiple Git process spawns)
+const pendingWorkspaceInfo = new Map<string, Promise<WorkspaceInfo>>();
+// Each Git scan may spawn worktree-list, status and branch subprocesses.
+// Cache briefly and deduplicate all overlapping requests from UI and watchers.
+const INFO_CACHE_TTL_MS = 15000;
+let infoGeneration = 0;
 
 export function clearWorkspaceCache(): void {
+  infoGeneration += 1;
   infoCache.clear();
+  pendingWorkspaceInfo.clear();
 }
 
-// Retrieve details for a workspace
-export async function getWorkspaceInfo(workspace: WorkspaceConfig): Promise<WorkspaceInfo> {
+export function getWorkspaceInfo(workspace: WorkspaceConfig): Promise<WorkspaceInfo> {
   const normalizedPath = normalizePath(workspace.path);
-  const cacheKey = normalizedPath;
-  const now = Date.now();
-  
+  const cacheKey = JSON.stringify([normalizedPath, workspace.name ?? '', workspace.defaultShell ?? 'powershell']);
   const cached = infoCache.get(cacheKey);
-  if (cached && (now - cached.timestamp < INFO_CACHE_TTL_MS)) {
-    return cached.info;
+  if (cached && Date.now() - cached.timestamp < INFO_CACHE_TTL_MS) {
+    return Promise.resolve(cached.info);
   }
 
+  const existing = pendingWorkspaceInfo.get(cacheKey);
+  if (existing) return existing;
+
+  const generation = infoGeneration;
+  const pending = computeWorkspaceInfo(workspace, normalizedPath).then(info => {
+    if (generation === infoGeneration) {
+      infoCache.set(cacheKey, { info, timestamp: Date.now() });
+    }
+    return info;
+  }).finally(() => {
+    if (pendingWorkspaceInfo.get(cacheKey) === pending) {
+      pendingWorkspaceInfo.delete(cacheKey);
+    }
+  });
+  pendingWorkspaceInfo.set(cacheKey, pending);
+  return pending;
+}
+
+// Keep the expensive workspace probe separate from cache bookkeeping.
+async function computeWorkspaceInfo(workspace: WorkspaceConfig, normalizedPath: string): Promise<WorkspaceInfo> {
   let name = workspace.name;
   if (!name) {
     if (normalizedPath.startsWith('ssh://')) {
@@ -280,16 +304,12 @@ export async function getWorkspaceInfo(workspace: WorkspaceConfig): Promise<Work
         }
       }
 
-      // Check dirty status for each worktree in parallel using Promise.all to improve performance
-      const resolvedWorktrees: WorktreeInfo[] = await Promise.all(
-        parsedWorktrees.map(async (wt) => {
+      // Bound subprocess load in large repositories with many worktrees.
+      const resolvedWorktrees: WorktreeInfo[] = await mapWithConcurrency(
+        parsedWorktrees, 4, async wt => {
           const { isDirty, dirtyCount } = await isWorktreeDirty(wt.path);
-          return {
-            ...wt,
-            isDirty,
-            dirtyCount
-          };
-        })
+          return { ...wt, isDirty, dirtyCount };
+        }
       );
       worktrees = resolvedWorktrees;
     } catch (e) {
@@ -322,7 +342,6 @@ export async function getWorkspaceInfo(workspace: WorkspaceConfig): Promise<Work
     defaultShell: workspace.defaultShell || 'powershell'
   };
 
-  infoCache.set(cacheKey, { info, timestamp: now });
   return info;
 }
 

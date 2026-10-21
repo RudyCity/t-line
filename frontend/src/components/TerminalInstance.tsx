@@ -8,6 +8,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import { CanvasAddon } from '@xterm/addon-canvas';
 import { ImageAddon } from '@xterm/addon-image';
 import { wsManager } from '../services/websocket';
+import { takeTerminalWriteBatch } from '../utils/terminalWriteBatch';
 import { useTerminalTouchMapping } from '../hooks/useTerminalTouchMapping';
 import { useTerminalInitialCommand } from '../hooks/useTerminalInitialCommand';
 import {
@@ -121,16 +122,18 @@ export function TerminalInstance({
   // so the terminal stays responsive to the most recent output.
   const MAX_WRITE_QUEUE_BYTES = 10 * 1024 * 1024; // 10 MB
 
-  // Flush data to terminal using requestAnimationFrame-backed processing loop
+  // Bound each animation frame to 64 Ki UTF-16 code units of output.
+  // Writing the former entire 10 MB queue in one frame froze input and layout.
   const flushWriteQueue = useCallback(() => {
-    const term = terminalRef.current;
-    if (term && writeQueueRef.current.length > 0) {
-      const batch = writeQueueRef.current.join('');
-      writeQueueRef.current = [];
-      writeQueueBytesRef.current = 0;
-      term.write(batch);
-    }
     writeIntervalRef.current = null;
+    const term = terminalRef.current;
+    if (!term || writeQueueRef.current.length === 0) return;
+    const batch = takeTerminalWriteBatch(writeQueueRef.current, 64 * 1024);
+    writeQueueBytesRef.current = Math.max(0, writeQueueBytesRef.current - batch.length);
+    if (batch) term.write(batch);
+    if (writeQueueRef.current.length > 0) {
+      writeIntervalRef.current = requestAnimationFrame(flushWriteQueue);
+    }
   }, []);
 
   const scheduleWrite = useCallback((data: string) => {
@@ -141,6 +144,10 @@ export function TerminalInstance({
       return;
     }
 
+    // Enforce cap even when a single replay frame is larger than the queue.
+    if (data.length > MAX_WRITE_QUEUE_BYTES) {
+      data = data.slice(-MAX_WRITE_QUEUE_BYTES);
+    }
     // Enforce byte cap: drop oldest chunks until the new one fits.
     if (writeQueueBytesRef.current + data.length > MAX_WRITE_QUEUE_BYTES) {
       while (

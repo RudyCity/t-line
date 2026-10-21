@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { areWorkspacesEqual } from '../utils/workspaceEquality';
 import { logFetchError } from '../utils/network';
 
 export interface WorktreeInfo {
@@ -45,31 +46,60 @@ export function useWorkspaces(
   const [deletingWorkspacePaths, setDeletingWorkspacePaths] = useState<string[]>([]);
   const [deletingWorktreePaths, setDeletingWorktreePaths] = useState<string[]>([]);
 
-  const fetchWorkspaces = useCallback(async () => {
-    if (!token) return;
-    try {
-      const res = await fetch('/api/workspaces', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setWorkspaces(data);
+  const inFlightRef = useRef<{
+    token: string; controller: AbortController; promise: Promise<void>;
+  } | null>(null);
+
+  const fetchWorkspaces = useCallback((force = false): Promise<void> => {
+    if (!token) return Promise.resolve();
+    const previous = inFlightRef.current;
+    if (previous?.token === token && !force) return previous.promise;
+    // A forced refresh after add/remove replaces a stale background poll.
+    previous?.controller.abort();
+    const controller = new AbortController();
+    const promise = (async () => {
+      try {
+        const res = await fetch('/api/workspaces', {
+          headers: { Authorization: 'Bearer ' + token },
+          cache: 'no-store',
+          signal: controller.signal
+        });
+        if (!res.ok) throw new Error('Workspaces HTTP ' + res.status);
+        const data = await res.json();
+        if (!controller.signal.aborted && Array.isArray(data)) {
+          setWorkspaces(prev => areWorkspacesEqual(prev, data) ? prev : data);
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) logFetchError('Failed to fetch workspaces', error);
       }
-    } catch (e) {
-      logFetchError('Failed to fetch workspaces', e);
-    }
+    })().finally(() => {
+      if (inFlightRef.current?.controller === controller) {
+        inFlightRef.current = null;
+      }
+    });
+    inFlightRef.current = { token, controller, promise };
+    return promise;
   }, [token]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    
-    fetchWorkspaces();
-    
-    const interval = setInterval(() => {
-      fetchWorkspaces();
-    }, 10000); // Poll every 10 seconds to keep workspace and branch badges up to date
-    
-    return () => clearInterval(interval);
+    void fetchWorkspaces();
+
+    // WebSocket events already refresh the list. Do not poll hidden windows.
+    const poll = () => {
+      if (!document.hidden) void fetchWorkspaces();
+    };
+    const interval = window.setInterval(poll, 20000);
+    const onVisibility = () => {
+      if (!document.hidden) void fetchWorkspaces();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+      inFlightRef.current?.controller.abort();
+      inFlightRef.current = null;
+    };
   }, [isAuthenticated, fetchWorkspaces]);
 
   // Dynamically update the default worktree path based on the selected/entered branch name
@@ -144,7 +174,7 @@ export function useWorkspaces(
         setNewWorkspacePath('');
         setNewWorkspaceShell('powershell');
         setShowFolderExplorer(false);
-        fetchWorkspaces();
+        void fetchWorkspaces(true);
       } else {
         showAlert('Workspace Error', data.error || 'Failed to add workspace.');
       }
@@ -169,7 +199,7 @@ export function useWorkspaces(
         window.dispatchEvent(new CustomEvent('tline-toast', {
           detail: { message: 'Workspace removed successfully' }
         }));
-        fetchWorkspaces();
+        void fetchWorkspaces(true);
         return true;
       }
     } catch (e) {
@@ -228,7 +258,7 @@ export function useWorkspaces(
       const data = await res.json();
       if (data.success) {
         setShowWorktreeModal(false);
-        fetchWorkspaces();
+        void fetchWorkspaces(true);
       } else {
         showAlert('Worktree Error', data.output || 'Failed to create worktree.');
       }
@@ -256,7 +286,7 @@ export function useWorkspaces(
         window.dispatchEvent(new CustomEvent('tline-toast', {
           detail: { message: 'Worktree removed successfully' }
         }));
-        fetchWorkspaces();
+        void fetchWorkspaces(true);
       } else {
         showAlert('Worktree Error', data.output || 'Failed to remove worktree.');
       }
@@ -280,7 +310,7 @@ export function useWorkspaces(
       });
       const data = await res.json();
       if (res.ok) {
-        fetchWorkspaces();
+        void fetchWorkspaces(true);
         return true;
       } else {
         showAlert('Workspace Error', data.error || 'Failed to update workspace.');
