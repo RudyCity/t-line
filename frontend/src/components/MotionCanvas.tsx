@@ -173,6 +173,7 @@ export function MotionCanvas({
             className={busy ? 'cursor-default' : 'cursor-move'}>
             {layer.kind === 'rect' ? (
               <rect x={values.x} y={values.y} width={values.width ?? layer.width} height={values.height ?? layer.height}
+                rx={Math.min(layer.cornerRadius ?? 0, (values.width ?? layer.width) / 2, (values.height ?? layer.height) / 2)}
                 fill={layer.fill} opacity={values.opacity} transform={transform} />
             ) : layer.kind === 'image' ? (
               assetUrls[layer.assetId] ? (

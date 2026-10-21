@@ -67,6 +67,42 @@ describe('Motion Studio authenticated client', () => {
     });
   });
 
+  it('submits one revision-guarded model vision repair using authenticated POST', async () => {
+    const id = 'motion-' + 'd'.repeat(20);
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ changed: false }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    await motionStudioApi.visionRepair('D:/studio', id, 5, 640);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/projects/' + id + '/vision-repair');
+    expect(url).not.toContain('baseRevision');
+    expect(init.method).toBe('POST');
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    expect(JSON.parse(init.body as string)).toEqual({ baseRevision: 5, width: 640 });
+    expect(() => motionStudioApi.visionRepair('D:/studio', '../bad', 5, 640)).toThrow();
+  });
+
+  it('requests optional multimodal review explicitly and downloads scoped subtitle text', async () => {
+    const id = 'motion-' + 'c'.repeat(20);
+    const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('vision-review')) {
+        return new Response(JSON.stringify({ passed: true, issues: [] }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      return new Response('1\n00:00:00,000 --> 00:00:02,000\nHello\n',
+        { status: 200, headers: { 'Content-Type': 'application/x-subrip' } });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    await motionStudioApi.visionReview('D:/studio', id);
+    const captions = await motionStudioApi.captions('D:/studio', id);
+    expect(captions).toContain('Hello');
+    expect(fetchMock.mock.calls[0][0]).toContain('/projects/' + id + '/vision-review');
+    expect(fetchMock.mock.calls[0][1].method).toBe('POST');
+    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    expect(fetchMock.mock.calls[1][0]).toContain('/projects/' + id + '/captions.srt');
+    expect(fetchMock.mock.calls[1][1].headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    expect(() => motionStudioApi.visionReview('D:/studio', '../outside')).toThrow();
+  });
   it('limits authenticated rendered frame snapshots to PNG and known Motion IDs', async () => {
     const id = 'motion-' + 'b'.repeat(20);
     const png = { type: 'image/png', size: 128 } as Blob;

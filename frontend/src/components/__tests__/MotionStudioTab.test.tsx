@@ -7,7 +7,7 @@ import { evaluateLayer, evaluateTrack, makeKeyframeTrack } from '../../services/
 vi.mock('../../services/motionStudioApi', () => ({
   motionStudioApi: {
     list: vi.fn(), inspect: vi.fn(), create: vi.fn(), edit: vi.fn(),
-    jobs: vi.fn(), capabilities: vi.fn(), quality: vi.fn(), loadFrameSnapshot: vi.fn(), generate: vi.fn(), revise: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
+    jobs: vi.fn(), capabilities: vi.fn(), quality: vi.fn(), loadFrameSnapshot: vi.fn(), visionReview: vi.fn(), visionRepair: vi.fn(), captions: vi.fn(), generate: vi.fn(), revise: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
   },
 }));
 const id = 'motion-' + 'a'.repeat(20);
@@ -91,6 +91,110 @@ describe('Motion Studio scene evaluation', () => {
 });
 
 describe('Native T-Line Motion Studio editor', () => {
+  it('round-trips an editable rounded rectangle through authorized revisioned canvas', async () => {
+    const scene = fixture();
+    scene.composition.layers = [{
+      id: 'rounded-card', kind: 'rect', x: 100, y: 200, width: 200, height: 100,
+      rotation: 0, opacity: 1, fill: '#FFFFFF', tracks: [], cornerRadius: 10,
+    }];
+    vi.mocked(motionStudioApi.inspect).mockResolvedValue(scene);
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    const corner = await screen.findByLabelText('Rounded corner radius');
+    expect(corner).toHaveValue(10);
+    const layer = screen.getByTestId('motion-canvas').querySelector('[data-motion-layer="rounded-card"] rect');
+    expect(layer).toHaveAttribute('rx', '10');
+    fireEvent.change(corner, { target: { value: '35' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rounded corners' }));
+    await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 1,
+      [{ type: 'replace-composition', composition: expect.objectContaining({
+        layers: [expect.objectContaining({ id: 'rounded-card', cornerRadius: 35 })],
+      }) }],
+    ));
+  });
+
+  it('makes one explicit visual improvement request with revision guard and updates selected project', async () => {
+    vi.mocked(motionStudioApi.capabilities).mockResolvedValue({ capabilities: {
+      aiPromptDirector: 'short-text-motion-preview',
+      boundedModelVisionRepair: 'one-review-one-revision',
+    } });
+    const changed = { ...fixture(), revision: 2 };
+    vi.mocked(motionStudioApi.visionRepair).mockResolvedValue({
+      changed: true,
+      review: {
+        type: 'model-vision-sampled-frames', projectId: id, revision: 1, reviewedFrames: [45],
+        passed: false, issues: [], limitations: [],
+      },
+      result: {
+        project: changed,
+        outline: ['Product intro'], limitations: [],
+        job: {
+          id: 'motionjob-' + 'd'.repeat(24), projectId: id, revision: 2,
+          status: 'queued', framesCompleted: 0, profile: { frameCount: 90, width: 640, height: 360 },
+        },
+      },
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    fireEvent.click(await screen.findByText(/Quality checks · Structure OK/));
+    fireEvent.click(screen.getByRole('button', { name: 'Review & auto-improve once' }));
+    await waitFor(() => expect(motionStudioApi.visionRepair).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 1, 640,
+    ));
+    expect(await screen.findByText(/Bounded AI visual repair applied/)).toBeInTheDocument();
+    expect(screen.getByText('r2')).toBeInTheDocument();
+  });
+
+  it('does not mutate editor when one-pass visual review finds no blocking errors', async () => {
+    vi.mocked(motionStudioApi.capabilities).mockResolvedValue({ capabilities: {
+      aiPromptDirector: 'short-text-motion-preview',
+      boundedModelVisionRepair: 'one-review-one-revision',
+    } });
+    vi.mocked(motionStudioApi.visionRepair).mockResolvedValue({
+      changed: false,
+      reason: 'No blocking issues',
+      review: {
+        type: 'model-vision-sampled-frames', projectId: id, revision: 1, reviewedFrames: [45],
+        passed: true, issues: [], limitations: [],
+      },
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    fireEvent.click(await screen.findByText(/Quality checks · Structure OK/));
+    fireEvent.click(screen.getByRole('button', { name: 'Review & auto-improve once' }));
+    expect(await screen.findByText('No blocking issues')).toBeInTheDocument();
+    expect(screen.getByText('r1')).toBeInTheDocument();
+  });
+
+  it('shows explicit AI-model vision findings and stages edits instead of running untrusted suggestions', async () => {
+    vi.mocked(motionStudioApi.capabilities).mockResolvedValue({ capabilities: {
+      aiPromptDirector: 'short-text-motion-preview', sampledModelVisionReview: 'on-demand-vision-model-required',
+    } });
+    vi.mocked(motionStudioApi.visionReview).mockResolvedValue({
+      type: 'model-vision-sampled-frames', projectId: id, revision: 1, reviewedFrames: [45],
+      passed: false,
+      issues: [{
+        frame: 45, category: 'readability', severity: 'error',
+        explanation: 'Headline too small', suggestion: 'Move headline to safe canvas region',
+      }],
+      limitations: ['Sampled frame only'],
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    fireEvent.click(await screen.findByText(/Quality checks · Structure OK/));
+    fireEvent.click(screen.getByRole('button', { name: 'AI Vision Review (uses configured model)' }));
+    expect(await screen.findByText('Headline too small')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Prepare suggested revision' }));
+    expect(screen.getByLabelText('Motion prompt')).toHaveValue(
+      'Improve the current motion at frame 45 for readability: Move headline to safe canvas region',
+    );
+    expect(motionStudioApi.revise).not.toHaveBeenCalled();
+  });
   it('renders and revokes authorized raster frame samples only when supported', async () => {
     vi.mocked(motionStudioApi.capabilities).mockResolvedValue({ capabilities: {
       aiPromptDirector: 'short-text-motion-preview',

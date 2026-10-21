@@ -18,7 +18,7 @@
     "dev:tauri": "node dev.cjs tauri",
     "build:backend": "bun run --filter backend build",
     "build:frontend": "bun run --filter frontend build",
-    "build:tauri": "bun run build:frontend && bun run build:backend && bun run --filter desktop-tauri copy-assets && bun run --filter desktop-tauri tauri build",
+    "build:tauri": "bun run build:frontend && bun run build:backend && bun run --filter desktop-tauri copy-assets && CI=true bun run --filter desktop-tauri tauri build",
     "build:exe": "bun run build:tauri",
     "sync:version": "node scripts/sync-version.cjs",
     "prebuild": "node scripts/sync-version.cjs",

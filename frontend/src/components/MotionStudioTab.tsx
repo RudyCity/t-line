@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import {
   motionStudioApi, type MotionJob, type MotionProject, type MotionLayer, type MotionEdit, type MotionSchedulerStatus,
-  type MotionProperty, type MotionProjectSummary, type MotionStorageStatus, type MotionQueueRecovery, type MotionSupervisorStatus, type MotionQualityReport,
+  type MotionProperty, type MotionProjectSummary, type MotionStorageStatus, type MotionQueueRecovery, type MotionSupervisorStatus, type MotionQualityReport, type MotionVisionReview,
 } from '../services/motionStudioApi';
 import { evaluateLayer, fpsOf, frameLabel, makeKeyframeTrack } from '../services/motionScene';
 import { MotionCanvas } from './MotionCanvas';
@@ -58,6 +58,10 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [promptVoiceoverGain, setPromptVoiceoverGain] = useState(1);
   const [promptHistory, setPromptHistory] = useState<Array<{ prompt: string; response: string }>>([]);
   const [quality, setQuality] = useState<MotionQualityReport | null>(null);
+  const [visionReview, setVisionReview] = useState<MotionVisionReview | null>(null);
+  const [visionAvailable, setVisionAvailable] = useState(false);
+  const [visionRepairAvailable, setVisionRepairAvailable] = useState(false);
+  const [captionsAvailable, setCaptionsAvailable] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -76,6 +80,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [redoStack, setRedoStack] = useState<MotionProject['composition'][]>([]);
   const [draftText, setDraftText] = useState('');
   const [propertyDraft, setPropertyDraft] = useState<PropertyDraft>({ field: 'x', value: '0' });
+  const [cornerDraft, setCornerDraft] = useState('0');
   const mounted = useRef(true);
   const previewRef = useRef<string | null>(null);
   const version = useRef(0);
@@ -101,7 +106,8 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     setDirectorSceneImagesAvailable(false); setDirectorAudioLoopAvailable(false); setDirectorVoiceoverAvailable(false);
     setDirectorAspectAvailable(false); setPromptAspectRatio('16:9');
     setDirectorSnapshotAvailable(false); setDirectorAutoNarration(false);
-    setPromptVoiceover(''); setPromptVoiceoverGain(1); setQuality(null);
+    setPromptVoiceover(''); setPromptVoiceoverGain(1); setQuality(null); setVisionReview(null);
+    setVisionAvailable(false); setVisionRepairAvailable(false); setCaptionsAvailable(false);
     setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
     setScheduler(null); setSupervisor(null); setSupervisedRender(false);
@@ -127,6 +133,9 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
         setDirectorVoiceoverAvailable(motionInfo?.capabilities?.localVoiceoverConfigured === true);
         setDirectorAspectAvailable(motionInfo?.capabilities?.aiAspectRatios?.includes('9:16') === true);
         setDirectorSnapshotAvailable(motionInfo?.capabilities?.authenticatedFrameSnapshots === true);
+        setVisionAvailable(motionInfo?.capabilities?.sampledModelVisionReview === 'on-demand-vision-model-required');
+        setVisionRepairAvailable(motionInfo?.capabilities?.boundedModelVisionRepair === 'one-review-one-revision');
+        setCaptionsAvailable(motionInfo?.capabilities?.exportSceneCaptionsSrt === true);
         const latest = existingJobs.find(job => job.status === 'completed') || existingJobs[0];
         setActiveJobId(latest?.id || '');
       } catch (cause) {
@@ -188,6 +197,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
 
   useEffect(() => {
     if (layer?.kind === 'text') setDraftText(layer.text);
+    if (layer?.kind === 'rect') setCornerDraft(String(layer.cornerRadius ?? 0));
     setPropertyDraft({ field: 'x', value: String(layer?.x ?? 0) });
   }, [layer?.id, layer?.kind, layer?.kind === 'text' ? layer.text : '', project?.revision]);
 
@@ -405,6 +415,21 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     applyEditorEdits([{ type: 'set-text', layerId: layer.id, text: draftText }], 'Text saved');
   };
 
+  const saveCornerRadius = () => {
+    if (!project || !layer || layer.kind !== 'rect') return;
+    const value = Number(cornerDraft);
+    if (!Number.isFinite(value) || value < 0 || value > 4096 ||
+        value > Math.min(layer.width, layer.height) / 2) {
+      message('Rounded corner radius must fit inside the rectangle');
+      return;
+    }
+    if (value === (layer.cornerRadius ?? 0)) return;
+    const composition = structuredClone(project.composition);
+    const target = composition.layers.find(item => item.id === layer.id);
+    if (!target || target.kind !== 'rect') return;
+    target.cornerRadius = value;
+    applyEditorEdits([{ type: 'replace-composition', composition }], 'Rounded rectangle updated');
+  };
   const saveProperty = () => {
     if (!project || !layer) return;
     const value = Number(propertyDraft.value);
@@ -462,6 +487,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     });
   };
 
+  useEffect(() => { setVisionReview(null); }, [project?.id, project?.revision, workspacePath]);
   useEffect(() => {
     motionSnapshotsRef.current.forEach(item => URL.revokeObjectURL?.(item.url));
     motionSnapshotsRef.current = [];
@@ -472,6 +498,63 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     };
   }, [project?.id, project?.revision, workspacePath]);
 
+  const reviewVision = () => {
+    if (!project || busy || !visionAvailable) return;
+    const projectId = project.id, revision = project.revision, sequence = version.current;
+    void operation(async () => {
+      const reviewed = await motionStudioApi.visionReview(workspacePath, projectId);
+      if (!mounted.current || sequence !== version.current) return;
+      if (reviewed.projectId !== projectId || reviewed.revision !== revision) {
+        throw new Error('Motion project changed during visual review; retry from the latest revision');
+      }
+      setVisionReview(reviewed);
+      setSuccess('AI visual review completed for ' + reviewed.reviewedFrames.length + ' sampled frame(s)');
+    });
+  };
+  const repairVision = () => {
+    if (!project || !visionRepairAvailable || busy) return;
+    const id = project.id, revision = project.revision, sequence = version.current;
+    void operation(async () => {
+      const repaired = await motionStudioApi.visionRepair(workspacePath, id, revision, renderWidth);
+      if (!mounted.current || sequence !== version.current) return;
+      if (repaired.review.projectId !== id || repaired.review.revision !== revision) {
+        throw new Error('Vision repair returned a stale project review');
+      }
+      if (!repaired.changed || !repaired.result) {
+        setVisionReview(repaired.review);
+        setSuccess(repaired.reason || 'No blocking model vision issue to repair');
+        return;
+      }
+      if (repaired.result.project.id !== id || repaired.result.project.revision <= revision) {
+        throw new Error('Invalid visual repair revision');
+      }
+      const updated = repaired.result;
+      setUndoStack([]); setRedoStack([]);
+      setProject(updated.project);
+      setQuality(updated.quality ?? null);
+      setJobs(prev => [updated.job, ...prev.filter(item => item.id !== updated.job.id)]);
+      setActiveJobId(updated.job.id);
+      setSuccess('Bounded AI visual repair applied · revision ' + updated.project.revision +
+        ' · new MP4 rendering started');
+    });
+  };
+  const exportCaptions = () => {
+    if (!project || !captionsAvailable || busy) return;
+    const projectId = project.id, revision = project.revision, sequence = version.current;
+    void operation(async () => {
+      const subtitles = await motionStudioApi.captions(workspacePath, projectId);
+      if (!mounted.current || sequence !== version.current) return;
+      const latest = await motionStudioApi.inspect(workspacePath, projectId);
+      if (latest.revision !== revision) throw new Error('Motion project changed during subtitle export');
+      const url = URL.createObjectURL(new Blob([subtitles], { type: 'application/x-subrip;charset=utf-8' }));
+      try {
+        const anchor = document.createElement('a');
+        anchor.href = url; anchor.download = 'motion-' + projectId + '-r' + revision + '.srt';
+        document.body.appendChild(anchor); anchor.click(); anchor.remove();
+      } finally { URL.revokeObjectURL(url); }
+      setSuccess('Exported editable scene-copy subtitles (not automatic speech transcription)');
+    });
+  };
   const loadDirectorSnapshots = () => {
     if (!project || !quality || !directorSnapshotAvailable || busy) return;
     const id = project.id, revision = project.revision, workspaceVersion = version.current;
@@ -711,6 +794,36 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
             {quality.issues.length > 0 ? ' · ' + quality.issues.length + ' finding(s)' : ' · no warnings'}
             <span className="ml-2 font-normal text-[var(--text-muted)]">(frame sampling, not AI vision review)</span>
           </summary>
+          {captionsAvailable && <button type="button" className={action + ' mt-2 mr-2'}
+            onClick={exportCaptions} disabled={busy}>
+            Export scene subtitles (.srt)
+          </button>}
+          {visionRepairAvailable && <button type="button" className={action + ' mt-2 mr-2'}
+            onClick={repairVision} disabled={busy}
+            title="Explicit opt-in: up to one sampled vision review and one validated scene revision">
+            Review & auto-improve once
+          </button>}
+          {visionAvailable && <button type="button" className={action + ' mt-2 mr-2'}
+            onClick={reviewVision} disabled={busy}>
+            AI Vision Review (uses configured model)
+          </button>}
+          {visionReview && <div className="mt-2 rounded border border-[var(--border-color)] p-2"
+            aria-label="Motion AI vision findings">
+            <strong>{visionReview.passed ? 'Sampled frames reviewed' : 'Visual issues identified'}</strong>
+            <p className="my-1 text-[var(--text-muted)]">
+              Independent model opinion on frames {visionReview.reviewedFrames.join(', ')}; not a full-video guarantee.
+            </p>
+            {visionReview.issues.map((issue, index) => <div key={index} className="mt-2">
+              <strong>{issue.severity}: {issue.category} · frame {issue.frame}</strong>
+              <p>{issue.explanation}</p>
+              <p className="text-[var(--text-muted)]">Suggested: {issue.suggestion}</p>
+              <button type="button" className={action + ' mt-1'} disabled={busy}
+                onClick={() => setMotionPrompt('Improve the current motion at frame ' + issue.frame +
+                  ' for ' + issue.category + ': ' + issue.suggestion.slice(0, 250))}>
+                Prepare suggested revision
+              </button>
+            </div>)}
+          </div>}
           {directorSnapshotAvailable && <button type="button" className={action + ' mt-2'}
             onClick={loadDirectorSnapshots} disabled={busy}>
             Review actual rendered frames
@@ -878,6 +991,15 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
                       <button className={action} disabled={busy || draftText === layer.text} onClick={saveText}><Save size={13} /> Save text</button>
                     </div>
                   )}
+                  {layer.kind === 'rect' && <div className="space-y-2">
+                    <label className="text-xs font-medium" htmlFor="motion-corner-radius">Rounded corner radius</label>
+                    <input id="motion-corner-radius" aria-label="Rounded corner radius" className={control}
+                      type="number" min={0} max={Math.min(4096, layer.width / 2, layer.height / 2)}
+                      step={1} value={cornerDraft} disabled={busy}
+                      onChange={event => setCornerDraft(event.target.value)} />
+                    <button type="button" className={action} disabled={busy || cornerDraft === String(layer.cornerRadius ?? 0)}
+                      onClick={saveCornerRadius}>Save rounded corners</button>
+                  </div>}
                   <div className="space-y-2">
                     <label className="text-xs font-medium" htmlFor="motion-property">Property</label>
                     <select id="motion-property" className={control} value={propertyDraft.field}

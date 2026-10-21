@@ -1448,14 +1448,22 @@ fn get_app_url() -> String {
 
 #[tauri::command]
 fn open_webview_devtools(app: tauri::AppHandle, label: String) -> Result<(), String> {
-    if let Some(webview) = app.get_webview(&label) {
-        webview.open_devtools();
-        Ok(())
-    } else if let Some(webview_window) = app.get_webview_window(&label) {
-        webview_window.open_devtools();
-        Ok(())
-    } else {
-        Err(format!("Webview with label {} not found", label))
+    #[cfg(feature = "devtools")]
+    {
+        if let Some(webview) = app.get_webview(&label) {
+            webview.open_devtools();
+            Ok(())
+        } else if let Some(webview_window) = app.get_webview_window(&label) {
+            webview_window.open_devtools();
+            Ok(())
+        } else {
+            Err(format!("Webview with label {} not found", label))
+        }
+    }
+    #[cfg(not(feature = "devtools"))]
+    {
+        let _ = (app, label);
+        Err("Webview DevTools are disabled in this build; enable the explicit devtools feature in a developer-only build".to_string())
     }
 }
 

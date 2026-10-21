@@ -11,7 +11,7 @@ export interface BaseMotionLayer {
 export interface MotionTextLayer extends BaseMotionLayer {
   kind: 'text'; text: string; fontSize: number; fontFamily: string;
 }
-export interface MotionRectLayer extends BaseMotionLayer { kind: 'rect' }
+export interface MotionRectLayer extends BaseMotionLayer { kind: 'rect'; cornerRadius?: number }
 export interface MotionImageLayer extends BaseMotionLayer { kind: 'image'; assetId: string }
 export type MotionLayer = MotionTextLayer | MotionRectLayer | MotionImageLayer;
 export interface MotionAudioTrack {
@@ -40,10 +40,19 @@ export type MotionEdit =
   | { type: 'set-audio'; audio: MotionAudioTrack | null }
   | { type: 'set-audio-tracks'; audioTracks: MotionAudioTrack[] };
 export interface MotionCapabilities {
-  capabilities?: { aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean };
+  capabilities?: { aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean };
 }
 export interface MotionQualityIssue {
   severity: 'warning' | 'error'; code: string; scene: number; message: string;
+}
+export interface MotionVisionReview {
+  type: 'model-vision-sampled-frames'; projectId: string; revision: number; reviewedFrames: number[];
+  passed: boolean;
+  issues: Array<{
+    frame: number; category: 'readability' | 'layout' | 'contrast' | 'pacing' | 'branding' | 'other';
+    severity: 'warning' | 'error'; explanation: string; suggestion: string;
+  }>;
+  limitations: string[];
 }
 export interface MotionQualityReport {
   passed: boolean;
@@ -177,6 +186,21 @@ export const motionStudioApi = {
   inspect: (workspace: string, id: string) => json<MotionProject>(workspace, '/projects/' + assertId(id)),
   quality: (workspace: string, id: string) =>
     json<MotionQualityReport>(workspace, '/projects/' + assertId(id) + '/quality'),
+  visionReview: (workspace: string, id: string) =>
+    json<MotionVisionReview>(workspace, '/projects/' + assertId(id) + '/vision-review', {
+      method: 'POST', body: JSON.stringify({}),
+    }),
+  visionRepair: (workspace: string, id: string, baseRevision: number, width = 640) =>
+    json<{ changed: boolean; reason?: string; review: MotionVisionReview; result?: MotionDirectorResult }>(
+      workspace, '/projects/' + assertId(id) + '/vision-repair', {
+        method: 'POST', body: JSON.stringify({ baseRevision, width }),
+      }),
+  captions: async (workspace: string, id: string): Promise<string> => {
+    const response = await motionFetch(workspace, '/projects/' + assertId(id) + '/captions.srt');
+    const text = await response.text();
+    if (text.length > 256_000) throw new Error('Motion subtitles exceed the maximum size');
+    return text;
+  },
   async loadFrameSnapshot(workspace: string, id: string, frame: number): Promise<string> {
     if (!Number.isSafeInteger(frame) || frame < 0 || frame > 216000) throw new Error('Invalid Motion snapshot frame');
     const response = await motionFetch(workspace, '/projects/' + assertId(id) + '/frames/' + frame + '.png');

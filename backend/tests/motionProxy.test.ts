@@ -141,6 +141,32 @@ describe('T-Line Motion proxy and service authentication', () => {
     expect((await fetch(base + '/projects/' + motionId + '/frames/45.png?workspace=allowed-root', {
       method: 'HEAD',
     })).status).toBe(404);
+    const visionRepair = await fetch(base + '/projects/' + motionId + '/vision-repair?workspace=allowed-root', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseRevision: 1, width: 640 }),
+    });
+    expect(visionRepair.status).toBe(201);
+    expect((await visionRepair.json()).url).toContain('/api/motion/projects/' + motionId + '/vision-repair');
+    expect((await fetch(base + '/projects/' + motionId + '/vision-repair?workspace=allowed-root')).status).toBe(404);
+    expect((await fetch(base + '/projects/' + motionId + '/vision-repair?workspace=foreign', {
+      method: 'POST',
+    })).status).toBe(403);
+    const reviewed = await fetch(base + '/projects/' + motionId + '/vision-review?workspace=allowed-root', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    });
+    expect(reviewed.status).toBe(201);
+    expect((await reviewed.json()).url).toContain('/api/motion/projects/' + motionId + '/vision-review');
+    expect((await fetch(base + '/projects/' + motionId + '/vision-review?workspace=allowed-root')).status).toBe(404);
+    expect((await fetch(base + '/projects/' + motionId + '/vision-review?workspace=foreign', {
+      method: 'POST',
+    })).status).toBe(403);
+    const srt = await fetch(base + '/projects/' + motionId + '/captions.srt?workspace=allowed-root');
+    expect(srt.status).toBe(200);
+    expect((await srt.json()).url).toContain('/api/motion/projects/' + motionId + '/captions.srt');
+    expect((await fetch(base + '/projects/' + motionId + '/captions.srt?workspace=allowed-root', {
+      method: 'POST',
+    })).status).toBe(404);
+    expect((await fetch(base + '/projects/' + motionId + '/captions.srt?workspace=foreign')).status).toBe(403);
     const quality = await fetch(base + '/projects/' + motionId + '/quality?workspace=allowed-root');
     expect(quality.status).toBe(200);
     expect((await quality.json()).url).toContain('/api/motion/projects/' + motionId + '/quality');
