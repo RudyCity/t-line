@@ -8,22 +8,24 @@ export interface MotionClipState {
 
 /** Preview the exact frame-relative clip delay and gain/fades used by the MP4 renderer. */
 export function motionClipAtFrame(
-  clip: MotionAudioTrack, frame: number, fps: number, clipSeconds: number,
+  clip: MotionAudioTrack, frame: number, fps: number, clipSeconds: number, durationFrames?: number,
 ): MotionClipState {
   if (!Number.isFinite(fps) || fps <= 0 || !Number.isFinite(clipSeconds) || clipSeconds <= 0) {
     return { active: false, sourceSeconds: 0, gain: 0 };
   }
   const elapsed = (frame - clip.startFrame) / fps;
-  if (elapsed < 0 || elapsed >= clipSeconds) return {
+  const maxSeconds = clip.loop && durationFrames !== undefined
+    ? Math.max(0, (durationFrames - clip.startFrame) / fps) : clipSeconds;
+  if (elapsed < 0 || elapsed >= maxSeconds) return {
     active: false, sourceSeconds: Math.max(0, Math.min(clipSeconds, elapsed)), gain: 0,
   };
   const fadeIn = Math.min(clipSeconds, (clip.fadeInFrames ?? 0) / fps);
-  const fadeOut = Math.min(clipSeconds, (clip.fadeOutFrames ?? 0) / fps);
+  const fadeOut = Math.min(maxSeconds, (clip.fadeOutFrames ?? 0) / fps);
   const attack = fadeIn > 0 ? Math.min(1, elapsed / fadeIn) : 1;
-  const release = fadeOut > 0 ? Math.min(1, (clipSeconds - elapsed) / fadeOut) : 1;
+  const release = fadeOut > 0 ? Math.min(1, (maxSeconds - elapsed) / fadeOut) : 1;
   return {
     active: true,
-    sourceSeconds: elapsed,
+    sourceSeconds: clip.loop ? elapsed % clipSeconds : elapsed,
     gain: Math.max(0, clip.volume * Math.min(attack, release)),
   };
 }
@@ -31,9 +33,10 @@ export function motionClipAtFrame(
 /** Keep a dedicated timeline player near the frame clock without fighting the manual WAV player. */
 export function syncMotionAudioElement(
   media: HTMLAudioElement, clip: MotionAudioTrack, frame: number,
-  fps: number, clipSeconds: number, playing: boolean,
+  fps: number, clipSeconds: number, playing: boolean, durationFrames?: number,
 ): void {
-  const at = motionClipAtFrame(clip, frame, fps, clipSeconds);
+  const at = motionClipAtFrame(clip, frame, fps, clipSeconds, durationFrames);
+  media.loop = clip.loop === true;
   if (!playing || !at.active) {
     if (!media.paused) media.pause();
     if (Number.isFinite(media.duration) && media.duration > 0 &&

@@ -12,6 +12,19 @@ describe('Motion frame-anchored source preview', () => {
     expect(motionClipAtFrame(clip, 42, 30, 1).gain).toBeCloseTo(0.8 / 0.3 * 0.1);
     expect(motionClipAtFrame(clip, 45, 30, 1).active).toBe(false);
   });
+  it('loops a short WAV in scene preview, with fade-out near video end', () => {
+    const looping = { ...clip, loop: true };
+    expect(motionClipAtFrame(looping, 75, 30, 1, 150)).toMatchObject({
+      active: true, sourceSeconds: 0,
+    });
+    expect(motionClipAtFrame(looping, 130, 30, 1, 150).gain).toBeCloseTo(0.8);
+    expect(motionClipAtFrame(looping, 148, 30, 1, 150).gain).toBeLessThan(0.8);
+    expect(motionClipAtFrame(looping, 150, 30, 1, 150).active).toBe(false);
+    const player = { paused: false, duration: 1, currentTime: 0, volume: 1,
+      play: vi.fn(), pause: vi.fn() } as unknown as HTMLAudioElement;
+    syncMotionAudioElement(player, looping, 75, 30, 1, true, 150);
+    expect(player.loop).toBe(true);
+  });
   it('ignores invalid fps and clips with no duration', () => {
     expect(motionClipAtFrame(clip, 20, 0, 1).active).toBe(false);
     expect(motionClipAtFrame(clip, 20, 30, Number.NaN).active).toBe(false);

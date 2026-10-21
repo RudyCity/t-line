@@ -41,9 +41,15 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [motionPrompt, setMotionPrompt] = useState('');
   const [directorAvailable, setDirectorAvailable] = useState(false);
   const [directorMediaAvailable, setDirectorMediaAvailable] = useState(false);
-  const [promptImage, setPromptImage] = useState<{ id: string; name: string } | null>(null);
+  const [promptImages, setPromptImages] = useState<Array<{ id: string; name: string }>>([]);
   const [promptAudio, setPromptAudio] = useState<{ id: string; name: string; seconds: number } | null>(null);
   const [promptAudioGain, setPromptAudioGain] = useState(1);
+  const [promptAudioLoop, setPromptAudioLoop] = useState(false);
+  const [directorSceneImagesAvailable, setDirectorSceneImagesAvailable] = useState(false);
+  const [directorAudioLoopAvailable, setDirectorAudioLoopAvailable] = useState(false);
+  const [directorVoiceoverAvailable, setDirectorVoiceoverAvailable] = useState(false);
+  const [promptVoiceover, setPromptVoiceover] = useState('');
+  const [promptVoiceoverGain, setPromptVoiceoverGain] = useState(1);
   const [promptHistory, setPromptHistory] = useState<Array<{ prompt: string; response: string }>>([]);
   const [quality, setQuality] = useState<MotionQualityReport | null>(null);
   const [busy, setBusy] = useState(false);
@@ -85,7 +91,9 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     selectionSeq.current++;
     setProject(null); setSelectedId(''); setSelectedLayer(null); setFrame(0);
     setMotionPrompt(''); setPromptHistory([]); setDirectorAvailable(false); setDirectorMediaAvailable(false);
-    setPromptImage(null); setPromptAudio(null); setPromptAudioGain(1); setQuality(null);
+    setPromptImages([]); setPromptAudio(null); setPromptAudioGain(1); setPromptAudioLoop(false);
+    setDirectorSceneImagesAvailable(false); setDirectorAudioLoopAvailable(false); setDirectorVoiceoverAvailable(false);
+    setPromptVoiceover(''); setPromptVoiceoverGain(1); setQuality(null);
     setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
     setScheduler(null); setSupervisor(null); setSupervisedRender(false);
@@ -106,6 +114,9 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
         setProjects(list); setJobs(existingJobs); setScheduler(capacity); setStorage(storageInfo); setQueueRecovery(recoveryInfo); setSupervisor(supervisorInfo);
         setDirectorAvailable(Boolean(motionInfo?.capabilities?.aiPromptDirector));
         setDirectorMediaAvailable(motionInfo?.capabilities?.aiWorkspaceMedia === 'uploaded-image-wav');
+        setDirectorSceneImagesAvailable((motionInfo?.capabilities?.aiSceneImagesMax ?? 0) >= 3);
+        setDirectorAudioLoopAvailable(motionInfo?.capabilities?.aiAudioLoop === true);
+        setDirectorVoiceoverAvailable(motionInfo?.capabilities?.localVoiceoverConfigured === true);
         const latest = existingJobs.find(job => job.status === 'completed') || existingJobs[0];
         setActiveJobId(latest?.id || '');
       } catch (cause) {
@@ -407,21 +418,37 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
       `Keyframe set at ${frame} · previous value ${evaluated[field].toFixed(2)}`);
   };
 
-  const attachDirectorFile = (kind: 'image' | 'audio', file?: File) => {
+  const attachDirectorImages = (files: FileList | null) => {
+    const selected = [...(files ?? [])];
+    if (!selected.length || busy || !directorMediaAvailable) return;
+    if (selected.length + promptImages.length > (directorSceneImagesAvailable ? 3 : 1)) {
+      message('Motion Director accepts up to ' + (directorSceneImagesAvailable ? 3 : 1) + ' images');
+      return;
+    }
+    const workspaceVersion = version.current;
+    void operation(async () => {
+      const uploaded = await Promise.all(selected.map(async file => {
+        if (file.size < 24 || file.size > 1024 * 1024) throw new Error('Motion image must be 1 MB or smaller');
+        const result = await motionStudioApi.uploadImage(workspacePath, file);
+        return { id: result.id, name: file.name };
+      }));
+      if (!mounted.current || version.current !== workspaceVersion) return;
+      setPromptImages(previous => [...previous, ...uploaded].slice(0, 3));
+      setSuccess(uploaded.length + ' image(s) ready for the next AI Motion prompt');
+    });
+  };
+
+  const attachDirectorFile = (file?: File) => {
     if (!file || busy || !directorMediaAvailable) return;
     const workspaceVersion = version.current;
     void operation(async () => {
-      if (kind === 'image') {
-        const uploaded = await motionStudioApi.uploadImage(workspacePath, file);
-        if (!mounted.current || version.current !== workspaceVersion) return;
-        setPromptImage({ id: uploaded.id, name: file.name });
-        setSuccess('Image ready for the next AI Motion prompt');
-      } else {
-        const uploaded = await motionStudioApi.uploadAudio(workspacePath, file);
-        if (!mounted.current || version.current !== workspaceVersion) return;
-        setPromptAudio({ id: uploaded.id, name: file.name, seconds: uploaded.seconds });
-        setSuccess('WAV ready for the next AI Motion prompt');
+      if (file.size < 46 || file.size > 2 * 1024 * 1024) {
+        throw new Error('Motion WAV must be 2 MB or smaller');
       }
+      const uploaded = await motionStudioApi.uploadAudio(workspacePath, file);
+      if (!mounted.current || version.current !== workspaceVersion) return;
+      setPromptAudio({ id: uploaded.id, name: file.name, seconds: uploaded.seconds });
+      setSuccess('WAV ready for the next AI Motion prompt');
     });
   };
 
@@ -431,8 +458,12 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     const targetId = selectedId;
     const workspaceVersion = version.current;
     const media = {
-      ...(promptImage ? { imageAssetId: promptImage.id } : {}),
-      ...(promptAudio ? { audioAssetId: promptAudio.id, audioGain: promptAudioGain } : {}),
+      ...(promptImages.length === 1 ? { imageAssetId: promptImages[0].id } : {}),
+      ...(promptImages.length > 1 ? { sceneImageAssetIds: promptImages.map(item => item.id) } : {}),
+      ...(promptAudio ? { audioAssetId: promptAudio.id, audioGain: promptAudioGain,
+        ...(directorAudioLoopAvailable ? { audioLoop: promptAudioLoop } : {}) } : {}),
+      ...(directorVoiceoverAvailable && promptVoiceover.trim() ?
+        { voiceoverText: promptVoiceover.trim(), voiceoverGain: promptVoiceoverGain } : {}),
     };
     void operation(async () => {
       const generated = targetId
@@ -451,7 +482,8 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
         prompt, response: generated.outline.join(' · ') +
           (generated.limitations.length ? ' · ' + generated.limitations.join('; ') : ''),
       }]);
-      setMotionPrompt(''); setPromptImage(null); setPromptAudio(null); setPromptAudioGain(1);
+      setMotionPrompt(''); setPromptImages([]); setPromptAudio(null); setPromptAudioGain(1);
+      setPromptAudioLoop(false); setPromptVoiceover(''); setPromptVoiceoverGain(1);
       setSuccess('AI Motion created revision ' + generated.project.revision + ' · MP4 rendering started');
     });
   };
@@ -558,33 +590,53 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
         </form>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-muted)]" aria-label="Motion prompt attachments">
           <label className={action + ' cursor-pointer'}>
-            <ImageIcon size={13} /> Attach image/logo
+            <ImageIcon size={13} /> Attach image(s) / logo
             <input type="file" aria-label="Attach motion image" accept="image/png,image/jpeg,image/webp"
-              className="sr-only" disabled={busy || !directorMediaAvailable}
-              onChange={event => { attachDirectorFile('image', event.target.files?.[0]); event.target.value = ''; }} />
+              className="sr-only" multiple={directorSceneImagesAvailable} disabled={busy || !directorMediaAvailable}
+              onChange={event => { attachDirectorImages(event.target.files); event.target.value = ''; }} />
           </label>
           <label className={action + ' cursor-pointer'}>
             <Film size={13} /> Attach WAV soundtrack
             <input type="file" aria-label="Attach motion WAV" accept=".wav,audio/wav,audio/x-wav"
               className="sr-only" disabled={busy || !directorMediaAvailable}
-              onChange={event => { attachDirectorFile('audio', event.target.files?.[0]); event.target.value = ''; }} />
+              onChange={event => { attachDirectorFile(event.target.files?.[0]); event.target.value = ''; }} />
           </label>
-          {promptImage && <span title={promptImage.id}>Image: {promptImage.name}
-            <button type="button" aria-label="Remove prompt image" className="ml-1 underline"
-              onClick={() => setPromptImage(null)} disabled={busy}>Remove</button>
-          </span>}
+          {promptImages.map((item, i) => <span key={item.id + i} title={item.id}>
+            Image: {item.name}{promptImages.length > 1 ? ' (scene ' + (i + 1) + ')' : ''}
+            <button type="button" aria-label={i === 0 ? 'Remove prompt image' : 'Remove prompt image ' + (i + 1)}
+              className="ml-1 underline" onClick={() => setPromptImages(prev => prev.filter((_, index) => index !== i))}
+              disabled={busy}>Remove</button>
+          </span>)}
           {promptAudio && <span title={promptAudio.id}>WAV: {promptAudio.name} ({promptAudio.seconds.toFixed(1)}s)
             <button type="button" aria-label="Remove prompt audio" className="ml-1 underline"
               onClick={() => setPromptAudio(null)} disabled={busy}>Remove</button>
           </span>}
+          {promptAudio && directorAudioLoopAvailable && <label className="inline-flex items-center gap-1">
+            <input type="checkbox" aria-label="Loop prompt soundtrack" disabled={busy}
+              checked={promptAudioLoop} onChange={event => setPromptAudioLoop(event.target.checked)} />
+            Loop WAV to video end
+          </label>}
           {promptAudio && <label>Audio gain
             <input type="number" aria-label="Prompt audio gain" min={0} max={2} step={0.1}
               className={control + ' ml-1 w-16'} disabled={busy} value={promptAudioGain}
               onChange={event => setPromptAudioGain(Number(event.target.value))} />
           </label>}
         </div>
+        {directorVoiceoverAvailable && promptVoiceover.trim() && <label className="mt-2 inline-flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
+          Voice-over gain
+          <input type="number" aria-label="Motion voice-over gain" min={0} max={2} step={0.1}
+            className={control + ' w-16'} disabled={busy} value={promptVoiceoverGain}
+            onChange={event => setPromptVoiceoverGain(Number(event.target.value))} />
+        </label>}
+        {directorVoiceoverAvailable && <label className="mt-2 block text-[11px] text-[var(--text-muted)]">
+          Narration / voice-over (local Piper)
+          <textarea className={control + ' mt-1 w-full resize-y'} rows={2} maxLength={220}
+            aria-label="Motion voice-over script" disabled={busy} value={promptVoiceover}
+            onChange={event => setPromptVoiceover(event.target.value)}
+            placeholder="Tuliskan kalimat yang diucapkan pengisi suara (maksimal 220 karakter)" />
+        </label>}
         <p className="mt-2 text-[11px] text-[var(--text-muted)]">
-          {directorAvailable ? 'AI uses the configured SuperAgent model. Attach existing images or PCM16 WAV (1 MB image / 2 MB WAV); audio synthesis, footage and 3D are not supported.' : 'AI Motion Director needs an updated SuperAgent server with prompt support. The manual editor remains available.'} {!directorMediaAvailable && directorAvailable ? ' Media attachments require an updated SuperAgent server.' : ''} Select “Select a project” to start a new video.
+          {directorAvailable ? 'AI uses the configured SuperAgent model. Attach up to 3 scene images and WAV (1 MB image / 2 MB WAV); Piper narration requires a local voice model, footage/3D and AI music generation are unsupported.' : 'AI Motion Director needs an updated SuperAgent server with prompt support. The manual editor remains available.'} {!directorMediaAvailable && directorAvailable ? ' Media attachments require an updated SuperAgent server.' : ''} Select “Select a project” to start a new video.
         </p>
       </div>
       {project && quality && (

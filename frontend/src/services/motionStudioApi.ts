@@ -15,7 +15,7 @@ export interface MotionRectLayer extends BaseMotionLayer { kind: 'rect' }
 export interface MotionImageLayer extends BaseMotionLayer { kind: 'image'; assetId: string }
 export type MotionLayer = MotionTextLayer | MotionRectLayer | MotionImageLayer;
 export interface MotionAudioTrack {
-  assetId: string; startFrame: number; volume: number; fadeInFrames?: number; fadeOutFrames?: number;
+  assetId: string; startFrame: number; volume: number; fadeInFrames?: number; fadeOutFrames?: number; loop?: boolean;
 }
 export interface MotionAudioAsset { id: string; bytes: number; sampleRate: number; channels: number; seconds: number }
 export interface MotionWaveform { peaks: number[]; seconds: number; sampleRate: number; channels: number }
@@ -40,7 +40,7 @@ export type MotionEdit =
   | { type: 'set-audio'; audio: MotionAudioTrack | null }
   | { type: 'set-audio-tracks'; audioTracks: MotionAudioTrack[] };
 export interface MotionCapabilities {
-  capabilities?: { aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string };
+  capabilities?: { aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean };
 }
 export interface MotionQualityIssue {
   severity: 'warning' | 'error'; code: string; scene: number; message: string;
@@ -51,7 +51,8 @@ export interface MotionQualityReport {
   issues: MotionQualityIssue[];
 }
 export interface MotionDirectorMedia {
-  imageAssetId?: string; audioAssetId?: string; audioGain?: number;
+  imageAssetId?: string; sceneImageAssetIds?: string[]; audioAssetId?: string; audioGain?: number; audioLoop?: boolean;
+  voiceoverText?: string; voiceoverGain?: number;
 }
 export interface MotionDirectorResult {
   project: MotionProject; job: MotionJob; outline: string[]; limitations: string[];

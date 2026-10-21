@@ -49,6 +49,24 @@ describe('Motion Studio authenticated client', () => {
     expect(() => motionStudioApi.quality('D:/studio', '../secret')).toThrow('Invalid Motion');
   });
 
+  it('forwards multi-scene image IDs, loop mode, and opt-in narration only in authenticated body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', {
+      status: 202, headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const ids = ['a', 'b', 'c'].map(hex => 'asset-' + hex.repeat(64));
+    await motionStudioApi.generate('D:/studio', 'Video 3 scenes', 640, {
+      sceneImageAssetIds: ids, audioAssetId: 'audio-' + 'f'.repeat(64), audioLoop: true,
+      voiceoverText: 'Voice-over', voiceoverGain: 0.8,
+    });
+    const [uri, request] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(uri).not.toContain('Voice-over');
+    expect(request.headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    expect(JSON.parse(request.body as string)).toMatchObject({
+      sceneImageAssetIds: ids, audioLoop: true, voiceoverText: 'Voice-over', voiceoverGain: 0.8,
+    });
+  });
+
   it('rejects media larger than 64 MB before downloading it', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, {
       status: 200, headers: { 'Content-Length': String(70 * 1024 * 1024) },

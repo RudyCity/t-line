@@ -85,6 +85,20 @@ describe('Motion WAV timeline controls', () => {
       type: 'set-audio-tracks', audioTracks: [{ assetId: audioId, startFrame: 10, volume: 1 }],
     }], 'Audio removed');
   });
+  it('enables looping from the manual audio mixer without modifying unrelated clips', async () => {
+    vi.mocked(motionStudioApi.loadAudioUrl).mockResolvedValue('blob:test-audio');
+    const onEdit = vi.fn();
+    render(<MotionAudioPanel {...common} onEdit={onEdit} onUpload={vi.fn()} onError={vi.fn()} />);
+    await screen.findByRole('checkbox', { name: 'Audio loop' });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Audio loop' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save audio' }));
+    expect(onEdit).toHaveBeenCalledWith([{
+      type: 'set-audio-tracks', audioTracks: [{
+        assetId: audioId, startFrame: 10, volume: 1,
+        fadeInFrames: 0, fadeOutFrames: 0, loop: true,
+      }],
+    }], 'Audio timing updated');
+  });
   it('disables uploading a fifth clip', () => {
     vi.mocked(motionStudioApi.loadAudioUrl).mockImplementation(() => new Promise(() => {}));
     const many: MotionProject = { ...scene, composition: {

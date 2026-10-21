@@ -298,6 +298,49 @@ describe('Native T-Line Motion Studio editor', () => {
     expect(screen.queryByText(/WAV: music.wav/)).not.toBeInTheDocument();
   });
 
+  it('sends three ordered product images and looping soundtrack with opt-in local voiceover', async () => {
+    vi.mocked(motionStudioApi.capabilities).mockResolvedValue({ capabilities: {
+      aiPromptDirector: 'short-text-motion-preview', aiWorkspaceMedia: 'uploaded-image-wav',
+      aiSceneImagesMax: 3, aiAudioLoop: true, localVoiceoverConfigured: true,
+    } });
+    const ids = ['a', 'b', 'c'].map(hex => 'asset-' + hex.repeat(64));
+    vi.mocked(motionStudioApi.uploadImage).mockImplementation(async (_workspace, file) => ({
+      id: ids[Number(file.name[0]) - 1], width: 300, height: 160, bytes: 300,
+    }));
+    vi.mocked(motionStudioApi.uploadAudio).mockResolvedValue({
+      id: 'audio-' + 'f'.repeat(64), channels: 1, sampleRate: 16000, seconds: 0.5, bytes: 400,
+    });
+    vi.mocked(motionStudioApi.generate).mockResolvedValue({
+      project: { ...fixture(), revision: 2 }, outline: ['Produk 1', 'Produk 2', 'Produk 3'], limitations: [],
+      job: { id: 'motionjob-' + 'f'.repeat(24), projectId: id, revision: 2,
+        status: 'queued', framesCompleted: 0, profile: { frameCount: 90, width: 640, height: 360 } },
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    await waitFor(() => expect(screen.getByLabelText('Attach motion image')).toHaveAttribute('multiple'));
+    const files = [1,2,3].map(i => new File([new Uint8Array(25)], i + '.png', { type: 'image/png' }));
+    fireEvent.change(screen.getByLabelText('Attach motion image'), { target: { files } });
+    await waitFor(() => expect(motionStudioApi.uploadImage).toHaveBeenCalledTimes(3));
+    expect(await screen.findByText(/Image: 3.png/)).toBeInTheDocument();
+    const wav = new File([new Uint8Array(50)], 'music.wav', { type: 'audio/wav' });
+    fireEvent.change(screen.getByLabelText('Attach motion WAV'), { target: { files: [wav] } });
+    expect(await screen.findByText(/WAV: music.wav/)).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Loop prompt soundtrack'));
+    fireEvent.change(screen.getByLabelText('Motion voice-over script'), {
+      target: { value: 'Halo, ini tiga produk favorit.' },
+    });
+    fireEvent.change(screen.getByLabelText('Motion voice-over gain'), { target: { value: '0.7' } });
+    fireEvent.change(screen.getByLabelText('Motion prompt'), { target: { value: 'Video tiga scene' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Generate with AI' }));
+    await waitFor(() => expect(motionStudioApi.generate).toHaveBeenCalledWith(
+      'D:/projects/studio', 'Video tiga scene', 640, {
+        sceneImageAssetIds: ids, audioAssetId: 'audio-' + 'f'.repeat(64),
+        audioGain: 1, audioLoop: true, voiceoverText: 'Halo, ini tiga produk favorit.', voiceoverGain: 0.7,
+      },
+    ));
+    expect(screen.queryByText(/Image: 3.png/)).not.toBeInTheDocument();
+  });
+
   it('disables attachments for older SuperAgent servers instead of silently omitting media', async () => {
     vi.mocked(motionStudioApi.capabilities).mockResolvedValue({
       capabilities: { aiPromptDirector: 'short-text-motion-preview' },

@@ -31,6 +31,7 @@ function MotionAudioClip({ clip, index, durationFrames, workspacePath, busy, isA
   const [volume, setVolume] = useState(String(clip.volume));
   const [fadeIn, setFadeIn] = useState(String(clip.fadeInFrames ?? 0));
   const [fadeOut, setFadeOut] = useState(String(clip.fadeOutFrames ?? 0));
+  const [loop, setLoop] = useState(clip.loop === true);
   const [preview, setPreview] = useState('');
   const [waveform, setWaveform] = useState<MotionWaveform | null>(null);
   const [sourceSeconds, setSourceSeconds] = useState(0);
@@ -38,6 +39,7 @@ function MotionAudioClip({ clip, index, durationFrames, workspacePath, busy, isA
   useEffect(() => {
     setStart(String(clip.startFrame)); setVolume(String(clip.volume));
     setFadeIn(String(clip.fadeInFrames ?? 0)); setFadeOut(String(clip.fadeOutFrames ?? 0));
+    setLoop(clip.loop === true);
   }, [clip.assetId, clip.startFrame, clip.volume, clip.fadeInFrames, clip.fadeOutFrames]);
   useEffect(() => {
     let cancelled = false;
@@ -83,9 +85,11 @@ function MotionAudioClip({ clip, index, durationFrames, workspacePath, busy, isA
   const next: MotionAudioTrack = {
     assetId: clip.assetId, startFrame: Number(start), volume: Number(volume),
     fadeInFrames: Number(fadeIn), fadeOutFrames: Number(fadeOut),
+    ...(loop ? { loop: true } : {}),
   };
   const changed = next.startFrame !== clip.startFrame || next.volume !== clip.volume ||
-    next.fadeInFrames !== (clip.fadeInFrames ?? 0) || next.fadeOutFrames !== (clip.fadeOutFrames ?? 0);
+    next.fadeInFrames !== (clip.fadeInFrames ?? 0) || next.fadeOutFrames !== (clip.fadeOutFrames ?? 0) ||
+    loop !== (clip.loop === true);
   const suffix = index === 0 ? '' : ' ' + (index + 1);
   return (
     <div className="flex flex-wrap items-center gap-2 rounded border border-[var(--border-color)] bg-[var(--bg-card)] p-2"
@@ -112,6 +116,10 @@ function MotionAudioClip({ clip, index, durationFrames, workspacePath, busy, isA
           min={0} max={durationFrames} step={1} value={fadeOut}
           onChange={event => setFadeOut(event.target.value)} disabled={busy || !isActive} />
       </label>
+      <label className="inline-flex items-center gap-1">Loop
+        <input type="checkbox" aria-label={'Audio loop' + suffix}
+          checked={loop} disabled={busy || !isActive} onChange={event => setLoop(event.target.checked)} />
+      </label>
       <button className={button} type="button" disabled={busy || !isActive || !valid || !changed}
         onClick={() => onSave(next)}>{'Save audio' + suffix}</button>
       <button className={button} type="button" disabled={busy || !isActive}
@@ -135,7 +143,7 @@ function MotionAudioClip({ clip, index, durationFrames, workspacePath, busy, isA
                 height={Math.max(1.6, peak * 28)} fill="var(--color-primary)" />
             ))}
             {(() => {
-              const progress = motionClipAtFrame(clip, frame, fps, waveform.seconds);
+              const progress = motionClipAtFrame(clip, frame, fps, waveform.seconds, durationFrames);
               return progress.active ? <line x1={progress.sourceSeconds / waveform.seconds * waveform.peaks.length}
                 y1={0} x2={progress.sourceSeconds / waveform.seconds * waveform.peaks.length} y2={32}
                 stroke="var(--text-main)" strokeWidth={0.8} /> : null;
