@@ -24,8 +24,11 @@ function prepareBunRuntime(tauriDir) {
   }
   const executable = fs.realpathSync(resolveBuildBun());
   const version = execFileSync(executable, ["--version"], { encoding: "utf8", timeout: 10000 }).trim();
-  if (!/^\d+\.\d+\.\d+$/.test(version) || Number(version.split(".")[0]) < 1) {
-    throw new Error("Unable to validate the official Bun runtime");
+  const licensedBunVersion = "1.4.2";
+  if (version !== licensedBunVersion) {
+    throw new Error("Unsupported Bun runtime " + version +
+      ": binary must match the pinned " + licensedBunVersion +
+      " release and bundled upstream license. Review/re-pin both before upgrading.");
   }
   const license = path.join(tauriDir, "bun-license.md");
   if (!fs.existsSync(license) || fs.statSync(license).size < 1000) {

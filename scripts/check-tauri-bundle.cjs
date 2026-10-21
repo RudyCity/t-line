@@ -149,7 +149,10 @@ function inspectInstaller() {
       "backend/dist/securePreviewProxy.js", "backend/package.json",
       "bun-runtime/bun.exe", "bun-runtime/LICENSE.md"
     ];
-    const extracted = spawnSync(available7z(), ["x", "-y", "-o" + temp, exe, ...relative], {
+    const extracted = spawnSync(available7z(), [
+      "x", "-y", "-o" + temp, exe,
+      ...relative, "backend/dist/*", "backend/node_modules/*"
+    ], {
       encoding: "utf8", timeout: 45000, maxBuffer: 2 * 1024 * 1024, windowsHide: true
     });
     if (extracted.status !== 0) {
@@ -167,8 +170,35 @@ function inspectInstaller() {
     if (process.platform === "win32" && !verifyBundledBun(path.join(temp, "bun-runtime", "bun.exe"))) {
       return { status: "blocked", description: "Extracted Bun runtime failed native ConPTY without global PATH" };
     }
+    if (process.platform === "win32") {
+      // Execute the actual extracted backend with the extracted Bun executable
+      // using a random loopback port and disposable home. This validates the
+      // installer dependencies, not only the backend/server.js entrypoint.
+      const backendSmoke = spawnSync(
+        path.join(temp, "bun-runtime", "bun.exe"),
+        [path.join(root, "scripts", "bun-backend-smoke.cjs")], {
+          cwd: temp, encoding: "utf8", timeout: 25000, maxBuffer: 1024 * 1024,
+          windowsHide: true,
+          env: {
+            // Backend needs built-in Windows OS commands, but not global Bun/Node.
+            ...process.env, PATH: [
+              path.join(process.env.SystemRoot || "C:\Windows", "System32"),
+              process.env.SystemRoot || "C:\Windows"
+            ].join(path.delimiter),
+            TLINE_BACKEND_SMOKE_ROOT: temp,
+            TLINE_BUN_RUNTIME: path.join(temp, "bun-runtime", "bun.exe")
+          }
+        }
+      );
+      if (backendSmoke.status !== 0 ||
+          !backendSmoke.stdout?.includes("BUN_BACKEND_SMOKE_OK")) {
+        return { status: "blocked", description:
+          "Extracted backend failed clean Windows startup: " +
+          String(backendSmoke.stderr || backendSmoke.stdout || backendSmoke.error || backendSmoke.status).slice(-400) };
+      }
+    }
     return { status: "pass", description:
-      "NSIS contains byte-matched Bun runtime, license and backend with verified native Windows PTY (installed app E2E still required)" };
+      "NSIS extracted Bun ConPTY passed; backend started on loopback and protected API returned HTTP 401 (installed UI E2E still required)" };
   } finally {
     try { fs.rmSync(temp, { recursive: true, force: true, maxRetries: 3, retryDelay: 250 }); } catch {}
   }

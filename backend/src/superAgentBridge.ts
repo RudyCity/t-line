@@ -280,10 +280,16 @@ function spawnSuperAgentProcess(opts: {
           logToSuperAgentFile(`[${label}][stdout] ${l}`);
         });
         if (!resolved && READY_MARKER.test(chunk)) {
-          const msgMarker = `Ready marker found in stdout.`;
-          console.log(`[${label}] ${msgMarker}`);
-          logToSuperAgentFile(`[${label}] ${msgMarker}`);
-          resolveReady();
+          // A child can print a ready banner without serving an authenticated
+          // SuperAgent protocol. Trust only the verified loopback probe.
+          probeSuperAgentPort().then(portState => {
+            if (portState === 'compatible') resolveReady();
+            else logToSuperAgentFile(
+              `[${label}] Ignored stdout ready marker: authenticated probe = ${portState}`
+            );
+          }).catch(error => {
+            logToSuperAgentFile(`[${label}] Ready probe failed: ${String(error)}`);
+          });
         }
       });
     }

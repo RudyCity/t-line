@@ -1,3 +1,4 @@
+import { resolveBackendBindHost } from './bindHost';
 import { createProcessScanCache } from './processScanCache';
 import { createSyncStateStore } from './syncStateStore';
 import { mapWithConcurrency } from './mapWithConcurrency';
@@ -89,7 +90,10 @@ console.warn = (...args: any[]) => {
 console.log(`[system] Logger initialized. Writing backend logs to: ${BACKEND_LOG_FILE}`);
 
 const app = express();
-const port = process.env.PORT || 5779;
+const port = Number(process.env.PORT || 5779);
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  throw new Error('Invalid backend PORT: expected an integer TCP port from 1 to 65535');
+}
 
 // Web preview proxy is now imported from ./previewProxy
 
@@ -943,7 +947,7 @@ process.on('SIGINT', () => { closeSessionDb(); process.exit(0); });
 process.on('SIGTERM', () => { closeSessionDb(); process.exit(0); });
 
 // Start Server
-server.listen(port, () => {
+server.listen(port, resolveBackendBindHost(process.env), () => {
   console.log(`========================================`);
   console.log(`t-line Workspace Server running on port ${port}`);
   console.log('Local bypass token initialized; token value intentionally omitted.');

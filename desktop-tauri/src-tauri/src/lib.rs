@@ -1096,6 +1096,15 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
                             return;
                         };
                         let mut cmd = Command::new(&bun_runtime);
+                        // Start Menu and updater launches may inherit System32
+                        // or an arbitrary cwd. Use the bundled backend root.
+                        let packaged_backend_dir = path.parent()
+                            .and_then(|dist_dir| dist_dir.parent());
+                        if let Some(package_dir) = packaged_backend_dir {
+                            if package_dir.is_dir() {
+                                cmd.current_dir(package_dir);
+                            }
+                        }
                         cmd.arg(clean_path)
                             .env("PORT", port.to_string())
                             .env("TLINE_BUN_RUNTIME", bun_runtime.as_os_str())
