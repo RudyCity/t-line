@@ -1,3 +1,15 @@
+## [1.3.699] - 2026-10-21
+
+### Motion Studio & Tauri Desktop Hardening
+
+- Authenticated Tauri backend startup via cryptographic identity handshake, preventing accidental attachment or termination of foreign processes on shared ports.
+- Bundled licensed standalone Node.js runtime with the Windows Tauri distribution for zero-dependency clean installations.
+- Replaced preview proxy with secure proxy implementation and added automated release gate checks.
+- Delivered prompt-first AI Director interface with workspace asset attachments (images, looping WAVs, local narration) and authorized SuperAgent generation proxy.
+- Added adaptive aspect ratio switching (16:9, 1:1, 9:16), Canvas snapshot frame reviews, opt-in vision auto-repair, and SubRip subtitle exports.
+- Surfaced real-time deterministic creative quality diagnostics (contrast, title auto-fit, timing) and storage disk usage with HD resolution selectors (640px, 1280px, 1920px).
+- Added opt-in FIFO supervisor render controls and orphaned render queue recovery candidate inspection.
+
 ## [1.3.698] - 2026-10-20
 
 ### Motion Studio: Waveform and Frame-Synchronized Audio Preview
