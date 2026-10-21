@@ -29,6 +29,14 @@ export interface MotionProject {
   };
 }
 export interface MotionProjectSummary { id: string; name: string; revision: number }
+export interface CompoundPreset {
+  id: string; name: string; description: string; tags: string[];
+  entrance: string; emphasis: string; exit: string; accent?: string;
+}
+export interface CompoundPresetApplication {
+  presetId: string; targetLayerId: string; startFrame?: number;
+  durationFrames?: number; intensity?: number;
+}
 export type MotionEdit =
   | { type: 'set-text'; layerId: string; text: string }
   | { type: 'set-property'; layerId: string; property: MotionProperty; value: number }
@@ -40,7 +48,7 @@ export type MotionEdit =
   | { type: 'set-audio'; audio: MotionAudioTrack | null }
   | { type: 'set-audio-tracks'; audioTracks: MotionAudioTrack[] };
 export interface MotionCapabilities {
-  capabilities?: { aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean };
+  capabilities?: { compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean };
 }
 export interface MotionQualityIssue {
   severity: 'warning' | 'error'; code: string; scene: number; message: string;
@@ -184,6 +192,19 @@ export const motionStudioApi = {
     json<MotionWaveform>(workspace, '/audio/' + assertAudioId(id) + '/waveform'),
   list: (workspace: string) => json<MotionProjectSummary[]>(workspace, '/projects'),
   inspect: (workspace: string, id: string) => json<MotionProject>(workspace, '/projects/' + assertId(id)),
+  presets: (workspace: string) => json<{ count: number; presets: CompoundPreset[] }>(workspace, '/presets'),
+  presetInfo: (workspace: string, id: string) => {
+    if (!/^[a-z][a-z0-9-]{1,63}$/.test(id)) throw new Error('Invalid compound preset ID');
+    return json<CompoundPreset>(workspace, '/presets/' + id);
+  },
+  previewPreset: (workspace: string, id: string, baseRevision: number, input: CompoundPresetApplication) =>
+    json<MotionProject>(workspace, '/projects/' + assertId(id) + '/presets/preview', {
+      method: 'POST', body: JSON.stringify({ ...input, baseRevision }),
+    }),
+  applyPreset: (workspace: string, id: string, baseRevision: number, input: CompoundPresetApplication) =>
+    json<MotionProject>(workspace, '/projects/' + assertId(id) + '/presets', {
+      method: 'POST', body: JSON.stringify({ ...input, baseRevision }),
+    }),
   quality: (workspace: string, id: string) =>
     json<MotionQualityReport>(workspace, '/projects/' + assertId(id) + '/quality'),
   visionReview: (workspace: string, id: string) =>

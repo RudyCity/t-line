@@ -7,6 +7,7 @@ import { evaluateLayer, evaluateTrack, makeKeyframeTrack } from '../../services/
 vi.mock('../../services/motionStudioApi', () => ({
   motionStudioApi: {
     list: vi.fn(), inspect: vi.fn(), create: vi.fn(), edit: vi.fn(),
+    presets: vi.fn(), presetInfo: vi.fn(), previewPreset: vi.fn(), applyPreset: vi.fn(),
     jobs: vi.fn(), capabilities: vi.fn(), quality: vi.fn(), loadFrameSnapshot: vi.fn(), visionReview: vi.fn(), visionRepair: vi.fn(), captions: vi.fn(), generate: vi.fn(), revise: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
   },
 }));
@@ -504,6 +505,58 @@ describe('Native T-Line Motion Studio editor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Undo scene change' }));
     await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith('D:/projects/studio', id, 2,
       [{ type: 'replace-composition', composition: expect.objectContaining({ layers: expect.any(Array) }) }]));
+    expect(await screen.findByText('Undo · revision 3')).toBeInTheDocument();
+  });
+
+  it('previews and applies a compound preset with revision-safe undo', async () => {
+    vi.mocked(motionStudioApi.capabilities).mockResolvedValue({
+      capabilities: { aiPromptDirector: 'short-text-motion-preview', compoundPresets: true },
+    });
+    vi.mocked(motionStudioApi.presets).mockResolvedValue({
+      count: 1, presets: [{ id: 'neon-impact', name: 'Neon Impact', description: 'Bright',
+        tags: ['neon'], entrance: 'entrance-whip-left',
+        emphasis: 'kinetic-glitch-drift', exit: 'exit-whip-right' }],
+    });
+    vi.mocked(motionStudioApi.previewPreset).mockImplementation(async () => {
+      const preview = fixture();
+      preview.composition.layers[0].tracks.push({ property: 'x',
+        keyframes: [{ frame: 0, value: 140 }, { frame: 30, value: 120 }] });
+      return preview;
+    });
+    vi.mocked(motionStudioApi.applyPreset).mockImplementation(async () => {
+      const applied = fixture();
+      applied.revision = 2;
+      applied.composition.layers[0].tracks.push({
+        property: 'x', keyframes: [{ frame: 0, value: 140 }, { frame: 30, value: 120 }],
+      });
+      return applied;
+    });
+    vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, base, ops) => {
+      const restored = fixture();
+      restored.revision = base + 1;
+      if (ops[0].type === 'replace-composition') restored.composition = ops[0].composition;
+      return restored;
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    await screen.findByLabelText('Select Motion preset');
+    fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+    await waitFor(() => expect(motionStudioApi.previewPreset).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 1, expect.objectContaining({ presetId: 'neon-impact', targetLayerId: 'title' }),
+    ));
+    expect(await screen.findByText(/PREVIEW \(not saved\)/)).toBeInTheDocument();
+    expect(motionStudioApi.applyPreset).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(motionStudioApi.applyPreset).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 1, expect.objectContaining({ presetId: 'neon-impact' }),
+    ));
+    expect(await screen.findByText(/Applied neon-impact · revision 2/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Undo scene change' }));
+    await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 2,
+      [{ type: 'replace-composition', composition: expect.objectContaining({ layers: expect.any(Array) }) }],
+    ));
     expect(await screen.findByText('Undo · revision 3')).toBeInTheDocument();
   });
 

@@ -122,6 +122,22 @@ describe('T-Line Motion proxy and service authentication', () => {
     expect(generated.status).toBe(201);
     expect((await generated.json()).url).toContain('/api/motion/generate?workspace=allowed-root');
     const motionId = 'motion-' + 'a'.repeat(20);
+    expect((await fetch(base + '/presets?workspace=allowed-root')).status).toBe(200);
+    expect((await fetch(base + '/presets/neon-impact?workspace=allowed-root')).status).toBe(200);
+    expect((await fetch(base + '/effects?workspace=allowed-root')).status).toBe(200);
+    expect((await fetch(base + '/effects/entrance-fade-in?workspace=allowed-root')).status).toBe(200);
+    expect((await fetch(base + '/presets?workspace=forbidden')).status).toBe(403);
+    expect((await fetch(base + '/presets?workspace=allowed-root', { method: 'POST' })).status).toBe(404);
+    expect((await fetch(base + '/projects/' + motionId + '/presets?workspace=allowed-root')).status).toBe(404);
+    expect((await fetch(base + '/projects/' + motionId + '/presets/preview?workspace=allowed-root')).status).toBe(404);
+    for (const suffix of ['/presets', '/presets/preview', '/effects']) {
+      const result = await fetch(base + '/projects/' + motionId + suffix + '?workspace=allowed-root', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseRevision: 1, presetId: 'neon-impact', targetLayerId: 'title' }),
+      });
+      expect(result.status).toBe(201);
+      expect((await result.json()).url).toContain('/api/motion/projects/' + motionId + suffix);
+    }
     const revised = await fetch(base + '/projects/' + motionId + '/revise?workspace=allowed-root', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: 'Make title shorter', width: 640 }),
