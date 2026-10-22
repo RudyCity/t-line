@@ -45,6 +45,7 @@ export interface MotionProject {
   composition: MotionComposition;
 }
 export interface MotionProjectSummary { id: string; name: string; revision: number }
+export interface MotionRevisionSnapshot { revision: number; updatedAt: string; name: string }
 export interface CompoundPreset {
   id: string; name: string; description: string; tags: string[];
   entrance: string; emphasis: string; exit: string; accent?: string;
@@ -80,7 +81,7 @@ export type MotionEdit =
   | { type: 'set-audio'; audio: MotionAudioTrack | null }
   | { type: 'set-audio-tracks'; audioTracks: MotionAudioTrack[] };
 export interface MotionCapabilities {
-  capabilities?: { nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean };
+  capabilities?: { motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean };
 }
 export interface MotionQualityIssue {
   severity: 'warning' | 'error'; code: string; scene: number; message: string;
@@ -224,6 +225,12 @@ export const motionStudioApi = {
     json<MotionWaveform>(workspace, '/audio/' + assertAudioId(id) + '/waveform'),
   list: (workspace: string) => json<MotionProjectSummary[]>(workspace, '/projects'),
   inspect: (workspace: string, id: string) => json<MotionProject>(workspace, '/projects/' + assertId(id)),
+  history: (workspace: string, id: string) =>
+    json<{ snapshots: MotionRevisionSnapshot[] }>(workspace, '/projects/' + assertId(id) + '/history'),
+  restoreHistory: (workspace: string, id: string, baseRevision: number, revision: number) =>
+    json<MotionProject>(workspace, '/projects/' + assertId(id) + '/history/restore', {
+      method: 'POST', body: JSON.stringify({ baseRevision, revision }),
+    }),
   presets: (workspace: string) => json<{ count: number; presets: CompoundPreset[] }>(workspace, '/presets'),
   effectsPage: (workspace: string, offset = 0) =>
     json<{ effects: MotionEffectCatalogItem[]; count: number; filteredTotal: number; hasMore: boolean }>(

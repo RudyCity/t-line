@@ -142,6 +142,17 @@ describe('T-Line Motion proxy and service authentication', () => {
     expect((await fetch(base + '/projects/' + motionId + '/presets/preview?workspace=allowed-root')).status).toBe(404);
     expect((await fetch(base + '/projects/' + motionId + '/effects/preview?workspace=allowed-root')).status).toBe(404);
     expect((await fetch(base + '/projects/' + motionId + '/effect-stack?workspace=allowed-root')).status).toBe(404);
+    const snapshots = await fetch(base + '/projects/' + motionId + '/history?workspace=allowed-root');
+    expect(snapshots.status).toBe(200);
+    expect((await snapshots.json()).url).toContain('/api/motion/projects/' + motionId + '/history');
+    expect((await fetch(base + '/projects/' + motionId + '/history?workspace=forbidden')).status).toBe(403);
+    expect((await fetch(base + '/projects/' + motionId + '/history/restore?workspace=allowed-root')).status).toBe(404);
+    const restored = await fetch(base + '/projects/' + motionId + '/history/restore?workspace=allowed-root', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseRevision: 5, revision: 3 }),
+    });
+    expect(restored.status).toBe(201);
+    expect((await restored.json()).url).toContain('/api/motion/projects/' + motionId + '/history/restore');
     for (const suffix of ['/presets', '/presets/preview', '/effects', '/effects/preview', '/effect-stack', '/effect-stack/preview']) {
       const result = await fetch(base + '/projects/' + motionId + suffix + '?workspace=allowed-root', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },

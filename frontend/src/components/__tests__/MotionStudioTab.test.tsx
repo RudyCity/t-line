@@ -9,6 +9,7 @@ vi.mock('../../services/motionStudioApi', () => ({
     list: vi.fn(), inspect: vi.fn(), create: vi.fn(), edit: vi.fn(),
     presets: vi.fn(), presetInfo: vi.fn(), previewPreset: vi.fn(), applyPreset: vi.fn(),
     effectsPage: vi.fn(), previewEffect: vi.fn(), applyEffect: vi.fn(), changeStack: vi.fn(),
+    history: vi.fn(), restoreHistory: vi.fn(),
     jobs: vi.fn(), capabilities: vi.fn(), quality: vi.fn(), loadFrameSnapshot: vi.fn(), visionReview: vi.fn(), visionRepair: vi.fn(), captions: vi.fn(), generate: vi.fn(), revise: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
   },
 }));
@@ -656,6 +657,39 @@ describe('Native T-Line Motion Studio editor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Undo scene change' }));
     await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith(
       'D:/projects/studio', id, 2, [{ type: 'replace-composition', composition: expect.objectContaining({ layers: expect.any(Array) }) }],
+    ));
+  });
+  it('restores a saved project revision and pushes prior composition onto Undo history', async () => {
+    vi.mocked(motionStudioApi.capabilities).mockResolvedValue({
+      capabilities: { motionRevisionHistory: true },
+    });
+    vi.mocked(motionStudioApi.history).mockResolvedValue({
+      snapshots: [{ revision: 1, name: 'Product intro', updatedAt: '2026-10-21T00:00:00.000Z' }],
+    });
+    const current = fixture(); current.revision = 3;
+    vi.mocked(motionStudioApi.inspect).mockResolvedValue(current);
+    vi.mocked(motionStudioApi.restoreHistory).mockImplementation(async () => {
+      const restored = fixture(); restored.revision = 4; return restored;
+    });
+    vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, rev, ops) => {
+      const restored = fixture(); restored.revision = rev + 1;
+      if (ops[0].type === 'replace-composition') restored.composition = ops[0].composition;
+      return restored;
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    await screen.findByText('1 snapshots');
+    fireEvent.click(screen.getByText('Auto-saved revisions'));
+    fireEvent.click(screen.getByRole('button', { name: 'Restore Motion revision 1' }));
+    await waitFor(() => expect(motionStudioApi.restoreHistory).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 3, 1,
+    ));
+    expect(await screen.findByText('Restored saved revision 1 · new revision 4')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Undo scene change' }));
+    await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 4,
+      [{ type: 'replace-composition', composition: expect.objectContaining({ layers: expect.any(Array) }) }],
     ));
   });
   it('does not resurrect a pending workspace response after unmount', async () => {

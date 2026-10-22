@@ -17,6 +17,7 @@ import { MotionCanvas } from './MotionCanvas';
 import { MotionPresetPanel } from './MotionPresetPanel';
 import { MotionEffectLibrary } from './MotionEffectLibrary';
 import { MotionEffectStackPanel } from './MotionEffectStackPanel';
+import { MotionRecoveryPanel } from './MotionRecoveryPanel';
 import { MotionTimeline } from './MotionTimeline';
 import { MotionAudioPanel } from './MotionAudioPanel';
 import { motionPlaybackFrame } from '../services/motionTimelineClock';
@@ -88,6 +89,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [compoundAvailable, setCompoundAvailable] = useState(false);
   const [effectsAvailable, setEffectsAvailable] = useState(false);
   const [stackAvailable, setStackAvailable] = useState(false);
+  const [historyAvailable, setHistoryAvailable] = useState(false);
   const [resizeRatio, setResizeRatio] = useState<'16:9' | '1:1' | '9:16'>('9:16');
   const [effectPreview, setEffectPreview] = useState<MotionProject | null>(null);
   const [presetPreview, setPresetPreview] = useState<MotionProject | null>(null);
@@ -118,7 +120,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     setDirectorSnapshotAvailable(false); setDirectorAutoNarration(false);
     setPromptVoiceover(''); setPromptVoiceoverGain(1); setQuality(null); setVisionReview(null);
     setVisionAvailable(false); setVisionRepairAvailable(false); setCaptionsAvailable(false);
-    setCompoundAvailable(false); setEffectsAvailable(false); setStackAvailable(false); setPresetPreview(null); setEffectPreview(null);
+    setCompoundAvailable(false); setEffectsAvailable(false); setStackAvailable(false); setHistoryAvailable(false); setPresetPreview(null); setEffectPreview(null);
     setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
     setScheduler(null); setSupervisor(null); setSupervisedRender(false);
@@ -150,6 +152,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
         setCompoundAvailable(motionInfo?.capabilities?.compoundPresets === true);
         setEffectsAvailable(motionInfo?.capabilities?.effectsEngine === true);
         setStackAvailable(motionInfo?.capabilities?.nondestructiveEffectStack === true);
+        setHistoryAvailable(motionInfo?.capabilities?.motionRevisionHistory === true);
         const latest = existingJobs.find(job => job.status === 'completed') || existingJobs[0];
         setActiveJobId(latest?.id || '');
       } catch (cause) {
@@ -378,6 +381,24 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
       setProject(next);
       if (focus !== undefined) setSelectedLayer(focus);
       setSuccess(note + ' · revision ' + next.revision);
+    });
+  };
+
+  const recoverSavedRevision = (revision: number) => {
+    if (!project || busy) return;
+    const before = structuredClone(project.composition);
+    const selectedSequence = selectionSeq.current;
+    setPresetPreview(null); setEffectPreview(null);
+    void operation(async () => {
+      const next = await motionStudioApi.restoreHistory(workspacePath, project.id, project.revision, revision);
+      if (selectedSequence !== selectionSeq.current) return;
+      setUndoStack(prev => [...prev.slice(-19), before]);
+      setRedoStack([]);
+      setProject(next);
+      if (!next.composition.layers.some(item => item.id === selectedLayer)) {
+        setSelectedLayer(next.composition.layers[0]?.id ?? null);
+      }
+      setSuccess('Restored saved revision ' + revision + ' · new revision ' + next.revision);
     });
   };
 
@@ -943,6 +964,10 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
           <span className="min-w-0 flex-1 break-words">{error || success}</span>
           <button aria-label="Dismiss notice" onClick={() => { setError(''); setSuccess(''); }}><X size={12} /></button>
         </div>
+      )}
+      {project && historyAvailable && (
+        <MotionRecoveryPanel workspacePath={workspacePath} projectId={project.id} revision={project.revision}
+          busy={busy} onRestore={recoverSavedRevision} />
       )}
       {project && compoundAvailable && (
         <MotionPresetPanel key={project.id} workspacePath={workspacePath} project={project} selectedLayer={selectedLayer}
