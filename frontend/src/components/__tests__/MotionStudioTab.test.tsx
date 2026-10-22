@@ -10,7 +10,7 @@ vi.mock('../../services/motionStudioApi', () => ({
     presets: vi.fn(), presetInfo: vi.fn(), previewPreset: vi.fn(), applyPreset: vi.fn(),
     effectsPage: vi.fn(), previewEffect: vi.fn(), applyEffect: vi.fn(), changeStack: vi.fn(),
     history: vi.fn(), restoreHistory: vi.fn(), brandKit: vi.fn(), saveBrandKit: vi.fn(),
-    templates: vi.fn(), previewTemplate: vi.fn(), applyTemplate: vi.fn(),
+    templates: vi.fn(), previewTemplate: vi.fn(), applyTemplate: vi.fn(), batchVariants: vi.fn(),
     jobs: vi.fn(), capabilities: vi.fn(), quality: vi.fn(), loadFrameSnapshot: vi.fn(), visionReview: vi.fn(), visionRepair: vi.fn(), captions: vi.fn(), generate: vi.fn(), revise: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
   },
 }));
@@ -736,6 +736,27 @@ describe('Native T-Line Motion Studio editor', () => {
       'D:/projects/studio', id, 2,
       [{ type: 'replace-composition', composition: expect.objectContaining({ layers: expect.any(Array) }) }],
     ));
+  });
+  it('queues aspect variants without replacing the current Motion scene', async () => {
+    vi.mocked(motionStudioApi.capabilities).mockResolvedValue({
+      capabilities: { motionBatchAspectVariants: true },
+    });
+    vi.mocked(motionStudioApi.batchVariants).mockResolvedValue({
+      sourceProjectId: id, sourceRevision: 1,
+      variants: [{ aspectRatio: '9:16', projectId: 'motion-' + 'b'.repeat(20),
+        revision: 2, jobId: 'motionjob-' + 'c'.repeat(24), jobStatus: 'queued' }],
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    await screen.findByText('Batch Aspect Variants');
+    fireEvent.click(screen.getByText('Batch Aspect Variants'));
+    fireEvent.click(screen.getByRole('button', { name: 'Create and queue 2 variants' }));
+    await waitFor(() => expect(motionStudioApi.batchVariants).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 1, ['1:1', '9:16'],
+    ));
+    await waitFor(() => expect(motionStudioApi.list).toHaveBeenCalledTimes(2));
+    expect(motionStudioApi.edit).not.toHaveBeenCalled();
   });
   it('does not resurrect a pending workspace response after unmount', async () => {
     let resolveList: ((value: { id: string; name: string; revision: number }[]) => void) | undefined;

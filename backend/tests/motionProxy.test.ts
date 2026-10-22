@@ -157,6 +157,13 @@ describe('T-Line Motion proxy and service authentication', () => {
     expect((await fetch(base + '/projects/' + motionId + '/history?workspace=forbidden')).status).toBe(403);
     expect((await fetch(base + '/projects/' + motionId + '/history/restore?workspace=allowed-root')).status).toBe(404);
     expect((await fetch(base + '/projects/' + motionId + '/templates?workspace=allowed-root')).status).toBe(404);
+    expect((await fetch(base + '/projects/' + motionId + '/variants?workspace=allowed-root')).status).toBe(404);
+    const variants = await fetch(base + '/projects/' + motionId + '/variants?workspace=allowed-root', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseRevision: 1, aspectRatios: ['9:16'] }),
+    });
+    expect(variants.status).toBe(201);
+    expect((await variants.json()).url).toContain('/api/motion/projects/' + motionId + '/variants');
     for (const suffix of ['/templates', '/templates/preview']) {
       const response = await fetch(base + '/projects/' + motionId + suffix + '?workspace=allowed-root', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },

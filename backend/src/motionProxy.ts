@@ -31,6 +31,7 @@ const permitted = [
   /^\/projects\/motion-[a-f0-9]{20}\/history$/,
   /^\/projects\/motion-[a-f0-9]{20}\/history\/restore$/,
   /^\/projects\/motion-[a-f0-9]{20}\/templates(?:\/preview)?$/,
+  /^\/projects\/motion-[a-f0-9]{20}\/variants$/,
   /^\/projects\/motion-[a-f0-9]{20}\/quality$/,
   /^\/projects\/motion-[a-f0-9]{20}\/vision-review$/,
   /^\/projects\/motion-[a-f0-9]{20}\/vision-repair$/,
@@ -42,12 +43,12 @@ const permitted = [
 
 function allowedRoute(method: string, pathname: string): boolean {
   if (!permitted.some(pattern => pattern.test(pathname))) return false;
-  if (method === 'GET') return !pathname.endsWith('/history/restore') && !pathname.endsWith('/vision-review') && !pathname.endsWith('/vision-repair') && !pathname.endsWith('/edits') && !pathname.endsWith('/render') && !pathname.endsWith('/revise') && !/^\/projects\/motion-[a-f0-9]{20}\/(?:presets|effects|effect-stack|resize|templates)(?:\/preview)?$/.test(pathname) && pathname !== '/generate' && !pathname.endsWith('/cancel');
+  if (method === 'GET') return !pathname.endsWith('/variants') && !pathname.endsWith('/history/restore') && !pathname.endsWith('/vision-review') && !pathname.endsWith('/vision-repair') && !pathname.endsWith('/edits') && !pathname.endsWith('/render') && !pathname.endsWith('/revise') && !/^\/projects\/motion-[a-f0-9]{20}\/(?:presets|effects|effect-stack|resize|templates)(?:\/preview)?$/.test(pathname) && pathname !== '/generate' && !pathname.endsWith('/cancel');
   if (method === 'HEAD') return pathname.endsWith('/artifact') || /^\/assets\/asset-[a-f0-9]{64}$/.test(pathname) ||
     /^\/audio\/audio-[a-f0-9]{64}$/.test(pathname);
   if (method === 'POST') {
     return pathname === '/projects' || pathname === '/generate' || pathname === '/assets' || pathname === '/audio' || pathname === '/brand-kit' ||
-      pathname.endsWith('/history/restore') || pathname.endsWith('/vision-review') || pathname.endsWith('/vision-repair') || pathname.endsWith('/edits') || pathname.endsWith('/render') || pathname.endsWith('/revise') || pathname.endsWith('/cancel') ||
+      pathname.endsWith('/variants') || pathname.endsWith('/history/restore') || pathname.endsWith('/vision-review') || pathname.endsWith('/vision-repair') || pathname.endsWith('/edits') || pathname.endsWith('/render') || pathname.endsWith('/revise') || pathname.endsWith('/cancel') ||
       /^\/projects\/motion-[a-f0-9]{20}\/(?:presets|effects|effect-stack|resize|templates)(?:\/preview)?$/.test(pathname);
   }
   return false;

@@ -20,6 +20,7 @@ import { MotionEffectStackPanel } from './MotionEffectStackPanel';
 import { MotionRecoveryPanel } from './MotionRecoveryPanel';
 import { MotionBrandKitPanel } from './MotionBrandKitPanel';
 import { MotionTemplatePanel } from './MotionTemplatePanel';
+import { MotionBatchVariantsPanel } from './MotionBatchVariantsPanel';
 import { MotionTimeline } from './MotionTimeline';
 import { MotionAudioPanel } from './MotionAudioPanel';
 import { motionPlaybackFrame } from '../services/motionTimelineClock';
@@ -94,6 +95,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [historyAvailable, setHistoryAvailable] = useState(false);
   const [brandAvailable, setBrandAvailable] = useState(false);
   const [templatesAvailable, setTemplatesAvailable] = useState(false);
+  const [batchAvailable, setBatchAvailable] = useState(false);
   const [templatePreview, setTemplatePreview] = useState<MotionProject | null>(null);
   const [resizeRatio, setResizeRatio] = useState<'16:9' | '1:1' | '9:16'>('9:16');
   const [effectPreview, setEffectPreview] = useState<MotionProject | null>(null);
@@ -126,7 +128,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     setPromptVoiceover(''); setPromptVoiceoverGain(1); setQuality(null); setVisionReview(null);
     setVisionAvailable(false); setVisionRepairAvailable(false); setCaptionsAvailable(false);
     setCompoundAvailable(false); setEffectsAvailable(false); setStackAvailable(false); setHistoryAvailable(false);
-    setBrandAvailable(false); setTemplatesAvailable(false); setTemplatePreview(null); setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null);
+    setBrandAvailable(false); setTemplatesAvailable(false); setBatchAvailable(false); setTemplatePreview(null); setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null);
     setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
     setScheduler(null); setSupervisor(null); setSupervisedRender(false);
@@ -161,6 +163,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
         setHistoryAvailable(motionInfo?.capabilities?.motionRevisionHistory === true);
         setBrandAvailable(motionInfo?.capabilities?.motionBrandKit === true);
         setTemplatesAvailable(motionInfo?.capabilities?.motionTemplateLibrary === true);
+        setBatchAvailable(motionInfo?.capabilities?.motionBatchAspectVariants === true);
         const latest = existingJobs.find(job => job.status === 'completed') || existingJobs[0];
         setActiveJobId(latest?.id || '');
       } catch (cause) {
@@ -995,6 +998,16 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
           project={project} busy={busy} preview={templatePreview}
           onPreview={next => { setTemplatePreview(next); if (next) { setPresetPreview(null); setEffectPreview(null); } }}
           onApply={applySceneTemplate} />
+      )}
+      {project && batchAvailable && (
+        <MotionBatchVariantsPanel key={project.id} workspacePath={workspacePath} project={project}
+          busy={busy} onQueued={result => {
+            setSuccess('Batch created ' + result.variants.filter(v => v.projectId).length +
+              ' project variant(s). Check queue status for MP4.');
+            void refreshProjects().catch(cause => message(cause instanceof Error ? cause.message : String(cause)));
+            void motionStudioApi.jobs(workspacePath).then(next => { if (mounted.current) setJobs(next); })
+              .catch(cause => message(cause instanceof Error ? cause.message : String(cause)));
+          }} />
       )}
       {project && historyAvailable && (
         <MotionRecoveryPanel workspacePath={workspacePath} projectId={project.id} revision={project.revision}
