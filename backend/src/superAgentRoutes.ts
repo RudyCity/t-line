@@ -11,6 +11,7 @@ import { forwardTlineRetry } from './superAgentTaskRetry';
 import studioProxyRouter from './studioProxy';
 import brainExplorerRouter from './brainExplorerRoutes';
 import { getWorkspaceSessions, getSessionMessages } from './sessionManager';
+import { getBrowserAgentSessions } from './browserSessions';
 
 const router = Router();
 
@@ -21,6 +22,17 @@ router.use(authMiddleware);
 router.use('/studio', studioProxyRouter);
 router.use('/motion', studioProxyRouter);
 router.use('/brain', brainExplorerRouter);
+
+// Read-only, authenticated browser session monitoring for the T-Line browser.
+// The endpoint never returns CDP session capabilities or cookie data.
+router.get('/browser/sessions', async (_req, res) => {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(await getBrowserAgentSessions());
+  } catch {
+    res.status(503).json({ ok: false, error: 'Browser session metadata unavailable.' });
+  }
+});
 
 /** SSE relay with exact session identity, authenticated and bounded to local SuperAgent. */
 router.get('/tasks/events', streamTlineTaskEvents);

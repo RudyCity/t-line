@@ -6,6 +6,7 @@ import { determineRenderMode, getCleanUrl, openInSystemBrowser, getFriendlyName,
 import { useBrowserListeners } from '../hooks/useBrowserListeners';
 import { getNativeNavigationJs, shouldPollNativeWebview } from './browserRuntimeUtils';
 import BrowserNavigationBar from './BrowserNavigationBar';
+import BrowserAgentSessions from './BrowserAgentSessions';
 import { useBrowserStorageAndHistory } from '../hooks/useBrowserStorageAndHistory';
 import { ConfirmModal } from './Modals';
 
@@ -886,6 +887,8 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
         openInSystemBrowser={openInSystemBrowser}
         isTauri={isTauri}
       />
+
+      <BrowserAgentSessions active={isActive} />
 
       {/* Main Browser Viewport Area — min-h-0 so DevTools can claim space */}
       <div className="flex-1 bg-[var(--bg-main)] relative min-h-0 overflow-hidden flex flex-col">
