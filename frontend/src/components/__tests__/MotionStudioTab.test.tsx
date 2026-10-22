@@ -9,7 +9,8 @@ vi.mock('../../services/motionStudioApi', () => ({
     list: vi.fn(), inspect: vi.fn(), create: vi.fn(), edit: vi.fn(),
     presets: vi.fn(), presetInfo: vi.fn(), previewPreset: vi.fn(), applyPreset: vi.fn(),
     effectsPage: vi.fn(), previewEffect: vi.fn(), applyEffect: vi.fn(), changeStack: vi.fn(),
-    history: vi.fn(), restoreHistory: vi.fn(),
+    history: vi.fn(), restoreHistory: vi.fn(), brandKit: vi.fn(), saveBrandKit: vi.fn(),
+    templates: vi.fn(), previewTemplate: vi.fn(), applyTemplate: vi.fn(),
     jobs: vi.fn(), capabilities: vi.fn(), quality: vi.fn(), loadFrameSnapshot: vi.fn(), visionReview: vi.fn(), visionRepair: vi.fn(), captions: vi.fn(), generate: vi.fn(), revise: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
   },
 }));
@@ -689,6 +690,50 @@ describe('Native T-Line Motion Studio editor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Undo scene change' }));
     await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith(
       'D:/projects/studio', id, 4,
+      [{ type: 'replace-composition', composition: expect.objectContaining({ layers: expect.any(Array) }) }],
+    ));
+  });
+  it('loads Brand Kit and previews/applies a curated template with Undo through the same scene history', async () => {
+    vi.mocked(motionStudioApi.capabilities).mockResolvedValue({
+      capabilities: { motionBrandKit: true, motionTemplateLibrary: true },
+    });
+    vi.mocked(motionStudioApi.brandKit).mockResolvedValue({
+      revision: 0, name: 'Workspace Brand', primary: '#38bdf8', accent: '#f97316',
+      background: '#171b28', textColor: '#f7f8ff', fontFamily: 'Arial', updatedAt: '',
+    });
+    vi.mocked(motionStudioApi.templates).mockResolvedValue({
+      templates: [{ id: 'product-launch', name: 'Product Launch', category: 'Marketing',
+        description: 'Big product introduction', align: 'left', tone: 'bold' }],
+    });
+    vi.mocked(motionStudioApi.previewTemplate).mockResolvedValue(fixture());
+    vi.mocked(motionStudioApi.applyTemplate).mockImplementation(async () => {
+      const result = fixture(); result.revision = 2; return result;
+    });
+    vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, base, ops) => {
+      const result = fixture(); result.revision = base + 1;
+      if (ops[0].type === 'replace-composition') result.composition = ops[0].composition;
+      return result;
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    await screen.findByText('1 templates');
+    await screen.findByDisplayValue('Workspace Brand');
+    fireEvent.click(screen.getByText('Scene Templates'));
+    fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+    await waitFor(() => expect(motionStudioApi.previewTemplate).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 1, { templateId: 'product-launch' },
+    ));
+    expect(await screen.findByText(/PREVIEW \(not saved\)/)).toBeInTheDocument();
+    expect(motionStudioApi.applyTemplate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(motionStudioApi.applyTemplate).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 1, { templateId: 'product-launch' },
+    ));
+    expect(await screen.findByText('Applied scene template product-launch · revision 2')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Undo scene change' }));
+    await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 2,
       [{ type: 'replace-composition', composition: expect.objectContaining({ layers: expect.any(Array) }) }],
     ));
   });

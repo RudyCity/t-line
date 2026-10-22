@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import {
   motionStudioApi, type MotionJob, type MotionProject, type MotionLayer, type MotionEdit, type MotionSchedulerStatus,
-  type CompoundPresetApplication, type MotionEffectApplication, type MotionStackOperation,
+  type CompoundPresetApplication, type MotionEffectApplication, type MotionStackOperation, type MotionTemplateInput,
   type MotionProperty, type MotionProjectSummary, type MotionStorageStatus, type MotionQueueRecovery, type MotionSupervisorStatus, type MotionQualityReport, type MotionVisionReview,
 } from '../services/motionStudioApi';
 import { evaluateLayer, fpsOf, frameLabel, makeKeyframeTrack } from '../services/motionScene';
@@ -18,6 +18,8 @@ import { MotionPresetPanel } from './MotionPresetPanel';
 import { MotionEffectLibrary } from './MotionEffectLibrary';
 import { MotionEffectStackPanel } from './MotionEffectStackPanel';
 import { MotionRecoveryPanel } from './MotionRecoveryPanel';
+import { MotionBrandKitPanel } from './MotionBrandKitPanel';
+import { MotionTemplatePanel } from './MotionTemplatePanel';
 import { MotionTimeline } from './MotionTimeline';
 import { MotionAudioPanel } from './MotionAudioPanel';
 import { motionPlaybackFrame } from '../services/motionTimelineClock';
@@ -90,6 +92,9 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [effectsAvailable, setEffectsAvailable] = useState(false);
   const [stackAvailable, setStackAvailable] = useState(false);
   const [historyAvailable, setHistoryAvailable] = useState(false);
+  const [brandAvailable, setBrandAvailable] = useState(false);
+  const [templatesAvailable, setTemplatesAvailable] = useState(false);
+  const [templatePreview, setTemplatePreview] = useState<MotionProject | null>(null);
   const [resizeRatio, setResizeRatio] = useState<'16:9' | '1:1' | '9:16'>('9:16');
   const [effectPreview, setEffectPreview] = useState<MotionProject | null>(null);
   const [presetPreview, setPresetPreview] = useState<MotionProject | null>(null);
@@ -120,7 +125,8 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     setDirectorSnapshotAvailable(false); setDirectorAutoNarration(false);
     setPromptVoiceover(''); setPromptVoiceoverGain(1); setQuality(null); setVisionReview(null);
     setVisionAvailable(false); setVisionRepairAvailable(false); setCaptionsAvailable(false);
-    setCompoundAvailable(false); setEffectsAvailable(false); setStackAvailable(false); setHistoryAvailable(false); setPresetPreview(null); setEffectPreview(null);
+    setCompoundAvailable(false); setEffectsAvailable(false); setStackAvailable(false); setHistoryAvailable(false);
+    setBrandAvailable(false); setTemplatesAvailable(false); setTemplatePreview(null); setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null);
     setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
     setScheduler(null); setSupervisor(null); setSupervisedRender(false);
@@ -153,6 +159,8 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
         setEffectsAvailable(motionInfo?.capabilities?.effectsEngine === true);
         setStackAvailable(motionInfo?.capabilities?.nondestructiveEffectStack === true);
         setHistoryAvailable(motionInfo?.capabilities?.motionRevisionHistory === true);
+        setBrandAvailable(motionInfo?.capabilities?.motionBrandKit === true);
+        setTemplatesAvailable(motionInfo?.capabilities?.motionTemplateLibrary === true);
         const latest = existingJobs.find(job => job.status === 'completed') || existingJobs[0];
         setActiveJobId(latest?.id || '');
       } catch (cause) {
@@ -169,7 +177,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     if (!selectedId || !workspacePath) { setProject(null); return; }
     setProject(null); setSelectedLayer(null); setFrame(0); setPlaying(false);
     setViewport(DEFAULT_MOTION_VIEWPORT); panGesture.current = null;
-    setUndoStack([]); setRedoStack([]); setPresetPreview(null); setEffectPreview(null);
+    setUndoStack([]); setRedoStack([]); setTemplatePreview(null); setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null);
     setActiveJobId(jobs.find(item => item.projectId === selectedId)?.id || '');
     motionStudioApi.inspect(workspacePath, selectedId)
       .then(next => {
@@ -299,7 +307,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     if (!project || busy) return;
     const before = structuredClone(project.composition);
     const selectedSequence = selectionSeq.current;
-    setPresetPreview(null); setEffectPreview(null);
+    setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null);
     void operation(async () => {
       const next = await motionStudioApi.applyPreset(workspacePath, project.id, project.revision, input);
       if (selectedSequence !== selectionSeq.current) return;
@@ -314,7 +322,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     if (!project || busy) return;
     const before = structuredClone(project.composition);
     const selectedSequence = selectionSeq.current;
-    setPresetPreview(null); setEffectPreview(null);
+    setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null);
     void operation(async () => {
       const next = stackAvailable
         ? await motionStudioApi.changeStack(workspacePath, project.id, project.revision, {
@@ -336,7 +344,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     if (!project || busy) return;
     const before = structuredClone(project.composition);
     const selectedSequence = selectionSeq.current;
-    setPresetPreview(null); setEffectPreview(null);
+    setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null);
     void operation(async () => {
       const next = await motionStudioApi.changeStack(workspacePath, project.id, project.revision, stackOperation);
       if (selectedSequence !== selectionSeq.current) return;
@@ -351,7 +359,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     if (!project || busy) return;
     const before = structuredClone(project.composition);
     const selectedSequence = selectionSeq.current;
-    setPresetPreview(null); setEffectPreview(null);
+    setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null);
     void operation(async () => {
       const next = await motionStudioApi.resize(workspacePath, project.id, project.revision, resizeRatio);
       if (selectedSequence !== selectionSeq.current) return;
@@ -370,7 +378,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
 
   const applyEditorEdits = (edits: MotionEdit[], note: string, focus?: string | null) => {
     if (!project || busy) return;
-    setPresetPreview(null); setEffectPreview(null);
+    setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null);
     const before = structuredClone(project.composition);
     const selectedSequence = selectionSeq.current;
     void operation(async () => {
@@ -384,11 +392,27 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     });
   };
 
+  const applySceneTemplate = (input: MotionTemplateInput) => {
+    if (!project || busy) return;
+    const before = structuredClone(project.composition);
+    const selectedSequence = selectionSeq.current;
+    setTemplatePreview(null); setEffectPreview(null); setPresetPreview(null);
+    void operation(async () => {
+      const next = await motionStudioApi.applyTemplate(workspacePath, project.id, project.revision, input);
+      if (selectedSequence !== selectionSeq.current) return;
+      setUndoStack(prev => [...prev.slice(-19), before]);
+      setRedoStack([]);
+      setProject(next);
+      setSelectedLayer(next.composition.layers.find(item => item.kind === 'text')?.id ?? next.composition.layers[0]?.id ?? null);
+      setSuccess('Applied scene template ' + input.templateId + ' · revision ' + next.revision);
+    });
+  };
+
   const recoverSavedRevision = (revision: number) => {
     if (!project || busy) return;
     const before = structuredClone(project.composition);
     const selectedSequence = selectionSeq.current;
-    setPresetPreview(null); setEffectPreview(null);
+    setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null);
     void operation(async () => {
       const next = await motionStudioApi.restoreHistory(workspacePath, project.id, project.revision, revision);
       if (selectedSequence !== selectionSeq.current) return;
@@ -404,7 +428,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
 
   const restoreHistory = (direction: 'undo' | 'redo') => {
     if (!project || busy) return;
-    setPresetPreview(null); setEffectPreview(null);
+    setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null);
     const from = direction === 'undo' ? undoStack : redoStack;
     const target = from[from.length - 1];
     if (!target) return;
@@ -965,13 +989,20 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
           <button aria-label="Dismiss notice" onClick={() => { setError(''); setSuccess(''); }}><X size={12} /></button>
         </div>
       )}
+      {brandAvailable && <MotionBrandKitPanel workspacePath={workspacePath} />}
+      {project && templatesAvailable && (
+        <MotionTemplatePanel key={workspacePath + ':' + project.id} workspacePath={workspacePath}
+          project={project} busy={busy} preview={templatePreview}
+          onPreview={next => { setTemplatePreview(next); if (next) { setPresetPreview(null); setEffectPreview(null); } }}
+          onApply={applySceneTemplate} />
+      )}
       {project && historyAvailable && (
         <MotionRecoveryPanel workspacePath={workspacePath} projectId={project.id} revision={project.revision}
           busy={busy} onRestore={recoverSavedRevision} />
       )}
       {project && compoundAvailable && (
         <MotionPresetPanel key={project.id} workspacePath={workspacePath} project={project} selectedLayer={selectedLayer}
-          busy={busy} preview={presetPreview} onPreview={next => { setPresetPreview(next); if (next) setEffectPreview(null); }}
+          busy={busy} preview={presetPreview} onPreview={next => { setPresetPreview(next); if (next) { setEffectPreview(null); setTemplatePreview(null); } }}
           onApply={applyCompound} />
       )}
       {project && stackAvailable && (
@@ -992,7 +1023,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
       {project && effectsAvailable && (
         <MotionEffectLibrary key={workspacePath + ':' + project.id} workspacePath={workspacePath} project={project}
           selectedLayer={selectedLayer} busy={busy} preview={effectPreview}
-          onPreview={next => { setEffectPreview(next); if (next) setPresetPreview(null); }}
+          onPreview={next => { setEffectPreview(next); if (next) { setPresetPreview(null); setTemplatePreview(null); } }}
           onApply={applySingleEffect} />
       )}
       {!project ? (
@@ -1042,7 +1073,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
             <div className="flex min-h-[250px] min-w-0 flex-col">
               <div className="flex items-center justify-between px-4 py-2 text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
                 <span title="Drag to move · corner handle resizes rotated rectangles · upper handle rotates · arrows nudge · Alt+arrows rotate · Ctrl+arrows resize rectangles">
-                  Composition · {project.composition.width} × {project.composition.height}{presetPreview || effectPreview ? ' · PREVIEW (not saved)' : ''}
+                  Composition · {project.composition.width} × {project.composition.height}{presetPreview || effectPreview || templatePreview ? ' · PREVIEW (not saved)' : ''}
                 </span>
                 <div className="flex items-center gap-3">
                   <label className="inline-flex cursor-pointer items-center gap-2 normal-case tracking-normal">
@@ -1092,9 +1123,9 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
               >
                 <div className="w-full max-w-[1000px]" data-testid="motion-canvas"
                   style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`, transformOrigin: 'center center' }}>
-                  <MotionCanvas key={project.id + ':' + project.revision + (presetPreview || effectPreview ? ':preview' : '')}
-                    project={effectPreview ?? presetPreview ?? project} frame={frame} assetUrls={imageUrls}
-                    selectedLayer={selectedLayer} isActive={isActive && !presetPreview && !effectPreview} busy={busy || panMode || !!presetPreview || !!effectPreview} snapping={canvasSnapping}
+                  <MotionCanvas key={project.id + ':' + project.revision + (presetPreview || effectPreview || templatePreview ? ':preview' : '')}
+                    project={templatePreview ?? effectPreview ?? presetPreview ?? project} frame={frame} assetUrls={imageUrls}
+                    selectedLayer={selectedLayer} isActive={isActive && !presetPreview && !effectPreview && !templatePreview} busy={busy || panMode || !!presetPreview || !!effectPreview || !!templatePreview} snapping={canvasSnapping}
                     onSelectLayer={setSelectedLayer} onStopPlayback={() => setPlaying(false)}
                     onEdit={(edits, note) => applyEditorEdits(edits, note)} />
                 </div>
@@ -1182,8 +1213,8 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
             busy={busy} isActive={isActive} frame={frame} playing={playing}
             onSeekFrame={next => { setPlaying(false); setFrame(next); }} onUpload={importAudio}
             onEdit={(edits, note) => applyEditorEdits(edits, note)} onError={message} />
-          <MotionTimeline project={effectPreview ?? presetPreview ?? project} currentFrame={frame} selectedLayer={selectedLayer}
-             busy={busy || !!presetPreview || !!effectPreview} isActive={isActive && !presetPreview && !effectPreview} onFrame={next => { setPlaying(false); setFrame(next); }}
+          <MotionTimeline project={templatePreview ?? effectPreview ?? presetPreview ?? project} currentFrame={frame} selectedLayer={selectedLayer}
+             busy={busy || !!presetPreview || !!effectPreview || !!templatePreview} isActive={isActive && !presetPreview && !effectPreview && !templatePreview} onFrame={next => { setPlaying(false); setFrame(next); }}
             onLayer={setSelectedLayer} onEdit={(edits, note) => applyEditorEdits(edits, note)}
             onError={message} />
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-color)] bg-[var(--bg-sidebar)] px-3 py-2" aria-label="Render jobs">

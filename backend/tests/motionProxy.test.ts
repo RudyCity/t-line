@@ -123,6 +123,15 @@ describe('T-Line Motion proxy and service authentication', () => {
     expect((await generated.json()).url).toContain('/api/motion/generate?workspace=allowed-root');
     const motionId = 'motion-' + 'a'.repeat(20);
     expect((await fetch(base + '/presets?workspace=allowed-root')).status).toBe(200);
+    expect((await fetch(base + '/templates?workspace=allowed-root')).status).toBe(200);
+    expect((await fetch(base + '/brand-kit?workspace=allowed-root')).status).toBe(200);
+    expect((await fetch(base + '/templates?workspace=forbidden')).status).toBe(403);
+    const updatedBrand = await fetch(base + '/brand-kit?workspace=allowed-root', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseRevision: 0, brand: { name: 'Laris' } }),
+    });
+    expect(updatedBrand.status).toBe(201);
+    expect((await updatedBrand.json()).url).toContain('/api/motion/brand-kit');
     expect((await fetch(base + '/presets/neon-impact?workspace=allowed-root')).status).toBe(200);
     expect((await fetch(base + '/effects?workspace=allowed-root')).status).toBe(200);
     const paginated = await fetch(base + '/effects?limit=100&offset=100&category=entrance&q=slide&workspace=allowed-root');
@@ -147,6 +156,15 @@ describe('T-Line Motion proxy and service authentication', () => {
     expect((await snapshots.json()).url).toContain('/api/motion/projects/' + motionId + '/history');
     expect((await fetch(base + '/projects/' + motionId + '/history?workspace=forbidden')).status).toBe(403);
     expect((await fetch(base + '/projects/' + motionId + '/history/restore?workspace=allowed-root')).status).toBe(404);
+    expect((await fetch(base + '/projects/' + motionId + '/templates?workspace=allowed-root')).status).toBe(404);
+    for (const suffix of ['/templates', '/templates/preview']) {
+      const response = await fetch(base + '/projects/' + motionId + suffix + '?workspace=allowed-root', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseRevision: 1, templateId: 'product-launch' }),
+      });
+      expect(response.status).toBe(201);
+      expect((await response.json()).url).toContain('/api/motion/projects/' + motionId + suffix);
+    }
     const restored = await fetch(base + '/projects/' + motionId + '/history/restore?workspace=allowed-root', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ baseRevision: 5, revision: 3 }),

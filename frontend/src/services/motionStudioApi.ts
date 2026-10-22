@@ -46,6 +46,18 @@ export interface MotionProject {
 }
 export interface MotionProjectSummary { id: string; name: string; revision: number }
 export interface MotionRevisionSnapshot { revision: number; updatedAt: string; name: string }
+export interface MotionBrandKit {
+  revision: number; name: string; primary: string; accent: string;
+  background: string; textColor: string;
+  fontFamily: 'Arial' | 'Helvetica' | 'Georgia' | 'Verdana' | 'sans-serif' | 'serif' | 'monospace';
+  logoAssetId?: string; updatedAt: string;
+}
+export type MotionBrandKitInput = Omit<MotionBrandKit, 'revision' | 'updatedAt'>;
+export interface MotionTemplateSummary {
+  id: string; name: string; category: string; description: string;
+  align: 'left' | 'center' | 'right'; tone: 'bold' | 'clean' | 'calm';
+}
+export interface MotionTemplateInput { templateId: string; headline?: string; subtitle?: string }
 export interface CompoundPreset {
   id: string; name: string; description: string; tags: string[];
   entrance: string; emphasis: string; exit: string; accent?: string;
@@ -81,7 +93,7 @@ export type MotionEdit =
   | { type: 'set-audio'; audio: MotionAudioTrack | null }
   | { type: 'set-audio-tracks'; audioTracks: MotionAudioTrack[] };
 export interface MotionCapabilities {
-  capabilities?: { motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean };
+  capabilities?: { motionBrandKit?: boolean; motionTemplateLibrary?: boolean; motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean };
 }
 export interface MotionQualityIssue {
   severity: 'warning' | 'error'; code: string; scene: number; message: string;
@@ -225,6 +237,20 @@ export const motionStudioApi = {
     json<MotionWaveform>(workspace, '/audio/' + assertAudioId(id) + '/waveform'),
   list: (workspace: string) => json<MotionProjectSummary[]>(workspace, '/projects'),
   inspect: (workspace: string, id: string) => json<MotionProject>(workspace, '/projects/' + assertId(id)),
+  brandKit: (workspace: string) => json<MotionBrandKit>(workspace, '/brand-kit'),
+  saveBrandKit: (workspace: string, baseRevision: number, brand: MotionBrandKitInput) =>
+    json<MotionBrandKit>(workspace, '/brand-kit', {
+      method: 'POST', body: JSON.stringify({ baseRevision, brand }),
+    }),
+  templates: (workspace: string) => json<{ templates: MotionTemplateSummary[] }>(workspace, '/templates'),
+  previewTemplate: (workspace: string, id: string, baseRevision: number, input: MotionTemplateInput) =>
+    json<MotionProject>(workspace, '/projects/' + assertId(id) + '/templates/preview', {
+      method: 'POST', body: JSON.stringify({ ...input, baseRevision }),
+    }),
+  applyTemplate: (workspace: string, id: string, baseRevision: number, input: MotionTemplateInput) =>
+    json<MotionProject>(workspace, '/projects/' + assertId(id) + '/templates', {
+      method: 'POST', body: JSON.stringify({ ...input, baseRevision }),
+    }),
   history: (workspace: string, id: string) =>
     json<{ snapshots: MotionRevisionSnapshot[] }>(workspace, '/projects/' + assertId(id) + '/history'),
   restoreHistory: (workspace: string, id: string, baseRevision: number, revision: number) =>
