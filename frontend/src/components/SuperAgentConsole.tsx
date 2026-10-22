@@ -8,6 +8,7 @@ import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSi
 import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
 import { ActiveTasksBar, ChecklistTaskItem } from './ActiveTasksBar';
 import { SuperAgentTaskMonitor } from './SuperAgentTaskMonitor';
+import { SuperAgentBrainExplorer } from './SuperAgentBrainExplorer';
 import { SuperAgentInputContainer } from './SuperAgentInputContainer';
 import { SuperAgentSettingsMenu } from './SuperAgentSettingsMenu';
 import { SessionIdBadge } from './SessionIdBadge';
@@ -19,7 +20,7 @@ import { SuperAgentHistorySidebar } from './SuperAgentHistorySidebar';
 import { useSuperAgentSessions, isSystemNoiseMsg } from './useSuperAgentSessions';
 import { useSidebarResize } from './useSidebarResize';
 import { getAuthHeader, readFileAsText, readFileAsDataURL, getMainModelLabel as getModelLabelUtil, handleAgentEventPayload, fetchCliPromptHistory } from './SuperAgentConsoleUtils';
-import { History, Folder, Activity, Sparkles, RefreshCw, ArrowDown, MoreVertical } from 'lucide-react';
+import { History, Folder, Activity, Sparkles, RefreshCw, ArrowDown, MoreVertical, Brain } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { addRule, loadRules, matchesRule, patternFromPermission, toolNameFromPermission } from '../utils/permissionRules';
 
@@ -45,6 +46,7 @@ export function SuperAgentConsole({
 
   // Session & Chat History management
   const [showHistorySidebar, setShowHistorySidebar] = useState<boolean>(true);
+  const [showBrainExplorer, setShowBrainExplorer] = useState(false);
   const {
     sessions,
     activeSessionId,
@@ -1010,6 +1012,16 @@ export function SuperAgentConsole({
         {/* Right Column: Monitor & Settings Actions */}
         <div className="flex justify-end gap-2 items-center relative">
           <button
+            type="button"
+            onClick={() => setShowBrainExplorer(open => !open)}
+            title="Toggle Brain Explorer"
+            aria-label="Toggle Brain Explorer"
+            aria-expanded={showBrainExplorer}
+            className={`p-2 rounded-lg border transition flex items-center justify-center cursor-pointer ${showBrainExplorer ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)] text-[var(--color-primary)]' : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
+          >
+            <Brain size={16} />
+          </button>
+          <button
             onClick={() => setShowSidebar(!showSidebar)}
             className={`p-2 rounded-lg border transition flex items-center justify-center cursor-pointer ${
               showSidebar 
@@ -1053,6 +1065,11 @@ export function SuperAgentConsole({
       </div>
 
       <div className="flex-1 flex overflow-hidden relative w-full" ref={mainConsoleRef}>
+          {showBrainExplorer && (
+            <div className="absolute right-0 inset-y-0 z-40 w-full max-w-[760px]">
+              <SuperAgentBrainExplorer activeSessionId={activeSessionId} onClose={() => setShowBrainExplorer(false)} />
+            </div>
+          )}
           {/* Left Resizable Chat History Sidebar */}
           {showHistorySidebar && (
             <div style={{ width: `${historyWidth}px` }} className="superagent-history-panel h-full shrink-0 relative min-w-[160px] max-w-[500px]">

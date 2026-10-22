@@ -9,6 +9,7 @@ import { streamTlineTaskEvents } from './superAgentTaskEvents';
 import { forwardTaskCancel } from './superAgentTaskCancel';
 import { forwardTlineRetry } from './superAgentTaskRetry';
 import motionProxyRouter from './motionProxy';
+import brainExplorerRouter from './brainExplorerRoutes';
 import { getWorkspaceSessions, getSessionMessages } from './sessionManager';
 
 const router = Router();
@@ -18,6 +19,7 @@ router.use(authMiddleware);
 
 // Binary Motion streaming and scoped JSON endpoints use a dedicated backend proxy.
 router.use('/motion', motionProxyRouter);
+router.use('/brain', brainExplorerRouter);
 
 /** SSE relay with exact session identity, authenticated and bounded to local SuperAgent. */
 router.get('/tasks/events', streamTlineTaskEvents);
