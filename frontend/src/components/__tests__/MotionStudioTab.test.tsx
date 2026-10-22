@@ -8,7 +8,7 @@ vi.mock('../../services/motionStudioApi', () => ({
   motionStudioApi: {
     list: vi.fn(), inspect: vi.fn(), create: vi.fn(), edit: vi.fn(),
     presets: vi.fn(), presetInfo: vi.fn(), previewPreset: vi.fn(), applyPreset: vi.fn(),
-    effectsPage: vi.fn(), previewEffect: vi.fn(), applyEffect: vi.fn(),
+    effectsPage: vi.fn(), previewEffect: vi.fn(), applyEffect: vi.fn(), changeStack: vi.fn(),
     jobs: vi.fn(), capabilities: vi.fn(), quality: vi.fn(), loadFrameSnapshot: vi.fn(), visionReview: vi.fn(), visionRepair: vi.fn(), captions: vi.fn(), generate: vi.fn(), revise: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
   },
 }));
@@ -618,6 +618,46 @@ describe('Native T-Line Motion Studio editor', () => {
     expect(await screen.findByText('Undo · revision 3')).toBeInTheDocument();
   });
 
+  it('adds a single effect to a non-destructive stack and can undo the insertion', async () => {
+    vi.mocked(motionStudioApi.capabilities).mockResolvedValue({
+      capabilities: { effectsEngine: true, nondestructiveEffectStack: true },
+    });
+    vi.mocked(motionStudioApi.effectsPage).mockResolvedValue({
+      count: 1, filteredTotal: 1, hasMore: false,
+      effects: [{ id: 'entrance-fade-in', name: 'Fade In', category: 'entrance',
+        description: 'Smooth fade', tags: [], targetKinds: ['text'], parameters: {} }],
+    });
+    vi.mocked(motionStudioApi.changeStack).mockImplementation(async () => {
+      const result = fixture(); result.revision = 2;
+      result.composition.effectStack = [
+        { id: 'fx-example', effectId: 'entrance-fade-in', enabled: true, targetLayerId: 'title', startFrame: 0, durationFrames: 75 },
+      ];
+      return result;
+    });
+    vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, rev, ops) => {
+      const result = fixture(); result.revision = rev + 1;
+      if (ops[0].type === 'replace-composition') result.composition = ops[0].composition;
+      return result;
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    await screen.findByText('1 effects');
+    fireEvent.click(screen.getByText('Effects Library'));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(motionStudioApi.changeStack).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 1, expect.objectContaining({
+        type: 'add',
+        entry: expect.objectContaining({ effectId: 'entrance-fade-in', enabled: true, targetLayerId: 'title' }),
+      }),
+    ));
+    expect(motionStudioApi.applyEffect).not.toHaveBeenCalled();
+    await screen.findByText('Updated Motion effect stack · revision 2').catch(() => screen.findByText('Applied entrance-fade-in · revision 2'));
+    fireEvent.click(screen.getByRole('button', { name: 'Undo scene change' }));
+    await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 2, [{ type: 'replace-composition', composition: expect.objectContaining({ layers: expect.any(Array) }) }],
+    ));
+  });
   it('does not resurrect a pending workspace response after unmount', async () => {
     let resolveList: ((value: { id: string; name: string; revision: number }[]) => void) | undefined;
     vi.mocked(motionStudioApi.list).mockImplementation(() =>

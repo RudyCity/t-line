@@ -19,14 +19,30 @@ export interface MotionAudioTrack {
 }
 export interface MotionAudioAsset { id: string; bytes: number; sampleRate: number; channels: number; seconds: number }
 export interface MotionWaveform { peaks: number[]; seconds: number; sampleRate: number; channels: number }
+export interface MotionStackEntry {
+  id: string; effectId: string; enabled: boolean; targetLayerId?: string;
+  params?: Record<string, string | number | boolean>;
+  startFrame?: number; durationFrames?: number;
+}
+export type MotionStackOperation =
+  | { type: 'add'; entry: MotionStackEntry }
+  | { type: 'remove'; id: string }
+  | { type: 'toggle'; id: string; enabled: boolean }
+  | { type: 'move'; id: string; toIndex: number }
+  | { type: 'update'; id: string; changes: Partial<Omit<MotionStackEntry, 'id'>> };
+export interface MotionComposition {
+  width: number; height: number;
+  fps: { numerator: number; denominator: number };
+  durationFrames: number; background: string;
+  audio?: MotionAudioTrack; audioTracks?: MotionAudioTrack[];
+  layers: MotionLayer[];
+  effectStack?: MotionStackEntry[];
+  stackBase?: Omit<MotionComposition, 'effectStack' | 'stackBase'>;
+}
 export interface MotionProject {
   schemaVersion: 1; id: string; workspaceRoot: string; name: string;
   revision: number; createdAt: string; updatedAt: string;
-  composition: {
-    width: number; height: number;
-    fps: { numerator: number; denominator: number };
-    durationFrames: number; background: string; audio?: MotionAudioTrack; audioTracks?: MotionAudioTrack[]; layers: MotionLayer[];
-  };
+  composition: MotionComposition;
 }
 export interface MotionProjectSummary { id: string; name: string; revision: number }
 export interface CompoundPreset {
@@ -64,7 +80,7 @@ export type MotionEdit =
   | { type: 'set-audio'; audio: MotionAudioTrack | null }
   | { type: 'set-audio-tracks'; audioTracks: MotionAudioTrack[] };
 export interface MotionCapabilities {
-  capabilities?: { effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean };
+  capabilities?: { nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean };
 }
 export interface MotionQualityIssue {
   severity: 'warning' | 'error'; code: string; scene: number; message: string;
@@ -219,6 +235,10 @@ export const motionStudioApi = {
   applyEffect: (workspace: string, id: string, baseRevision: number, input: MotionEffectApplication) =>
     json<MotionProject>(workspace, '/projects/' + assertId(id) + '/effects', {
       method: 'POST', body: JSON.stringify({ ...input, baseRevision }),
+    }),
+  changeStack: (workspace: string, id: string, baseRevision: number, operation: MotionStackOperation, preview = false) =>
+    json<MotionProject>(workspace, '/projects/' + assertId(id) + '/effect-stack' + (preview ? '/preview' : ''), {
+      method: 'POST', body: JSON.stringify({ baseRevision, action: operation.type, operation }),
     }),
   presetInfo: (workspace: string, id: string) => {
     if (!/^[a-z][a-z0-9-]{1,63}$/.test(id)) throw new Error('Invalid compound preset ID');

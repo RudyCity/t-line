@@ -9,13 +9,14 @@ import {
 } from 'lucide-react';
 import {
   motionStudioApi, type MotionJob, type MotionProject, type MotionLayer, type MotionEdit, type MotionSchedulerStatus,
-  type CompoundPresetApplication, type MotionEffectApplication,
+  type CompoundPresetApplication, type MotionEffectApplication, type MotionStackOperation,
   type MotionProperty, type MotionProjectSummary, type MotionStorageStatus, type MotionQueueRecovery, type MotionSupervisorStatus, type MotionQualityReport, type MotionVisionReview,
 } from '../services/motionStudioApi';
 import { evaluateLayer, fpsOf, frameLabel, makeKeyframeTrack } from '../services/motionScene';
 import { MotionCanvas } from './MotionCanvas';
 import { MotionPresetPanel } from './MotionPresetPanel';
 import { MotionEffectLibrary } from './MotionEffectLibrary';
+import { MotionEffectStackPanel } from './MotionEffectStackPanel';
 import { MotionTimeline } from './MotionTimeline';
 import { MotionAudioPanel } from './MotionAudioPanel';
 import { motionPlaybackFrame } from '../services/motionTimelineClock';
@@ -86,6 +87,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [cornerDraft, setCornerDraft] = useState('0');
   const [compoundAvailable, setCompoundAvailable] = useState(false);
   const [effectsAvailable, setEffectsAvailable] = useState(false);
+  const [stackAvailable, setStackAvailable] = useState(false);
   const [effectPreview, setEffectPreview] = useState<MotionProject | null>(null);
   const [presetPreview, setPresetPreview] = useState<MotionProject | null>(null);
   const mounted = useRef(true);
@@ -115,7 +117,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     setDirectorSnapshotAvailable(false); setDirectorAutoNarration(false);
     setPromptVoiceover(''); setPromptVoiceoverGain(1); setQuality(null); setVisionReview(null);
     setVisionAvailable(false); setVisionRepairAvailable(false); setCaptionsAvailable(false);
-    setCompoundAvailable(false); setEffectsAvailable(false); setPresetPreview(null); setEffectPreview(null);
+    setCompoundAvailable(false); setEffectsAvailable(false); setStackAvailable(false); setPresetPreview(null); setEffectPreview(null);
     setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
     setScheduler(null); setSupervisor(null); setSupervisedRender(false);
@@ -146,6 +148,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
         setCaptionsAvailable(motionInfo?.capabilities?.exportSceneCaptionsSrt === true);
         setCompoundAvailable(motionInfo?.capabilities?.compoundPresets === true);
         setEffectsAvailable(motionInfo?.capabilities?.effectsEngine === true);
+        setStackAvailable(motionInfo?.capabilities?.nondestructiveEffectStack === true);
         const latest = existingJobs.find(job => job.status === 'completed') || existingJobs[0];
         setActiveJobId(latest?.id || '');
       } catch (cause) {
@@ -309,12 +312,34 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     const selectedSequence = selectionSeq.current;
     setPresetPreview(null); setEffectPreview(null);
     void operation(async () => {
-      const next = await motionStudioApi.applyEffect(workspacePath, project.id, project.revision, input);
+      const next = stackAvailable
+        ? await motionStudioApi.changeStack(workspacePath, project.id, project.revision, {
+          type: 'add', entry: {
+            id: 'fx-' + Math.random().toString(36).slice(2, 12),
+            enabled: true, ...input,
+          },
+        })
+        : await motionStudioApi.applyEffect(workspacePath, project.id, project.revision, input);
       if (selectedSequence !== selectionSeq.current) return;
       setUndoStack(prev => [...prev.slice(-19), before]);
       setRedoStack([]);
       setProject(next);
       setSuccess('Applied ' + input.effectId + ' · revision ' + next.revision);
+    });
+  };
+
+  const changeEffectStack = (stackOperation: MotionStackOperation) => {
+    if (!project || busy) return;
+    const before = structuredClone(project.composition);
+    const selectedSequence = selectionSeq.current;
+    setPresetPreview(null); setEffectPreview(null);
+    void operation(async () => {
+      const next = await motionStudioApi.changeStack(workspacePath, project.id, project.revision, stackOperation);
+      if (selectedSequence !== selectionSeq.current) return;
+      setUndoStack(prev => [...prev.slice(-19), before]);
+      setRedoStack([]);
+      setProject(next);
+      setSuccess('Updated Motion effect stack · revision ' + next.revision);
     });
   };
 
@@ -907,6 +932,9 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
         <MotionPresetPanel key={project.id} workspacePath={workspacePath} project={project} selectedLayer={selectedLayer}
           busy={busy} preview={presetPreview} onPreview={next => { setPresetPreview(next); if (next) setEffectPreview(null); }}
           onApply={applyCompound} />
+      )}
+      {project && stackAvailable && (
+        <MotionEffectStackPanel project={project} busy={busy} onChange={changeEffectStack} />
       )}
       {project && effectsAvailable && (
         <MotionEffectLibrary key={workspacePath + ':' + project.id} workspacePath={workspacePath} project={project}

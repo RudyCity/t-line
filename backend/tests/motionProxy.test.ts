@@ -141,7 +141,8 @@ describe('T-Line Motion proxy and service authentication', () => {
     expect((await fetch(base + '/projects/' + motionId + '/presets?workspace=allowed-root')).status).toBe(404);
     expect((await fetch(base + '/projects/' + motionId + '/presets/preview?workspace=allowed-root')).status).toBe(404);
     expect((await fetch(base + '/projects/' + motionId + '/effects/preview?workspace=allowed-root')).status).toBe(404);
-    for (const suffix of ['/presets', '/presets/preview', '/effects', '/effects/preview']) {
+    expect((await fetch(base + '/projects/' + motionId + '/effect-stack?workspace=allowed-root')).status).toBe(404);
+    for (const suffix of ['/presets', '/presets/preview', '/effects', '/effects/preview', '/effect-stack', '/effect-stack/preview']) {
       const result = await fetch(base + '/projects/' + motionId + suffix + '?workspace=allowed-root', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ baseRevision: 1, presetId: 'neon-impact', targetLayerId: 'title' }),
