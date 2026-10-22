@@ -172,6 +172,13 @@ describe('T-Line Motion proxy and service authentication', () => {
     expect((await fetch(base + '/jobs/motionjob-' + 'a'.repeat(24) + '/exports/webm?workspace=allowed-root')).status).toBe(200);
     expect((await fetch(base + '/jobs/motionjob-' + 'a'.repeat(24) + '/exports/avi?workspace=allowed-root')).status).toBe(404);
     expect((await fetch(base + '/jobs/motionjob-' + 'a'.repeat(24) + '/exports/gif?workspace=allowed-root', { method: 'POST' })).status).toBe(404);
+    expect((await fetch(base + '/projects/' + motionId + '/typography?workspace=allowed-root')).status).toBe(404);
+    const typography = await fetch(base + '/projects/' + motionId + '/typography/preview?workspace=allowed-root', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseRevision: 1, targetLayerId: 'title', style: 'letter-reveal' }),
+    });
+    expect(typography.status).toBe(201);
+    expect((await typography.json()).url).toContain('/api/motion/projects/' + motionId + '/typography/preview');
     expect((await fetch(base + '/projects/' + motionId + '/particles?workspace=allowed-root')).status).toBe(404);
     const overlay = await fetch(base + '/projects/' + motionId + '/particles/preview?workspace=allowed-root', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },

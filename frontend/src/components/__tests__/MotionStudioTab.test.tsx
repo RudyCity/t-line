@@ -11,7 +11,7 @@ vi.mock('../../services/motionStudioApi', () => ({
     effectsPage: vi.fn(), previewEffect: vi.fn(), applyEffect: vi.fn(), changeStack: vi.fn(),
     history: vi.fn(), restoreHistory: vi.fn(), brandKit: vi.fn(), saveBrandKit: vi.fn(),
     templates: vi.fn(), previewTemplate: vi.fn(), applyTemplate: vi.fn(), batchVariants: vi.fn(), beatSync: vi.fn(),
-    storyboardPlan: vi.fn(), storyboardPreview: vi.fn(), storyboardRender: vi.fn(), particles: vi.fn(),
+    storyboardPlan: vi.fn(), storyboardPreview: vi.fn(), storyboardRender: vi.fn(), particles: vi.fn(), typography: vi.fn(),
     jobs: vi.fn(), capabilities: vi.fn(), quality: vi.fn(), loadFrameSnapshot: vi.fn(), visionReview: vi.fn(), visionRepair: vi.fn(), captions: vi.fn(), generate: vi.fn(), revise: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
   },
 }));
@@ -873,6 +873,43 @@ describe('Native T-Line Motion Studio editor', () => {
       'D:/projects/studio', id, 1, { kind: 'confetti', count: 20, color: '#38bdf8' },
     ));
     expect(await screen.findByText('Applied confetti particle overlay · revision 2')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Undo scene change' }));
+    await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 2,
+      [{ type: 'replace-composition', composition: expect.objectContaining({ layers: expect.any(Array) }) }],
+    ));
+  });
+  it('previews per-letter typography, applies via revision lock and allows Undo', async () => {
+    vi.mocked(motionStudioApi.capabilities).mockResolvedValue({
+      capabilities: { motionAdvancedTypography: ['letter-reveal', 'word-rise'] },
+    });
+    vi.mocked(motionStudioApi.typography).mockImplementation(async (_ws, _id, _rev, _input, preview) => {
+      const next = fixture(); next.revision = preview ? 1 : 2;
+      next.composition.layers[0].tracks.push({
+        property: 'x', keyframes: [{ frame: 0, value: 80 }, { frame: 30, value: 120 }],
+      });
+      return next;
+    });
+    vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, rev, edits) => {
+      const next = fixture(); next.revision = rev + 1;
+      if (edits[0].type === 'replace-composition') next.composition = edits[0].composition;
+      return next;
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    await screen.findByText('Advanced Typography');
+    fireEvent.click(screen.getByText('Advanced Typography'));
+    fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+    await waitFor(() => expect(motionStudioApi.typography).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 1, { targetLayerId: 'title', style: 'letter-reveal',
+        startFrame: 0, durationFrames: 60 }, true));
+    expect(await screen.findByText(/PREVIEW \(not saved\)/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(motionStudioApi.typography).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 1, { targetLayerId: 'title', style: 'letter-reveal',
+        startFrame: 0, durationFrames: 60 }));
+    expect(await screen.findByText('Applied letter-reveal typography · revision 2')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Undo scene change' }));
     await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith(
       'D:/projects/studio', id, 2,
