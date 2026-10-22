@@ -236,6 +236,10 @@ export const motionStudioApi = {
     json<MotionProject>(workspace, '/projects/' + assertId(id) + '/effects', {
       method: 'POST', body: JSON.stringify({ ...input, baseRevision }),
     }),
+  resize: (workspace: string, id: string, baseRevision: number, aspectRatio: '16:9' | '1:1' | '9:16', preview = false) =>
+    json<MotionProject>(workspace, '/projects/' + assertId(id) + '/resize' + (preview ? '/preview' : ''), {
+      method: 'POST', body: JSON.stringify({ baseRevision, aspectRatio }),
+    }),
   changeStack: (workspace: string, id: string, baseRevision: number, operation: MotionStackOperation, preview = false) =>
     json<MotionProject>(workspace, '/projects/' + assertId(id) + '/effect-stack' + (preview ? '/preview' : ''), {
       method: 'POST', body: JSON.stringify({ baseRevision, action: operation.type, operation }),

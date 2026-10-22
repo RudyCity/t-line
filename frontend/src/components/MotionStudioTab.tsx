@@ -88,6 +88,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [compoundAvailable, setCompoundAvailable] = useState(false);
   const [effectsAvailable, setEffectsAvailable] = useState(false);
   const [stackAvailable, setStackAvailable] = useState(false);
+  const [resizeRatio, setResizeRatio] = useState<'16:9' | '1:1' | '9:16'>('9:16');
   const [effectPreview, setEffectPreview] = useState<MotionProject | null>(null);
   const [presetPreview, setPresetPreview] = useState<MotionProject | null>(null);
   const mounted = useRef(true);
@@ -340,6 +341,21 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
       setRedoStack([]);
       setProject(next);
       setSuccess('Updated Motion effect stack · revision ' + next.revision);
+    });
+  };
+
+  const resizeProject = () => {
+    if (!project || busy) return;
+    const before = structuredClone(project.composition);
+    const selectedSequence = selectionSeq.current;
+    setPresetPreview(null); setEffectPreview(null);
+    void operation(async () => {
+      const next = await motionStudioApi.resize(workspacePath, project.id, project.revision, resizeRatio);
+      if (selectedSequence !== selectionSeq.current) return;
+      setUndoStack(prev => [...prev.slice(-19), before]);
+      setRedoStack([]);
+      setProject(next);
+      setSuccess('Resized to ' + resizeRatio + ' · revision ' + next.revision);
     });
   };
 
@@ -932,6 +948,18 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
         <MotionPresetPanel key={project.id} workspacePath={workspacePath} project={project} selectedLayer={selectedLayer}
           busy={busy} preview={presetPreview} onPreview={next => { setPresetPreview(next); if (next) setEffectPreview(null); }}
           onApply={applyCompound} />
+      )}
+      {project && stackAvailable && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] px-4 py-2">
+          <label htmlFor="motion-resize-ratio" className="text-xs">Smart Resize</label>
+          <select id="motion-resize-ratio" aria-label="Motion output aspect ratio"
+            className={control + ' max-w-[120px]'} value={resizeRatio}
+            onChange={event => setResizeRatio(event.target.value as '16:9' | '1:1' | '9:16')}>
+            <option value="16:9">16:9</option><option value="1:1">1:1</option><option value="9:16">9:16</option>
+          </select>
+          <button className={action} disabled={busy} onClick={resizeProject}>Resize scene</button>
+          <span className="text-[10px] text-[var(--text-muted)]">Keeps animation timing and effect stack · Undo available</span>
+        </div>
       )}
       {project && stackAvailable && (
         <MotionEffectStackPanel project={project} busy={busy} onChange={changeEffectStack} />

@@ -25,6 +25,7 @@ const permitted = [
   /^\/projects\/motion-[a-f0-9]{20}\/presets\/preview$/,
   /^\/projects\/motion-[a-f0-9]{20}\/effects\/preview$/,
   /^\/projects\/motion-[a-f0-9]{20}\/effect-stack(?:\/preview)?$/,
+  /^\/projects\/motion-[a-f0-9]{20}\/resize(?:\/preview)?$/,
   /^\/projects\/motion-[a-f0-9]{20}\/quality$/,
   /^\/projects\/motion-[a-f0-9]{20}\/vision-review$/,
   /^\/projects\/motion-[a-f0-9]{20}\/vision-repair$/,
@@ -36,13 +37,13 @@ const permitted = [
 
 function allowedRoute(method: string, pathname: string): boolean {
   if (!permitted.some(pattern => pattern.test(pathname))) return false;
-  if (method === 'GET') return !pathname.endsWith('/vision-review') && !pathname.endsWith('/vision-repair') && !pathname.endsWith('/edits') && !pathname.endsWith('/render') && !pathname.endsWith('/revise') && !/^\/projects\/motion-[a-f0-9]{20}\/(?:presets|effects|effect-stack)(?:\/preview)?$/.test(pathname) && pathname !== '/generate' && !pathname.endsWith('/cancel');
+  if (method === 'GET') return !pathname.endsWith('/vision-review') && !pathname.endsWith('/vision-repair') && !pathname.endsWith('/edits') && !pathname.endsWith('/render') && !pathname.endsWith('/revise') && !/^\/projects\/motion-[a-f0-9]{20}\/(?:presets|effects|effect-stack|resize)(?:\/preview)?$/.test(pathname) && pathname !== '/generate' && !pathname.endsWith('/cancel');
   if (method === 'HEAD') return pathname.endsWith('/artifact') || /^\/assets\/asset-[a-f0-9]{64}$/.test(pathname) ||
     /^\/audio\/audio-[a-f0-9]{64}$/.test(pathname);
   if (method === 'POST') {
     return pathname === '/projects' || pathname === '/generate' || pathname === '/assets' || pathname === '/audio' ||
       pathname.endsWith('/vision-review') || pathname.endsWith('/vision-repair') || pathname.endsWith('/edits') || pathname.endsWith('/render') || pathname.endsWith('/revise') || pathname.endsWith('/cancel') ||
-      /^\/projects\/motion-[a-f0-9]{20}\/(?:presets|effects|effect-stack)(?:\/preview)?$/.test(pathname);
+      /^\/projects\/motion-[a-f0-9]{20}\/(?:presets|effects|effect-stack|resize)(?:\/preview)?$/.test(pathname);
   }
   return false;
 }
