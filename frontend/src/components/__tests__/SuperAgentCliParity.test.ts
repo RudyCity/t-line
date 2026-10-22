@@ -4,9 +4,12 @@ import { CLI_COMMAND_PARITY, getCliOnlySuggestions, getSlashCommands, isCliOnlyC
 describe('T-Line / SuperAgent CLI command parity guard', () => {
   it('contains source-inferred CLI commands missing from T-Line UI', () => {
     expect(CLI_COMMAND_PARITY.length).toBeGreaterThan(50);
-    for (const name of ['/daemon', '/gateway', '/motion', '/selfdev', '/muse', '/tools']) {
+    for (const name of ['/daemon', '/gateway', '/selfdev', '/muse', '/tools']) {
       expect(isCliOnlyCommand(name)).toBe(true);
     }
+    expect(isCliOnlyCommand('/studio')).toBe(false);
+    expect(CLI_COMMAND_PARITY.some(item => item.command === '/motion')).toBe(false);
+    expect(CLI_COMMAND_PARITY.some(item => item.command === '/studio' && item.tlineHandler === 'local-ui-handler')).toBe(true);
     expect(isCliOnlyCommand('/status')).toBe(false);
   });
 
@@ -23,6 +26,25 @@ describe('T-Line / SuperAgent CLI command parity guard', () => {
     expect(item?.description).toMatch(/CLI only/);
     item?.action?.();
     expect(warned).toHaveBeenCalledWith('/telegram');
+  });
+
+  it('opens the native SuperAgent Studio panel without executing CLI code', () => {
+    const onOpenStudio = vi.fn();
+    const notifyUnsupported = vi.fn();
+    const setMessages = vi.fn();
+    const ctx: Parameters<typeof getSlashCommands>[0] = {
+      ws: null, workspace: 'D:/studio', agentMode: 'single', customArgs: '',
+      setMessages, setAgentMode: vi.fn(), setCustomArgs: vi.fn(),
+      setWorkspace: vi.fn(), setConnectTrigger: vi.fn(),
+      handleSend: vi.fn(), handleAbort: vi.fn(), notifyUnsupported, onOpenStudio,
+    };
+    const studio = getSlashCommands(ctx).find(item => item.command === '/studio');
+    expect(studio).toBeDefined();
+    studio?.action?.('open');
+    expect(onOpenStudio).toHaveBeenCalledOnce();
+    expect(notifyUnsupported).not.toHaveBeenCalled();
+    studio?.action?.('help');
+    expect(setMessages).toHaveBeenCalledOnce();
   });
 
   it('legacy slash actions do not reenter handleSend recursively', () => {

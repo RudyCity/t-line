@@ -9,6 +9,12 @@
       "tlineHandler": "cli-only"
     },
     {
+      "command": "/brain",
+      "description": "Manage per-session scratch, artifacts and detached CLI tasks under ~/.superagent-r/brain",
+      "sourceFile": "src/core/commands/brainCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
       "command": "/checkpoint",
       "description": "Manage checkpoints to save/restore conversation state",
       "sourceFile": "src/core/commands/sessionCommands.ts",
@@ -16,7 +22,7 @@
     },
     {
       "command": "/compact",
-      "description": "Show conversation summary or force compaction",
+      "description": "Inspect context, compact, benchmark or undo a compaction",
       "sourceFile": "src/core/commands/compactCommand.ts",
       "tlineHandler": "cli-only"
     },
@@ -106,7 +112,7 @@
     },
     {
       "command": "/mcp",
-      "description": "Manage MCP (Model Context Protocol) servers. Subcommands: list, add, remove, reload",
+      "description": "Manage MCP servers and tunnels. Subcommands: list, add, remove, reload, use gateway|full, tunnel",
       "sourceFile": "src/core/commands/mcpCommand.ts",
       "tlineHandler": "cli-only"
     },
@@ -127,12 +133,6 @@
       "description": "Set or list active AI models (e.g. /model openai/gpt-4o [--save])",
       "sourceFile": "src/core/commands/modelCommand.ts",
       "tlineHandler": "local-ui-handler"
-    },
-    {
-      "command": "/motion",
-      "description": "Create, edit and render Motion Studio video previews in the active workspace",
-      "sourceFile": "src/core/commands/motionCommand.ts",
-      "tlineHandler": "cli-only"
     },
     {
       "command": "/mp",
@@ -331,6 +331,12 @@
       "description": "Stop/interrupt current work, or stop all managed service connections and tunnels with /stop all",
       "sourceFile": "src/core/commands/coreCommands.ts",
       "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/studio",
+      "description": "Create, edit and render SuperAgent Studio visuals in the active workspace",
+      "sourceFile": "src/core/commands/motionCommand.ts",
+      "tlineHandler": "local-ui-handler"
     },
     {
       "command": "/telegram",

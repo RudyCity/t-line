@@ -19,6 +19,7 @@ interface CommandContext {
   setConnectTrigger: React.Dispatch<React.SetStateAction<number>>;
   handleSend: (prompt?: string) => Promise<void> | void;
   handleAbort: () => void;
+  onOpenStudio?: () => void;
   notifyUnsupported: (command: string) => void;
 }
 
@@ -102,9 +103,28 @@ export function getSlashCommands({
   setConnectTrigger,
   handleSend,
   handleAbort,
+  onOpenStudio,
   notifyUnsupported
 }: CommandContext): SlashCommand[] {
   return [
+    {
+      command: '/studio',
+      description: 'Open SuperAgent Studio in the current workspace',
+      argsHelp: '[open|help]',
+      action: (args?: string) => {
+        const mode = args?.trim().toLowerCase() ?? '';
+        if (!mode || mode === 'open') {
+          if (onOpenStudio) onOpenStudio();
+          else setMessages(prev => [...prev, { role: 'system', text: 'SuperAgent Studio is unavailable in this window.' }]);
+        } else if (mode === 'help') {
+          setMessages(prev => [...prev, { role: 'system',
+            text: 'Use /studio to open the native SuperAgent Studio editor. For scripting: superagent studio help, superagent studio generate, or superagent studio render.' }]);
+        } else {
+          setMessages(prev => [...prev, { role: 'system',
+            text: 'Use /studio to open the editor. CLI-only actions can be run from a terminal with superagent studio ' + mode + '.' }]);
+        }
+      }
+    },
     {
       command: '/help',
       description: BUILTIN_COMMAND_DESCRIPTIONS['/help'],
@@ -349,6 +369,13 @@ export function getSubCommands(
   context: { workspace: string; agentMode: 'single' | 'multi' }
 ): SlashCommand[] {
   const cleanCmd = parentCmd.toLowerCase().trim();
+
+  if (cleanCmd === '/studio') {
+    return [
+      { command: '/studio open', description: 'Open SuperAgent Studio editor' },
+      { command: '/studio help', description: 'Show Studio command usage' },
+    ];
+  }
 
   if (cleanCmd === '/model') {
     return [

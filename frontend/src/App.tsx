@@ -2511,6 +2511,7 @@ export default function App() {
                   style={{ display: tab.id === activeTabId ? 'block' : 'none' }}
                 >
                   <SuperAgentConsole
+                    onOpenStudio={() => openMotionTab(tab.workspaceId)}
                     activeWorkspacePath={panelWorkspace?.path}
                     workspaces={workspaces}
                     onOpenSettings={() => setShowSettingsModal(true)}

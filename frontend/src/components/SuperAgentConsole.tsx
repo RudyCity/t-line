@@ -31,6 +31,7 @@ interface SuperAgentConsoleProps {
   onLoadingChange?: (isLoading: boolean) => void;
   onOpenFile?: (filePath: string, fileName?: string) => void;
   onOpenDiffTab?: (commitHash: string, filePath: string, worktreePath?: string) => void;
+  onOpenStudio?: () => void;
 }
 
 export function SuperAgentConsole({
@@ -39,7 +40,8 @@ export function SuperAgentConsole({
   onOpenSettings: _onOpenSettings,
   onLoadingChange,
   onOpenFile,
-  onOpenDiffTab
+  onOpenDiffTab,
+  onOpenStudio
 }: SuperAgentConsoleProps) {
   // Workspace & Config state
   const [workspace, setWorkspace] = useState(() => activeWorkspacePath || localStorage.getItem('currentWorkspace') || '');
@@ -710,6 +712,7 @@ export function SuperAgentConsole({
       setConnectTrigger,
       handleSend,
       handleAbort,
+      onOpenStudio,
       notifyUnsupported: command => {
         setMessages(prev => [...prev, {
           role: 'system',
