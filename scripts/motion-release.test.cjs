@@ -50,7 +50,10 @@ test("Tauri CLI wrapper normalizes CI to true on Windows without building", () =
   assert.equal(result.status, 0, result.stderr);
   const info = JSON.parse(result.stdout);
   assert.equal(info.ci, "true");
-  assert.deepEqual(info.command, ["bun", "run", "--filter", "desktop-tauri", "tauri", "build"]);
+  assert.equal(info.command[0], "bun");
+  assert.equal(info.command.at(-1), "build");
+  assert.match(info.command[1].replaceAll("\\", "/"), /desktop-tauri\/node_modules\/@tauri-apps\/cli\/tauri\.js$/);
+  assert.equal(info.command.length, 3);
 });
 
 test("requires backend and native runtime in real NSIS archive listing", () => {
