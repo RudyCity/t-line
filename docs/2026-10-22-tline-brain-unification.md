@@ -45,3 +45,10 @@ bun --bun x vitest run backend/tests/brainExplorerRoutes.test.ts
 cd frontend && bun --bun x vitest run --config vite.config.ts src/components/__tests__/SuperAgentBrainExplorer.test.tsx
 ```
 The current tests include real loopback HTTP tests, filesystem policy assertions and browser component tests. The packaged T-Line desktop and deployed MCP tunnel must still be restarted and smoke-tested with real operator credentials on the target host before a production sign-off.
+
+## Observability and release gates
+- `GET /api/superagent/brain/metrics` returns a 7-day local-cli summary of allowlisted operation names, successes/failures and bounded durations. It does not expose user prompts, token strings, artifact paths or the identities of other MCP tenants.
+- Brain Explorer shows an **Activity** summary with the most frequent operation types and average durations. The numbers reflect observed backend operations, not inferred filesystem work.
+- T-Line release workflows now run `bun scripts/check-brain-runtime.cjs`, the Brain backend API tests, and the Brain UI tests before packaging the desktop. The independent `brain-integrity.yml` workflow runs on relevant pushes and pull requests.
+- Local verification: `bun scripts/check-brain-runtime.cjs` and `bun scripts/verify-brain-release.ts --with-tline` (from the SuperAgent sibling repository).
+- No packaged desktop process was available for a real user interaction acceptance test at the time of integration. CI configuration added to source is not evidence that remote GitHub Actions have executed successfully.

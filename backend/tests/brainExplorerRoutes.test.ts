@@ -242,6 +242,23 @@ describe('Authenticated T-Line Brain Explorer read model', () => {
     expect(recentSearch.records).toHaveLength(0);
   });
 
+  it('exposes only scoped operational counters without leaking artifact data', async () => {
+    const { base, root } = await fixture();
+    const token = 'Bearer scoped_operator_secret';
+    const before = await (await fetch(base + '/metrics')).json();
+    expect(before.events).toBe(0);
+    const headers = { Authorization: token, 'Content-Type': 'application/json' };
+    await fetch(base + '/sessions/sess_local/cleanup/prepare', { method: 'POST', headers });
+    const metrics = await (await fetch(base + '/metrics')).json();
+    expect(metrics.events).toBe(1);
+    expect(metrics.types[0].event).toBe('cleanup.prepare');
+    const json = JSON.stringify(metrics);
+    expect(json).not.toContain(token);
+    expect(json).not.toContain(root);
+    expect(json).not.toContain('sess_local');
+    expect(json).not.toContain('result.md');
+  });
+
   it('does not follow symlinks to outside files', async () => {
     const { base, session, root } = await fixture();
     const link = path.join(session, 'artifacts', 'external');

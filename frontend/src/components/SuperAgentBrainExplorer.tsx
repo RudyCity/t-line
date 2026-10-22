@@ -10,6 +10,8 @@ type StorageInfo = { totalBytes: number; areas: StorageArea[] };
 type RegisteredProject = { id: string; name: string };
 type RetentionPreview = { days: number; autoDelete: false; dryRun: true; partial?: boolean; candidates: Array<{sessionId: string; scratchFiles: number; scratchBytes: number }> ; totalCandidateBytes: number };
 type BrainSearchRecord = { sessionId: string; path: string; summary: string; tags: string[]; bytes: number };
+type BrainMetric = { event: string; count: number; failures: number; avgDurationMs: number; maxDurationMs: number };
+type BrainMetrics = { events: number; failures: number; windowDays: number; types: BrainMetric[]; incomplete: boolean };
 
 async function readApi<T>(url: string, signal: AbortSignal): Promise<T> {
   const response = await fetch(url, { headers: getAuthHeader(), signal, cache: 'no-store' });
@@ -52,6 +54,7 @@ export function SuperAgentBrainExplorer({ activeSessionId, onClose }: {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<BrainSearchRecord[]>([]);
   const [annotation, setAnnotation] = useState('');
+  const [metrics, setMetrics] = useState<BrainMetrics | null>(null);
   const [preview, setPreview] = useState('');
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
@@ -138,6 +141,14 @@ export function SuperAgentBrainExplorer({ activeSessionId, onClose }: {
       .catch(err => { if (!ctrl.signal.aborted) setError(err.message || 'Retention preview failed.'); });
     return () => ctrl.abort();
   }, [retentionDays, refreshId]);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    readApi<BrainMetrics>('/api/superagent/brain/metrics', ctrl.signal)
+      .then(value => { if (!ctrl.signal.aborted) setMetrics(value); })
+      .catch(() => { if (!ctrl.signal.aborted) setMetrics(null); });
+    return () => ctrl.abort();
+  }, [refreshId]);
 
   const searchBrain = async () => {
     if (!searchTerm.trim()) { setSearchResults([]); return; }
@@ -292,6 +303,19 @@ export function SuperAgentBrainExplorer({ activeSessionId, onClose }: {
       <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[minmax(180px,0.75fr)_minmax(0,1fr)]">
         <div className="border-r border-[var(--border-color)] overflow-y-auto min-h-0">
           <div className="uppercase text-[10px] tracking-wide text-[var(--text-muted)] font-medium p-3 border-b border-[var(--border-color)]">Sessions {pending ? '…' : `(${sessions.length})`}</div>
+          <div className="p-3 text-xs border-b border-[var(--border-color)]" aria-label="Brain activity metrics">
+            <p className="font-medium">Activity · last 7 days</p>
+            <p className="mt-1 text-[var(--text-muted)]">
+              {metrics ? `${metrics.events} operations · ${metrics.failures} failed` : 'No metrics recorded yet'}
+            </p>
+            {metrics?.types.slice(0, 4).map(item => (
+              <div key={item.event} className="flex justify-between gap-2 text-[11px] mt-1">
+                <span className="truncate">{item.event}</span>
+                <span className="font-mono shrink-0">{item.count} · {item.avgDurationMs}ms avg</span>
+              </div>
+            ))}
+            {metrics?.incomplete && <p className="text-amber-400">Partial metrics window</p>}
+          </div>
           <div className="p-3 text-xs border-b border-[var(--border-color)]">
             <label className="block text-[var(--text-muted)] mb-1" htmlFor="brain-search">Search indexed artifacts</label>
             <form onSubmit={e => { e.preventDefault(); void searchBrain(); }} className="flex gap-1">

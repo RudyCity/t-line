@@ -7,6 +7,8 @@ beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     const response = String(url).includes('/file?')
       ? { content: 'analyzed data' }
+      : String(url).endsWith('/metrics')
+        ? { events: 3, failures: 1, windowDays: 7, incomplete: false, types: [{ event: 'transfer.finish', count: 3, failures: 1, avgDurationMs: 5, maxDurationMs: 9 }] }
       : String(url).endsWith('/files')
         ? { files: [{ path: 'artifacts/report.md', bytes: 13 }] }
         : String(url).endsWith('/jobs')

@@ -15,6 +15,7 @@ import {
 } from './brainStorageManager';
 import { beginBrainTransfer, inspectBrainTransfer, appendBrainTransfer, finishBrainTransfer, abortBrainTransfer } from './brainTransfers';
 import { annotateBrainArtifact, searchBrainArtifacts, brainResumeContext, brainRMemoryCandidate } from './brainIndex';
+import { recordBrainEvent, summarizeBrainEvents } from './brainObservability';
 
 const SESSION_ID = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$/;
 const MAX_LIST = 100;
@@ -32,6 +33,36 @@ export function createBrainExplorerRouter(options: ReadOptions = {}): Router {
   const root = () => path.resolve(options.configRoot?.() ?? process.env.SUPERAGENT_CONFIG_DIR?.trim() ?? path.join(os.homedir(), '.superagent-r'));
   const owned = () => path.join(root(), 'brain', LOCAL_OWNER_HASH);
   const scanRetentionArea = (dir: string) => scanBrainArea(dir, 'scratch');
+
+  // Only record allowlisted operation names and outcomes. No paths, query
+  // strings, prompts, tokens, or artifact contents enter the metrics store.
+  router.use((req, res, next) => {
+    const started = Date.now();
+    const location = req.path;
+    const operation =
+      req.method === 'POST' && /\/transfers\/[^/]+\/chunk$/.test(location) ? 'transfer.append' :
+      req.method === 'POST' && /\/transfers\/[^/]+\/finish$/.test(location) ? 'transfer.finish' :
+      req.method === 'POST' && /\/sessions\/[^/]+\/transfers$/.test(location) ? 'transfer.begin' :
+      req.method === 'DELETE' && /\/transfers\/[^/]+$/.test(location) ? 'transfer.abort' :
+      req.method === 'GET' && /\/transfers\/[^/]+$/.test(location) ? 'transfer.resume' :
+      req.method === 'POST' && /\/artifacts\/import$/.test(location) ? 'artifact.import' :
+      req.method === 'POST' && /\/annotate$/.test(location) ? 'artifact.annotate' :
+      req.method === 'GET' && location === '/search' ? 'artifact.search' :
+      req.method === 'POST' && /\/cleanup\/prepare$/.test(location) ? 'cleanup.prepare' :
+      req.method === 'POST' && /\/cleanup\/confirm$/.test(location) ? 'cleanup.confirm' :
+      req.method === 'POST' && /\/publish\/prepare$/.test(location) ? 'publish.prepare' :
+      req.method === 'POST' && /\/publish\/confirm$/.test(location) ? 'publish.confirm' :
+      null;
+    if (operation) res.once('finish', () =>
+      recordBrainEvent('local-cli', operation, res.statusCode < 400 ? 'ok' : 'error',
+        Date.now() - started, root()));
+    next();
+  });
+
+  router.get('/metrics', (_req, res) => {
+    try { res.setHeader('Cache-Control', 'no-store'); res.json(summarizeBrainEvents('local-cli', root())); }
+    catch { res.status(503).json({ error: 'Brain metrics unavailable.' }); }
+  });
 
   // Publishing requires *both* an enabled SuperAgent local project registration
   // and a separately registered T-Line local workspace. The desktop operator

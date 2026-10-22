@@ -34,6 +34,16 @@ jobs:
       - name: Install Dependencies
         run: bun install
 
+      - name: Verify generated Brain Core integrity
+        run: bun scripts/check-brain-runtime.cjs
+
+      - name: Brain storage API regression
+        run: bun --bun x vitest run backend/tests/brainExplorerRoutes.test.ts
+
+      - name: Brain Explorer UI regression
+        run: bun --bun x vitest run --config vite.config.ts src/components/__tests__/SuperAgentBrainExplorer.test.tsx
+        working-directory: frontend
+
       - name: Build Frontend
         run: bun run build:frontend
 
