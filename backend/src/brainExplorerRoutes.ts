@@ -7,7 +7,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { Router } from 'express';
+import { Router, raw } from 'express';
+import { isRegisteredMotionWorkspace } from './motionWorkspaceAccess';
+import {
+  brainStorageUsage, prepareBrainCleanup, confirmBrainCleanup, scanBrainArea,
+  prepareBrainPublish, confirmBrainPublish, validateDestination, assertNoSymlink, importBrainBinaryArtifact,
+} from './brainStorageManager';
 
 const SESSION_ID = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$/;
 const MAX_LIST = 100;
@@ -16,11 +21,35 @@ const MAX_PREVIEW = 128 * 1024;
 const LOCAL_OWNER_HASH = crypto.createHash('sha256').update('local-cli').digest('hex').slice(0, 24);
 const TEXT_EXT = new Set(['.txt', '.md', '.json', '.jsonl', '.csv', '.log', '.ts', '.tsx', '.js', '.jsx', '.py', '.css', '.html', '.yaml', '.yml', '.xml', '.sh']);
 
-type ReadOptions = { configRoot?: () => string };
+type ReadOptions = {
+  configRoot?: () => string;
+  authorizeProject?: (projectId: string, root: string) => boolean;
+};
 export function createBrainExplorerRouter(options: ReadOptions = {}): Router {
   const router = Router();
   const root = () => path.resolve(options.configRoot?.() ?? process.env.SUPERAGENT_CONFIG_DIR?.trim() ?? path.join(os.homedir(), '.superagent-r'));
   const owned = () => path.join(root(), 'brain', LOCAL_OWNER_HASH);
+  const scanRetentionArea = (dir: string) => scanBrainArea(dir, 'scratch');
+
+  // Publishing requires *both* an enabled SuperAgent local project registration
+  // and a separately registered T-Line local workspace. The desktop operator
+  // must complete the one-time prepare/confirm challenge. It does not reuse
+  // or claim the OAuth MCP project's write capability.
+  function publishingProject(projectId: unknown): string {
+    if (typeof projectId !== 'string' || !/^[a-z0-9][a-z0-9-]{0,62}$/.test(projectId)) throw new Error('Invalid project ID.');
+    const registry = path.join(root(), 'projects.json');
+    assertSafe(root(), registry);
+    const stat = fs.lstatSync(registry);
+    if (!stat.isFile() || stat.size > 1024 * 1024) throw new Error('Project registry unavailable.');
+    const parsed = JSON.parse(fs.readFileSync(registry, 'utf8'));
+    if (parsed.schemaVersion !== 1 || !Array.isArray(parsed.projects)) throw new Error('Invalid project registry.');
+    const project = parsed.projects.find((p: any) =>
+      p?.id === projectId && p.enabled === true && p.type === 'local' && typeof p.root === 'string');
+    if (!project) throw new Error('Enabled local project registration required.');
+    const resolved = fs.realpathSync.native(project.root);
+    if (!(options.authorizeProject ?? isRegisteredMotionWorkspace)(projectId, resolved)) throw new Error('Project not registered and authorized in T-Line.');
+    return resolved;
+  }
 
   function assertSafe(start: string, target: string): void {
     const rel = path.relative(start, target);
@@ -151,6 +180,128 @@ export function createBrainExplorerRouter(options: ReadOptions = {}): Router {
       jobs.sort((a, b) => b.updatedAt - a.updatedAt);
       res.json({ sessionId: req.params.sessionId, jobs: jobs.slice(0, 50), source: 'persisted-bridge-snapshots', readOnly: true });
     } catch { res.status(404).json({ error: 'Brain delegation metadata unavailable.' }); }
+  });
+
+  // Informational retention preview. There is no background deletion and no
+  // batch-delete endpoint; each cleanup requires its own explicit confirmation.
+  router.get('/retention/preview', (req, res) => {
+    try {
+      const days = Number(req.query.days ?? 30);
+      if (![7, 30, 90].includes(days)) { res.status(400).json({ error: 'Retention preview supports 7, 30 or 90 days.' }); return; }
+      const directory = owned();
+      assertSafe(path.join(root(), 'brain'), directory);
+      const cutoff = Date.now() - days * 86400_000;
+      const candidates: Array<{ sessionId: string; scratchFiles: number; scratchBytes: number; lastModifiedAt: string | null }> = [];
+      let scanned = 0;
+      if (fs.existsSync(directory)) for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+        if (!entry.isDirectory() || !SESSION_ID.test(entry.name)) continue;
+        if (++scanned > 200) break;
+        try {
+          const { dir } = session(entry.name);
+          const area = scanRetentionArea(dir);
+          if (area.files > 0 && area.lastModifiedAt && Date.parse(area.lastModifiedAt) < cutoff) {
+            candidates.push({ sessionId: entry.name, scratchFiles: area.files, scratchBytes: area.bytes, lastModifiedAt: area.lastModifiedAt });
+          }
+        } catch { /* Ignore uninspectable sessions, never delete implicitly. */ }
+        if (candidates.length >= MAX_LIST) break;
+      }
+      res.json({ days, dryRun: true, autoDelete: false, candidates, scanned,
+        partial: scanned > 200 || candidates.length >= MAX_LIST,
+        totalCandidateBytes: candidates.reduce((sum, entry) => sum + entry.scratchBytes, 0) });
+    } catch { res.status(503).json({ error: 'Retention preview unavailable.' }); }
+  });
+
+  router.get('/sessions/:sessionId/storage', (req, res) => {
+    try {
+      const { dir } = session(req.params.sessionId);
+      res.json({ sessionId: req.params.sessionId, ...brainStorageUsage(dir), readOnly: true });
+    } catch { res.status(404).json({ error: 'Brain storage unavailable.' }); }
+  });
+
+  router.post('/sessions/:sessionId/cleanup/prepare', (req, res) => {
+    try {
+      const { dir } = session(req.params.sessionId);
+      res.json(prepareBrainCleanup(req.headers.authorization, req.params.sessionId, dir));
+    } catch { res.status(409).json({ error: 'Unable to prepare Brain cleanup.' }); }
+  });
+
+  router.post('/sessions/:sessionId/cleanup/confirm', (req, res) => {
+    try {
+      const { dir } = session(req.params.sessionId);
+      if (typeof req.body?.challenge !== 'string' || !/^[0-9a-f]{48}$/.test(req.body.challenge))
+        throw new Error('Invalid challenge.');
+      res.json(confirmBrainCleanup(req.headers.authorization, req.params.sessionId, req.body.challenge, dir));
+    } catch { res.status(409).json({ error: 'Cleanup rejected; request a new preview.' }); }
+  });
+
+  router.get('/projects', (_req, res) => {
+    try {
+      const registry = path.join(root(), 'projects.json');
+      assertSafe(root(), registry);
+      if (!fs.existsSync(registry)) { res.json({ projects: [] }); return; }
+      const stat = fs.lstatSync(registry);
+      if (!stat.isFile() || stat.size > 1024 * 1024) throw new Error('Invalid project registry.');
+      const doc = JSON.parse(fs.readFileSync(registry, 'utf8'));
+      if (doc.schemaVersion !== 1 || !Array.isArray(doc.projects)) throw new Error('Invalid registry schema.');
+      const projects = doc.projects.filter((p: any) => p?.enabled && p.type === 'local' &&
+        typeof p.id === 'string' && typeof p.root === 'string')
+        .filter((p: any) => {
+          try { return (options.authorizeProject ?? isRegisteredMotionWorkspace)(p.id, fs.realpathSync.native(p.root)); }
+          catch { return false; }
+        }).slice(0, 100).map((p: any) => ({ id: p.id, name: typeof p.name === 'string' ? p.name : p.id }));
+      res.json({ projects });
+    } catch { res.status(503).json({ error: 'Could not list permitted local projects.' }); }
+  });
+
+  router.post('/sessions/:sessionId/publish/prepare', (req, res) => {
+    try {
+      const { dir } = session(req.params.sessionId);
+      const root = publishingProject(req.body?.projectId);
+      if (typeof req.body?.filePath !== 'string' || typeof req.body?.destinationPath !== 'string') throw new Error('Missing publish paths.');
+      const result = prepareBrainPublish(req.headers.authorization, req.params.sessionId,
+        dir, req.body.filePath, root, req.body.destinationPath);
+      res.json(result);
+    } catch { res.status(409).json({ error: 'Publish preview rejected. Check registrations, file path and destination.' }); }
+  });
+
+  router.post('/sessions/:sessionId/publish/confirm', (req, res) => {
+    try {
+      const { dir } = session(req.params.sessionId);
+      if (typeof req.body?.challenge !== 'string' || !/^[0-9a-f]{48}$/.test(req.body.challenge))
+        throw new Error('Invalid challenge.');
+      const projectRoot = publishingProject(req.body?.projectId);
+      const result = confirmBrainPublish(req.headers.authorization, req.params.sessionId,
+        req.body.challenge, dir, projectRoot, true);
+      res.json(result);
+    } catch { res.status(409).json({ error: 'Publish rejected; request a new preview.' }); }
+  });
+
+  router.post('/sessions/:sessionId/artifacts/import', raw({ type: 'application/octet-stream', limit: '5mb' }), (req, res) => {
+    try {
+      const { dir } = session(req.params.sessionId);
+      if (typeof req.query.name !== 'string' || !Buffer.isBuffer(req.body)) throw new Error('Expected a binary payload.');
+      res.status(201).json(importBrainBinaryArtifact(dir, req.query.name, req.body));
+    } catch { res.status(409).json({ error: 'Artifact upload rejected (type, size, path, quota or collision).' }); }
+  });
+
+  router.get('/sessions/:sessionId/download', (req, res) => {
+    try {
+      const { dir } = session(req.params.sessionId);
+      const relative = String(req.query.path ?? '');
+      if (!relative.startsWith('artifacts/') && !relative.startsWith('evidence/')) throw new Error('Only artifacts and evidence may be downloaded.');
+      const target = path.join(dir, validateDestination(relative));
+      assertNoSymlink(dir, target);
+      const stat = fs.lstatSync(target);
+      if (!stat.isFile() || stat.nlink > 1 || stat.size > 20 * 1024 * 1024) {
+        res.status(415).json({ error: 'Unsupported artifact download (20 MiB maximum).' }); return;
+      }
+      res.setHeader('Content-Type', 'application/octet-stream');
+      const filename = path.basename(target).replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 120) || 'brain-artifact';
+      res.setHeader('Content-Disposition', 'attachment; filename="' + filename + '"');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', 'no-store');
+      res.sendFile(target);
+    } catch { res.status(404).json({ error: 'Artifact unavailable.' }); }
   });
 
   router.get('/sessions/:sessionId/file', (req, res) => {

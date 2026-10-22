@@ -31,7 +31,11 @@ async function fixture() {
     schemaVersion: 1, ownerHash: 'different', sessionId: 'foreign', createdAt: '2026-10-22', updatedAt: '2026-10-22',
   }));
   const app = express();
-  app.use('/brain', createBrainExplorerRouter({ configRoot: () => root }));
+  app.use(express.json());
+  app.use('/brain', createBrainExplorerRouter({
+    configRoot: () => root,
+    authorizeProject: (id, destination) => id === 'allowed-project' && destination === path.join(root, 'allowed-project'),
+  }));
   const server = http.createServer(app);
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   cleanup.push(async () => new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())));
@@ -90,6 +94,109 @@ describe('Authenticated T-Line Brain Explorer read model', () => {
     expect(JSON.stringify(payload)).not.toContain('private');
     expect(JSON.stringify(payload)).not.toContain('foreign');
     expect(JSON.stringify(payload)).not.toContain('logPath');
+  });
+
+  it('previews scratch cleanup and retains artifacts, rejecting replay and changed content', async () => {
+    const { base, session } = await fixture();
+    const headers = { Authorization: 'Bearer test_operator_very_long_token', 'Content-Type': 'application/json' };
+    fs.writeFileSync(path.join(session, 'scratch', 'experiment.txt'), 'throwaway');
+    const storage = await (await fetch(base + '/sessions/sess_local/storage')).json();
+    expect(storage.areas.find((area: any) => area.area === 'scratch').bytes).toBe(9);
+    const prepareUrl = base + '/sessions/sess_local/cleanup/prepare';
+    const confirmUrl = base + '/sessions/sess_local/cleanup/confirm';
+    expect((await fetch(prepareUrl, { method: 'POST' })).status).toBe(409);
+    const prepared = await (await fetch(prepareUrl, { method: 'POST', headers })).json();
+    expect(prepared.preview.bytes).toBe(9);
+    expect(prepared.preview.retained).toContain('artifacts/');
+    fs.appendFileSync(path.join(session, 'scratch', 'experiment.txt'), 'more');
+    expect((await fetch(confirmUrl, { method: 'POST', headers, body: JSON.stringify({ challenge: prepared.challenge }) })).status).toBe(409);
+    const next = await (await fetch(prepareUrl, { method: 'POST', headers })).json();
+    const confirmed = await fetch(confirmUrl, { method: 'POST', headers, body: JSON.stringify({ challenge: next.challenge }) });
+    expect(confirmed.status).toBe(200);
+    expect(fs.existsSync(path.join(session, 'scratch', 'experiment.txt'))).toBe(false);
+    expect(fs.readFileSync(path.join(session, 'artifacts', 'result.md'), 'utf8')).toBe('safe brain artifact');
+    expect((await fetch(confirmUrl, { method: 'POST', headers, body: JSON.stringify({ challenge: next.challenge }) })).status).toBe(409);
+  });
+
+  it('downloads only bounded artifacts and publishes only to dual-registered local projects', async () => {
+    const { base, root, session } = await fixture();
+    const headers = { Authorization: 'Bearer test_operator_very_long_token', 'Content-Type': 'application/json' };
+    const allowed = path.join(root, 'allowed-project');
+    fs.mkdirSync(allowed);
+    fs.writeFileSync(path.join(root, 'projects.json'), JSON.stringify({
+      schemaVersion: 1, projects: [
+        { id: 'allowed-project', name: 'Allowed project', enabled: true, type: 'local', root: allowed },
+        { id: 'forbidden-project', name: 'Forbidden project', enabled: true, type: 'local', root },
+      ],
+    }));
+    const imageBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1, 2, 3]);
+    fs.writeFileSync(path.join(session, 'artifacts', 'image.png'), imageBytes);
+    const download = await fetch(base + '/sessions/sess_local/download?path=artifacts%2Fimage.png');
+    expect(download.status).toBe(200);
+    expect(download.headers.get('content-disposition')).toContain('attachment');
+    expect(download.headers.get('content-disposition')).toContain('image.png');
+    expect(Buffer.from(await download.arrayBuffer())).toEqual(imageBytes);
+    expect((await fetch(base + '/sessions/sess_local/download?path=scratch%2Fimage.png')).status).toBe(404);
+    expect((await fetch(base + '/sessions/sess_local/download?path=artifacts%2Fhuge.txt')).status).toBe(200);
+    const list = await (await fetch(base + '/projects')).json();
+    expect(list.projects.map((p: any) => p.id)).toEqual(['allowed-project']);
+    const prepare = base + '/sessions/sess_local/publish/prepare';
+    const confirm = base + '/sessions/sess_local/publish/confirm';
+    const body = { projectId: 'allowed-project', filePath: 'artifacts/image.png', destinationPath: 'assets/image.png' };
+    expect((await fetch(prepare, { method: 'POST', headers, body: JSON.stringify({ ...body, projectId: 'forbidden-project' }) })).status).toBe(409);
+    const prepared = await (await fetch(prepare, { method: 'POST', headers, body: JSON.stringify(body) })).json();
+    expect(prepared.preview.overwrite).toBe(false);
+    expect((await fetch(confirm, { method: 'POST', headers, body: JSON.stringify({ projectId: 'forbidden-project', challenge: prepared.challenge }) })).status).toBe(409);
+    const preparedAgain = await (await fetch(prepare, { method: 'POST', headers, body: JSON.stringify(body) })).json();
+    const confirmed = await fetch(confirm, { method: 'POST', headers, body: JSON.stringify({ projectId: 'allowed-project', challenge: preparedAgain.challenge }) });
+    expect(confirmed.status).toBe(200);
+    expect(fs.readFileSync(path.join(allowed, 'assets', 'image.png'))).toEqual(imageBytes);
+    expect((await fetch(prepare, { method: 'POST', headers, body: JSON.stringify(body) })).status).toBe(409);
+    expect((await fetch(prepare, { method: 'POST', headers, body: JSON.stringify({ ...body, destinationPath: '../escape.png' }) })).status).toBe(409);
+    expect((await fetch(prepare, { method: 'POST', headers, body: JSON.stringify({ ...body, destinationPath: 'reports/bad\nname.png' }) })).status).toBe(409);
+    expect((await fetch(confirm, { method: 'POST', headers, body: JSON.stringify({ projectId: 'allowed-project', challenge: preparedAgain.challenge }) })).status).toBe(409);
+  });
+
+  it('shows only aged scratch candidates without deleting them automatically', async () => {
+    const { base, session } = await fixture();
+    const oldFile = path.join(session, 'scratch', 'old.txt');
+    fs.writeFileSync(oldFile, 'keep until confirmed');
+    const oldTime = new Date(Date.now() - 40 * 86400_000);
+    fs.utimesSync(oldFile, oldTime, oldTime);
+    const preview = await (await fetch(base + '/retention/preview?days=30')).json();
+    expect(preview.dryRun).toBe(true);
+    expect(preview.autoDelete).toBe(false);
+    expect(preview.candidates.map((item: any) => item.sessionId)).toContain('sess_local');
+    expect(fs.readFileSync(oldFile, 'utf8')).toBe('keep until confirmed');
+    const shorter = await (await fetch(base + '/retention/preview?days=90')).json();
+    expect(shorter.candidates).toHaveLength(0);
+    expect((await fetch(base + '/retention/preview?days=1')).status).toBe(400);
+  });
+
+  it('refuses scratch cleanup while an AGY/Claude delegation is still active', async () => {
+    const { base, root, session } = await fixture();
+    const headers = { Authorization: 'Bearer test_operator_very_long_token', 'Content-Type': 'application/json' };
+    const jobId = 'clj_1792638000000_aabbccdd';
+    const shard = path.join(root, 'cli-bridge', 'delegations', 'jobs.d', jobId);
+    fs.mkdirSync(shard, { recursive: true });
+    const snapshot = path.join(shard, '1792638000000-0000000001-0123456789abcdef.json');
+    fs.writeFileSync(snapshot, JSON.stringify({ jobId, cwd: path.join(session, 'scratch'), status: 'running' }));
+    expect((await fetch(base + '/sessions/sess_local/cleanup/prepare', { method: 'POST', headers })).status).toBe(409);
+    fs.writeFileSync(snapshot, JSON.stringify({ jobId, cwd: path.join(session, 'scratch'), status: 'succeeded' }));
+    expect((await fetch(base + '/sessions/sess_local/cleanup/prepare', { method: 'POST', headers })).status).toBe(200);
+  });
+
+  it('imports bounded binary artifacts but never overwrites or accepts traversal', async () => {
+    const { base, session } = await fixture();
+    const imported = Buffer.from([0x89, 0x50, 0x4e, 0x47, 2, 3, 4]);
+    const endpoint = base + '/sessions/sess_local/artifacts/import?name=image-import.png';
+    const headers = { Authorization: 'Bearer test_operator_very_long_token', 'Content-Type': 'application/octet-stream' };
+    const response = await fetch(endpoint, { method: 'POST', headers, body: imported });
+    expect(response.status).toBe(201);
+    expect(fs.readFileSync(path.join(session, 'artifacts', 'image-import.png'))).toEqual(imported);
+    expect((await fetch(endpoint, { method: 'POST', headers, body: imported })).status).toBe(409);
+    expect((await fetch(base + '/sessions/sess_local/artifacts/import?name=..%2Fbad.png', { method: 'POST', headers, body: imported })).status).toBe(409);
+    expect((await fetch(base + '/sessions/sess_local/artifacts/import?name=run.exe', { method: 'POST', headers, body: imported })).status).toBe(409);
   });
 
   it('does not follow symlinks to outside files', async () => {
