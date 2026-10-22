@@ -23,6 +23,7 @@ const permitted = [
   /^\/projects\/motion-[a-f0-9]{20}(?:\/edits|\/render|\/revise)?$/,
   /^\/projects\/motion-[a-f0-9]{20}\/(?:presets|effects)$/,
   /^\/projects\/motion-[a-f0-9]{20}\/presets\/preview$/,
+  /^\/projects\/motion-[a-f0-9]{20}\/effects\/preview$/,
   /^\/projects\/motion-[a-f0-9]{20}\/quality$/,
   /^\/projects\/motion-[a-f0-9]{20}\/vision-review$/,
   /^\/projects\/motion-[a-f0-9]{20}\/vision-repair$/,
@@ -101,7 +102,22 @@ export function createMotionProxyRouter(options: MotionProxyOptions = {}): Route
       res.status(503).json({ error: 'Could not authorize the selected workspace in SuperAgent' });
       return;
     }
-    const targetPath = '/api/motion' + (route === '/' ? '' : route) + '?workspace=' + encodeURIComponent(workspace);
+    const targetQuery = new URLSearchParams({ workspace });
+    // Only forward documented catalogue filters; all other renderer query
+    // parameters are deliberately excluded from the upstream request.
+    if (req.method === 'GET' && route === '/effects') {
+      const allowed = ['limit', 'offset', 'category', 'q', 'targetKind', 'tag'] as const;
+      for (const key of allowed) {
+        const value = req.query[key];
+        if (value === undefined) continue;
+        if (typeof value !== 'string' || value.length > 120) {
+          res.status(400).json({ error: 'Invalid Motion effects filter: ' + key });
+          return;
+        }
+        targetQuery.set(key, value);
+      }
+    }
+    const targetPath = '/api/motion' + (route === '/' ? '' : route) + '?' + targetQuery.toString();
     const headers: Record<string, string> = {
       Authorization: 'Bearer ' + token,
       'x-workspace-path': workspace,

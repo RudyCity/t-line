@@ -125,12 +125,23 @@ describe('T-Line Motion proxy and service authentication', () => {
     expect((await fetch(base + '/presets?workspace=allowed-root')).status).toBe(200);
     expect((await fetch(base + '/presets/neon-impact?workspace=allowed-root')).status).toBe(200);
     expect((await fetch(base + '/effects?workspace=allowed-root')).status).toBe(200);
+    const paginated = await fetch(base + '/effects?limit=100&offset=100&category=entrance&q=slide&workspace=allowed-root');
+    expect(paginated.status).toBe(200);
+    const paginatedUrl = new URL('http://localhost' + (await paginated.json()).url);
+    expect(paginatedUrl.searchParams.get('offset')).toBe('100');
+    expect(paginatedUrl.searchParams.get('limit')).toBe('100');
+    expect(paginatedUrl.searchParams.get('category')).toBe('entrance');
+    expect(paginatedUrl.searchParams.get('q')).toBe('slide');
+    expect(paginatedUrl.searchParams.get('workspace')).toBe('allowed-root');
+    expect((await fetch(base + '/effects?limit[]=1&workspace=allowed-root')).status).toBe(400);
+    expect((await fetch(base + '/effects?limit=1&limit=2&workspace=allowed-root')).status).toBe(400);
     expect((await fetch(base + '/effects/entrance-fade-in?workspace=allowed-root')).status).toBe(200);
     expect((await fetch(base + '/presets?workspace=forbidden')).status).toBe(403);
     expect((await fetch(base + '/presets?workspace=allowed-root', { method: 'POST' })).status).toBe(404);
     expect((await fetch(base + '/projects/' + motionId + '/presets?workspace=allowed-root')).status).toBe(404);
     expect((await fetch(base + '/projects/' + motionId + '/presets/preview?workspace=allowed-root')).status).toBe(404);
-    for (const suffix of ['/presets', '/presets/preview', '/effects']) {
+    expect((await fetch(base + '/projects/' + motionId + '/effects/preview?workspace=allowed-root')).status).toBe(404);
+    for (const suffix of ['/presets', '/presets/preview', '/effects', '/effects/preview']) {
       const result = await fetch(base + '/projects/' + motionId + suffix + '?workspace=allowed-root', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ baseRevision: 1, presetId: 'neon-impact', targetLayerId: 'title' }),

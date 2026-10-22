@@ -8,6 +8,7 @@ vi.mock('../../services/motionStudioApi', () => ({
   motionStudioApi: {
     list: vi.fn(), inspect: vi.fn(), create: vi.fn(), edit: vi.fn(),
     presets: vi.fn(), presetInfo: vi.fn(), previewPreset: vi.fn(), applyPreset: vi.fn(),
+    effectsPage: vi.fn(), previewEffect: vi.fn(), applyEffect: vi.fn(),
     jobs: vi.fn(), capabilities: vi.fn(), quality: vi.fn(), loadFrameSnapshot: vi.fn(), visionReview: vi.fn(), visionRepair: vi.fn(), captions: vi.fn(), generate: vi.fn(), revise: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
   },
 }));
@@ -552,6 +553,63 @@ describe('Native T-Line Motion Studio editor', () => {
       'D:/projects/studio', id, 1, expect.objectContaining({ presetId: 'neon-impact' }),
     ));
     expect(await screen.findByText(/Applied neon-impact · revision 2/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Undo scene change' }));
+    await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 2,
+      [{ type: 'replace-composition', composition: expect.objectContaining({ layers: expect.any(Array) }) }],
+    ));
+    expect(await screen.findByText('Undo · revision 3')).toBeInTheDocument();
+  });
+
+  it('previews, applies and undoes one individual effect through the shared editor history', async () => {
+    vi.mocked(motionStudioApi.capabilities).mockResolvedValue({
+      capabilities: { aiPromptDirector: 'short-text-motion-preview', effectsEngine: true },
+    });
+    vi.mocked(motionStudioApi.effectsPage).mockResolvedValue({
+      count: 1, filteredTotal: 1, hasMore: false,
+      effects: [{
+        id: 'entrance-fade-in', name: 'Fade In', category: 'entrance',
+        description: 'Smooth fade', tags: [], targetKinds: ['text'],
+        parameters: {},
+      }],
+    });
+    vi.mocked(motionStudioApi.previewEffect).mockImplementation(async () => {
+      const value = fixture();
+      value.composition.layers[0].tracks.push({
+        property: 'x', keyframes: [{ frame: 0, value: 110 }, { frame: 45, value: 120 }],
+      });
+      return value;
+    });
+    vi.mocked(motionStudioApi.applyEffect).mockImplementation(async () => {
+      const value = fixture();
+      value.revision = 2;
+      value.composition.layers[0].tracks.push({
+        property: 'x', keyframes: [{ frame: 0, value: 110 }, { frame: 45, value: 120 }],
+      });
+      return value;
+    });
+    vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, revision, ops) => {
+      const value = fixture(); value.revision = revision + 1;
+      if (ops[0].type === 'replace-composition') value.composition = ops[0].composition;
+      return value;
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    await screen.findByText('1 effects');
+    fireEvent.click(screen.getByText(/Effects Library/));
+    fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+    await waitFor(() => expect(motionStudioApi.previewEffect).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 1,
+      expect.objectContaining({ effectId: 'entrance-fade-in', targetLayerId: 'title' }),
+    ));
+    expect(await screen.findByText(/PREVIEW \(not saved\)/)).toBeInTheDocument();
+    expect(motionStudioApi.applyEffect).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(motionStudioApi.applyEffect).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 1, expect.objectContaining({ effectId: 'entrance-fade-in' }),
+    ));
+    expect(await screen.findByText('Applied entrance-fade-in · revision 2')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Undo scene change' }));
     await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith(
       'D:/projects/studio', id, 2,

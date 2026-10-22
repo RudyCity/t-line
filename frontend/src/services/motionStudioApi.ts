@@ -37,6 +37,22 @@ export interface CompoundPresetApplication {
   presetId: string; targetLayerId: string; startFrame?: number;
   durationFrames?: number; intensity?: number;
 }
+export type MotionEffectCategory = 'entrance' | 'exit' | 'kinetic-typography' | 'camera' |
+  'transition' | 'background' | 'graphic-accent';
+export interface MotionEffectParameter {
+  name: string; type: 'number' | 'color' | 'boolean' | 'string' | 'enum';
+  description: string; default: string | number | boolean;
+  min?: number; max?: number; step?: number; choices?: Array<string | number>;
+}
+export interface MotionEffectCatalogItem {
+  id: string; name: string; description: string; category: MotionEffectCategory;
+  tags: string[]; targetKinds: Array<'text' | 'rect' | 'image' | 'scene'>;
+  parameters: Record<string, MotionEffectParameter>;
+}
+export interface MotionEffectApplication {
+  effectId: string; targetLayerId?: string; params?: Record<string, string | number | boolean>;
+  startFrame?: number; durationFrames?: number;
+}
 export type MotionEdit =
   | { type: 'set-text'; layerId: string; text: string }
   | { type: 'set-property'; layerId: string; property: MotionProperty; value: number }
@@ -48,7 +64,7 @@ export type MotionEdit =
   | { type: 'set-audio'; audio: MotionAudioTrack | null }
   | { type: 'set-audio-tracks'; audioTracks: MotionAudioTrack[] };
 export interface MotionCapabilities {
-  capabilities?: { compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean };
+  capabilities?: { effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean };
 }
 export interface MotionQualityIssue {
   severity: 'warning' | 'error'; code: string; scene: number; message: string;
@@ -132,7 +148,7 @@ function authHeaders(): Record<string, string> {
 }
 function url(workspace: string, path: string): string {
   if (!workspace.trim()) throw new Error('Select a local workspace first');
-  return base + path + '?workspace=' + encodeURIComponent(workspace);
+  return base + path + (path.includes('?') ? '&' : '?') + 'workspace=' + encodeURIComponent(workspace);
 }
 async function motionFetch(workspace: string, path: string, init?: RequestInit): Promise<Response> {
   const response = await fetch(url(workspace, path), {
@@ -193,6 +209,17 @@ export const motionStudioApi = {
   list: (workspace: string) => json<MotionProjectSummary[]>(workspace, '/projects'),
   inspect: (workspace: string, id: string) => json<MotionProject>(workspace, '/projects/' + assertId(id)),
   presets: (workspace: string) => json<{ count: number; presets: CompoundPreset[] }>(workspace, '/presets'),
+  effectsPage: (workspace: string, offset = 0) =>
+    json<{ effects: MotionEffectCatalogItem[]; count: number; filteredTotal: number; hasMore: boolean }>(
+      workspace, '/effects?limit=100&offset=' + Math.max(0, Math.floor(offset))),
+  previewEffect: (workspace: string, id: string, baseRevision: number, input: MotionEffectApplication) =>
+    json<MotionProject>(workspace, '/projects/' + assertId(id) + '/effects/preview', {
+      method: 'POST', body: JSON.stringify({ ...input, baseRevision }),
+    }),
+  applyEffect: (workspace: string, id: string, baseRevision: number, input: MotionEffectApplication) =>
+    json<MotionProject>(workspace, '/projects/' + assertId(id) + '/effects', {
+      method: 'POST', body: JSON.stringify({ ...input, baseRevision }),
+    }),
   presetInfo: (workspace: string, id: string) => {
     if (!/^[a-z][a-z0-9-]{1,63}$/.test(id)) throw new Error('Invalid compound preset ID');
     return json<CompoundPreset>(workspace, '/presets/' + id);
