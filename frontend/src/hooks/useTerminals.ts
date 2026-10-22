@@ -1,3 +1,4 @@
+import { MOTION_DISPLAY_NAME } from "../services/motionBranding";
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { wsManager } from '../services/websocket';
 import { normalizeShellType, getWorkspaceShell } from '../utils/shellUtils';
@@ -692,7 +693,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
       const id = 'motion-' + Date.now();
       setActiveTabId(id);
       onTerminalOpen?.();
-      return [...prev, { id, name: 'Motion Studio', type: 'motion', workspaceId }];
+      return [...prev, { id, name: MOTION_DISPLAY_NAME, type: 'motion', workspaceId }];
     });
   }, [onTerminalOpen]);
 

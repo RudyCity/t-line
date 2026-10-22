@@ -1,3 +1,4 @@
+import { MOTION_DISPLAY_NAME } from "../services/motionBranding";
 import React from 'react';
 import { FolderPlus } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
@@ -96,7 +97,7 @@ export function EmptyDashboard({
                 if (!panelWorkspace) setPanelWorkspace(target);
                 openMotionTab(target.id);
               }}
-            >Open Motion Studio</button>
+            >{`Open ${MOTION_DISPLAY_NAME}`}</button>
           )}
           {openAgentTab && (
             <button 

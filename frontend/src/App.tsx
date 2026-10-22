@@ -1,3 +1,4 @@
+import { MOTION_DISPLAY_NAME } from "./services/motionBranding";
 import { useState, useEffect, useMemo, Fragment, useRef, Suspense, lazy, type ComponentProps } from 'react';
 import { 
   Folder, 
@@ -2330,8 +2331,8 @@ export default function App() {
                     className="action-btn shrink-0"
                     onClick={() => openMotionTab(panelWorkspace?.id)}
                     disabled={!panelWorkspace?.id}
-                    title="Open Motion Studio"
-                    aria-label="Open Motion Studio"
+                    title={`Open ${MOTION_DISPLAY_NAME}`}
+                    aria-label={`Open ${MOTION_DISPLAY_NAME}`}
                     style={{ marginLeft: '6px' }}
                   >
                     <Clapperboard size={14} />

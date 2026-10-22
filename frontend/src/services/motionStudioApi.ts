@@ -1,3 +1,4 @@
+import { MOTION_DISPLAY_NAME } from "./motionBranding";
 /** Typed Motion Studio v1 contract. The SuperAgent server remains authoritative. */
 export type MotionProperty = 'x' | 'y' | 'opacity' | 'rotation';
 export type MotionEasing = 'linear' | 'step' | 'easeInOut' | 'easeOutBack';
@@ -55,7 +56,7 @@ export interface MotionBrandKit {
 export type MotionBrandKitInput = Omit<MotionBrandKit, 'revision' | 'updatedAt'>;
 export interface MotionTemplateSummary {
   id: string; name: string; category: string; description: string;
-  align: 'left' | 'center' | 'right'; tone: 'bold' | 'clean' | 'calm';
+  align: 'left' | 'center' | 'right'; tone: 'bold' | 'clean' | 'calm'; origin?: 'superagent-original';
 }
 export interface MotionTemplateInput { templateId: string; headline?: string; subtitle?: string }
 export interface MotionStoryboardScene {
@@ -201,7 +202,7 @@ function assertId(id: string, job = false): string {
 }
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem('token');
-  if (!token) throw new Error('Sign in to T-Line before opening Motion Studio');
+  if (!token) throw new Error('Sign in to T-Line before opening SuperAgent Visuals');
   return { Authorization: 'Bearer ' + token };
 }
 function url(workspace: string, path: string): string {
@@ -214,7 +215,7 @@ async function motionFetch(workspace: string, path: string, init?: RequestInit):
     headers: { ...authHeaders(), ...(init?.body ? { 'Content-Type': 'application/json' } : {}), ...init?.headers },
   });
   if (!response.ok) {
-    let message = 'Motion Studio HTTP ' + response.status;
+    let message = MOTION_DISPLAY_NAME + ' HTTP ' + response.status;
     try {
       const parsed = await response.json() as { error?: string };
       if (typeof parsed.error === 'string') message = parsed.error;

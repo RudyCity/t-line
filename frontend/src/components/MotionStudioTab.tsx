@@ -1,3 +1,4 @@
+import { MOTION_DISPLAY_NAME } from "../services/motionBranding";
 /* Hallmark · pre-emit critique: P4 H5 E4 S5 R5 V4
  * Motion Studio · production-editor layout, inherited T-Line tokens.
  * Scene is drawn with React SVG primitives only; user text is never evaluated as markup.
@@ -829,14 +830,14 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     });
   };
 
-  if (!workspacePath) return <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">Choose a local workspace to open Motion Studio.</div>;
+  if (!workspacePath) return <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">Choose a local workspace to open {MOTION_DISPLAY_NAME}.</div>;
   return (
-    <section className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-[var(--bg-main)] text-[var(--text-main)]" aria-label="Motion Studio">
+    <section className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-[var(--bg-main)] text-[var(--text-main)]" aria-label={MOTION_DISPLAY_NAME}>
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
           <Clapperboard size={20} className="text-[var(--color-primary)]" />
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold tracking-wide">Motion Studio <span className="text-[10px] font-normal text-[var(--text-muted)]">v1 · preview</span></h2>
+            <h2 className="text-sm font-semibold tracking-wide">{MOTION_DISPLAY_NAME} <span className="text-[10px] font-normal text-[var(--text-muted)]">v1 · preview</span></h2>
             <p className="max-w-[220px] truncate text-[10px] text-[var(--text-muted)]" title={workspacePath}>{workspacePath}</p>
           </div>
           {project && <span className="rounded border border-[var(--border-color)] px-2 py-1 font-mono text-[10px] text-[var(--text-muted)]">r{project.revision}</span>}
