@@ -66,6 +66,28 @@ describe('T-Line Brain Explorer UI', () => {
     expect(body.projectRoot).toBeUndefined();
   });
 
+  it('searches indexed Brain results and saves a summary only in the selected session', async () => {
+    const original = vi.mocked(fetch).getMockImplementation()!;
+    vi.mocked(fetch).mockImplementation(async (url: any, init: any) => {
+      if (String(url).includes('/search?q=generated')) return { ok: true, json: async () => ({
+        records: [{sessionId:'sess_local',path:'artifacts/report.md',summary:'Generated analysis',tags:['report'],bytes:13}],
+      }) } as any;
+      if (String(url).endsWith('/annotate')) return { ok: true, json: async () => ({ sessionId:'sess_local' }) } as any;
+      return original(url, init);
+    });
+    render(<SuperAgentBrainExplorer activeSessionId="sess_local" onClose={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText('artifacts/report.md')).toBeTruthy());
+    fireEvent.change(screen.getByRole('textbox', {name:'Search Brain artifacts'}), { target: { value:'generated' } });
+    fireEvent.click(screen.getByRole('button', {name:'Find'}));
+    await waitFor(() => expect(screen.getByText('Generated analysis')).toBeTruthy());
+    fireEvent.click(screen.getByText('Generated analysis'));
+    fireEvent.change(screen.getByRole('textbox', {name:'Brain artifact summary'}), {target:{value:'Human reviewed report'}});
+    fireEvent.click(screen.getByRole('button', {name:'Save annotation'}));
+    await waitFor(() => expect(vi.mocked(fetch).mock.calls.some(([url])=>String(url).endsWith('/annotate'))).toBe(true));
+    const args = vi.mocked(fetch).mock.calls.find(([url])=>String(url).endsWith('/annotate'))!;
+    expect(JSON.parse(String(args[1]?.body))).toMatchObject({filePath:'artifacts/report.md',summary:'Human reviewed report'});
+  });
+
   it('uploads an explicitly selected binary artifact to the current Brain only', async () => {
     const original = vi.mocked(fetch).getMockImplementation()!;
     vi.mocked(fetch).mockImplementation(async (url: any, init: any) => {

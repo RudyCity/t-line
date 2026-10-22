@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Brain, FileText, FolderOpen, RefreshCw, X, AlertTriangle, Clock3 } from 'lucide-react';
 import { getAuthHeader } from './SuperAgentConsoleUtils';
 
@@ -9,6 +9,7 @@ type StorageArea = { area: 'scratch' | 'artifacts' | 'evidence'; files: number; 
 type StorageInfo = { totalBytes: number; areas: StorageArea[] };
 type RegisteredProject = { id: string; name: string };
 type RetentionPreview = { days: number; autoDelete: false; dryRun: true; partial?: boolean; candidates: Array<{sessionId: string; scratchFiles: number; scratchBytes: number }> ; totalCandidateBytes: number };
+type BrainSearchRecord = { sessionId: string; path: string; summary: string; tags: string[]; bytes: number };
 
 async function readApi<T>(url: string, signal: AbortSignal): Promise<T> {
   const response = await fetch(url, { headers: getAuthHeader(), signal, cache: 'no-store' });
@@ -47,6 +48,10 @@ export function SuperAgentBrainExplorer({ activeSessionId, onClose }: {
   const [busyAction, setBusyAction] = useState<'cleanup' | 'publish' | 'download' | 'upload' | null>(null);
   const [notice, setNotice] = useState('');
   const [selectedFile, setSelectedFile] = useState('');
+  const pendingOpen = useRef<{ sessionId: string; path: string } | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<BrainSearchRecord[]>([]);
+  const [annotation, setAnnotation] = useState('');
   const [preview, setPreview] = useState('');
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
@@ -79,7 +84,14 @@ export function SuperAgentBrainExplorer({ activeSessionId, onClose }: {
     readApi<{ files: BrainFile[] }>(
       `/api/superagent/brain/sessions/${encodeURIComponent(selected)}/files`,
       ctrl.signal,
-    ).then(data => setFiles(data.files))
+    ).then(data => {
+      setFiles(data.files);
+      if (pendingOpen.current?.sessionId === selected &&
+        data.files.some(item => item.path === pendingOpen.current?.path)) {
+        setSelectedFile(pendingOpen.current.path);
+        pendingOpen.current = null;
+      }
+    })
       .catch(err => { if (!ctrl.signal.aborted) setError(err.message || 'Could not load Brain files.'); });
     readApi<{ jobs: BrainJob[] }>(
       `/api/superagent/brain/sessions/${encodeURIComponent(selected)}/jobs`,
@@ -127,6 +139,27 @@ export function SuperAgentBrainExplorer({ activeSessionId, onClose }: {
     return () => ctrl.abort();
   }, [retentionDays, refreshId]);
 
+  const searchBrain = async () => {
+    if (!searchTerm.trim()) { setSearchResults([]); return; }
+    setError('');
+    try {
+      const ctrl = new AbortController();
+      const res = await readApi<{ records: BrainSearchRecord[] }>(
+        `/api/superagent/brain/search?q=${encodeURIComponent(searchTerm.trim())}`, ctrl.signal);
+      setSearchResults(res.records);
+    } catch (e: any) { setError(e.message || 'Brain search unavailable.'); }
+  };
+  const annotate = async () => {
+    if (!selected || !selectedFile || !annotation.trim() || busyAction) return;
+    setError(''); setNotice('');
+    try {
+      await sendBrainAction(`/api/superagent/brain/sessions/${encodeURIComponent(selected)}/annotate`, {
+        filePath: selectedFile, summary: annotation.trim(), tags: [],
+      });
+      setNotice('Brain artifact indexed and available for search/RMemory candidate.');
+      setAnnotation('');
+    } catch (e: any) { setError(e.message || 'Annotation rejected.'); }
+  };
   const cleanScratch = async () => {
     if (!selected || busyAction) return;
     setBusyAction('cleanup'); setError(''); setNotice('');
@@ -158,18 +191,62 @@ export function SuperAgentBrainExplorer({ activeSessionId, onClose }: {
     if (!selected || busyAction) return;
     setBusyAction('upload'); setError(''); setNotice('');
     try {
-      if (file.size > 5 * 1024 * 1024 || file.size === 0) throw new Error('File must be between 1 byte and 5 MiB.');
-      const url = `/api/superagent/brain/sessions/${encodeURIComponent(selected)}/artifacts/import?name=${encodeURIComponent(file.name)}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { ...getAuthHeader(), 'Content-Type': 'application/octet-stream' },
-        body: file,
-      });
-      if (!response.ok) {
-        const info = await response.json().catch(() => null);
-        throw new Error(info?.error || 'Artifact import rejected (' + response.status + ')');
+      if (file.size > 20 * 1024 * 1024 || file.size === 0) throw new Error('File must be between 1 byte and 20 MiB.');
+      if (file.size <= 5 * 1024 * 1024) {
+        const url = `/api/superagent/brain/sessions/${encodeURIComponent(selected)}/artifacts/import?name=${encodeURIComponent(file.name)}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { ...getAuthHeader(), 'Content-Type': 'application/octet-stream' },
+          body: file,
+        });
+        if (!response.ok) {
+          const info = await response.json().catch(() => null);
+          throw new Error(info?.error || 'Artifact import rejected (' + response.status + ')');
+        }
+      } else {
+        // Large files transfer in bounded chunks and may be resumed after a page reload.
+        const hashBytes = new Uint8Array(await crypto.subtle.digest('SHA-256', await file.arrayBuffer()));
+        const sha256 = Array.from(hashBytes).map(byte => byte.toString(16).padStart(2, '0')).join('');
+        const sessionBase = `/api/superagent/brain/sessions/${encodeURIComponent(selected)}`;
+        const resumeKey = 'tline:brain:upload:' + selected + ':' + file.name;
+        let transferId = '';
+        let offset = 0;
+        const saved = localStorage.getItem(resumeKey);
+        if (saved) {
+          try {
+            const record = JSON.parse(saved);
+            if (record.sha256 === sha256 && record.totalBytes === file.size && typeof record.transferId === 'string') {
+              const current = await fetch(`${sessionBase}/transfers/${encodeURIComponent(record.transferId)}`, { headers: getAuthHeader() });
+              if (current.ok) {
+                const status = await current.json();
+                if (status.sha256 === sha256 && status.totalBytes === file.size && Number.isSafeInteger(status.offset)) {
+                  transferId = record.transferId; offset = status.offset;
+                }
+              }
+            }
+          } catch { /* Explicit new transfer is safer than trusting corrupt resume data. */ }
+        }
+        if (!transferId) {
+          const started = await sendBrainAction<{ transferId: string; offset: number }>(sessionBase + '/transfers', {
+            filename: file.name, totalBytes: file.size, sha256,
+          });
+          transferId = started.transferId;
+          localStorage.setItem(resumeKey, JSON.stringify({ transferId, sha256, totalBytes: file.size }));
+        }
+        while (offset < file.size) {
+          const chunk = file.slice(offset, Math.min(offset + 128 * 1024, file.size));
+          const response = await fetch(`${sessionBase}/transfers/${encodeURIComponent(transferId)}/chunk?offset=${offset}`, {
+            method: 'POST', headers: { ...getAuthHeader(), 'Content-Type': 'application/octet-stream' }, body: chunk,
+          });
+          if (!response.ok) throw new Error('Upload paused at byte ' + offset + '. Select the same file again to resume.');
+          const progress = await response.json();
+          if (!Number.isSafeInteger(progress.offset) || progress.offset <= offset) throw new Error('Invalid upload progress.');
+          offset = progress.offset;
+        }
+        await sendBrainAction(`${sessionBase}/transfers/${encodeURIComponent(transferId)}/finish`);
+        localStorage.removeItem(resumeKey);
       }
-      setNotice('Artifact imported into current Brain session.');
+      setNotice('Artifact imported into the current Brain session.');
       refresh();
     } catch (e: any) { setError(e.message || 'Artifact import failed.'); }
     finally { setBusyAction(null); }
@@ -215,6 +292,25 @@ export function SuperAgentBrainExplorer({ activeSessionId, onClose }: {
       <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[minmax(180px,0.75fr)_minmax(0,1fr)]">
         <div className="border-r border-[var(--border-color)] overflow-y-auto min-h-0">
           <div className="uppercase text-[10px] tracking-wide text-[var(--text-muted)] font-medium p-3 border-b border-[var(--border-color)]">Sessions {pending ? '…' : `(${sessions.length})`}</div>
+          <div className="p-3 text-xs border-b border-[var(--border-color)]">
+            <label className="block text-[var(--text-muted)] mb-1" htmlFor="brain-search">Search indexed artifacts</label>
+            <form onSubmit={e => { e.preventDefault(); void searchBrain(); }} className="flex gap-1">
+              <input id="brain-search" aria-label="Search Brain artifacts" value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                placeholder="Search summaries/tags"
+                className="min-w-0 flex-1 p-1 rounded border border-[var(--border-color)] bg-[var(--bg-card)]" />
+              <button type="submit" className="px-2 rounded border border-[var(--border-color)]">Find</button>
+            </form>
+            {searchResults.map(hit => <button type="button" key={hit.sessionId + ":" + hit.path}
+              onClick={() => {
+                if (selected === hit.sessionId) setSelectedFile(hit.path);
+                else { pendingOpen.current = { sessionId: hit.sessionId, path: hit.path }; setSelected(hit.sessionId); }
+              }}
+              className="text-left block w-full p-1 mt-1 text-[11px] rounded bg-[var(--bg-card)]">
+              <span className="font-mono block break-all">{hit.path}</span>
+              <span className="text-[var(--text-muted)]">{hit.summary.slice(0, 130)}</span>
+            </button>)}
+          </div>
           <div className="p-3 text-xs border-b border-[var(--border-color)]">
             <label className="flex flex-wrap items-center gap-2">
               Retention preview
@@ -276,7 +372,7 @@ export function SuperAgentBrainExplorer({ activeSessionId, onClose }: {
           <div className="p-3 text-xs border-b border-[var(--border-color)] flex flex-wrap gap-2 justify-between items-center">
             <span className="font-medium">Files {files.length > 0 ? `(${files.length})` : ''}</span>
             <label className="cursor-pointer border border-[var(--border-color)] px-2 py-1 rounded hover:border-[var(--color-primary)]">
-              {busyAction === 'upload' ? 'Importing…' : 'Import artifact (5 MiB max)'}
+              {busyAction === 'upload' ? 'Importing…' : 'Import artifact (20 MiB, resumable)'}
               <input aria-label="Import Brain artifact" type="file" className="sr-only" disabled={!selected || !!busyAction}
                 accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.zip,.mp4,.webm,.wav,.mp3,.csv,.json,.txt"
                 onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; if (file) void importArtifact(file); }} />
@@ -299,6 +395,18 @@ export function SuperAgentBrainExplorer({ activeSessionId, onClose }: {
               className="px-2 py-1 mb-3 text-[11px] rounded bg-[var(--bg-card)] border border-[var(--border-color)] disabled:opacity-50">
               {busyAction === 'download' ? 'Downloading…' : 'Download (max 20 MiB)'}
             </button>}
+            {(selectedFile.startsWith('artifacts/') || selectedFile.startsWith('evidence/')) && (
+              <div className="flex gap-2 mb-3 items-end flex-wrap">
+                <label className="text-[11px] text-[var(--text-muted)]">
+                  Artifact summary (search / RMemory candidate)
+                  <input aria-label="Brain artifact summary" value={annotation} onChange={e => setAnnotation(e.target.value)}
+                    placeholder="Brief verified result, not raw file contents"
+                    className="block w-56 mt-1 p-1 rounded bg-[var(--bg-card)] border border-[var(--border-color)]" />
+                </label>
+                <button type="button" disabled={!annotation.trim()} onClick={annotate}
+                  className="px-2 py-1 rounded border border-[var(--border-color)] text-[11px] disabled:opacity-40">Save annotation</button>
+              </div>
+            )}
             {selectedFile.startsWith('artifacts/') && (
               <div className="flex flex-wrap items-end gap-2 mb-3">
                 <label className="text-[11px] text-[var(--text-muted)]">

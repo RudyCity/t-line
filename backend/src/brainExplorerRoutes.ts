@@ -13,6 +13,8 @@ import {
   brainStorageUsage, prepareBrainCleanup, confirmBrainCleanup, scanBrainArea,
   prepareBrainPublish, confirmBrainPublish, validateDestination, assertNoSymlink, importBrainBinaryArtifact,
 } from './brainStorageManager';
+import { beginBrainTransfer, inspectBrainTransfer, appendBrainTransfer, finishBrainTransfer, abortBrainTransfer } from './brainTransfers';
+import { annotateBrainArtifact, searchBrainArtifacts, brainResumeContext, brainRMemoryCandidate } from './brainIndex';
 
 const SESSION_ID = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$/;
 const MAX_LIST = 100;
@@ -209,6 +211,68 @@ export function createBrainExplorerRouter(options: ReadOptions = {}): Router {
         partial: scanned > 200 || candidates.length >= MAX_LIST,
         totalCandidateBytes: candidates.reduce((sum, entry) => sum + entry.scratchBytes, 0) });
     } catch { res.status(503).json({ error: 'Retention preview unavailable.' }); }
+  });
+
+  router.get('/search', (req, res) => {
+    try {
+      if (typeof req.query.q !== 'string' || !req.query.q.trim()) throw new Error('Search query required.');
+      res.json({ records: searchBrainArtifacts('local-cli', req.query.q, root()), owner: 'local-cli' });
+    } catch { res.status(400).json({ error: 'Invalid Brain search.' }); }
+  });
+  router.get('/sessions/:sessionId/resume', (req, res) => {
+    try {
+      session(req.params.sessionId);
+      res.json(brainResumeContext('local-cli', req.params.sessionId, root()));
+    } catch { res.status(404).json({ error: 'Brain session resume unavailable.' }); }
+  });
+  router.post('/sessions/:sessionId/annotate', (req, res) => {
+    try {
+      session(req.params.sessionId);
+      res.json(annotateBrainArtifact('local-cli', req.params.sessionId,
+        req.body?.filePath, req.body?.summary, req.body?.tags || [], root()));
+    } catch { res.status(409).json({ error: 'Brain annotation rejected.' }); }
+  });
+  router.get('/sessions/:sessionId/memory-candidate', (req, res) => {
+    try {
+      session(req.params.sessionId);
+      res.json(brainRMemoryCandidate('local-cli', req.params.sessionId, String(req.query.path || ''), root()));
+    } catch { res.status(404).json({ error: 'No verified Brain memory candidate available.' }); }
+  });
+
+  router.post('/sessions/:sessionId/transfers', (req, res) => {
+    try {
+      session(req.params.sessionId);
+      res.status(201).json(beginBrainTransfer('local-cli', req.params.sessionId,
+        req.body?.filename, req.body?.totalBytes, req.body?.sha256, root()));
+    } catch { res.status(409).json({ error: 'Brain transfer initialization rejected.' }); }
+  });
+  router.get('/sessions/:sessionId/transfers/:transferId', (req, res) => {
+    try {
+      session(req.params.sessionId);
+      res.json(inspectBrainTransfer('local-cli', req.params.sessionId, req.params.transferId, root()));
+    } catch { res.status(404).json({ error: 'Brain transfer not available.' }); }
+  });
+  router.post('/sessions/:sessionId/transfers/:transferId/chunk',
+    raw({ type: 'application/octet-stream', limit: '256kb' }), (req, res) => {
+    try {
+      session(req.params.sessionId);
+      if (!Buffer.isBuffer(req.body) || !req.body.length) throw new Error('Expected a nonempty binary chunk.');
+      const offset = Number(req.query.offset);
+      res.json(appendBrainTransfer('local-cli', req.params.sessionId, req.params.transferId,
+        offset, req.body.toString('base64'), root()));
+    } catch { res.status(409).json({ error: 'Brain transfer chunk rejected; check current offset.' }); }
+  });
+  router.post('/sessions/:sessionId/transfers/:transferId/finish', (req, res) => {
+    try {
+      session(req.params.sessionId);
+      res.json(finishBrainTransfer('local-cli', req.params.sessionId, req.params.transferId, root()));
+    } catch { res.status(409).json({ error: 'Brain transfer is incomplete or checksum mismatch.' }); }
+  });
+  router.delete('/sessions/:sessionId/transfers/:transferId', (req, res) => {
+    try {
+      session(req.params.sessionId);
+      res.json(abortBrainTransfer('local-cli', req.params.sessionId, req.params.transferId, root()));
+    } catch { res.status(404).json({ error: 'Brain transfer not available.' }); }
   });
 
   router.get('/sessions/:sessionId/storage', (req, res) => {

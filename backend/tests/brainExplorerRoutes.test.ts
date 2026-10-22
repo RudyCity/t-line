@@ -199,6 +199,49 @@ describe('Authenticated T-Line Brain Explorer read model', () => {
     expect((await fetch(base + '/sessions/sess_local/artifacts/import?name=run.exe', { method: 'POST', headers, body: imported })).status).toBe(409);
   });
 
+  it('supports resumable 20 MiB-capable chunk uploads and indexed session resume', async () => {
+    const { base, session } = await fixture();
+    const body = Buffer.alloc(310000, 0x7a);
+    const sha256 = crypto.createHash('sha256').update(body).digest('hex');
+    const start = await fetch(base + '/sessions/sess_local/transfers', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ filename:'resumable.zip', totalBytes:body.length, sha256 }),
+    });
+    expect(start.status).toBe(201);
+    const started = await start.json();
+    expect(started.transferId).toMatch(/^btx_/);
+    const chunk = async (offset: number, bytes: Buffer) => fetch(
+      base + '/sessions/sess_local/transfers/' + started.transferId + '/chunk?offset=' + offset,
+      { method:'POST', headers:{'Content-Type':'application/octet-stream'}, body:bytes },
+    );
+    expect((await chunk(0, body.subarray(0,150000))).status).toBe(200);
+    expect((await chunk(0, body.subarray(0,100))).status).toBe(409);
+    const status = await (await fetch(base + '/sessions/sess_local/transfers/' + started.transferId)).json();
+    expect(status.offset).toBe(150000);
+    expect((await chunk(150000, body.subarray(150000,300000))).status).toBe(200);
+    expect((await chunk(300000, body.subarray(300000))).status).toBe(200);
+    const finish = await fetch(base + '/sessions/sess_local/transfers/' + started.transferId + '/finish', {method:'POST'});
+    expect(finish.status).toBe(200);
+    expect(fs.readFileSync(path.join(session,'artifacts','resumable.zip'))).toEqual(body);
+    const annotated = await fetch(base + '/sessions/sess_local/annotate', {
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({filePath:'artifacts/resumable.zip',summary:'Verified generated archive',tags:['generated']}),
+    });
+    expect(annotated.status).toBe(200);
+    const searched = await (await fetch(base + '/search?q=generated')).json();
+    expect(searched.records.map((v:any)=>v.path)).toContain('artifacts/resumable.zip');
+    const resume = await (await fetch(base + '/sessions/sess_local/resume')).json();
+    expect(resume.records[0].summary).toBe('Verified generated archive');
+    const candidate = await (await fetch(base + '/sessions/sess_local/memory-candidate?path=artifacts%2Fresumable.zip')).json();
+    expect(candidate.requiresExplicitRMemorySave).toBe(true);
+    expect(candidate.content).toContain('Verified generated archive');
+    fs.writeFileSync(path.join(session,'artifacts','resumable.zip'),'modified');
+    const changed = await fetch(base + '/sessions/sess_local/memory-candidate?path=artifacts%2Fresumable.zip');
+    expect(changed.status).toBe(404);
+    const recentSearch = await (await fetch(base + '/search?q=generated')).json();
+    expect(recentSearch.records).toHaveLength(0);
+  });
+
   it('does not follow symlinks to outside files', async () => {
     const { base, session, root } = await fixture();
     const link = path.join(session, 'artifacts', 'external');

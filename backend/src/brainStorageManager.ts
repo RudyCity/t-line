@@ -1,3 +1,5 @@
+// GENERATED FROM SuperAgent src/core/brain/brainStorageManager.ts; DO NOT EDIT.
+// Regenerate using bun scripts/sync-brain-runtime.ts
 /**
  * Explicit two-step local Brain storage mutations. Does not accept arbitrary
  * filesystem roots, avoids symlink traversal, and never overwrites a project file.
@@ -5,6 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { getRootConfigDir, inspectBrainSession, listBrainSessions } from './brainRuntimeCompat';
 
 const MAX_SCAN_ENTRIES = 5000;
 const MAX_BINARY_BYTES = 20 * 1024 * 1024;
@@ -62,6 +65,8 @@ export function scanBrainArea(dir: string, area: 'scratch' | 'artifacts' | 'evid
         bytes += stat.size;
         latestModified = Math.max(latestModified, stat.mtimeMs);
         fingerprint.update(path.relative(directory, full) + ':' + stat.size + ':' + stat.mtimeMs + ':' + stat.ctimeMs + '\n');
+      } else {
+        throw new Error('Unsupported Brain filesystem entry; refusing storage operation.');
       }
     }
   };
@@ -72,6 +77,30 @@ export function scanBrainArea(dir: string, area: 'scratch' | 'artifacts' | 'evid
 export function brainStorageUsage(dir: string) {
   const areas = (['scratch', 'artifacts', 'evidence'] as const).map(a => scanBrainArea(dir, a));
   return { areas: areas.map(({ fingerprint, ...safe }) => safe), totalBytes: areas.reduce((sum, a) => sum + a.bytes, 0) };
+}
+
+/** Dry-run retention overview, scoped to the supplied Brain principal. */
+export function previewBrainRetention(principal: string, requestedDays: number = 30, configRoot = getRootConfigDir()) {
+  if (![7, 30, 90].includes(requestedDays)) throw new Error('Retention preview supports only 7, 30 or 90 days.');
+  const sessions = listBrainSessions(principal, configRoot);
+  const cutoff = Date.now() - requestedDays * 86_400_000;
+  const candidates: Array<{ sessionId: string; scratchFiles: number; scratchBytes: number; lastModifiedAt: string | null }> = [];
+  for (const item of sessions) {
+    try {
+      const dir = inspectBrainSession(principal, item.sessionId, configRoot).path;
+      const area = scanBrainArea(dir, 'scratch');
+      if (area.files && area.lastModifiedAt && Date.parse(area.lastModifiedAt) < cutoff) {
+        candidates.push({
+          sessionId: item.sessionId, scratchFiles: area.files, scratchBytes: area.bytes,
+          lastModifiedAt: area.lastModifiedAt,
+        });
+      }
+    } catch { /* Uninspectable sessions are never silently removed. */ }
+  }
+  return {
+    days: requestedDays, dryRun: true, autoDelete: false, candidates, partial: sessions.length >= 100,
+    totalCandidateBytes: candidates.reduce((sum, c) => sum + c.scratchBytes, 0),
+  };
 }
 
 function claimOwner(authorization: unknown): string {
@@ -173,7 +202,8 @@ export function importBrainBinaryArtifact(dir: string, fileName: string, content
   assertNoSymlink(dir, destination);
   const fd = fs.openSync(destination, 'wx', 0o600);
   try { fs.writeFileSync(fd, content); }
-  finally { fs.closeSync(fd); }
+  catch (error) { fs.closeSync(fd); try { fs.unlinkSync(destination); } catch {} throw error; }
+  fs.closeSync(fd);
   return { success: true, filePath: 'artifacts/' + fileName, bytes: content.length,
     sha256: crypto.createHash('sha256').update(content).digest('hex') };
 }
@@ -220,14 +250,20 @@ export function confirmBrainPublish(
   const source = path.join(dir, validateDestination(entry.filePath!));
   assertNoSymlink(dir, source);
   const stat = fs.lstatSync(source);
-  if (!stat.isFile() || stat.nlink > 1 || stat.size > MAX_BINARY_BYTES ||
-    crypto.createHash('sha256').update(fs.readFileSync(source)).digest('hex') !== entry.fingerprint) {
+  if (!stat.isFile() || stat.nlink > 1 || stat.size > MAX_BINARY_BYTES) throw new Error('Artifact changed since preview.');
+  // Capture one immutable payload. Never hash one version and then copy a second
+  // version if another process edits the source during publication.
+  const bytes = fs.readFileSync(source);
+  if (bytes.length !== entry.bytes || crypto.createHash('sha256').update(bytes).digest('hex') !== entry.fingerprint) {
     throw new Error('Artifact changed since preview.');
   }
   const target = path.join(canonicalRoot, validateDestination(entry.destinationPath!));
   assertNoSymlink(canonicalRoot, target);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   assertNoSymlink(canonicalRoot, target);
-  fs.copyFileSync(source, target, fs.constants.COPYFILE_EXCL);
-  return { success: true, sessionId, destinationPath: entry.destinationPath, bytes: stat.size, sha256: entry.fingerprint };
+  const fd = fs.openSync(target, 'wx', 0o600);
+  try { fs.writeFileSync(fd, bytes); fs.fsyncSync(fd); }
+  catch (error) { fs.closeSync(fd); try { fs.unlinkSync(target); } catch {} throw error; }
+  fs.closeSync(fd);
+  return { success: true, sessionId, destinationPath: entry.destinationPath, bytes: bytes.length, sha256: entry.fingerprint };
 }
