@@ -41,7 +41,7 @@ jobs:
         run: bun --bun x vitest run backend/tests/brainExplorerRoutes.test.ts
 
       - name: Brain Explorer UI regression
-        run: bun --bun x vitest run --config vite.config.ts src/components/__tests__/SuperAgentBrainExplorer.test.tsx src/components/__tests__/SuperAgentBrainTaskPanel.test.tsx
+        run: bun --bun x vitest run --config vite.config.ts src/components/__tests__/SuperAgentBrainExplorer.test.tsx src/components/__tests__/SuperAgentBrainTaskPanel.test.tsx src/components/__tests__/SuperAgentCliParity.test.ts
         working-directory: frontend
 
       - name: Build Frontend

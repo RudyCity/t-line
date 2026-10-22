@@ -18,4 +18,20 @@ for (const name of expected) {
   const hash = crypto.createHash('sha256').update(fs.readFileSync(file,'utf8').replace(/\r\n/g,'\n')).digest('hex');
   if (hash !== reference) throw new Error('T-Line Brain module drift: ' + name + '; regenerate from SuperAgent Core.');
 }
-console.log('T-Line Brain generated source matches the pinned canonical manifest.');
+const suggestionsPath = path.resolve(__dirname, '../frontend/src/generated/brainCommandSuggestions.json');
+const suggestionsRaw = fs.readFileSync(suggestionsPath,'utf8').replace(/\r\n/g,'\n');
+const suggestionsHash = crypto.createHash('sha256').update(suggestionsRaw).digest('hex');
+if (!/^[a-f0-9]{64}$/.test(data.commandSuggestionsSha256 || '') ||
+    suggestionsHash !== data.commandSuggestionsSha256) {
+  throw new Error('T-Line Brain command suggestions drifted from the pinned SuperAgent catalog.');
+}
+const commandTree = JSON.parse(suggestionsRaw);
+if (commandTree.schemaVersion !== 1 || !Array.isArray(commandTree.commands) ||
+    commandTree.commands.length < 25 ||
+    commandTree.commands.some(item =>
+      typeof item.command !== 'string' || !item.command.startsWith('/brain ') ||
+      typeof item.description !== 'string' || !item.description.trim()) ||
+    new Set(commandTree.commands.map(item=>item.command)).size !== commandTree.commands.length) {
+  throw new Error('Invalid generated Brain command suggestions.');
+}
+console.log('T-Line Brain generated source and subcommand suggestions match the pinned canonical manifest.');

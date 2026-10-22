@@ -1,7 +1,24 @@
 import { describe, expect, it, vi } from 'vitest';
-import { CLI_COMMAND_PARITY, getCliOnlySuggestions, getSlashCommands, isCliOnlyCommand } from '../SuperAgentCommands';
+import { CLI_COMMAND_PARITY, BRAIN_CLI_SUBCOMMANDS, getCliOnlySuggestions, getSlashCommands, getSubCommands, isCliOnlyCommand } from '../SuperAgentCommands';
 
 describe('T-Line / SuperAgent CLI command parity guard', () => {
+  it('uses the pinned Brain CLI catalog for nested suggestions without pretending desktop can execute them',()=>{
+    const context={workspace:'D:/work',agentMode:'single' as const};
+    const brain=getSubCommands('/brain',context);
+    const scratch=getSubCommands('/scratch',context);
+    expect(brain).toHaveLength(BRAIN_CLI_SUBCOMMANDS.length);
+    expect(brain).toEqual(expect.arrayContaining([
+      expect.objectContaining({command:'/brain task.reconcile',description:expect.stringContaining('CLI-only')}),
+      expect.objectContaining({command:'/brain artifact.recover'}),
+      expect.objectContaining({command:'/brain delegate.start agy'}),
+      expect.objectContaining({command:'/brain clean.confirm'}),
+    ]));
+    expect(scratch.some(s=>s.command==='/scratch task.reconcile')).toBe(true);
+    expect(brain.some(s=>s.command.includes('credential.rotate'))).toBe(false);
+    expect(isCliOnlyCommand('/brain task.reconcile')).toBe(true);
+    expect(getCliOnlySuggestions(()=>{}).some(s=>s.command==='/brain')).toBe(false);
+  });
+
   it('contains source-inferred CLI commands missing from T-Line UI', () => {
     expect(CLI_COMMAND_PARITY.length).toBeGreaterThan(50);
     for (const name of ['/daemon', '/gateway', '/selfdev', '/muse', '/tools']) {

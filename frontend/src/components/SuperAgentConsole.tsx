@@ -611,6 +611,18 @@ export function SuperAgentConsole({
         setMessages(prev => [...prev, { role: 'system', text: output }]);
         return;
       }
+      if ((cmdName.toLowerCase() === '/brain' || cmdName.toLowerCase() === '/scratch') && !cmdArgs) {
+        setInput('');
+        setShowBrainExplorer(true);
+        return;
+      }
+      if (cmdName.toLowerCase() === '/brain' || cmdName.toLowerCase() === '/scratch') {
+        setInput('');
+        setMessages(prev => [...prev, {
+          role:'system', text:'Brain subcommands are CLI-only in the desktop console. Use the SuperAgent CLI, or open Brain Explorer for native task, storage, and credential controls. No command was executed.'
+        }]);
+        return;
+      }
       if (isCliOnlyCommand(cmdName)) {
         setInput('');
         setMessages(prev => [...prev, {
@@ -726,6 +738,24 @@ export function SuperAgentConsole({
         text: `${command} is currently CLI-only. Open SuperAgent CLI in a terminal; T-Line has no desktop execution adapter for it yet.`
       }]);
     }),
+    {
+      command: '/brain',
+      argsHelp: '[subcommand]',
+      description: 'Open Brain Explorer. Nested /brain actions are CLI-only.',
+      action: (args?: string) => {
+        if (!args) setShowBrainExplorer(true);
+        else setMessages(prev => [...prev, {role:'system',text:'Nested /brain commands require SuperAgent CLI. Open Brain Explorer for native desktop task and artifact controls.'}]);
+      },
+    },
+    {
+      command: '/scratch',
+      argsHelp: '[subcommand]',
+      description: 'Brain Explorer alias. Nested /scratch actions are CLI-only.',
+      action: (args?: string) => {
+        if (!args) setShowBrainExplorer(true);
+        else setMessages(prev => [...prev, {role:'system',text:'Nested /scratch commands require SuperAgent CLI. Open Brain Explorer for native desktop controls.'}]);
+      },
+    },
     {
       command: '/parity',
       description: 'Inspect live SuperAgent runtime capabilities (read-only)',

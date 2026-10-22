@@ -8,5 +8,6 @@
     "brainStorageManager.ts": "0ce4d41c2159ed3f5190a4d43b16e246b3a9364d3ee00a7498789c8cdad73c9a",
     "brainTransfers.ts": "576948922a9af385b58de813908992418fdd0ec1f6c22f797a6f6007d0a615f3",
     "brainIndex.ts": "dd7787cc76267186439066306a9bacec6c71c7d9854f535086a28a4fb1c3b9c3"
-  }
+  },
+  "commandSuggestionsSha256": "c6388f6294804c3aa64c2f5693c113fce49fa9d0cfc1cc6add73efb56d31da21"
 }

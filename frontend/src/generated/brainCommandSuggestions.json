@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "commands": [
+    {
+      "command": "/brain help",
+      "description": "Display all Brain CLI actions, including nested task, job and recovery operations."
+    },
+    {
+      "command": "/brain create",
+      "description": "Session Brain — create"
+    },
+    {
+      "command": "/brain list",
+      "description": "Session Brain — list"
+    },
+    {
+      "command": "/brain inspect",
+      "description": "Session Brain — inspect"
+    },
+    {
+      "command": "/brain files",
+      "description": "Session Brain — files"
+    },
+    {
+      "command": "/brain metrics",
+      "description": "Session Brain — metrics"
+    },
+    {
+      "command": "/brain storage",
+      "description": "Session Brain — storage"
+    },
+    {
+      "command": "/brain retention",
+      "description": "Session Brain — retention"
+    },
+    {
+      "command": "/brain resume",
+      "description": "Session Brain — resume"
+    },
+    {
+      "command": "/brain search",
+      "description": "Session Brain — search"
+    },
+    {
+      "command": "/brain annotate",
+      "description": "Session Brain — annotate"
+    },
+    {
+      "command": "/brain promote",
+      "description": "Promote one verified output artifact from a delegation."
+    },
+    {
+      "command": "/brain remember",
+      "description": "Explicitly save a verified artifact candidate to project RMemory."
+    },
+    {
+      "command": "/brain clean",
+      "description": "Prepare a guarded scratch cleanup challenge; no immediate deletion."
+    },
+    {
+      "command": "/brain clean.confirm",
+      "description": "Confirm an existing cleanup challenge explicitly."
+    },
+    {
+      "command": "/brain task.create",
+      "description": "Create a session-scoped multi-agent task."
+    },
+    {
+      "command": "/brain task.list",
+      "description": "List tasks for the current Brain session."
+    },
+    {
+      "command": "/brain task.claim",
+      "description": "Claim task ownership for an agent ID (local CLI operator)."
+    },
+    {
+      "command": "/brain task.resume",
+      "description": "Read saved task checkpoints and handoffs."
+    },
+    {
+      "command": "/brain task.checkpoint",
+      "description": "Save a bounded task checkpoint."
+    },
+    {
+      "command": "/brain task.transfer",
+      "description": "Transfer task ownership to another member."
+    },
+    {
+      "command": "/brain task.complete",
+      "description": "Mark an explicitly claimed task completed."
+    },
+    {
+      "command": "/brain task.reconcile",
+      "description": "Reconcile persisted CLI Bridge jobs safely; never retry work implicitly."
+    },
+    {
+      "command": "/brain artifact.recover",
+      "description": "Recover an interrupted journaled artifact batch without deleting unrelated files."
+    },
+    {
+      "command": "/brain delegate.start agy",
+      "description": "Start an AGY delegation in a newly isolated Brain task scratch."
+    },
+    {
+      "command": "/brain delegate.start claude",
+      "description": "Start a Claude delegation in a newly isolated Brain task scratch."
+    },
+    {
+      "command": "/brain delegate.start codex",
+      "description": "Start a Codex delegation in a newly isolated Brain task scratch."
+    },
+    {
+      "command": "/brain jobs",
+      "description": "List persisted delegated CLI jobs."
+    },
+    {
+      "command": "/brain get",
+      "description": "Inspect a delegated job by ID."
+    },
+    {
+      "command": "/brain tail",
+      "description": "Show recent output of a delegated job."
+    },
+    {
+      "command": "/brain cancel",
+      "description": "Request cancellation of a delegated job."
+    }
+  ]
+}

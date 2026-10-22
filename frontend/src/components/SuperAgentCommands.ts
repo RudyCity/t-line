@@ -1,4 +1,5 @@
 import cliCatalog from '../generated/superagentCliCatalog.json';
+import brainCliCatalog from '../generated/brainCommandSuggestions.json';
 
 export interface SlashCommand {
   command: string;
@@ -23,6 +24,15 @@ interface CommandContext {
   notifyUnsupported: (command: string) => void;
 }
 
+/** T-Line advertises the existing SuperAgent CLI Brain tree as discoverable
+ * completions only. Nested commands remain CLI-only; the bare /brain or
+ * /scratch command opens the native desktop Brain Explorer.
+ */
+export const BRAIN_CLI_SUBCOMMANDS = brainCliCatalog.commands.map(entry => ({
+  name: entry.command.slice('/brain '.length),
+  description: entry.description,
+}));
+
 export const CLI_COMMAND_PARITY = cliCatalog.commands;
 const CLI_ONLY = new Map(
   CLI_COMMAND_PARITY.filter(cmd => cmd.tlineHandler === 'cli-only')
@@ -42,7 +52,7 @@ export function isCliOnlyCommand(input: string): boolean {
 
 export function getCliOnlySuggestions(onUnsupported: (command: string) => void): SlashCommand[] {
   return [...CLI_ONLY.values()].filter(cmd =>
-    !['/daemon', '/gateway', '/mcp', '/tools', '/selfdev', '/muse'].includes(cmd.command)).map(cmd => ({
+    !['/daemon', '/gateway', '/mcp', '/tools', '/selfdev', '/muse', '/brain'].includes(cmd.command)).map(cmd => ({
     command: cmd.command,
     description: `CLI only — ${cmd.description}`,
     action: () => onUnsupported(cmd.command),
@@ -369,6 +379,13 @@ export function getSubCommands(
   context: { workspace: string; agentMode: 'single' | 'multi' }
 ): SlashCommand[] {
   const cleanCmd = parentCmd.toLowerCase().trim();
+
+  if (cleanCmd === '/brain' || cleanCmd === '/scratch') {
+    return BRAIN_CLI_SUBCOMMANDS.map(sub => ({
+      command: cleanCmd + ' ' + sub.name,
+      description: sub.description + ' (CLI-only; desktop has a separate Brain Explorer UI.)',
+    }));
+  }
 
   if (cleanCmd === '/studio') {
     return [
