@@ -226,7 +226,8 @@ export function createBrainExplorerRouter(options: ReadOptions = {}): Router {
     } catch { res.status(404).json({ error: 'Brain session is unavailable.' }); }
   });
 
-  // Only show committed CLI Bridge snapshots whose cwd is EXACTLY this Brain scratch.
+  // Only show committed CLI Bridge snapshots whose cwd is within this owner's Brain scratch,
+  // including isolated nested agent/task directories. No sibling or prefix matches.
   // Never return prompts, logs, executable paths, tokens, or jobs from other sessions.
   router.get('/sessions/:sessionId/jobs', (req, res) => {
     try {
@@ -234,6 +235,9 @@ export function createBrainExplorerRouter(options: ReadOptions = {}): Router {
       const scratch = path.join(dir, 'scratch');
       assertSafe(dir, scratch);
       const expected = fs.realpathSync(scratch);
+      const canonical = (value: string) => process.platform === 'win32' ? value.toLowerCase() : value;
+      const expectedRoot = canonical(expected);
+      const scratchPrefix = expectedRoot.endsWith(path.sep) ? expectedRoot : expectedRoot + path.sep;
       const shardRoot = path.join(root(), 'cli-bridge', 'delegations', 'jobs.d');
       assertSafe(root(), shardRoot);
       const jobs: Array<{ jobId: string; cli: string; status: string; completionState: string; startedAt: number; updatedAt: number }> = [];
@@ -253,7 +257,9 @@ export function createBrainExplorerRouter(options: ReadOptions = {}): Router {
               if (fs.statSync(file).size > 64 * 1024) continue;
               const job = JSON.parse(fs.readFileSync(file, 'utf8'));
               if (job.jobId !== entry.name || typeof job.cwd !== 'string' ||
-                fs.realpathSync(job.cwd) !== expected || typeof job.status !== 'string') continue;
+                typeof job.status !== 'string') continue;
+              const jobCwd = canonical(fs.realpathSync(job.cwd));
+              if (jobCwd !== expectedRoot && !jobCwd.startsWith(scratchPrefix)) continue;
               jobs.push({
                 jobId: entry.name, cli: typeof job.cliAlias === 'string' ? job.cliAlias.slice(0, 30) : 'unknown',
                 status: job.status.slice(0, 40),

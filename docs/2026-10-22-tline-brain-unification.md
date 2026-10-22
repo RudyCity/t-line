@@ -40,6 +40,13 @@ Task API routes under `/sessions/:sessionId/tasks` support listing, create, insp
 
 Task membership IDs are **not OAuth identities**. T-Line only displays the local-cli owner's tasks; separate OAuth principals remain isolated. The panel does not automatically execute another agent or grant new project write permissions.
 
+### Nested task scratch and live status hardening (2026-10-22)
+- Job listing accepts persisted CLI Bridge cwd values inside the owner session's scratch subtree, including `scratch/agents/<agent>/<task>/`; sibling paths are rejected using canonical segment boundaries.
+- Cleanup refuses to delete scratch while a nested AGY/Claude delegation is active, using the synchronized SuperAgent Core storage implementation.
+- Running tasks refresh sanitized delegation statuses approximately every 12 seconds. A missing snapshot is displayed as unavailable rather than inferred to be successful.
+- MCP remote task mutations require one-time-issued agent capabilities; the trusted T-Line operator is separately authenticated and acts only within the `local-cli` owner namespace.
+- Additional regressions cover nested active-job listing, denied cleanup, and non-matching sibling paths.
+
 ## Release acceptance
 ```sh
 # From SuperAgent repository

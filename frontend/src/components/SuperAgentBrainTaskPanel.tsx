@@ -7,6 +7,7 @@ type BrainTask = {
   taskId:string; title:string; status:'pending'|'running'|'blocked'|'completed'|'cancelled';
   agents:string[]; assignedTo:string|null; updatedAt:string; checkpoints:TaskCheckpoint[];
   handoffs:Array<{at:string;from:string;to:string;artifact:string;inbox:string;sha256:string}>;
+  delegationJobs?:Array<{jobId:string;agentId:string;cli:string;at:string}>;
 };
 const request = async <T,>(url:string,body?:Record<string,unknown>):Promise<T>=>{
  const response=await fetch(url,{
@@ -20,6 +21,7 @@ const request = async <T,>(url:string,body?:Record<string,unknown>):Promise<T>=>
 };
 export function SuperAgentBrainTaskPanel({sessionId}:{sessionId:string}){
  const [tasks,setTasks]=useState<BrainTask[]>([]);
+ const [jobs,setJobs]=useState<Array<{jobId:string;status:string;completionState:string;cli:string}>>([]);
  const [current,setCurrent]=useState('');
  const [title,setTitle]=useState('');
  const [members,setMembers]=useState('main, agy, claude');
@@ -37,6 +39,10 @@ export function SuperAgentBrainTaskPanel({sessionId}:{sessionId:string}){
  useEffect(()=>{
   let active=true;setTasks([]);setCurrent('');setError('');
   if(!base)return()=>{active=false;};
+  request<{jobs:Array<{jobId:string;status:string;completionState:string;cli:string}>}>(
+   base.replace(/\/tasks$/,'')+'/jobs').then(result=>{
+    if(active)setJobs(Array.isArray(result.jobs)?result.jobs:[]);
+   }).catch(()=>{if(active)setJobs([]);});
   request<{tasks:BrainTask[]}>(base).then(result=>{
    if(!active)return;
    const available=Array.isArray(result.tasks)?result.tasks:[];
@@ -45,6 +51,11 @@ export function SuperAgentBrainTaskPanel({sessionId}:{sessionId:string}){
   }).catch(e=>{if(active)setError(e.message);});
   return()=>{active=false;};
  },[base,tick]);
+ useEffect(()=>{
+  if(!base||!tasks.some(t=>t.status==='running'))return;
+  const interval=setInterval(reload,12000);
+  return()=>clearInterval(interval);
+ },[base,reload,tasks]);
  const selected=tasks.find(task=>task.taskId===current);
  const perform=async(url:string,body:Record<string,unknown>,message:string)=>{
   setBusy(true);setError('');setNotice('');
@@ -88,6 +99,15 @@ export function SuperAgentBrainTaskPanel({sessionId}:{sessionId:string}){
     <div className="text-[11px] text-[var(--text-muted)]">
       Members: {selected.agents.join(', ')} · Checkpoints: {selected.checkpoints.length} · Handoffs: {selected.handoffs.length}
     </div>
+    {(selected.delegationJobs||[]).slice(-5).map(ref=>{
+      const job=jobs.find(j=>j.jobId===ref.jobId);
+      return <div key={ref.jobId} className="p-2 rounded bg-[var(--bg-card)] text-[11px] flex gap-2 justify-between">
+        <span className="truncate">{ref.cli} · {ref.agentId}</span>
+        <span aria-label="Brain delegated job status" className="shrink-0">
+          {job ? job.status+' · '+job.completionState : 'unavailable / refresh'}
+        </span>
+      </div>;
+    })}
     <div className="flex gap-2 items-end flex-wrap">
       <label className="text-[11px]">Agent
        <select aria-label="Brain active agent" value={selected.agents.includes(actor)?actor:(selected.agents[0]||'')}

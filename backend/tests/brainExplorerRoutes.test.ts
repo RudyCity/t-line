@@ -96,6 +96,26 @@ describe('Authenticated T-Line Brain Explorer read model', () => {
     expect(JSON.stringify(payload)).not.toContain('logPath');
   });
 
+  it('includes nested agent delegations but excludes adjacent scratch-prefix directories', async () => {
+    const { base, root, session } = await fixture();
+    const jobRoot = path.join(root, 'cli-bridge', 'delegations', 'jobs.d');
+    const nested = path.join(session, 'scratch', 'agents', 'agy', 'task_0123456789abcdefabcd');
+    const sibling = path.join(session, 'scratch-neighbor');
+    fs.mkdirSync(nested, {recursive:true});
+    fs.mkdirSync(sibling, {recursive:true});
+    const stamp = '1792638000000-0000000001-0123456789abcdef.json';
+    for (const [id, cwd] of [['clj_1792638000000_aaaa1111',nested],['clj_1792638000000_bbbb2222',sibling]]) {
+      const dir=path.join(jobRoot,id);
+      fs.mkdirSync(dir,{recursive:true});
+      fs.writeFileSync(path.join(dir,stamp),JSON.stringify({jobId:id,cwd,cliAlias:'agy',status:'running',completionState:'pending',startedAt:1,updatedAt:2}));
+    }
+    const res = await fetch(base + '/sessions/sess_local/jobs');
+    const data = await res.json();
+    expect(data.jobs.map((j:any)=>j.jobId)).toEqual(['clj_1792638000000_aaaa1111']);
+    const denied=await fetch(base + '/sessions/sess_local/cleanup/prepare',{method:'POST',headers:{Authorization:'Bearer operator_testing_token_valid_123456789'}});
+    expect(denied.status).toBe(409);
+  });
+
   it('previews scratch cleanup and retains artifacts, rejecting replay and changed content', async () => {
     const { base, session } = await fixture();
     const headers = { Authorization: 'Bearer test_operator_very_long_token', 'Content-Type': 'application/json' };
