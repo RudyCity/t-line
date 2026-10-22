@@ -6,6 +6,8 @@ on:
       - "backend/src/brain-runtime-manifest.json"
       - "backend/tests/brain*.test.ts"
       - "frontend/src/components/SuperAgentBrainExplorer.tsx"
+      - "frontend/src/components/SuperAgentBrainTaskPanel.tsx"
+      - "frontend/src/components/__tests__/SuperAgentBrainTaskPanel.test.tsx"
       - "frontend/src/components/__tests__/SuperAgentBrainExplorer.test.tsx"
       - "scripts/check-brain-runtime.cjs"
       - ".github/workflows/brain-integrity.yml"
@@ -43,5 +45,5 @@ jobs:
       - name: Brain backend tests
         run: bun --bun x vitest run backend/tests/brainExplorerRoutes.test.ts
       - name: Brain UI tests
-        run: bun --bun x vitest run --config vite.config.ts src/components/__tests__/SuperAgentBrainExplorer.test.tsx
+        run: bun --bun x vitest run --config vite.config.ts src/components/__tests__/SuperAgentBrainExplorer.test.tsx src/components/__tests__/SuperAgentBrainTaskPanel.test.tsx
         working-directory: frontend

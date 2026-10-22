@@ -259,6 +259,43 @@ describe('Authenticated T-Line Brain Explorer read model', () => {
     expect(json).not.toContain('result.md');
   });
 
+  it('coordinates multi-agent tasks with exclusive claims and durable checkpoints through HTTP', async () => {
+    const {base,session}=await fixture();
+    const create=await fetch(base+'/sessions/sess_local/tasks',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({title:'Review generated output',agentIds:['agy','claude']}),
+    });
+    expect(create.status).toBe(201);
+    const task=await create.json();
+    expect(task.taskId).toMatch(/^task_/);
+    const taskBase=base+'/sessions/sess_local/tasks/'+task.taskId;
+    const jsonPost=(suffix:string,body:unknown)=>fetch(taskBase+suffix,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),
+    });
+    const claimed=await (await jsonPost('/claim',{agentId:'agy'})).json();
+    expect(claimed.task.assignedTo).toBe('agy');
+    expect((await jsonPost('/claim',{agentId:'claude'})).status).toBe(409);
+    fs.writeFileSync(path.join(session,'artifacts','collab.txt'),'prepared');
+    const ck=await (await jsonPost('/checkpoint',{
+      agentId:'agy',note:'Experiment finished',nextStep:'Claude review',
+      artifactPaths:['artifacts/collab.txt'],
+    })).json();
+    expect(ck.checkpoint.version).toBe(1);
+    const handed=await (await jsonPost('/handoff',{agentId:'agy',toAgent:'claude',filePath:'artifacts/collab.txt'})).json();
+    expect(handed.record.bytes).toBe(8);
+    expect(handed.record.sha256).toBe(crypto.createHash('sha256').update('prepared').digest('hex'));
+    expect((await jsonPost('/transfer',{agentId:'claude',toAgent:'agy'})).status).toBe(409);
+    expect((await jsonPost('/transfer',{agentId:'agy',toAgent:'claude'})).status).toBe(200);
+    const resumed=await (await fetch(taskBase+'/resume')).json();
+    expect(resumed.checkpoint.note).toBe('Experiment finished');
+    expect(resumed.assignedTo).toBe('claude');
+    expect((await jsonPost('/status',{agentId:'claude',status:'completed'})).status).toBe(200);
+    expect((await jsonPost('/claim',{agentId:'agy'})).status).toBe(409);
+    const list=await (await fetch(base+'/sessions/sess_local/tasks')).json();
+    expect(list.tasks).toHaveLength(1);
+    expect(list.tasks[0].status).toBe('completed');
+  });
+
   it('does not follow symlinks to outside files', async () => {
     const { base, session, root } = await fixture();
     const link = path.join(session, 'artifacts', 'external');

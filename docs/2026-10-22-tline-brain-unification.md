@@ -33,6 +33,13 @@ Important distinctions:
 
 All are appended to `/api/superagent/brain`. Earlier listing, storage, cleanup, publish, import and download routes remain compatible.
 
+## Phase 5: Multi-agent Brain dashboard
+Brain Explorer now includes a **Multi-agent tasks** panel. Local CLI sessions can create owner-scoped tasks, list logical agent members, claim a task exclusively, checkpoint current findings, explicitly hand off a finalized artifact to a permitted collaborator's isolated scratch inbox, transfer ownership and mark work complete. Persistent task metadata supports resume after reconnect without reading the full conversation.
+
+Task API routes under `/sessions/:sessionId/tasks` support listing, create, inspect, resume, claim, checkpoint, handoff, transfer and status updates. T-Line uses the canonical generated `brainTasks.ts` module from SuperAgent Core; `brain-runtime-manifest.json` is checked by CI.
+
+Task membership IDs are **not OAuth identities**. T-Line only displays the local-cli owner's tasks; separate OAuth principals remain isolated. The panel does not automatically execute another agent or grant new project write permissions.
+
 ## Release acceptance
 ```sh
 # From SuperAgent repository

@@ -10,7 +10,7 @@ const manifestPath = path.join(backend, 'brain-runtime-manifest.json');
 if (!fs.existsSync(manifestPath)) throw new Error('Brain runtime manifest missing.');
 const data = JSON.parse(fs.readFileSync(manifestPath,'utf8'));
 if (data.schemaVersion !== 1 || !data.files || typeof data.files !== 'object') throw new Error('Invalid Brain source manifest.');
-const expected = ['brainSessionLock.ts','brainStorageManager.ts','brainTransfers.ts','brainIndex.ts','brainObservability.ts'];
+const expected = ['brainSessionLock.ts','brainStorageManager.ts','brainTransfers.ts','brainIndex.ts','brainObservability.ts','brainTasks.ts'];
 for (const name of expected) {
   const file = path.join(backend, name);
   const reference = data.files[name];

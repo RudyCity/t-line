@@ -16,6 +16,8 @@ import {
 import { beginBrainTransfer, inspectBrainTransfer, appendBrainTransfer, finishBrainTransfer, abortBrainTransfer } from './brainTransfers';
 import { annotateBrainArtifact, searchBrainArtifacts, brainResumeContext, brainRMemoryCandidate } from './brainIndex';
 import { recordBrainEvent, summarizeBrainEvents } from './brainObservability';
+import { createBrainTask, listBrainTasks, inspectBrainTask, claimBrainTask,
+  transferBrainTask, updateBrainTask, checkpointBrainTask, handoffBrainArtifact, resumeBrainTask } from './brainTasks';
 
 const SESSION_ID = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$/;
 const MAX_LIST = 100;
@@ -129,6 +131,59 @@ export function createBrainExplorerRouter(options: ReadOptions = {}): Router {
       /[:<>|?*"\\]/.test(item))) throw new Error('Unsafe Brain file path.');
     return segments.join(path.sep);
   }
+
+  // Task coordination is confined to the local-cli owner's own Brain.
+  // A task agentId is only a logical collaborator name, never an OAuth identity.
+  router.get('/sessions/:sessionId/tasks', (req, res) => {
+    try { session(req.params.sessionId);
+      res.json({ tasks:listBrainTasks('local-cli',req.params.sessionId,root()) });
+    } catch { res.status(404).json({error:'Brain tasks unavailable.'}); }
+  });
+  router.post('/sessions/:sessionId/tasks', (req, res) => {
+    try { session(req.params.sessionId);
+      res.status(201).json(createBrainTask('local-cli',req.params.sessionId,
+        req.body?.title,req.body?.agentIds ?? ['main'],root()));
+    } catch { res.status(409).json({error:'Brain task creation rejected.'}); }
+  });
+  router.get('/sessions/:sessionId/tasks/:taskId', (req, res) => {
+    try { session(req.params.sessionId);
+      res.json(inspectBrainTask('local-cli',req.params.sessionId,req.params.taskId,root()));
+    } catch { res.status(404).json({error:'Brain task not found.'}); }
+  });
+  router.get('/sessions/:sessionId/tasks/:taskId/resume', (req, res) => {
+    try { session(req.params.sessionId);
+      res.json(resumeBrainTask('local-cli',req.params.sessionId,req.params.taskId,root()));
+    } catch { res.status(404).json({error:'Brain task checkpoint unavailable.'}); }
+  });
+  router.post('/sessions/:sessionId/tasks/:taskId/claim', (req, res) => {
+    try { session(req.params.sessionId);
+      res.json(claimBrainTask('local-cli',req.params.sessionId,req.params.taskId,req.body?.agentId,root()));
+    } catch { res.status(409).json({error:'Task claim denied.'}); }
+  });
+  router.post('/sessions/:sessionId/tasks/:taskId/transfer', (req, res) => {
+    try { session(req.params.sessionId);
+      res.json(transferBrainTask('local-cli',req.params.sessionId,req.params.taskId,
+        req.body?.agentId,req.body?.toAgent,root()));
+    } catch { res.status(409).json({error:'Task ownership transfer denied.'}); }
+  });
+  router.post('/sessions/:sessionId/tasks/:taskId/checkpoint', (req, res) => {
+    try { session(req.params.sessionId);
+      res.json(checkpointBrainTask('local-cli',req.params.sessionId,req.params.taskId,
+        req.body?.agentId,req.body?.note,req.body?.nextStep,req.body?.artifactPaths ?? [],root()));
+    } catch { res.status(409).json({error:'Task checkpoint rejected.'}); }
+  });
+  router.post('/sessions/:sessionId/tasks/:taskId/status', (req, res) => {
+    try { session(req.params.sessionId);
+      res.json(updateBrainTask('local-cli',req.params.sessionId,req.params.taskId,
+        req.body?.agentId,req.body?.status,root()));
+    } catch { res.status(409).json({error:'Task status update denied.'}); }
+  });
+  router.post('/sessions/:sessionId/tasks/:taskId/handoff', (req, res) => {
+    try { session(req.params.sessionId);
+      res.json(handoffBrainArtifact('local-cli',req.params.sessionId,req.params.taskId,
+        req.body?.agentId,req.body?.toAgent,req.body?.filePath,root()));
+    } catch { res.status(409).json({error:'Task artifact handoff denied.'}); }
+  });
 
   router.get('/sessions', (_req, res) => {
     try {

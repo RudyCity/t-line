@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Brain, FileText, FolderOpen, RefreshCw, X, AlertTriangle, Clock3 } from 'lucide-react';
 import { getAuthHeader } from './SuperAgentConsoleUtils';
+import { SuperAgentBrainTaskPanel } from './SuperAgentBrainTaskPanel';
 
 type BrainSession = { sessionId: string; createdAt: string; updatedAt: string };
 type BrainFile = { path: string; bytes: number };
@@ -365,7 +366,8 @@ export function SuperAgentBrainExplorer({ activeSessionId, onClose }: {
             </button>
           ))}
         </div>
-        <div className="min-h-0 flex flex-col">
+        <div className="min-h-0 flex flex-col overflow-y-auto">
+          <SuperAgentBrainTaskPanel sessionId={selected} />
           <div className="border-b border-[var(--border-color)] p-3 space-y-2">
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs font-semibold">Storage {storage ? formatBytes(storage.totalBytes) : '—'}</p>
