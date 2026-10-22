@@ -1,4 +1,4 @@
-import { MOTION_DISPLAY_NAME } from "../services/motionBranding";
+import { STUDIO_DISPLAY_NAME } from "../services/studioBranding";
 import React from 'react';
 import { FolderPlus } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
@@ -11,7 +11,7 @@ export interface EmptyDashboardProps {
   workspaces: WorkspaceInfo[];
   panelWorktreePath?: string | null;
   openAgentTab?: (workspaceId?: string) => void;
-  openMotionTab?: (workspaceId?: string) => void;
+  openStudioTab?: (workspaceId?: string) => void;
 }
 
 export function EmptyDashboard({
@@ -22,7 +22,7 @@ export function EmptyDashboard({
   workspaces,
   panelWorktreePath,
   openAgentTab,
-  openMotionTab
+  openStudioTab
 }: EmptyDashboardProps): React.JSX.Element {
   return (
     <div className="welcome-card-outer">
@@ -85,7 +85,7 @@ export function EmptyDashboard({
           >
             Open Terminal
           </button>
-          {openMotionTab && (
+          {openStudioTab && (
             <button
               type="button"
               className="px-4 py-2 rounded-lg text-xs font-semibold transition-colors border cursor-pointer"
@@ -95,9 +95,9 @@ export function EmptyDashboard({
                 const target = panelWorkspace || workspaces[0];
                 if (!target) return;
                 if (!panelWorkspace) setPanelWorkspace(target);
-                openMotionTab(target.id);
+                openStudioTab(target.id);
               }}
-            >{`Open ${MOTION_DISPLAY_NAME}`}</button>
+            >{`Open ${STUDIO_DISPLAY_NAME}`}</button>
           )}
           {openAgentTab && (
             <button 

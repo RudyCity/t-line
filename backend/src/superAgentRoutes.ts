@@ -8,7 +8,7 @@ import { fetchParityReadAction, PARITY_READ_ACTIONS, type ParityReadAction } fro
 import { streamTlineTaskEvents } from './superAgentTaskEvents';
 import { forwardTaskCancel } from './superAgentTaskCancel';
 import { forwardTlineRetry } from './superAgentTaskRetry';
-import motionProxyRouter from './motionProxy';
+import studioProxyRouter from './studioProxy';
 import brainExplorerRouter from './brainExplorerRoutes';
 import { getWorkspaceSessions, getSessionMessages } from './sessionManager';
 
@@ -17,8 +17,9 @@ const router = Router();
 // Apply authMiddleware globally to all routes in this router
 router.use(authMiddleware);
 
-// Binary Motion streaming and scoped JSON endpoints use a dedicated backend proxy.
-router.use('/motion', motionProxyRouter);
+// Studio is canonical; retain legacy /motion for already-running clients.
+router.use('/studio', studioProxyRouter);
+router.use('/motion', studioProxyRouter);
 router.use('/brain', brainExplorerRouter);
 
 /** SSE relay with exact session identity, authenticated and bounded to local SuperAgent. */

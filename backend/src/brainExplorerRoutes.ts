@@ -8,7 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { Router, raw } from 'express';
-import { isRegisteredMotionWorkspace } from './motionWorkspaceAccess';
+import { isRegisteredStudioWorkspace } from './studioWorkspaceAccess';
 import {
   brainStorageUsage, prepareBrainCleanup, confirmBrainCleanup, scanBrainArea,
   prepareBrainPublish, confirmBrainPublish, validateDestination, assertNoSymlink, importBrainBinaryArtifact,
@@ -49,7 +49,7 @@ export function createBrainExplorerRouter(options: ReadOptions = {}): Router {
       p?.id === projectId && p.enabled === true && p.type === 'local' && typeof p.root === 'string');
     if (!project) throw new Error('Enabled local project registration required.');
     const resolved = fs.realpathSync.native(project.root);
-    if (!(options.authorizeProject ?? isRegisteredMotionWorkspace)(projectId, resolved)) throw new Error('Project not registered and authorized in T-Line.');
+    if (!(options.authorizeProject ?? isRegisteredStudioWorkspace)(projectId, resolved)) throw new Error('Project not registered and authorized in T-Line.');
     return resolved;
   }
 
@@ -310,7 +310,7 @@ export function createBrainExplorerRouter(options: ReadOptions = {}): Router {
       const projects = doc.projects.filter((p: any) => p?.enabled && p.type === 'local' &&
         typeof p.id === 'string' && typeof p.root === 'string')
         .filter((p: any) => {
-          try { return (options.authorizeProject ?? isRegisteredMotionWorkspace)(p.id, fs.realpathSync.native(p.root)); }
+          try { return (options.authorizeProject ?? isRegisteredStudioWorkspace)(p.id, fs.realpathSync.native(p.root)); }
           catch { return false; }
         }).slice(0, 100).map((p: any) => ({ id: p.id, name: typeof p.name === 'string' ? p.name : p.id }));
       res.json({ projects });

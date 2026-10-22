@@ -1,4 +1,4 @@
-import { MOTION_DISPLAY_NAME } from "../services/motionBranding";
+import { STUDIO_DISPLAY_NAME } from "../services/studioBranding";
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { wsManager } from '../services/websocket';
 import { normalizeShellType, getWorkspaceShell } from '../utils/shellUtils';
@@ -62,7 +62,7 @@ export type SplitLayoutNode =
 export interface TabData {
   id: string;
   name: string;
-  type: 'terminal' | 'file' | 'diff' | 'grid' | 'browser' | 'agent' | 'motion';
+  type: 'terminal' | 'file' | 'diff' | 'grid' | 'browser' | 'agent' | 'studio'; // persisted 'motion' tab types are migrated on hydration
   filePath?: string;
   url?: string;
   // For 'diff' type tabs
@@ -180,6 +180,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
       if (savedTabs) {
         const parsed: TabData[] = JSON.parse(savedTabs);
         return parsed.map(t => {
+          if ((t.type as string) === 'motion') return { ...t, type: 'studio' as const, name: STUDIO_DISPLAY_NAME };
           if (t.type === 'grid' && !t.gridTerminalIds) {
             return { ...t, gridTerminalIds: [] };
           }
@@ -681,19 +682,19 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
       return [...prev, newTab];
     });
   }, [onTerminalOpen]);
-  const openMotionTab = useCallback((workspaceId?: string) => {
+  const openStudioTab = useCallback((workspaceId?: string) => {
     if (!workspaceId) return;
     setTabs(prev => {
-      const existing = prev.find(tab => tab.type === 'motion' && tab.workspaceId === workspaceId && !tab.isDetached);
+      const existing = prev.find(tab => tab.type === 'studio' && tab.workspaceId === workspaceId && !tab.isDetached);
       if (existing) {
         setActiveTabId(existing.id);
         onTerminalOpen?.();
         return prev;
       }
-      const id = 'motion-' + Date.now();
+      const id = 'studio-' + Date.now();
       setActiveTabId(id);
       onTerminalOpen?.();
-      return [...prev, { id, name: MOTION_DISPLAY_NAME, type: 'motion', workspaceId }];
+      return [...prev, { id, name: STUDIO_DISPLAY_NAME, type: 'studio', workspaceId }];
     });
   }, [onTerminalOpen]);
 
@@ -1049,7 +1050,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     openDiffTab,
     openBrowserTab,
     openAgentTab,
-    openMotionTab,
+    openStudioTab,
     openGridTab,
     closeTerminal,
     closePane,

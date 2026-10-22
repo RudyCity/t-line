@@ -1,4 +1,4 @@
-import { MOTION_DISPLAY_NAME } from "./services/motionBranding";
+import { STUDIO_DISPLAY_NAME } from "./services/studioBranding";
 import { useState, useEffect, useMemo, Fragment, useRef, Suspense, lazy, type ComponentProps } from 'react';
 import { 
   Folder, 
@@ -54,9 +54,9 @@ const LazySuperAgentConsole = lazy(() => import('./components/SuperAgentConsole'
 function SuperAgentConsole(props: ComponentProps<typeof LazySuperAgentConsole>) {
   return <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-slate-400" role="status">Loading SuperAgentConsole...</div>}><LazySuperAgentConsole {...props} /></Suspense>;
 }
-const LazyMotionStudioTab = lazy(() => import('./components/MotionStudioTab').then(m => ({ default: m.MotionStudioTab })));
-function MotionStudioTab(props: ComponentProps<typeof LazyMotionStudioTab>) {
-  return <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-slate-400" role="status">Loading MotionStudioTab...</div>}><LazyMotionStudioTab {...props} /></Suspense>;
+const LazyStudioTab = lazy(() => import('./components/StudioTab').then(m => ({ default: m.StudioTab })));
+function StudioTab(props: ComponentProps<typeof LazyStudioTab>) {
+  return <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-slate-400" role="status">Loading StudioTab...</div>}><LazyStudioTab {...props} /></Suspense>;
 }
 const LazySplitLayoutRenderer = lazy(() => import('./components/SplitLayoutRenderer').then(m => ({ default: m.SplitLayoutRenderer })));
 function SplitLayoutRenderer(props: ComponentProps<typeof LazySplitLayoutRenderer>) {
@@ -456,7 +456,7 @@ export default function App() {
     openDiffTab,
     openBrowserTab,
     openAgentTab,
-    openMotionTab,
+    openStudioTab,
     openGridTab,
     closeTerminal,
     closePane,
@@ -487,10 +487,10 @@ export default function App() {
   }, [activeTabId, tabs]);
 
   // Keep editor and agent tabs alive once visited, but avoid constructing
-  // Monaco, Motion canvases and agent consoles for inactive restored tabs.
+  // Monaco, Studio canvases and agent consoles for inactive restored tabs.
   useEffect(() => {
     const active = tabs.find(tab => tab.id === activeTabId);
-    if (!active || !['file', 'agent', 'motion'].includes(active.type)) return;
+    if (!active || !['file', 'agent', 'studio'].includes(active.type)) return;
     setMountedDeferredTabIds(prev => {
       if (prev.has(active.id)) return prev;
       return new Set([...prev, active.id]);
@@ -2089,7 +2089,7 @@ export default function App() {
                       className={`mobile-tab-item ${isActive ? 'mobile-tab-active' : ''}`}
                       onClick={() => handleTabClick(t)}
                     >
-                      {t.type === 'motion' ? (
+                      {t.type === 'studio' ? (
                         <Clapperboard size={11} className="shrink-0" />
                       ) : t.type === 'file' ? (
                         <FileCode size={11} className="shrink-0" />
@@ -2258,7 +2258,7 @@ export default function App() {
                             onMouseLeave={handleTabMouseLeave}
                             onContextMenu={(e) => handleTabContextMenu(e, t.id)}
                           >
-                            {t.type === 'motion' ? (
+                            {t.type === 'studio' ? (
                               <Clapperboard size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
                             ) : t.type === 'file' ? (
                               <FileCode size={13} className="tab-icon shrink-0" style={{ color: activeTabId === t.id ? 'var(--color-primary)' : 'var(--text-muted)' }} />
@@ -2326,13 +2326,13 @@ export default function App() {
                   >
                     <Globe size={14} />
                   </button>
-                  {/* Motion Studio native editor, scoped to the selected workspace */}
+                  {/* Studio Studio native editor, scoped to the selected workspace */}
                   <button
                     className="action-btn shrink-0"
-                    onClick={() => openMotionTab(panelWorkspace?.id)}
+                    onClick={() => openStudioTab(panelWorkspace?.id)}
                     disabled={!panelWorkspace?.id}
-                    title={`Open ${MOTION_DISPLAY_NAME}`}
-                    aria-label={`Open ${MOTION_DISPLAY_NAME}`}
+                    title={`Open ${STUDIO_DISPLAY_NAME}`}
+                    aria-label={`Open ${STUDIO_DISPLAY_NAME}`}
                     style={{ marginLeft: '6px' }}
                   >
                     <Clapperboard size={14} />
@@ -2466,7 +2466,7 @@ export default function App() {
               workspaces={workspaces}
               panelWorktreePath={panelWorktreePath}
               openAgentTab={openAgentTab}
-              openMotionTab={openMotionTab}
+              openStudioTab={openStudioTab}
             />
             
           ) : (
@@ -2493,10 +2493,10 @@ export default function App() {
                 />
               ))}
 
-              {/* Native Motion Studio tabs remain workspace-pinned across sidebar navigation. */}
-              {tabs.filter(tab => tab.type === 'motion' && !tab.isDetached && mountedDeferredTabIds.has(tab.id)).map(tab => (
+              {/* Native Studio Studio tabs remain workspace-pinned across sidebar navigation. */}
+              {tabs.filter(tab => tab.type === 'studio' && !tab.isDetached && mountedDeferredTabIds.has(tab.id)).map(tab => (
                 <div key={tab.id} className="h-full w-full" style={{ display: tab.id === activeTabId ? 'block' : 'none' }}>
-                  <MotionStudioTab
+                  <StudioTab
                     isActive={tab.id === activeTabId}
                     workspacePath={workspaces.find(item => item.id === tab.workspaceId)?.path || ''}
                   />
@@ -2511,7 +2511,7 @@ export default function App() {
                   style={{ display: tab.id === activeTabId ? 'block' : 'none' }}
                 >
                   <SuperAgentConsole
-                    onOpenStudio={() => openMotionTab(tab.workspaceId)}
+                    onOpenStudio={() => openStudioTab(tab.workspaceId)}
                     activeWorkspacePath={panelWorkspace?.path}
                     workspaces={workspaces}
                     onOpenSettings={() => setShowSettingsModal(true)}
@@ -2600,8 +2600,8 @@ export default function App() {
                       onRefreshTerminal={refreshTerminal}
                     />
                   );
-                } else if (activeTab.type === 'motion') {
-                  // MotionStudioTab is handled by the persistent mapping above
+                } else if (activeTab.type === 'studio') {
+                  // StudioTab is handled by the persistent mapping above
                   tabElement = null;
                 } else if (activeTab.type === 'agent') {
                   // SuperAgentConsole is handled by persistent mapping above

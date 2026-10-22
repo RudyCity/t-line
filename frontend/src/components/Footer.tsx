@@ -23,7 +23,7 @@ export interface FooterProps {
   handleStartTunnel: (target: 'tline' | 'custom', type: 'quick' | 'token', customPort?: number) => void;
   handleStopTunnel: (target: 'tline' | 'custom', port?: number) => void;
   onManagePortsClick: () => void;
-  activeTabType?: 'terminal' | 'file' | 'diff' | 'grid' | 'browser' | 'agent' | 'motion' | null;
+  activeTabType?: 'terminal' | 'file' | 'diff' | 'grid' | 'browser' | 'agent' | 'studio' | null;
   activeTabPath?: string;
   appVersion?: string;
   updateAvailable?: boolean;

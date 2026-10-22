@@ -1,0 +1,183 @@
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { studioApi } from '../studioApi';
+
+describe('Studio Studio authenticated client', () => {
+  beforeEach(() => {
+    localStorage.setItem('token', 'tline-only-token');
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    localStorage.removeItem('token');
+  });
+  it('passes T-Line auth with workspace routing and no secret in URLs', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(studioApi.list('D:/my workspace')).resolves.toEqual([]);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('workspace=D%3A%2Fmy%20workspace');
+    expect(url).not.toContain('tline-only-token');
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+  });
+  it('sends prompt and revision through authorized T-Line routes, not arbitrary URLs', async () => {
+    const motionId = 'motion-' + 'a'.repeat(20);
+    const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ project: { id: motionId } }), {
+      status: 202, headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    await studioApi.quality('D:/studio', motionId);
+    await studioApi.generate('D:/studio', 'Buat video promo', 640, {
+      imageAssetId: 'asset-' + 'b'.repeat(64), audioAssetId: 'audio-' + 'c'.repeat(64), audioGain: 0.6,
+    });
+    await studioApi.revise('D:/studio', motionId, 'Bikin transisinya lebih cepat', 1280, {
+      audioAssetId: 'audio-' + 'd'.repeat(64),
+    });
+    expect(fetchMock.mock.calls[0][0]).toContain('/projects/' + motionId + '/quality?workspace=');
+    expect(fetchMock.mock.calls[1][0]).toContain('/generate?workspace=');
+    expect(fetchMock.mock.calls[2][0]).toContain('/projects/' + motionId + '/revise?workspace=');
+    expect(JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string)).toMatchObject({
+      prompt: 'Buat video promo', width: 640, imageAssetId: 'asset-' + 'b'.repeat(64),
+      audioAssetId: 'audio-' + 'c'.repeat(64), audioGain: 0.6,
+    });
+    expect(JSON.parse((fetchMock.mock.calls[2][1] as RequestInit).body as string)).toMatchObject({
+      audioAssetId: 'audio-' + 'd'.repeat(64),
+    });
+    expect((fetchMock.mock.calls[2][1] as RequestInit).headers).toMatchObject({
+      Authorization: 'Bearer tline-only-token',
+    });
+    expect(() => studioApi.revise('D:/studio', '../secret', 'change')).toThrow('Invalid Studio');
+    expect(() => studioApi.quality('D:/studio', '../secret')).toThrow('Invalid Studio');
+  });
+
+  it('forwards multi-scene image IDs, loop mode, and opt-in narration only in authenticated body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', {
+      status: 202, headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const ids = ['a', 'b', 'c'].map(hex => 'asset-' + hex.repeat(64));
+    await studioApi.generate('D:/studio', 'Video 3 scenes', 640, {
+      sceneImageAssetIds: ids, audioAssetId: 'audio-' + 'f'.repeat(64), audioLoop: true,
+      voiceoverText: 'Voice-over', voiceoverGain: 0.8,
+    });
+    const [uri, request] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(uri).not.toContain('Voice-over');
+    expect(request.headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    expect(JSON.parse(request.body as string)).toMatchObject({
+      sceneImageAssetIds: ids, audioLoop: true, voiceoverText: 'Voice-over', voiceoverGain: 0.8,
+    });
+  });
+
+  it('submits one revision-guarded model vision repair using authenticated POST', async () => {
+    const id = 'motion-' + 'd'.repeat(20);
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ changed: false }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    await studioApi.visionRepair('D:/studio', id, 5, 640);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/projects/' + id + '/vision-repair');
+    expect(url).not.toContain('baseRevision');
+    expect(init.method).toBe('POST');
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    expect(JSON.parse(init.body as string)).toEqual({ baseRevision: 5, width: 640 });
+    expect(() => studioApi.visionRepair('D:/studio', '../bad', 5, 640)).toThrow();
+  });
+
+  it('requests optional multimodal review explicitly and downloads scoped subtitle text', async () => {
+    const id = 'motion-' + 'c'.repeat(20);
+    const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('vision-review')) {
+        return new Response(JSON.stringify({ passed: true, issues: [] }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      return new Response('1\n00:00:00,000 --> 00:00:02,000\nHello\n',
+        { status: 200, headers: { 'Content-Type': 'application/x-subrip' } });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    await studioApi.visionReview('D:/studio', id);
+    const captions = await studioApi.captions('D:/studio', id);
+    expect(captions).toContain('Hello');
+    expect(fetchMock.mock.calls[0][0]).toContain('/projects/' + id + '/vision-review');
+    expect(fetchMock.mock.calls[0][1].method).toBe('POST');
+    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    expect(fetchMock.mock.calls[1][0]).toContain('/projects/' + id + '/captions.srt');
+    expect(fetchMock.mock.calls[1][1].headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    expect(() => studioApi.visionReview('D:/studio', '../outside')).toThrow();
+  });
+  it('limits authenticated rendered frame snapshots to PNG and known Studio IDs', async () => {
+    const id = 'motion-' + 'b'.repeat(20);
+    const png = { type: 'image/png', size: 128 } as Blob;
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, blob: async () => png });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview-frame');
+    expect(await studioApi.loadFrameSnapshot('D:/studio', id, 45)).toBe('blob:preview-frame');
+    expect(fetchMock.mock.calls[0][0]).toContain('/projects/' + id + '/frames/45.png');
+    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    await expect(studioApi.loadFrameSnapshot('D:/studio', id, -1)).rejects.toThrow('frame');
+    await expect(studioApi.loadFrameSnapshot('D:/studio', '../secret', 45)).rejects.toThrow('identifier');
+  });
+
+  it('rejects media larger than 64 MB before downloading it', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, {
+      status: 200, headers: { 'Content-Length': String(70 * 1024 * 1024) },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(studioApi.loadPreview('D:/studio', 'motionjob-' + 'a'.repeat(24))).rejects.toThrow('64 MB');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+  it('uploads bounded image data with T-Line authorization and downloads authenticated Blob previews', async () => {
+    const assetId = 'asset-' + 'b'.repeat(64);
+    const payload = new Uint8Array(40).fill(123);
+    const file = new File([payload], 'image.png', { type: 'image/png' });
+    Object.defineProperty(file, 'arrayBuffer', { value: async () => payload.buffer });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: assetId, width: 10, height: 4, bytes: 40 }), {
+        status: 201, headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(payload, {
+        status: 200, headers: { 'Content-Type': 'image/png' },
+      }));
+    const objectUrl = vi.fn().mockReturnValue('blob:motion-test');
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(URL, 'createObjectURL').mockImplementation(objectUrl);
+    await expect(studioApi.uploadImage('D:/studio', file)).resolves.toMatchObject({ id: assetId });
+    const [uploadPath, uploadInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(uploadPath).toContain('/assets?workspace=');
+    expect(uploadInit.headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    expect(JSON.parse(uploadInit.body as string).base64).toBe(btoa(String.fromCharCode(...payload)));
+    expect(await studioApi.loadImageUrl('D:/studio', assetId)).toBe('blob:motion-test');
+    expect(objectUrl).toHaveBeenCalledTimes(1);
+    await expect(studioApi.loadImageUrl('D:/studio', '../../secret')).rejects.toThrow('Invalid Studio asset');
+  });
+
+  it('authorizes bounded WAV uploads and authenticated audio Blob responses', async () => {
+    const audioId = 'audio-' + 'd'.repeat(64);
+    const payload = new Uint8Array(64).fill(100);
+    const file = new File([payload], 'beat.wav', { type: 'audio/wav' });
+    Object.defineProperty(file, 'arrayBuffer', { value: async () => payload.buffer });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: audioId, seconds: 1, bytes: 64 }), {
+        status: 201, headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(payload, {
+        status: 200, headers: { 'Content-Type': 'audio/wav' },
+      }));
+    const objectUrl = vi.fn().mockReturnValue('blob:audio-test');
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(URL, 'createObjectURL').mockImplementation(objectUrl);
+    await expect(studioApi.uploadAudio('D:/studio', file)).resolves.toMatchObject({ id: audioId });
+    const [uploadPath, uploadInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(uploadPath).toContain('/audio?workspace=');
+    expect(uploadInit.headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    expect(await studioApi.loadAudioUrl('D:/studio', audioId)).toBe('blob:audio-test');
+    await expect(studioApi.loadAudioUrl('D:/studio', '../secret')).rejects.toThrow('Invalid Studio audio');
+  });
+
+  it('requires login and rejects invalid scene identifiers before calling the API', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    localStorage.removeItem('token');
+    await expect(studioApi.list('D:/studio')).rejects.toThrow('Sign in');
+    expect(() => studioApi.inspect('D:/studio', '../escape')).toThrow('Invalid Studio');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
