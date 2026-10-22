@@ -32,6 +32,7 @@ const permitted = [
   /^\/projects\/motion-[a-f0-9]{20}\/history\/restore$/,
   /^\/projects\/motion-[a-f0-9]{20}\/templates(?:\/preview)?$/,
   /^\/projects\/motion-[a-f0-9]{20}\/variants$/,
+  /^\/projects\/motion-[a-f0-9]{20}\/beat-sync(?:\/preview)?$/,
   /^\/projects\/motion-[a-f0-9]{20}\/quality$/,
   /^\/projects\/motion-[a-f0-9]{20}\/vision-review$/,
   /^\/projects\/motion-[a-f0-9]{20}\/vision-repair$/,
@@ -39,16 +40,17 @@ const permitted = [
   /^\/projects\/motion-[a-f0-9]{20}\/frames\/\d{1,6}\.png$/,
   /^\/jobs$/,
   /^\/jobs\/motionjob-[a-f0-9]{24}(?:\/cancel|\/recovery|\/artifact)?$/,
+  /^\/jobs\/motionjob-[a-f0-9]{24}\/exports\/(?:gif|webm)$/,
 ];
 
 function allowedRoute(method: string, pathname: string): boolean {
   if (!permitted.some(pattern => pattern.test(pathname))) return false;
-  if (method === 'GET') return !pathname.endsWith('/variants') && !pathname.endsWith('/history/restore') && !pathname.endsWith('/vision-review') && !pathname.endsWith('/vision-repair') && !pathname.endsWith('/edits') && !pathname.endsWith('/render') && !pathname.endsWith('/revise') && !/^\/projects\/motion-[a-f0-9]{20}\/(?:presets|effects|effect-stack|resize|templates)(?:\/preview)?$/.test(pathname) && pathname !== '/generate' && !pathname.endsWith('/cancel');
+  if (method === 'GET') return !/^\/projects\/motion-[a-f0-9]{20}\/beat-sync(?:\/preview)?$/.test(pathname) && !pathname.endsWith('/variants') && !pathname.endsWith('/history/restore') && !pathname.endsWith('/vision-review') && !pathname.endsWith('/vision-repair') && !pathname.endsWith('/edits') && !pathname.endsWith('/render') && !pathname.endsWith('/revise') && !/^\/projects\/motion-[a-f0-9]{20}\/(?:presets|effects|effect-stack|resize|templates)(?:\/preview)?$/.test(pathname) && pathname !== '/generate' && !pathname.endsWith('/cancel');
   if (method === 'HEAD') return pathname.endsWith('/artifact') || /^\/assets\/asset-[a-f0-9]{64}$/.test(pathname) ||
     /^\/audio\/audio-[a-f0-9]{64}$/.test(pathname);
   if (method === 'POST') {
     return pathname === '/projects' || pathname === '/generate' || pathname === '/assets' || pathname === '/audio' || pathname === '/brand-kit' ||
-      pathname.endsWith('/variants') || pathname.endsWith('/history/restore') || pathname.endsWith('/vision-review') || pathname.endsWith('/vision-repair') || pathname.endsWith('/edits') || pathname.endsWith('/render') || pathname.endsWith('/revise') || pathname.endsWith('/cancel') ||
+      /^\/projects\/motion-[a-f0-9]{20}\/beat-sync(?:\/preview)?$/.test(pathname) || pathname.endsWith('/variants') || pathname.endsWith('/history/restore') || pathname.endsWith('/vision-review') || pathname.endsWith('/vision-repair') || pathname.endsWith('/edits') || pathname.endsWith('/render') || pathname.endsWith('/revise') || pathname.endsWith('/cancel') ||
       /^\/projects\/motion-[a-f0-9]{20}\/(?:presets|effects|effect-stack|resize|templates)(?:\/preview)?$/.test(pathname);
   }
   return false;
@@ -141,7 +143,9 @@ export function createMotionProxyRouter(options: MotionProxyOptions = {}): Route
     const upstream = http.request({
       hostname: '127.0.0.1', port: options.upstreamPort ?? 7888,
       path: targetPath, method: req.method, headers,
-      timeout: route === '/generate' || route.endsWith('/revise') || (route.endsWith('/vision-review') || route.endsWith('/vision-repair')) ? 120_000 : 30_000,
+      timeout: route === '/generate' || route.endsWith('/revise') ||
+        route.includes('/exports/') || route.endsWith('/vision-review') || route.endsWith('/vision-repair')
+        ? 120_000 : 30_000,
     }, reply => {
       const safeHeaders: Record<string, string> = {};
       for (const name of forwardedResponseHeaders) {

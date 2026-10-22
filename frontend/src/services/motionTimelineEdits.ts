@@ -40,6 +40,20 @@ export function easeMotionKeyframe(
   next.keyframes.find(item => item.frame === frame)!.easing = easing;
   return [{ type: 'set-track', layerId, track: next }];
 }
+export function setMotionKeyframeValue(
+  project: MotionProject, layerId: string, property: MotionProperty, frame: number, value: number,
+): MotionEdit[] {
+  if (!Number.isFinite(value) || Math.abs(value) > 100000 ||
+      (property === 'opacity' && (value < 0 || value > 1))) {
+    throw new Error('Keyframe value is outside allowed bounds');
+  }
+  const track = trackFor(project, layerId, property);
+  const current = existingFrame(track, frame);
+  if (current.value === value) return [];
+  const updated = structuredClone(track);
+  updated.keyframes.find(item => item.frame === frame)!.value = value;
+  return [{ type: 'set-track', layerId, track: updated }];
+}
 export function deleteMotionKeyframe(
   project: MotionProject, layerId: string, property: MotionProperty, frame: number,
 ): MotionEdit[] {

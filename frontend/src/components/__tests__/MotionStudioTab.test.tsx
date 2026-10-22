@@ -10,7 +10,7 @@ vi.mock('../../services/motionStudioApi', () => ({
     presets: vi.fn(), presetInfo: vi.fn(), previewPreset: vi.fn(), applyPreset: vi.fn(),
     effectsPage: vi.fn(), previewEffect: vi.fn(), applyEffect: vi.fn(), changeStack: vi.fn(),
     history: vi.fn(), restoreHistory: vi.fn(), brandKit: vi.fn(), saveBrandKit: vi.fn(),
-    templates: vi.fn(), previewTemplate: vi.fn(), applyTemplate: vi.fn(), batchVariants: vi.fn(),
+    templates: vi.fn(), previewTemplate: vi.fn(), applyTemplate: vi.fn(), batchVariants: vi.fn(), beatSync: vi.fn(),
     jobs: vi.fn(), capabilities: vi.fn(), quality: vi.fn(), loadFrameSnapshot: vi.fn(), visionReview: vi.fn(), visionRepair: vi.fn(), captions: vi.fn(), generate: vi.fn(), revise: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
   },
 }));
@@ -757,6 +757,52 @@ describe('Native T-Line Motion Studio editor', () => {
     ));
     await waitFor(() => expect(motionStudioApi.list).toHaveBeenCalledTimes(2));
     expect(motionStudioApi.edit).not.toHaveBeenCalled();
+  });
+  it('previews audio beat-sync then applies through revision history and Undo', async () => {
+    vi.mocked(motionStudioApi.capabilities).mockResolvedValue({
+      capabilities: { motionAudioBeatSync: true },
+    });
+    const original = fixture();
+    original.composition.audioTracks = [{ assetId: 'audio-' + 'a'.repeat(64),
+      startFrame: 0, volume: 1, role: 'music' }];
+    vi.mocked(motionStudioApi.inspect).mockResolvedValue(original);
+    vi.mocked(motionStudioApi.beatSync).mockImplementation(async (_ws, _id, _rev, _input, preview) => {
+      const next = structuredClone(original);
+      next.revision = preview ? 1 : 2;
+      next.composition.layers[0].tracks.push({
+        property: 'x', keyframes: [{ frame: 0, value: 120 }, { frame: 30, value: 200 }],
+      });
+      return { project: next, onsetFrames: [5, 17, 29], analysis: 'pcm16-transient-energy' };
+    });
+    vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, rev, ops) => {
+      const result = fixture(); result.revision = rev + 1;
+      if (ops[0].type === 'replace-composition') result.composition = ops[0].composition;
+      return result;
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    await screen.findByText('Audio Beat Sync');
+    fireEvent.click(screen.getByText('Audio Beat Sync'));
+    fireEvent.click(screen.getByRole('button', { name: 'Preview beats' }));
+    await waitFor(() => expect(motionStudioApi.beatSync).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 1, {
+        targetLayerId: 'title', audioTrackIndex: 0, intensity: .35,
+      }, true,
+    ));
+    expect(await screen.findByText(/PREVIEW \(not saved\)/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Apply beat sync' }));
+    await waitFor(() => expect(motionStudioApi.beatSync).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 1, {
+        targetLayerId: 'title', audioTrackIndex: 0, intensity: .35,
+      },
+    ));
+    expect(await screen.findByText('Beat sync applied · 3 transients · revision 2')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Undo scene change' }));
+    await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 2,
+      [{ type: 'replace-composition', composition: expect.objectContaining({ layers: expect.any(Array) }) }],
+    ));
   });
   it('does not resurrect a pending workspace response after unmount', async () => {
     let resolveList: ((value: { id: string; name: string; revision: number }[]) => void) | undefined;

@@ -158,6 +158,17 @@ describe('T-Line Motion proxy and service authentication', () => {
     expect((await fetch(base + '/projects/' + motionId + '/history/restore?workspace=allowed-root')).status).toBe(404);
     expect((await fetch(base + '/projects/' + motionId + '/templates?workspace=allowed-root')).status).toBe(404);
     expect((await fetch(base + '/projects/' + motionId + '/variants?workspace=allowed-root')).status).toBe(404);
+    expect((await fetch(base + '/jobs/motionjob-' + 'a'.repeat(24) + '/exports/gif?workspace=allowed-root')).status).toBe(200);
+    expect((await fetch(base + '/jobs/motionjob-' + 'a'.repeat(24) + '/exports/webm?workspace=allowed-root')).status).toBe(200);
+    expect((await fetch(base + '/jobs/motionjob-' + 'a'.repeat(24) + '/exports/avi?workspace=allowed-root')).status).toBe(404);
+    expect((await fetch(base + '/jobs/motionjob-' + 'a'.repeat(24) + '/exports/gif?workspace=allowed-root', { method: 'POST' })).status).toBe(404);
+    expect((await fetch(base + '/projects/' + motionId + '/beat-sync?workspace=allowed-root')).status).toBe(404);
+    const beat = await fetch(base + '/projects/' + motionId + '/beat-sync/preview?workspace=allowed-root', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseRevision: 1, targetLayerId: 'title' }),
+    });
+    expect(beat.status).toBe(201);
+    expect((await beat.json()).url).toContain('/api/motion/projects/' + motionId + '/beat-sync/preview');
     const variants = await fetch(base + '/projects/' + motionId + '/variants?workspace=allowed-root', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ baseRevision: 1, aspectRatios: ['9:16'] }),

@@ -67,6 +67,8 @@ export interface MotionBatchVariant {
 export interface MotionBatchResult {
   sourceProjectId: string; sourceRevision: number; variants: MotionBatchVariant[];
 }
+export interface MotionBeatSyncInput { targetLayerId: string; audioTrackIndex?: number; intensity?: number }
+export interface MotionBeatSyncResult { project: MotionProject; onsetFrames: number[]; analysis: string }
 export interface CompoundPreset {
   id: string; name: string; description: string; tags: string[];
   entrance: string; emphasis: string; exit: string; accent?: string;
@@ -102,7 +104,7 @@ export type MotionEdit =
   | { type: 'set-audio'; audio: MotionAudioTrack | null }
   | { type: 'set-audio-tracks'; audioTracks: MotionAudioTrack[] };
 export interface MotionCapabilities {
-  capabilities?: { motionBatchAspectVariants?: boolean; motionBrandKit?: boolean; motionTemplateLibrary?: boolean; motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean };
+  capabilities?: { motionExtraExportFormats?: string[]; motionAudioBeatSync?: boolean; motionBatchAspectVariants?: boolean; motionBrandKit?: boolean; motionTemplateLibrary?: boolean; motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean };
 }
 export interface MotionQualityIssue {
   severity: 'warning' | 'error'; code: string; scene: number; message: string;
@@ -264,6 +266,10 @@ export const motionStudioApi = {
     json<MotionBatchResult>(workspace, '/projects/' + assertId(id) + '/variants', {
       method: 'POST', body: JSON.stringify({ baseRevision, aspectRatios, width }),
     }),
+  beatSync: (workspace: string, id: string, baseRevision: number, input: MotionBeatSyncInput, preview = false) =>
+    json<MotionBeatSyncResult>(workspace, '/projects/' + assertId(id) + '/beat-sync' + (preview ? '/preview' : ''), {
+      method: 'POST', body: JSON.stringify({ ...input, baseRevision }),
+    }),
   history: (workspace: string, id: string) =>
     json<{ snapshots: MotionRevisionSnapshot[] }>(workspace, '/projects/' + assertId(id) + '/history'),
   restoreHistory: (workspace: string, id: string, baseRevision: number, revision: number) =>
@@ -352,6 +358,18 @@ export const motionStudioApi = {
   queueRecovery: (workspace: string) => json<MotionQueueRecovery>(workspace, '/queue-recovery'),
   status: (workspace: string, id: string) => json<MotionJob>(workspace, '/jobs/' + assertId(id, true)),
   cancel: (workspace: string, id: string) => json<{ cancellationRequested: boolean }>(workspace, '/jobs/' + assertId(id, true) + '/cancel', { method: 'POST', body: '{}' }),
+  async loadExtraExport(workspace: string, id: string, format: 'gif' | 'webm'): Promise<string> {
+    if (format !== 'gif' && format !== 'webm') throw new Error('Unsupported Motion export format');
+    const response = await motionFetch(workspace, '/jobs/' + assertId(id, true) + '/exports/' + format);
+    const declared = response.headers.get('content-length');
+    if (declared && Number(declared) > 16 * 1024 * 1024) throw new Error('Motion export exceeds 16 MB');
+    const blob = await response.blob();
+    if (blob.size < 30 || blob.size > 16 * 1024 * 1024 ||
+        blob.type !== (format === 'gif' ? 'image/gif' : 'video/webm')) {
+      throw new Error('Invalid Motion extra export response');
+    }
+    return URL.createObjectURL(blob);
+  },
   /** Authorize media via T-Line, then use an ephemeral object URL. Never put bearer credentials in <video src>. */
   async loadPreview(workspace: string, id: string): Promise<string> {
     const path = '/jobs/' + assertId(id, true) + '/artifact';

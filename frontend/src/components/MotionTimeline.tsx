@@ -3,7 +3,8 @@
  */
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { MotionEdit, MotionEasing, MotionProject, MotionProperty } from '../services/motionStudioApi';
-import { deleteMotionKeyframe, easeMotionKeyframe, motionFrameFromPointer, moveMotionKeyframe } from '../services/motionTimelineEdits';
+import { deleteMotionKeyframe, easeMotionKeyframe, motionFrameFromPointer, moveMotionKeyframe, setMotionKeyframeValue } from '../services/motionTimelineEdits';
+import { MotionGraphEditor } from './MotionGraphEditor';
 
 type Selected = { layerId: string; property: MotionProperty; frame: number };
 type Drag = Selected & { pointerId: number; previewFrame: number; revision: number; projectId: string };
@@ -158,6 +159,18 @@ export function MotionTimeline({ project, currentFrame, selectedLayer, busy, isA
               catch (e) { errorMessage(e); }
             }}>Delete keyframe</button>
         </div>
+      )}
+      {selected && key && track && (
+        <MotionGraphEditor key={selected.layerId + ':' + selected.property}
+          track={track} property={selected.property} selectedFrame={selected.frame}
+          disabled={busy || !isActive}
+          onValue={value => {
+            try {
+              commit(setMotionKeyframeValue(project, selected.layerId, selected.property, selected.frame, value),
+                'Keyframe graph value updated');
+            } catch (error) { errorMessage(error); }
+          }}
+        />
       )}
     </section>
   );
