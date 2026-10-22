@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, RefreshCw, ShieldCheck, Users } from 'lucide-react';
 
-type AgentSession = { key: string; agentId: string; targetId: string; port: number; expiresAt: number; claimedAt: number };
+type Participant = { agentId: string; role: 'owner' | 'observer' | 'contributor' };
+type AgentSession = { key: string; agentId: string; targetId: string; port: number; expiresAt: number; claimedAt: number;
+  mode?: 'isolated' | 'shared'; participants?: Participant[] };
 type Queue = { resourceKey: string; waiting: number; oldestWaitMs: number; locked: boolean };
 type GatewayState = {
   ok: boolean;
@@ -54,7 +56,7 @@ export default function BrowserAgentSessions({ active }: { active: boolean }) {
       {expanded && (
         <div className="max-h-52 overflow-auto border-t border-[var(--border-color)] px-3 py-2" aria-label="Browser session details">
           <div className="flex items-center justify-between pb-2">
-            <span className="inline-flex items-center gap-1 text-[var(--text-muted)]"><Users size={12} /> {data?.summary.activeAgents ?? 0} agent(s) • isolated Chrome CDP targets</span>
+            <span className="inline-flex items-center gap-1 text-[var(--text-muted)]"><Users size={12} /> {data?.summary.activeAgents ?? 0} agent(s) • isolated and shared Chrome CDP targets</span>
             <button aria-label="Refresh browser sessions" title="Refresh" onClick={() => void refresh()} className="rounded p-1 hover:bg-[var(--bg-main)]"><RefreshCw size={13}/></button>
           </div>
           {error && <p className="text-red-400">{error}</p>}
@@ -62,8 +64,25 @@ export default function BrowserAgentSessions({ active }: { active: boolean }) {
           {data?.sessions.map(session => (
             <div key={session.key} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 border-t border-[var(--border-color)] py-1.5">
               <div className="min-w-0">
-                <div className="truncate font-semibold" title={session.agentId}>{session.agentId}</div>
+                <div className="flex items-center gap-2">
+                  <span className="truncate font-semibold" title={session.agentId}>{session.agentId}</span>
+                  <span className={session.mode === 'shared'
+                    ? 'rounded bg-emerald-400/15 px-1.5 py-0.5 text-emerald-400'
+                    : 'rounded bg-[var(--bg-main)] px-1.5 py-0.5 text-[var(--text-muted)]'}>
+                    {session.mode === 'shared' ? 'Shared' : 'Isolated'}
+                  </span>
+                </div>
                 <div className="font-mono text-[10px] text-[var(--text-muted)]">:{session.port} / {session.targetId.slice(0, 12)}…</div>
+                {session.mode === 'shared' && (session.participants?.length ?? 0) > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-1" aria-label="Shared tab participants">
+                    {session.participants?.map(member => (
+                      <span key={member.agentId} title={member.agentId}
+                        className="max-w-full truncate rounded border border-[var(--border-color)] px-1.5 py-0.5 text-[10px] text-[var(--text-muted)]">
+                        {member.agentId} · {member.role}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="self-center text-[var(--text-muted)] tabular-nums">
                 {Math.max(0, Math.ceil((session.expiresAt - Date.now()) / 1000))}s lease

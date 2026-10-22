@@ -9,7 +9,9 @@ import { join } from 'node:path';
 const root = () => process.env.SUPERAGENT_CDP_SESSION_DIR || join(homedir(), '.superagent-r', 'cdp-sessions');
 const MAX_ENTRY_BYTES = 16_384;
 const MAX_ENTRIES = 256;
-type Session = { key: string; agentId: string; targetId: string; port: number; expiresAt: number; claimedAt: number };
+type Participant = { agentId: string; role: 'owner' | 'observer' | 'contributor' };
+type Session = { key: string; agentId: string; targetId: string; port: number; expiresAt: number; claimedAt: number;
+  mode: 'isolated' | 'shared'; participants: Participant[] };
 const hashFile = /^[a-f0-9]{64}\.json$/;
 async function jsonEntry(path: string): Promise<Record<string, unknown> | null> {
   try {
@@ -32,10 +34,20 @@ export async function getBrowserAgentSessions(): Promise<{
       if (!row || row.key !== name.slice(0, -5) || !Number.isFinite(row.expiresAt) ||
           Number(row.expiresAt) <= now || typeof row.agentId !== 'string' ||
           typeof row.targetId !== 'string' || !Number.isSafeInteger(row.port)) continue;
-      // Explicit projection. tokenHash, sessionToken, generation, URLs, cookies and titles are NEVER returned.
+      // Explicit allowlist projection: NEVER return per-member token hashes or invitations.
+      const mode = row.mode === 'shared' ? 'shared' : 'isolated';
+      const participants: Participant[] = [{ agentId: row.agentId, role: 'owner' }];
+      if (mode === 'shared' && row.members && typeof row.members === 'object' && !Array.isArray(row.members)) {
+        for (const [agentId, member] of Object.entries(row.members).slice(0, 12)) {
+          if (!/^[a-zA-Z0-9][a-zA-Z0-9_.:@-]{0,95}$/.test(agentId) || !member || typeof member !== 'object') continue;
+          const role = (member as Record<string, unknown>).role;
+          if (role === 'observer' || role === 'contributor') participants.push({ agentId, role });
+        }
+      }
       sessions.push({
         key: row.key, agentId: row.agentId, targetId: row.targetId,
         port: Number(row.port), expiresAt: Number(row.expiresAt), claimedAt: Number(row.claimedAt) || now,
+        mode, participants,
       });
     }
   } catch (err: any) {
@@ -65,7 +77,7 @@ export async function getBrowserAgentSessions(): Promise<{
     sessions,
     queues,
     summary: {
-      activeAgents: new Set(sessions.map(s => s.agentId)).size,
+      activeAgents: new Set(sessions.flatMap(s => s.participants.map(p => p.agentId))).size,
       activeTabs: sessions.length,
       queued: queues.reduce((sum, q) => sum + q.waiting, 0),
       extensionBlocked: sessions.length > 0,

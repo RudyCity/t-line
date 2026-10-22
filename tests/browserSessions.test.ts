@@ -28,12 +28,21 @@ describe('T-Line read-only SuperAgent browser sessions', () => {
     await writeFile(join(dir, 'owners', key + '.json'), JSON.stringify({
       key, port: 9222, targetId: 'TAB_A', agentId: 'agent-a',
       claimedAt: Date.now(), expiresAt: Date.now() + 60_000,
-      tokenHash: 'SENSITIVE_HASH', sessionToken: 'SENSITIVE_TOKEN',
+      tokenHash: 'SENSITIVE_HASH', sessionToken: 'SENSITIVE_TOKEN', mode: 'shared',
+      members: { 'agent-b': { role: 'contributor', tokenHash: 'MEMBER_SECRET', joinedAt: Date.now() } },
+      invitations: { leaked: { tokenHash: 'INVITATION_SECRET', agentId: 'agent-c', role: 'observer' } },
     }));
     await writeFile(join(dir, 'queues', key, 'waiter.json'), JSON.stringify({ pid: process.pid, at: Date.now() }));
     const result = await getBrowserAgentSessions();
-    expect(result.summary).toMatchObject({ activeAgents: 1, activeTabs: 1, queued: 1, extensionBlocked: true });
+    expect(result.summary).toMatchObject({ activeAgents: 2, activeTabs: 1, queued: 1, extensionBlocked: true });
     expect(result.sessions[0].targetId).toBe('TAB_A');
+    expect(result.sessions[0].mode).toBe('shared');
+    expect(result.sessions[0].participants).toEqual([
+      { agentId: 'agent-a', role: 'owner' },
+      { agentId: 'agent-b', role: 'contributor' },
+    ]);
+    expect(JSON.stringify(result)).not.toContain('MEMBER_SECRET');
+    expect(JSON.stringify(result)).not.toContain('INVITATION_SECRET');
     expect(JSON.stringify(result)).not.toContain('SENSITIVE');
     expect(JSON.stringify(result)).not.toContain('tokenHash');
   });
