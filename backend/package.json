@@ -4,7 +4,7 @@
   "description": "Backend service for t-line workspace manager",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "bun --bun x tsc",
     "start": "bun dist/server.js",
     "dev": "bun --watch src/server.ts"
   },

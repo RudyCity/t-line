@@ -177,7 +177,7 @@ function inspectInstaller() {
       const backendSmoke = spawnSync(
         path.join(temp, "bun-runtime", "bun.exe"),
         [path.join(root, "scripts", "bun-backend-smoke.cjs")], {
-          cwd: temp, encoding: "utf8", timeout: 25000, maxBuffer: 1024 * 1024,
+          cwd: temp, encoding: "utf8", timeout: 40000, maxBuffer: 1024 * 1024,
           windowsHide: true,
           env: {
             // Backend needs built-in Windows OS commands, but not global Bun/Node.

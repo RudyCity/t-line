@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "copy-monaco": "bun copy-monaco.cjs",
-    "dev": "bun run copy-monaco && vite",
-    "build": "bun run copy-monaco && tsc && vite build",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "dev": "bun run copy-monaco && bun --bun x vite",
+    "build": "bun run copy-monaco && bun --bun x tsc && bun --bun x vite build",
+    "preview": "bun --bun x vite preview",
+    "test": "bun --bun x vitest run",
+    "test:watch": "bun --bun x vitest"
   },
   "dependencies": {
     "@medv/finder": "^4.0.2",

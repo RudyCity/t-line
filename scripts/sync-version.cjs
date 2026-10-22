@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * scripts/sync-version.cjs
  *
@@ -6,7 +6,7 @@
  * Syncs the version field across all version-bearing manifests in the repo.
  *
  * Usage:
- *   node scripts/sync-version.cjs           # uses source version
+ *   bun scripts/sync-version.cjs           # uses source version
  *   node scripts/sync-version.cjs 1.3.678   # override version explicitly
  *
  * Targets:

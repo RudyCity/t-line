@@ -1,10 +1,10 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Compare the T-Line slash-command UI against the actual SuperAgent CLI command
  * source. This is a source-code parity inventory, not a claim that the HTTP
  * bridge can execute a particular CLI command.
  *
- * Usage: node scripts/audit-superagent-parity.cjs [--check]
+ * Usage: bun scripts/audit-superagent-parity.cjs [--check]
  * Source override: TLINE_SUPERAGENT_SOURCE_DIR=<path-to-superagent>
  */
 const fs = require("node:fs");
