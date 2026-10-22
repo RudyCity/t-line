@@ -34,6 +34,33 @@ router.get('/browser/sessions', async (_req, res) => {
   }
 });
 
+/** Fixed-action browser collaboration controls, gated by T-Line auth AND
+ * SuperAgent's per-tab owner capability. Never record or persist that token. */
+router.post('/browser/shared-control', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const body = req.body || {};
+  const actions = new Set(['share', 'stop', 'invite', 'revoke', 'handover', 'participants']);
+  if (!actions.has(body.action) || !Number.isSafeInteger(body.port) ||
+      body.port < 1024 || body.port > 65535 ||
+      typeof body.targetId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(body.targetId) ||
+      typeof body.agentId !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_.:@-]{0,95}$/.test(body.agentId) ||
+      typeof body.sessionToken !== 'string' || body.sessionToken.length > 160 || !body.sessionToken ||
+      JSON.stringify(body).length > 2000) {
+    res.status(400).json({ success: false, error: 'Invalid browser sharing request.' });
+    return;
+  }
+  const request = {
+    action: body.action, port: body.port, targetId: body.targetId,
+    agentId: body.agentId, sessionToken: body.sessionToken,
+    memberId: typeof body.memberId === 'string' ? body.memberId : undefined,
+    role: body.role === 'observer' || body.role === 'contributor' ? body.role : undefined,
+  };
+  const upstream = await proxyToSuperAgent('/api/browser/shared-control',
+    { success: false, error: 'SuperAgent browser collaboration API is unavailable.' },
+    undefined, 5500, 'POST', request);
+  res.status(upstream?.success ? 200 : 403).json(upstream);
+});
+
 /** SSE relay with exact session identity, authenticated and bounded to local SuperAgent. */
 router.get('/tasks/events', streamTlineTaskEvents);
 

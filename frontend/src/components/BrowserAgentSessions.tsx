@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, RefreshCw, ShieldCheck, Users } from 'lucide-react';
+import BrowserSharedControls from './BrowserSharedControls';
 
 type Participant = { agentId: string; role: 'owner' | 'observer' | 'contributor' };
 type AgentSession = { key: string; agentId: string; targetId: string; port: number; expiresAt: number; claimedAt: number;
-  mode?: 'isolated' | 'shared'; participants?: Participant[] };
+  mode?: 'isolated' | 'shared'; revision?: number; participants?: Participant[] };
 type Queue = { resourceKey: string; waiting: number; oldestWaitMs: number; locked: boolean };
 type GatewayState = {
   ok: boolean;
   sessions: AgentSession[];
   queues: Queue[];
   summary: { activeAgents: number; activeTabs: number; queued: number; extensionBlocked: boolean };
+  recentEvents?: Array<{ time: string; event: string; actor: string; key: string }>;
 };
 
 /** Read-only local browser coordinator monitor. Never fetches or displays session tokens. */
@@ -83,6 +85,8 @@ export default function BrowserAgentSessions({ active }: { active: boolean }) {
                     ))}
                   </div>
                 )}
+                <span className="text-[10px] text-[var(--text-muted)]">Revision {session.revision ?? 0}</span>
+                <BrowserSharedControls session={session} onChanged={() => void refresh()} />
               </div>
               <div className="self-center text-[var(--text-muted)] tabular-nums">
                 {Math.max(0, Math.ceil((session.expiresAt - Date.now()) / 1000))}s lease
@@ -95,7 +99,19 @@ export default function BrowserAgentSessions({ active }: { active: boolean }) {
               {queue.waiting > 0 ? ` • oldest ${Math.ceil(queue.oldestWaitMs / 1000)}s` : ''}
             </div>
           ))}
-          <p className="mt-2 text-[10px] text-[var(--text-muted)]">Read-only status. Release a tab with its owning agent's CDP session token.</p>
+          {!!data?.recentEvents?.length && (
+            <section className="mt-2 border-t border-[var(--border-color)] pt-2" aria-label="Shared tab activity timeline">
+              <div className="font-semibold mb-1">Recent agent activity</div>
+              {data.recentEvents.slice(0, 12).map((ev, i) => (
+                <div key={ev.time + ev.key + i} className="flex gap-2 py-0.5 text-[10px] text-[var(--text-muted)]">
+                  <span className="shrink-0 tabular-nums">{new Date(ev.time).toLocaleTimeString()}</span>
+                  <span className="min-w-0 truncate" title={ev.actor}>{ev.actor}</span>
+                  <span className="ml-auto text-right">{ev.event.replace(/_/g, ' ')}</span>
+                </div>
+              ))}
+            </section>
+          )}
+          <p className="mt-2 text-[10px] text-[var(--text-muted)]">Managing access requires the owner token.</p>
         </div>
       )}
     </div>
