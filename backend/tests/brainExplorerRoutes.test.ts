@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 import http from 'node:http';
 import express from 'express';
 import { createBrainExplorerRouter } from '../src/brainExplorerRoutes';
+import {authorizeBrainTaskAgent} from '../src/brainAgentCredentials';
 
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const close of cleanup.splice(0).reverse()) await close(); });
@@ -314,6 +315,33 @@ describe('Authenticated T-Line Brain Explorer read model', () => {
     const list=await (await fetch(base+'/sessions/sess_local/tasks')).json();
     expect(list.tasks).toHaveLength(1);
     expect(list.tasks[0].status).toBe('completed');
+  });
+
+  it('rotates and revokes operator-managed task credentials without leaking secrets in list',async()=>{
+    const {base,root}=await fixture();
+    const origin=base+'/sessions/sess_local/tasks';
+    const created=await fetch(origin,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({title:'Credential review',agentIds:['agy','claude']})});
+    expect(created.status).toBe(201);
+    expect(created.headers.get('cache-control')).toBe('no-store');
+    const task=await created.json();
+    const remote=origin+'/'+task.taskId;
+    const token=task.credentials.agy;
+    expect(token).toMatch(/^bag_[a-f0-9]{64}$/);
+    const status=await (await fetch(remote+'/credentials')).json();
+    expect(status.agents).toHaveLength(2);
+    expect(JSON.stringify(status)).not.toContain(token);
+    expect(JSON.stringify(await (await fetch(origin)).json())).not.toContain(token);
+    const post=(route:string,confirm:boolean)=>fetch(remote+'/credentials/agy/'+route,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm})});
+    expect((await post('rotate',false)).status).toBe(409);
+    const rotation=await (await post('rotate',true)).json();
+    expect(rotation.agentCredential).toMatch(/^bag_[a-f0-9]{64}$/);
+    expect(()=>authorizeBrainTaskAgent('local-cli','sess_local',task.taskId,'agy',token,root)).toThrow(/mismatch/);
+    expect(authorizeBrainTaskAgent('local-cli','sess_local',task.taskId,'agy',rotation.agentCredential,root)).toBe(true);
+    const revoked=await (await post('revoke',true)).json();
+    expect(revoked.revoked).toBe(true);
+    expect(()=>authorizeBrainTaskAgent('local-cli','sess_local',task.taskId,'agy',rotation.agentCredential,root)).toThrow(/revoked/);
   });
 
   it('does not follow symlinks to outside files', async () => {

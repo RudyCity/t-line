@@ -3,6 +3,7 @@ import { CheckCircle2, ClipboardList, CornerDownRight, RefreshCw } from 'lucide-
 import { getAuthHeader } from './SuperAgentConsoleUtils';
 
 type TaskCheckpoint = { version:number; at:string; agentId:string; note:string; nextStep:string; artifactPaths:string[] };
+type CapabilityStatus = { agentId: string; expiresAt: string; generation: number; revoked: boolean; expired: boolean };
 type BrainTask = {
   taskId:string; title:string; status:'pending'|'running'|'blocked'|'completed'|'cancelled';
   agents:string[]; assignedTo:string|null; updatedAt:string; checkpoints:TaskCheckpoint[];
@@ -22,6 +23,10 @@ const request = async <T,>(url:string,body?:Record<string,unknown>):Promise<T>=>
 export function SuperAgentBrainTaskPanel({sessionId}:{sessionId:string}){
  const [tasks,setTasks]=useState<BrainTask[]>([]);
  const [jobs,setJobs]=useState<Array<{jobId:string;status:string;completionState:string;cli:string}>>([]);
+ const [capabilities,setCapabilities]=useState<CapabilityStatus[]>([]);
+ const [approved,setApproved]=useState(false);
+ const [freshCredential,setFreshCredential]=useState<{agentId:string;value:string}|null>(null);
+ const [createdCredentials,setCreatedCredentials]=useState<{taskId:string;tokens:Record<string,string>}|null>(null);
  const [current,setCurrent]=useState('');
  const [title,setTitle]=useState('');
  const [members,setMembers]=useState('main, agy, claude');
@@ -56,7 +61,28 @@ export function SuperAgentBrainTaskPanel({sessionId}:{sessionId:string}){
   const interval=setInterval(reload,12000);
   return()=>clearInterval(interval);
  },[base,reload,tasks]);
+ useEffect(()=>{setFreshCredential(null);setCreatedCredentials(null);setApproved(false);},[sessionId]);
+ useEffect(()=>{setFreshCredential(null);setApproved(false);},[current]);
+ useEffect(()=>{
+   if(!base||!current){setCapabilities([]);return;}
+   let live=true;
+   request<{agents:CapabilityStatus[]}>(base+'/'+encodeURIComponent(current)+'/credentials')
+     .then(data=>{if(live)setCapabilities(data.agents||[]);})
+     .catch(()=>{if(live)setCapabilities([]);});
+   return()=>{live=false;};
+ },[base,current,tick]);
  const selected=tasks.find(task=>task.taskId===current);
+ const changeCapability=async(action:'rotate'|'revoke',agentId:string)=>{
+   if(!approved||!taskUrl)return;
+   setBusy(true);setError('');setNotice('');
+   try {
+     const result=await request<{agentCredential?:string}>(taskUrl+'/credentials/'+encodeURIComponent(agentId)+'/'+action,{confirm:true});
+     setFreshCredential(action==='rotate'&&result.agentCredential?{agentId,value:result.agentCredential}:null);
+     setApproved(false);setNotice(action==='rotate'?'Copy the replacement credential now. It will not be shown again.':'Agent credential revoked.');
+     reload();
+   }catch(e:any){setError(e?.message||'Credential operation rejected');}
+   finally{setBusy(false);}
+ };
  const perform=async(url:string,body:Record<string,unknown>,message:string)=>{
   setBusy(true);setError('');setNotice('');
   try {await request(url,body);setNotice(message);reload();}
@@ -76,7 +102,12 @@ export function SuperAgentBrainTaskPanel({sessionId}:{sessionId:string}){
    <summary className="p-2 cursor-pointer text-[11px]">Create task</summary>
    <form className="p-2 flex flex-col gap-2" onSubmit={e=>{
     e.preventDefault();
-    void perform(base,{title,agentIds:members.split(',').map(x=>x.trim()).filter(Boolean)},'Task created');
+    setBusy(true);setError('');setNotice('');
+    void request<BrainTask&{credentials?:Record<string,string>}>(base,{title,agentIds:members.split(',').map(x=>x.trim()).filter(Boolean)})
+      .then(data=>{setCurrent(data.taskId);setCreatedCredentials(data.credentials?{taskId:data.taskId,tokens:data.credentials}:null);
+        setNotice('Task created. Copy the one-time credentials before closing this panel.');reload();})
+      .catch(e=>setError(e?.message||'Task creation failed'))
+      .finally(()=>setBusy(false));
    }}>
     <input value={title} onChange={e=>setTitle(e.target.value)} aria-label="Brain task title" placeholder="Research or experiment goal"
      maxLength={160} className="text-xs p-1 rounded border border-[var(--border-color)] bg-[var(--bg-card)]"/>
@@ -87,10 +118,17 @@ export function SuperAgentBrainTaskPanel({sessionId}:{sessionId:string}){
   </details>
   {tasks.length===0&&<p className="text-[11px] text-[var(--text-muted)]">No tasks. Creating one will allocate isolated agent scratch when claimed.</p>}
   <div className="flex gap-1 flex-wrap max-h-20 overflow-y-auto">
-    {tasks.map(t=><button key={t.taskId} type="button" onClick={()=>{setCurrent(t.taskId);setActor(t.assignedTo||t.agents[0]||'main');}}
+    {tasks.map(t=><button key={t.taskId} type="button" onClick={()=>{setCurrent(t.taskId);setActor(t.assignedTo||t.agents[0]||'main');setCreatedCredentials(null);}}
      className={`rounded px-2 py-1 text-[11px] border border-[var(--border-color)] ${current===t.taskId?'bg-[var(--color-primary-glow)] text-[var(--color-primary)]':'bg-[var(--bg-card)]'}`}
      title={t.taskId}>{t.title.slice(0,42)}</button>)}
   </div>
+  {createdCredentials&&createdCredentials.taskId===current&&<div role="status" className="rounded border border-[var(--border-color)] p-2 text-[11px]">
+    <p className="font-semibold">One-time task agent credentials. Copy now; not stored in browser storage.</p>
+    {Object.entries(createdCredentials.tokens).map(([agentId,token])=><div key={agentId}>
+      <strong>{agentId}</strong><code className="break-all block select-all">{token}</code>
+    </div>)}
+    <button className="underline mt-1" type="button" onClick={()=>setCreatedCredentials(null)}>Clear credentials</button>
+  </div>}
   {selected&&<div className="space-y-2">
     <div className="flex flex-wrap justify-between gap-1 items-center text-[11px]">
       <span className="font-medium">{selected.status}</span>
@@ -108,6 +146,27 @@ export function SuperAgentBrainTaskPanel({sessionId}:{sessionId:string}){
         </span>
       </div>;
     })}
+    <details className="rounded border border-[var(--border-color)]">
+      <summary className="p-2 cursor-pointer text-[11px]">Agent credentials</summary>
+      <div className="space-y-2 p-2 text-[11px]">
+        {capabilities.length===0&&<p className="text-[var(--text-muted)]">No remote agent credentials for this task.</p>}
+        {capabilities.map(c=><div key={c.agentId} className="flex gap-2 items-center justify-between flex-wrap">
+          <span>{c.agentId} · {c.revoked?'revoked':c.expired?'expired':'active'} · v{c.generation}</span>
+          <span className="text-[var(--text-muted)]">{new Date(c.expiresAt).toLocaleString()}</span>
+          <button type="button" disabled={!approved||busy} onClick={()=>void changeCapability('rotate',c.agentId)}
+           className="rounded border px-2 py-1 border-[var(--border-color)] disabled:opacity-40">Rotate</button>
+          <button type="button" disabled={!approved||busy||c.revoked} onClick={()=>void changeCapability('revoke',c.agentId)}
+           className="rounded border px-2 py-1 border-[var(--border-color)] disabled:opacity-40">Revoke</button>
+        </div>)}
+        <label className="flex items-center gap-1"><input type="checkbox" aria-label="Confirm Brain credential operation" checked={approved}
+          onChange={e=>setApproved(e.target.checked)}/> Confirm changing this task's agent credentials</label>
+        {freshCredential&&<div role="status" className="rounded border border-[var(--border-color)] p-2">
+          <p>New {freshCredential.agentId} credential — shown once</p>
+          <code className="block break-all select-all">{freshCredential.value}</code>
+          <button type="button" onClick={()=>setFreshCredential(null)} className="underline">Clear displayed credential</button>
+        </div>}
+      </div>
+    </details>
     <div className="flex gap-2 items-end flex-wrap">
       <label className="text-[11px]">Agent
        <select aria-label="Brain active agent" value={selected.agents.includes(actor)?actor:(selected.agents[0]||'')}

@@ -18,6 +18,7 @@ import { annotateBrainArtifact, searchBrainArtifacts, brainResumeContext, brainR
 import { recordBrainEvent, summarizeBrainEvents } from './brainObservability';
 import { createBrainTask, listBrainTasks, inspectBrainTask, claimBrainTask,
   transferBrainTask, updateBrainTask, checkpointBrainTask, handoffBrainArtifact, resumeBrainTask } from './brainTasks';
+import {brainTaskCapabilityStatus,rotateBrainTaskAgentCredential,revokeBrainTaskAgentCredential,issueBrainTaskAgentCredentials} from './brainAgentCredentials';
 
 const SESSION_ID = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$/;
 const MAX_LIST = 100;
@@ -141,8 +142,13 @@ export function createBrainExplorerRouter(options: ReadOptions = {}): Router {
   });
   router.post('/sessions/:sessionId/tasks', (req, res) => {
     try { session(req.params.sessionId);
-      res.status(201).json(createBrainTask('local-cli',req.params.sessionId,
-        req.body?.title,req.body?.agentIds ?? ['main'],root()));
+      const task=createBrainTask('local-cli',req.params.sessionId,
+        req.body?.title,req.body?.agentIds ?? ['main'],root());
+      // Return credentials only on creation. Never persist plaintext outside
+      // this operator-authenticated response.
+      const credentials=issueBrainTaskAgentCredentials('local-cli',req.params.sessionId,task.taskId,24*60*60*1000,root());
+      res.setHeader('Cache-Control','no-store');
+      res.status(201).json({...task,credentials});
     } catch { res.status(409).json({error:'Brain task creation rejected.'}); }
   });
   router.get('/sessions/:sessionId/tasks/:taskId', (req, res) => {
@@ -150,6 +156,33 @@ export function createBrainExplorerRouter(options: ReadOptions = {}): Router {
       res.json(inspectBrainTask('local-cli',req.params.sessionId,req.params.taskId,root()));
     } catch { res.status(404).json({error:'Brain task not found.'}); }
   });
+  // Desktop operator is authenticated by the parent backend middleware.
+  // Rotation reveals a replacement credential once; never log or cache responses.
+  router.get('/sessions/:sessionId/tasks/:taskId/credentials', (req,res) => {
+    try {
+      session(req.params.sessionId);
+      res.setHeader('Cache-Control','no-store');
+      res.json({agents:brainTaskCapabilityStatus('local-cli',req.params.sessionId,req.params.taskId,root())});
+    } catch {res.status(404).json({error:'Task credentials unavailable.'});}
+  });
+  router.post('/sessions/:sessionId/tasks/:taskId/credentials/:agentId/rotate', (req,res)=>{
+    try {
+      session(req.params.sessionId);
+      if(req.body?.confirm !== true)throw new Error('Confirmation required');
+      const rotated=rotateBrainTaskAgentCredential('local-cli',req.params.sessionId,req.params.taskId,req.params.agentId,
+        {operatorApproved:true,ttlMs:24*60*60*1000},root());
+      res.setHeader('Cache-Control','no-store');res.json(rotated);
+    } catch {res.status(409).json({error:'Credential rotation rejected.'});}
+  });
+  router.post('/sessions/:sessionId/tasks/:taskId/credentials/:agentId/revoke', (req,res)=>{
+    try {
+      session(req.params.sessionId);
+      if(req.body?.confirm !== true)throw new Error('Confirmation required');
+      res.setHeader('Cache-Control','no-store');
+      res.json(revokeBrainTaskAgentCredential('local-cli',req.params.sessionId,req.params.taskId,req.params.agentId,{operatorApproved:true},root()));
+    } catch {res.status(409).json({error:'Credential revocation rejected.'});}
+  });
+
   router.get('/sessions/:sessionId/tasks/:taskId/resume', (req, res) => {
     try { session(req.params.sessionId);
       res.json(resumeBrainTask('local-cli',req.params.sessionId,req.params.taskId,root()));

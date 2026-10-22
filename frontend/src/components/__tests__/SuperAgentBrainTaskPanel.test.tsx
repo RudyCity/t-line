@@ -14,7 +14,7 @@ beforeEach(()=>{
   else if(url===base&&method==='POST'){
    const task={taskId:'task_0123456789abcdefabcd',title:body.title,status:'pending',
     agents:body.agentIds,assignedTo:null,checkpoints:[],handoffs:[],updatedAt:new Date().toISOString()};
-   tasks=[task];data=task;status=201;
+   tasks=[task];data={...task,credentials:{main:'bag_'+ 'a'.repeat(64)}};status=201;
   }else{
    const task=tasks[0];
    if(!task){status=404;data={error:'Not found'};}
@@ -43,6 +43,7 @@ describe('Brain multi-agent task dashboard',()=>{
   fireEvent.change(screen.getByLabelText('Brain task title'),{target:{value:'Analyze source'}});
   fireEvent.click(screen.getByRole('button',{name:'Create'}));
   await waitFor(()=>expect(screen.getByRole('button',{name:'Analyze source'})).toBeTruthy());
+  await waitFor(()=>expect(screen.getByText(/One-time task agent credentials/)).toBeTruthy());
   fireEvent.click(screen.getByRole('button',{name:'Claim'}));
   await waitFor(()=>expect(screen.getByText('running')).toBeTruthy());
   fireEvent.click(screen.getByText('Checkpoint / handoff'));

@@ -40,6 +40,14 @@ Task API routes under `/sessions/:sessionId/tasks` support listing, create, insp
 
 Task membership IDs are **not OAuth identities**. T-Line only displays the local-cli owner's tasks; separate OAuth principals remain isolated. The panel does not automatically execute another agent or grant new project write permissions.
 
+### Phase 6: Expiring Agent Credentials and Operator Controls
+- Canonical generated `brainAgentCredentials.ts` introduces 24-hour credentials, per-agent generation, hashed persistence, explicit rotation and revocation. Standalone T-Line build integrity checks pin the canonical module checksum.
+- Operator-authenticated routes under `/sessions/:id/tasks/:taskId/credentials`: GET redacted status, POST `/:agentId/rotate` and POST `/:agentId/revoke`. Changes require `{"confirm":true}` and responses include `Cache-Control: no-store`.
+- Task creation returns new plaintext credentials **once** for temporary Brain Task panel display. No tokens are written to browser localStorage or telemetry. The operator can dismiss them.
+- Backend API regression validates expired/revoked state handling, old-token invalidation, and no plaintext leakage into task listings.
+- The local desktop operator has trusted local-cli authority; remote MCP agent updates still require their *own* current task credential.
+- The installed desktop and public OAuth tunnel still require operator-run live acceptance.
+
 ### Nested task scratch and live status hardening (2026-10-22)
 - Job listing accepts persisted CLI Bridge cwd values inside the owner session's scratch subtree, including `scratch/agents/<agent>/<task>/`; sibling paths are rejected using canonical segment boundaries.
 - Cleanup refuses to delete scratch while a nested AGY/Claude delegation is active, using the synchronized SuperAgent Core storage implementation.
