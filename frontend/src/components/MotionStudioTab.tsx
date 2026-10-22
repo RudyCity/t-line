@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import {
   motionStudioApi, type MotionJob, type MotionProject, type MotionLayer, type MotionEdit, type MotionSchedulerStatus,
-  type CompoundPresetApplication, type MotionEffectApplication, type MotionStackOperation, type MotionTemplateInput, type MotionBeatSyncInput,
+  type CompoundPresetApplication, type MotionEffectApplication, type MotionStackOperation, type MotionTemplateInput, type MotionBeatSyncInput, type MotionParticleInput,
   type MotionProperty, type MotionProjectSummary, type MotionStorageStatus, type MotionQueueRecovery, type MotionSupervisorStatus, type MotionQualityReport, type MotionVisionReview,
 } from '../services/motionStudioApi';
 import { evaluateLayer, fpsOf, frameLabel, makeKeyframeTrack } from '../services/motionScene';
@@ -23,6 +23,8 @@ import { MotionTemplatePanel } from './MotionTemplatePanel';
 import { MotionBatchVariantsPanel } from './MotionBatchVariantsPanel';
 import { MotionBeatSyncPanel } from './MotionBeatSyncPanel';
 import { MotionExtraExportPanel } from './MotionExtraExportPanel';
+import { MotionStoryboardPanel } from './MotionStoryboardPanel';
+import { MotionParticlesPanel } from './MotionParticlesPanel';
 import { MotionTimeline } from './MotionTimeline';
 import { MotionAudioPanel } from './MotionAudioPanel';
 import { motionPlaybackFrame } from '../services/motionTimelineClock';
@@ -99,7 +101,10 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
   const [templatesAvailable, setTemplatesAvailable] = useState(false);
   const [batchAvailable, setBatchAvailable] = useState(false);
   const [beatAvailable, setBeatAvailable] = useState(false);
+  const [particlesAvailable, setParticlesAvailable] = useState(false);
+  const [particlePreview, setParticlePreview] = useState<MotionProject | null>(null);
   const [extraExportsAvailable, setExtraExportsAvailable] = useState(false);
+  const [storyboardAvailable, setStoryboardAvailable] = useState(false);
   const [beatPreview, setBeatPreview] = useState<MotionProject | null>(null);
   const [templatePreview, setTemplatePreview] = useState<MotionProject | null>(null);
   const [resizeRatio, setResizeRatio] = useState<'16:9' | '1:1' | '9:16'>('9:16');
@@ -133,7 +138,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
     setPromptVoiceover(''); setPromptVoiceoverGain(1); setQuality(null); setVisionReview(null);
     setVisionAvailable(false); setVisionRepairAvailable(false); setCaptionsAvailable(false);
     setCompoundAvailable(false); setEffectsAvailable(false); setStackAvailable(false); setHistoryAvailable(false);
-    setBrandAvailable(false); setTemplatesAvailable(false); setBatchAvailable(false); setBeatAvailable(false); setExtraExportsAvailable(false); setBeatPreview(null); setTemplatePreview(null); setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null); setBeatPreview(null);
+    setBrandAvailable(false); setTemplatesAvailable(false); setBatchAvailable(false); setBeatAvailable(false); setParticlesAvailable(false); setParticlePreview(null); setExtraExportsAvailable(false); setStoryboardAvailable(false); setBeatPreview(null); setTemplatePreview(null); setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null); setBeatPreview(null); setParticlePreview(null);
     setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
     setScheduler(null); setSupervisor(null); setSupervisedRender(false);
@@ -170,7 +175,9 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
         setTemplatesAvailable(motionInfo?.capabilities?.motionTemplateLibrary === true);
         setBatchAvailable(motionInfo?.capabilities?.motionBatchAspectVariants === true);
         setBeatAvailable(motionInfo?.capabilities?.motionAudioBeatSync === true);
+        setParticlesAvailable(motionInfo?.capabilities?.motionCpuParticleOverlays === true);
         setExtraExportsAvailable(motionInfo?.capabilities?.motionExtraExportFormats?.includes('gif') === true);
+        setStoryboardAvailable(motionInfo?.capabilities?.aiStoryboardReview === true);
         const latest = existingJobs.find(job => job.status === 'completed') || existingJobs[0];
         setActiveJobId(latest?.id || '');
       } catch (cause) {
@@ -399,6 +406,21 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
       setProject(next);
       if (focus !== undefined) setSelectedLayer(focus);
       setSuccess(note + ' · revision ' + next.revision);
+    });
+  };
+
+  const applyParticleOverlay = (input: MotionParticleInput) => {
+    if (!project || busy) return;
+    const before = structuredClone(project.composition);
+    const selectedSequence = selectionSeq.current;
+    setParticlePreview(null); setBeatPreview(null); setTemplatePreview(null); setPresetPreview(null); setEffectPreview(null);
+    void operation(async () => {
+      const next = await motionStudioApi.particles(workspacePath, project.id, project.revision, input);
+      if (selectedSequence !== selectionSeq.current) return;
+      setUndoStack(prev => [...prev.slice(-19), before]);
+      setRedoStack([]);
+      setProject(next);
+      setSuccess('Applied ' + input.kind + ' particle overlay · revision ' + next.revision);
     });
   };
 
@@ -851,6 +873,25 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
           <button className={primary} onClick={render} disabled={!project || busy}><Film size={14} /> Render MP4</button>
         </div>
       </header>
+      {storyboardAvailable && (
+        <MotionStoryboardPanel workspacePath={workspacePath} busy={busy} renderWidth={renderWidth}
+          onCreated={result => {
+            setProjects(prev => [
+              { id: result.project.id, name: result.project.name, revision: result.project.revision },
+              ...prev.filter(item => item.id !== result.project.id),
+            ]);
+            setSelectedId(result.project.id);
+            setProject(result.project);
+            setSelectedLayer(result.project.composition.layers.find(item => item.kind === 'text')?.id ?? null);
+            setFrame(0); setUndoStack([]); setRedoStack([]);
+            setJobs(prev => [result.job, ...prev.filter(item => item.id !== result.job.id)]);
+            setActiveJobId(result.job.id);
+            setQuality(result.quality ?? null);
+            setSuccess(result.job.status === 'failed'
+              ? 'Approved storyboard saved, but MP4 render failed to start'
+              : 'Approved storyboard saved · MP4 rendering queued');
+          }} />
+      )}
       <div className="border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] px-4 py-4" aria-label="AI Motion Director">
         <div className="mb-2 flex items-center justify-between gap-2">
           <div className="text-sm font-semibold">AI Motion Director</div>
@@ -1022,12 +1063,21 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
           onPreview={next => { setTemplatePreview(next); if (next) { setPresetPreview(null); setEffectPreview(null); } }}
           onApply={applySceneTemplate} />
       )}
+      {project && particlesAvailable && (
+        <MotionParticlesPanel key={project.id} workspacePath={workspacePath} project={project}
+          busy={busy} preview={particlePreview}
+          onPreview={next => {
+            setParticlePreview(next);
+            if (next) { setBeatPreview(null); setTemplatePreview(null); setPresetPreview(null); setEffectPreview(null); }
+          }}
+          onApply={applyParticleOverlay} />
+      )}
       {project && beatAvailable && (
         <MotionBeatSyncPanel key={project.id} workspacePath={workspacePath} project={project}
           selectedLayer={selectedLayer} busy={busy} preview={beatPreview}
           onPreview={next => {
             setBeatPreview(next);
-            if (next) { setTemplatePreview(null); setPresetPreview(null); setEffectPreview(null); }
+            if (next) { setTemplatePreview(null); setPresetPreview(null); setEffectPreview(null); setParticlePreview(null); }
           }} onApply={applyAudioBeatSync} />
       )}
       {project && batchAvailable && (
@@ -1117,7 +1167,7 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
             <div className="flex min-h-[250px] min-w-0 flex-col">
               <div className="flex items-center justify-between px-4 py-2 text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
                 <span title="Drag to move · corner handle resizes rotated rectangles · upper handle rotates · arrows nudge · Alt+arrows rotate · Ctrl+arrows resize rectangles">
-                  Composition · {project.composition.width} × {project.composition.height}{presetPreview || effectPreview || templatePreview || beatPreview ? ' · PREVIEW (not saved)' : ''}
+                  Composition · {project.composition.width} × {project.composition.height}{presetPreview || effectPreview || templatePreview || beatPreview || particlePreview ? ' · PREVIEW (not saved)' : ''}
                 </span>
                 <div className="flex items-center gap-3">
                   <label className="inline-flex cursor-pointer items-center gap-2 normal-case tracking-normal">
@@ -1167,9 +1217,9 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
               >
                 <div className="w-full max-w-[1000px]" data-testid="motion-canvas"
                   style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`, transformOrigin: 'center center' }}>
-                  <MotionCanvas key={project.id + ':' + project.revision + (presetPreview || effectPreview || templatePreview || beatPreview ? ':preview' : '')}
-                    project={beatPreview ?? templatePreview ?? effectPreview ?? presetPreview ?? project} frame={frame} assetUrls={imageUrls}
-                    selectedLayer={selectedLayer} isActive={isActive && !presetPreview && !effectPreview && !templatePreview && !beatPreview} busy={busy || panMode || !!presetPreview || !!effectPreview || !!templatePreview || !!beatPreview} snapping={canvasSnapping}
+                  <MotionCanvas key={project.id + ':' + project.revision + (presetPreview || effectPreview || templatePreview || beatPreview || particlePreview ? ':preview' : '')}
+                    project={particlePreview ?? beatPreview ?? templatePreview ?? effectPreview ?? presetPreview ?? project} frame={frame} assetUrls={imageUrls}
+                    selectedLayer={selectedLayer} isActive={isActive && !presetPreview && !effectPreview && !templatePreview && !beatPreview && !particlePreview} busy={busy || panMode || !!presetPreview || !!effectPreview || !!templatePreview || !!beatPreview || !!particlePreview} snapping={canvasSnapping}
                     onSelectLayer={setSelectedLayer} onStopPlayback={() => setPlaying(false)}
                     onEdit={(edits, note) => applyEditorEdits(edits, note)} />
                 </div>
@@ -1257,8 +1307,8 @@ export function MotionStudioTab({ workspacePath, isActive }: Props) {
             busy={busy} isActive={isActive} frame={frame} playing={playing}
             onSeekFrame={next => { setPlaying(false); setFrame(next); }} onUpload={importAudio}
             onEdit={(edits, note) => applyEditorEdits(edits, note)} onError={message} />
-          <MotionTimeline project={beatPreview ?? templatePreview ?? effectPreview ?? presetPreview ?? project} currentFrame={frame} selectedLayer={selectedLayer}
-             busy={busy || !!presetPreview || !!effectPreview || !!templatePreview || !!beatPreview} isActive={isActive && !presetPreview && !effectPreview && !templatePreview && !beatPreview} onFrame={next => { setPlaying(false); setFrame(next); }}
+          <MotionTimeline project={particlePreview ?? beatPreview ?? templatePreview ?? effectPreview ?? presetPreview ?? project} currentFrame={frame} selectedLayer={selectedLayer}
+             busy={busy || !!presetPreview || !!effectPreview || !!templatePreview || !!beatPreview || !!particlePreview} isActive={isActive && !presetPreview && !effectPreview && !templatePreview && !beatPreview && !particlePreview} onFrame={next => { setPlaying(false); setFrame(next); }}
             onLayer={setSelectedLayer} onEdit={(edits, note) => applyEditorEdits(edits, note)}
             onError={message} />
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-color)] bg-[var(--bg-sidebar)] px-3 py-2" aria-label="Render jobs">

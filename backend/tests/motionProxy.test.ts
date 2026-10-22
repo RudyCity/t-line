@@ -124,6 +124,16 @@ describe('T-Line Motion proxy and service authentication', () => {
     const motionId = 'motion-' + 'a'.repeat(20);
     expect((await fetch(base + '/presets?workspace=allowed-root')).status).toBe(200);
     expect((await fetch(base + '/templates?workspace=allowed-root')).status).toBe(200);
+    expect((await fetch(base + '/storyboard/plan?workspace=allowed-root')).status).toBe(404);
+    for (const route of ['/storyboard/plan', '/storyboard/preview', '/storyboard/render']) {
+      const approved = await fetch(base + route + '?workspace=allowed-root', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: 'video promo' }),
+      });
+      expect(approved.status).toBe(201);
+      expect((await approved.json()).url).toContain('/api/motion' + route);
+      expect((await fetch(base + route + '?workspace=forbidden', { method: 'POST' })).status).toBe(403);
+    }
     expect((await fetch(base + '/brand-kit?workspace=allowed-root')).status).toBe(200);
     expect((await fetch(base + '/templates?workspace=forbidden')).status).toBe(403);
     const updatedBrand = await fetch(base + '/brand-kit?workspace=allowed-root', {
@@ -162,6 +172,16 @@ describe('T-Line Motion proxy and service authentication', () => {
     expect((await fetch(base + '/jobs/motionjob-' + 'a'.repeat(24) + '/exports/webm?workspace=allowed-root')).status).toBe(200);
     expect((await fetch(base + '/jobs/motionjob-' + 'a'.repeat(24) + '/exports/avi?workspace=allowed-root')).status).toBe(404);
     expect((await fetch(base + '/jobs/motionjob-' + 'a'.repeat(24) + '/exports/gif?workspace=allowed-root', { method: 'POST' })).status).toBe(404);
+    expect((await fetch(base + '/projects/' + motionId + '/particles?workspace=allowed-root')).status).toBe(404);
+    const overlay = await fetch(base + '/projects/' + motionId + '/particles/preview?workspace=allowed-root', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseRevision: 1, kind: 'confetti' }),
+    });
+    expect(overlay.status).toBe(201);
+    expect((await overlay.json()).url).toContain('/api/motion/projects/' + motionId + '/particles/preview');
+    expect((await fetch(base + '/projects/' + motionId + '/particles/preview?workspace=forbidden', {
+      method: 'POST',
+    })).status).toBe(403);
     expect((await fetch(base + '/projects/' + motionId + '/beat-sync?workspace=allowed-root')).status).toBe(404);
     const beat = await fetch(base + '/projects/' + motionId + '/beat-sync/preview?workspace=allowed-root', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },

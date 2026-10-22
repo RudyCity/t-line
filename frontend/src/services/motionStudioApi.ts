@@ -58,6 +58,19 @@ export interface MotionTemplateSummary {
   align: 'left' | 'center' | 'right'; tone: 'bold' | 'clean' | 'calm';
 }
 export interface MotionTemplateInput { templateId: string; headline?: string; subtitle?: string }
+export interface MotionStoryboardScene {
+  headline: string; subtitle?: string; accent: string;
+  motion?: string; effect?: string; preset?: string; narration?: string;
+  layout?: 'left' | 'center' | 'right';
+}
+export interface MotionStoryboardPlan {
+  name: string; durationSeconds: number; background: string;
+  scenes: MotionStoryboardScene[];
+  motion?: string; effect?: string; preset?: string;
+  transition?: 'crossfade' | 'cut';
+  aspectRatio?: '16:9' | '1:1' | '9:16';
+  artDirection?: 'minimal' | 'editorial' | 'neon' | 'brutalist';
+}
 export type MotionAspectRatio = '16:9' | '1:1' | '9:16';
 export interface MotionBatchVariant {
   aspectRatio: MotionAspectRatio;
@@ -68,6 +81,7 @@ export interface MotionBatchResult {
   sourceProjectId: string; sourceRevision: number; variants: MotionBatchVariant[];
 }
 export interface MotionBeatSyncInput { targetLayerId: string; audioTrackIndex?: number; intensity?: number }
+export interface MotionParticleInput { kind: 'confetti' | 'sparks' | 'snow'; count?: number; color?: string }
 export interface MotionBeatSyncResult { project: MotionProject; onsetFrames: number[]; analysis: string }
 export interface CompoundPreset {
   id: string; name: string; description: string; tags: string[];
@@ -104,7 +118,7 @@ export type MotionEdit =
   | { type: 'set-audio'; audio: MotionAudioTrack | null }
   | { type: 'set-audio-tracks'; audioTracks: MotionAudioTrack[] };
 export interface MotionCapabilities {
-  capabilities?: { motionExtraExportFormats?: string[]; motionAudioBeatSync?: boolean; motionBatchAspectVariants?: boolean; motionBrandKit?: boolean; motionTemplateLibrary?: boolean; motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean };
+  capabilities?: { motionCpuParticleOverlays?: boolean; aiStoryboardReview?: boolean; motionExtraExportFormats?: string[]; motionAudioBeatSync?: boolean; motionBatchAspectVariants?: boolean; motionBrandKit?: boolean; motionTemplateLibrary?: boolean; motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean };
 }
 export interface MotionQualityIssue {
   severity: 'warning' | 'error'; code: string; scene: number; message: string;
@@ -258,6 +272,18 @@ export const motionStudioApi = {
     json<MotionProject>(workspace, '/projects/' + assertId(id) + '/templates/preview', {
       method: 'POST', body: JSON.stringify({ ...input, baseRevision }),
     }),
+  storyboardPlan: (workspace: string, prompt: string) =>
+    json<{ plan: MotionStoryboardPlan; preview: MotionProject }>(workspace, '/storyboard/plan', {
+      method: 'POST', body: JSON.stringify({ prompt }),
+    }),
+  storyboardPreview: (workspace: string, plan: MotionStoryboardPlan) =>
+    json<{ preview: MotionProject }>(workspace, '/storyboard/preview', {
+      method: 'POST', body: JSON.stringify({ plan }),
+    }),
+  storyboardRender: (workspace: string, plan: MotionStoryboardPlan, width = 640) =>
+    json<MotionDirectorResult>(workspace, '/storyboard/render', {
+      method: 'POST', body: JSON.stringify({ plan, width }),
+    }),
   applyTemplate: (workspace: string, id: string, baseRevision: number, input: MotionTemplateInput) =>
     json<MotionProject>(workspace, '/projects/' + assertId(id) + '/templates', {
       method: 'POST', body: JSON.stringify({ ...input, baseRevision }),
@@ -265,6 +291,10 @@ export const motionStudioApi = {
   batchVariants: (workspace: string, id: string, baseRevision: number, aspectRatios: MotionAspectRatio[], width = 640) =>
     json<MotionBatchResult>(workspace, '/projects/' + assertId(id) + '/variants', {
       method: 'POST', body: JSON.stringify({ baseRevision, aspectRatios, width }),
+    }),
+  particles: (workspace: string, id: string, baseRevision: number, input: MotionParticleInput, preview = false) =>
+    json<MotionProject>(workspace, '/projects/' + assertId(id) + '/particles' + (preview ? '/preview' : ''), {
+      method: 'POST', body: JSON.stringify({ ...input, baseRevision }),
     }),
   beatSync: (workspace: string, id: string, baseRevision: number, input: MotionBeatSyncInput, preview = false) =>
     json<MotionBeatSyncResult>(workspace, '/projects/' + assertId(id) + '/beat-sync' + (preview ? '/preview' : ''), {

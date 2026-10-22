@@ -13,6 +13,7 @@ const permitted = [
   /^\/queue-recovery$/,
   /^\/presets$/,
   /^\/templates$/,
+  /^\/storyboard\/(?:plan|preview|render)$/,
   /^\/brand-kit$/,
   /^\/presets\/[a-z][a-z0-9-]{1,63}$/,
   /^\/effects$/,
@@ -33,6 +34,7 @@ const permitted = [
   /^\/projects\/motion-[a-f0-9]{20}\/templates(?:\/preview)?$/,
   /^\/projects\/motion-[a-f0-9]{20}\/variants$/,
   /^\/projects\/motion-[a-f0-9]{20}\/beat-sync(?:\/preview)?$/,
+  /^\/projects\/motion-[a-f0-9]{20}\/particles(?:\/preview)?$/,
   /^\/projects\/motion-[a-f0-9]{20}\/quality$/,
   /^\/projects\/motion-[a-f0-9]{20}\/vision-review$/,
   /^\/projects\/motion-[a-f0-9]{20}\/vision-repair$/,
@@ -45,12 +47,12 @@ const permitted = [
 
 function allowedRoute(method: string, pathname: string): boolean {
   if (!permitted.some(pattern => pattern.test(pathname))) return false;
-  if (method === 'GET') return !/^\/projects\/motion-[a-f0-9]{20}\/beat-sync(?:\/preview)?$/.test(pathname) && !pathname.endsWith('/variants') && !pathname.endsWith('/history/restore') && !pathname.endsWith('/vision-review') && !pathname.endsWith('/vision-repair') && !pathname.endsWith('/edits') && !pathname.endsWith('/render') && !pathname.endsWith('/revise') && !/^\/projects\/motion-[a-f0-9]{20}\/(?:presets|effects|effect-stack|resize|templates)(?:\/preview)?$/.test(pathname) && pathname !== '/generate' && !pathname.endsWith('/cancel');
+  if (method === 'GET') return !pathname.startsWith('/storyboard/') && !/^\/projects\/motion-[a-f0-9]{20}\/(?:beat-sync|particles)(?:\/preview)?$/.test(pathname) && !pathname.endsWith('/variants') && !pathname.endsWith('/history/restore') && !pathname.endsWith('/vision-review') && !pathname.endsWith('/vision-repair') && !pathname.endsWith('/edits') && !pathname.endsWith('/render') && !pathname.endsWith('/revise') && !/^\/projects\/motion-[a-f0-9]{20}\/(?:presets|effects|effect-stack|resize|templates)(?:\/preview)?$/.test(pathname) && pathname !== '/generate' && !pathname.endsWith('/cancel');
   if (method === 'HEAD') return pathname.endsWith('/artifact') || /^\/assets\/asset-[a-f0-9]{64}$/.test(pathname) ||
     /^\/audio\/audio-[a-f0-9]{64}$/.test(pathname);
   if (method === 'POST') {
-    return pathname === '/projects' || pathname === '/generate' || pathname === '/assets' || pathname === '/audio' || pathname === '/brand-kit' ||
-      /^\/projects\/motion-[a-f0-9]{20}\/beat-sync(?:\/preview)?$/.test(pathname) || pathname.endsWith('/variants') || pathname.endsWith('/history/restore') || pathname.endsWith('/vision-review') || pathname.endsWith('/vision-repair') || pathname.endsWith('/edits') || pathname.endsWith('/render') || pathname.endsWith('/revise') || pathname.endsWith('/cancel') ||
+    return pathname === '/projects' || pathname === '/generate' || /^\/storyboard\/(?:plan|preview|render)$/.test(pathname) || pathname === '/assets' || pathname === '/audio' || pathname === '/brand-kit' ||
+      /^\/projects\/motion-[a-f0-9]{20}\/(?:beat-sync|particles)(?:\/preview)?$/.test(pathname) || pathname.endsWith('/variants') || pathname.endsWith('/history/restore') || pathname.endsWith('/vision-review') || pathname.endsWith('/vision-repair') || pathname.endsWith('/edits') || pathname.endsWith('/render') || pathname.endsWith('/revise') || pathname.endsWith('/cancel') ||
       /^\/projects\/motion-[a-f0-9]{20}\/(?:presets|effects|effect-stack|resize|templates)(?:\/preview)?$/.test(pathname);
   }
   return false;
@@ -143,7 +145,7 @@ export function createMotionProxyRouter(options: MotionProxyOptions = {}): Route
     const upstream = http.request({
       hostname: '127.0.0.1', port: options.upstreamPort ?? 7888,
       path: targetPath, method: req.method, headers,
-      timeout: route === '/generate' || route.endsWith('/revise') ||
+      timeout: route === '/generate' || route === '/storyboard/plan' || route === '/storyboard/render' || route.endsWith('/revise') ||
         route.includes('/exports/') || route.endsWith('/vision-review') || route.endsWith('/vision-repair')
         ? 120_000 : 30_000,
     }, reply => {

@@ -11,6 +11,7 @@ vi.mock('../../services/motionStudioApi', () => ({
     effectsPage: vi.fn(), previewEffect: vi.fn(), applyEffect: vi.fn(), changeStack: vi.fn(),
     history: vi.fn(), restoreHistory: vi.fn(), brandKit: vi.fn(), saveBrandKit: vi.fn(),
     templates: vi.fn(), previewTemplate: vi.fn(), applyTemplate: vi.fn(), batchVariants: vi.fn(), beatSync: vi.fn(),
+    storyboardPlan: vi.fn(), storyboardPreview: vi.fn(), storyboardRender: vi.fn(), particles: vi.fn(),
     jobs: vi.fn(), capabilities: vi.fn(), quality: vi.fn(), loadFrameSnapshot: vi.fn(), visionReview: vi.fn(), visionRepair: vi.fn(), captions: vi.fn(), generate: vi.fn(), revise: vi.fn(), scheduler: vi.fn(), supervisor: vi.fn(), storage: vi.fn(), queueRecovery: vi.fn(), render: vi.fn(), status: vi.fn(), cancel: vi.fn(), loadPreview: vi.fn(), uploadImage: vi.fn(), loadImageUrl: vi.fn(), uploadAudio: vi.fn(), loadAudioUrl: vi.fn(), loadAudioWaveform: vi.fn(),
   },
 }));
@@ -798,6 +799,80 @@ describe('Native T-Line Motion Studio editor', () => {
       },
     ));
     expect(await screen.findByText('Beat sync applied · 3 transients · revision 2')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Undo scene change' }));
+    await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 2,
+      [{ type: 'replace-composition', composition: expect.objectContaining({ layers: expect.any(Array) }) }],
+    ));
+  });
+  it('creates a new project after explicit storyboard review and render approval', async () => {
+    vi.mocked(motionStudioApi.capabilities).mockResolvedValue({
+      capabilities: { aiStoryboardReview: true },
+    });
+    const plan = {
+      name: 'Launch', durationSeconds: 3, background: '#171b28',
+      scenes: [{ headline: 'Fast SaaS', subtitle: 'Introducing AI', accent: '#ff9900', layout: 'left' as const }],
+    };
+    vi.mocked(motionStudioApi.storyboardPlan).mockResolvedValue({
+      plan, preview: fixture(),
+    });
+    vi.mocked(motionStudioApi.storyboardPreview).mockResolvedValue({ preview: fixture() });
+    const generated = fixture(); generated.revision = 2;
+    const queuedJob = {
+      id: 'motionjob-' + 'b'.repeat(24), status: 'queued' as const,
+      projectId: id, revision: 2, framesCompleted: 0,
+      schemaVersion: 1 as const, workspaceRoot: 'D:/projects/studio',
+      profile: { width: 640, height: 360, fps: '30/1', frameCount: 90 },
+      createdAt: '2026-10-22T00:00:00Z', updatedAt: '2026-10-22T00:00:00Z',
+    };
+    vi.mocked(motionStudioApi.storyboardRender).mockResolvedValue({
+      project: generated, job: queuedJob, outline: ['Fast SaaS'], limitations: [],
+    } as any);
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.click(screen.getByText(/AI Motion Director 2.0/));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Storyboard creative brief' }),
+      { target: { value: 'Launch SaaS in minimalist style' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Plan storyboard' }));
+    await screen.findByRole('textbox', { name: 'Storyboard headline 0' });
+    fireEvent.click(screen.getByRole('button', { name: 'Approve & render MP4' }));
+    await waitFor(() => expect(motionStudioApi.storyboardRender).toHaveBeenCalledWith(
+      'D:/projects/studio', expect.objectContaining({ name: 'Launch' }), 640,
+    ));
+    expect(await screen.findByText('Approved storyboard saved · MP4 rendering queued')).toBeInTheDocument();
+  });
+  it('previews procedural particles and commits with Undo through the canonical revisioned editor', async () => {
+    vi.mocked(motionStudioApi.capabilities).mockResolvedValue({
+      capabilities: { motionCpuParticleOverlays: true },
+    });
+    vi.mocked(motionStudioApi.particles).mockImplementation(async (_ws, _id, _rev, _input, preview) => {
+      const project = fixture(); project.revision = preview ? 1 : 2;
+      project.composition.layers.push({
+        id: 'motion-particle-01', kind: 'rect', x: 12, y: 30,
+        width: 14, height: 14, fill: '#38BDF8', opacity: 1, rotation: 0, tracks: [],
+      });
+      return project;
+    });
+    vi.mocked(motionStudioApi.edit).mockImplementation(async (_ws, _id, base, edits) => {
+      const result = fixture(); result.revision = base + 1;
+      if (edits[0].type === 'replace-composition') result.composition = edits[0].composition;
+      return result;
+    });
+    render(<MotionStudioTab workspacePath="D:/projects/studio" isActive />);
+    await screen.findByText('Choose a scene to edit');
+    fireEvent.change(screen.getByLabelText('Select Motion project'), { target: { value: id } });
+    await screen.findByText('Procedural Particle Accents');
+    fireEvent.click(screen.getByText('Procedural Particle Accents'));
+    fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+    await waitFor(() => expect(motionStudioApi.particles).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 1, { kind: 'confetti', count: 20, color: '#38bdf8' }, true,
+    ));
+    expect(await screen.findByText(/PREVIEW \(not saved\)/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(motionStudioApi.particles).toHaveBeenCalledWith(
+      'D:/projects/studio', id, 1, { kind: 'confetti', count: 20, color: '#38bdf8' },
+    ));
+    expect(await screen.findByText('Applied confetti particle overlay · revision 2')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Undo scene change' }));
     await waitFor(() => expect(motionStudioApi.edit).toHaveBeenCalledWith(
       'D:/projects/studio', id, 2,
