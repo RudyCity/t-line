@@ -176,3 +176,7 @@ Contributions are welcome! Please make sure to test your code and follow the gui
 Developed by **Rudy City** ([@RudyCity](https://github.com/RudyCity)) • 📧 Contact: [hrudy715@gmail.com](mailto:hrudy715@gmail.com)
 
 Distributed under the [MIT License](LICENSE).
+
+### Strict Windows OS isolation for managed SuperAgent
+
+T-Line normally starts its managed SuperAgent server using the T-Line backend's Windows process identity. If `SUPERAGENT_REQUIRE_OS_SANDBOX=1` is set, startup now verifies `SUPERAGENT_OS_RUNNER_IDENTITY` matches `whoami.exe` and that opening the existing `SUPERAGENT_OS_DENIED_PROBE_PATH` returns an actual permission denial (`EACCES`/`EPERM`). The backend refuses to start managed SuperAgent otherwise. To activate this policy, run the **T-Line backend itself** as a dedicated restricted Windows user and configure folder ACL restrictions for that user; the check does **not** magically spawn under another account and it does not modify ACLs. For setup and caveats, see the SuperAgent repository README, section "Strict OS sandbox startup gate". Do not assume this sample probe proves comprehensive isolation or protects separate Chrome/CDP processes.

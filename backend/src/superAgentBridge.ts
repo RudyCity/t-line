@@ -223,6 +223,33 @@ function spawnSuperAgentProcess(opts: {
     drainPendingCallbacks(new Error(message));
     return;
   }
+  // Child processes inherit the backend identity. Require a matching Windows
+  // token and a genuine EACCES/EPERM probe before spawning in strict mode.
+  if (process.env.SUPERAGENT_REQUIRE_OS_SANDBOX === '1') {
+    let problem = '';
+    try {
+      const expected = process.env.SUPERAGENT_OS_RUNNER_IDENTITY?.trim();
+      const probe = process.env.SUPERAGENT_OS_DENIED_PROBE_PATH?.trim();
+      if (process.platform !== 'win32' || !expected || !probe) throw new Error('Windows runner identity and denied probe are required');
+      const actual = execSync('whoami.exe', { encoding: 'utf8', timeout: 3000 }).trim();
+      if (actual.toLowerCase() !== expected.toLowerCase()) throw new Error('T-Line backend identity does not match configured runner');
+      try {
+        const fd = fs.openSync(probe, 'r');
+        fs.closeSync(fd);
+        throw new Error('Denied probe was readable');
+      } catch (error: any) {
+        if (error?.code !== 'EACCES' && error?.code !== 'EPERM') throw error;
+      }
+    } catch (error: any) { problem = String(error?.message || error); }
+    if (problem) {
+      const reason = 'OS isolation verification failed: ' + problem;
+      isStartingSuperAgent = false;
+      autoSuperAgentProcess = null;
+      onFail(reason);
+      drainPendingCallbacks(new Error(reason));
+      return;
+    }
+  }
   const spawnArgs = launch.args;
   const { cmd: bunCmd, spawnEnv } = getCachedBunEnv();
   logToSuperAgentFile(`[Runtime] Selected ${launch.runtime} ${launch.version || 'version not yet verified'}`);
