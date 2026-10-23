@@ -194,6 +194,27 @@ describe('Authenticated T-Line Brain Explorer read model', () => {
     expect((await fetch(base + '/retention/preview?days=1')).status).toBe(400);
   });
 
+  it('refuses a terminal task state while a task-local delegation remains active',async()=>{
+    const {base,root,session}=await fixture();
+    const headers={'Content-Type':'application/json'};
+    const tasksUrl=base+'/sessions/sess_local/tasks';
+    const created=await (await fetch(tasksUrl,{method:'POST',headers,
+      body:JSON.stringify({title:'Active delegation protection',agentIds:['agy']})})).json();
+    const id=created.taskId;
+    const taskUrl=tasksUrl+'/'+id;
+    expect((await fetch(taskUrl+'/claim',{method:'POST',headers,body:JSON.stringify({agentId:'agy'})})).status).toBe(200);
+    const nested=path.join(session,'scratch','agents','agy',id);
+    const jobId='clj_1792638000000_aabbccd1';
+    const shard=path.join(root,'cli-bridge','delegations','jobs.d',jobId);
+    fs.mkdirSync(shard,{recursive:true});
+    const snapshot=path.join(shard,'1792638000000-0000000001-0123456789abcdef.json');
+    fs.writeFileSync(snapshot,JSON.stringify({jobId,cwd:nested,status:'running'}));
+    const complete=()=>fetch(taskUrl+'/status',{method:'POST',headers,
+      body:JSON.stringify({agentId:'agy',status:'completed'})});
+    expect((await complete()).status).toBe(409);
+    fs.writeFileSync(snapshot,JSON.stringify({jobId,cwd:nested,status:'succeeded'}));
+    expect((await complete()).status).toBe(200);
+  });
   it('refuses scratch cleanup while an AGY/Claude delegation is still active', async () => {
     const { base, root, session } = await fixture();
     const headers = { Authorization: 'Bearer test_operator_very_long_token', 'Content-Type': 'application/json' };
@@ -328,6 +349,7 @@ describe('Authenticated T-Line Brain Explorer read model', () => {
     const remote=origin+'/'+task.taskId;
     const token=task.credentials.agy;
     expect(token).toMatch(/^bag_[a-f0-9]{64}$/);
+    expect(task.ownerRecoveryCredential).toMatch(/^bag_[a-f0-9]{64}$/);
     const status=await (await fetch(remote+'/credentials')).json();
     expect(status.agents).toHaveLength(2);
     expect(JSON.stringify(status)).not.toContain(token);

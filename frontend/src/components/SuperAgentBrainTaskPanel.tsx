@@ -26,7 +26,7 @@ export function SuperAgentBrainTaskPanel({sessionId}:{sessionId:string}){
  const [capabilities,setCapabilities]=useState<CapabilityStatus[]>([]);
  const [approved,setApproved]=useState(false);
  const [freshCredential,setFreshCredential]=useState<{agentId:string;value:string}|null>(null);
- const [createdCredentials,setCreatedCredentials]=useState<{taskId:string;tokens:Record<string,string>}|null>(null);
+ const [createdCredentials,setCreatedCredentials]=useState<{taskId:string;tokens:Record<string,string>;ownerRecoveryCredential?:string}|null>(null);
  const [current,setCurrent]=useState('');
  const [title,setTitle]=useState('');
  const [members,setMembers]=useState('main, agy, claude');
@@ -103,8 +103,8 @@ export function SuperAgentBrainTaskPanel({sessionId}:{sessionId:string}){
    <form className="p-2 flex flex-col gap-2" onSubmit={e=>{
     e.preventDefault();
     setBusy(true);setError('');setNotice('');
-    void request<BrainTask&{credentials?:Record<string,string>}>(base,{title,agentIds:members.split(',').map(x=>x.trim()).filter(Boolean)})
-      .then(data=>{setCurrent(data.taskId);setCreatedCredentials(data.credentials?{taskId:data.taskId,tokens:data.credentials}:null);
+    void request<BrainTask&{credentials?:Record<string,string>;ownerRecoveryCredential?:string}>(base,{title,agentIds:members.split(',').map(x=>x.trim()).filter(Boolean)})
+      .then(data=>{setCurrent(data.taskId);setCreatedCredentials(data.credentials?{taskId:data.taskId,tokens:data.credentials,ownerRecoveryCredential:data.ownerRecoveryCredential}:null);
         setNotice('Task created. Copy the one-time credentials before closing this panel.');reload();})
       .catch(e=>setError(e?.message||'Task creation failed'))
       .finally(()=>setBusy(false));
@@ -127,6 +127,11 @@ export function SuperAgentBrainTaskPanel({sessionId}:{sessionId:string}){
     {Object.entries(createdCredentials.tokens).map(([agentId,token])=><div key={agentId}>
       <strong>{agentId}</strong><code className="break-all block select-all">{token}</code>
     </div>)}
+    {createdCredentials.ownerRecoveryCredential&&<div className="mt-2 border-t border-[var(--border-color)] pt-2">
+      <strong>Owner recovery secret — never give to delegated agents</strong>
+      <code className="break-all block select-all">{createdCredentials.ownerRecoveryCredential}</code>
+      <p>Store securely. Each successful recovery rotates this secret.</p>
+    </div>}
     <button className="underline mt-1" type="button" onClick={()=>setCreatedCredentials(null)}>Clear credentials</button>
   </div>}
   {selected&&<div className="space-y-2">

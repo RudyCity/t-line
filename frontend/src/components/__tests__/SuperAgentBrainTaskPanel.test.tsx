@@ -14,11 +14,13 @@ beforeEach(()=>{
   else if(url===base&&method==='POST'){
    const task={taskId:'task_0123456789abcdefabcd',title:body.title,status:'pending',
     agents:body.agentIds,assignedTo:null,checkpoints:[],handoffs:[],updatedAt:new Date().toISOString()};
-   tasks=[task];data={...task,credentials:{main:'bag_'+ 'a'.repeat(64)}};status=201;
+   tasks=[task];data={...task,credentials:{main:'bag_'+ 'a'.repeat(64)},ownerRecoveryCredential:'bag_'+ 'b'.repeat(64)};status=201;
   }else{
    const task=tasks[0];
    if(!task){status=404;data={error:'Not found'};}
-   else if(url.endsWith('/claim')){
+   else if(url.endsWith('/credentials')){
+    data={agents:task.agents.map((agentId:string)=>({agentId,expiresAt:new Date(Date.now()+3600000).toISOString(),generation:1,revoked:false,expired:false}))};
+   }else if(url.endsWith('/claim')){
     task.assignedTo=body.agentId;task.status='running';
     data={task, scratchPath:'brain/scratch/agents/'+body.agentId};
    }else if(url.endsWith('/checkpoint')){
@@ -44,6 +46,7 @@ describe('Brain multi-agent task dashboard',()=>{
   fireEvent.click(screen.getByRole('button',{name:'Create'}));
   await waitFor(()=>expect(screen.getByRole('button',{name:'Analyze source'})).toBeTruthy());
   await waitFor(()=>expect(screen.getByText(/One-time task agent credentials/)).toBeTruthy());
+  expect(screen.getByText(/Owner recovery secret/)).toBeTruthy();
   fireEvent.click(screen.getByRole('button',{name:'Claim'}));
   await waitFor(()=>expect(screen.getByText('running')).toBeTruthy());
   fireEvent.click(screen.getByText('Checkpoint / handoff'));

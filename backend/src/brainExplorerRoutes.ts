@@ -18,7 +18,7 @@ import { annotateBrainArtifact, searchBrainArtifacts, brainResumeContext, brainR
 import { recordBrainEvent, summarizeBrainEvents } from './brainObservability';
 import { createBrainTask, listBrainTasks, inspectBrainTask, claimBrainTask,
   transferBrainTask, updateBrainTask, checkpointBrainTask, handoffBrainArtifact, resumeBrainTask } from './brainTasks';
-import {brainTaskCapabilityStatus,rotateBrainTaskAgentCredential,revokeBrainTaskAgentCredential,issueBrainTaskAgentCredentials} from './brainAgentCredentials';
+import {brainTaskCapabilityStatus,rotateBrainTaskAgentCredential,revokeBrainTaskAgentCredential,issueBrainTaskAgentCredentials,issueBrainTaskRecoveryCredential} from './brainAgentCredentials';
 
 const SESSION_ID = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$/;
 const MAX_LIST = 100;
@@ -147,8 +147,9 @@ export function createBrainExplorerRouter(options: ReadOptions = {}): Router {
       // Return credentials only on creation. Never persist plaintext outside
       // this operator-authenticated response.
       const credentials=issueBrainTaskAgentCredentials('local-cli',req.params.sessionId,task.taskId,24*60*60*1000,root());
+      const ownerRecoveryCredential=issueBrainTaskRecoveryCredential('local-cli',req.params.sessionId,task.taskId,root());
       res.setHeader('Cache-Control','no-store');
-      res.status(201).json({...task,credentials});
+      res.status(201).json({...task,credentials,ownerRecoveryCredential});
     } catch { res.status(409).json({error:'Brain task creation rejected.'}); }
   });
   router.get('/sessions/:sessionId/tasks/:taskId', (req, res) => {

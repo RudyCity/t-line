@@ -40,6 +40,13 @@ Task API routes under `/sessions/:sessionId/tasks` support listing, create, insp
 
 Task membership IDs are **not OAuth identities**. T-Line only displays the local-cli owner's tasks; separate OAuth principals remain isolated. The panel does not automatically execute another agent or grant new project write permissions.
 
+### 2026-10-23 Brain audit remediation
+- Canonical generated Brain tasks refuse terminal state changes while an active CLI Bridge delegation is writing anywhere in the same session's scratch subtree. The T-Line task-status HTTP endpoint now returns 409 for this case, verified by a persisted nested-job snapshot regression.
+- Handoff storage is quota-checked and cleans an orphan inbox copy if task metadata cannot be saved. The canonical generated source checksum is pinned after each sync.
+- Brain task creation includes a separate one-time **owner recovery secret** alongside per-agent credentials. The Brain Task Panel shows it once and warns not to give it to agent workers. Only a matching owner recovery token can restore an expired/revoked MCP agent; recovery replaces both secrets.
+- The task-panel key warning observed during audit originated from a test mock returning a string array where the credential-status API returns objects. The corrected fixture passes without this React warning.
+- Terminal/status hardening and one-time token display are validated by backend/UI suites; installed desktop GUI and public tunnel OAuth acceptance remain separate.
+
 ### Phase 6: Expiring Agent Credentials and Operator Controls
 - Canonical generated `brainAgentCredentials.ts` introduces 24-hour credentials, per-agent generation, hashed persistence, explicit rotation and revocation. Standalone T-Line build integrity checks pin the canonical module checksum.
 - Operator-authenticated routes under `/sessions/:id/tasks/:taskId/credentials`: GET redacted status, POST `/:agentId/rotate` and POST `/:agentId/revoke`. Changes require `{"confirm":true}` and responses include `Cache-Control: no-store`.
