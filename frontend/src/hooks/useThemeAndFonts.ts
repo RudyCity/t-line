@@ -15,6 +15,20 @@ export interface ThemePreset {
 }
 
 export const THEMES: Record<string, ThemePreset> = {
+  'calm-light': {
+    name: 'Hybrid Calm - Light',
+    bgMain: '#F8F9FB', bgSidebar: '#F0F2F5', bgCard: '#FFFFFF',
+    bgCardHover: '#EFF2F7', borderColor: '#DDE3EB',
+    textMain: '#242B38', textMuted: '#586578', textDark: '#677488',
+    defaultAccent: '#5369A5', bgRadialDot: 'transparent',
+  },
+  'calm-dark': {
+    name: 'Hybrid Calm - Dark',
+    bgMain: '#1B2029', bgSidebar: '#171B23', bgCard: '#242B36',
+    bgCardHover: '#303949', borderColor: '#3B4554',
+    textMain: '#F0F2F7', textMuted: '#B8C3D2', textDark: '#A5B0C0',
+    defaultAccent: '#8095D3', bgRadialDot: 'transparent',
+  },
   default: {
     name: 'Default Dark',
     bgMain: '#05070c',
@@ -95,6 +109,16 @@ export const THEMES: Record<string, ThemePreset> = {
   }
 };
 
+export type CalmDensity = 'comfortable' | 'compact';
+export type CalmMotion = 'minimal' | 'off';
+
+export function applyCalmPreferences(density?: CalmDensity, motion?: CalmMotion): void {
+  const savedDensity = density ?? (localStorage.getItem('tline-calm-density') === 'compact' ? 'compact' : 'comfortable');
+  const savedMotion = motion ?? (localStorage.getItem('tline-calm-motion') === 'off' ? 'off' : 'minimal');
+  document.documentElement.dataset.calmDensity = savedDensity;
+  document.documentElement.dataset.calmMotion = savedMotion;
+}
+
 export const UI_FONTS = {
   Outfit: "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   Inter: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
@@ -170,6 +194,7 @@ export function useThemeAndFonts() {
       const preset = THEMES[newTheme];
       setAccentColorState(preset.defaultAccent);
       localStorage.setItem('tline-accent-color', preset.defaultAccent);
+      window.dispatchEvent(new CustomEvent('tline-theme-change', { detail: { theme: newTheme } }));
     }
   };
 
@@ -240,34 +265,36 @@ export function useThemeAndFonts() {
     root.style.setProperty('--font-sans-weight', fontSansWeight);
     root.style.setProperty('--font-mono-weight', fontMonoWeight);
 
-    // Set theme class on document element for CSS selectors (e.g. .theme-light)
-    root.className = `theme-${theme}`;
+    const isCalm = theme === 'calm-light' || theme === 'calm-dark';
+    const isLight = theme === 'light' || theme === 'calm-light';
+    // Reuse light-mode adaptations, while scoping calm-only presentation changes.
+    root.className = `theme-${theme}${isLight ? ' theme-light' : ''}${isCalm ? ' theme-calm' : ''}`;
+    applyCalmPreferences();
 
     root.style.setProperty('--accent-color', accentColor);
     root.style.setProperty('--color-primary', accentColor);
 
-    const isLight = theme === 'light';
     root.style.setProperty(
       '--color-primary-hover',
       `color-mix(in srgb, ${accentColor} 80%, ${isLight ? '#000000' : '#ffffff'})`
     );
     root.style.setProperty(
       '--color-primary-glow',
-      `color-mix(in srgb, ${accentColor} 35%, transparent)`
+      `color-mix(in srgb, ${accentColor} ${isCalm ? '8%' : '35%'}, transparent)`
     );
     root.style.setProperty(
       '--border-glow',
-      `color-mix(in srgb, ${accentColor} 15%, transparent)`
+      `color-mix(in srgb, ${accentColor} ${isCalm ? '6%' : '15%'}, transparent)`
     );
 
     root.style.setProperty('--bg-radial-dot', preset.bgRadialDot);
     root.style.setProperty(
       '--bg-radial-glow1',
-      `color-mix(in srgb, ${accentColor} 8%, transparent)`
+      `color-mix(in srgb, ${accentColor} ${isCalm ? '0%' : '8%'}, transparent)`
     );
     root.style.setProperty(
       '--bg-radial-glow2',
-      `color-mix(in srgb, ${preset.textMain} 4%, transparent)`
+      `color-mix(in srgb, ${preset.textMain} ${isCalm ? '0%' : '4%'}, transparent)`
     );
 
     // Light/dark adaptive semantic tokens

@@ -135,7 +135,17 @@ export function SuperAgentConsole({
   const [browserInstanceList, setBrowserInstanceList] = useState<any[]>([]);
   const [checklistTasks, setChecklistTasks] = useState<ChecklistTaskItem[]>([]);
   const [selectedSubagent, setSelectedSubagent] = useState<SubAgentItem | null>(null);
-  const [showSidebar, setShowSidebar] = useState<boolean>(true);
+  const [showSidebar, setShowSidebar] = useState<boolean>(() =>
+    !(localStorage.getItem('tline-theme') || 'default').startsWith('calm-')
+  );
+  useEffect(() => {
+    const onThemeChanged = (event: Event) => {
+      const next = (event as CustomEvent<{ theme: string }>).detail?.theme;
+      if (next?.startsWith('calm-')) setShowSidebar(false);
+    };
+    window.addEventListener('tline-theme-change', onThemeChanged);
+    return () => window.removeEventListener('tline-theme-change', onThemeChanged);
+  }, []);
   const [showSettingsMenu, setShowSettingsMenu] = useState<boolean>(false);
   const [isLoadingMonitor, setIsLoadingMonitor] = useState<boolean>(false);
 
@@ -1015,8 +1025,8 @@ export function SuperAgentConsole({
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-[var(--bg-main)] text-[var(--text-main)] overflow-hidden font-sans">
-      <div className="flex flex-wrap items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)] border-b border-[var(--border-color)] min-h-[48px] w-full  gap-3 select-none">
+    <div className="calm-chat-workspace flex flex-col h-full w-full bg-[var(--bg-main)] text-[var(--text-main)] overflow-hidden font-sans">
+      <div className="calm-chat-toolbar flex flex-wrap items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)] border-b border-[var(--border-color)] min-h-[48px] w-full gap-3 select-none">
         {/* Left Column: History Toggle & Active Workspace Pill */}
         <div className="flex items-center gap-2 min-w-0">
           <button
@@ -1135,7 +1145,7 @@ export function SuperAgentConsole({
           <div className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0 relative">
             <div
               ref={messagesContainerRef}
-              className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-xs leading-relaxed w-full"
+              className="sa-chat-thread flex-1 overflow-y-auto p-4 space-y-3 font-mono text-xs leading-relaxed w-full"
               onScroll={(e) => {
                 const el = e.currentTarget;
                 if (el.scrollTop < 80 && hasMore && !loadingMore) {

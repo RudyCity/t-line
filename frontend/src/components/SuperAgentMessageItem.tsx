@@ -381,7 +381,7 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
 
   if (msg.role === 'user') {
     return (
-      <div key={index} className="my-2 py-2 px-3 bg-[var(--color-primary-glow)] text-xs font-sans text-[var(--text-main)] select-text rounded-lg border border-[var(--color-primary)]/40 ">
+      <div key={index} className="sa-user-message my-2 py-2 px-3 bg-[var(--color-primary-glow)] text-xs font-sans text-[var(--text-main)] select-text rounded-lg border border-[var(--color-primary)]/40 ">
         <div className="flex items-center gap-1.5 mb-1 select-none text-[10px] font-bold font-mono text-[var(--color-primary)] uppercase">
           <span>❯ USER</span>
         </div>
@@ -393,7 +393,7 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
   }
 
   return (
-    <div key={index} className="py-2 px-1 w-full transition-all select-text bg-transparent border-none">
+    <div key={index} className="sa-assistant-message py-2 px-1 w-full transition-all select-text bg-transparent border-none">
       <div className="flex items-center gap-2 mb-1">
         <span className={`text-[10px] uppercase tracking-wider font-bold font-mono ${
           msg.role === 'thought'

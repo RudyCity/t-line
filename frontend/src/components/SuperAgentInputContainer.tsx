@@ -85,7 +85,7 @@ export function SuperAgentInputContainer({
   return (
     <div
       ref={consoleContainerRef}
-      className="sa-input-container relative w-full font-mono text-xs select-none"
+      className="sa-input-container calm-chat-composer relative w-full font-mono text-xs select-none"
     >
       {/* Hidden File Input */}
       <input
@@ -203,7 +203,7 @@ export function SuperAgentInputContainer({
                   ? "Enter prompt or command (e.g. /schedule, /goal, /grill-me)..."
                   : "Connecting to SuperAgent bridge..."
             }
-            className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 text-xs text-[var(--text-main)] placeholder-[var(--text-muted)] font-mono py-0.5 px-0 resize-none overflow-y-auto max-h-[220px] leading-relaxed"
+            className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 text-sm text-[var(--text-main)] placeholder-[var(--text-muted)] font-mono py-0.5 px-0 resize-none overflow-y-auto max-h-[220px] leading-relaxed"
             rows={1}
             disabled={loading || !ws || ws.readyState !== WebSocket.OPEN || !hasActivePreset}
             style={{ minHeight: '36px' }}

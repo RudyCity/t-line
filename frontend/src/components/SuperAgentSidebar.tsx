@@ -101,12 +101,12 @@ export function SuperAgentSidebar({
     bgTasks: boolean;
     browserInstances: boolean;
   }>({
-    chain: true,
-    changes: true,
-    procs: true,
+    chain: !(localStorage.getItem('tline-theme') || '').startsWith('calm-'),
+    changes: !(localStorage.getItem('tline-theme') || '').startsWith('calm-'),
+    procs: !(localStorage.getItem('tline-theme') || '').startsWith('calm-'),
     subagents: true,
-    bgTasks: true,
-    browserInstances: true
+    bgTasks: !(localStorage.getItem('tline-theme') || '').startsWith('calm-'),
+    browserInstances: !(localStorage.getItem('tline-theme') || '').startsWith('calm-')
   });
 
   const [chainInfo, setChainInfo] = useState<WorkspaceChainInfo | null>(initialActiveChain);

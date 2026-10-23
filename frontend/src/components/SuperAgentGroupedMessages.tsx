@@ -80,12 +80,23 @@ function CollapsibleProcessBlock({
   isLastTurn: boolean;
   isStreaming?: boolean;
 }) {
-  const [expanded, setExpanded] = useState<boolean>(true);
+  const [expanded, setExpanded] = useState<boolean>(() =>
+    !(localStorage.getItem('tline-theme') || '').startsWith('calm-')
+  );
   const userToggledRef = React.useRef<boolean>(false);
   const prevStreamingRef = React.useRef<boolean | undefined>(isStreaming);
+  // Collapse already-mounted process blocks when the user switches into Calm mode.
+  useEffect(() => {
+    const onThemeChanged = (event: Event) => {
+      const next = (event as CustomEvent<{ theme: string }>).detail?.theme;
+      if (next?.startsWith('calm-') && !userToggledRef.current) setExpanded(false);
+    };
+    window.addEventListener('tline-theme-change', onThemeChanged);
+    return () => window.removeEventListener('tline-theme-change', onThemeChanged);
+  }, []);
 
   useEffect(() => {
-    if (isLastTurn && isStreaming && !userToggledRef.current) {
+    if (isLastTurn && isStreaming && !userToggledRef.current && !(localStorage.getItem('tline-theme') || '').startsWith('calm-')) {
       setExpanded(true);
     }
     prevStreamingRef.current = isStreaming;
@@ -109,9 +120,11 @@ function CollapsibleProcessBlock({
   return (
     <div className="my-1.5 font-mono text-xs w-full select-text">
       {/* Collapsible Header */}
-      <div
+      <button
+        type="button"
         onClick={handleToggle}
-        className="flex items-center gap-2 py-1 px-1.5 rounded hover:bg-[var(--surface-overlay-hover)] cursor-pointer transition-colors text-[var(--text-muted)] hover:text-[var(--text-main)] select-none group"
+        aria-expanded={expanded}
+        className="w-full text-left flex items-center gap-2 py-1 px-1.5 rounded hover:bg-[var(--surface-overlay-hover)] cursor-pointer transition-colors text-[var(--text-muted)] hover:text-[var(--text-main)] select-none group"
       >
         <span className="shrink-0 text-[var(--color-primary)]">
           {expanded ? (
@@ -130,7 +143,7 @@ function CollapsibleProcessBlock({
             <span>Running...</span>
           </span>
         )}
-      </div>
+      </button>
 
       {/* Expandable Process Body */}
       {expanded && (

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Info, Shield, Eye, EyeOff, RefreshCw, Download, CheckCircle, XCircle, Loader2, ArrowUpCircle, Palette, ExternalLink } from 'lucide-react';
 import { FormField, Input, Button, Select } from './Form';
-import { THEMES, UI_FONTS, MONO_FONTS } from '../hooks/useThemeAndFonts';
+import { THEMES, UI_FONTS, MONO_FONTS, applyCalmPreferences, type CalmDensity, type CalmMotion } from '../hooks/useThemeAndFonts';
 
 const UI_FONT_OPTIONS = Object.keys(UI_FONTS).map(f => ({ value: f, label: f }));
 const MONO_FONT_OPTIONS = Object.keys(MONO_FONTS).map(f => ({ value: f, label: f }));
@@ -64,6 +64,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   setTerminalFontSize = () => {}
 }) => {
   const [activeTab, setActiveTab] = React.useState<'general' | 'appearance' | 'security' | 'connections'>('general');
+  const [calmDensity, setCalmDensity] = React.useState<CalmDensity>(() =>
+    localStorage.getItem('tline-calm-density') === 'compact' ? 'compact' : 'comfortable');
+  const [calmMotion, setCalmMotion] = React.useState<CalmMotion>(() =>
+    localStorage.getItem('tline-calm-motion') === 'off' ? 'off' : 'minimal');
+  const updateCalmDensity = (value: CalmDensity) => {
+    setCalmDensity(value);
+    localStorage.setItem('tline-calm-density', value);
+    applyCalmPreferences(value, calmMotion);
+  };
+  const updateCalmMotion = (value: CalmMotion) => {
+    setCalmMotion(value);
+    localStorage.setItem('tline-calm-motion', value);
+    applyCalmPreferences(calmDensity, value);
+  };
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
@@ -525,8 +539,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {Object.entries(THEMES).map(([key, preset]) => {
                       const isSelected = theme === key;
                       return (
-                        <div
+                        <button
                           key={key}
+                          type="button"
+                          aria-pressed={isSelected}
                           onClick={() => setTheme(key)}
                           style={{
                             padding: '8px 10px',
@@ -549,11 +565,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: preset.bgSidebar, border: '1px solid rgba(255,255,255,0.1)' }} />
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: preset.defaultAccent, border: '1px solid rgba(255,255,255,0.1)' }} />
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
                 </div>
+
+                {/* Calm comfort controls are independent of palette choice. */}
+                {theme.startsWith('calm-') && (
+                  <section aria-label="Calm display preferences" className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-3 space-y-3">
+                    <div>
+                      <h4 className="text-sm font-semibold text-[var(--text-main)]">Calm comfort</h4>
+                      <p className="text-xs text-[var(--text-muted)] mt-1">Prioritize reading comfort and fewer moving elements.</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <label className="flex flex-col gap-1 text-xs text-[var(--text-main)]">
+                        Information density
+                        <select aria-label="Information density" value={calmDensity}
+                          onChange={(e) => updateCalmDensity(e.target.value as CalmDensity)}
+                          className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-sidebar)] px-3 py-2 text-sm">
+                          <option value="comfortable">Comfortable</option>
+                          <option value="compact">Compact</option>
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs text-[var(--text-main)]">
+                        Interface motion
+                        <select aria-label="Interface motion" value={calmMotion}
+                          onChange={(e) => updateCalmMotion(e.target.value as CalmMotion)}
+                          className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-sidebar)] px-3 py-2 text-sm">
+                          <option value="minimal">Minimal</option>
+                          <option value="off">Off</option>
+                        </select>
+                      </label>
+                    </div>
+                  </section>
+                )}
 
                 {/* Accent Color Selector */}
                 <div>

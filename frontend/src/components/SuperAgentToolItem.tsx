@@ -197,9 +197,12 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
   return (
     <div className="py-0.5 px-1 font-mono text-[11px] w-full select-text">
       {/* Clickable Compact Log Line */}
-      <div
+      <button
+        type="button"
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer transition-colors py-0.5 select-none"
+        aria-expanded={expanded}
+        aria-label={`Show ${info.action} tool details`}
+        className="w-full text-left flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer transition-colors py-0.5 select-none"
       >
         {info.icon}
         <span className="font-sans font-medium text-[var(--text-muted)]">{info.action}</span>
@@ -211,7 +214,7 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
             <ChevronRight className="w-3 h-3 text-[var(--text-muted)]" />
           )}
         </span>
-      </div>
+      </button>
 
       {/* Expanded Details */}
       {expanded && (

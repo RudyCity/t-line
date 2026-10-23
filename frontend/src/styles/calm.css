@@ -1,0 +1,281 @@
+/*
+ * Hybrid Calm: optional low-stimulation appearance for T-Line.
+ * The existing theme presets remain unchanged. All visual rules are scoped.
+ */
+html.theme-calm {
+  --sidebar-width: 270px;
+  --blur-amount: 0px;
+  --calm-reading-width: 960px;
+}
+html.theme-calm body {
+  background-color: var(--bg-main);
+  background-image: none;
+}
+.theme-calm .glass-panel,
+.theme-calm .sa-card-base {
+  background: var(--bg-card);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  border: 1px solid var(--border-color);
+}
+.theme-calm .logo-text {
+  background: none;
+  color: var(--text-main);
+  -webkit-text-fill-color: currentColor;
+  font-size: 1.08rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.theme-calm .activity-bar-logo:hover,
+.theme-calm .activity-bar-item:active,
+.theme-calm .terminal-status-btn-small:hover,
+.theme-calm .terminal-status-btn-small:active {
+  transform: none;
+  scale: 1;
+}
+.theme-calm .activity-bar-item.active,
+.theme-calm .activity-icon-btn.active {
+  background: color-mix(in srgb, var(--color-primary) 11%, var(--bg-sidebar));
+  color: var(--color-primary);
+}
+.theme-calm .ws-card,
+.theme-calm .ws-card-active {
+  backdrop-filter: none;
+  border-radius: 10px;
+  box-shadow: none;
+}
+.theme-calm .calm-chat-toolbar {
+  background: var(--bg-main);
+  min-height: 54px;
+  padding-inline: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+.theme-calm .calm-chat-toolbar > div:last-child button {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.theme-calm .calm-chat-toolbar > div:last-child button:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-main);
+}
+.theme-calm .calm-chat-workspace .sa-chat-thread {
+  max-width: var(--calm-reading-width);
+  width: 100%;
+  margin-inline: auto;
+  padding: 24px 28px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.65;
+}
+.theme-calm .sa-user-message {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.theme-calm .sa-assistant-message {
+  padding: 14px 2px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.theme-calm .sa-assistant-message > div:last-child {
+  font-size: 14px;
+  line-height: 1.7;
+}
+.theme-calm .sa-user-message [class*="text-[10px]"],
+.theme-calm .sa-assistant-message [class*="text-[10px]"] {
+  font-size: 12px;
+  letter-spacing: 0;
+}
+.theme-calm .sa-assistant-message > div:first-child .text-emerald-500 {
+  color: var(--text-muted);
+}
+.theme-calm .calm-chat-composer {
+  max-width: var(--calm-reading-width);
+  margin-inline: auto;
+  padding: 0 20px 16px;
+  font-family: var(--font-sans);
+}
+.theme-calm .calm-chat-composer > div:last-child {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  box-shadow: none;
+}
+.theme-calm .calm-chat-composer > div:last-child:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-glow);
+}
+.theme-calm .calm-chat-composer textarea {
+  font: 400 14px/1.6 var(--font-sans);
+  min-height: 44px;
+}
+.theme-calm .calm-chat-composer button {
+  min-height: 30px;
+}
+.theme-calm .sa-command-popover {
+  border-color: var(--border-color);
+  background: var(--bg-card);
+  backdrop-filter: none;
+  box-shadow: none;
+}
+.theme-calm .sa-input-area:focus-within {
+  box-shadow: none;
+}
+.theme-calm .superagent-monitor-panel [class*="text-[9px]"],
+.theme-calm .superagent-monitor-panel [class*="text-[10px]"],
+.theme-calm .superagent-history-panel [class*="text-[9px]"],
+.theme-calm .superagent-history-panel [class*="text-[10px]"] {
+  font-size: 12px;
+}
+.theme-calm .superagent-monitor-panel [class*="text-[11px]"],
+.theme-calm .superagent-history-panel [class*="text-[11px]"] {
+  font-size: 13px;
+}
+.theme-calm .superagent-monitor-panel,
+.theme-calm .superagent-history-panel {
+  background: var(--bg-sidebar);
+}
+.theme-calm .terminal-status-font-size {
+  font-size: 11px;
+}
+.theme-calm .sa-chat-thread pre {
+  line-height: 1.55;
+  font-size: 12px;
+}
+/* Keep focus obvious without bringing back hard, decorative borders. */
+.theme-calm :is(button, a, input, textarea, select):focus-visible,
+.theme-calm [role="button"]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.theme-calm .animate-pulse,
+.theme-calm .animate-ping,
+.theme-calm .animate-bounce {
+  animation: none !important;
+}
+.theme-calm .animate-spin {
+  animation-duration: 2s;
+}
+html.theme-calm[data-calm-density="compact"] {
+  --sidebar-width: 252px;
+  --calm-reading-width: 1060px;
+}
+.theme-calm[data-calm-density="compact"] .sa-chat-thread {
+  padding: 12px 18px;
+}
+.theme-calm[data-calm-density="compact"] .sa-assistant-message {
+  padding-block: 6px;
+}
+.theme-calm[data-calm-density="compact"] .calm-chat-composer {
+  padding-bottom: 6px;
+}
+.theme-calm-dark .sa-btn-primary,
+.theme-calm-dark button[class*="bg-[var(--color-primary)]"] {
+  color: #111827;
+}
+html.theme-calm[data-calm-motion="off"] *,
+html.theme-calm[data-calm-motion="off"] *::before,
+html.theme-calm[data-calm-motion="off"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .theme-calm *, .theme-calm *::before, .theme-calm *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+@media (max-width: 920px) {
+  .theme-calm .superagent-monitor-panel {
+    position: absolute !important;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 35;
+    width: min(85vw, 340px) !important;
+    box-shadow: -6px 0 20px rgba(0, 0, 0, .08);
+  }
+  .theme-calm .calm-chat-workspace .sa-chat-thread { padding: 16px; }
+  .theme-calm .calm-chat-composer { padding-inline: 12px; }
+}
+@media (max-width: 650px) {
+  .theme-calm .superagent-history-panel {
+    position: absolute !important;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 34;
+    width: min(80vw, 270px) !important;
+    box-shadow: 6px 0 20px rgba(0, 0, 0, .08);
+  }
+  .theme-calm .calm-chat-toolbar { padding-inline: 10px; }
+  .theme-calm .calm-chat-workspace .sa-chat-thread { padding: 12px; }
+}
+/* Terminal-grid chrome: preserve terminal content, quiet surrounding controls. */
+.theme-calm .grid-tab-header,
+.theme-calm .grid-card-header,
+.theme-calm .grid-card-footer {
+  background: var(--bg-sidebar);
+  backdrop-filter: none;
+}
+.theme-calm .grid-title-text {
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  color: var(--text-main);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.theme-calm .grid-subtitle,
+.theme-calm .grid-config-btn,
+.theme-calm .grid-card-title {
+  font-size: 13px;
+}
+.theme-calm .grid-count-badge,
+.theme-calm .grid-badge {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.theme-calm .grid-terminal-card {
+  background: var(--bg-card);
+  border-radius: 10px;
+  box-shadow: none;
+}
+.theme-calm .grid-terminal-card.focused {
+  border-color: var(--color-primary);
+  box-shadow: none;
+}
+.theme-calm .grid-empty-icon-glow {
+  background: var(--bg-sidebar);
+  box-shadow: none;
+}
+.theme-calm .grid-empty-icon-glow::after {
+  display: none;
+}
+.theme-calm .grid-config-dropdown,
+.theme-calm .grid-modal-overlay,
+.theme-calm .grid-modal-container {
+  backdrop-filter: none;
+  box-shadow: none;
+}
+.theme-calm .ws-search-input,
+.theme-calm .ws-path-row {
+  font-size: 12px;
+}
+.theme-calm .activity-badge {
+  font-size: 11px;
+  min-width: 17px;
+  height: 17px;
+}
