@@ -7,6 +7,7 @@ import http from 'node:http';
 import express from 'express';
 import { createBrainExplorerRouter } from '../src/brainExplorerRoutes';
 import {authorizeBrainTaskAgent} from '../src/brainAgentCredentials';
+import {claimBrainTask,reserveBrainTaskLaunch} from '../src/brainTasks';
 
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const close of cleanup.splice(0).reverse()) await close(); });
@@ -338,6 +339,37 @@ describe('Authenticated T-Line Brain Explorer read model', () => {
     expect(list.tasks[0].status).toBe('completed');
   });
 
+  it('inspects and safely attaches only an evidenced CLI launch reservation',async()=>{
+    const {base,root,session}=await fixture();
+    const url=base+'/sessions/sess_local/tasks';
+    const created=await (await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({title:'Evidence recovery',agentIds:['agy']})})).json();
+    const taskId=created.taskId;
+    claimBrainTask('local-cli','sess_local',taskId,'agy',root);
+    const token=reserveBrainTaskLaunch('local-cli','sess_local',taskId,'agy',false,root);
+    const endpoint=url+'/'+taskId+'/launch-recovery';
+    const initial=await (await fetch(endpoint)).json();
+    expect(initial.state).toBe('missing-evidence');
+    expect(JSON.stringify(initial)).not.toContain(token);
+    expect((await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({jobId:'clj_1792658000000_abcdaaaa',confirm:true})})).status).toBe(409);
+    const jobId='clj_1792658000000_abcdaaaa';
+    const shard=path.join(root,'cli-bridge','delegations','jobs.d',jobId);
+    fs.mkdirSync(shard,{recursive:true});
+    fs.writeFileSync(path.join(shard,'1792658000000-0000000001-0123456789abcdef.json'),
+      JSON.stringify({jobId,idempotencyKey:'brain:'+taskId+':'+token,cliAlias:'agy',
+        cwd:path.join(session,'scratch','agents','agy',taskId),status:'succeeded',updatedAt:Date.now()}));
+    const verified=await (await fetch(endpoint)).json();
+    expect(verified.state).toBe('verified-match');
+    expect(verified.matches[0].jobId).toBe(jobId);
+    expect(JSON.stringify(verified)).not.toContain(token);
+    const result=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({jobId,confirm:true})});
+    expect(result.status).toBe(200);
+    expect((await result.json()).retryDispatched).toBe(false);
+    expect((await (await fetch(endpoint)).json()).state).toBe('clear');
+  });
+
   it('rotates and revokes operator-managed task credentials without leaking secrets in list',async()=>{
     const {base,root}=await fixture();
     const origin=base+'/sessions/sess_local/tasks';
@@ -353,6 +385,9 @@ describe('Authenticated T-Line Brain Explorer read model', () => {
     const status=await (await fetch(remote+'/credentials')).json();
     expect(status.agents).toHaveLength(2);
     expect(JSON.stringify(status)).not.toContain(token);
+    const history=await (await fetch(remote+'/credentials/audit')).json();
+    expect(history.entries.some((e:any)=>e.action==='issued')).toBe(true);
+    expect(JSON.stringify(history)).not.toContain(token);
     expect(JSON.stringify(await (await fetch(origin)).json())).not.toContain(token);
     const post=(route:string,confirm:boolean)=>fetch(remote+'/credentials/agy/'+route,{
       method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm})});

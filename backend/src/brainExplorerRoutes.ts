@@ -18,7 +18,8 @@ import { annotateBrainArtifact, searchBrainArtifacts, brainResumeContext, brainR
 import { recordBrainEvent, summarizeBrainEvents } from './brainObservability';
 import { createBrainTask, listBrainTasks, inspectBrainTask, claimBrainTask,
   transferBrainTask, updateBrainTask, checkpointBrainTask, handoffBrainArtifact, resumeBrainTask } from './brainTasks';
-import {brainTaskCapabilityStatus,rotateBrainTaskAgentCredential,revokeBrainTaskAgentCredential,issueBrainTaskAgentCredentials,issueBrainTaskRecoveryCredential} from './brainAgentCredentials';
+import {brainTaskCapabilityStatus,rotateBrainTaskAgentCredential,revokeBrainTaskAgentCredential,issueBrainTaskAgentCredentials,issueBrainTaskRecoveryCredential,brainTaskCredentialAudit} from './brainAgentCredentials';
+import {inspectBrainTaskLaunch,recoverBrainTaskLaunch} from './brainLaunchRecovery';
 
 const SESSION_ID = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$/;
 const MAX_LIST = 100;
@@ -159,6 +160,29 @@ export function createBrainExplorerRouter(options: ReadOptions = {}): Router {
   });
   // Desktop operator is authenticated by the parent backend middleware.
   // Rotation reveals a replacement credential once; never log or cache responses.
+  router.get('/sessions/:sessionId/tasks/:taskId/launch-recovery', (req,res)=>{
+    try {
+      session(req.params.sessionId);
+      res.setHeader('Cache-Control','no-store');
+      res.json(inspectBrainTaskLaunch('local-cli',req.params.sessionId,req.params.taskId,root()));
+    } catch {res.status(409).json({error:'Launch recovery requires operator review.'});}
+  });
+  router.post('/sessions/:sessionId/tasks/:taskId/launch-recovery', (req,res)=>{
+    try {
+      session(req.params.sessionId);
+      if(req.body?.confirm!==true)throw new Error('Explicit confirmation required');
+      res.setHeader('Cache-Control','no-store');
+      res.json(recoverBrainTaskLaunch('local-cli',req.params.sessionId,req.params.taskId,
+        req.body?.jobId,true,root()));
+    } catch {res.status(409).json({error:'Cannot reconcile launch without verified job evidence.'});}
+  });
+  router.get('/sessions/:sessionId/tasks/:taskId/credentials/audit', (req,res)=>{
+    try {
+      session(req.params.sessionId);
+      res.setHeader('Cache-Control','no-store');
+      res.json({entries:brainTaskCredentialAudit('local-cli',req.params.sessionId,req.params.taskId,root())});
+    }catch {res.status(404).json({error:'Credential audit unavailable.'});}
+  });
   router.get('/sessions/:sessionId/tasks/:taskId/credentials', (req,res) => {
     try {
       session(req.params.sessionId);

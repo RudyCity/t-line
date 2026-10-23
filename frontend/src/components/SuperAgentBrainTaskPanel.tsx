@@ -4,6 +4,8 @@ import { getAuthHeader } from './SuperAgentConsoleUtils';
 
 type TaskCheckpoint = { version:number; at:string; agentId:string; note:string; nextStep:string; artifactPaths:string[] };
 type CapabilityStatus = { agentId: string; expiresAt: string; generation: number; revoked: boolean; expired: boolean };
+type LaunchReview = {state:string;taskId:string;reviewRequired:boolean;agentId?:string;
+ matches:Array<{jobId:string;status:string;cli:string;completionState:string}>};
 type BrainTask = {
   taskId:string; title:string; status:'pending'|'running'|'blocked'|'completed'|'cancelled';
   agents:string[]; assignedTo:string|null; updatedAt:string; checkpoints:TaskCheckpoint[];
@@ -24,7 +26,10 @@ export function SuperAgentBrainTaskPanel({sessionId}:{sessionId:string}){
  const [tasks,setTasks]=useState<BrainTask[]>([]);
  const [jobs,setJobs]=useState<Array<{jobId:string;status:string;completionState:string;cli:string}>>([]);
  const [capabilities,setCapabilities]=useState<CapabilityStatus[]>([]);
+ const [credentialAudit,setCredentialAudit]=useState<Array<{at:string;action:string;agentId:string;generation:number}>>([]);
  const [approved,setApproved]=useState(false);
+ const [launchReview,setLaunchReview]=useState<LaunchReview|null>(null);
+ const [approveRecovery,setApproveRecovery]=useState(false);
  const [freshCredential,setFreshCredential]=useState<{agentId:string;value:string}|null>(null);
  const [createdCredentials,setCreatedCredentials]=useState<{taskId:string;tokens:Record<string,string>;ownerRecoveryCredential?:string}|null>(null);
  const [current,setCurrent]=useState('');
@@ -62,16 +67,38 @@ export function SuperAgentBrainTaskPanel({sessionId}:{sessionId:string}){
   return()=>clearInterval(interval);
  },[base,reload,tasks]);
  useEffect(()=>{setFreshCredential(null);setCreatedCredentials(null);setApproved(false);},[sessionId]);
- useEffect(()=>{setFreshCredential(null);setApproved(false);},[current]);
+ useEffect(()=>{setFreshCredential(null);setApproved(false);setApproveRecovery(false);},[current]);
+ useEffect(()=>{
+  if(!base||!current){setLaunchReview(null);return;}
+  let live=true;
+  request<LaunchReview>(base+'/'+encodeURIComponent(current)+'/launch-recovery')
+   .then(data=>{if(live)setLaunchReview(data);})
+   .catch(()=>{if(live)setLaunchReview(null);});
+  return()=>{live=false;};
+ },[base,current,tick]);
  useEffect(()=>{
    if(!base||!current){setCapabilities([]);return;}
    let live=true;
    request<{agents:CapabilityStatus[]}>(base+'/'+encodeURIComponent(current)+'/credentials')
      .then(data=>{if(live)setCapabilities(data.agents||[]);})
      .catch(()=>{if(live)setCapabilities([]);});
+   request<{entries:Array<{at:string;action:string;agentId:string;generation:number}>}>(
+     base+'/'+encodeURIComponent(current)+'/credentials/audit')
+     .then(data=>{if(live)setCredentialAudit((data.entries||[]).slice(-12).reverse());})
+     .catch(()=>{if(live)setCredentialAudit([]);});
    return()=>{live=false;};
  },[base,current,tick]);
  const selected=tasks.find(task=>task.taskId===current);
+ const attachRecoveredJob=async(jobId:string)=>{
+  if(!approveRecovery||!taskUrl)return;
+  setBusy(true);setError('');setNotice('');
+  try {
+   const result=await request<{jobId:string}>(taskUrl+'/launch-recovery',{jobId,confirm:true});
+   setNotice('Verified CLI Bridge job '+result.jobId+' attached. No retry was dispatched.');
+   setApproveRecovery(false);reload();
+  }catch(e:any){setError(e.message||'Launch recovery rejected');}
+  finally{setBusy(false);}
+ };
  const changeCapability=async(action:'rotate'|'revoke',agentId:string)=>{
    if(!approved||!taskUrl)return;
    setBusy(true);setError('');setNotice('');
@@ -151,6 +178,19 @@ export function SuperAgentBrainTaskPanel({sessionId}:{sessionId:string}){
         </span>
       </div>;
     })}
+    {launchReview&&launchReview.state!=='clear'&&<div className="rounded border border-[var(--border-color)] p-2 space-y-2 text-[11px]">
+      <strong>Delegation recovery requires review · {launchReview.state}</strong>
+      <p>Never dispatches a retry. Attach only jobs whose persisted idempotency key and working directory match this task.</p>
+      {launchReview.matches.map(m=><div key={m.jobId} className="flex gap-2 items-center flex-wrap">
+        <span className="font-mono">{m.jobId} · {m.cli} · {m.status}</span>
+        <button type="button" disabled={busy||!approveRecovery||launchReview.state!=='verified-match'}
+          onClick={()=>void attachRecoveredJob(m.jobId)}
+          className="rounded border px-2 py-1 border-[var(--border-color)] disabled:opacity-40">Attach verified job</button>
+      </div>)}
+      <label className="flex gap-1 items-center"><input type="checkbox" checked={approveRecovery}
+        onChange={e=>setApproveRecovery(e.target.checked)}/> Confirm manual evidence-based recovery</label>
+      {launchReview.matches.length===0&&<p>No verified job. Reservation stays locked until operator review.</p>}
+    </div>}
     <details className="rounded border border-[var(--border-color)]">
       <summary className="p-2 cursor-pointer text-[11px]">Agent credentials</summary>
       <div className="space-y-2 p-2 text-[11px]">
@@ -165,6 +205,14 @@ export function SuperAgentBrainTaskPanel({sessionId}:{sessionId:string}){
         </div>)}
         <label className="flex items-center gap-1"><input type="checkbox" aria-label="Confirm Brain credential operation" checked={approved}
           onChange={e=>setApproved(e.target.checked)}/> Confirm changing this task's agent credentials</label>
+        {credentialAudit.length>0&&<details>
+          <summary>Credential audit · {credentialAudit.length} recent changes</summary>
+          <div className="mt-1 space-y-1">
+            {credentialAudit.map((entry,i)=><div key={entry.at+entry.agentId+entry.action+i}>
+              {entry.action} · {entry.agentId} · v{entry.generation} · {new Date(entry.at).toLocaleString()}
+            </div>)}
+          </div>
+        </details>}
         {freshCredential&&<div role="status" className="rounded border border-[var(--border-color)] p-2">
           <p>New {freshCredential.agentId} credential — shown once</p>
           <code className="block break-all select-all">{freshCredential.value}</code>

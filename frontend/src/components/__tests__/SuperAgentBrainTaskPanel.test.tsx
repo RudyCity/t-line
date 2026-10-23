@@ -3,9 +3,11 @@ import { cleanup,fireEvent,render,screen,waitFor } from '@testing-library/react'
 import { SuperAgentBrainTaskPanel } from '../SuperAgentBrainTaskPanel';
 
 let tasks:any[];
+let recoveryState=false;
+let recoveryPosts=0;
 const base='/api/superagent/brain/sessions/session_testing/tasks';
 beforeEach(()=>{
- tasks=[];
+ tasks=[];recoveryState=false;recoveryPosts=0;
  vi.stubGlobal('fetch',vi.fn(async(input:string,init?:RequestInit)=>{
   const url=String(input),method=init?.method||'GET';
   const body=init?.body?JSON.parse(String(init.body)):{};
@@ -18,7 +20,15 @@ beforeEach(()=>{
   }else{
    const task=tasks[0];
    if(!task){status=404;data={error:'Not found'};}
-   else if(url.endsWith('/credentials')){
+   else if(url.endsWith('/credentials/audit')){
+    data={entries:[]};
+   }else if(url.endsWith('/launch-recovery')&&method==='GET'){
+    data=recoveryState?{state:'verified-match',taskId:task.taskId,reviewRequired:true,
+      matches:[{jobId:'clj_1792658000000_abcdef12',status:'succeeded',cli:'agy',completionState:'unverified'}]}
+      :{state:'clear',taskId:task.taskId,matches:[],reviewRequired:false};
+   }else if(url.endsWith('/launch-recovery')&&method==='POST'){
+    recoveryPosts++;recoveryState=false;data={jobId:body.jobId,retryDispatched:false};
+   }else if(url.endsWith('/credentials')){
     data={agents:task.agents.map((agentId:string)=>({agentId,expiresAt:new Date(Date.now()+3600000).toISOString(),generation:1,revoked:false,expired:false}))};
    }else if(url.endsWith('/claim')){
     task.assignedTo=body.agentId;task.status='running';
@@ -38,6 +48,24 @@ beforeEach(()=>{
 });
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 describe('Brain multi-agent task dashboard',()=>{
+ it('requires operator confirmation before attaching an evidenced CLI job',async()=>{
+  render(<SuperAgentBrainTaskPanel sessionId="session_testing"/>);
+  await waitFor(()=>expect(screen.getByText(/No tasks/)).toBeTruthy());
+  fireEvent.click(screen.getByText('Create task'));
+  fireEvent.change(screen.getByLabelText('Brain task title'),{target:{value:'Recovery review'}});
+  fireEvent.click(screen.getByRole('button',{name:'Create'}));
+  await waitFor(()=>expect(screen.getByRole('button',{name:'Recovery review'})).toBeTruthy());
+  recoveryState=true;
+  fireEvent.click(screen.getByLabelText('Refresh Brain tasks'));
+  await waitFor(()=>expect(screen.getByText(/Delegation recovery requires review/)).toBeTruthy());
+  const attach=screen.getByRole('button',{name:'Attach verified job'}) as HTMLButtonElement;
+  expect(attach.disabled).toBe(true);
+  fireEvent.click(screen.getByLabelText(/Confirm manual evidence-based recovery/));
+  expect(attach.disabled).toBe(false);
+  fireEvent.click(attach);
+  await waitFor(()=>expect(recoveryPosts).toBe(1));
+  await waitFor(()=>expect(screen.getByText(/No retry was dispatched/)).toBeTruthy());
+ },20000);
  it('creates, claims, checkpoints and resumes a task without changing projects',async()=>{
   render(<SuperAgentBrainTaskPanel sessionId="session_testing"/>);
   await waitFor(()=>expect(screen.getByText(/No tasks/)).toBeTruthy());

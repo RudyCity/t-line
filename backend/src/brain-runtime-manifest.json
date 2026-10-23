@@ -3,11 +3,12 @@
   "files": {
     "brainSessionLock.ts": "398c68cf352a97270a98b81345813670944547e787682ee241d52b261a69f1e0",
     "brainObservability.ts": "525e3ba14b8295b78655774d600d8ab80617f7b18ccee14c7d3171c6932ba513",
-    "brainAgentCredentials.ts": "ef6eeb4a8ec9341878b736cf8c7ce714fd3691a88ce4424a36e514ce008f87b9",
-    "brainTasks.ts": "67308d5abc46983b614a386bb27742aa81e90ba07f037a0e6025cba9d5e0a6c9",
+    "brainAgentCredentials.ts": "b9c9ef239a016d4fcd1d6cf0abbced451a337b56068aca35878409602b7c2d85",
+    "brainTasks.ts": "8d6e5c05d78f9760ef3712ceb37ed0cbcfad2a85d4c80584c5c830eff2c39ee3",
+    "brainLaunchRecovery.ts": "a84440339d672c7aee59117b21c962fd94862fc949ba0611cd9803bad4c1326f",
     "brainStorageManager.ts": "0ce4d41c2159ed3f5190a4d43b16e246b3a9364d3ee00a7498789c8cdad73c9a",
     "brainTransfers.ts": "576948922a9af385b58de813908992418fdd0ec1f6c22f797a6f6007d0a615f3",
     "brainIndex.ts": "dd7787cc76267186439066306a9bacec6c71c7d9854f535086a28a4fb1c3b9c3"
   },
-  "commandSuggestionsSha256": "c6388f6294804c3aa64c2f5693c113fce49fa9d0cfc1cc6add73efb56d31da21"
+  "commandSuggestionsSha256": "ffbaab6c6cd144a1d8db160008c7698834349fb32cbfa0e064b5fdcd12cfd786"
 }

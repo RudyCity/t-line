@@ -94,6 +94,14 @@
       "description": "Reconcile persisted CLI Bridge jobs safely; never retry work implicitly."
     },
     {
+      "command": "/brain task.launch.inspect",
+      "description": "Inspect a reserved CLI launch and find only evidence-matched Bridge jobs."
+    },
+    {
+      "command": "/brain task.launch.recover",
+      "description": "Attach a verified job with explicit operator confirmation. Never retries."
+    },
+    {
       "command": "/brain artifact.recover",
       "description": "Recover an interrupted journaled artifact batch without deleting unrelated files."
     },
