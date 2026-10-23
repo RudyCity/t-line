@@ -98,7 +98,7 @@ See [Brain unification and UI endpoints](docs/2026-10-22-tline-brain-unification
 ## 🚀 Quick Start
 
 ### Prerequisites
-* [Bun](https://bun.sh) `1.1+` (or Node.js `20+`)
+* [Bun](https://bun.sh) `1.4.2+` (tested runtime for CLI, backend and frontend; optional third-party integrations can require other runtimes)
 * [Rust](https://www.rust-lang.org/) (required only for building Tauri v2 desktop binaries)
 * [Git](https://git-scm.com/)
 
@@ -106,25 +106,30 @@ See [Brain unification and UI endpoints](docs/2026-10-22-tline-brain-unification
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/your-username/t-line.git
+   git clone https://github.com/RudyCity/t-line.git
    cd t-line
    ```
 
 2. **Install Dependencies**
    ```bash
-   bun install
+   bun install --frozen-lockfile
    ```
 
-3. **Start Development Environment**
+3. **Start Backend + Frontend Development Servers (separate terminals)**
    ```bash
-   bun dev
+   bun run dev:backend
+   # Open a second terminal:
+   bun run dev:frontend
    ```
-   *Starts backend Express server, Vite React frontend, and auto-connects to SuperAgent bridge.*
+   These run the Bun backend and Vite frontend. To start the bundled CLI instead, run `bun run dev`.
 
 4. **Launch Desktop App (Optional)**
    ```bash
    bun run tauri dev
    ```
+   `bun run tauri dev` invokes Tauri through the `desktop-tauri` workspace. Alternatively `bun run dev:tauri` starts desktop + development servers, **but `dev.cjs` forcibly terminates listeners on ports 5773/5779 and existing T-Line desktop processes before launching**. Do not use `dev:tauri` on a shared or actively used host. Verify there are no other sessions first; prefer separate dev servers and an explicitly controlled desktop test.
+
+   Production build: `bun run build:tauri` (requires Rust and platform desktop toolchains).
 
 ---
 
@@ -145,7 +150,7 @@ t-line/
 │   │   ├── components/        # UI components (SuperAgent Console, Worktrees, Terminal Grid)
 │   │   ├── hooks/             # Custom React hooks (terminals, git, web sockets)
 │   │   └── services/          # WebSocket & HTTP API client modules
-├── src-tauri/                # Tauri v2 Rust desktop configuration
+├── desktop-tauri/            # Tauri v2 Rust desktop configuration and CLI
 ├── CHANGELOG.md              # Project version & release history
 └── package.json              # Project workspace dependencies & scripts
 ```

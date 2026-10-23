@@ -30,10 +30,14 @@ jobs:
 
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
 
       - name: Install Dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
+      - name: Verify README setup and Brain docs
+        run: bun scripts/check-brain-docs.cjs
       - name: Verify generated Brain Core integrity
         run: bun scripts/check-brain-runtime.cjs
 

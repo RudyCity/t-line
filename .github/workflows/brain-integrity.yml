@@ -4,6 +4,11 @@ on:
     paths:
       - "backend/src/brain*.ts"
       - "backend/src/brain-runtime-manifest.json"
+      - "README.md"
+      - "scripts/check-brain-docs.cjs"
+      - "frontend/src/generated/brainCommandSuggestions.json"
+      - "frontend/src/components/SuperAgentCommands.ts"
+      - "frontend/src/components/SuperAgentConsole.tsx"
       - "backend/tests/brain*.test.ts"
       - "frontend/src/components/SuperAgentBrainExplorer.tsx"
       - "frontend/src/components/SuperAgentBrainTaskPanel.tsx"
@@ -13,6 +18,12 @@ on:
       - ".github/workflows/brain-integrity.yml"
   pull_request:
     paths:
+      - "README.md"
+      - "scripts/check-brain-docs.cjs"
+      - "frontend/src/generated/brainCommandSuggestions.json"
+      - "frontend/src/components/SuperAgentCommands.ts"
+      - "frontend/src/components/SuperAgentConsole.tsx"
+      - "frontend/src/components/__tests__/SuperAgentCliParity.test.ts"
       - "backend/src/brain*.ts"
       - "backend/src/brain-runtime-manifest.json"
       - "backend/tests/brain*.test.ts"
@@ -36,6 +47,8 @@ jobs:
           bun-version: 1.4.2
       - name: Install dependencies
         run: bun install --frozen-lockfile
+      - name: Verify README setup and Brain docs
+        run: bun scripts/check-brain-docs.cjs
       - name: Verify generated Brain Core integrity
         run: bun scripts/check-brain-runtime.cjs
       - name: Build backend
