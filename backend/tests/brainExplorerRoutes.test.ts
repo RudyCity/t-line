@@ -36,7 +36,19 @@ async function fixture() {
   app.use(express.json());
   app.use('/brain', createBrainExplorerRouter({
     configRoot: () => root,
-    authorizeProject: (id, destination) => id === 'allowed-project' && destination === path.join(root, 'allowed-project'),
+    authorizeProject: (id, destination) => {
+      if (id !== 'allowed-project') return false;
+      const registered = path.join(root, 'allowed-project');
+      // The production route resolves directory identity with realpathSync.native.
+      // Windows can change drive/path casing and separator representation;
+      // compare canonical filesystem identities, not raw string spellings.
+      if (!fs.existsSync(registered)) return false;
+      const canonical = (value: string) => {
+        const real = fs.realpathSync.native(value);
+        return process.platform === 'win32' ? real.toLowerCase() : real;
+      };
+      return canonical(destination) === canonical(registered);
+    },
   }));
   const server = http.createServer(app);
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
