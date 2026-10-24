@@ -23,6 +23,12 @@ const permitted = [
   /^\/audio$/,
   /^\/audio\/audio-[a-f0-9]{64}$/,
   /^\/audio\/audio-[a-f0-9]{64}\/waveform$/,
+  /^\/palettes$/,
+  /^\/mockups$/,
+  /^\/saas-promo$/,
+  /^\/trace-image$/,
+  /^\/events$/,
+  /^\/tline-bridge$/,
   /^\/projects\/(?:studio|motion)-[a-f0-9]{20}(?:\/edits|\/render|\/revise)?$/,
   /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/(?:presets|effects)$/,
   /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/presets\/preview$/,
@@ -36,6 +42,11 @@ const permitted = [
   /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/beat-sync(?:\/preview)?$/,
   /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/particles(?:\/preview)?$/,
   /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/typography(?:\/preview)?$/,
+  /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/bundle$/,
+  /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/vectorize$/,
+  /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/mockup$/,
+  /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/chart$/,
+  /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/(?:player|preview)$/,
   /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/quality$/,
   /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/vision-review$/,
   /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/vision-repair$/,
@@ -48,12 +59,30 @@ const permitted = [
 
 function allowedRoute(method: string, pathname: string): boolean {
   if (!permitted.some(pattern => pattern.test(pathname))) return false;
-  if (method === 'GET') return !pathname.startsWith('/storyboard/') && !/^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/(?:beat-sync|particles|typography)(?:\/preview)?$/.test(pathname) && !pathname.endsWith('/variants') && !pathname.endsWith('/history/restore') && !pathname.endsWith('/vision-review') && !pathname.endsWith('/vision-repair') && !pathname.endsWith('/edits') && !pathname.endsWith('/render') && !pathname.endsWith('/revise') && !/^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/(?:presets|effects|effect-stack|resize|templates)(?:\/preview)?$/.test(pathname) && pathname !== '/generate' && !pathname.endsWith('/cancel');
+  if (method === 'GET') {
+    return !pathname.startsWith('/storyboard/') &&
+      !/^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/(?:beat-sync|particles|typography|vectorize|mockup|chart)(?:\/preview)?$/.test(pathname) &&
+      !pathname.endsWith('/variants') &&
+      !pathname.endsWith('/history/restore') &&
+      !pathname.endsWith('/vision-review') &&
+      !pathname.endsWith('/vision-repair') &&
+      !pathname.endsWith('/edits') &&
+      !pathname.endsWith('/render') &&
+      !pathname.endsWith('/revise') &&
+      !/^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/(?:presets|effects|effect-stack|resize|templates)(?:\/preview)?$/.test(pathname) &&
+      pathname !== '/generate' &&
+      pathname !== '/saas-promo' &&
+      pathname !== '/trace-image' &&
+      !pathname.endsWith('/cancel');
+  }
   if (method === 'HEAD') return pathname.endsWith('/artifact') || /^\/assets\/asset-[a-f0-9]{64}$/.test(pathname) ||
     /^\/audio\/audio-[a-f0-9]{64}$/.test(pathname);
   if (method === 'POST') {
-    return pathname === '/projects' || pathname === '/generate' || /^\/storyboard\/(?:plan|preview|render)$/.test(pathname) || pathname === '/assets' || pathname === '/audio' || pathname === '/brand-kit' ||
-      /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/(?:beat-sync|particles|typography)(?:\/preview)?$/.test(pathname) || pathname.endsWith('/variants') || pathname.endsWith('/history/restore') || pathname.endsWith('/vision-review') || pathname.endsWith('/vision-repair') || pathname.endsWith('/edits') || pathname.endsWith('/render') || pathname.endsWith('/revise') || pathname.endsWith('/cancel') ||
+    return pathname === '/projects' || pathname === '/generate' || pathname === '/saas-promo' || pathname === '/trace-image' ||
+      /^\/storyboard\/(?:plan|preview|render)$/.test(pathname) || pathname === '/assets' || pathname === '/audio' || pathname === '/brand-kit' ||
+      /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/bundle$/.test(pathname) ||
+      /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/(?:beat-sync|particles|typography|vectorize|mockup|chart)(?:\/preview)?$/.test(pathname) ||
+      pathname.endsWith('/variants') || pathname.endsWith('/history/restore') || pathname.endsWith('/vision-review') || pathname.endsWith('/vision-repair') || pathname.endsWith('/edits') || pathname.endsWith('/render') || pathname.endsWith('/revise') || pathname.endsWith('/cancel') ||
       /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/(?:presets|effects|effect-stack|resize|templates)(?:\/preview)?$/.test(pathname);
   }
   return false;
@@ -146,7 +175,8 @@ export function createStudioProxyRouter(options: StudioProxyOptions = {}): Route
     const upstream = http.request({
       hostname: '127.0.0.1', port: options.upstreamPort ?? 7888,
       path: targetPath, method: req.method, headers,
-      timeout: route === '/generate' || route === '/storyboard/plan' || route === '/storyboard/render' || route.endsWith('/revise') ||
+      timeout: route === '/generate' || route === '/saas-promo' || route === '/trace-image' || route.endsWith('/bundle') ||
+        route === '/storyboard/plan' || route === '/storyboard/render' || route.endsWith('/revise') ||
         route.includes('/exports/') || route.endsWith('/vision-review') || route.endsWith('/vision-repair')
         ? 120_000 : 30_000,
     }, reply => {

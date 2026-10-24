@@ -139,4 +139,58 @@ describe('Studio Canvas native pointer interaction', () => {
     fireEvent.pointerUp(svg, { pointerId: 5, clientX: 130, clientY: 100 });
     expect(onEdit).not.toHaveBeenCalled();
   });
+  it('renders SVG path layers with custom stroke attributes and scale transforms', () => {
+    const pathProject: StudioProject = {
+      ...project,
+      composition: {
+        ...project.composition,
+        layers: [
+          {
+            id: 'sparkline',
+            kind: 'path',
+            x: 50,
+            y: 50,
+            width: 100,
+            height: 100,
+            rotation: 0,
+            opacity: 1,
+            scale: 1.5,
+            fill: 'none',
+            stroke: '#10b981',
+            strokeWidth: 3,
+            strokeDasharray: [10, 5],
+            strokeDashoffset: 20,
+            d: 'M 50 100 L 75 60 L 100 80 L 150 40',
+            tracks: [],
+          },
+          {
+            id: 'hidden-act',
+            kind: 'rect',
+            x: 0,
+            y: 0,
+            width: 100,
+            height: 100,
+            rotation: 0,
+            opacity: 0,
+            fill: '#ffffff',
+            tracks: [],
+          },
+        ],
+      },
+    };
+    render(<StudioCanvas project={pathProject} frame={0} selectedLayer={null} isActive busy={false}
+      snapping onEdit={vi.fn()} onSelectLayer={vi.fn()} onStopPlayback={vi.fn()} />);
+    const svg = screen.getByRole('img', { name: /Studio preview frame/ });
+    const pathNode = svg.querySelector('path');
+    expect(pathNode).not.toBeNull();
+    expect(pathNode?.getAttribute('d')).toBe('M 50 100 L 75 60 L 100 80 L 150 40');
+    expect(pathNode?.getAttribute('stroke')).toBe('#10b981');
+    expect(pathNode?.getAttribute('stroke-width')).toBe('3');
+    expect(pathNode?.getAttribute('stroke-dasharray')).toBe('10 5');
+    expect(pathNode?.getAttribute('stroke-dashoffset')).toBe('20');
+    expect(pathNode?.getAttribute('transform')).toContain('scale(1.5 1.5)');
+
+    const hiddenGroup = svg.querySelector('[data-motion-layer="hidden-act"]');
+    expect(hiddenGroup?.getAttribute('style')).toContain('pointer-events: none');
+  });
 });

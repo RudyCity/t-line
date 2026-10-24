@@ -140,6 +140,18 @@ describe('T-Line Studio proxy and service authentication', () => {
     const motionId = 'motion-' + 'a'.repeat(20);
     expect((await fetch(base + '/presets?workspace=allowed-root')).status).toBe(200);
     expect((await fetch(base + '/templates?workspace=allowed-root')).status).toBe(200);
+    expect((await fetch(base + '/palettes?workspace=allowed-root')).status).toBe(200);
+    expect((await fetch(base + '/mockups?workspace=allowed-root')).status).toBe(200);
+    const saasPromo = await fetch(base + '/saas-promo?workspace=allowed-root', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product: 'T-Line Studio' }),
+    });
+    expect(saasPromo.status).toBe(201);
+    const traceImg = await fetch(base + '/trace-image?workspace=allowed-root', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: 'QUJD' }),
+    });
+    expect(traceImg.status).toBe(201);
     expect((await fetch(base + '/storyboard/plan?workspace=allowed-root')).status).toBe(404);
     for (const route of ['/storyboard/plan', '/storyboard/preview', '/storyboard/render']) {
       const approved = await fetch(base + route + '?workspace=allowed-root', {
@@ -226,6 +238,16 @@ describe('T-Line Studio proxy and service authentication', () => {
       expect(response.status).toBe(201);
       expect((await response.json()).url).toContain('/api/motion/projects/' + motionId + suffix);
     }
+    for (const suffix of ['/bundle', '/vectorize', '/mockup', '/chart']) {
+      const resp = await fetch(base + '/projects/' + motionId + suffix + '?workspace=allowed-root', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseRevision: 1 }),
+      });
+      expect(resp.status).toBe(201);
+      expect((await resp.json()).url).toContain('/api/motion/projects/' + motionId + suffix);
+    }
+    expect((await fetch(base + '/projects/' + motionId + '/bundle?workspace=allowed-root')).status).toBe(200);
+    expect((await fetch(base + '/projects/' + motionId + '/preview?workspace=allowed-root')).status).toBe(200);
     const restored = await fetch(base + '/projects/' + motionId + '/history/restore?workspace=allowed-root', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ baseRevision: 5, revision: 3 }),

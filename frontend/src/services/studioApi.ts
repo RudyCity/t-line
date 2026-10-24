@@ -1,12 +1,25 @@
 import { STUDIO_DISPLAY_NAME } from "./studioBranding";
 /** Typed Studio Studio v1 contract. The SuperAgent server remains authoritative. */
-export type StudioProperty = 'x' | 'y' | 'opacity' | 'rotation';
-export type StudioEasing = 'linear' | 'step' | 'easeInOut' | 'easeOutBack';
+export type StudioProperty = 'x' | 'y' | 'opacity' | 'rotation' | 'scale' | 'scaleX' | 'scaleY' | 'strokeDashoffset';
+export type StudioEasing =
+  | 'linear'
+  | 'step'
+  | 'easeInOut'
+  | 'easeOutBack'
+  | 'easeIn'
+  | 'easeOut'
+  | 'bounce'
+  | 'easeOutExpo'
+  | 'easeOutQuart'
+  | 'easeOutCubic'
+  | 'spring'
+  | 'apple';
 export interface StudioKeyframe { frame: number; value: number; easing?: StudioEasing }
 export interface StudioTrack { property: StudioProperty; keyframes: StudioKeyframe[] }
 export interface BaseStudioLayer {
-  id: string; kind: 'text' | 'rect' | 'image'; x: number; y: number;
+  id: string; kind: 'text' | 'rect' | 'image' | 'video' | 'path'; x: number; y: number;
   width: number; height: number; rotation: number; opacity: number;
+  scale?: number; scaleX?: number; scaleY?: number; strokeDashoffset?: number;
   fill: string; tracks: StudioTrack[];
 }
 export interface StudioTextLayer extends BaseStudioLayer {
@@ -14,7 +27,15 @@ export interface StudioTextLayer extends BaseStudioLayer {
 }
 export interface StudioRectLayer extends BaseStudioLayer { kind: 'rect'; cornerRadius?: number }
 export interface StudioImageLayer extends BaseStudioLayer { kind: 'image'; assetId: string }
-export type StudioLayer = StudioTextLayer | StudioRectLayer | StudioImageLayer;
+export interface StudioVideoLayer extends BaseStudioLayer {
+  kind: 'video'; assetId: string; startFrame?: number; trimInSeconds?: number;
+  trimOutSeconds?: number; speedMultiplier?: number; loop?: boolean;
+}
+export interface StudioPathLayer extends BaseStudioLayer {
+  kind: 'path'; d: string; stroke?: string; strokeWidth?: number;
+  strokeDasharray?: number[]; strokeDashoffset?: number; fillRule?: 'nonzero' | 'evenodd';
+}
+export type StudioLayer = StudioTextLayer | StudioRectLayer | StudioImageLayer | StudioVideoLayer | StudioPathLayer;
 export interface StudioAudioTrack {
   assetId: string; startFrame: number; volume: number; fadeInFrames?: number; fadeOutFrames?: number; loop?: boolean; role?: 'music' | 'voiceover';
 }
@@ -105,7 +126,7 @@ export interface StudioEffectParameter {
 }
 export interface StudioEffectCatalogItem {
   id: string; name: string; description: string; category: StudioEffectCategory;
-  tags: string[]; targetKinds: Array<'text' | 'rect' | 'image' | 'scene'>;
+  tags: string[]; targetKinds: Array<'text' | 'rect' | 'image' | 'video' | 'path' | 'scene'>;
   parameters: Record<string, StudioEffectParameter>;
 }
 export interface StudioEffectApplication {
@@ -145,6 +166,22 @@ export interface StudioQualityReport {
 export interface StudioDirectorMedia {
   imageAssetId?: string; sceneImageAssetIds?: string[]; audioAssetId?: string; audioGain?: number; audioLoop?: boolean;
   voiceoverText?: string; voiceoverGain?: number; autoNarrateScenes?: boolean; aspectRatio?: '16:9' | '1:1' | '9:16';
+  palette?: string; specularSheen?: boolean; deviceMockup?: 'macbook' | 'iphone' | 'browser';
+  chartType?: 'benchmark' | 'kpi' | 'radial' | 'sparkline'; chartTitle?: string;
+  chartKpiValue?: string; chartProgressPercent?: number; codeSnippet?: string; codeLang?: string;
+  audioVisualizer?: boolean; voice?: string; burnCaptions?: boolean;
+}
+export interface StudioPalette {
+  id: string; name: string; bg: string; text: string; primary: string; accent: string; muted: string; border: string;
+}
+export interface StudioDeviceMockup {
+  id: string; name: string; width: number; height: number; description: string;
+}
+export interface StudioDeliverablesBundle {
+  bundlePath: string; files: string[]; sizeBytes: number;
+}
+export interface StudioImageTraceResult {
+  pathData: string; d: string; width: number; height: number;
 }
 export interface StudioDirectorResult {
   project: StudioProject; job: StudioJob; outline: string[]; limitations: string[];
@@ -390,6 +427,34 @@ export const studioApi = {
     json<StudioDirectorResult>(workspace, '/projects/' + assertId(motionId) + '/revise', {
       method: 'POST', body: JSON.stringify({ prompt, width, ...media }),
     }),
+  palettes: (workspace: string) => json<{ palettes: StudioPalette[] }>(workspace, '/palettes'),
+  mockups: (workspace: string) => json<{ mockups: StudioDeviceMockup[] }>(workspace, '/mockups'),
+  attachMockup: (workspace: string, id: string, baseRevision: number, options: { device?: 'macbook' | 'iphone' | 'browser'; title?: string; url?: string; accent?: string }) =>
+    json<{ project: StudioProject; layersAdded: number; deviceType: string }>(workspace, '/projects/' + assertId(id) + '/mockup', {
+      method: 'POST', body: JSON.stringify({ baseRevision, ...options }),
+    }),
+  attachChart: (workspace: string, id: string, baseRevision: number, options: { type?: 'benchmark' | 'kpi' | 'radial' | 'sparkline'; title?: string; kpiValue?: string; kpiBadge?: string; progressPercent?: number; accent?: string }) =>
+    json<{ project: StudioProject; layersAdded: number }>(workspace, '/projects/' + assertId(id) + '/chart', {
+      method: 'POST', body: JSON.stringify({ baseRevision, ...options }),
+    }),
+  saasPromo: (workspace: string, options: { product?: string; tagline?: string; palette?: string; device?: 'macbook' | 'iphone' | 'browser'; voice?: string; width?: number }) =>
+    json<{ project: StudioProject; job: StudioJob }>(workspace, '/saas-promo', {
+      method: 'POST', body: JSON.stringify(options),
+    }),
+  traceImage: (workspace: string, input: { imageBase64?: string; assetId?: string; options?: unknown }) =>
+    json<StudioImageTraceResult>(workspace, '/trace-image', {
+      method: 'POST', body: JSON.stringify(input),
+    }),
+  vectorizeLayer: (workspace: string, id: string, baseRevision: number, layerId: string, options?: unknown) =>
+    json<StudioProject>(workspace, '/projects/' + assertId(id) + '/vectorize', {
+      method: 'POST', body: JSON.stringify({ baseRevision, layerId, options }),
+    }),
+  exportBundle: (workspace: string, id: string) =>
+    json<StudioDeliverablesBundle>(workspace, '/projects/' + assertId(id) + '/bundle', {
+      method: 'POST', body: '{}',
+    }),
+  getBundleManifest: (workspace: string, id: string) =>
+    json<StudioDeliverablesBundle>(workspace, '/projects/' + assertId(id) + '/bundle'),
   jobs: (workspace: string) => json<StudioJob[]>(workspace, '/jobs'),
   scheduler: (workspace: string) => json<StudioSchedulerStatus>(workspace, '/scheduler'),
   supervisor: (workspace: string) => json<StudioSupervisorStatus>(workspace, '/supervisor'),

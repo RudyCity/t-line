@@ -632,7 +632,7 @@ export function StudioTab({ workspacePath, isActive }: Props) {
     if (!project || !layer) return;
     const value = Number(propertyDraft.value);
     const { field } = propertyDraft;
-    const range = field === 'opacity' ? [0, 1] : field === 'rotation' ? [-36000, 36000] : [-100000, 100000];
+    const range = field === 'opacity' ? [0, 1] : field === 'rotation' ? [-36000, 36000] : field === 'scale' || field === 'scaleX' || field === 'scaleY' ? [0.001, 100] : [-100000, 100000];
     if (!Number.isFinite(value) || value < range[0] || value > range[1]) { message('Property value is outside the supported range'); return; }
     applyEditorEdits([{ type: 'set-property', layerId: layer.id, property: field, value }], 'Base property updated');
   };
@@ -644,7 +644,7 @@ export function StudioTab({ workspacePath, isActive }: Props) {
     const numeric = Number(propertyDraft.value);
     if (!Number.isFinite(numeric)) { message('Enter a numeric keyframe value'); return; }
     const value = numeric;
-    const range = field === 'opacity' ? [0, 1] : field === 'rotation' ? [-36000, 36000] : [-100000, 100000];
+    const range = field === 'opacity' ? [0, 1] : field === 'rotation' ? [-36000, 36000] : field === 'scale' || field === 'scaleX' || field === 'scaleY' ? [0.001, 100] : [-100000, 100000];
     if (value < range[0] || value > range[1]) { message('Keyframe value is outside supported range'); return; }
     const track = makeKeyframeTrack(layer, field, frame, value);
     applyEditorEdits([{ type: 'set-track', layerId: layer.id, track }],
@@ -1300,6 +1300,8 @@ export function StudioTab({ workspacePath, isActive }: Props) {
                       }}>
                       <option value="x">X position</option><option value="y">Y position</option>
                       <option value="opacity">Opacity</option><option value="rotation">Rotation</option>
+                      <option value="scale">Uniform Scale</option><option value="scaleX">Scale X</option>
+                      <option value="scaleY">Scale Y</option><option value="strokeDashoffset">Stroke Dash Offset</option>
                     </select>
                     <label className="text-[11px] text-[var(--text-muted)]" htmlFor="motion-property-value">Value at frame {frame}</label>
                     <input id="motion-property-value" className={control} type="number" step="any" value={propertyDraft.value}

@@ -56,6 +56,12 @@ describe('Studio timeline keyframe editing', () => {
         expect.objectContaining({ frame: 30, easing: 'easeInOut' }), expect.objectContaining({ frame: 60 })],
     } });
     expect(easeStudioKeyframe(project, 'panel', 'x', 0, 'step')).toEqual([]);
+    expect(easeStudioKeyframe(project, 'panel', 'x', 0, 'apple')[0]).toMatchObject({
+      type: 'set-track', track: { keyframes: [expect.objectContaining({ frame: 0, easing: 'apple' }), expect.anything(), expect.anything()] },
+    });
+    expect(easeStudioKeyframe(project, 'panel', 'x', 0, 'easeOutExpo')[0]).toMatchObject({
+      type: 'set-track', track: { keyframes: [expect.objectContaining({ frame: 0, easing: 'easeOutExpo' }), expect.anything(), expect.anything()] },
+    });
     expect(() => easeStudioKeyframe(project, 'panel', 'x', 0, 'bad' as never)).toThrow('Unsupported');
   });
   it('deletes one keyframe through set-track, and deletes the final track through scene replacement', () => {

@@ -172,6 +172,49 @@ describe('Studio Studio authenticated client', () => {
     await expect(studioApi.loadAudioUrl('D:/studio', '../secret')).rejects.toThrow('Invalid Studio audio');
   });
 
+  it('routes palettes, mockups, saas-promo, charts, vectorization, and deliverables bundles through authenticated endpoints', async () => {
+    const motionId = 'motion-' + 'f'.repeat(20);
+    const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/palettes')) return new Response(JSON.stringify({ palettes: [{ id: 'cyber', name: 'Cyberpunk' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      if (url.includes('/mockups')) return new Response(JSON.stringify({ mockups: [{ id: 'macbook', name: 'MacBook Pro' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      if (url.includes('/saas-promo')) return new Response(JSON.stringify({ project: { id: motionId }, job: { id: 'motionjob-' + '1'.repeat(24) } }), { status: 202, headers: { 'Content-Type': 'application/json' } });
+      if (url.includes('/bundle')) return new Response(JSON.stringify({ bundlePath: 'D:/bundle.zip', files: ['preview.mp4'], sizeBytes: 1024 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      if (url.includes('/trace-image')) return new Response(JSON.stringify({ pathData: 'M0,0', d: 'M0,0', width: 100, height: 100 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      if (url.includes('/vectorize')) return new Response(JSON.stringify({ id: motionId, revision: 2 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      if (url.includes('/mockup')) return new Response(JSON.stringify({ project: { id: motionId, revision: 2 }, layersAdded: 4, deviceType: 'macbook' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      if (url.includes('/chart')) return new Response(JSON.stringify({ project: { id: motionId, revision: 2 }, layersAdded: 3 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const palettes = await studioApi.palettes('D:/studio');
+    expect(palettes.palettes[0].id).toBe('cyber');
+
+    const mockups = await studioApi.mockups('D:/studio');
+    expect(mockups.mockups[0].id).toBe('macbook');
+
+    const promo = await studioApi.saasPromo('D:/studio', { product: 'T-Line', palette: 'cyber', device: 'macbook' });
+    expect(promo.project.id).toBe(motionId);
+
+    const trace = await studioApi.traceImage('D:/studio', { imageBase64: 'QUJD' });
+    expect(trace.d).toBe('M0,0');
+
+    const vectorized = await studioApi.vectorizeLayer('D:/studio', motionId, 1, 'img1');
+    expect(vectorized.id).toBe(motionId);
+
+    const attachedMockup = await studioApi.attachMockup('D:/studio', motionId, 1, { device: 'macbook' });
+    expect(attachedMockup.deviceType).toBe('macbook');
+
+    const attachedChart = await studioApi.attachChart('D:/studio', motionId, 1, { type: 'benchmark' });
+    expect(attachedChart.layersAdded).toBe(3);
+
+    const bundle = await studioApi.exportBundle('D:/studio', motionId);
+    expect(bundle.bundlePath).toBe('D:/bundle.zip');
+
+    const manifest = await studioApi.getBundleManifest('D:/studio', motionId);
+    expect(manifest.files).toContain('preview.mp4');
+  });
+
   it('requires login and rejects invalid scene identifiers before calling the API', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);

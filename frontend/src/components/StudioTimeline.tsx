@@ -15,7 +15,11 @@ interface Props {
   onEdit: (edits: StudioEdit[], note: string) => void; onError: (message: string) => void;
 }
 const btn = 'rounded border border-[var(--border-color)] bg-[var(--bg-card)] px-2 py-1 text-[11px] text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] disabled:opacity-40';
-const easingNames: StudioEasing[] = ['linear', 'step', 'easeInOut', 'easeOutBack'];
+const easingNames: StudioEasing[] = [
+  'linear', 'step', 'easeInOut', 'easeOutBack',
+  'easeIn', 'easeOut', 'bounce', 'easeOutExpo',
+  'easeOutQuart', 'easeOutCubic', 'spring', 'apple',
+];
 
 export function StudioTimeline({ project, currentFrame, selectedLayer, busy, isActive, onFrame, onLayer, onEdit, onError }: Props) {
   const [selected, setSelected] = useState<Selected | null>(null);

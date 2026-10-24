@@ -1,3 +1,13 @@
+## [1.3.700] - 2026-10-25
+
+### Motion Studio Superagent Parity, Signature Easings & Path Rendering
+
+- **Backend Proxy Route Expansion (studioProxy.ts)**: Allowed routes and methods for /palettes, /mockups, /saas-promo, /trace-image, and project /bundle, /vectorize, /mockup, /chart, and /preview, with extended timeouts.
+- **Extended Studio Schema & Types (studioApi.ts)**: Added extended properties (scale, scaleX, scaleY, strokeDashoffset), extended easing curves (apple, easeOutExpo, easeIn, easeOut, bounce, spring, easeOutCubic, easeOutQuart), and layer kinds (path, video).
+- **Timeline & Evaluator Parity (studioScene.ts, studioTimelineEdits.ts)**: Implemented Apple quintic velocity curve and exponential ease-out formulas in track evaluation; enabled non-destructive timeline editing for extended easings.
+- **Canvas Scale Matrix & SVG Path Rendering (StudioCanvas.tsx)**: Rendered SVG <path> elements with dynamic stroke, stroke-dash, and fill-rule attributes; applied center-anchored scale transforms; protected zero-opacity layers from stealing pointer events.
+- **Property Inspector Enhancements (StudioTab.tsx)**: Added uniform scale, directional scale X/Y, and stroke dash offset to layer property options with appropriate range boundaries.
+
 ## [1.3.699] - 2026-10-21
 
 ### Motion Studio & Tauri Desktop Hardening

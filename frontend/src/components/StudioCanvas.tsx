@@ -1,4 +1,4 @@
-/* Hallmark · pre-emit critique: P4 H5 E5 S5 R5 V4
+/* Hallmark Â· pre-emit critique: P4 H5 E5 S5 R5 V4
  * Studio Studio canvas: pointer-captured, revision-guarded move/rotate/resize interactions.
  * Reuses application tokens and declarative SVG scene nodes; never evaluates scene markup.
  */
@@ -165,12 +165,19 @@ export function StudioCanvas({
         const values = preview?.layerId === layer.id ? { ...evaluated, ...preview } : evaluated;
         const cx = values.x + (values.width ?? layer.width) / 2;
         const cy = values.y + (values.height ?? layer.height) / 2;
-        const transform = `rotate(${values.rotation} ${cx} ${cy})`;
+        const sx = values.scaleX ?? values.scale ?? 1;
+        const sy = values.scaleY ?? values.scale ?? 1;
+        const hasScale = Math.abs(sx - 1) > 0.0001 || Math.abs(sy - 1) > 0.0001;
+        const transform = hasScale
+          ? `translate(${cx} ${cy}) rotate(${values.rotation}) scale(${sx} ${sy}) translate(${-cx} ${-cy})`
+          : `rotate(${values.rotation} ${cx} ${cy})`;
         const selected = selectedLayer === layer.id;
+        const isZeroOpacity = values.opacity <= 0.0001;
         return (
           <g key={layer.id} data-motion-layer={layer.id} onPointerDown={event => start(event, layer, 'move')}
             onClick={() => onSelectLayer(layer.id)}
-            className={busy ? 'cursor-default' : 'cursor-move'}>
+            style={{ pointerEvents: isZeroOpacity ? 'none' : undefined }}
+            className={busy ? 'cursor-default' : isZeroOpacity ? 'pointer-events-none' : 'cursor-move'}>
             {layer.kind === 'rect' ? (
               <rect x={values.x} y={values.y} width={values.width ?? layer.width} height={values.height ?? layer.height}
                 rx={Math.min(layer.cornerRadius ?? 0, (values.width ?? layer.width) / 2, (values.height ?? layer.height) / 2)}
@@ -185,6 +192,23 @@ export function StudioCanvas({
                   height={values.height ?? layer.height} fill="var(--bg-card)"
                   stroke="var(--border-color)" transform={transform} />
               )
+            ) : layer.kind === 'video' ? (
+              assetUrls[layer.assetId] ? (
+                <image x={values.x} y={values.y} width={values.width ?? layer.width}
+                  height={values.height ?? layer.height} href={assetUrls[layer.assetId]}
+                  preserveAspectRatio="none" opacity={values.opacity} transform={transform} />
+              ) : (
+                <rect x={values.x} y={values.y} width={values.width ?? layer.width}
+                  height={values.height ?? layer.height} fill="var(--bg-card)"
+                  stroke="var(--border-color)" transform={transform} />
+              )
+            ) : layer.kind === 'path' ? (
+              <path d={layer.d} fill={layer.fill || 'none'} stroke={layer.stroke || 'none'}
+                strokeWidth={layer.strokeWidth ?? 1}
+                strokeDasharray={layer.strokeDasharray?.join(' ')}
+                strokeDashoffset={values.strokeDashoffset ?? layer.strokeDashoffset ?? 0}
+                fillRule={layer.fillRule ?? 'nonzero'}
+                opacity={values.opacity} transform={transform} />
             ) : (
               <text x={values.x} y={values.y + layer.fontSize} fontSize={layer.fontSize}
                 fontFamily={layer.fontFamily} fill={layer.fill} opacity={values.opacity}

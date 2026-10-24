@@ -183,6 +183,12 @@
       "tlineHandler": "cli-only"
     },
     {
+      "command": "/security",
+      "description": "Inspect OS isolation and manage persistent path/drive blocks",
+      "sourceFile": "src/core/commands/coreCommands.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
       "command": "/selfdev",
       "description": "Inspect, distill, review, and manage self-development behavioral lessons",
       "sourceFile": "src/core/commands/selfdevCommand.ts",

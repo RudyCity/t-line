@@ -28,11 +28,19 @@ export function moveStudioKeyframe(
   next.keyframes.sort((a, b) => a.frame - b.frame);
   return [{ type: 'set-track', layerId, track: next }];
 }
+const VALID_EASINGS: StudioEasing[] = [
+  'linear', 'step', 'easeInOut', 'easeOutBack',
+  'easeIn', 'easeOut', 'bounce', 'easeOutExpo',
+  'easeOutQuart', 'easeOutCubic', 'spring', 'apple',
+];
+
 export function easeStudioKeyframe(
   project: StudioProject, layerId: string, property: StudioProperty, frame: number, easing: StudioEasing,
 ): StudioEdit[] {
-  if (!(['linear', 'step', 'easeInOut', 'easeOutBack'] as const).includes(easing)) throw new Error('Unsupported keyframe easing');
-  if (property === 'opacity' && easing === 'easeOutBack') throw new Error('Overshoot easing cannot affect opacity');
+  if (!VALID_EASINGS.includes(easing)) throw new Error('Unsupported keyframe easing');
+  if (property === 'opacity' && (easing === 'easeOutBack' || easing === 'bounce' || easing === 'spring')) {
+    throw new Error('Overshoot easing cannot affect opacity');
+  }
   const track = trackFor(project, layerId, property);
   const current = existingFrame(track, frame);
   if ((current.easing ?? 'linear') === easing) return [];
