@@ -44,7 +44,7 @@ describe('T-Line Studio preset panel', () => {
     render(<StudioPresetPanel workspacePath="D:/studio" project={project()} selectedLayer="title"
       busy={false} preview={null} onPreview={onPreview} onApply={onApply} />);
     const preset = await screen.findByRole('combobox', { name: 'Select Studio preset' });
-    expect(screen.getByText('2 styles')).toBeInTheDocument();
+    expect(await screen.findByText('2 styles')).toBeInTheDocument();
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Preset intensity' }), { target: { value: '1.5' } });
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Preset duration' }), { target: { value: '60' } });
     fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
@@ -87,3 +87,4 @@ describe('T-Line Studio preset panel', () => {
     expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
   });
 });
+
