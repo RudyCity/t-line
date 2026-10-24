@@ -1,3 +1,11 @@
+## [1.3.701] - 2026-10-25
+
+### Motion Studio Resolution Upscaling & 4K UHD Parity
+
+- **Backend Proxy Whitelist (studioProxy.ts)**: Allowed /projects/:id/upscale (and /preview, /targets), /jobs/:id/upscale, and extended proxy timeouts to 120s for upscaling operations.
+- **Frontend Studio API Client (studioApi.ts)**: Added typed client methods upscaleTargets(), upscale(), and upscaleJob() with full parameter contracts (scale, target, mode).
+- **Interactive Upscale Resolution Controls (StudioTab.tsx)**: Added dedicated Scene Upscaling selector (2×, 4×, 1080p FHD, 2K QHD, 4K UHD) in the composition toolbar with instant revision bumping and non-destructive Undo/Redo integration.
+
 ## [1.3.700] - 2026-10-25
 
 ### Motion Studio Superagent Parity, Signature Easings & Path Rendering

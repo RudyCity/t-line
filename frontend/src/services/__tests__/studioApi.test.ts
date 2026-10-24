@@ -183,6 +183,8 @@ describe('Studio Studio authenticated client', () => {
       if (url.includes('/vectorize')) return new Response(JSON.stringify({ id: motionId, revision: 2 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       if (url.includes('/mockup')) return new Response(JSON.stringify({ project: { id: motionId, revision: 2 }, layersAdded: 4, deviceType: 'macbook' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       if (url.includes('/chart')) return new Response(JSON.stringify({ project: { id: motionId, revision: 2 }, layersAdded: 3 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      if (url.includes('/upscale/targets')) return new Response(JSON.stringify({ currentWidth: 1280, currentHeight: 720, availableTargets: [{ target: '4k', label: '4K', width: 3840, height: 2160, scaleFactor: 3 }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      if (url.includes('/upscale')) return new Response(JSON.stringify({ id: motionId, revision: 2, width: 3840, height: 2160 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -213,6 +215,15 @@ describe('Studio Studio authenticated client', () => {
 
     const manifest = await studioApi.getBundleManifest('D:/studio', motionId);
     expect(manifest.files).toContain('preview.mp4');
+
+    const targets = await studioApi.upscaleTargets('D:/studio', motionId);
+    expect(targets.availableTargets[0].target).toBe('4k');
+
+    const upscaled = await studioApi.upscale('D:/studio', motionId, 1, { target: '4k' });
+    expect(upscaled.id).toBe(motionId);
+
+    const upscaledJob = await studioApi.upscaleJob('D:/studio', 'motionjob-' + '1'.repeat(24), { target: '4k' });
+    expect(upscaledJob.width).toBe(3840);
   });
 
   it('requires login and rejects invalid scene identifiers before calling the API', async () => {

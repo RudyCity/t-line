@@ -219,6 +219,28 @@ export interface StudioJob {
   artifact?: { bytes: number; sha256: string };
   error?: string;
 }
+export type StudioUpscaleTarget = '1080p' | '2k' | '4k';
+export type StudioUpscaleMode = 'lanczos' | 'sharp' | 'spline' | 'superres';
+
+export interface StudioUpscaleTargetInfo {
+  target: StudioUpscaleTarget;
+  label: string;
+  width: number;
+  height: number;
+  scaleFactor: number;
+}
+
+export interface StudioArtifactUpscaleResult {
+  jobId: string;
+  sourceFile: string;
+  upscaledFile: string;
+  width: number;
+  height: number;
+  bytes: number;
+  sha256: string;
+  durationSeconds: number;
+}
+
 const projectIdPattern = /^(?:studio|motion)-[0-9a-f]{20}$/;
 const jobIdPattern = /^(?:studiojob|motionjob)-[0-9a-f]{24}$/;
 const assetIdPattern = /^asset-[a-f0-9]{64}$/;
@@ -368,6 +390,37 @@ export const studioApi = {
     json<StudioProject>(workspace, '/projects/' + assertId(id) + '/resize' + (preview ? '/preview' : ''), {
       method: 'POST', body: JSON.stringify({ baseRevision, aspectRatio }),
     }),
+  upscaleTargets: (workspace: string, id: string) =>
+    json<{ currentWidth: number; currentHeight: number; availableTargets: StudioUpscaleTargetInfo[] }>(
+      workspace, '/projects/' + assertId(id) + '/upscale/targets'
+    ),
+  upscale: (
+    workspace: string,
+    id: string,
+    baseRevision: number,
+    options: { scale?: number; target?: StudioUpscaleTarget; targetWidth?: number; preview?: boolean } = {}
+  ) =>
+    json<StudioProject>(
+      workspace,
+      '/projects/' + assertId(id) + '/upscale' + (options.preview ? '/preview' : ''),
+      {
+        method: 'POST',
+        body: JSON.stringify({ baseRevision, ...options }),
+      }
+    ),
+  upscaleJob: (
+    workspace: string,
+    id: string,
+    options: { scale?: number; target?: StudioUpscaleTarget; mode?: StudioUpscaleMode } = {}
+  ) =>
+    json<StudioArtifactUpscaleResult>(
+      workspace,
+      '/jobs/' + assertId(id, true) + '/upscale',
+      {
+        method: 'POST',
+        body: JSON.stringify(options),
+      }
+    ),
   changeStack: (workspace: string, id: string, baseRevision: number, operation: StudioStackOperation, preview = false) =>
     json<StudioProject>(workspace, '/projects/' + assertId(id) + '/effect-stack' + (preview ? '/preview' : ''), {
       method: 'POST', body: JSON.stringify({ baseRevision, action: operation.type, operation }),

@@ -238,14 +238,19 @@ describe('T-Line Studio proxy and service authentication', () => {
       expect(response.status).toBe(201);
       expect((await response.json()).url).toContain('/api/motion/projects/' + motionId + suffix);
     }
-    for (const suffix of ['/bundle', '/vectorize', '/mockup', '/chart']) {
+    for (const suffix of ['/bundle', '/vectorize', '/mockup', '/chart', '/upscale', '/upscale/preview']) {
       const resp = await fetch(base + '/projects/' + motionId + suffix + '?workspace=allowed-root', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ baseRevision: 1 }),
+        body: JSON.stringify({ baseRevision: 1, target: '4k' }),
       });
       expect(resp.status).toBe(201);
       expect((await resp.json()).url).toContain('/api/motion/projects/' + motionId + suffix);
     }
+    expect((await fetch(base + '/projects/' + motionId + '/upscale/targets?workspace=allowed-root')).status).toBe(200);
+    expect((await fetch(base + '/jobs/motionjob-' + 'a'.repeat(24) + '/upscale?workspace=allowed-root', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: '4k' }),
+    })).status).toBe(201);
     expect((await fetch(base + '/projects/' + motionId + '/bundle?workspace=allowed-root')).status).toBe(200);
     expect((await fetch(base + '/projects/' + motionId + '/preview?workspace=allowed-root')).status).toBe(200);
     const restored = await fetch(base + '/projects/' + motionId + '/history/restore?workspace=allowed-root', {

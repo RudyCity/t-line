@@ -112,6 +112,7 @@ export function StudioTab({ workspacePath, isActive }: Props) {
   const [beatPreview, setBeatPreview] = useState<StudioProject | null>(null);
   const [templatePreview, setTemplatePreview] = useState<StudioProject | null>(null);
   const [resizeRatio, setResizeRatio] = useState<'16:9' | '1:1' | '9:16'>('9:16');
+  const [upscaleTarget, setUpscaleTarget] = useState<'2x' | '4x' | '1080p' | '2k' | '4k'>('2x');
   const [effectPreview, setEffectPreview] = useState<StudioProject | null>(null);
   const [presetPreview, setPresetPreview] = useState<StudioProject | null>(null);
   const mounted = useRef(true);
@@ -389,6 +390,26 @@ export function StudioTab({ workspacePath, isActive }: Props) {
       setRedoStack([]);
       setProject(next);
       setSuccess('Resized to ' + resizeRatio + ' · revision ' + next.revision);
+    });
+  };
+
+  const upscaleProject = () => {
+    if (!project || busy) return;
+    const before = structuredClone(project.composition);
+    const selectedSequence = selectionSeq.current;
+    setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null);
+    void operation(async () => {
+      const opts = upscaleTarget === '2x'
+        ? { scale: 2 }
+        : upscaleTarget === '4x'
+          ? { scale: 4 }
+          : { target: upscaleTarget as '1080p' | '2k' | '4k' };
+      const next = await studioApi.upscale(workspacePath, project.id, project.revision, opts);
+      if (selectedSequence !== selectionSeq.current) return;
+      setUndoStack(prev => [...prev.slice(-19), before]);
+      setRedoStack([]);
+      setProject(next);
+      setSuccess('Upscaled to ' + next.composition.width + ' × ' + next.composition.height + ' · revision ' + next.revision);
     });
   };
 
@@ -1139,6 +1160,18 @@ export function StudioTab({ workspacePath, isActive }: Props) {
             <option value="16:9">16:9</option><option value="1:1">1:1</option><option value="9:16">9:16</option>
           </select>
           <button className={action} disabled={busy} onClick={resizeProject}>Resize scene</button>
+          <div className="mx-1 h-3.5 w-px bg-[var(--border-color)]" />
+          <label htmlFor="motion-upscale-target" className="text-xs">Upscale</label>
+          <select id="motion-upscale-target" aria-label="Studio upscale target"
+            className={control + ' max-w-[120px]'} value={upscaleTarget}
+            onChange={event => setUpscaleTarget(event.target.value as '2x' | '4x' | '1080p' | '2k' | '4k')}>
+            <option value="2x">2× (Factor)</option>
+            <option value="4x">4× (Factor)</option>
+            <option value="1080p">1080p (FHD)</option>
+            <option value="2k">2K (1440p)</option>
+            <option value="4k">4K (2160p UHD)</option>
+          </select>
+          <button className={action} disabled={busy} onClick={upscaleProject}>Upscale scene</button>
           <span className="text-[10px] text-[var(--text-muted)]">Keeps animation timing and effect stack · Undo available</span>
         </div>
       )}

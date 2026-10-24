@@ -35,6 +35,7 @@ const permitted = [
   /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/effects\/preview$/,
   /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/effect-stack(?:\/preview)?$/,
   /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/resize(?:\/preview)?$/,
+  /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/upscale(?:\/(?:preview|targets))?$/,
   /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/history$/,
   /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/history\/restore$/,
   /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/templates(?:\/preview)?$/,
@@ -53,7 +54,7 @@ const permitted = [
   /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/captions\.srt$/,
   /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/frames\/\d{1,6}\.png$/,
   /^\/jobs$/,
-  /^\/jobs\/(?:studiojob|motionjob)-[a-f0-9]{24}(?:\/cancel|\/recovery|\/artifact)?$/,
+  /^\/jobs\/(?:studiojob|motionjob)-[a-f0-9]{24}(?:\/cancel|\/recovery|\/artifact|\/upscale)?$/,
   /^\/jobs\/(?:studiojob|motionjob)-[a-f0-9]{24}\/exports\/(?:gif|webm)$/,
 ];
 
@@ -70,6 +71,7 @@ function allowedRoute(method: string, pathname: string): boolean {
       !pathname.endsWith('/render') &&
       !pathname.endsWith('/revise') &&
       !/^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/(?:presets|effects|effect-stack|resize|templates)(?:\/preview)?$/.test(pathname) &&
+      !/^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/upscale(?:\/preview)?$/.test(pathname) &&
       pathname !== '/generate' &&
       pathname !== '/saas-promo' &&
       pathname !== '/trace-image' &&
@@ -82,8 +84,8 @@ function allowedRoute(method: string, pathname: string): boolean {
       /^\/storyboard\/(?:plan|preview|render)$/.test(pathname) || pathname === '/assets' || pathname === '/audio' || pathname === '/brand-kit' ||
       /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/bundle$/.test(pathname) ||
       /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/(?:beat-sync|particles|typography|vectorize|mockup|chart)(?:\/preview)?$/.test(pathname) ||
-      pathname.endsWith('/variants') || pathname.endsWith('/history/restore') || pathname.endsWith('/vision-review') || pathname.endsWith('/vision-repair') || pathname.endsWith('/edits') || pathname.endsWith('/render') || pathname.endsWith('/revise') || pathname.endsWith('/cancel') ||
-      /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/(?:presets|effects|effect-stack|resize|templates)(?:\/preview)?$/.test(pathname);
+      pathname.endsWith('/variants') || pathname.endsWith('/history/restore') || pathname.endsWith('/vision-review') || pathname.endsWith('/vision-repair') || pathname.endsWith('/edits') || pathname.endsWith('/render') || pathname.endsWith('/revise') || pathname.endsWith('/cancel') || pathname.endsWith('/upscale') ||
+      /^\/projects\/(?:studio|motion)-[a-f0-9]{20}\/(?:presets|effects|effect-stack|resize|upscale|templates)(?:\/preview)?$/.test(pathname);
   }
   return false;
 }
@@ -176,6 +178,7 @@ export function createStudioProxyRouter(options: StudioProxyOptions = {}): Route
       hostname: '127.0.0.1', port: options.upstreamPort ?? 7888,
       path: targetPath, method: req.method, headers,
       timeout: route === '/generate' || route === '/saas-promo' || route === '/trace-image' || route.endsWith('/bundle') ||
+        route.includes('/upscale') ||
         route === '/storyboard/plan' || route === '/storyboard/render' || route.endsWith('/revise') ||
         route.includes('/exports/') || route.endsWith('/vision-review') || route.endsWith('/vision-repair')
         ? 120_000 : 30_000,
