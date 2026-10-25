@@ -12,6 +12,7 @@ This document defines style guidelines, behavioral constraints, and coding stand
   - Commit the changes locally to the Git repository.
   - Bump the version of the application in package.json configurations.
   - Document the updates in CHANGELOG.md.
+- **Commit message naming (required)**: Use neutral engineering/capability descriptions. Never name an external competitor, vendor, service or product brand in the commit subject or body, including when adapting another assistant. Appropriate example: `docs: plan persistent parallel assistant workflows`. This restriction applies to commit messages, not necessary technical names in code or documentation.
 
 ---
 
