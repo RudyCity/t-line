@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "1.3.707",
+  "version": "1.3.708",
   "type": "module",
   "scripts": {
     "copy-monaco": "bun copy-monaco.cjs",
