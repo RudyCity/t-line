@@ -18,7 +18,7 @@ describe('Studio Studio authenticated client', () => {
     Object.defineProperty(file, 'arrayBuffer', { value: async () => input.buffer });
     const report = { status: 'experimental-multi', projectId, revision: 2,
       objects: [{ id: 'subject-1' }, { id: 'subject-2' }],
-      measuredForegroundIoU: [.9, .91, .92] };
+      measuredForegroundIoU: [.9, .91, .92], interpolationCheckIoU: [.85, .86] };
     const mock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ id: videoId, bytes: 48, format: 'mp4' }), {
         status: 201, headers: { 'Content-Type': 'application/json' },

@@ -211,10 +211,13 @@ declarative rules panel, not the planned free-form graph/state-machine editor.
 `experimentalMultiVectorReconstruction=two-to-four-bright-separated-objects-api-v1`,
 the Studio tab allows the user to select a **local MP4/WebM (1–12 seconds, up
 to 12 MiB)** and click **Create editable layers**. The authenticated backend
-samples three frames, tries to track 2–4 separated bright shapes on a stable
-dark background, and creates a new revisioned vector project. A private
+tracks between 5 and 9 video frames (with additional samples on
+high-motion intervals) to estimate 2–4 separated bright shapes on a stable
+dark background. Each shape receives editable x/y keyframes. A private
 comparison image shows three source/Studio frame pairs and foreground-mask
-similarity scores; it is not a full-fidelity guarantee. The UI rejects
+similarity scores, while up to two additional frames not used for tracking
+are checked for interpolation drift. These scores are not a full-fidelity
+guarantee. The UI rejects
 oversized/unsupported files, limits API routes to the selected workspace, and
 never exposes bearer tokens or source file paths in URLs. Changes do not
 automatically publish to any website, run arbitrary video-to-code AI, or

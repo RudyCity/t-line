@@ -170,6 +170,8 @@ export interface StudioMultiVideoReconstruction {
   dimensions: { width: number; height: number };
   confidence: number;
   measuredForegroundIoU: number[];
+  /** Optional for older experimental backends. At most two unsampled checks. */
+  interpolationCheckIoU?: number[];
   limitations: string[];
 }
 export interface StudioCapabilities {

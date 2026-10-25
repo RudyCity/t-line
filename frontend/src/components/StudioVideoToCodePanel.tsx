@@ -93,12 +93,16 @@ export function StudioVideoToCodePanel({ workspacePath, onCreated }: Props) {
     {error && <p role="alert" className="mt-2 text-xs text-red-400">{error}</p>}
     {report && <div className="mt-2 space-y-2 text-xs text-[var(--text-main)]">
       <p role="status">Created project {report.projectId}: {report.objects.length} vector layers,
-        sampled foreground similarity {report.measuredForegroundIoU.map(x => (x * 100).toFixed(1) + "%").join(" / ")}.</p>
+        {report.sampleTimes.length} tracked frames, sampled foreground similarity
+        {" "}{report.measuredForegroundIoU.map(x => (x * 100).toFixed(1) + "%").join(" / ")}.</p>
       <p className="text-[11px] text-[var(--text-muted)]">
-        Similarity covers only three sampled foreground masks. All generated keyframes are editable in Studio.
+        The three preview comparisons show reconstructed mask overlap, not full color/animation fidelity.
+        {report.interpolationCheckIoU?.length ? " Additional unseen-frame checks: " +
+          report.interpolationCheckIoU.map(x => (x * 100).toFixed(1) + "%").join(" / ") + "." : ""}
+        {" "}All generated position keyframes are editable in Studio.
       </p>
       {imageUrl && <figure className="max-w-[720px]">
-        <img src={imageUrl} alt="Three sample comparisons: original video on the left and reconstructed vector frames on the right"
+        <img src={imageUrl} alt="Three preview comparisons: original video on the left and reconstructed vector frames on the right"
           className="max-h-72 max-w-full border border-[var(--border-color)] object-contain" />
         <figcaption className="mt-1 text-[10px] text-[var(--text-muted)]">
           Original (left) compared with editable Studio vector reconstruction (right), three sampled times.

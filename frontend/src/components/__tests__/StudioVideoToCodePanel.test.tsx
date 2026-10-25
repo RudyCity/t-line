@@ -15,6 +15,7 @@ const result: StudioMultiVideoReconstruction = {
   dimensions: { width: 320, height: 180 },
   confidence: .68,
   measuredForegroundIoU: [.92, .91, .90],
+  interpolationCheckIoU: [.84, .82],
   limitations: ["Only isolated 2D shapes"],
 };
 afterEach(() => {
@@ -43,6 +44,7 @@ describe("Studio Video-to-Code experimental panel", () => {
     expect(screen.getByRole("img", { name: /original video on the left/ })).toHaveAttribute(
       "src", "blob:local-review");
     expect(screen.getByText(/92.0%/)).toBeInTheDocument();
+    expect(screen.getByText(/unseen-frame checks: 84.0% \/ 82.0%/)).toBeInTheDocument();
     unmount();
     expect(revoke).toHaveBeenCalledWith("blob:local-review");
   });
