@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { StudioCodeToVideoPanel } from "../StudioCodeToVideoPanel";
 import { studioApi } from "../../services/studioApi";
 
@@ -133,6 +133,30 @@ describe("Studio Code-to-Video editor panel", () => {
     await waitFor(() => expect(previous).toHaveBeenCalledWith("D:/studio", videoId));
     expect(screen.getByText("Download MP4")).toHaveAttribute("download", videoId + ".mp4");
     expect(queue).not.toHaveBeenCalled();
+  });
+
+  it("does not attach an old workspace MP4 if workspace changes mid-download", async () => {
+    const oldId = "codejob-" + "7".repeat(24);
+    const videoId = "codevideo-" + "8".repeat(24);
+    vi.mocked(studioApi.listCodeVideoJobs).mockResolvedValue([
+      { id: oldId, status:"completed", queuedAt:new Date().toISOString(),
+        framesCompleted:4, frameCount:4, result:{
+          id:videoId,bytes:4000,width:640,height:360,fps:4,frameCount:4,
+          source:"studio",
+        }},
+    ]);
+    let complete!: (url: string) => void;
+    vi.spyOn(studioApi, "loadCodeVideo").mockImplementation(
+      () => new Promise(resolve => { complete = resolve; }));
+    const revoke = vi.fn();
+    Object.defineProperty(URL, "revokeObjectURL", {value:revoke,configurable:true});
+    const id = "studio-" + "9".repeat(20);
+    const view = render(<StudioCodeToVideoPanel workspacePath="D:/first" projectId={id} />);
+    fireEvent.click(await screen.findByRole("button", {name:"Open saved video " + oldId}));
+    view.rerender(<StudioCodeToVideoPanel workspacePath="D:/second" projectId={id}/>);
+    await act(async () => complete("blob:old-workspace"));
+    expect(revoke).toHaveBeenCalledWith("blob:old-workspace");
+    expect(screen.queryByText("Download MP4")).not.toBeInTheDocument();
   });
 
   it("locks actions when disabled", async () => {

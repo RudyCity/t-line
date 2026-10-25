@@ -44,23 +44,32 @@ export function StudioCodeToVideoPanel({ workspacePath, projectId, disabled = fa
     return () => { active = false; };
   }, [workspacePath, projectId]);
   const refreshHistory = async () => {
+    const version = lifetime.current;
     try {
       const records = await studioApi.listCodeVideoJobs(workspacePath);
+      if (version !== lifetime.current) return;
       setHistory(records.slice(0, 8));
       setHistoryError("");
     } catch {
-      setHistoryError("Job history refresh failed");
+      if (version === lifetime.current)
+        setHistoryError("Job history refresh failed");
     }
   };
   const openPrevious = async (saved: StudioCodeVideoJob) => {
     if (working || disabled || saved.status !== "completed" || !saved.result) return;
+    const version = lifetime.current;
     try {
       setError("");
       const url = await studioApi.loadCodeVideo(workspacePath, saved.result.id);
+      if (version !== lifetime.current) {
+        URL.revokeObjectURL(url);
+        return;
+      }
       setVideo(url);
       setName(saved.result.id + ".mp4");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      if (version === lifetime.current)
+        setError(cause instanceof Error ? cause.message : String(cause));
     }
   };
   useEffect(() => {
@@ -118,11 +127,13 @@ export function StudioCodeToVideoPanel({ workspacePath, projectId, disabled = fa
   const cancel = async () => {
     const id = jobId.current;
     if (!id) return;
+    const version = lifetime.current;
     try {
       const result = await studioApi.cancelCodeVideo(workspacePath, id);
-      setJob(result);
+      if (version === lifetime.current) setJob(result);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      if (version === lifetime.current)
+        setError(cause instanceof Error ? cause.message : String(cause));
     }
   };
   return <section className="border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] px-3 py-2"
