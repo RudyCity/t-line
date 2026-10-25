@@ -16,6 +16,18 @@ const result: StudioMultiVideoReconstruction = {
   confidence: .68,
   measuredForegroundIoU: [.92, .91, .90],
   interpolationCheckIoU: [.84, .82],
+  parityReport: [
+    {frame:0,sampleType:"keyframe",foregroundIoU:.92,foregroundPrecision:.94,
+      foregroundRecall:.96,foregroundF1:.95,rgbMeanAbsoluteError:.025,foregroundRgbMeanAbsoluteError:.08},
+    {frame:24,sampleType:"holdout",foregroundIoU:.84,foregroundPrecision:.90,
+      foregroundRecall:.92,foregroundF1:.91,rgbMeanAbsoluteError:.042,foregroundRgbMeanAbsoluteError:.1},
+    {frame:45,sampleType:"keyframe",foregroundIoU:.91,foregroundPrecision:.94,
+      foregroundRecall:.95,foregroundF1:.945,rgbMeanAbsoluteError:.027,foregroundRgbMeanAbsoluteError:.08},
+    {frame:60,sampleType:"holdout",foregroundIoU:.82,foregroundPrecision:.88,
+      foregroundRecall:.92,foregroundF1:.90,rgbMeanAbsoluteError:.05,foregroundRgbMeanAbsoluteError:.11},
+    {frame:85,sampleType:"keyframe",foregroundIoU:.9,foregroundPrecision:.93,
+      foregroundRecall:.94,foregroundF1:.935,rgbMeanAbsoluteError:.03,foregroundRgbMeanAbsoluteError:.08},
+  ],
   limitations: ["Only isolated 2D shapes"],
 };
 afterEach(() => {
@@ -43,8 +55,13 @@ describe("Studio Video-to-Code experimental panel", () => {
     await waitFor(() => expect(preview).toHaveBeenCalledWith("D:/demo", result.projectId, 2));
     expect(screen.getByRole("img", { name: /original video on the left/ })).toHaveAttribute(
       "src", "blob:local-review");
-    expect(screen.getByText(/92.0%/)).toBeInTheDocument();
+    expect(screen.getAllByText(/92.0%/).length).toBeGreaterThan(0);
     expect(screen.getByText(/unseen-frame checks: 84.0% \/ 82.0%/)).toBeInTheDocument();
+    expect(screen.getByText(/Visual parity · 5 checked frames/)).toBeInTheDocument();
+    const table = screen.getByRole("table", { name: "Video source versus reconstructed frames" });
+    expect(table).toBeInTheDocument();
+    expect(screen.getAllByText("holdout")).toHaveLength(2);
+    expect(screen.getAllByText("keyframe")).toHaveLength(3);
     unmount();
     expect(revoke).toHaveBeenCalledWith("blob:local-review");
   });

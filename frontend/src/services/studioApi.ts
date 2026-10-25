@@ -199,6 +199,13 @@ export interface StudioMultiVideoReconstruction {
   measuredForegroundIoU: number[];
   /** Optional for older experimental backends. At most two unsampled checks. */
   interpolationCheckIoU?: number[];
+  /** P5 optional bounded keyframe/holdout comparison metrics. */
+  parityReport?: Array<{
+    frame: number; sampleType: 'keyframe' | 'holdout';
+    foregroundIoU: number; foregroundPrecision: number;
+    foregroundRecall: number; foregroundF1: number;
+    rgbMeanAbsoluteError: number; foregroundRgbMeanAbsoluteError: number;
+  }>;
   limitations: string[];
 }
 export interface StudioCapabilities {

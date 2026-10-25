@@ -151,8 +151,39 @@ export function StudioVideoToCodePanel({
         The three preview comparisons show reconstructed mask overlap, not full color/animation fidelity.
         {report.interpolationCheckIoU?.length ? " Additional unseen-frame checks: " +
           report.interpolationCheckIoU.map(x => (x * 100).toFixed(1) + "%").join(" / ") + "." : ""}
-        {" "}All generated position keyframes are editable in Studio.
+        {" "}Position and bounded scale keyframes are editable in Studio.
       </p>
+      {report.parityReport?.length ? <details className="max-w-[720px] rounded border border-[var(--border-color)] p-2">
+        <summary className="cursor-pointer text-[11px] font-medium">
+          Visual parity · {report.parityReport.length} checked frames
+          {" · mean mask F1 "}{(report.parityReport.reduce((sum, f) =>
+            sum + f.foregroundF1, 0) / report.parityReport.length * 100).toFixed(1)}%
+        </summary>
+        <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+          Bounded foreground-mask similarity and RGB pixel error.
+          Holdout frames were not used as animation keyframes. These scores do not measure
+          semantic correctness or all frames of the video.
+        </p>
+        <div className="mt-1 overflow-x-auto">
+          <table className="w-full text-left text-[10px]" aria-label="Video source versus reconstructed frames">
+            <thead><tr>
+              <th className="pr-3">Frame</th><th className="pr-3">Type</th>
+              <th className="pr-3">IoU</th><th className="pr-3">Precision</th>
+              <th className="pr-3">Recall</th><th className="pr-3">F1</th>
+              <th>RGB error</th>
+            </tr></thead>
+            <tbody>{report.parityReport.map(frame => <tr key={frame.frame}>
+              <td className="pr-3">{frame.frame}</td>
+              <td className="pr-3">{frame.sampleType}</td>
+              <td className="pr-3">{(frame.foregroundIoU * 100).toFixed(1)}%</td>
+              <td className="pr-3">{(frame.foregroundPrecision * 100).toFixed(1)}%</td>
+              <td className="pr-3">{(frame.foregroundRecall * 100).toFixed(1)}%</td>
+              <td className="pr-3">{(frame.foregroundF1 * 100).toFixed(1)}%</td>
+              <td>{(frame.rgbMeanAbsoluteError * 100).toFixed(1)}%</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+      </details> : null}
       {imageUrl && <figure className="max-w-[720px]">
         <img src={imageUrl} alt="Three preview comparisons: original video on the left and reconstructed vector frames on the right"
           className="max-h-72 max-w-full border border-[var(--border-color)] object-contain" />
