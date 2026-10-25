@@ -224,6 +224,17 @@ declarative rules panel, not the planned free-form graph/state-machine editor.
 
 **Code-to-Video durable job history:** Current Studio backends persist only allowlisted job status/MP4 metadata per authorized workspace. Use the **Recent renders** section in Code → MP4 to refresh status or reopen completed MP4 without re-rendering. In-progress jobs lost to a backend restart display **interrupted** and require manual retry; no automatic rerun, cross-process scheduler or exactly-once guarantee. Authenticated `GET /api/studio/code-to-video/jobs` lists up to 20 jobs. Chrome/Edge and FFmpeg still required locally; production release remains gated.
 
+**Editable React JSX export (P4, developer preview):** The Studio **Export
+Web Code** menu offers `Editable React JSX` when an updated backend
+advertises `react-jsx` in `studioToCodeFormats`. It downloads an
+authenticated `.editable.tsx` React/Next client component with SVG shapes and
+text as actual JSX nodes—not an iframe. Position and opacity keyframes are
+embedded as data, so the component can animate the reconstructed scene.
+The previous sandboxed React wrapper and offline HTML export remain
+unchanged. Currently vector/text scenes only: unsupported media/audio and
+custom Interaction Graph rules must use the compatible exporter. Real installed
+React WebView2 parity and full video-complexity coverage remain unverified.
+
 **Experimental Video → Editable Studio Code:** On a backend advertising
 `experimentalMultiVectorReconstruction=two-to-four-bright-separated-objects-api-v1`,
 the Studio tab allows the user to select a **local MP4/WebM (1–12 seconds, up

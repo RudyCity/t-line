@@ -694,6 +694,25 @@ export const studioApi = {
     }
     return source;
   },
+  /** Direct SVG JSX, not the legacy sandboxed React iframe adapter. */
+  async exportCodeEditableReact(workspace: string, id: string,
+    trigger: 'autoplay' | 'scroll' | 'click' | 'hover' = 'autoplay'): Promise<string> {
+    if (!['autoplay', 'scroll', 'click', 'hover'].includes(trigger))
+      throw new Error('Unsupported Studio code trigger');
+    const response = await motionFetch(workspace,
+      '/projects/' + assertId(id) + '/code.editable.tsx?trigger=' + trigger);
+    const declared = Number(response.headers.get('content-length'));
+    if (Number.isFinite(declared) && declared > 4 * 1024 * 1024)
+      throw new Error('Editable Studio TSX exceeds 4 MiB');
+    const source = await response.text();
+    if (!source.startsWith('"use client";') ||
+        !source.includes('data-studio-id=') || !source.includes('<svg') ||
+        source.includes('<iframe') || source.includes('srcDoc=') ||
+        new Blob([source]).size > 4 * 1024 * 1024) {
+      throw new Error('Invalid direct editable React JSX source');
+    }
+    return source;
+  },
   exportBundle: (workspace: string, id: string) =>
     json<StudioDeliverablesBundle>(workspace, '/projects/' + assertId(id) + '/bundle', {
       method: 'POST', body: '{}',

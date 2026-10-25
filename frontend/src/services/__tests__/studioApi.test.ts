@@ -191,6 +191,29 @@ describe('Studio Studio authenticated client', () => {
     expect(init.headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
     await expect(studioApi.exportCodeReact('D:/studio', id)).rejects.toThrow('Invalid Studio React source');
   });
+  it('fetches direct editable JSX as an authenticated source and rejects iframe output', async () => {
+    const id = 'studio-' + 'e'.repeat(20);
+    const valid = `"use client";
+function StudioAnimation(){ return <svg><g data-studio-id={"shape-1"}><path d={"M0 0"} /></g></svg> }`;
+    const mock = vi.fn()
+      .mockResolvedValueOnce(new Response(valid, {
+        status: 200, headers: { 'Content-Length': String(valid.length) },
+      }))
+      .mockResolvedValueOnce(new Response('"use client";<iframe srcDoc="unsafe" />', { status: 200 }));
+    vi.stubGlobal('fetch', mock);
+    await expect(studioApi.exportCodeEditableReact('D:/studio', id, 'hover'))
+      .resolves.toBe(valid);
+    const [route, init] = mock.mock.calls[0] as [string, RequestInit];
+    expect(route).toContain('/projects/' + id + '/code.editable.tsx?trigger=hover');
+    expect(route).not.toContain('tline-only-token');
+    expect(init.headers).toMatchObject({Authorization:'Bearer tline-only-token'});
+    await expect(studioApi.exportCodeEditableReact('D:/studio', id))
+      .rejects.toThrow(/Invalid direct editable/);
+    await expect(studioApi.exportCodeEditableReact('D:/studio', '../outside'))
+      .rejects.toThrow(/Invalid Studio/);
+    expect(mock).toHaveBeenCalledTimes(2);
+  });
+
   it('refuses malformed or oversized HTML source instead of downloading it', async () => {
     const id = 'studio-' + 'b'.repeat(20);
     const fetchMock = vi.fn().mockResolvedValueOnce(new Response('<video></video>', { status: 200 }))
