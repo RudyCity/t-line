@@ -1,3 +1,12 @@
+## [1.3.719] - 2026-10-25
+
+### Managed Browser — Session-scoped Assistant Handoff (M2-B request routing)
+
+- Explicit Pair agent confirmation now queues its native-verified gateway instruction directly into the same-workspace SuperAgent chat; manual copy remains available when no valid workspace destination exists.
+- The request uses the existing WebSocket chat-turn pipeline with a one-shot ID, checks active session and model readiness, expires after one minute, preserves composer drafts and does not persist CDP endpoints in local prompt history.
+- Added workspace-isolation and expiry tests, and paired-browser callback tests. An authenticated claim still depends on the agent having the existing MCP gateway tool and successfully calling it; this change does not silently create an owner capability.
+- No browser runtime binary, gateway permissions or SuperAgent Core state was changed; native packaged-app/browser attach E2E and mirrored Chrome viewport remain unverified.
+
 ## [1.3.718] - 2026-10-25
 
 ### Explicit background read-only assistant tasks

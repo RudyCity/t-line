@@ -19,9 +19,10 @@ interface BrowserTabProps {
   isActive: boolean;
   onUpdateTabName?: (newName: string) => void;
   onUpdateTabUrl?: (newUrl: string) => void;
+  onManagedBrowserHandoff?: (instruction: string) => boolean;
 }
 
-export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTabUrl }: BrowserTabProps) {
+export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTabUrl, onManagedBrowserHandoff }: BrowserTabProps) {
   const [urlInput, setUrlInput] = useState(tab.url || '');
   const [activeUrl, setActiveUrl] = useState(tab.url || '');
   const activeUrlRef = useRef(activeUrl);
@@ -826,7 +827,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       />
 
       <BrowserAgentSessions active={isActive} />
-      <ManagedBrowserPanel active={isActive} initialUrl={activeUrl} />
+      <ManagedBrowserPanel active={isActive} initialUrl={activeUrl} onSendToAgent={onManagedBrowserHandoff} />
 
       {/* Main Browser Viewport Area — min-h-0 so DevTools can claim space */}
       <div className="flex-1 bg-[var(--bg-main)] relative min-h-0 overflow-hidden flex flex-col">

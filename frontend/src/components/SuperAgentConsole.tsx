@@ -15,6 +15,7 @@ import { SuperAgentBrainExplorer } from './SuperAgentBrainExplorer';
 import { SuperAgentInputContainer } from './SuperAgentInputContainer';
 import { SuperAgentSettingsMenu } from './SuperAgentSettingsMenu';
 import { SessionIdBadge } from './SessionIdBadge';
+import { isFreshBrowserHandoff } from './browserHandoffRouting';
 
 import { SuperAgentSettingsModal } from './SuperAgentSettingsModal';
 import { ProviderProfile } from './SuperAgentLoginManager';
@@ -35,6 +36,8 @@ interface SuperAgentConsoleProps {
   onOpenFile?: (filePath: string, fileName?: string) => void;
   onOpenDiffTab?: (commitHash: string, filePath: string, worktreePath?: string) => void;
   onOpenStudio?: () => void;
+  browserHandoff?: { id: string; workspacePath: string; instruction: string; createdAt: number } | null;
+  onBrowserHandoffConsumed?: (id: string) => void;
 }
 
 export function SuperAgentConsole({
@@ -44,7 +47,9 @@ export function SuperAgentConsole({
   onLoadingChange,
   onOpenFile,
   onOpenDiffTab,
-  onOpenStudio
+  onOpenStudio,
+  browserHandoff,
+  onBrowserHandoffConsumed,
 }: SuperAgentConsoleProps) {
   // Workspace & Config state
   const [workspace, setWorkspace] = useState(() => activeWorkspacePath || localStorage.getItem('currentWorkspace') || '');
@@ -74,6 +79,8 @@ export function SuperAgentConsole({
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [ws, setWs] = useState<WebSocket | null>(null);
+  const [browserBridgeReady, setBrowserBridgeReady] = useState(false);
+  const handledBrowserHandoffRef = useRef<string>('');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -518,8 +525,10 @@ export function SuperAgentConsole({
       : new WebSocket(wsUrl);
 
     socket.onopen = () => {
+      if (activeWsUrlRef.current !== wsUrl) return;
       console.log(`[SuperAgent WS] Connection established. Workspace: ${workspace || 'Default'}`);
       reconnectAttemptsRef.current = 0;
+      setBrowserBridgeReady(true);
     };
 
     socket.onmessage = (event) => {
@@ -559,8 +568,9 @@ export function SuperAgentConsole({
 
     socket.onclose = () => {
       console.log('[SuperAgent WS] Connection closed.');
-      setLoading(false);
       if (activeWsUrlRef.current !== wsUrl) return; // intentional unmount
+      setBrowserBridgeReady(false);
+      setLoading(false);
       const attempts = reconnectAttemptsRef.current + 1;
       reconnectAttemptsRef.current = attempts;
       const delay = Math.min(30000, 500 * Math.pow(2, attempts - 1));
@@ -610,7 +620,7 @@ export function SuperAgentConsole({
     chatEndRef.current?.scrollIntoView({ behavior });
   }, [messages, pendingPermission, pendingQuestion, pendingPlanApproval, toolProgressMsg, loading]);
 
-  async function handleSend(customPrompt?: string) {
+  async function handleSend(customPrompt?: string, options?: { preserveDraft?: boolean; skipHistory?: boolean }) {
     const prompt = (customPrompt !== undefined ? customPrompt : input).trim();
     if (!prompt && attachments.length === 0) return;
 
@@ -678,7 +688,9 @@ export function SuperAgentConsole({
       return;
     }
 
-    setInput('');
+    // An external, explicitly approved browser handoff must not erase a
+    // partially written chat draft in the current composer.
+    if (!options?.preserveDraft) setInput('');
     setLoading(true);
     setToolProgressMsg('Reading attachments...');
 
@@ -720,7 +732,7 @@ export function SuperAgentConsole({
     setMessages(prev => [...prev, { role: 'user', text: prompt || `Sent ${attachments.length} attachment(s)` }]);
 
     // Save to history
-    if (prompt && !history.includes(prompt)) {
+    if (!options?.skipHistory && prompt && !history.includes(prompt)) {
       const newHistory = [prompt, ...history].slice(0, 50);
       setHistory(newHistory);
       localStorage.setItem('superagent_prompt_history', JSON.stringify(newHistory));
@@ -735,6 +747,38 @@ export function SuperAgentConsole({
     }));
   };
 
+  // A verified desktop pairing may request one ordinary chat turn in the
+  // existing session; never bypass MCP gateway permissions or mint a CDP claim.
+  // The native check and user's confirmation happen in ManagedBrowserPanel.
+  useEffect(() => {
+    if (browserHandoff && handledBrowserHandoffRef.current === browserHandoff.id) return;
+    if (browserHandoff && !isFreshBrowserHandoff(browserHandoff.createdAt)) {
+      handledBrowserHandoffRef.current = browserHandoff.id;
+      onBrowserHandoffConsumed?.(browserHandoff.id);
+      setMessages(prev => [...prev, { role: 'system',
+        text: 'Managed browser pairing request expired before the assistant was ready. Return to Browser and pair the tab again.' }]);
+      return;
+    }
+    if (!browserHandoff || browserHandoff.workspacePath !== workspace ||
+        !browserBridgeReady || !ws || ws.readyState !== WebSocket.OPEN ||
+        !activeSessionId || !sessions.some(s => s.id === activeSessionId) ||
+        attachments.length !== 0) return;
+    const url = new URL(ws.url);
+    if (url.searchParams.get('sessionId') !== activeSessionId ||
+        url.searchParams.get('workspace') !== workspace) return;
+    const selectedPresetId = activePresetId[agentMode];
+    const hasPreset = (presets[agentMode] || []).some(p =>
+      p.id?.toLowerCase() === selectedPresetId?.toLowerCase() ||
+      p.name?.toLowerCase() === selectedPresetId?.toLowerCase());
+    if (!hasPreset || handledBrowserHandoffRef.current === browserHandoff.id) return;
+    handledBrowserHandoffRef.current = browserHandoff.id;
+    // Clear the App's one-shot delivery before dispatch; this prevents duplicate
+    // prompts if the console reconnects or rerenders. The existing session turn
+    // channel has its own clientMessageId and queue semantics.
+    onBrowserHandoffConsumed?.(browserHandoff.id);
+    void handleSend(browserHandoff.instruction, { preserveDraft: true, skipHistory: true });
+  }, [browserHandoff?.id, browserBridgeReady, ws, activeSessionId, workspace,
+      agentMode, activePresetId, presets, attachments.length, sessions]);
   const slashCommands = [
     ...getSlashCommands({
       ws,

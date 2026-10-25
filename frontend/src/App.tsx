@@ -96,6 +96,7 @@ import { TPlusLogo } from './components/TPlusLogo';
 import { TabTooltip, TabContextMenu } from './components/TabUiComponents';
 import { NewTerminalButton } from './components/NewTerminalButton';
 import { getRuntimeSearchParams } from './utils/runtimeQuery';
+import { browserHandoffWorkspace } from './components/browserHandoffRouting';
 import { reconcileTabs, reconcileTerminalInstances } from './utils/syncReconcile';
 import { shellForDigit, getShellMeta, isCustomShell } from './utils/shellUtils';
 
@@ -337,6 +338,9 @@ export default function App() {
   // This prevents native WebView2 instances from being created for every browser tab upfront.
   const [mountedBrowserTabIds, setMountedBrowserTabIds] = useState<Set<string>>(new Set());
   const [mountedDeferredTabIds, setMountedDeferredTabIds] = useState<Set<string>>(new Set());
+  const [pendingBrowserHandoff, setPendingBrowserHandoff] = useState<{
+    id: string; workspacePath: string; instruction: string; createdAt: number;
+  } | null>(null);
 
   // Active panel state: 'workspaces' | 'explorer' | 'changes' | 'checkpoints'
   const [activePanel, setActivePanel] = useState<'workspaces' | 'explorer' | 'changes' | 'checkpoints' | 'tabs'>('workspaces');
@@ -1542,6 +1546,15 @@ export default function App() {
       }));
     }
   };
+  const submitManagedBrowserHandoff = (workspaceId: string | undefined, instruction: string): boolean => {
+    const workspacePath = browserHandoffWorkspace(workspaceId, instruction, workspaces);
+    if (!workspacePath) return false;
+    setPendingBrowserHandoff({
+      id: crypto.randomUUID(), workspacePath, instruction, createdAt: Date.now(),
+    });
+    openAgentTab(workspaceId);
+    return true;
+  };
   const renderPreAuthWithControls = (content: React.ReactNode) => {
     return (
       <div className="relative w-full h-full">
@@ -2484,6 +2497,7 @@ export default function App() {
                   key={tab.id}
                   tab={tab}
                   isActive={tab.id === activeTabId}
+                  onManagedBrowserHandoff={(instruction) => submitManagedBrowserHandoff(tab.workspaceId, instruction)}
                   onUpdateTabName={(newName) => {
                     setTabs(prev => prev.map(t => t.id === tab.id ? { ...t, name: newName } : t));
                   }}
@@ -2498,6 +2512,7 @@ export default function App() {
                 <div key={tab.id} className="h-full w-full" style={{ display: tab.id === activeTabId ? 'block' : 'none' }}>
                   <StudioTab
                     isActive={tab.id === activeTabId}
+
                     workspacePath={workspaces.find(item => item.id === tab.workspaceId)?.path || ''}
                   />
                 </div>
@@ -2512,7 +2527,9 @@ export default function App() {
                 >
                   <SuperAgentConsole
                     onOpenStudio={() => openStudioTab(tab.workspaceId)}
-                    activeWorkspacePath={panelWorkspace?.path}
+                    activeWorkspacePath={workspaces.find(w => w.id === tab.workspaceId)?.path || ''}
+                     browserHandoff={pendingBrowserHandoff?.workspacePath === workspaces.find(w => w.id === tab.workspaceId)?.path ? pendingBrowserHandoff : null}
+                     onBrowserHandoffConsumed={(id) => setPendingBrowserHandoff(current => current?.id === id ? null : current)}
                     workspaces={workspaces}
                     onOpenSettings={() => setShowSettingsModal(true)}
                     onLoadingChange={setIsAgentLoading}

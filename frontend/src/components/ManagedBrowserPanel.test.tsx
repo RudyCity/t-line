@@ -69,7 +69,8 @@ describe('managed browser safety contract', () => {
     });
     vi.stubGlobal('__TAURI__', { core: { invoke } });
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
-    render(<ManagedBrowserPanel active initialUrl="about:blank" />);
+    const onSendToAgent = vi.fn((_instruction: string) => true);
+    render(<ManagedBrowserPanel active initialUrl="about:blank" onSendToAgent={onSendToAgent} />);
     fireEvent.click(screen.getByRole('button', { name: 'Toggle managed browser' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Enable managed browser' }));
     const pair = await screen.findByRole('button', { name: 'Pair agent with Test page' });
@@ -77,12 +78,16 @@ describe('managed browser safety contract', () => {
     fireEvent.click(pair);
     expect(confirm).toHaveBeenCalled();
     expect(invoke).not.toHaveBeenCalledWith('managed_browser_gateway_pairing', expect.anything());
+    expect(onSendToAgent).not.toHaveBeenCalled();
     confirm.mockReturnValue(true);
     fireEvent.click(pair);
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('managed_browser_gateway_pairing',
       { profileId: 'default-managed', generation: '456-789', targetId: 'TARGET1' }));
-    expect((await screen.findByLabelText('Verified MCP gateway handoff (manual; not yet an automatic agent connection)') as HTMLTextAreaElement).value)
+    expect((await screen.findByLabelText('Verified MCP gateway handoff (assistant request or manual copy)') as HTMLTextAreaElement).value)
       .toContain('action=claim, port=53333, targetId=TARGET1');
+    await waitFor(() => expect(onSendToAgent).toHaveBeenCalledTimes(1));
+    expect(onSendToAgent.mock.calls[0][0]).toContain('action=claim, port=53333, targetId=TARGET1');
+    expect(screen.getByText(/Pairing instruction routed to your workspace assistant/)).toBeTruthy();
     expect(invoke).not.toHaveBeenCalledWith('managed_browser_launch', expect.anything());
   });
 });

@@ -9,7 +9,9 @@ const getInvoke = (): ((name: string, args?: Record<string, unknown>) => Promise
   (window as any).__TAURI__?.core?.invoke ?? null;
 
 /** Experimental real-window manager. No password, cookies or CDP endpoint is persisted in React. */
-export default function ManagedBrowserPanel({ active, initialUrl }: { active: boolean; initialUrl: string }) {
+export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent }: {
+  active: boolean; initialUrl: string; onSendToAgent?: (instruction: string) => boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [available, setAvailable] = useState<ManagedBrowserAvailability | null>(null);
@@ -111,7 +113,10 @@ export default function ManagedBrowserPanel({ active, initialUrl }: { active: bo
       setPairing(instruction);
       setPairedRuntime(info);
       setGatewayClaim(null);
-      setMessage('Verified gateway handoff prepared. Copy the instruction into T-Line chat to have SuperAgent attach through its MCP gateway.');
+      const handedOff = onSendToAgent?.(instruction) === true;
+      setMessage(handedOff
+        ? 'Pairing instruction routed to your workspace assistant. Gateway claim will appear once the agent attaches.'
+        : 'Verified gateway handoff prepared. Copy the instruction into T-Line chat to have SuperAgent attach through its MCP gateway.');
     } catch (err) { setError(String(err)); }
     finally { setBusy(false); }
   }
@@ -212,7 +217,7 @@ export default function ManagedBrowserPanel({ active, initialUrl }: { active: bo
                           : 'No active gateway claim observed for this target. Pairing is not an agent connection.'}
                       </p>
                       <label htmlFor="managed-pairing-instructions" className="text-[var(--text-muted)]">
-                        Verified MCP gateway handoff (manual; not yet an automatic agent connection)
+                        Verified MCP gateway handoff (assistant request or manual copy)
                       </label>
                       <textarea id="managed-pairing-instructions" readOnly rows={6} value={pairing}
                         className="w-full resize-y rounded border border-[var(--border-color)] bg-[var(--bg-main)] p-2 font-mono text-[10px]" />
