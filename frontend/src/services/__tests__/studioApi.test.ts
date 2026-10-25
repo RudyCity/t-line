@@ -10,6 +10,36 @@ describe('Studio Studio authenticated client', () => {
     vi.restoreAllMocks();
     localStorage.removeItem('token');
   });
+  it('downloads authenticated SVG/GSAP source without exposing access tokens', async () => {
+    const id = 'studio-' + 'a'.repeat(20);
+    const html = '<!doctype html><svg id="studio-stage"></svg>';
+    const fetchMock = vi.fn().mockResolvedValue(new Response(html, {
+      status: 200, headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Length': String(html.length),
+      },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(studioApi.exportCodeHtml('D:/studio code', id, 'scroll')).resolves.toBe(html);
+    const [route, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(route).toContain('/projects/' + id + '/code.html?trigger=scroll&workspace=');
+    expect(route).not.toContain('tline-only-token');
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    await expect(studioApi.exportCodeHtml('D:/studio', id, 'evil' as 'click')).rejects.toThrow('Unsupported Studio code trigger');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await expect(studioApi.exportCodeHtml('D:/studio', '../secret')).rejects.toThrow('Invalid Studio');
+  });
+  it('refuses malformed or oversized HTML source instead of downloading it', async () => {
+    const id = 'studio-' + 'b'.repeat(20);
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response('<video></video>', { status: 200 }))
+      .mockResolvedValueOnce(new Response('<!doctype html><svg id="studio-stage"></svg>', {
+        status: 200, headers: { 'Content-Length': String(5 * 1024 * 1024) },
+      }));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(studioApi.exportCodeHtml('D:/studio', id)).rejects.toThrow('Invalid Studio');
+    await expect(studioApi.exportCodeHtml('D:/studio', id)).rejects.toThrow('exceeds 4 MB');
+  });
+
   it('passes T-Line auth with workspace routing and no secret in URLs', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } }));
     vi.stubGlobal('fetch', fetchMock);

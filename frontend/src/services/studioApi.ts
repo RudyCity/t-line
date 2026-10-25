@@ -144,7 +144,7 @@ export type StudioEdit =
   | { type: 'set-audio'; audio: StudioAudioTrack | null }
   | { type: 'set-audio-tracks'; audioTracks: StudioAudioTrack[] };
 export interface StudioCapabilities {
-  capabilities?: { motionAdvancedTypography?: string[]; motionCpuParticleOverlays?: boolean; aiStoryboardReview?: boolean; motionExtraExportFormats?: string[]; motionAudioBeatSync?: boolean; motionBatchAspectVariants?: boolean; motionBrandKit?: boolean; motionTemplateLibrary?: boolean; motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean };
+  capabilities?: { motionAdvancedTypography?: string[]; motionCpuParticleOverlays?: boolean; aiStoryboardReview?: boolean; motionExtraExportFormats?: string[]; motionAudioBeatSync?: boolean; motionBatchAspectVariants?: boolean; motionBrandKit?: boolean; motionTemplateLibrary?: boolean; motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean; studioToCodeExport?: string; studioToCodeTriggers?: string[] };
 }
 export interface StudioQualityIssue {
   severity: 'warning' | 'error'; code: string; scene: number; message: string;
@@ -502,6 +502,19 @@ export const studioApi = {
     json<StudioProject>(workspace, '/projects/' + assertId(id) + '/vectorize', {
       method: 'POST', body: JSON.stringify({ baseRevision, layerId, options }),
     }),
+  /** Authenticated Studio-to-Code download. Never leak bearer tokens into export URLs. */
+  async exportCodeHtml(workspace: string, id: string, trigger: 'autoplay' | 'scroll' | 'click' | 'hover' = 'autoplay'): Promise<string> {
+    if (!['autoplay', 'scroll', 'click', 'hover'].includes(trigger)) throw new Error('Unsupported Studio code trigger');
+    const response = await motionFetch(workspace, '/projects/' + assertId(id) + '/code.html?trigger=' + trigger);
+    const size = Number(response.headers.get('content-length'));
+    if (Number.isFinite(size) && size > 4 * 1024 * 1024) throw new Error('Studio code export exceeds 4 MB');
+    const html = await response.text();
+    if (!html.startsWith('<!doctype html>') || !html.includes('id="studio-stage"') ||
+        new Blob([html]).size > 4 * 1024 * 1024) {
+      throw new Error('Invalid Studio to Code export');
+    }
+    return html;
+  },
   exportBundle: (workspace: string, id: string) =>
     json<StudioDeliverablesBundle>(workspace, '/projects/' + assertId(id) + '/bundle', {
       method: 'POST', body: '{}',

@@ -187,3 +187,15 @@ Distributed under the [MIT License](LICENSE).
 ### Strict Windows OS isolation for managed SuperAgent
 
 T-Line normally starts its managed SuperAgent server using the T-Line backend's Windows process identity. If `SUPERAGENT_REQUIRE_OS_SANDBOX=1` is set, startup now verifies `SUPERAGENT_OS_RUNNER_IDENTITY` matches `whoami.exe` and that opening the existing `SUPERAGENT_OS_DENIED_PROBE_PATH` returns an actual permission denial (`EACCES`/`EPERM`). The backend refuses to start managed SuperAgent otherwise. To activate this policy, run the **T-Line backend itself** as a dedicated restricted Windows user and configure folder ACL restrictions for that user; the check does **not** magically spawn under another account and it does not modify ACLs. For setup and caveats, see the SuperAgent repository README, section "Strict OS sandbox startup gate". Do not assume this sample probe proves comprehensive isolation or protects separate Chrome/CDP processes.
+
+### SuperAgent Studio — web animation code export
+
+From the Studio tab, select a vector/text/path-only project, choose **Autoplay**,
+**Scroll**, **Click** or **Hover**, then **Export Web Code**. The T-Line
+frontend downloads the authenticated HTML/SVG/GSAP export as a local file; it
+never places its bearer token in a browser URL. The export needs an updated
+SuperAgent Studio backend exposing `studioToCodeExport=svg-gsap-html-v1`.
+The generated HTML loads GSAP 3.15.0 from a CDN, so it requires internet (or
+manual local hosting of the same GSAP scripts); it is not a video-to-code AI
+reconstruction, and raster/video/audio inputs are intentionally rejected.
+Existing Studio MP4 rendering and download remain available.
