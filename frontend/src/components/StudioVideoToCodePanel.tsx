@@ -73,8 +73,10 @@ export function StudioVideoToCodePanel({ workspacePath, onCreated }: Props) {
           <span className="ml-2 text-[10px] font-normal text-[var(--text-muted)]">Experimental · 2–4 shapes</span>
         </h3>
         <p className="max-w-[680px] text-[11px] text-[var(--text-muted)]">
-          Local 1–12-second MP4/WebM, up to 12 MiB. Only separated bright 2D shapes on a stable dark background.
-          No semantic AI, text recovery or exact video-to-source conversion. Use clips you have permission to process.
+          Local 1–12-second MP4/WebM, up to 12 MiB. Tracks 2–4 separated high-contrast 2D shapes
+          against a stable solid-color background (light or dark). Gradients, occlusion and changing
+          backgrounds are not supported. No semantic AI, text recovery or exact source recovery.
+          Use clips you have permission to process.
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">

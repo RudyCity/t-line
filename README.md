@@ -212,8 +212,11 @@ declarative rules panel, not the planned free-form graph/state-machine editor.
 the Studio tab allows the user to select a **local MP4/WebM (1–12 seconds, up
 to 12 MiB)** and click **Create editable layers**. The authenticated backend
 tracks between 5 and 9 video frames (with additional samples on
-high-motion intervals) to estimate 2–4 separated bright shapes on a stable
-dark background. Each shape receives editable x/y keyframes. A private
+high-motion intervals) to estimate 2–4 separated high-contrast colored or
+dark shapes on a stable solid-color background, light or dark. Object/background
+colors are preserved within codec tolerances. The source is sampled through
+96% of the duration to detect late missing objects. Each shape receives
+editable x/y keyframes. A private
 comparison image shows three source/Studio frame pairs and foreground-mask
 similarity scores, while up to two additional frames not used for tracking
 are checked for interpolation drift. These scores are not a full-fidelity
