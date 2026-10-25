@@ -24,6 +24,7 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
   const [pairing, setPairing] = useState('');
   const [pairedRuntime, setPairedRuntime] = useState<ManagedBrowserGatewayPairing | null>(null);
   const [gatewayClaim, setGatewayClaim] = useState<GatewayClaimProjection | null>(null);
+  const [registeredUntil, setRegisteredUntil] = useState<number | null>(null);
   const selected = runtimes.find(r => r.profileId === profileId);
 
   const refresh = useCallback(async () => {
@@ -58,8 +59,33 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
       setPairing('');
       setPairedRuntime(null);
       setGatewayClaim(null);
+      setRegisteredUntil(null);
     }
   }, [selected?.generation, pairedRuntime?.generation]);
+  // Keep the Core directory announcement short-lived and revalidate the owned
+  // native browser/target on each refresh; no background registration on hidden tabs.
+  useEffect(() => {
+    if (!active || !expanded || !enabled || !pairedRuntime || !registeredUntil) return;
+    let cancelled = false;
+    const update = async () => {
+      const invoke = getInvoke();
+      if (!invoke) return;
+      try {
+        const receipt = await invoke('managed_browser_gateway_register', {
+          profileId: pairedRuntime.profileId, generation: pairedRuntime.generation,
+          targetId: pairedRuntime.targetId,
+        }) as { registered: boolean; expiresAt: number };
+        if (!cancelled) setRegisteredUntil(receipt.registered ? receipt.expiresAt : null);
+      } catch {
+        if (!cancelled) {
+          setRegisteredUntil(null);
+          setError('Managed browser Core registration expired or is unavailable. Pair again before assigning an agent.');
+        }
+      }
+    };
+    const timer = window.setInterval(() => { void update(); }, 45_000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [active, expanded, enabled, pairedRuntime?.port, pairedRuntime?.targetId, pairedRuntime?.generation, !!registeredUntil]);
   useEffect(() => {
     if (!active || !expanded || !enabled || !pairedRuntime) return;
     let cancelled = false;
@@ -104,7 +130,7 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
     const invoke = getInvoke();
     if (!invoke || !selected || busy || !enabled) return;
     if (!window.confirm('Share local managed-browser target details for an authorized SuperAgent agent to claim through the existing CDP gateway? The agent must still claim or request access.')) return;
-    setBusy(true); setError(''); setPairing('');
+    setBusy(true); setError(''); setPairing(''); setRegisteredUntil(null);
     try {
       const info = await invoke('managed_browser_gateway_pairing', {
         profileId: selected.profileId, generation: selected.generation, targetId: target.id,
@@ -113,7 +139,17 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
       setPairing(instruction);
       setPairedRuntime(info);
       setGatewayClaim(null);
-      const handedOff = onSendToAgent?.(instruction) === true;
+      let registered = false;
+      try {
+        const receipt = await invoke('managed_browser_gateway_register', {
+          profileId: info.profileId, generation: info.generation, targetId: info.targetId,
+        }) as { registered: boolean; expiresAt: number };
+        registered = receipt.registered === true && receipt.expiresAt > Date.now();
+        setRegisteredUntil(registered ? receipt.expiresAt : null);
+      } catch {
+        setError('Core registration is unavailable. Manual gateway instructions remain available; automatic assignment was not sent.');
+      }
+      const handedOff = registered && onSendToAgent?.(instruction) === true;
       setMessage(handedOff
         ? 'Pairing instruction routed to your workspace assistant. Gateway claim will appear once the agent attaches.'
         : 'Verified gateway handoff prepared. Copy the instruction into T-Line chat to have SuperAgent attach through its MCP gateway.');
@@ -136,6 +172,7 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
       setPairing('');
       setPairedRuntime(null);
       setGatewayClaim(null);
+      setRegisteredUntil(null);
       await refresh();
       setMessage('Owned Chrome process stopped.');
     } catch (err) { setError(String(err)); }
@@ -159,7 +196,7 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
                 <input type="checkbox" checked={enabled} onChange={e => {
                   setEnabled(e.target.checked);
                   if (!e.target.checked) {
-                    setPairing(''); setPairedRuntime(null); setGatewayClaim(null);
+                    setPairing(''); setPairedRuntime(null); setGatewayClaim(null); setRegisteredUntil(null);
                   }
                 }}
                   aria-label="Enable managed browser" />
@@ -169,7 +206,7 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
                 <>
                   <div className="flex flex-wrap items-center gap-2">
                     <label htmlFor="managed-profile">Profile</label>
-                    <select id="managed-profile" value={profileId} onChange={e => { setProfileId(e.target.value); setTargets([]); setPairing(''); setPairedRuntime(null); setGatewayClaim(null); }}
+                    <select id="managed-profile" value={profileId} onChange={e => { setProfileId(e.target.value); setTargets([]); setPairing(''); setPairedRuntime(null); setGatewayClaim(null); setRegisteredUntil(null); }}
                       className="rounded border border-[var(--border-color)] bg-[var(--bg-main)] p-1">
                       <option value="default-managed">Default managed</option>
                       <option value="research">Research</option>
@@ -210,6 +247,11 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
                   )}
                   {pairing && (
                     <div className="space-y-1">
+                      <p role="status" aria-label="Native Core registration">
+                        {registeredUntil && registeredUntil > Date.now()
+                          ? 'Native runtime registered with local Core (no CDP claim issued)'
+                          : 'Core registration not confirmed; manual pairing only'}
+                      </p>
                       <p aria-label="Gateway claim status" role="status" className="text-[var(--text-muted)]">
                         {gatewayClaim
                           ? 'Gateway claim observed · ' + gatewayClaim.agentId + ' · ' + gatewayClaim.mode +

@@ -108,6 +108,8 @@ UI: show browser engine, executable origin/version, managed profile, connection/
 
 ### P0-C — Connect owned Chrome targets to existing SuperAgent CDP gateway
 
+**M2-C checkpoint (2026-10-25):** Native Rust now registers a live owned target directly with authenticated local Core, which publishes a 90-second, cross-process, nonsecret runtime descriptor to MCP gateway `action=managed`. The existing gateway retains exclusive ownership/lease controls. This is discovery, not agent auto-claim, and packaged Windows E2E remains required. See [M2-C native registry](2026-10-25-tline-browser-m2c-native-registry.md).
+
 - [ ] Extend SuperAgent tools/gateway only for missing *trusted browser runtime registration* and per-runtime target mapping. Preserve current external-Chrome CDP workflow on 9222.
 - [ ] Add **fixed, authenticated** T-Line proxy operations `GET /api/browser-managed/status`, `POST /api/browser-managed/launch`, `POST /api/browser-managed/stop`, and narrowly scoped `GET /api/superagent/browser-managed/targets` / `POST /api/superagent/browser-managed/action` (names provisional). Desktop process control via Tauri or authenticated internal bridge only, never unauthenticated local HTTP.
 - [ ] Use existing CDP `claim`, `share`, `execute`, `heartbeat`, `release` and per-target write queue. Map target IDs, owner/session identity, workspace, browser generation; make multi-agent shared writes serialize unless resource policy explicitly permits concurrency.

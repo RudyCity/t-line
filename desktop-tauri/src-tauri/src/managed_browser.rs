@@ -450,6 +450,76 @@ pub fn managed_browser_gateway_pairing(
         transport: "superagent_browser_gateway",
     })
 }
+/// Register a verified, currently-owned browser target directly from Rust.
+/// The local Core service credential is never returned to React.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RegistrationReceipt {
+    registered: bool,
+    expires_at: u64,
+}
+fn local_core_token() -> Result<String, String> {
+    let home = std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .ok_or("User home directory unavailable.")?;
+    let info_path = std::path::PathBuf::from(home).join(".superagent-r")
+        .join("server-info-7888.json");
+    let metadata = fs::symlink_metadata(&info_path)
+        .map_err(|_| "Core service information unavailable.")?;
+    if !metadata.file_type().is_file() || metadata.file_type().is_symlink()
+        || metadata.len() > 16_384 {
+        return Err("Untrusted Core service information file.".into());
+    }
+    let contents = fs::read_to_string(info_path)
+        .map_err(|_| "Core service information unreadable.")?;
+    let data: serde_json::Value = serde_json::from_str(&contents)
+        .map_err(|_| "Invalid Core service information.")?;
+    if data["port"] != 7888 {
+        return Err("Core service port is not the expected local port.".into());
+    }
+    let token = data["authToken"].as_str().ok_or("Core service credential unavailable.")?;
+    if token.len() != 48 || !token.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return Err("Invalid Core service credential format.".into());
+    }
+    Ok(token.to_string())
+}
+fn register_with_core(pair: GatewayPairing) -> Result<RegistrationReceipt, String> {
+    let token = local_core_token()?;
+    let payload = serde_json::json!({
+        "profileId": pair.profile_id, "generation": pair.generation,
+        "port": pair.port, "targetId": pair.target_id
+    });
+    let response = ureq::post("http://127.0.0.1:7888/api/browser/managed/register")
+        .set("Authorization", &format!("Bearer {token}"))
+        .set("Content-Type", "application/json")
+        .timeout(Duration::from_secs(4))
+        .send_string(&payload.to_string())
+        .map_err(|_| "Authenticated local Core browser registration unavailable.")?;
+    use std::io::Read;
+    let mut body = String::new();
+    response.into_reader().take(4096).read_to_string(&mut body)
+        .map_err(|_| "Could not read local Core registration response.")?;
+    let result: serde_json::Value = serde_json::from_str(&body)
+        .map_err(|_| "Invalid Core registration response.")?;
+    let expires = result["registration"]["expiresAt"].as_u64()
+        .ok_or("Core response did not confirm registration expiry.")?;
+    if result["success"] != true {
+        return Err("Core did not confirm target registration.".into());
+    }
+    Ok(RegistrationReceipt { registered: true, expires_at: expires })
+}
+#[tauri::command]
+pub async fn managed_browser_gateway_register(
+    webview: tauri::Webview,
+    state: tauri::State<'_, ManagedBrowserState>,
+    profile_id: String,
+    generation: String,
+    target_id: String,
+) -> Result<RegistrationReceipt, String> {
+    let verified = managed_browser_gateway_pairing(webview, state, profile_id, generation, target_id)?;
+    tauri::async_runtime::spawn_blocking(move || register_with_core(verified))
+        .await.map_err(|_| "Local Core registration worker failed.".to_string())?
+}
 #[cfg(test)]
 mod tests {
     use super::*;

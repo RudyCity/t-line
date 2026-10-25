@@ -53,6 +53,7 @@
     "allow-managed-browser-launch",
     "allow-managed-browser-stop",
     "allow-managed-browser-targets",
-    "allow-managed-browser-gateway-pairing"
+    "allow-managed-browser-gateway-pairing",
+    "allow-managed-browser-gateway-register"
   ]
 }

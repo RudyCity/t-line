@@ -20,6 +20,7 @@ export function gatewayPairingInstructions(input: ManagedBrowserGatewayPairing):
   return [
     'Connect to my T-Line managed browser via the existing SuperAgent MCP browser gateway.',
     'The native desktop confirmed this target belongs to the active managed browser generation.',
+    'First check superagent_browser_gateway action=managed for the local Core runtime registration; it does not grant access.',
     'Use superagent_browser_gateway with action=discover, port=' + input.port,
     'Then use action=claim, port=' + input.port + ', targetId=' + input.targetId + '.',
     'Do not control other targets or ports. Use an explicit agent claim and respect session ownership.',

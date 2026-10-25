@@ -1,3 +1,12 @@
+## [1.3.720] - 2026-10-25
+
+### Managed Browser — Authenticated Native Runtime Directory (M2-C)
+
+- Added a native Rust-only registration path from verified, T-Line-owned browser targets to the local Core service over authenticated loopback; service credentials are never returned to the renderer.
+- Core and MCP share a 90-second registry of nonsecret runtime/target descriptors via atomic local files. Registration does not grant agent ownership or bypass existing CDP lease and collaborator approval rules.
+- T-Line refreshes registration while the approved panel is active and blocks automatic chat dispatch when Core registration fails; manual pairing remains available.
+- Added Core and frontend regression tests, updated the runtime plan and acceptance notes. Packaged Windows real-browser/multiagent E2E and interactive in-app mirroring remain outstanding.
+
 ## [1.3.719] - 2026-10-25
 
 ### Managed Browser — Session-scoped Assistant Handoff (M2-B request routing)

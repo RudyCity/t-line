@@ -21,7 +21,8 @@ fn main() {
              "managed_browser_launch",
              "managed_browser_stop",
              "managed_browser_targets",
-             "managed_browser_gateway_pairing"
+             "managed_browser_gateway_pairing",
+             "managed_browser_gateway_register"
           ])
       )
   )

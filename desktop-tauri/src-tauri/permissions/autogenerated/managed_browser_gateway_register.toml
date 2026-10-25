@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-managed-browser-gateway-register"
+description = "Enables the managed_browser_gateway_register command without any pre-configured scope."
+commands.allow = ["managed_browser_gateway_register"]
+
+[[permission]]
+identifier = "deny-managed-browser-gateway-register"
+description = "Denies the managed_browser_gateway_register command without any pre-configured scope."
+commands.deny = ["managed_browser_gateway_register"]

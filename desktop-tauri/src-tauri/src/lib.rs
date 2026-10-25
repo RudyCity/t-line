@@ -1716,6 +1716,7 @@ pub fn run() {
             managed_browser::managed_browser_stop,
             managed_browser::managed_browser_targets,
             managed_browser::managed_browser_gateway_pairing,
+            managed_browser::managed_browser_gateway_register,
             get_memory_usage,
             open_webview_devtools,
             eval_webview_js,

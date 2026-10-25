@@ -61,6 +61,9 @@ describe('managed browser safety contract', () => {
       if (command === 'managed_browser_discover') return { available: true, engine: 'system-chrome' };
       if (command === 'managed_browser_status') return [runtime];
       if (command === 'managed_browser_targets') return [{ id: 'TARGET1', title: 'Test page', url: 'https://example.org/' }];
+      if (command === 'managed_browser_gateway_register') return {
+        registered: true, expiresAt: Date.now() + 90_000,
+      };
       if (command === 'managed_browser_gateway_pairing') return {
         profileId: runtime.profileId, generation: runtime.generation, port: 53333,
         targetId: 'TARGET1', transport: 'superagent_browser_gateway',
@@ -85,9 +88,37 @@ describe('managed browser safety contract', () => {
       { profileId: 'default-managed', generation: '456-789', targetId: 'TARGET1' }));
     expect((await screen.findByLabelText('Verified MCP gateway handoff (assistant request or manual copy)') as HTMLTextAreaElement).value)
       .toContain('action=claim, port=53333, targetId=TARGET1');
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('managed_browser_gateway_register',
+      { profileId: 'default-managed', generation: '456-789', targetId: 'TARGET1' }));
     await waitFor(() => expect(onSendToAgent).toHaveBeenCalledTimes(1));
+    expect(screen.getByText(/Native runtime registered with local Core/)).toBeTruthy();
     expect(onSendToAgent.mock.calls[0][0]).toContain('action=claim, port=53333, targetId=TARGET1');
     expect(screen.getByText(/Pairing instruction routed to your workspace assistant/)).toBeTruthy();
     expect(invoke).not.toHaveBeenCalledWith('managed_browser_launch', expect.anything());
+  });
+  it('never sends a browser agent request if native Core registration is rejected', async () => {
+    const runtime = { profileId: 'default-managed', generation: '789-17929200000000',
+      lifecycle: 'ready', debuggingAvailable: true };
+    const invoke = vi.fn(async (command: string) => {
+      if (command === 'managed_browser_discover') return { available: true, engine: 'system-chrome' };
+      if (command === 'managed_browser_status') return [runtime];
+      if (command === 'managed_browser_targets') return [{ id: 'TAB1', title: 'Safe test', url: 'https://example.org' }];
+      if (command === 'managed_browser_gateway_pairing') return {
+        profileId: runtime.profileId, generation: runtime.generation, port: 53333,
+        targetId: 'TAB1', transport: 'superagent_browser_gateway',
+      };
+      if (command === 'managed_browser_gateway_register') throw new Error('Service offline');
+      throw new Error('Unexpected native call');
+    });
+    vi.stubGlobal('__TAURI__', { core: { invoke } });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const onSendToAgent = vi.fn((_instruction: string) => true);
+    render(<ManagedBrowserPanel active initialUrl="about:blank" onSendToAgent={onSendToAgent} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle managed browser' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Enable managed browser' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pair agent with Safe test' }));
+    expect(await screen.findByText(/Core registration not confirmed; manual pairing only/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Copy for assistant' })).toBeTruthy();
+    expect(onSendToAgent).not.toHaveBeenCalled();
   });
 });
