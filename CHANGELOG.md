@@ -1,3 +1,12 @@
+## [1.3.714] - 2026-10-25
+
+### Managed Browser Runtime — Architecture and Delivery Plan
+
+- Added a codebase-grounded, Windows-first desktop managed-browser architecture plan and P0–P2 implementation packages.
+- Prioritized a real, separately managed browser window with isolated profiles and authenticated CDP agent control; an interactive in-app mirrored viewer is a later, gated phase.
+- Documented process ownership, target leases, optional distributable runtime security/licensing, profile isolation, safe rollback and packaged Windows acceptance.
+- Plan only: no browser executable downloaded/launched, no runtime changes, and no live CDP end-to-end test claimed.
+
 ## [1.3.713] - 2026-10-25
 
 ### Session-scoped assistant task drafts
