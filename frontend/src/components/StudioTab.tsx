@@ -967,6 +967,19 @@ export function StudioTab({ workspacePath, isActive }: Props) {
       {multiVideoAvailable && <StudioVideoToCodePanel key={workspacePath} workspacePath={workspacePath}
         ocrAvailable={textOcrAvailable}
         ocrTimelineAvailable={textOcrTimelineAvailable}
+        onUpdated={(next, layerId, at) => {
+          if (selectedId === next.id && project && project.revision === next.revision-1)
+            setUndoStack(prev => [...prev.slice(-29), structuredClone(project.composition)]);
+          else setUndoStack([]);
+          setRedoStack([]);
+          setProject(next);
+          setSelectedId(next.id);
+          setSelectedLayer(layerId);
+          setFrame(at);
+          setProjects(prev => prev.map(item => item.id === next.id
+            ? { id: next.id, name: next.name, revision: next.revision } : item));
+          setSuccess('Tracked layer correction saved at frame ' + at);
+        }}
         onCreated={result => {
           setProjects(prev => [{
             id: result.projectId, name: 'Reconstructed video shapes', revision: result.revision,

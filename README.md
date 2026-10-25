@@ -228,6 +228,17 @@ declarative rules panel, not the planned free-form graph/state-machine editor.
 
 **Code-to-Video durable job history:** Current Studio backends persist only allowlisted job status/MP4 metadata per authorized workspace. Use the **Recent renders** section in Code → MP4 to refresh status or reopen completed MP4 without re-rendering. In-progress jobs lost to a backend restart display **interrupted** and require manual retry; no automatic rerun, cross-process scheduler or exactly-once guarantee. Authenticated `GET /api/studio/code-to-video/jobs` lists up to 20 jobs. Chrome/Edge and FFmpeg still required locally; production release remains gated.
 
+**Video-to-Code P7 manual layer correction:** After a successful experimental
+vector reconstruction, open **Manually correct tracked layer at a timeline
+frame** to edit a reconstructed object's `x`, `y`, `scaleX`, `scaleY`,
+or `rotation` keyframe. The initial frame is suggested from the lowest
+sampled timeline IoU, but you select the object, frame and value. Save uses
+workspace-authorized, revision-checked Studio edits and updates the selected
+editor project. Concurrent changes require **Reload project** instead of
+silent overwrite. This is manual editing of **already reconstructed visible
+shapes**, not rescue of clips rejected for occlusion or hidden-object recovery.
+See `docs/audits/2026-10-26-studio-p7-manual-reconstruction-correction.md`.
+
 **P5 mask-difference heatmap and bounded rotation:** Backends with the
 experimental orientation extension can generate editable `rotation`
 keyframes for near-horizontal, visibly elongated non-occluded shapes,

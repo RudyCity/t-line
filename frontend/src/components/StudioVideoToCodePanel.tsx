@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { studioApi, type StudioVideoCodeResult } from "../services/studioApi";
+import { studioApi, type StudioProject, type StudioVideoCodeResult } from "../services/studioApi";
+import { StudioReconstructionCorrectionPanel } from "./StudioReconstructionCorrectionPanel";
 
 interface Props {
   workspacePath: string;
   onCreated: (report: StudioVideoCodeResult) => void;
+  onUpdated?: (project: StudioProject, layerId: string, frame: number) => void;
   ocrAvailable?: boolean;
   ocrTimelineAvailable?: boolean;
 }
@@ -14,7 +16,7 @@ const buttonClass = "rounded border border-[var(--border-color)] bg-[var(--bg-ca
  * reconstruction. No file path, token, or plaintext video in any URL.
  */
 export function StudioVideoToCodePanel({
-  workspacePath, onCreated, ocrAvailable = false, ocrTimelineAvailable = false,
+  workspacePath, onCreated, onUpdated, ocrAvailable = false, ocrTimelineAvailable = false,
 }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [mode, setMode] = useState<'shapes' | 'text' | 'timeline'>('shapes');
@@ -167,6 +169,12 @@ export function StudioVideoToCodePanel({
           report.interpolationCheckIoU.map(x => (x * 100).toFixed(1) + "%").join(" / ") + "." : ""}
         {" "}Position, bounded scale and eligible rotation keyframes are editable in Studio.
       </p>
+      {report.objects.length > 0 && <StudioReconstructionCorrectionPanel
+        workspacePath={workspacePath} projectId={report.projectId}
+        initialFrame={report.timelineValidation?.checks.reduce((lowest,current)=>
+          current.foregroundIoU<lowest.foregroundIoU?current:lowest).frame??0}
+        onUpdated={onUpdated}
+      />}
       {report.timelineValidation?.checks.length ? <details
         className="max-w-[720px] rounded border border-[var(--border-color)] p-2">
         <summary className="cursor-pointer text-[11px] font-medium">
