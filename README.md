@@ -194,8 +194,7 @@ From the Studio tab, select a vector/text/path-only project, choose **Autoplay**
 **Scroll**, **Click** or **Hover**, then **Export Web Code**. The T-Line
 frontend downloads the authenticated HTML/SVG/GSAP export as a local file; it
 never places its bearer token in a browser URL. The export needs an updated
-SuperAgent Studio backend exposing `studioToCodeExport=svg-gsap-html-v1`.
-The generated HTML loads GSAP 3.15.0 from a CDN, so it requires internet (or
-manual local hosting of the same GSAP scripts); it is not a video-to-code AI
+SuperAgent Studio backend exposing `studioToCodeExport=svg-native-html-v2`.
+The generated HTML uses a first-party native browser runtime and works offline; it is not a video-to-code AI
 reconstruction, and raster/video/audio inputs are intentionally rejected.
 Existing Studio MP4 rendering and download remain available.

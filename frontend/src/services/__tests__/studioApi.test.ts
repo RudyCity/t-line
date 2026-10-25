@@ -29,6 +29,20 @@ describe('Studio Studio authenticated client', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     await expect(studioApi.exportCodeHtml('D:/studio', '../secret')).rejects.toThrow('Invalid Studio');
   });
+  it('fetches authenticated Next/React TSX and rejects malformed response', async () => {
+    const id = 'studio-' + 'd'.repeat(20);
+    const valid = '"use client";<iframe sandbox="allow-scripts" />';
+    const mock = vi.fn().mockResolvedValueOnce(new Response(valid, {
+      status: 200, headers: { 'Content-Length': String(valid.length) },
+    })).mockResolvedValueOnce(new Response('bad', { status: 200 }));
+    vi.stubGlobal('fetch', mock);
+    await expect(studioApi.exportCodeReact('D:/studio', id, 'hover')).resolves.toBe(valid);
+    const [route, init] = mock.mock.calls[0] as [string, RequestInit];
+    expect(route).toContain('/projects/' + id + '/code.tsx?trigger=hover');
+    expect(route).not.toContain('tline-only-token');
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    await expect(studioApi.exportCodeReact('D:/studio', id)).rejects.toThrow('Invalid Studio React source');
+  });
   it('refuses malformed or oversized HTML source instead of downloading it', async () => {
     const id = 'studio-' + 'b'.repeat(20);
     const fetchMock = vi.fn().mockResolvedValueOnce(new Response('<video></video>', { status: 200 }))

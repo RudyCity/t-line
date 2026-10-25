@@ -110,6 +110,8 @@ export function StudioTab({ workspacePath, isActive }: Props) {
   const [extraExportsAvailable, setExtraExportsAvailable] = useState(false);
   const [codeExportAvailable, setCodeExportAvailable] = useState(false);
   const [codeTrigger, setCodeTrigger] = useState<'autoplay' | 'scroll' | 'click' | 'hover'>('autoplay');
+  const [reactCodeAvailable, setReactCodeAvailable] = useState(false);
+  const [codeFormat, setCodeFormat] = useState<'html' | 'react'>('html');
   const [storyboardAvailable, setStoryboardAvailable] = useState(false);
   const [beatPreview, setBeatPreview] = useState<StudioProject | null>(null);
   const [templatePreview, setTemplatePreview] = useState<StudioProject | null>(null);
@@ -145,7 +147,7 @@ export function StudioTab({ workspacePath, isActive }: Props) {
     setPromptVoiceover(''); setPromptVoiceoverGain(1); setQuality(null); setVisionReview(null);
     setVisionAvailable(false); setVisionRepairAvailable(false); setCaptionsAvailable(false);
     setCompoundAvailable(false); setEffectsAvailable(false); setStackAvailable(false); setHistoryAvailable(false);
-    setBrandAvailable(false); setTemplatesAvailable(false); setBatchAvailable(false); setBeatAvailable(false); setParticlesAvailable(false); setParticlePreview(null); setTypographyAvailable(false); setTypographyPreview(null); setExtraExportsAvailable(false); setCodeExportAvailable(false); setStoryboardAvailable(false); setBeatPreview(null); setTemplatePreview(null); setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null); setBeatPreview(null); setParticlePreview(null); setTypographyPreview(null);
+    setBrandAvailable(false); setTemplatesAvailable(false); setBatchAvailable(false); setBeatAvailable(false); setParticlesAvailable(false); setParticlePreview(null); setTypographyAvailable(false); setTypographyPreview(null); setExtraExportsAvailable(false); setCodeExportAvailable(false); setReactCodeAvailable(false); setCodeFormat('html'); setStoryboardAvailable(false); setBeatPreview(null); setTemplatePreview(null); setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null); setBeatPreview(null); setParticlePreview(null); setTypographyPreview(null);
     setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
     setScheduler(null); setSupervisor(null); setSupervisedRender(false);
@@ -185,7 +187,8 @@ export function StudioTab({ workspacePath, isActive }: Props) {
         setParticlesAvailable(motionInfo?.capabilities?.motionCpuParticleOverlays === true);
         setTypographyAvailable(motionInfo?.capabilities?.motionAdvancedTypography?.includes('letter-reveal') === true);
         setExtraExportsAvailable(motionInfo?.capabilities?.motionExtraExportFormats?.includes('gif') === true);
-        setCodeExportAvailable(motionInfo?.capabilities?.studioToCodeExport === 'svg-gsap-html-v1');
+        setCodeExportAvailable(motionInfo?.capabilities?.studioToCodeExport === 'svg-native-html-v2');
+        setReactCodeAvailable(motionInfo?.capabilities?.studioToCodeFormats?.includes('react') === true);
         setStoryboardAvailable(motionInfo?.capabilities?.aiStoryboardReview === true);
         const latest = existingJobs.find(job => job.status === 'completed') || existingJobs[0];
         setActiveJobId(latest?.id || '');
@@ -783,18 +786,20 @@ export function StudioTab({ workspacePath, isActive }: Props) {
     void operation(async () => {
       const latest = await studioApi.inspect(workspacePath, projectId);
       if (latest.revision !== revision) throw new Error('Studio project changed before code export');
-      const html = await studioApi.exportCodeHtml(workspacePath, projectId, codeTrigger);
+      const html = codeFormat === 'react'
+        ? await studioApi.exportCodeReact(workspacePath, projectId, codeTrigger)
+        : await studioApi.exportCodeHtml(workspacePath, projectId, codeTrigger);
       if (!mounted.current || sequence !== version.current) return;
-      const blobUrl = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+      const blobUrl = URL.createObjectURL(new Blob([html], { type: codeFormat === 'react' ? 'text/plain;charset=utf-8' : 'text/html;charset=utf-8' }));
       try {
         const anchor = document.createElement('a');
         anchor.href = blobUrl;
-        anchor.download = 'studio-' + projectId + '-r' + revision + '-' + codeTrigger + '.html';
+        anchor.download = 'studio-' + projectId + '-r' + revision + '-' + codeTrigger + (codeFormat === 'react' ? '.tsx' : '.html');
         document.body.appendChild(anchor);
         anchor.click();
         anchor.remove();
       } finally { URL.revokeObjectURL(blobUrl); }
-      setSuccess('Exported executable SVG + GSAP web animation (' + codeTrigger + ')');
+      setSuccess('Exported offline Studio ' + (codeFormat === 'react' ? 'React/Next wrapper' : 'HTML/SVG') + ' (' + codeTrigger + ')');
     });
   };
   const loadDirectorSnapshots = () => {
@@ -1411,6 +1416,12 @@ export function StudioTab({ workspacePath, isActive }: Props) {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {codeExportAvailable && <div className="flex items-center gap-1.5">
+                <select aria-label="Studio to Code format" className={control + ' w-28'}
+                  disabled={busy} value={codeFormat}
+                  onChange={event => setCodeFormat(event.target.value as 'html' | 'react')}>
+                  <option value="html">Offline HTML</option>
+                  {reactCodeAvailable && <option value="react">React / Next</option>}
+                </select>
                 <select aria-label="Studio to Code interaction" value={codeTrigger}
                   onChange={event => setCodeTrigger(event.target.value as typeof codeTrigger)}
                   disabled={busy} className={control + ' w-28'}>
@@ -1420,7 +1431,7 @@ export function StudioTab({ workspacePath, isActive }: Props) {
                   <option value="hover">Hover</option>
                 </select>
                 <button type="button" className={action} disabled={busy} onClick={exportWebCode}
-                  title="HTML + SVG + GSAP. Vector/text/path scenes only; GSAP loads from CDN.">
+                  title="Offline HTML + SVG + native animation. Vector/text/path scenes only.">
                   <Film size={13} /> Export Web Code
                 </button>
               </div>}
