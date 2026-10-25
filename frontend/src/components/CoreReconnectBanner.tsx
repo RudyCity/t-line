@@ -1,4 +1,3 @@
-import React from 'react';
 import type { CoreReconnectNotice } from '../services/coreReconnectNotice';
 
 export interface CoreReconnectBannerProps {

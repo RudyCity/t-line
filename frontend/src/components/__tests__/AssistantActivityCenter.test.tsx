@@ -126,6 +126,37 @@ describe('Unified Activity Center', () => {
     expect(screen.queryByRole('tablist')).toBeNull();
   });
 
+  it('opens the agent timeline on a real pending permission and delegates to Core decision handler', async () => {
+    const onPermissionDecision = vi.fn();
+    const permission = {
+      permissionId: 'permission-11',
+      toolCall: { name: 'write_file', args: { path: 'README.md', content: 'Test edit' } },
+      description: 'Edit the README',
+    };
+    render(<AssistantActivityCenter workspace="D:/project" sessionId="sess_1"
+      messages={[]} subagents={[]} pendingPermission={permission}
+      connected onPermissionDecision={onPermissionDecision}/>);
+    const panel = await screen.findByRole('tabpanel', { name: /Agent timeline/ });
+    expect(screen.getByRole('button', { name: 'Toggle Activity Center' }).getAttribute('aria-expanded'))
+      .toBe('true');
+    expect(within(panel).getByText('Action pending approval · Main Agent')).toBeTruthy();
+    expect(screen.getByText('2 review')).toBeTruthy();
+    fireEvent.click(within(panel).getByRole('button', { name: /Deny/ }));
+    expect(onPermissionDecision).toHaveBeenCalledOnce();
+    expect(onPermissionDecision).toHaveBeenCalledWith(false);
+  });
+
+  it('keeps approval view but disables action when Core connection is unavailable', async () => {
+    const onPermissionDecision = vi.fn();
+    render(<AssistantActivityCenter workspace="D:/project" sessionId="sess_1"
+      pendingPermission={{ permissionId: 'p2', toolCall: { name: 'shell' }, description: 'Run shell' }}
+      connected={false} onPermissionDecision={onPermissionDecision}/>);
+    const panel = await screen.findByRole('tabpanel', { name: /Agent timeline/ });
+    expect(within(panel).getByText(/Connection unavailable/)).toBeTruthy();
+    expect(within(panel).queryByRole('button', { name: /Allow Once/ })).toBeNull();
+    expect(onPermissionDecision).not.toHaveBeenCalled();
+  });
+
   it('keeps last known summaries and reports partial service degradation', async () => {
     const ui = render(<AssistantActivityCenter workspace="D:/project" sessionId="sess_1"/>);
     await waitFor(() => expect(screen.getByText('2 active')).toBeTruthy());

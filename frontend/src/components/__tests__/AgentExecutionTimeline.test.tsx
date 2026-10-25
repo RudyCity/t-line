@@ -1,0 +1,92 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { AgentExecutionTimeline, buildAgentTimeline } from '../AgentExecutionTimeline';
+
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+const mainMessages = [
+  { role: 'user' as const, text: 'Check repo' },
+  { role: 'tool' as const, text: 'Invoking tool', toolName: 'read_files' },
+  { role: 'tool' as const, text: 'Done', toolName: 'web_search', result: ['found'] },
+];
+const agent = {
+  id: 'agent-1', role: 'Researcher', status: 'RUNNING', startedAt: '2026-10-26T02:00:00Z',
+  prompt: 'Research original sources',
+  logs: ['[9:00] Started research', '[9:01] Checked citations'],
+};
+const task = {
+  taskId: 'task-1', goalId: 'goal-1', title: 'Summarize policy',
+  domain: 'analysis' as const, status: 'running', revision: 2,
+  createdAt: 1792960000000, updatedAt: 1792960120000, evidenceIds: [],
+};
+const approval = {
+  permissionId: 'perm-1', toolCall: { name: 'write_file', args: { path: 'README.md', content: 'Hello' } },
+  description: 'Write README',
+};
+
+describe('Per-agent timeline evidence and approval', () => {
+  it('shows only observed tool action state, not invented timestamps or hidden reasoning', () => {
+    const timeline = buildAgentTimeline(mainMessages, [], [], null);
+    expect(timeline).toHaveLength(1);
+    expect(timeline[0].events.map(step => step.state)).toEqual(['running', 'completed']);
+    expect(timeline[0].events.every(step => step.timestamp === undefined)).toBe(true);
+  });
+
+  it('builds separate per-subagent and retained background-task traces', () => {
+    const timeline = buildAgentTimeline([], [agent], [task], null);
+    expect(timeline).toHaveLength(3);
+    expect(timeline[1].id).toBe('sub:agent-1');
+    expect(timeline[1].events.map(event => event.label)).toEqual([
+      'Agent started', 'Instruction received', 'Log entry 1', 'Log entry 2', 'Current status: Running',
+    ]);
+    expect(timeline[1].events[0].timestamp).toBe(Date.parse(agent.startedAt));
+    expect(timeline[1].events[2].timestamp).toBeUndefined();
+    expect(timeline[2].events.map(event => event.label)).toEqual(['Task created', 'Latest observed status: Running']);
+    expect(timeline[2].events[1].detail).toContain('not a reconstructed');
+  });
+
+  it('does not treat orphaned task as running and does not invent old transitions', () => {
+    const result = buildAgentTimeline([], [], [task], null, ['task-1']);
+    expect(result[1].state).toBe('reconcile_required');
+    expect(result[1].events[1].state).toBe('review');
+    expect(result[1].events).toHaveLength(2);
+  });
+
+  it('renders a distinct agent view and allows switching to a single agent', () => {
+    render(<AgentExecutionTimeline messages={mainMessages} subagents={[agent]} drafts={[task]}/>);
+    expect(screen.getByRole('region', { name: 'Per-agent execution timeline' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Researcher/ }));
+    const events = screen.getByRole('list', { name: 'Timeline for Researcher' });
+    expect(within(events).getByText('Agent started')).toBeTruthy();
+    expect(within(events).getByText('Log entry 1')).toBeTruthy();
+    expect(within(events).queryByText('web_search')).toBeNull();
+  });
+
+  it('shows actual live tool permission decisions and does not launch tools on timeline click', () => {
+    const decide = vi.fn();
+    render(<AgentExecutionTimeline messages={mainMessages} subagents={[]} drafts={[]}
+      pendingPermission={approval} onPermissionDecision={decide} connected/>);
+    const region = screen.getByRole('region', { name: 'Per-agent execution timeline' });
+    expect(within(region).getByText('Action pending approval · Main Agent')).toBeTruthy();
+    expect(within(region).getByText('Approval required · write_file')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Allow Once/ }));
+    expect(decide).toHaveBeenCalledExactlyOnceWith(true);
+    fireEvent.click(screen.getByRole('button', { name: /Deny/ }));
+    expect(decide).toHaveBeenCalledWith(false);
+  });
+
+  it('fails closed for disconnected Core even if a permission was received before disconnect', () => {
+    const decide = vi.fn();
+    render(<AgentExecutionTimeline messages={[]} subagents={[]} drafts={[]}
+      pendingPermission={approval} onPermissionDecision={decide} connected={false}/>);
+    expect(screen.queryByRole('button', { name: /Allow Once/ })).toBeNull();
+    expect(screen.getByRole('alert').textContent).toContain('Connection unavailable');
+    expect(decide).not.toHaveBeenCalled();
+  });
+
+  it('does not show fabricated approval controls for ordinary process actions', () => {
+    render(<AgentExecutionTimeline messages={mainMessages} subagents={[]} drafts={[]}/>);
+    expect(screen.queryByRole('button', { name: /Allow Once/ })).toBeNull();
+    expect(screen.queryByText('Action pending approval · Main Agent')).toBeNull();
+  });
+});

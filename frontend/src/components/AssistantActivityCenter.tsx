@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Activity, ChevronDown, ChevronUp, MessageSquareText,
-  Layers3, RefreshCw, AlertTriangle } from 'lucide-react';
+  Layers3, RefreshCw, AlertTriangle, GitBranch } from 'lucide-react';
+import { AgentExecutionTimeline } from './AgentExecutionTimeline';
+import type { ConsoleMessage } from './SuperAgentMessageItem';
+import type { SubAgentItem } from './SubAgentTerminalModal';
+import type { PendingPermission } from './SuperAgentInteractiveCards';
 import { AssistantTurnQueue } from './AssistantTurnQueue';
 import { AssistantTaskDraftPanel, type AssistantTaskHandoff } from './AssistantTaskDraftPanel';
 import { assistantTurnTotals, loadAssistantTurns } from './AssistantTurnApi';
 import { getAssistantDrafts, type AssistantDraftTask } from './AssistantTaskDraftApi';
 import { getAuthHeader } from './SuperAgentConsoleUtils';
 
-type ActivityView = 'chat' | 'tasks';
+type ActivityView = 'chat' | 'tasks' | 'timeline';
 type ActivitySummary = {
   chatRunning: number; chatPending: number; chatRecoverable: number;
   taskActive: number; taskCompleted: number; taskAttention: number;
@@ -29,18 +33,26 @@ export function summarizeBackgroundTasks(tasks: readonly AssistantDraftTask[], u
 
 /** One desktop activity surface. Chat turns and detached tasks keep their OWN
  * session-scoped APIs and permission/recovery policies. Never merge execution. */
-export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraftCreated }: {
+export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraftCreated,
+  messages = [], subagents = [], pendingPermission = null, onPermissionDecision,
+  connected = true, approvalJump = 0 }: {
   workspace: string; sessionId: string; handoff?: AssistantTaskHandoff | null;
   onDraftCreated?: (submitted: string) => void;
+  messages?: readonly ConsoleMessage[]; subagents?: readonly SubAgentItem[];
+  pendingPermission?: PendingPermission | null;
+  onPermissionDecision?: (decision: boolean | 'session' | 'always') => void;
+  connected?: boolean; approvalJump?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<ActivityView>('chat');
   const [summary, setSummary] = useState<ActivitySummary>(empty);
+  const [drafts, setDrafts] = useState<AssistantDraftTask[]>([]);
+  const [unverifiedIds, setUnverifiedIds] = useState<string[]>([]);
   const [errors, setErrors] = useState({ chat: '', tasks: '' });
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
-    setOpen(false); setView('chat'); setSummary(empty);
+    setOpen(false); setView('chat'); setSummary(empty); setDrafts([]); setUnverifiedIds([]);
     setErrors({ chat: '', tasks: '' });
   }, [workspace, sessionId]);
 
@@ -48,6 +60,11 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
     if (!handoff || handoff.workspace !== workspace || handoff.sessionId !== sessionId) return;
     setOpen(true); setView('tasks');
   }, [handoff, workspace, sessionId]);
+
+  useEffect(() => {
+    if (!pendingPermission || !workspace || !sessionId) return;
+    setOpen(true); setView('timeline');
+  }, [pendingPermission?.permissionId, approvalJump, workspace, sessionId]);
 
   useEffect(() => {
     if (!workspace || !sessionId) return;
@@ -61,6 +78,10 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
         getAssistantDrafts(workspace, sessionId, getAuthHeader, controller.signal),
       ]);
       if (disposed || current !== generation) return;
+      if (tasks.status === 'fulfilled') {
+        setDrafts(tasks.value.tasks);
+        setUnverifiedIds(tasks.value.unverifiedTaskIds || []);
+      }
       setSummary(prev => ({
         ...prev,
         ...(chat.status === 'fulfilled' ? (() => {
@@ -88,7 +109,7 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
   }, [workspace, sessionId, revision]);
 
   const currentCount = summary.chatRunning + summary.taskActive;
-  const reviewCount = summary.chatRecoverable + summary.taskAttention;
+  const reviewCount = summary.chatRecoverable + summary.taskAttention + (pendingPermission ? 1 : 0);
   const available = Boolean(workspace && sessionId);
   const delayed = Boolean(errors.chat || errors.tasks);
   return (
@@ -104,7 +125,8 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
           <span className="min-w-0 flex-1">
             <span className="block text-xs font-semibold">Activity Center</span>
             <span className="block truncate text-[10px] text-[var(--text-muted)]">
-              Chat queue & independent tasks · {summary.chatPending} queued chat · {summary.taskCompleted} tasks completed
+              Chat · tasks · agent timeline · {pendingPermission ? 'Approval waiting' :
+              summary.chatPending + ' queued chat · ' + summary.taskCompleted + ' tasks completed'}
             </span>
           </span>
           {currentCount > 0 && <span className="rounded-full bg-[var(--color-primary-glow)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-primary)]">
@@ -143,6 +165,14 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
                 <Layers3 size={14} aria-hidden="true"/> Background tasks
                 <span className="opacity-70">{summary.taskActive + summary.taskAttention}</span>
               </button>
+              <button type="button" id="activity-tab-timeline" role="tab" aria-selected={view === 'timeline'}
+                aria-controls="activity-panel-timeline" onClick={() => setView('timeline')}
+                className={'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs ' +
+                  (view === 'timeline' ? 'border-[var(--color-primary)] bg-[var(--color-primary-glow)] text-[var(--color-primary)]'
+                    : 'border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)]')}>
+                <GitBranch size={14} aria-hidden="true"/> Agent timeline
+                {pendingPermission && <span className="rounded-full bg-amber-500/10 px-1.5 text-amber-400">1 approval</span>}
+              </button>
             </div>
             <span className="text-[10px] text-[var(--text-muted)]">This chat session only</span>
           </div>
@@ -167,6 +197,12 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
                     onDraftCreated?.(submitted);
                     setRevision(value => value + 1);
                   }} embedded/>
+              </div>
+              <div role="tabpanel" id="activity-panel-timeline" aria-labelledby="activity-tab-timeline"
+                hidden={view !== 'timeline'}>
+                <AgentExecutionTimeline messages={messages} subagents={subagents} drafts={drafts}
+                  unverifiedTaskIds={unverifiedIds} pendingPermission={pendingPermission}
+                  onPermissionDecision={onPermissionDecision} connected={connected}/>
               </div>
             </>
           )}
