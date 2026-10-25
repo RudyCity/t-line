@@ -20,6 +20,7 @@ mod tray_logic;
 mod state;
 mod managed_browser;
 mod managed_browser_core;
+mod managed_browser_capture;
 
 use backend_identity::{decide_port, verify_local_backend, PortDecision};
 
@@ -1718,6 +1719,7 @@ pub fn run() {
             managed_browser::managed_browser_targets,
             managed_browser::managed_browser_gateway_pairing,
             managed_browser::managed_browser_gateway_register,
+            managed_browser::managed_browser_capture,
             get_memory_usage,
             open_webview_devtools,
             eval_webview_js,

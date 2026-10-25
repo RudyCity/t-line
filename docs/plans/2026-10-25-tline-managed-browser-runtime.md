@@ -133,6 +133,8 @@ UI: show browser engine, executable origin/version, managed profile, connection/
 - [ ] Show queue, owners, collaborators, activity timeline, disconnect/reconnect and explicit approval prompts. No manual owner token in URL or persistent storage.
 - **Gate:** selected tab/URL/state reflects real Chrome target after navigation, tab switch, browser restart and T-Line UI reload. No duplicate Chrome windows on retry.
 
+**M4-A checkpoint (2026-10-26):** native read-only JPEG snapshot preview implemented behind explicit user selection. Frame access requires verified T-Line-owned browser generation and exact local CDP page target; React receives bounded JPEG pixels, not debugger addresses. Real Windows Chrome headless capture and focused frontend tests passed. Higher-FPS `Page.startScreencast`, interactive mouse/keyboard through agent capabilities, packaged Tauri GUI acceptance and soak testing remain pending. See [M4-A live preview](2026-10-26-tline-browser-m4a-live-preview.md).
+
 ### P1-B — Optional in-app live Chrome viewer (experimental)
 
 - [ ] Prototype official CDP `Page.startScreencast` / `screencastFrame` + frame acknowledgement and bounded WebSocket transport. CDP screencast methods are experimental; keep a screenshot-on-demand fallback.

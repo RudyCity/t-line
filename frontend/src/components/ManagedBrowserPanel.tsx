@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Monitor, RefreshCw, Square, Link2, Copy } from 'lucide-react';
+import { Monitor, RefreshCw, Square, Link2, Copy, Eye } from 'lucide-react';
+import ManagedBrowserLivePreview from './ManagedBrowserLivePreview';
 import { gatewayPairingInstructions, type ManagedBrowserGatewayPairing } from './managedBrowserGateway';
 import { matchingGatewayClaim, type GatewayClaimProjection } from './managedGatewaySessions';
 import { DEFAULT_MANAGED_PROFILE, safeManagedLaunchUrl,
@@ -25,6 +26,9 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
   const [pairedRuntime, setPairedRuntime] = useState<ManagedBrowserGatewayPairing | null>(null);
   const [gatewayClaim, setGatewayClaim] = useState<GatewayClaimProjection | null>(null);
   const [registeredUntil, setRegisteredUntil] = useState<number | null>(null);
+  const [previewTarget, setPreviewTarget] = useState<{
+    profileId: string; generation: string; targetId: string;
+  } | null>(null);
   const selected = runtimes.find(r => r.profileId === profileId);
 
   const refresh = useCallback(async () => {
@@ -63,6 +67,15 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
       setRegisteredUntil(null);
     }
   }, [selected?.generation, selected?.lifecycle, selected?.debuggingAvailable, pairedRuntime?.generation]);
+  useEffect(() => {
+    if (!previewTarget) return;
+    if (!active || !enabled || !selected || selected.profileId !== previewTarget.profileId ||
+        selected.generation !== previewTarget.generation || selected.lifecycle !== 'ready' ||
+        !selected.debuggingAvailable || !targets.some(tab => tab.id === previewTarget.targetId)) {
+      setPreviewTarget(null);
+    }
+  }, [active, enabled, selected?.profileId, selected?.generation, selected?.lifecycle,
+    selected?.debuggingAvailable, targets, previewTarget?.targetId]);
   // Keep the Core directory announcement short-lived and revalidate the owned
   // native browser/target on each refresh; no background registration on hidden tabs.
   useEffect(() => {
@@ -170,6 +183,7 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
     try {
       await invoke('managed_browser_stop', { profileId, generation: selected.generation });
       setTargets([]);
+      setPreviewTarget(null);
       setPairing('');
       setPairedRuntime(null);
       setGatewayClaim(null);
@@ -192,12 +206,12 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
         <div className="mt-2 space-y-2 border-t border-[var(--border-color)] pt-2">
           {!getInvoke() ? <p>Native T-Line desktop is required for managed browser controls.</p> : (
             <>
-              <p className="text-[var(--text-muted)]">Opens Chrome in its own window with an isolated profile. This panel displays status and tab metadata, not an embedded Chrome viewport. Automatic agent attachment is not enabled yet.</p>
+              <p className="text-[var(--text-muted)]">Opens Chrome separately with an isolated profile. Select Preview to show opt-in, read-only live snapshots within T-Line. Agent control still requires an authorized gateway claim; Chrome is not embedded natively.</p>
               <label className="inline-flex items-center gap-2">
                 <input type="checkbox" checked={enabled} onChange={e => {
                   setEnabled(e.target.checked);
                   if (!e.target.checked) {
-                    setPairing(''); setPairedRuntime(null); setGatewayClaim(null); setRegisteredUntil(null);
+                    setPairing(''); setPairedRuntime(null); setGatewayClaim(null); setRegisteredUntil(null); setPreviewTarget(null);
                   }
                 }}
                   aria-label="Enable managed browser" />
@@ -207,7 +221,7 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
                 <>
                   <div className="flex flex-wrap items-center gap-2">
                     <label htmlFor="managed-profile">Profile</label>
-                    <select id="managed-profile" value={profileId} onChange={e => { setProfileId(e.target.value); setTargets([]); setPairing(''); setPairedRuntime(null); setGatewayClaim(null); setRegisteredUntil(null); }}
+                    <select id="managed-profile" value={profileId} onChange={e => { setProfileId(e.target.value); setTargets([]); setPairing(''); setPairedRuntime(null); setGatewayClaim(null); setRegisteredUntil(null); setPreviewTarget(null); }}
                       className="rounded border border-[var(--border-color)] bg-[var(--bg-main)] p-1">
                       <option value="default-managed">Default managed</option>
                       <option value="research">Research</option>
@@ -247,6 +261,17 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
                       {targets.map(target => (
                         <div key={target.id} className="flex items-center gap-2 rounded border border-[var(--border-color)] p-1">
                           <span className="min-w-0 flex-1 truncate">{target.title || 'Untitled'} · {target.url}</span>
+                          <button type="button" aria-label={'Preview ' + (target.title || target.id)}
+                            disabled={busy || selected?.lifecycle !== 'ready' || !selected.debuggingAvailable}
+                            onClick={() => {
+                              if (!selected) return;
+                              setPreviewTarget({
+                                profileId: selected.profileId, generation: selected.generation, targetId: target.id,
+                              });
+                            }}
+                            className="inline-flex shrink-0 items-center gap-1 rounded border border-[var(--border-color)] px-2 py-1 disabled:opacity-40">
+                            <Eye size={12} /> Preview
+                          </button>
                           <button type="button" aria-label={'Pair agent with ' + (target.title || target.id)}
                             disabled={busy || selected?.lifecycle !== 'ready' || !selected.debuggingAvailable} onClick={() => void pairTarget(target)}
                             className="inline-flex shrink-0 items-center gap-1 rounded border border-[var(--border-color)] px-2 py-1 disabled:opacity-40">
@@ -256,6 +281,12 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
                       ))}
                     </div>
                   )}
+                  {previewTarget && selected?.generation === previewTarget.generation &&
+                    selected?.profileId === previewTarget.profileId && selected.lifecycle === 'ready' &&
+                    <ManagedBrowserLivePreview key={previewTarget.generation + previewTarget.targetId}
+                      profileId={previewTarget.profileId} generation={previewTarget.generation}
+                      targetId={previewTarget.targetId} active={active && enabled && expanded}
+                      onClose={() => setPreviewTarget(null)}/>}
                   {pairing && (
                     <div className="space-y-1">
                       <p role="status" aria-label="Native Core registration">

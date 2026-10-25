@@ -542,6 +542,58 @@ pub fn managed_browser_targets(
         })
         .collect())
 }
+/// Only the desktop's primary UI can view a bounded screenshot of a live
+/// browser tab owned by this Tauri process. No generic CDP commands are exposed.
+#[tauri::command]
+pub async fn managed_browser_capture(
+    webview: tauri::Webview,
+    state: tauri::State<'_, ManagedBrowserState>,
+    profile_id: String,
+    generation: String,
+    target_id: String,
+) -> Result<crate::managed_browser_capture::BrowserFrame, String> {
+    primary_ui(&webview)?;
+    if target_id.is_empty()
+        || target_id.len() > 128
+        || !target_id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+    {
+        return Err("Invalid capture target.".into());
+    }
+    let port = {
+        let mut guard = state
+            .children
+            .lock()
+            .map_err(|_| "Browser state unavailable.")?;
+        let owned = guard
+            .get_mut(&profile_id)
+            .ok_or("No owned browser for this profile.")?;
+        if owned.generation != generation {
+            return Err("Stale managed browser generation.".into());
+        }
+        verified_owned_port(owned)?
+    };
+    let requested_target = target_id.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        crate::managed_browser_capture::capture_page_frame(port, &requested_target)
+    })
+    .await
+    .map_err(|_| "Screenshot worker exited.".to_string())??;
+    // Prevent a screenshot captured during restart/stop from ever entering React.
+    let mut guard = state
+        .children
+        .lock()
+        .map_err(|_| "Browser state unavailable.")?;
+    let owned = guard
+        .get_mut(&profile_id)
+        .ok_or("Owned browser disappeared during capture.")?;
+    if owned.generation != generation || verified_owned_port(owned)? != port {
+        return Err("Managed browser changed during screenshot capture.".into());
+    }
+    primary_ui(&webview)?;
+    Ok(result)
+}
 /// Strict browser + generation + *real page target* pairing. A tab title or a
 /// caller-selected port is never used as proof that the desktop owns Chrome.
 #[tauri::command]
@@ -834,6 +886,30 @@ mod tests {
             assert_eq!(verified_owned_port(entry).unwrap(), port);
             assert_eq!(status_of(entry, true).lifecycle, "ready");
         }
+        // Smoke the exact read-only CDP screenshot path used by the GUI viewer.
+        let response = ureq::get(&format!("http://127.0.0.1:{port}/json/list"))
+            .timeout(Duration::from_secs(2))
+            .call()
+            .unwrap();
+        use std::io::Read as _;
+        let mut listing = String::new();
+        response
+            .into_reader()
+            .take(128 * 1024)
+            .read_to_string(&mut listing)
+            .unwrap();
+        let pages: serde_json::Value = serde_json::from_str(&listing).unwrap();
+        let target = pages
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["type"] == "page")
+            .and_then(|page| page["id"].as_str())
+            .expect("owned browser contains a page");
+        let frame = crate::managed_browser_capture::capture_page_frame(port, target)
+            .expect("capture owned browser screenshot");
+        assert!(frame.data_url.starts_with("data:image/jpeg;base64,/9j/"));
+        assert!(frame.data_url.len() < 2_000_100);
         assert!(
             !retire_owned_port_file(&profile, port, &fingerprint).unwrap(),
             "must never remove an active profile endpoint"

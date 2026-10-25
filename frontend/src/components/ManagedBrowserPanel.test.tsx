@@ -116,6 +116,32 @@ describe('managed browser safety contract', () => {
     expect(screen.getByText(/The recovery profile starts empty/)).toBeTruthy();
     expect(invoke).not.toHaveBeenCalledWith('managed_browser_gateway_pairing', expect.anything());
   });
+  it('opens a read-only screenshot only after selecting Preview and clears on close', async () => {
+    const runtime = { profileId: 'default-managed', generation: '999-111', lifecycle: 'ready', debuggingAvailable: true };
+    const invoke = vi.fn(async (command: string) => {
+      if (command === 'managed_browser_discover') return { available: true, engine: 'system-chrome' };
+      if (command === 'managed_browser_status') return [runtime];
+      if (command === 'managed_browser_targets') return [{ id: 'TAB999', title: 'Preview page', url: 'https://example.org/' }];
+      if (command === 'managed_browser_capture') return {
+        targetId: 'TAB999', dataUrl: 'data:image/jpeg;base64,/9j/ABCD==', capturedAt: Date.now(),
+      };
+      throw new Error('Unexpected native command ' + command);
+    });
+    vi.stubGlobal('__TAURI__', { core: { invoke } });
+    render(<ManagedBrowserPanel active initialUrl="about:blank"/>);
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle managed browser' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Enable managed browser' }));
+    const preview = await screen.findByRole('button', { name: 'Preview Preview page' });
+    expect(invoke).not.toHaveBeenCalledWith('managed_browser_capture', expect.anything());
+    fireEvent.click(preview);
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('managed_browser_capture', {
+      profileId: 'default-managed', generation: '999-111', targetId: 'TAB999',
+    }));
+    expect(await screen.findByAltText('Live screenshot of the selected T-Line-managed browser tab')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Close live preview' }));
+    expect(screen.queryByAltText('Live screenshot of the selected T-Line-managed browser tab')).toBeNull();
+    expect(invoke).not.toHaveBeenCalledWith('managed_browser_gateway_pairing', expect.anything());
+  });
   it('never sends a browser agent request if native Core registration is rejected', async () => {
     const runtime = { profileId: 'default-managed', generation: '789-17929200000000',
       lifecycle: 'ready', debuggingAvailable: true };

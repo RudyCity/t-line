@@ -1,3 +1,12 @@
+## [1.3.726] - 2026-10-26
+
+### Managed Browser — Native Read-only Live Preview (M4-A)
+
+- Added an explicitly opened, per-tab live JPEG screenshot preview to T-Line Browser; capture runs only on the primary desktop's native Rust process against a currently owned Chrome tab.
+- Bounded and validated local CDP WebSocket screenshot frames and browser identity before/after capture. The renderer receives image pixels only, not debugging ports, cookies, scripts or CDP control capabilities.
+- Added pause-on-hidden, one in-flight screenshot, profile/generation disconnect cleanup, and a separate Preview button alongside authorized agent pairing.
+- Verified live screenshot on real isolated Windows Chrome, local Rust security tests and focused frontend tests. Packaged GUI, full screencast and interactive input controls remain pending.
+
 ## [1.3.725] - 2026-10-26
 
 ### Managed Browser — App Exit Ownership and Local Core Transport
