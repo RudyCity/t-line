@@ -85,6 +85,30 @@ function verifyBundledBun(binary) {
   return result.status === 0 && result.stdout?.includes("BUN_BUNDLE_PTY_OK");
 }
 
+/** Fail closed when local UI source/build outputs postdate the embedded frontend in NSIS. */
+function newerFrontendInputs(installerTime, rootDir = root) {
+  const newer = [];
+  const targets = [
+    path.join(rootDir, "frontend", "src"),
+    path.join(rootDir, "frontend", "dist"),
+    path.join(rootDir, "frontend", "index.html"),
+  ];
+  const visit = (file) => {
+    if (!fs.existsSync(file)) { newer.push(path.relative(rootDir, file) + " (missing)"); return; }
+    const stat = fs.lstatSync(file);
+    if (stat.isSymbolicLink()) { newer.push(path.relative(rootDir, file) + " (unsafe link)"); return; }
+    if (stat.isDirectory()) {
+      for (const name of fs.readdirSync(file)) visit(path.join(file, name));
+      return;
+    }
+    if (stat.isFile() && stat.mtimeMs > installerTime + 1000) {
+      newer.push(path.relative(rootDir, file));
+    }
+  };
+  for (const file of targets) visit(file);
+  return newer;
+}
+
 function inspectInstaller() {
   const staged = compareStagedBackend();
   if (staged.length) return { status: "blocked", description:
@@ -112,6 +136,10 @@ function inspectInstaller() {
     return { status: "blocked", description: "No Windows NSIS installer has been generated for Bun" };
   }
   const installerTime = fs.statSync(exe).mtimeMs;
+  const staleFrontend = newerFrontendInputs(installerTime);
+  if (staleFrontend.length) return { status: "blocked", description:
+    "Windows installer predates frontend source/build outputs: " +
+    staleFrontend.slice(0, 4).join(", ") };
   const nativeRoot = path.join(root, "desktop-tauri", "src-tauri");
   const sourceFiles = [
     configPath,
@@ -208,4 +236,4 @@ if (require.main === module) {
   console.log(JSON.stringify(status, null, 2));
   if (status.status !== "pass") process.exitCode = 1;
 }
-module.exports = { inspectListing, inspectInstaller, verifyBundledBun };
+module.exports = { inspectListing, inspectInstaller, verifyBundledBun, newerFrontendInputs };

@@ -3,8 +3,10 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");
+const fs = require("node:fs");
+const os = require("node:os");
 const { parseAudit } = require("./check-studio-release.cjs");
-const { inspectListing } = require("./check-tauri-bundle.cjs");
+const { inspectListing, newerFrontendInputs } = require("./check-tauri-bundle.cjs");
 
 test("blocks high and critical production advisories without claiming automatic fixes", () => {
   const result = parseAudit(JSON.stringify({
@@ -70,4 +72,41 @@ test("requires backend and native runtime in real NSIS archive listing", () => {
   assert.equal(inspectListing("2026-10-21 ....A app.exe").server, false);
   assert.equal(inspectListing("2026-10-21 ....A app.exe").bunRuntime, false);
   assert.equal(inspectListing("2026-10-21 ....A app.exe").bunLicense, false);
+});
+
+test("installer freshness gate detects rebuilt UI or modified frontend source", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "studio-release-freshness-"));
+  try {
+    const src = path.join(root, "frontend", "src");
+    const dist = path.join(root, "frontend", "dist");
+    fs.mkdirSync(src, { recursive: true });
+    fs.mkdirSync(dist, { recursive: true });
+    const files = [
+      path.join(root, "frontend", "index.html"),
+      path.join(src, "StudioTab.tsx"),
+      path.join(dist, "index.html")
+    ];
+    for (const file of files) {
+      fs.writeFileSync(file, "verified local fixture");
+      fs.utimesSync(file, new Date(10000), new Date(10000));
+    }
+    const compiledAt = 30000;
+    assert.deepEqual(newerFrontendInputs(compiledAt, root), []);
+    fs.utimesSync(files[1], new Date(35000), new Date(35000));
+    assert.ok(newerFrontendInputs(compiledAt, root).some(p => p.endsWith("StudioTab.tsx")));
+    fs.utimesSync(files[1], new Date(10000), new Date(10000));
+    fs.utimesSync(files[2], new Date(35000), new Date(35000));
+    assert.ok(newerFrontendInputs(compiledAt, root).some(p => p.endsWith("index.html")));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("installer freshness gate fails closed if compiled UI is missing", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "studio-release-missing-"));
+  try {
+    assert.ok(newerFrontendInputs(Date.now(), root).some(s => s.includes("missing")));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
