@@ -112,6 +112,38 @@ describe('Studio Studio authenticated client', () => {
     await expect(studioApi.loadCodeVideo('D:/demo', '../secret')).rejects.toThrow(/Invalid/);
     expect(mock).toHaveBeenCalledTimes(2);
   });
+  it('supports workspace-scoped queued Code-to-Video create/poll/cancel with audio asset', async () => {
+    const projectId = 'studio-' + 'c'.repeat(20);
+    const id = 'codejob-' + 'd'.repeat(24);
+    const state = { id, status:'queued', framesCompleted:0, frameCount:0,
+      queuedAt:'2026-10-25T00:00:00Z' };
+    const mock = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify(state), {
+      status:202, headers:{'Content-Type':'application/json'},
+    })).mockResolvedValueOnce(new Response(JSON.stringify({...state,status:'running',frameCount:24}), {
+      status:200, headers:{'Content-Type':'application/json'},
+    })).mockResolvedValueOnce(new Response(JSON.stringify({...state,status:'cancelled'}), {
+      status:200, headers:{'Content-Type':'application/json'},
+    }));
+    vi.stubGlobal('fetch',mock);
+    const args = {projectId, audioAssetId:'audio-'+'a'.repeat(64),
+      width:640,height:360,fps:12,durationSeconds:2};
+    expect((await studioApi.queueCodeVideo('D:/studio',args)).status).toBe('queued');
+    expect((await studioApi.inspectCodeVideo('D:/studio',id)).status).toBe('running');
+    expect((await studioApi.cancelCodeVideo('D:/studio',id)).status).toBe('cancelled');
+    const routes=mock.mock.calls.map(call=>call[0] as string);
+    expect(routes[0]).toContain('/code-to-video/jobs?workspace=');
+    expect(routes[1]).toContain('/code-to-video/jobs/'+id+'?workspace=');
+    expect(routes[2]).toContain('/code-to-video/jobs/'+id+'/cancel?workspace=');
+    expect(routes.every(route=>!route.includes('tline-only-token'))).toBe(true);
+    expect(mock.mock.calls.every(call=>
+      (call[1] as RequestInit).headers &&
+      ((call[1] as RequestInit).headers as Record<string,string>).Authorization === 'Bearer tline-only-token'
+    )).toBe(true);
+    expect(JSON.parse(mock.mock.calls[0][1].body).audioAssetId).toBe(args.audioAssetId);
+    expect(() => studioApi.inspectCodeVideo('D:/studio','../bad')).toThrow(/Invalid/);
+    expect(() => studioApi.cancelCodeVideo('D:/studio','../bad')).toThrow(/Invalid/);
+    expect(mock).toHaveBeenCalledTimes(3);
+  });
   it('downloads authenticated SVG/GSAP source without exposing access tokens', async () => {
     const id = 'studio-' + 'a'.repeat(20);
     const html = '<!doctype html><svg id="studio-stage"></svg>';

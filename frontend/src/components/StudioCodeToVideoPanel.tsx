@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { studioApi } from "../services/studioApi";
+import { useEffect, useRef, useState } from "react";
+import { studioApi, type StudioCodeVideoJob } from "../services/studioApi";
 
 interface Props {
   workspacePath: string;
@@ -15,22 +15,30 @@ const buttonClass = "rounded border border-[var(--border-color)] bg-[var(--bg-ca
 export function StudioCodeToVideoPanel({ workspacePath, projectId, disabled = false }: Props) {
   const [source, setSource] = useState<"studio" | "html">("studio");
   const [file, setFile] = useState<File | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
   const [trusted, setTrusted] = useState(false);
   const [width, setWidth] = useState(640);
   const [height, setHeight] = useState(360);
   const [fps, setFps] = useState(12);
   const [seconds, setSeconds] = useState(2);
   const [working, setWorking] = useState(false);
+  const [job, setJob] = useState<StudioCodeVideoJob | null>(null);
+  const jobId = useRef<string | null>(null);
+  const lifetime = useRef(0);
+  useEffect(() => () => { lifetime.current += 1; }, []);
   const [error, setError] = useState("");
   const [video, setVideo] = useState("");
   const [name, setName] = useState("");
   useEffect(() => () => { if (video) URL.revokeObjectURL(video); }, [video]);
   useEffect(() => {
-    setVideo(""); setError(""); setFile(null); setTrusted(false);
+    lifetime.current += 1;
+    setVideo(""); setError(""); setFile(null); setAudioFile(null); setTrusted(false);
+    setJob(null); jobId.current = null; setWorking(false);
   }, [projectId, workspacePath]);
   const submit = async () => {
     if (working || disabled) return;
-    setWorking(true); setError(""); setVideo("");
+    const version = lifetime.current;
+    setWorking(true); setError(""); setVideo(""); setJob(null);
     try {
       if (source === "html" && (!file || !trusted)) throw new Error(
         "Choose an HTML file and confirm that you trust its source");
@@ -38,17 +46,50 @@ export function StudioCodeToVideoPanel({ workspacePath, projectId, disabled = fa
       if (file && file.size > (isStudioReact ? 2 * 1024 * 1024 : 256 * 1024))
         throw new Error("Code source exceeds maximum file size");
       const content = source === "html" ? await file!.text() : undefined;
-      const result = await studioApi.codeToVideo(workspacePath, {
+      const audio = audioFile ? await studioApi.uploadAudio(workspacePath, audioFile) : undefined;
+      if (version !== lifetime.current) return;
+      let current = await studioApi.queueCodeVideo(workspacePath, {
         ...(content ? { ...(isStudioReact ? { reactTsx: content } : { html: content }),
           trustLocalHtml: true } : { projectId }),
         width, height, fps, durationSeconds: seconds,
+        ...(audio ? { audioAssetId: audio.id } : {}),
       });
-      const url = await studioApi.loadCodeVideo(workspacePath, result.id);
+      if (version !== lifetime.current) return;
+      jobId.current = current.id;
+      setJob(current);
+      while (!["completed", "cancelled", "failed"].includes(current.status)) {
+        await new Promise<void>(resolve => setTimeout(resolve, 350));
+        if (version !== lifetime.current) return;
+        current = await studioApi.inspectCodeVideo(workspacePath, current.id);
+        if (version !== lifetime.current) return;
+        setJob(current);
+      }
+      if (current.status === "failed" || current.status === "cancelled")
+        throw new Error(current.error ?? ("Code-to-Video " + current.status));
+      if (!current.result) throw new Error("Code-to-Video completed without an MP4");
+      const url = await studioApi.loadCodeVideo(workspacePath, current.result.id);
+      if (version !== lifetime.current) { URL.revokeObjectURL(url); return; }
       setVideo(url);
-      setName(result.id + ".mp4");
+      setName(current.result.id + ".mp4");
+    } catch (cause) {
+      if (version === lifetime.current)
+        setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      if (version === lifetime.current) {
+        setWorking(false);
+        jobId.current = null;
+      }
+    }
+  };
+  const cancel = async () => {
+    const id = jobId.current;
+    if (!id) return;
+    try {
+      const result = await studioApi.cancelCodeVideo(workspacePath, id);
+      setJob(result);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
-    } finally { setWorking(false); }
+    }
   };
   return <section className="border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] px-3 py-2"
     aria-label="Studio Code to Video">
@@ -92,13 +133,26 @@ export function StudioCodeToVideoPanel({ workspacePath, projectId, disabled = fa
           value={seconds} disabled={disabled || working}
           onChange={event => setSeconds(Number(event.target.value))} className={inputClass + " ml-1 w-14"} />
       </label>
+      <label className="text-[11px] text-[var(--text-muted)]">
+        Optional PCM16 WAV (AAC mux)
+        <input type="file" accept=".wav,audio/wav,audio/wave,audio/x-wav" aria-label="Code video audio file"
+          className={inputClass + " ml-1 max-w-[180px]"}
+          disabled={disabled || working} onChange={event => setAudioFile(event.target.files?.[0] ?? null)} />
+      </label>
       <button className={buttonClass} disabled={disabled || working || (source === "html" && (!file || !trusted))}
         onClick={() => void submit()} type="button">{working ? "Rendering..." : "Render MP4"}</button>
+      {working && job && !["cancelled", "failed", "completed", "cancelling"].includes(job.status) &&
+        <button type="button" className={buttonClass} aria-label="Cancel code video render"
+          onClick={() => void cancel()}>Cancel</button>}
+      {job && <span role="status" className="text-[11px] text-[var(--text-muted)]">
+        {job.status} · {job.framesCompleted}/{job.frameCount || "?"} frames
+      </span>}
     </div>
     <p className="mt-1 text-[10px] text-[var(--text-muted)]">
       First-party Studio HTML/React exports share the same scene. External React must first be built into a
       self-contained HTML file (Studio-generated React TSX also works). CSS/WAAPI and Studio frame controls are sampled; arbitrary JS timelines,
-      audio and remote assets are not guaranteed. Do not load untrusted HTML.
+      browser audio and remote assets are not captured. Optional uploaded audio is muxed to MP4.
+      Do not load untrusted HTML.
     </p>
     {error && <p role="alert" className="mt-2 text-xs text-red-400">{error}</p>}
     {video && <div className="mt-2 flex flex-wrap items-center gap-2">

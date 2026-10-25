@@ -202,7 +202,7 @@ export interface StudioMultiVideoReconstruction {
   limitations: string[];
 }
 export interface StudioCapabilities {
-  capabilities?: { motionAdvancedTypography?: string[]; motionCpuParticleOverlays?: boolean; aiStoryboardReview?: boolean; motionExtraExportFormats?: string[]; motionAudioBeatSync?: boolean; motionBatchAspectVariants?: boolean; motionBrandKit?: boolean; motionTemplateLibrary?: boolean; motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean; studioToCodeExport?: string; studioToCodeTriggers?: string[]; studioToCodeFormats?: string[]; studioCodeToVideo?: string; studioCodeToVideoFormats?: string[]; localCodeToVideoReady?: boolean; studioInteractionRules?: string; studioInteractionRulesMax?: number; experimentalMultiVectorReconstruction?: string; experimentalTextOcrReconstruction?: string; experimentalTextOcrTimeline?: string; localTextOcrReady?: boolean };
+  capabilities?: { motionAdvancedTypography?: string[]; motionCpuParticleOverlays?: boolean; aiStoryboardReview?: boolean; motionExtraExportFormats?: string[]; motionAudioBeatSync?: boolean; motionBatchAspectVariants?: boolean; motionBrandKit?: boolean; motionTemplateLibrary?: boolean; motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean; studioToCodeExport?: string; studioToCodeTriggers?: string[]; studioToCodeFormats?: string[]; studioCodeToVideo?: string; studioCodeToVideoFormats?: string[]; studioCodeToVideoJobs?: string; localCodeToVideoReady?: boolean; studioInteractionRules?: string; studioInteractionRulesMax?: number; experimentalMultiVectorReconstruction?: string; experimentalTextOcrReconstruction?: string; experimentalTextOcrTimeline?: string; localTextOcrReady?: boolean };
 }
 export interface StudioQualityIssue {
   severity: 'warning' | 'error'; code: string; scene: number; message: string;
@@ -343,6 +343,40 @@ async function motionFetch(workspace: string, path: string, init?: RequestInit):
 }
 async function json<T>(workspace: string, path: string, init?: RequestInit): Promise<T> {
   return (await motionFetch(workspace, path, init)).json() as Promise<T>;
+}
+export interface StudioCodeVideoArgs {
+  projectId?: string; html?: string; reactTsx?: string; trustLocalHtml?: boolean;
+  width: number; height: number; fps: number; durationSeconds: number;
+  audioAssetId?: string;
+}
+export interface StudioCodeVideoJob {
+  id: string; status: 'queued' | 'running' | 'cancelling' | 'completed' | 'failed' | 'cancelled';
+  framesCompleted: number; frameCount: number;
+  queuedAt: string; startedAt?: string; finishedAt?: string; error?: string;
+  result?: { id: string; bytes: number; width: number; height: number; fps: number;
+    frameCount: number; source: 'studio' | 'html' | 'studio-react' };
+}
+function validateStudioCodeVideoArgs(args: StudioCodeVideoArgs) {
+  if ([args.projectId, args.html, args.reactTsx].filter(Boolean).length !== 1)
+    throw new Error('Choose one Studio project, HTML or Studio React TSX');
+  if (args.projectId) assertId(args.projectId);
+  if (args.audioAssetId && !/^audio-[a-f0-9]{64}$/.test(args.audioAssetId))
+    throw new Error('Invalid Studio audio asset ID');
+  if ((args.html || args.reactTsx) && !args.trustLocalHtml)
+    throw new Error('Trust confirmation required for local HTML/Studio React TSX');
+  if (args.html && new Blob([args.html]).size > 256 * 1024) throw new Error('HTML exceeds 256 KiB');
+  if (args.reactTsx && new Blob([args.reactTsx]).size > 2 * 1024 * 1024)
+    throw new Error('Studio React TSX exceeds 2 MiB');
+  if (!Number.isSafeInteger(args.width) || args.width < 160 || args.width > 1920 || args.width % 2 ||
+    !Number.isSafeInteger(args.height) || args.height < 90 || args.height > 1080 || args.height % 2 ||
+    !Number.isSafeInteger(args.fps) || args.fps < 1 || args.fps > 30 ||
+    !Number.isFinite(args.durationSeconds) || args.durationSeconds < .25 || args.durationSeconds > 12 ||
+    Math.ceil(args.fps * args.durationSeconds) > 300)
+    throw new Error('Unsupported Code-to-Video profile');
+}
+function assertCodeVideoJob(id: string) {
+  if (!/^codejob-[a-f0-9]{24}$/.test(id)) throw new Error('Invalid Code-to-Video job ID');
+  return id;
 }
 export const studioApi = {
   capabilities: (workspace: string) => json<StudioCapabilities>(workspace, '/'),
@@ -604,29 +638,24 @@ export const studioApi = {
     json<StudioProject>(workspace, '/projects/' + assertId(id) + '/vectorize', {
       method: 'POST', body: JSON.stringify({ baseRevision, layerId, options }),
     }),
-  codeToVideo: (workspace: string, args: {
-    projectId?: string;
-    html?: string;
-    reactTsx?: string;
-    trustLocalHtml?: boolean;
-    width: number; height: number; fps: number; durationSeconds: number;
-  }): Promise<{ id: string; bytes: number; width: number; height: number; fps: number;
+  codeToVideo: (workspace: string, args: StudioCodeVideoArgs): Promise<{
+    id: string; bytes: number; width: number; height: number; fps: number;
     frameCount: number; source: 'studio' | 'html' | 'studio-react' }> => {
-    if ([args.projectId, args.html, args.reactTsx].filter(Boolean).length !== 1)
-      throw new Error('Choose one Studio project, HTML or Studio React TSX');
-    if (args.projectId) assertId(args.projectId);
-    if ((args.html || args.reactTsx) && !args.trustLocalHtml)
-      throw new Error('Trust confirmation required for local HTML/Studio React TSX');
-    if (args.html && new Blob([args.html]).size > 256 * 1024) throw new Error('HTML exceeds 256 KiB');
-    if (args.reactTsx && new Blob([args.reactTsx]).size > 2 * 1024 * 1024)
-      throw new Error('Studio React TSX exceeds 2 MiB');
-    if (!Number.isSafeInteger(args.width) || args.width < 160 || args.width > 1920 || args.width % 2 ||
-      !Number.isSafeInteger(args.height) || args.height < 90 || args.height > 1080 || args.height % 2 ||
-      !Number.isSafeInteger(args.fps) || args.fps < 1 || args.fps > 30 ||
-      !Number.isFinite(args.durationSeconds) || args.durationSeconds < .25 || args.durationSeconds > 12 ||
-      Math.ceil(args.fps * args.durationSeconds) > 300) throw new Error('Unsupported Code-to-Video profile');
+    validateStudioCodeVideoArgs(args);
     return json(workspace, '/code-to-video', { method: 'POST', body: JSON.stringify(args) });
   },
+  queueCodeVideo: (workspace: string, args: StudioCodeVideoArgs): Promise<StudioCodeVideoJob> => {
+    validateStudioCodeVideoArgs(args);
+    return json(workspace, '/code-to-video/jobs', {
+      method: 'POST', body: JSON.stringify(args),
+    });
+  },
+  inspectCodeVideo: (workspace: string, id: string): Promise<StudioCodeVideoJob> =>
+    json(workspace, '/code-to-video/jobs/' + assertCodeVideoJob(id)),
+  cancelCodeVideo: (workspace: string, id: string): Promise<StudioCodeVideoJob> =>
+    json(workspace, '/code-to-video/jobs/' + assertCodeVideoJob(id) + '/cancel', {
+      method: 'POST', body: '{}',
+    }),
   async loadCodeVideo(workspace: string, id: string): Promise<string> {
     if (!/^codevideo-[a-f0-9]{24}$/.test(id)) throw new Error('Invalid Studio code video ID');
     const response = await motionFetch(workspace, '/code-videos/' + id + '.mp4');
