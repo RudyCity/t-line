@@ -52,12 +52,25 @@ export type StudioStackOperation =
   | { type: 'toggle'; id: string; enabled: boolean }
   | { type: 'move'; id: string; toIndex: number }
   | { type: 'update'; id: string; changes: Partial<Omit<StudioStackEntry, 'id'>> };
+export interface StudioInteractionBinding {
+  id: string;
+  event: 'ready' | 'click' | 'mouseenter' | 'mouseleave' | 'focus' | 'scroll';
+  action: 'play' | 'pause' | 'replay' | 'seek';
+  target: 'stage' | 'layer';
+  layerId?: string;
+  progress?: number;
+}
+export interface StudioInteractionGraph {
+  version: 1;
+  bindings: StudioInteractionBinding[];
+}
 export interface StudioComposition {
   width: number; height: number;
   fps: { numerator: number; denominator: number };
   durationFrames: number; background: string;
   audio?: StudioAudioTrack; audioTracks?: StudioAudioTrack[];
   layers: StudioLayer[];
+  interactionGraph?: StudioInteractionGraph;
   effectStack?: StudioStackEntry[];
   stackBase?: Omit<StudioComposition, 'effectStack' | 'stackBase'>;
 }
@@ -141,10 +154,11 @@ export type StudioEdit =
   | { type: 'remove-layer'; layerId: string }
   | { type: 'move-layer'; layerId: string; toIndex: number }
   | { type: 'replace-composition'; composition: StudioProject['composition'] }
+  | { type: 'set-interaction-graph'; graph: StudioInteractionGraph | null }
   | { type: 'set-audio'; audio: StudioAudioTrack | null }
   | { type: 'set-audio-tracks'; audioTracks: StudioAudioTrack[] };
 export interface StudioCapabilities {
-  capabilities?: { motionAdvancedTypography?: string[]; motionCpuParticleOverlays?: boolean; aiStoryboardReview?: boolean; motionExtraExportFormats?: string[]; motionAudioBeatSync?: boolean; motionBatchAspectVariants?: boolean; motionBrandKit?: boolean; motionTemplateLibrary?: boolean; motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean; studioToCodeExport?: string; studioToCodeTriggers?: string[]; studioToCodeFormats?: string[] };
+  capabilities?: { motionAdvancedTypography?: string[]; motionCpuParticleOverlays?: boolean; aiStoryboardReview?: boolean; motionExtraExportFormats?: string[]; motionAudioBeatSync?: boolean; motionBatchAspectVariants?: boolean; motionBrandKit?: boolean; motionTemplateLibrary?: boolean; motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean; studioToCodeExport?: string; studioToCodeTriggers?: string[]; studioToCodeFormats?: string[]; studioInteractionRules?: string; studioInteractionRulesMax?: number };
 }
 export interface StudioQualityIssue {
   severity: 'warning' | 'error'; code: string; scene: number; message: string;

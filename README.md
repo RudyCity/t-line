@@ -198,3 +198,11 @@ SuperAgent Studio backend exposing `studioToCodeExport=svg-native-html-v2`.
 The generated HTML uses a first-party native browser runtime and works offline; it is not a video-to-code AI
 reconstruction, and raster/video/audio inputs are intentionally rejected.
 Existing Studio MP4 rendering and download remain available.
+
+**Interaction Graph v1:** Updated SuperAgent Studio backends advertise
+`studioInteractionRules=declarative-bindings-v1` and the T-Line Studio tab
+shows a rules panel. Choose an event (load/click/hover enter/leave/focus/scroll),
+a stage or text/vector layer target, and play/pause/replay/seek. Up to 12 rules
+are saved as revisioned Studio project data and used by offline HTML and React
+exports. Invalid/dangling layer targets are rejected server-side. This is a
+declarative rules panel, not the planned free-form graph/state-machine editor.
