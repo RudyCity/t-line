@@ -1,3 +1,11 @@
+## [1.3.722] - 2026-10-25
+
+### Session-safe isolated patch proposal review
+- Add explicit patch preparation for queued assistant tasks with an isolated Git worktree; original checkout files remain untouched.
+- Expose bounded read-only patch preview and explicit orphan reconciliation, without merging or replaying previous tool operations.
+- Correct task cancellation API path and route fixed revision-guarded patch/reconcile requests through the authenticated desktop bridge.
+- Validate patch review, scope boundaries and API wiring with local Git integration and UI/backend tests. Model-provider and packaged E2E remain pending.
+
 ## [1.3.721] - 2026-10-25
 
 ### Managed Browser — Runtime Identity and Windows Smoke (M2-D)

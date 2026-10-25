@@ -3,12 +3,14 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { AssistantTaskDraftPanel } from '../AssistantTaskDraftPanel';
 import {
   addAssistantDraft, cancelAssistantDraft, getAssistantDrafts,
-  getAssistantTaskResult, runAssistantReadOnlyTask,
+  getAssistantTaskResult, runAssistantReadOnlyTask, prepareAssistantPatch,
+  getAssistantPatch, reconcileAssistantTask,
 } from '../AssistantTaskDraftApi';
 
 vi.mock('../AssistantTaskDraftApi', () => ({
   addAssistantDraft: vi.fn(), cancelAssistantDraft: vi.fn(), getAssistantDrafts: vi.fn(),
   getAssistantTaskResult: vi.fn(), runAssistantReadOnlyTask: vi.fn(),
+  prepareAssistantPatch: vi.fn(), getAssistantPatch: vi.fn(), reconcileAssistantTask: vi.fn(),
 }));
 vi.mock('../SuperAgentConsoleUtils', () => ({
   getAuthHeader: () => ({ Authorization: 'Bearer test' }),
@@ -20,7 +22,8 @@ const draft = {
 };
 const snapshot = {
   success: true, tasks: [draft], executionEnabled: true,
-  executionPolicy: 'read-only-explicit-run', liveTaskIds: [], unverifiedTaskIds: [],
+  executionPolicy: 'read-only-explicit-run', supportedModes: ['analysis', 'patch-preview'],
+  liveTaskIds: [], unverifiedTaskIds: [],
 };
 beforeEach(() => {
   vi.resetAllMocks();
@@ -32,6 +35,11 @@ beforeEach(() => {
   vi.mocked(runAssistantReadOnlyTask).mockResolvedValue({
     success: true, scheduled: true, taskId: draft.taskId,
   });
+  vi.mocked(prepareAssistantPatch).mockResolvedValue({ success: true, scheduled: true, taskId: draft.taskId });
+  vi.mocked(reconcileAssistantTask).mockResolvedValue({ success: true, replayed: false,
+    task: { ...draft, status: 'interrupted', revision: 4 } });
+  vi.mocked(getAssistantPatch).mockResolvedValue({ success: true, taskId: draft.taskId,
+    patch: 'diff --git a/src/file.ts b/src/file.ts' });
   vi.mocked(getAssistantTaskResult).mockResolvedValue({
     success: true, taskId: draft.taskId, result: 'Verified review',
   });
@@ -103,6 +111,42 @@ describe('session-scoped background analysis panel', () => {
     await open();
     fireEvent.click(screen.getByRole('button', { name: 'View result Investigate app' }));
     await waitFor(() => expect(screen.getByText('Verified review')).toBeTruthy());
+  });
+  it('requires approval to prepare an isolated patch', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    await open();
+    fireEvent.click(screen.getByRole('button', { name: 'Prepare patch Investigate app' }));
+    expect(prepareAssistantPatch).not.toHaveBeenCalled();
+    confirm.mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Prepare patch Investigate app' }));
+    await waitFor(() => expect(prepareAssistantPatch).toHaveBeenCalledOnce());
+    expect(vi.mocked(prepareAssistantPatch).mock.calls[0].slice(0,4))
+      .toEqual(['D:/project', 'sess_1', draft.taskId, 1]);
+  });
+  it('reconciles an orphan but never retries it', async () => {
+    vi.mocked(getAssistantDrafts).mockResolvedValue({
+      ...snapshot, tasks: [{ ...draft, status: 'running', revision: 3 }],
+      unverifiedTaskIds: [draft.taskId],
+    });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    await open();
+    fireEvent.click(screen.getByRole('button', { name: 'Reconcile task Investigate app' }));
+    await waitFor(() => expect(reconcileAssistantTask).toHaveBeenCalledOnce());
+    expect(vi.mocked(reconcileAssistantTask).mock.calls[0].slice(0,4))
+      .toEqual(['D:/project','sess_1', draft.taskId, 3]);
+    expect(runAssistantReadOnlyTask).not.toHaveBeenCalled();
+    expect(prepareAssistantPatch).not.toHaveBeenCalled();
+  });
+  it('inspects completed verified patch without applying it', async () => {
+    vi.mocked(getAssistantDrafts).mockResolvedValue({
+      ...snapshot, tasks: [{ ...draft, status: 'completed', revision: 4,
+        evidenceIds: ['patch_review_ready'] }],
+    });
+    await open();
+    fireEvent.click(screen.getByRole('button', { name: 'Review patch Investigate app' }));
+    await waitFor(() => expect(screen.getByText(/diff --git a\/src\/file/)).toBeTruthy());
+    expect(getAssistantPatch).toHaveBeenCalledOnce();
+    expect(prepareAssistantPatch).not.toHaveBeenCalled();
   });
   it('keeps older Core drafts non-executable', async () => {
     vi.mocked(getAssistantDrafts).mockResolvedValue({

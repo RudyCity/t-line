@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { ListTodo, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import {
   addAssistantDraft, cancelAssistantDraft, getAssistantDrafts,
-  runAssistantReadOnlyTask, getAssistantTaskResult, type AssistantDraftTask,
+  runAssistantReadOnlyTask, getAssistantTaskResult, prepareAssistantPatch,
+  getAssistantPatch, reconcileAssistantTask, type AssistantDraftTask,
 } from './AssistantTaskDraftApi';
 import { getAuthHeader } from './SuperAgentConsoleUtils';
 
@@ -14,6 +15,7 @@ export function AssistantTaskDraftPanel({ workspace, sessionId }: {
   const [title, setTitle] = useState('');
   const [drafts, setDrafts] = useState<AssistantDraftTask[]>([]);
   const [enabled, setEnabled] = useState(false);
+  const [patchEnabled, setPatchEnabled] = useState(false);
   const [liveIds, setLiveIds] = useState<string[]>([]);
   const [unverifiedIds, setUnverifiedIds] = useState<string[]>([]);
   const [error, setError] = useState('');
@@ -24,7 +26,7 @@ export function AssistantTaskDraftPanel({ workspace, sessionId }: {
 
   useEffect(() => {
     setDrafts([]); setTitle(''); setError(''); setResult(null);
-    setLiveIds([]); setUnverifiedIds([]); setEnabled(false);
+    setLiveIds([]); setUnverifiedIds([]); setEnabled(false); setPatchEnabled(false);
     if (!open || !workspace || !sessionId) return;
     const controller = new AbortController();
     let alive = true;
@@ -35,6 +37,8 @@ export function AssistantTaskDraftPanel({ workspace, sessionId }: {
         setDrafts(snapshot.tasks);
         setEnabled(snapshot.executionEnabled === true &&
           snapshot.executionPolicy === 'read-only-explicit-run');
+        setPatchEnabled(snapshot.executionEnabled === true &&
+          snapshot.supportedModes?.includes('patch-preview') === true);
         setLiveIds(snapshot.liveTaskIds || []);
         setUnverifiedIds(snapshot.unverifiedTaskIds || []);
         setError('');
@@ -102,6 +106,41 @@ export function AssistantTaskDraftPanel({ workspace, sessionId }: {
     } finally { setSaving(false); }
   };
 
+  const preparePatch = async (task: AssistantDraftTask) => {
+    if (saving || !patchEnabled || task.status !== 'queued') return;
+    if (!window.confirm('Prepare an isolated Git patch proposal? Only tracked source/test files may change in a separate worktree. Nothing will be merged automatically.')) return;
+    setSaving(true); setError(''); setNotice('');
+    try {
+      await prepareAssistantPatch(workspace, sessionId, task.taskId, task.revision, getAuthHeader);
+      setNotice('Patch proposal started in an isolated worktree; continue chatting.');
+      setRefresh(n => n + 1);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Patch preparation failed');
+    } finally { setSaving(false); }
+  };
+  const previewPatch = async (task: AssistantDraftTask) => {
+    if (saving || task.status !== 'completed') return;
+    setSaving(true); setError('');
+    try {
+      const response = await getAssistantPatch(workspace, sessionId, task.taskId, getAuthHeader);
+      setResult({ taskId: task.taskId, text: response.patch });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Verified patch unavailable');
+    } finally { setSaving(false); }
+  };
+  const reconcile = async (task: AssistantDraftTask) => {
+    if (saving || !unverifiedIds.includes(task.taskId)) return;
+    if (!window.confirm('Mark this orphaned task interrupted? No previous tool operations will be replayed.')) return;
+    setSaving(true); setError('');
+    try {
+      await reconcileAssistantTask(workspace, sessionId, task.taskId, task.revision, getAuthHeader);
+      setNotice('Task marked interrupted for manual reconciliation; not restarted.');
+      setRefresh(n => n + 1);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Reconciliation failed');
+    } finally { setSaving(false); }
+  };
+
   return (
     <section className="border-t border-[var(--border-color)] bg-[var(--bg-card)] text-[11px] font-sans">
       <button type="button" aria-expanded={open} onClick={() => setOpen(v => !v)}
@@ -143,6 +182,16 @@ export function AssistantTaskDraftPanel({ workspace, sessionId }: {
                   aria-label={'Run read-only ' + draft.title}
                   className="text-[var(--color-primary)] disabled:opacity-40">Run</button>
               )}
+              {draft.status === 'queued' && patchEnabled && (
+                <button type="button" disabled={saving} onClick={() => { void preparePatch(draft); }}
+                  aria-label={'Prepare patch ' + draft.title}
+                  className="text-[var(--color-primary)] disabled:opacity-40">Patch</button>
+              )}
+              {unverifiedIds.includes(draft.taskId) && (
+                <button type="button" disabled={saving} onClick={() => { void reconcile(draft); }}
+                  aria-label={'Reconcile task ' + draft.title}
+                  className="text-amber-400 disabled:opacity-50">Reconcile</button>
+              )}
               {['queued', 'planning', 'running'].includes(draft.status) &&
                 !unverifiedIds.includes(draft.taskId) && (
                 <button type="button" disabled={saving} onClick={() => { void cancel(draft); }}
@@ -150,9 +199,16 @@ export function AssistantTaskDraftPanel({ workspace, sessionId }: {
                   className="text-amber-400 disabled:opacity-50">Cancel</button>
               )}
               {draft.status === 'completed' && (
-                <button type="button" disabled={saving} onClick={() => { void view(draft); }}
-                  aria-label={'View result ' + draft.title}
-                  className="text-[var(--color-primary)] disabled:opacity-50">Result</button>
+                <>
+                  <button type="button" disabled={saving} onClick={() => { void view(draft); }}
+                    aria-label={'View result ' + draft.title}
+                    className="text-[var(--color-primary)] disabled:opacity-50">Result</button>
+                  {draft.evidenceIds.includes('patch_review_ready') && (
+                    <button type="button" disabled={saving} onClick={() => { void previewPatch(draft); }}
+                      aria-label={'Review patch ' + draft.title}
+                      className="text-[var(--color-primary)] disabled:opacity-50">Review patch</button>
+                  )}
+                </>
               )}
             </div>
           ))}

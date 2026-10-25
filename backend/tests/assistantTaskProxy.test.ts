@@ -82,6 +82,29 @@ describe('desktop assistant task fixed-action proxy', () => {
     })).status).toBe(400);
     expect(observed).toHaveLength(2);
   });
+  it('forwards only fixed patch proposal and reconciliation operations', async () => {
+    const { base, observed } = await fixture({ role: 'admin' });
+    const taskId = 'c7ba78d0-1719-4a8e-90b4-15832cf48114';
+    const query = '?sessionId=session123&workspace=' + encodeURIComponent('D:/project');
+    for (const action of ['prepare', 'reconcile']) {
+      const reply = await fetch(base + '/' + taskId + '/' + action + query, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expectedRevision: 3, secret: 'leak', ownerId: 'another' }),
+      });
+      expect(reply.status).toBe(200);
+    }
+    const patchReply = await fetch(base + '/' + taskId + '/patch' + query);
+    expect(patchReply.status).toBe(200);
+    expect(observed.map(o => o.method)).toEqual(['POST', 'POST', 'GET']);
+    expect(observed.map(o => o.path.split('?')[0])).toEqual([
+      '/api/assistant/tasks/' + taskId + '/prepare',
+      '/api/assistant/tasks/' + taskId + '/reconcile',
+      '/api/assistant/tasks/' + taskId + '/patch',
+    ]);
+    expect(JSON.parse(observed[0].body)).toEqual({ expectedRevision: 3 });
+    expect(JSON.parse(observed[1].body)).toEqual({ expectedRevision: 3 });
+    expect(observed[2].body).toBe('');
+  });
   it('rejects nonoperator, unscoped and unknown actions before contacting Core', async () => {
     const denied = await fixture({ role: 'viewer' });
     const path = '?sessionId=session123&workspace=project';

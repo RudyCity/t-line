@@ -21,7 +21,8 @@ export function createAssistantTaskProxy(
     next();
   });
 
-  type Action = 'list' | 'events' | 'inspect' | 'create' | 'cancel' | 'run' | 'result';
+  type Action = 'list' | 'events' | 'inspect' | 'create' | 'cancel' |
+    'run' | 'result' | 'prepare' | 'patch' | 'reconcile';
   const forward = (action: Action) => async (req: Request, res: Response) => {
     const workspace = req.query.workspace;
     const sessionId = req.query.sessionId;
@@ -31,7 +32,8 @@ export function createAssistantTaskProxy(
       res.status(400).json({ error: 'Explicit workspace and sessionId required' });
       return;
     }
-    const hasId = action === 'inspect' || action === 'cancel' || action === 'run' || action === 'result';
+    const hasId = action === 'inspect' || action === 'cancel' || action === 'run' ||
+      action === 'result' || action === 'prepare' || action === 'patch' || action === 'reconcile';
     if (hasId && (typeof taskId !== 'string' || !/^[0-9a-f-]{36}$/i.test(taskId))) {
       res.status(400).json({ error: 'Invalid task ID' });
       return;
@@ -39,7 +41,7 @@ export function createAssistantTaskProxy(
     const supplied = req.body;
     const body: Record<string, unknown> | undefined = action === 'create'
       ? { goalId: supplied?.goalId, title: supplied?.title, idempotencyKey: supplied?.idempotencyKey }
-      : (action === 'cancel' || action === 'run')
+      : (action === 'cancel' || action === 'run' || action === 'prepare' || action === 'reconcile')
         ? { expectedRevision: supplied?.expectedRevision } : undefined;
     if (action === 'create' &&
         (typeof body?.goalId !== 'string' || typeof body?.title !== 'string' ||
@@ -47,7 +49,8 @@ export function createAssistantTaskProxy(
       res.status(400).json({ error: 'Invalid task draft' });
       return;
     }
-    if ((action === 'run' || action === 'cancel') &&
+    if ((action === 'run' || action === 'cancel' ||
+         action === 'prepare' || action === 'reconcile') &&
         (!Number.isSafeInteger(body?.expectedRevision) || (body!.expectedRevision as number) < 1)) {
       res.status(400).json({ error: 'Expected task revision required' });
       return;
@@ -65,7 +68,8 @@ export function createAssistantTaskProxy(
     let route = '/api/assistant/tasks';
     if (action === 'events') route += '/events';
     if (hasId) route += '/' + taskId;
-    if (action === 'cancel' || action === 'run' || action === 'result') route += '/' + action;
+    if (action === 'cancel' || action === 'run' || action === 'result' ||
+        action === 'prepare' || action === 'patch' || action === 'reconcile') route += '/' + action;
     const cursor = req.query.cursor;
     if (action === 'events' && cursor !== undefined &&
         (typeof cursor !== 'string' || !/^\d{1,15}$/.test(cursor))) {
@@ -74,7 +78,8 @@ export function createAssistantTaskProxy(
     }
     const query = new URLSearchParams({ sessionId, workspace });
     if (action === 'events' && typeof cursor === 'string') query.set('cursor', cursor);
-    const method = action === 'create' || action === 'cancel' || action === 'run' ? 'POST' : 'GET';
+    const method = action === 'create' || action === 'cancel' || action === 'run' ||
+      action === 'prepare' || action === 'reconcile' ? 'POST' : 'GET';
     const upstream = http.request({
       hostname: '127.0.0.1', port, path: route + '?' + query.toString(),
       method, timeout: 8000,
@@ -106,8 +111,11 @@ export function createAssistantTaskProxy(
   router.get('/events', forward('events'));
   router.get('/:taskId', forward('inspect'));
   router.get('/:taskId/result', forward('result'));
+  router.get('/:taskId/patch', forward('patch'));
   router.post('/', forward('create'));
   router.post('/:taskId/run', forward('run'));
+  router.post('/:taskId/prepare', forward('prepare'));
+  router.post('/:taskId/reconcile', forward('reconcile'));
   router.post('/:taskId/cancel', forward('cancel'));
   return router;
 }

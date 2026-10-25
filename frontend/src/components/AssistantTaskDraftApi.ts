@@ -20,7 +20,8 @@ async function request<T>(route: string, auth: () => Record<string, string>,
 export const getAssistantDrafts = (workspace: string, sessionId: string,
   auth: () => Record<string, string>, signal?: AbortSignal) =>
   request<{ success: boolean; tasks: AssistantDraftTask[]; executionEnabled: boolean;
-    liveTaskIds: string[]; unverifiedTaskIds: string[]; executionPolicy: string }>(
+    liveTaskIds: string[]; unverifiedTaskIds: string[]; executionPolicy: string;
+    supportedModes?: string[] }>(
     base + '?' + contextQuery(workspace, sessionId), auth, {}, signal);
 
 export const addAssistantDraft = (workspace: string, sessionId: string,
@@ -30,20 +31,37 @@ export const addAssistantDraft = (workspace: string, sessionId: string,
       method: 'POST', body: JSON.stringify({ title, goalId: idempotencyKey, idempotencyKey }),
     });
 
+const taskPath = (workspace: string, sessionId: string, taskId: string, action: string) =>
+  base + '/' + encodeURIComponent(taskId) + '/' + action + '?' +
+    contextQuery(workspace, sessionId);
+const postRevision = (workspace: string, sessionId: string, taskId: string,
+  action: string, expectedRevision: number, auth: () => Record<string, string>) =>
+  request<{ success: boolean; taskId?: string; task?: AssistantDraftTask; replayed?: false; scheduled?: boolean }>(
+    taskPath(workspace, sessionId, taskId, action), auth,
+    { method: 'POST', body: JSON.stringify({ expectedRevision }) });
+
 export const cancelAssistantDraft = (workspace: string, sessionId: string,
   taskId: string, expectedRevision: number, auth: () => Record<string, string>) =>
-  request<{ success: boolean; task: AssistantDraftTask }>(
-    base + '/' + encodeURIComponent(taskId) + '?' + contextQuery(workspace, sessionId),
-    auth, { method: 'POST', body: JSON.stringify({ expectedRevision }) });
+  postRevision(workspace, sessionId, taskId, 'cancel', expectedRevision, auth);
 
 export const runAssistantReadOnlyTask = (workspace: string, sessionId: string,
   taskId: string, expectedRevision: number, auth: () => Record<string, string>) =>
-  request<{ success: boolean; scheduled: boolean; taskId: string }>(
-    base + '/' + encodeURIComponent(taskId) + '/run?' + contextQuery(workspace, sessionId),
-    auth, { method: 'POST', body: JSON.stringify({ expectedRevision }) });
+  postRevision(workspace, sessionId, taskId, 'run', expectedRevision, auth);
+
+export const prepareAssistantPatch = (workspace: string, sessionId: string,
+  taskId: string, expectedRevision: number, auth: () => Record<string, string>) =>
+  postRevision(workspace, sessionId, taskId, 'prepare', expectedRevision, auth);
+
+export const reconcileAssistantTask = (workspace: string, sessionId: string,
+  taskId: string, expectedRevision: number, auth: () => Record<string, string>) =>
+  postRevision(workspace, sessionId, taskId, 'reconcile', expectedRevision, auth);
 
 export const getAssistantTaskResult = (workspace: string, sessionId: string,
   taskId: string, auth: () => Record<string, string>) =>
   request<{ success: boolean; taskId: string; result: string }>(
-    base + '/' + encodeURIComponent(taskId) + '/result?' + contextQuery(workspace, sessionId),
-    auth);
+    taskPath(workspace, sessionId, taskId, 'result'), auth);
+
+export const getAssistantPatch = (workspace: string, sessionId: string,
+  taskId: string, auth: () => Record<string, string>) =>
+  request<{ success: boolean; taskId: string; patch: string }>(
+    taskPath(workspace, sessionId, taskId, 'patch'), auth);
