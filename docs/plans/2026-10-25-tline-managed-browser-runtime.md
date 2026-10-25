@@ -123,6 +123,8 @@ UI: show browser engine, executable origin/version, managed profile, connection/
 
 **M3 native checkpoint (2026-10-25):** Rust desktop supervisor and installed Windows Chrome have passed an isolated real-process lifecycle smoke, including owned launch/stop and CDP identity verification. The compiled desktop binary was built without launching the GUI. Packaged app IPC and real authenticated Core round-trip are still outstanding. See [M3 native lifecycle](2026-10-25-tline-browser-m3-native-lifecycle.md).
 
+**M3-E checkpoint (2026-10-26):** Native app `Exit` now stops only T-Line-owned Chrome processes while tray minimization leaves them alive. The fixed-loopback Core HTTP client has isolated authorization/response tests. Packaged Windows UI and live Core registration are not yet accepted. See [M3-E report](2026-10-26-tline-browser-m3e-core-transport-and-exit.md).
+
 ### P1-A — Browser Manager UI (functional real-window MVP)
 
 - [ ] Add `ManagedBrowserPanel.tsx` and small hooks/types under `frontend/src/components/browser-managed/` and `frontend/src/hooks/`.

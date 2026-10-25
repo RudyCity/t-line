@@ -44,6 +44,8 @@
 
 **Managed Chrome native lifecycle (M3):** The Windows Rust desktop supervisor now revalidates the managed browser's own CDP identity on status/target/pairing requests, displays disconnected state without reattaching a reused port, stops only an owned Chrome process tree, and cleans a stopped profile's stale endpoint marker only when its fingerprint matches. The opt-in Rust test with real isolated headless Chrome and the offline Windows desktop binary build have passed. Packaged Tauri GUI interactions and live authenticated Core registration remain outstanding. See [M3 verification](docs/plans/2026-10-25-tline-browser-m3-native-lifecycle.md).
 
+**M3-E desktop exit and Core transport:** The managed browser supervisor stops its own Chrome process trees only on an actual Tauri `Exit` (not when the UI is minimized to tray) and conservatively removes only verified stale endpoint markers. The native registration HTTP transport now has independent success/denial tests against an isolated local service and rejects invalid expiry. This does **not** establish a live production Core registration. See [M3-E test report](docs/plans/2026-10-26-tline-browser-m3e-core-transport-and-exit.md).
+
 ### 🔐 Security & Remote Workspace Sharing
 * **Cloudflare Tunnel Integration**: Share your local dev server, terminal sessions, and workspace remotely with zero-trust access tokens and password protection.
 * **Tauri v2 Desktop Native**: Native C++/Rust desktop wrapper keeping RAM footprint under 100MB with system tray support.

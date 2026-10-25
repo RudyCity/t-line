@@ -164,7 +164,13 @@ fn current_status(map: &mut HashMap<String, OwnedBrowser>) -> Vec<BrowserStatus>
         }
     }
     for id in stopped {
-        map.remove(&id);
+        if let Some(owned) = map.remove(&id) {
+            if let (Some(port), Some(fingerprint)) = (owned.port, owned.fingerprint.as_deref()) {
+                // A naturally exited owned browser may leave the old marker.
+                // Preserve active/foreign markers; retire only matching stale ones.
+                let _ = retire_owned_port_file(&owned.profile_path, port, fingerprint);
+            }
+        }
     }
     results
 }
@@ -399,6 +405,19 @@ fn retire_owned_port_file(
     fs::remove_file(path).map_err(|e| e.to_string())?;
     Ok(true)
 }
+/// App exit cleanup applies only to Child handles created by this Tauri
+/// instance. Main-window minimize-to-tray is not an app exit.
+pub fn shutdown_owned(state: &ManagedBrowserState) {
+    if let Ok(mut guard) = state.children.lock() {
+        for owned in guard.values_mut() {
+            let _ = stop_owned_process(owned);
+            if let (Some(port), Some(fingerprint)) = (owned.port, owned.fingerprint.as_deref()) {
+                let _ = retire_owned_port_file(&owned.profile_path, port, fingerprint);
+            }
+        }
+        guard.clear();
+    }
+}
 #[tauri::command]
 pub fn managed_browser_stop(
     webview: tauri::Webview,
@@ -583,12 +602,7 @@ pub fn managed_browser_gateway_pairing(
 }
 /// Register a verified, currently-owned browser target directly from Rust.
 /// The local Core service credential is never returned to React.
-#[derive(serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RegistrationReceipt {
-    registered: bool,
-    expires_at: u64,
-}
+pub use crate::managed_browser_core::RegistrationReceipt;
 fn local_core_token() -> Result<String, String> {
     let home = std::env::var_os("USERPROFILE")
         .or_else(|| std::env::var_os("HOME"))
@@ -692,31 +706,7 @@ fn register_with_core(
         "profileId": pair.profile_id, "generation": pair.generation,
         "port": pair.port, "targetId": pair.target_id, "browserFingerprint": fingerprint
     });
-    let response = ureq::post("http://127.0.0.1:7888/api/browser/managed/register")
-        .set("Authorization", &format!("Bearer {token}"))
-        .set("Content-Type", "application/json")
-        .timeout(Duration::from_secs(4))
-        .send_string(&payload.to_string())
-        .map_err(|_| "Authenticated local Core browser registration unavailable.")?;
-    use std::io::Read;
-    let mut body = String::new();
-    response
-        .into_reader()
-        .take(4096)
-        .read_to_string(&mut body)
-        .map_err(|_| "Could not read local Core registration response.")?;
-    let result: serde_json::Value =
-        serde_json::from_str(&body).map_err(|_| "Invalid Core registration response.")?;
-    let expires = result["registration"]["expiresAt"]
-        .as_u64()
-        .ok_or("Core response did not confirm registration expiry.")?;
-    if result["success"] != true {
-        return Err("Core did not confirm target registration.".into());
-    }
-    Ok(RegistrationReceipt {
-        registered: true,
-        expires_at: expires,
-    })
+    crate::managed_browser_core::post_registration(7888, &token, &payload)
 }
 #[tauri::command]
 pub async fn managed_browser_gateway_register(
@@ -848,7 +838,15 @@ mod tests {
             !retire_owned_port_file(&profile, port, &fingerprint).unwrap(),
             "must never remove an active profile endpoint"
         );
-        stop_owned_process(cleanup.browser.as_mut().unwrap()).expect("stop only spawned Chrome");
+        // Exercise the real app-exit cleanup path, not just direct Stop.
+        let state = ManagedBrowserState::default();
+        state
+            .children
+            .lock()
+            .unwrap()
+            .insert("native-smoke".into(), cleanup.browser.take().unwrap());
+        shutdown_owned(&state);
+        assert!(state.children.lock().unwrap().is_empty());
         let closed = Instant::now() + Duration::from_secs(6);
         while browser_port(&profile).is_some() && Instant::now() < closed {
             thread::sleep(Duration::from_millis(180));

@@ -19,6 +19,7 @@ mod tray_logic;
 
 mod state;
 mod managed_browser;
+mod managed_browser_core;
 
 use backend_identity::{decide_port, verify_local_backend, PortDecision};
 
@@ -1878,6 +1879,10 @@ pub fn run() {
 
     app.run(move |app_handle, event| {
         if let tauri::RunEvent::Exit = event {
+            // Managed browser processes belong to this desktop instance only.
+            // Closing to tray is not Exit and must not terminate them.
+            let browsers = app_handle.state::<managed_browser::ManagedBrowserState>();
+            managed_browser::shutdown_owned(&browsers);
             let state = app_handle.state::<DesktopState>();
             stop_backend(&state);
         }

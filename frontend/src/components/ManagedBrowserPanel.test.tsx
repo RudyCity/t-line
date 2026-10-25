@@ -96,6 +96,26 @@ describe('managed browser safety contract', () => {
     expect(screen.getByText(/Pairing instruction routed to your workspace assistant/)).toBeTruthy();
     expect(invoke).not.toHaveBeenCalledWith('managed_browser_launch', expect.anything());
   });
+  it('keeps disconnected browser unpaired and offers a clean recovery profile', async () => {
+    const invoke = vi.fn(async (name: string) => {
+      if (name === 'managed_browser_discover') return { available: true, engine: 'system-chrome' };
+      if (name === 'managed_browser_status') return [{
+        profileId: 'default-managed', generation: '123-456',
+        lifecycle: 'disconnected', debuggingAvailable: false,
+      }];
+      throw new Error('Disconnected runtime cannot enumerate targets');
+    });
+    vi.stubGlobal('__TAURI__', { core: { invoke } });
+    render(<ManagedBrowserPanel active initialUrl="about:blank" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle managed browser' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Enable managed browser' }));
+    expect(await screen.findByText(/Chrome is still owned by T-Line/)).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Refresh tabs' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole('button', { name: /Pair agent with/ })).toBeNull();
+    fireEvent.change(screen.getByLabelText('Profile'), { target: { value: 'recovery' } });
+    expect(screen.getByText(/The recovery profile starts empty/)).toBeTruthy();
+    expect(invoke).not.toHaveBeenCalledWith('managed_browser_gateway_pairing', expect.anything());
+  });
   it('never sends a browser agent request if native Core registration is rejected', async () => {
     const runtime = { profileId: 'default-managed', generation: '789-17929200000000',
       lifecycle: 'ready', debuggingAvailable: true };

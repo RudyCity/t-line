@@ -1,3 +1,13 @@
+## [1.3.725] - 2026-10-26
+
+### Managed Browser — App Exit Ownership and Local Core Transport
+
+- Stop only T-Line-owned Chrome process trees on actual desktop exit while preserving tray-minimized browser sessions.
+- Retire exited managed browser profile markers only when their original port and browser fingerprint match and the CDP endpoint is no longer running.
+- Extract native Core registration HTTP client into a small dedicated Rust module with loopback bearer-header and authorization rejection tests, and validate bounded short-lived registration expiry.
+- Add UI regression coverage for disconnected browser restrictions and recovery profile availability.
+- Real isolated Windows Chrome shutdown and mocked loopback Core HTTP tests pass. Packaged Windows GUI and live authenticated Core round-trip are still pending.
+
 ## [1.3.724] - 2026-10-25
 
 ### Conversational task delegation and calmer desktop assistant UI
