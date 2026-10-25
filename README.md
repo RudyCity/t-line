@@ -207,6 +207,8 @@ are saved as revisioned Studio project data and used by offline HTML and React
 exports. Invalid/dangling layer targets are rejected server-side. This is a
 declarative rules panel, not the planned free-form graph/state-machine editor.
 
+**Code → MP4 (developer preview):** In Studio, the **Code → MP4** panel appears if the backend reports `studioCodeToVideo=offline-chromium-ffmpeg-preview-v1` and `localCodeToVideoReady=true`. It can render the current Studio scene (identical to its HTML/React wrapper) or a self-contained, explicitly trusted local `.html` or **Studio-exported** `.tsx`. External React/Next.js source must be compiled into a self-contained HTML build before rendering. Users can set width, height, FPS and duration, watch the MP4 preview and download it. Limits: 0.25–12s, max 300 frames, up to 1920×1080, H.264 MP4 without audio. Chrome/Edge/Chromium and FFmpeg must already be installed; no remote URLs or assets are loaded. This does not promise parity with arbitrary JS animation frameworks and is NOT a general hostile-HTML sandbox. The backend runs this preview synchronously, and installed-desktop click-through E2E remains unverified.
+
 **Experimental Video → Editable Studio Code:** On a backend advertising
 `experimentalMultiVectorReconstruction=two-to-four-bright-separated-objects-api-v1`,
 the Studio tab allows the user to select a **local MP4/WebM (1–12 seconds, up

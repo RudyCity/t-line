@@ -31,6 +31,7 @@ import { StudioTimeline } from './StudioTimeline';
 import { StudioAudioPanel } from './StudioAudioPanel';
 import { StudioInteractionPanel } from './StudioInteractionPanel';
 import { StudioVideoToCodePanel } from './StudioVideoToCodePanel';
+import { StudioCodeToVideoPanel } from './StudioCodeToVideoPanel';
 import { motionPlaybackFrame } from '../services/studioTimelineClock';
 import { DEFAULT_MOTION_VIEWPORT, panStudioViewport, zoomStudioViewport, type StudioViewport } from '../services/studioViewport';
 
@@ -111,6 +112,7 @@ export function StudioTab({ workspacePath, isActive }: Props) {
   const [particlePreview, setParticlePreview] = useState<StudioProject | null>(null);
   const [extraExportsAvailable, setExtraExportsAvailable] = useState(false);
   const [codeExportAvailable, setCodeExportAvailable] = useState(false);
+  const [codeToVideoAvailable, setCodeToVideoAvailable] = useState(false);
   const [interactionRulesAvailable, setInteractionRulesAvailable] = useState(false);
   const [multiVideoAvailable, setMultiVideoAvailable] = useState(false);
   const [textOcrAvailable, setTextOcrAvailable] = useState(false);
@@ -153,7 +155,7 @@ export function StudioTab({ workspacePath, isActive }: Props) {
     setPromptVoiceover(''); setPromptVoiceoverGain(1); setQuality(null); setVisionReview(null);
     setVisionAvailable(false); setVisionRepairAvailable(false); setCaptionsAvailable(false);
     setCompoundAvailable(false); setEffectsAvailable(false); setStackAvailable(false); setHistoryAvailable(false);
-    setBrandAvailable(false); setTemplatesAvailable(false); setBatchAvailable(false); setBeatAvailable(false); setParticlesAvailable(false); setParticlePreview(null); setTypographyAvailable(false); setTypographyPreview(null); setExtraExportsAvailable(false); setCodeExportAvailable(false); setInteractionRulesAvailable(false); setMultiVideoAvailable(false); setTextOcrAvailable(false); setTextOcrTimelineAvailable(false); setReactCodeAvailable(false); setCodeFormat('html'); setStoryboardAvailable(false); setBeatPreview(null); setTemplatePreview(null); setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null); setBeatPreview(null); setParticlePreview(null); setTypographyPreview(null);
+    setBrandAvailable(false); setTemplatesAvailable(false); setBatchAvailable(false); setBeatAvailable(false); setParticlesAvailable(false); setParticlePreview(null); setTypographyAvailable(false); setTypographyPreview(null); setExtraExportsAvailable(false); setCodeExportAvailable(false); setCodeToVideoAvailable(false); setInteractionRulesAvailable(false); setMultiVideoAvailable(false); setTextOcrAvailable(false); setTextOcrTimelineAvailable(false); setReactCodeAvailable(false); setCodeFormat('html'); setStoryboardAvailable(false); setBeatPreview(null); setTemplatePreview(null); setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null); setBeatPreview(null); setParticlePreview(null); setTypographyPreview(null);
     setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
     setScheduler(null); setSupervisor(null); setSupervisedRender(false);
@@ -194,6 +196,8 @@ export function StudioTab({ workspacePath, isActive }: Props) {
         setTypographyAvailable(motionInfo?.capabilities?.motionAdvancedTypography?.includes('letter-reveal') === true);
         setExtraExportsAvailable(motionInfo?.capabilities?.motionExtraExportFormats?.includes('gif') === true);
         setCodeExportAvailable(motionInfo?.capabilities?.studioToCodeExport === 'svg-native-html-v2');
+        setCodeToVideoAvailable(motionInfo?.capabilities?.studioCodeToVideo === 'offline-chromium-ffmpeg-preview-v1'
+          && motionInfo?.capabilities?.localCodeToVideoReady === true);
         setReactCodeAvailable(motionInfo?.capabilities?.studioToCodeFormats?.includes('react') === true);
         setInteractionRulesAvailable(motionInfo?.capabilities?.studioInteractionRules === 'declarative-bindings-v1');
         setMultiVideoAvailable(motionInfo?.capabilities?.experimentalMultiVectorReconstruction === 'two-to-four-bright-separated-objects-api-v1');
@@ -1434,6 +1438,8 @@ export function StudioTab({ workspacePath, isActive }: Props) {
              busy={busy || !!presetPreview || !!effectPreview || !!templatePreview || !!beatPreview || !!particlePreview || !!typographyPreview} isActive={isActive && !presetPreview && !effectPreview && !templatePreview && !beatPreview && !particlePreview && !typographyPreview} onFrame={next => { setPlaying(false); setFrame(next); }}
             onLayer={setSelectedLayer} onEdit={(edits, note) => applyEditorEdits(edits, note)}
             onError={message} />
+          {codeToVideoAvailable && <StudioCodeToVideoPanel workspacePath={workspacePath}
+            projectId={project.id} disabled={busy} />}
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-color)] bg-[var(--bg-sidebar)] px-3 py-2" aria-label="Render jobs">
             <div className="flex min-w-0 items-center gap-2 text-[11px]">
               <Film size={13} className="text-[var(--color-primary)]" />

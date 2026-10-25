@@ -202,7 +202,7 @@ export interface StudioMultiVideoReconstruction {
   limitations: string[];
 }
 export interface StudioCapabilities {
-  capabilities?: { motionAdvancedTypography?: string[]; motionCpuParticleOverlays?: boolean; aiStoryboardReview?: boolean; motionExtraExportFormats?: string[]; motionAudioBeatSync?: boolean; motionBatchAspectVariants?: boolean; motionBrandKit?: boolean; motionTemplateLibrary?: boolean; motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean; studioToCodeExport?: string; studioToCodeTriggers?: string[]; studioToCodeFormats?: string[]; studioInteractionRules?: string; studioInteractionRulesMax?: number; experimentalMultiVectorReconstruction?: string; experimentalTextOcrReconstruction?: string; experimentalTextOcrTimeline?: string; localTextOcrReady?: boolean };
+  capabilities?: { motionAdvancedTypography?: string[]; motionCpuParticleOverlays?: boolean; aiStoryboardReview?: boolean; motionExtraExportFormats?: string[]; motionAudioBeatSync?: boolean; motionBatchAspectVariants?: boolean; motionBrandKit?: boolean; motionTemplateLibrary?: boolean; motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean; studioToCodeExport?: string; studioToCodeTriggers?: string[]; studioToCodeFormats?: string[]; studioCodeToVideo?: string; studioCodeToVideoFormats?: string[]; localCodeToVideoReady?: boolean; studioInteractionRules?: string; studioInteractionRulesMax?: number; experimentalMultiVectorReconstruction?: string; experimentalTextOcrReconstruction?: string; experimentalTextOcrTimeline?: string; localTextOcrReady?: boolean };
 }
 export interface StudioQualityIssue {
   severity: 'warning' | 'error'; code: string; scene: number; message: string;
@@ -604,6 +604,40 @@ export const studioApi = {
     json<StudioProject>(workspace, '/projects/' + assertId(id) + '/vectorize', {
       method: 'POST', body: JSON.stringify({ baseRevision, layerId, options }),
     }),
+  codeToVideo: (workspace: string, args: {
+    projectId?: string;
+    html?: string;
+    reactTsx?: string;
+    trustLocalHtml?: boolean;
+    width: number; height: number; fps: number; durationSeconds: number;
+  }): Promise<{ id: string; bytes: number; width: number; height: number; fps: number;
+    frameCount: number; source: 'studio' | 'html' | 'studio-react' }> => {
+    if ([args.projectId, args.html, args.reactTsx].filter(Boolean).length !== 1)
+      throw new Error('Choose one Studio project, HTML or Studio React TSX');
+    if (args.projectId) assertId(args.projectId);
+    if ((args.html || args.reactTsx) && !args.trustLocalHtml)
+      throw new Error('Trust confirmation required for local HTML/Studio React TSX');
+    if (args.html && new Blob([args.html]).size > 256 * 1024) throw new Error('HTML exceeds 256 KiB');
+    if (args.reactTsx && new Blob([args.reactTsx]).size > 2 * 1024 * 1024)
+      throw new Error('Studio React TSX exceeds 2 MiB');
+    if (!Number.isSafeInteger(args.width) || args.width < 160 || args.width > 1920 || args.width % 2 ||
+      !Number.isSafeInteger(args.height) || args.height < 90 || args.height > 1080 || args.height % 2 ||
+      !Number.isSafeInteger(args.fps) || args.fps < 1 || args.fps > 30 ||
+      !Number.isFinite(args.durationSeconds) || args.durationSeconds < .25 || args.durationSeconds > 12 ||
+      Math.ceil(args.fps * args.durationSeconds) > 300) throw new Error('Unsupported Code-to-Video profile');
+    return json(workspace, '/code-to-video', { method: 'POST', body: JSON.stringify(args) });
+  },
+  async loadCodeVideo(workspace: string, id: string): Promise<string> {
+    if (!/^codevideo-[a-f0-9]{24}$/.test(id)) throw new Error('Invalid Studio code video ID');
+    const response = await motionFetch(workspace, '/code-videos/' + id + '.mp4');
+    const declared = Number(response.headers.get('content-length'));
+    if (Number.isFinite(declared) && declared > 150 * 1024 * 1024)
+      throw new Error('Code video exceeds the maximum size');
+    const video = await response.blob();
+    if (video.size < 1024 || video.size > 150 * 1024 * 1024 || video.type !== 'video/mp4')
+      throw new Error('Invalid MP4 code-to-video result');
+    return URL.createObjectURL(video);
+  },
   /** Authenticated Studio-to-Code download. Never leak bearer tokens into export URLs. */
   async exportCodeHtml(workspace: string, id: string, trigger: 'autoplay' | 'scroll' | 'click' | 'hover' = 'autoplay'): Promise<string> {
     if (!['autoplay', 'scroll', 'click', 'hover'].includes(trigger)) throw new Error('Unsupported Studio code trigger');

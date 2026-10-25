@@ -83,6 +83,35 @@ describe('Studio Studio authenticated client', () => {
     expect(()=>studioApi.reconstructTextTimelineVideo('D:/studio','../untrusted')).toThrow(/Invalid/);
     expect(mock).toHaveBeenCalledTimes(1);
   });
+  it('renders Code-to-Video using scoped authorization and downloads MP4 privately', async () => {
+    const projectId = 'studio-' + 'a'.repeat(20);
+    const videoId = 'codevideo-' + 'b'.repeat(24);
+    const response = { id: videoId, bytes: 2000, width: 640, height: 360, fps: 4,
+      frameCount: 4, source: 'studio' };
+    const mock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(response), { status: 201,
+        headers: { 'Content-Type': 'application/json' } }))
+      .mockResolvedValueOnce(new Response(new Uint8Array(2000), {
+        status: 200, headers: { 'Content-Type': 'video/mp4' },
+      }));
+    vi.stubGlobal('fetch', mock);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:code-video');
+    expect(await studioApi.codeToVideo('D:/demo', {
+      projectId, width: 640, height: 360, fps: 4, durationSeconds: 1,
+    })).toEqual(response);
+    expect(await studioApi.loadCodeVideo('D:/demo', videoId)).toBe('blob:code-video');
+    expect(mock.mock.calls[0][0]).toContain('/code-to-video?workspace=');
+    expect(mock.mock.calls[1][0]).toContain('/code-videos/' + videoId + '.mp4?workspace=');
+    for (const [, init] of mock.mock.calls) {
+      expect(init.headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    }
+    expect(mock.mock.calls.every(call => !call[0].includes('tline-only-token'))).toBe(true);
+    expect(() => studioApi.codeToVideo('D:/demo', {
+      html: '<html></html>', width: 640, height: 360, fps: 4, durationSeconds: 1,
+    })).toThrow(/Trust/);
+    await expect(studioApi.loadCodeVideo('D:/demo', '../secret')).rejects.toThrow(/Invalid/);
+    expect(mock).toHaveBeenCalledTimes(2);
+  });
   it('downloads authenticated SVG/GSAP source without exposing access tokens', async () => {
     const id = 'studio-' + 'a'.repeat(20);
     const html = '<!doctype html><svg id="studio-stage"></svg>';
