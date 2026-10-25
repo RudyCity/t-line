@@ -157,8 +157,23 @@ export type StudioEdit =
   | { type: 'set-interaction-graph'; graph: StudioInteractionGraph | null }
   | { type: 'set-audio'; audio: StudioAudioTrack | null }
   | { type: 'set-audio-tracks'; audioTracks: StudioAudioTrack[] };
+export interface StudioMultiVideoReconstruction {
+  status: 'experimental-multi';
+  projectId: string;
+  revision: number;
+  objects: Array<{
+    id: string;
+    boxes: Array<{ frame: number; x: number; y: number; width: number; height: number }>;
+    matchingCosts: number[];
+  }>;
+  sampleTimes: number[];
+  dimensions: { width: number; height: number };
+  confidence: number;
+  measuredForegroundIoU: number[];
+  limitations: string[];
+}
 export interface StudioCapabilities {
-  capabilities?: { motionAdvancedTypography?: string[]; motionCpuParticleOverlays?: boolean; aiStoryboardReview?: boolean; motionExtraExportFormats?: string[]; motionAudioBeatSync?: boolean; motionBatchAspectVariants?: boolean; motionBrandKit?: boolean; motionTemplateLibrary?: boolean; motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean; studioToCodeExport?: string; studioToCodeTriggers?: string[]; studioToCodeFormats?: string[]; studioInteractionRules?: string; studioInteractionRulesMax?: number };
+  capabilities?: { motionAdvancedTypography?: string[]; motionCpuParticleOverlays?: boolean; aiStoryboardReview?: boolean; motionExtraExportFormats?: string[]; motionAudioBeatSync?: boolean; motionBatchAspectVariants?: boolean; motionBrandKit?: boolean; motionTemplateLibrary?: boolean; motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean; studioToCodeExport?: string; studioToCodeTriggers?: string[]; studioToCodeFormats?: string[]; studioInteractionRules?: string; studioInteractionRulesMax?: number; experimentalMultiVectorReconstruction?: string };
 }
 export interface StudioQualityIssue {
   severity: 'warning' | 'error'; code: string; scene: number; message: string;
@@ -302,6 +317,38 @@ async function json<T>(workspace: string, path: string, init?: RequestInit): Pro
 }
 export const studioApi = {
   capabilities: (workspace: string) => json<StudioCapabilities>(workspace, '/'),
+  /** Small, bounded MP4/WebM reference video. Never submit client filesystem paths. */
+  async uploadVideo(workspace: string, file: File): Promise<{ id: string; bytes: number; format: string }> {
+    if (file.size < 32 || file.size > 12 * 1024 * 1024)
+      throw new Error('Studio reconstruction video must be 32 bytes to 12 MiB');
+    if (!['video/mp4', 'video/webm', ''].includes(file.type))
+      throw new Error('Choose an MP4 or WebM reference clip');
+    const data = new Uint8Array(await file.arrayBuffer());
+    let binary = '';
+    for (let i = 0; i < data.length; i += 8192) binary += String.fromCharCode(...data.subarray(i, i + 8192));
+    return json(workspace, '/videos', {
+      method: 'POST', body: JSON.stringify({ base64: btoa(binary) }),
+    });
+  },
+  reconstructMultiVideo: (workspace: string, videoId: string): Promise<StudioMultiVideoReconstruction> => {
+    if (!/^video-[a-f0-9]{64}$/.test(videoId)) throw new Error('Invalid Studio video ID');
+    return json(workspace, '/reconstruct/multi', {
+      method: 'POST', body: JSON.stringify({ videoId }),
+    });
+  },
+  async loadMultiVideoReviewUrl(workspace: string, projectId: string, revision: number): Promise<string> {
+    if (!Number.isSafeInteger(revision) || revision < 1)
+      throw new Error('Invalid Studio review revision');
+    const result = await motionFetch(workspace,
+      '/projects/' + assertId(projectId) + '/reconstruction-review.png?revision=' + revision);
+    const length = Number(result.headers.get('content-length'));
+    if (Number.isFinite(length) && length > 2 * 1024 * 1024)
+      throw new Error('Studio review preview exceeds 2 MiB');
+    const image = await result.blob();
+    if (image.type !== 'image/png' || image.size < 24 || image.size > 2 * 1024 * 1024)
+      throw new Error('Invalid Studio reconstruction PNG');
+    return URL.createObjectURL(image);
+  },
   /** Accepts image bytes only; browser paths never cross the API boundary. */
   async uploadImage(workspace: string, file: File): Promise<{ id: string; bytes: number; width: number; height: number }> {
     if (file.size < 24 || file.size > 1024 * 1024) throw new Error('Studio image must be 1 MB or smaller');

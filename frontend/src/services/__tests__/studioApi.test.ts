@@ -10,6 +10,46 @@ describe('Studio Studio authenticated client', () => {
     vi.restoreAllMocks();
     localStorage.removeItem('token');
   });
+  it('uploads and reconstructs small video through authenticated paths and reads private review', async () => {
+    const videoId = 'video-' + 'a'.repeat(64);
+    const projectId = 'studio-' + 'b'.repeat(20);
+    const input = new Uint8Array(48).fill(97);
+    const file = new File([input], 'local.mp4', { type: 'video/mp4' });
+    Object.defineProperty(file, 'arrayBuffer', { value: async () => input.buffer });
+    const report = { status: 'experimental-multi', projectId, revision: 2,
+      objects: [{ id: 'subject-1' }, { id: 'subject-2' }],
+      measuredForegroundIoU: [.9, .91, .92] };
+    const mock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: videoId, bytes: 48, format: 'mp4' }), {
+        status: 201, headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(report), {
+        status: 201, headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(input, {
+        status: 200, headers: { 'Content-Type': 'image/png' },
+      }));
+    vi.stubGlobal('fetch', mock);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:private-review');
+    await expect(studioApi.uploadVideo('D:/studio', file)).resolves.toMatchObject({ id: videoId });
+    await expect(studioApi.reconstructMultiVideo('D:/studio', videoId)).resolves.toMatchObject({
+      projectId, revision: 2,
+    });
+    await expect(studioApi.loadMultiVideoReviewUrl('D:/studio', projectId, 2))
+      .resolves.toBe('blob:private-review');
+    const routes = mock.mock.calls.map(call => call[0]) as string[];
+    expect(routes[0]).toContain('/videos?workspace=');
+    expect(routes[1]).toContain('/reconstruct/multi?workspace=');
+    expect(routes[2]).toContain('/projects/' + projectId + '/reconstruction-review.png?revision=2&workspace=');
+    expect(routes.every(route => !route.includes('tline-only-token'))).toBe(true);
+    expect(mock.mock.calls[0][1].headers).toMatchObject({ Authorization: 'Bearer tline-only-token' });
+    expect(JSON.parse(mock.mock.calls[0][1].body).base64).toBe(btoa('a'.repeat(48)));
+    expect(() => studioApi.reconstructMultiVideo('D:/studio', '../escape')).toThrow(/Invalid/);
+    await expect(studioApi.loadMultiVideoReviewUrl('D:/studio', '../escape', 2)).rejects.toThrow(/Invalid/);
+    await expect(studioApi.uploadVideo('D:/studio', new File([input], 'bad.txt', { type: 'text/plain' })))
+      .rejects.toThrow(/MP4 or WebM/);
+    expect(mock).toHaveBeenCalledTimes(3);
+  });
   it('downloads authenticated SVG/GSAP source without exposing access tokens', async () => {
     const id = 'studio-' + 'a'.repeat(20);
     const html = '<!doctype html><svg id="studio-stage"></svg>';

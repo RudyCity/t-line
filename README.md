@@ -192,7 +192,7 @@ T-Line normally starts its managed SuperAgent server using the T-Line backend's 
 
 From the Studio tab, select a vector/text/path-only project, choose **Autoplay**,
 **Scroll**, **Click** or **Hover**, then **Export Web Code**. The T-Line
-frontend downloads the authenticated HTML/SVG/GSAP export as a local file; it
+frontend downloads the authenticated offline HTML/SVG or sandboxed React TSX export as a local file; it
 never places its bearer token in a browser URL. The export needs an updated
 SuperAgent Studio backend exposing `studioToCodeExport=svg-native-html-v2`.
 The generated HTML uses a first-party native browser runtime and works offline; it is not a video-to-code AI
@@ -206,3 +206,16 @@ a stage or text/vector layer target, and play/pause/replay/seek. Up to 12 rules
 are saved as revisioned Studio project data and used by offline HTML and React
 exports. Invalid/dangling layer targets are rejected server-side. This is a
 declarative rules panel, not the planned free-form graph/state-machine editor.
+
+**Experimental Video → Editable Studio Code:** On a backend advertising
+`experimentalMultiVectorReconstruction=two-to-four-bright-separated-objects-api-v1`,
+the Studio tab allows the user to select a **local MP4/WebM (1–12 seconds, up
+to 12 MiB)** and click **Create editable layers**. The authenticated backend
+samples three frames, tries to track 2–4 separated bright shapes on a stable
+dark background, and creates a new revisioned vector project. A private
+comparison image shows three source/Studio frame pairs and foreground-mask
+similarity scores; it is not a full-fidelity guarantee. The UI rejects
+oversized/unsupported files, limits API routes to the selected workspace, and
+never exposes bearer tokens or source file paths in URLs. Changes do not
+automatically publish to any website, run arbitrary video-to-code AI, or
+replace the existing video renderer.
