@@ -1,3 +1,12 @@
+## [1.3.724] - 2026-10-25
+
+### Conversational task delegation and calmer desktop assistant UI
+- Add an explicit **Delegate** action beside Send in the main chat composer. Text hands off to a session-bound task draft for review; no auto-execution or lost chat input on a failed save.
+- Redesign the Assistant tasks panel with calm responsive cards, domain chips, state filters, live/review counters, accessible action labels, bounded scrolling, and a copyable result/patch viewer.
+- Fix periodic and manual refresh clearing unsaved drafts; block stale poll responses and keep domain selection while task status updates.
+- Give the desktop assistant a clearer general-purpose identity and friendlier natural-language chat composer typography.
+- Validate chat handoff, no-start-until-confirmation, blocked file attachments, unsaved-text retention, filter behavior, backend session guard and build with focused tests. Packaged Tauri visual E2E remains pending.
+
 ## [1.3.723] - 2026-10-25
 
 ### Managed Browser — Windows Native Lifecycle Verification (M3)

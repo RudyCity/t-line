@@ -64,8 +64,8 @@ describe('session-scoped background analysis panel', () => {
   }
   it('shows queued tasks with explicit read-only run and no implicit launch', async () => {
     await open();
-    expect(screen.getByText(/Choose a task domain, draft it/)).toBeTruthy();
-    expect(screen.getByText('draft')).toBeTruthy();
+    expect(screen.getByText(/Choose a skill, save a draft/)).toBeTruthy();
+    expect(screen.getByText('Ready')).toBeTruthy();
     expect(runAssistantReadOnlyTask).not.toHaveBeenCalled();
     expect(vi.mocked(getAssistantDrafts).mock.calls[0].slice(0,2)).toEqual(['D:/project', 'sess_1']);
   });
@@ -109,7 +109,7 @@ describe('session-scoped background analysis panel', () => {
       unverifiedTaskIds: [draft.taskId],
     });
     await open();
-    expect(screen.getByText('needs reconciliation')).toBeTruthy();
+    expect(screen.getByText('Needs reconciliation')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Cancel draft/ })).toBeNull();
     cleanup();
     vi.clearAllMocks();
@@ -158,8 +158,8 @@ describe('session-scoped background analysis panel', () => {
   });
   it('creates research tasks without forcing coding', async () => {
     await open();
-    expect((screen.getByRole('combobox', { name: 'Task domain' }) as HTMLSelectElement).value).toBe('general');
-    fireEvent.change(screen.getByRole('combobox', { name: 'Task domain' }), { target: { value: 'research' } });
+    expect(screen.getByRole('button', { name: 'Domain: General Assistant' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Domain: Research' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Task draft title' }),
       { target: { value: 'Research recent technology' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add draft' }));
@@ -174,6 +174,70 @@ describe('session-scoped background analysis panel', () => {
     await open();
     expect(screen.queryByRole('button', { name: /Prepare patch/ })).toBeNull();
     expect(screen.getByRole('button', { name: 'Run read-only Investigate app' })).toBeTruthy();
+  });
+  it('keeps unsaved text and domain during refresh', async () => {
+    await open();
+    fireEvent.click(screen.getByRole('button', { name: 'Domain: Research' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Task draft title' }), {
+      target: { value: 'My research notes are not finished' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh assistant tasks' }));
+    await waitFor(() => expect(getAssistantDrafts).toHaveBeenCalledTimes(2));
+    expect((screen.getByRole('textbox', { name: 'Task draft title' }) as HTMLTextAreaElement).value)
+      .toBe('My research notes are not finished');
+    expect(screen.getByRole('button', { name: 'Domain: Research' }).getAttribute('aria-pressed'))
+      .toBe('true');
+    expect(runAssistantReadOnlyTask).not.toHaveBeenCalled();
+  });
+  it('hands off chat text as a reviewable draft without running a worker', async () => {
+    const onDraftCreated = vi.fn();
+    const handoff = { id: 8, text: 'Compare cloud platforms', sessionId: 'sess_1', workspace: 'D:/project' };
+    const view = render(<AssistantTaskDraftPanel workspace="D:/project" sessionId="sess_1"
+      handoff={handoff} onDraftCreated={onDraftCreated}/>);
+    const editor = await screen.findByRole('textbox', { name: 'Task draft title' });
+    await waitFor(() => expect((editor as HTMLTextAreaElement).value).toBe(handoff.text));
+    expect(addAssistantDraft).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Domain: Research' }));
+    view.rerender(<AssistantTaskDraftPanel workspace="D:/project" sessionId="sess_1"
+      handoff={handoff} onDraftCreated={onDraftCreated}/>);
+    expect((editor as HTMLTextAreaElement).value).toBe(handoff.text);
+    fireEvent.click(screen.getByRole('button', { name: 'Add draft' }));
+    await waitFor(() => expect(onDraftCreated).toHaveBeenCalledWith('Compare cloud platforms'));
+    expect(vi.mocked(addAssistantDraft).mock.calls[0][5]).toBe('research');
+    expect(runAssistantReadOnlyTask).not.toHaveBeenCalled();
+  });
+  it('keeps delegated text after a save failure', async () => {
+    vi.mocked(addAssistantDraft).mockRejectedValueOnce(Error('Offline'));
+    const onDraftCreated = vi.fn();
+    render(<AssistantTaskDraftPanel workspace="D:/project" sessionId="sess_1"
+      handoff={{ id: 22, text: 'Explain these files', sessionId: 'sess_1', workspace: 'D:/project' }}
+      onDraftCreated={onDraftCreated}/>);
+    const editor = await screen.findByRole('textbox', { name: 'Task draft title' });
+    await waitFor(() => expect((editor as HTMLTextAreaElement).value).toBe('Explain these files'));
+    fireEvent.click(screen.getByRole('button', { name: 'Add draft' }));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Offline'));
+    expect((editor as HTMLTextAreaElement).value).toBe('Explain these files');
+    expect(onDraftCreated).not.toHaveBeenCalled();
+  });
+  it('filters task statuses without mixing completed and failed tasks', async () => {
+    vi.mocked(getAssistantDrafts).mockResolvedValue({
+      ...snapshot,
+      tasks: [
+        draft,
+        { ...draft, taskId: 'c8ba78d0-1719-4a8e-90b4-15832cf48115',
+          title: 'Completed summary', status: 'completed', domain: 'general' },
+        { ...draft, taskId: 'c9ba78d0-1719-4a8e-90b4-15832cf48116',
+          title: 'Failed research', status: 'failed', domain: 'research' },
+      ],
+    });
+    await open();
+    fireEvent.click(screen.getByRole('button', { name: /Completed 1/ }));
+    expect(screen.getByText('Completed summary')).toBeTruthy();
+    expect(screen.queryByText('Investigate app')).toBeNull();
+    expect(screen.getByRole('button', { name: 'View result Completed summary' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Needs review 1/ }));
+    expect(screen.getByText('Failed research')).toBeTruthy();
+    expect(screen.queryByText('Completed summary')).toBeNull();
   });
   it('keeps older Core drafts non-executable', async () => {
     vi.mocked(getAssistantDrafts).mockResolvedValue({

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Paperclip, Square, Send, ChevronDown, X, Cpu, Terminal, Search } from 'lucide-react';
+import { Paperclip, Square, Send, ChevronDown, X, Cpu, Terminal, Search, ListTodo } from 'lucide-react';
 import { SlashCommand } from './SuperAgentCommands';
 
 interface SuperAgentInputContainerProps {
@@ -8,6 +8,8 @@ interface SuperAgentInputContainerProps {
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   handleSend: (customPrompt?: string) => Promise<void> | void;
   handleAbort: () => void;
+  canDelegateAsTask?: boolean;
+  onDelegateAsTask?: () => void;
   loading: boolean;
   ws: WebSocket | null;
   attachments: Array<{
@@ -39,6 +41,8 @@ export function SuperAgentInputContainer({
   handleKeyDown,
   handleSend,
   handleAbort,
+  canDelegateAsTask = false,
+  onDelegateAsTask,
   loading,
   ws,
   attachments,
@@ -200,10 +204,10 @@ export function SuperAgentInputContainer({
               !hasActivePreset
                 ? "No active model preset selected. Please select a preset first..."
                 : ws?.readyState === WebSocket.OPEN
-                  ? (loading ? "Send another instruction; it will queue behind the active turn..." : "Enter prompt or command (e.g. /schedule, /goal, /grill-me)...")
+                  ? (loading ? "Ask a follow-up or delegate a separate task..." : "Ask anything, or delegate a task to work separately...")
                   : "Connecting to SuperAgent bridge..."
             }
-            className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 text-sm text-[var(--text-main)] placeholder-[var(--text-muted)] font-mono py-0.5 px-0 resize-none overflow-y-auto max-h-[220px] leading-relaxed"
+            className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 text-sm text-[var(--text-main)] placeholder-[var(--text-muted)] font-sans py-0.5 px-0 resize-none overflow-y-auto max-h-[220px] leading-relaxed"
             rows={1}
             disabled={!ws || ws.readyState !== WebSocket.OPEN || !hasActivePreset}
             style={{ minHeight: '36px' }}
@@ -341,6 +345,18 @@ export function SuperAgentInputContainer({
               {input.length} chars
             </span>
 
+            {onDelegateAsTask && (
+              <button type="button" onClick={onDelegateAsTask}
+                disabled={!canDelegateAsTask || !input.trim() || attachments.length > 0}
+                aria-label="Delegate as background task"
+                title={attachments.length > 0
+                  ? "Remove attachments before delegating; background tasks accept text only"
+                  : "Create a background task from this message (review required, no automatic execution)"}
+                className="inline-flex items-center gap-1 rounded-md border border-[var(--border-color)] bg-[var(--bg-card)] px-2.5 py-1.5 text-[10px] font-sans text-[var(--text-main)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]">
+                <ListTodo className="h-3.5 w-3.5" aria-hidden="true"/>
+                <span className="hidden sm:inline">Delegate</span>
+              </button>
+            )}
             {loading && (
               <button
                 onClick={handleAbort}

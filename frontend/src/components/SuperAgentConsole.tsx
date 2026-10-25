@@ -8,7 +8,7 @@ import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSi
 import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
 import { ActiveTasksBar, ChecklistTaskItem } from './ActiveTasksBar';
 import { SuperAgentTaskMonitor } from './SuperAgentTaskMonitor';
-import { AssistantTaskDraftPanel } from './AssistantTaskDraftPanel';
+import { AssistantTaskDraftPanel, type AssistantTaskHandoff } from './AssistantTaskDraftPanel';
 import { AssistantTurnQueue } from './AssistantTurnQueue';
 import { resolveAgentChatModeSwitch } from './agentModeSession';
 import { SuperAgentBrainExplorer } from './SuperAgentBrainExplorer';
@@ -77,6 +77,7 @@ export function SuperAgentConsole({
   } = useSuperAgentSessions(workspace);
 
   const [input, setInput] = useState('');
+  const [delegateHandoff, setDelegateHandoff] = useState<AssistantTaskHandoff | null>(null);
   const [loading, setLoading] = useState(false);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [browserBridgeReady, setBrowserBridgeReady] = useState(false);
@@ -1106,8 +1107,13 @@ export function SuperAgentConsole({
           )}
         </div>
 
-        {/* Center Column: Title */}
-        <div className="flex justify-center items-center">
+        {/* Desktop identity: chat first, task delegation second. */}
+        <div className="hidden md:flex flex-col items-center justify-center leading-tight">
+          <span className="flex items-center gap-1.5 text-xs font-semibold tracking-tight text-[var(--text-main)]">
+            <Sparkles size={13} className="text-[var(--color-primary)]" aria-hidden="true"/>
+            T-Line Assistant
+          </span>
+          <span className="text-[10px] text-[var(--text-muted)]">Chat · Delegate · Review</span>
         </div>
 
         {/* Right Column: Monitor & Settings Actions */}
@@ -1332,7 +1338,11 @@ export function SuperAgentConsole({
           <SuperAgentTaskMonitor key={workspace + '::' + activeSessionId}
             workspace={workspace} sessionId={activeSessionId} />
           <AssistantTaskDraftPanel key={'draft::' + workspace + '::' + activeSessionId}
-            workspace={workspace} sessionId={activeSessionId} />
+            workspace={workspace} sessionId={activeSessionId}
+            handoff={delegateHandoff?.workspace === workspace && delegateHandoff?.sessionId === activeSessionId
+              ? delegateHandoff : null}
+            onDraftCreated={submitted => setInput(previous =>
+              previous.trim() === submitted ? '' : previous)} />
           <AssistantTurnQueue key={'turn::' + workspace + '::' + activeSessionId}
             workspace={workspace} sessionId={activeSessionId} />
 
@@ -1352,6 +1362,16 @@ export function SuperAgentConsole({
               handleKeyDown={handleKeyDown}
               handleSend={handleSend}
               handleAbort={handleAbort}
+              canDelegateAsTask={Boolean(workspace && activeSessionId &&
+                sessions.some(session => session.id === activeSessionId))}
+              onDelegateAsTask={() => {
+                if (!input.trim() || attachments.length || !workspace || !activeSessionId ||
+                    !sessions.some(session => session.id === activeSessionId)) return;
+                setDelegateHandoff(previous => ({
+                  id: (previous?.id ?? 0) + 1,
+                  text: input, workspace, sessionId: activeSessionId,
+                }));
+              }}
               loading={loading}
               ws={ws}
               attachments={attachments}
