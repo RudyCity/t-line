@@ -176,6 +176,14 @@ Existing tools: CDP, CLI bridge, MCP, RMemory, Brain, daemon, gateway
 - **Remaining milestones:** task-to-worker adapter, scoped authenticated orchestration APIs, durable streamed events, task control UI, crash reconciliation, proactive goals and packaged desktop acceptance.
 - **Evidence:** `superagent/docs/plans/2026-10-25-persistent-parallel-task-runtime.md`.
 
+## Implementation checkpoint — session-scoped task API milestone (2026-10-25)
+
+- **Core:** versioned journal now has session/workspace-scoped fixed routes to list, inspect, create idempotent drafts, query event cursors, and cancel only queued drafts using optimistic revisions. Core's existing bearer and trusted-workspace gate is required.
+- **T-Line backend:** authenticated, operator-only, fixed-action proxy under `/api/superagent/assistant/tasks`. It passes no caller-controlled owner IDs, URLs or shell tools upstream.
+- **T-Line frontend:** an independent collapsible `Assistant task drafts` panel bound to the active session, explicitly marked `planning only`. Tasks do not execute until a trusted worker adapter is connected.
+- **Current limitations:** no task spawning, execution checkpoint/recovery, live task stream, cross-session execution reconciliation, permissioned worker controls, or packaged desktop acceptance. Builds and scoped route/component tests do not prove live multi-agent behavior.
+- **Reference:** `superagent/docs/plans/2026-10-25-session-scoped-assistant-task-api.md`.
+
 ## 9. Starting order
 
 1. P0-A contract + lifecycle audit.

@@ -70,7 +70,9 @@ The integrity gate checks generated Brain backend files and the suggestions chec
 
 See [Brain unification and UI endpoints](docs/2026-10-22-tline-brain-unification.md) for implementation details.
 
-**Session-safe agent mode changes (P0):** Switching between Single Agent and Multi-Agent Master starts a new chat session instead of restarting the shared SuperAgent server. Previously running sessions are not automatically aborted. Process startup flags are not hot-applied. The new durable task journal and resource-aware dispatcher in the SuperAgent source are development primitives only; a full desktop multi-goal execution API, automatic crash recovery, and guaranteed work continuity after closing the backend have **not** been enabled. See [the implementation roadmap](docs/plans/2026-10-25-persistent-parallel-assistant-workspace.md).
+**Session-safe agent mode changes (P0):** Switching between Single Agent and Multi-Agent Master opens a new chat session rather than restarting the shared Core. Existing agent sessions are not intentionally aborted by that mode switch. Process startup flags still require an explicit supervised restart.
+
+**Session-scoped Assistant task drafts:** Open **Assistant task drafts (planning only)** in the chat console to save, inspect and cancel queued task *drafts* for that exact workspace/session. The backend uses authenticated, fixed-action proxies to the Core journal; it cannot run arbitrary commands. Core must be running with this API version. `executionEnabled: false` means these are not running workers, and task status remains separate from the existing live cross-channel monitor. The next phase will bind authorized agent workers and reconcile execution evidence. See [the implementation roadmap](docs/plans/2026-10-25-persistent-parallel-assistant-workspace.md).
 
 ---
 

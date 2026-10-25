@@ -1,3 +1,11 @@
+## [1.3.713] - 2026-10-25
+
+### Session-scoped assistant task drafts
+- Added authenticated fixed-action desktop proxy for session-owned task journal drafts, list, event cursor, inspect, and queued-only cancellation.
+- Added an Assistant task drafts panel in the chat console with clear planning-only labeling; session switches cannot leak drafts between conversations.
+- Enforced operator role, bounded request/response sizes, and strict task/session/workspace validation. Core remains authoritative for task data and lifecycle.
+- Added backend and UI regression tests. No automatic parallel-agent execution or crash adoption is enabled by this increment.
+
 ## [1.3.712] - 2026-10-25
 
 ### Assistant session mode isolation (P0)

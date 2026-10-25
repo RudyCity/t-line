@@ -10,6 +10,7 @@ import { forwardTaskCancel } from './superAgentTaskCancel';
 import { forwardTlineRetry } from './superAgentTaskRetry';
 import studioProxyRouter from './studioProxy';
 import brainExplorerRouter from './brainExplorerRoutes';
+import { createAssistantTaskProxy } from './assistantTaskProxy';
 import { getWorkspaceSessions, getSessionMessages } from './sessionManager';
 import { getBrowserAgentSessions } from './browserSessions';
 
@@ -22,6 +23,7 @@ router.use(authMiddleware);
 router.use('/studio', studioProxyRouter);
 router.use('/motion', studioProxyRouter);
 router.use('/brain', brainExplorerRouter);
+router.use('/assistant/tasks', createAssistantTaskProxy());
 
 // Read-only, authenticated browser session monitoring for the T-Line browser.
 // The endpoint never returns CDP session capabilities or cookie data.
