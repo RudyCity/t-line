@@ -1,3 +1,12 @@
+## [1.3.723] - 2026-10-25
+
+### Managed Browser — Windows Native Lifecycle Verification (M3)
+
+- Hardened the desktop supervisor so target listings, pairing and readiness require the original managed-profile Chrome identity, not simply an accessible local debugging port.
+- Stopped only the Windows Chrome process tree owned by the retained native Child handle, and safely retired stale CDP profile markers only after verifying their original fingerprint and a disconnected endpoint.
+- Added native opt-in real-Chrome lifecycle smoke, startup/disconnect/recovery states, new-profile recovery guidance and disabling of stale UI pairing; no personal Chrome profile changes.
+- Verified Rust tests, actual isolated Windows Chrome launch/stop, desktop binary build, and focused frontend tests. Packaged Tauri GUI and live authenticated Core round-trip remain pending.
+
 ## [1.3.722] - 2026-10-25
 
 ### Session-safe isolated patch proposal review

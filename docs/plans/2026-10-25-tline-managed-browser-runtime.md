@@ -121,6 +121,8 @@ UI: show browser engine, executable origin/version, managed profile, connection/
 
 **M2-D checkpoint (2026-10-25):** repeatable genuine Windows headless Chrome integration smoke confirms multi-agent gateway registration/claim/observer/denial/release and stale browser rejection. Rust and Core now hash and reverify the browser's CDP instance identity before registry announcement and managed agent actions. The packaged Tauri UI is still unverified; see [M2-D Windows smoke](2026-10-25-tline-browser-m2d-windows-smoke.md).
 
+**M3 native checkpoint (2026-10-25):** Rust desktop supervisor and installed Windows Chrome have passed an isolated real-process lifecycle smoke, including owned launch/stop and CDP identity verification. The compiled desktop binary was built without launching the GUI. Packaged app IPC and real authenticated Core round-trip are still outstanding. See [M3 native lifecycle](2026-10-25-tline-browser-m3-native-lifecycle.md).
+
 ### P1-A — Browser Manager UI (functional real-window MVP)
 
 - [ ] Add `ManagedBrowserPanel.tsx` and small hooks/types under `frontend/src/components/browser-managed/` and `frontend/src/hooks/`.

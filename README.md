@@ -42,6 +42,8 @@
 
 **Windows browser integration acceptance:** A headless Chrome installed on Windows has been exercised with isolated temporary profiles and multi-agent gateway ownership/approval. The Core registration now pins the hashed real browser identity so a restarted browser cannot silently inherit a stale managed lease; see [M2-D Windows smoke results](docs/plans/2026-10-25-tline-browser-m2d-windows-smoke.md). This **does not** prove the Tauri packaged GUI or system Core authentication path is working end-to-end; those gates are still pending.
 
+**Managed Chrome native lifecycle (M3):** The Windows Rust desktop supervisor now revalidates the managed browser's own CDP identity on status/target/pairing requests, displays disconnected state without reattaching a reused port, stops only an owned Chrome process tree, and cleans a stopped profile's stale endpoint marker only when its fingerprint matches. The opt-in Rust test with real isolated headless Chrome and the offline Windows desktop binary build have passed. Packaged Tauri GUI interactions and live authenticated Core registration remain outstanding. See [M3 verification](docs/plans/2026-10-25-tline-browser-m3-native-lifecycle.md).
+
 ### 🔐 Security & Remote Workspace Sharing
 * **Cloudflare Tunnel Integration**: Share your local dev server, terminal sessions, and workspace remotely with zero-trust access tokens and password protection.
 * **Tauri v2 Desktop Native**: Native C++/Rust desktop wrapper keeping RAM footprint under 100MB with system tray support.
@@ -223,6 +225,15 @@ declarative rules panel, not the planned free-form graph/state-machine editor.
 **Code → MP4 (developer preview):** In Studio, the **Code → MP4** panel appears if the backend reports `studioCodeToVideo=offline-chromium-ffmpeg-preview-v1` and `localCodeToVideoReady=true`. It can render the current Studio scene (identical to its HTML/React wrapper) or a self-contained, explicitly trusted local `.html` or **Studio-exported** `.tsx`. External React/Next.js source must be compiled into a self-contained HTML build before rendering. Users can set width, height, FPS and duration, watch the MP4 preview and download it. Limits: 0.25–12s, max 300 frames, up to 1920×1080, H.264 MP4 without audio. Chrome/Edge/Chromium and FFmpeg must already be installed; no remote URLs or assets are loaded. This does not promise parity with arbitrary JS animation frameworks and is NOT a general hostile-HTML sandbox. The backend runs this preview synchronously, and installed-desktop click-through E2E remains unverified.
 
 **Code-to-Video durable job history:** Current Studio backends persist only allowlisted job status/MP4 metadata per authorized workspace. Use the **Recent renders** section in Code → MP4 to refresh status or reopen completed MP4 without re-rendering. In-progress jobs lost to a backend restart display **interrupted** and require manual retry; no automatic rerun, cross-process scheduler or exactly-once guarantee. Authenticated `GET /api/studio/code-to-video/jobs` lists up to 20 jobs. Chrome/Edge and FFmpeg still required locally; production release remains gated.
+
+**Video-to-Code P5 metrics:** Updated Studio backends additionally track bounded
+axis-aligned `scaleX/scaleY` for separated growing/shrinking objects. The
+Video → Editable Studio Code panel displays an expandable **Visual parity**
+report per checked frame, including IoU, precision, recall, F1, and RGB pixel
+error. `holdout` means the frame was not used to create the animation
+keyframes. These metrics are computed from original video frames versus
+actual SVG-rendered frames, not a claim of semantic accuracy or full-frame
+video fidelity. Older backends without `parityReport` remain compatible.
 
 **Editable React JSX export (P4, developer preview):** The Studio **Export
 Web Code** menu offers `Editable React JSX` when an updated backend

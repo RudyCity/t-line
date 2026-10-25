@@ -1,7 +1,9 @@
 //! Managed browser runtime. Only the primary T-Line UI may invoke these commands.
 use std::collections::HashMap;
 use std::fs;
-use std::net::TcpStream;
+
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
@@ -100,6 +102,9 @@ struct OwnedBrowser {
     profile_id: String,
     generation: String,
     port: Option<u16>,
+    profile_path: PathBuf,
+    ever_ready: bool,
+    fingerprint: Option<String>,
 }
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -114,7 +119,15 @@ fn status_of(owned: &OwnedBrowser, alive: bool) -> BrowserStatus {
     BrowserStatus {
         profile_id: owned.profile_id.clone(),
         generation: owned.generation.clone(),
-        lifecycle: if alive { "ready" } else { "exited" },
+        lifecycle: if !alive {
+            "exited"
+        } else if owned.port.is_some() {
+            "ready"
+        } else if owned.ever_ready {
+            "disconnected"
+        } else {
+            "starting"
+        },
         debugging_available: alive && owned.port.is_some(),
         engine: "system-chrome",
     }
@@ -127,6 +140,24 @@ fn current_status(map: &mut HashMap<String, OwnedBrowser>) -> Vec<BrowserStatus>
     let mut results = Vec::new();
     for (id, owned) in map.iter_mut() {
         let alive = is_alive(owned);
+        if alive {
+            // Recheck the browser identity before reporting readiness. A port
+            // alone is not proof that Chrome still belongs to this profile.
+            match browser_port(&owned.profile_path) {
+                Some((port, fingerprint))
+                    if (owned.port.is_none() || owned.port == Some(port))
+                        && owned
+                            .fingerprint
+                            .as_ref()
+                            .map_or(true, |prior| prior == &fingerprint) =>
+                {
+                    owned.port = Some(port);
+                    owned.fingerprint = Some(fingerprint);
+                    owned.ever_ready = true;
+                }
+                _ => owned.port = None,
+            }
+        }
         results.push(status_of(owned, alive));
         if !alive {
             stopped.push(id.clone());
@@ -137,15 +168,27 @@ fn current_status(map: &mut HashMap<String, OwnedBrowser>) -> Vec<BrowserStatus>
     }
     results
 }
-fn browser_port(profile: &std::path::Path) -> Option<u16> {
+fn browser_port(profile: &std::path::Path) -> Option<(u16, String)> {
     let raw = fs::read_to_string(profile.join("DevToolsActivePort")).ok()?;
     let port: u16 = raw.lines().next()?.trim().parse().ok()?;
     if port < 1024 {
         return None;
     }
-    let address = format!("127.0.0.1:{port}").parse().ok()?;
-    TcpStream::connect_timeout(&address, Duration::from_millis(200)).ok()?;
-    Some(port)
+    // Only the matching live browser instance is considered ready. Another
+    // process could reuse a port formerly owned by this profile.
+    let fingerprint = verified_browser_fingerprint(port, profile).ok()?;
+    Some((port, fingerprint))
+}
+fn verified_owned_port(entry: &mut OwnedBrowser) -> Result<u16, String> {
+    if !is_alive(entry) {
+        return Err("Owned Chrome process has exited.".into());
+    }
+    let (port, fingerprint) =
+        browser_port(&entry.profile_path).ok_or("Owned Chrome CDP connection is unavailable.")?;
+    if entry.port != Some(port) || entry.fingerprint.as_deref() != Some(fingerprint.as_str()) {
+        return Err("Managed browser identity changed. Start a fresh verified session.".into());
+    }
+    Ok(port)
 }
 #[tauri::command]
 pub fn managed_browser_status(
@@ -180,36 +223,28 @@ fn checked_url(url: Option<String>) -> Result<String, String> {
     }
     Ok(url)
 }
-fn launch_owned(
-    app: tauri::AppHandle,
-    registry: Arc<Mutex<HashMap<String, OwnedBrowser>>>,
+fn spawn_owned_chrome(
+    executable: &std::path::Path,
+    profile: &std::path::Path,
     id: String,
     url: String,
-) -> Result<BrowserStatus, String> {
-    let executable = discover_executable().ok_or("Installed Chrome is not available.")?;
-    let profile = profile_path(&app, &id)?;
-    let mut map = registry.lock().map_err(|_| "Browser state unavailable.")?;
-    if let Some(existing) = map.get_mut(&id) {
-        if is_alive(existing) {
-            return Ok(status_of(existing, true));
-        }
-        map.remove(&id);
-    }
-    fs::create_dir_all(&profile).map_err(|e| e.to_string())?;
-    // A left-over debugging file may indicate a browser managed by another
-    // desktop instance. Do not steal/rebind a profile by trusting stale data.
-    if profile.join("DevToolsActivePort").exists() {
-        return Err(
-            "Profile may already be in use. Existing browser ownership cannot be verified.".into(),
-        );
-    }
-    let child = Command::new(executable)
+    headless_test: bool,
+) -> Result<OwnedBrowser, String> {
+    // This executable is selected by installed-browser discovery, never by the
+    // renderer or a browser page. Tests use an isolated temporary directory.
+    let mut command = Command::new(executable);
+    command
         .arg(format!("--user-data-dir={}", profile.display()))
         .arg("--remote-debugging-port=0")
         .arg("--remote-debugging-address=127.0.0.1")
         .arg("--no-first-run")
-        .arg("--no-default-browser-check")
-        .arg("--new-window")
+        .arg("--no-default-browser-check");
+    if headless_test {
+        command.arg("--headless=new").arg("--disable-extensions");
+    } else {
+        command.arg("--new-window");
+    }
+    let child = command
         .arg(url)
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -223,19 +258,52 @@ fn launch_owned(
             .unwrap_or_default()
             .as_nanos()
     );
-    let mut entry = OwnedBrowser {
+    Ok(OwnedBrowser {
         child,
-        profile_id: id.clone(),
+        profile_id: id,
         generation,
         port: None,
-    };
+        profile_path: profile.to_path_buf(),
+        ever_ready: false,
+        fingerprint: None,
+    })
+}
+fn launch_owned(
+    app: tauri::AppHandle,
+    registry: Arc<Mutex<HashMap<String, OwnedBrowser>>>,
+    id: String,
+    url: String,
+) -> Result<BrowserStatus, String> {
+    let executable = discover_executable().ok_or("Installed Chrome is not available.")?;
+    let profile = profile_path(&app, &id)?;
+    let mut map = registry.lock().map_err(|_| "Browser state unavailable.")?;
+    if let Some(existing) = map.get_mut(&id) {
+        if is_alive(existing) {
+            if verified_owned_port(existing).is_err() {
+                existing.port = None;
+            }
+            return Ok(status_of(existing, true));
+        }
+        map.remove(&id);
+    }
+    fs::create_dir_all(&profile).map_err(|e| e.to_string())?;
+    // A left-over debugging file may indicate a browser managed by another
+    // desktop instance. Do not steal/rebind a profile by trusting stale data.
+    if profile.join("DevToolsActivePort").exists() {
+        return Err(
+            "Profile may already be in use. Existing browser ownership cannot be verified.".into(),
+        );
+    }
+    let mut entry = spawn_owned_chrome(&executable, &profile, id.clone(), url, false)?;
     let deadline = Instant::now() + Duration::from_secs(8);
     while Instant::now() < deadline {
         if !is_alive(&mut entry) {
             return Err("Browser exited before a verified debugging endpoint was ready.".into());
         }
-        if let Some(port) = browser_port(&profile) {
+        if let Some((port, fingerprint)) = browser_port(&profile) {
             entry.port = Some(port);
+            entry.fingerprint = Some(fingerprint);
+            entry.ever_ready = true;
             let result = status_of(&entry, true);
             map.insert(id, entry);
             return Ok(result);
@@ -268,6 +336,69 @@ pub async fn managed_browser_launch(
         .await
         .map_err(|_| "Browser supervisor did not return.".to_string())?
 }
+fn stop_owned_process(entry: &mut OwnedBrowser) -> Result<(), String> {
+    if !is_alive(entry) {
+        return Ok(());
+    }
+    // Only use the PID from the retained live Child handle, never from a UI
+    // argument or a scan of the user's existing Chrome processes.
+    #[cfg(windows)]
+    {
+        if let Some(root) = std::env::var_os("SystemRoot") {
+            let tool = PathBuf::from(root).join("System32").join("taskkill.exe");
+            if tool.is_file() {
+                let stopped_tree = Command::new(tool)
+                    .args(["/PID", &entry.child.id().to_string(), "/T", "/F"])
+                    .creation_flags(0x08000000)
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status()
+                    .is_ok_and(|status| status.success());
+                if stopped_tree {
+                    let _ = entry.child.wait();
+                    return Ok(());
+                }
+            }
+        }
+        if !is_alive(entry) {
+            return Ok(());
+        }
+    }
+    entry
+        .child
+        .kill()
+        .map_err(|e| format!("Could not stop owned browser: {e}"))?;
+    let _ = entry.child.wait();
+    Ok(())
+}
+fn retire_owned_port_file(
+    profile: &std::path::Path,
+    port: u16,
+    expected_fingerprint: &str,
+) -> Result<bool, String> {
+    let path = profile.join("DevToolsActivePort");
+    let meta = match fs::symlink_metadata(&path) {
+        Ok(meta) => meta,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(e) => return Err(e.to_string()),
+    };
+    if !meta.file_type().is_file() || meta.len() > 512 {
+        return Err("Unsafe browser endpoint marker was not removed.".into());
+    }
+    let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let mut lines = content.lines();
+    if lines.next().and_then(|p| p.parse::<u16>().ok()) != Some(port) {
+        return Ok(false);
+    }
+    let id = lines.next().unwrap_or("");
+    let digest = ring::digest::digest(&ring::digest::SHA256, id.as_bytes());
+    let fingerprint: String = digest.as_ref().iter().map(|b| format!("{b:02x}")).collect();
+    if fingerprint != expected_fingerprint || browser_port(profile).is_some() {
+        return Ok(false);
+    }
+    fs::remove_file(path).map_err(|e| e.to_string())?;
+    Ok(true)
+}
 #[tauri::command]
 pub fn managed_browser_stop(
     webview: tauri::Webview,
@@ -290,12 +421,12 @@ pub fn managed_browser_stop(
         map.remove(&profile_id);
         return Ok(());
     }
-    // An owned Child handle, never a PID supplied by the UI.
-    entry
-        .child
-        .kill()
-        .map_err(|e| format!("Could not stop owned browser: {e}"))?;
-    let _ = entry.child.wait();
+    stop_owned_process(entry)?;
+    // Only remove a marker matching the exact browser this desktop launched;
+    // crash leftovers from unrelated live browsers are never silently erased.
+    if let (Some(port), Some(fingerprint)) = (entry.port, entry.fingerprint.as_deref()) {
+        let _ = retire_owned_port_file(&entry.profile_path, port, fingerprint);
+    }
     map.remove(&profile_id);
     Ok(())
 }
@@ -347,10 +478,10 @@ pub fn managed_browser_targets(
     let entry = guard
         .get_mut(&profile_id)
         .ok_or("Managed browser not found.")?;
-    if entry.generation != generation || !is_alive(entry) {
+    if entry.generation != generation {
         return Err("Browser session is not owned or is stale.".into());
     }
-    let port = entry.port.ok_or("Debugging endpoint not ready.")?;
+    let port = verified_owned_port(entry)?;
     let response = ureq::get(&format!("http://127.0.0.1:{port}/json/list"))
         .timeout(Duration::from_secs(2))
         .call()
@@ -418,10 +549,10 @@ pub fn managed_browser_gateway_pairing(
     let entry = guard
         .get_mut(&profile_id)
         .ok_or("No owned browser matches the profile.")?;
-    if entry.generation != generation || !is_alive(entry) {
+    if entry.generation != generation {
         return Err("Browser runtime changed; refresh before pairing.".into());
     }
-    let port = entry.port.ok_or("Managed browser is not CDP ready.")?;
+    let port = verified_owned_port(entry)?;
     let response = ureq::get(&format!("http://127.0.0.1:{port}/json/list"))
         .timeout(Duration::from_secs(2))
         .call()
@@ -649,6 +780,110 @@ mod tests {
         ] {
             assert!(owned_browser_fingerprint(53331, owned_port, path, url).is_err());
         }
+    }
+    #[test]
+    #[cfg(windows)]
+    #[ignore = "Opt-in installed Windows Chrome native process smoke"]
+    fn real_owned_chrome_lifecycle_smoke() {
+        let executable = discover_executable().expect("Installed Chrome required");
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let profile = std::env::temp_dir().join(format!(
+            "tline-native-browser-smoke-{}-{unique}",
+            std::process::id()
+        ));
+        fs::create_dir(&profile).expect("isolated temporary profile");
+        struct Cleanup {
+            profile: PathBuf,
+            browser: Option<OwnedBrowser>,
+        }
+        impl Drop for Cleanup {
+            fn drop(&mut self) {
+                if let Some(browser) = self.browser.as_mut() {
+                    let _ = stop_owned_process(browser);
+                }
+                for _ in 0..15 {
+                    if fs::remove_dir_all(&self.profile).is_ok() || !self.profile.exists() {
+                        break;
+                    }
+                    thread::sleep(Duration::from_millis(150));
+                }
+            }
+        }
+        let mut cleanup = Cleanup {
+            profile: profile.clone(),
+            browser: None,
+        };
+        cleanup.browser = Some(
+            spawn_owned_chrome(
+                &executable,
+                &profile,
+                "native-smoke".to_string(),
+                "about:blank".to_string(),
+                true,
+            )
+            .expect("start isolated owned Chrome"),
+        );
+        let deadline = Instant::now() + Duration::from_secs(15);
+        let (port, fingerprint) = loop {
+            let entry = cleanup.browser.as_mut().unwrap();
+            assert!(is_alive(entry), "owned Chrome exited during startup");
+            if let Some((port, fingerprint)) = browser_port(&profile) {
+                break (port, fingerprint);
+            }
+            assert!(Instant::now() < deadline, "Chrome CDP never became ready");
+            thread::sleep(Duration::from_millis(180));
+        };
+        {
+            let entry = cleanup.browser.as_mut().unwrap();
+            entry.port = Some(port);
+            entry.fingerprint = Some(fingerprint.clone());
+            entry.ever_ready = true;
+            assert_eq!(verified_owned_port(entry).unwrap(), port);
+            assert_eq!(status_of(entry, true).lifecycle, "ready");
+        }
+        assert!(
+            !retire_owned_port_file(&profile, port, &fingerprint).unwrap(),
+            "must never remove an active profile endpoint"
+        );
+        stop_owned_process(cleanup.browser.as_mut().unwrap()).expect("stop only spawned Chrome");
+        let closed = Instant::now() + Duration::from_secs(6);
+        while browser_port(&profile).is_some() && Instant::now() < closed {
+            thread::sleep(Duration::from_millis(180));
+        }
+        assert!(
+            browser_port(&profile).is_none(),
+            "owned Chrome tree left CDP active after stop"
+        );
+        let _ = retire_owned_port_file(&profile, port, &fingerprint);
+        assert!(
+            !profile.join("DevToolsActivePort").exists(),
+            "only the confirmed stopped profile marker should be retired"
+        );
+    }
+    #[test]
+    fn stale_profile_marker_cleanup_requires_exact_owned_identity() {
+        let name = format!("tline-native-marker-{}", std::process::id());
+        let profile = std::env::temp_dir().join(name);
+        fs::create_dir_all(&profile).unwrap();
+        let file = profile.join("DevToolsActivePort");
+        let browser_path = "/devtools/browser/01234567-89ab-cdef-0123-456789abcdef";
+        fs::write(&file, format!("54321\n{browser_path}\n")).unwrap();
+        assert!(!retire_owned_port_file(&profile, 54321, &"0".repeat(64)).unwrap());
+        assert!(file.exists(), "unowned profile marker must stay intact");
+        let hash = ring::digest::digest(&ring::digest::SHA256, browser_path.as_bytes());
+        let fingerprint: String = hash
+            .as_ref()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect();
+        // No matching browser responds at this test marker, so removing it is
+        // allowed *only* when the caller provides the exact prior identity.
+        assert!(retire_owned_port_file(&profile, 54321, &fingerprint).unwrap());
+        assert!(!file.exists());
+        let _ = fs::remove_dir_all(profile);
     }
     #[test]
     fn refuses_unsafe_launch_urls() {

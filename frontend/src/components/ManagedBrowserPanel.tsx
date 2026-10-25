@@ -55,13 +55,14 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
   }, [active, expanded, busy, refresh]);
   useEffect(() => {
     if (!pairedRuntime) return;
-    if (!selected || selected.generation !== pairedRuntime.generation) {
+    if (!selected || selected.generation !== pairedRuntime.generation ||
+        selected.lifecycle !== 'ready' || !selected.debuggingAvailable) {
       setPairing('');
       setPairedRuntime(null);
       setGatewayClaim(null);
       setRegisteredUntil(null);
     }
-  }, [selected?.generation, pairedRuntime?.generation]);
+  }, [selected?.generation, selected?.lifecycle, selected?.debuggingAvailable, pairedRuntime?.generation]);
   // Keep the Core directory announcement short-lived and revalidate the owned
   // native browser/target on each refresh; no background registration on hidden tabs.
   useEffect(() => {
@@ -211,13 +212,14 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
                       <option value="default-managed">Default managed</option>
                       <option value="research">Research</option>
                       <option value="testing">Testing</option>
+                       <option value="recovery">Recovery (fresh isolated profile)</option>
                     </select>
                     <button type="button" aria-label="Refresh managed browser" onClick={() => void refresh()}
                       className="rounded border border-[var(--border-color)] p-1"><RefreshCw size={14} /></button>
                   </div>
                   <div role="status">
                     {available?.available ? 'Installed Chrome detected' : 'Installed Chrome unavailable'}
-                    {selected ? ' · ' + selected.lifecycle + (selected.debuggingAvailable ? ' · CDP ready' : ' · CDP pending') : ' · stopped'}
+                    {selected ? ' · ' + selected.lifecycle + (selected.debuggingAvailable ? ' · CDP ready' : ' · CDP unavailable') : ' · stopped'}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button type="button" disabled={busy || !!selected || !available?.available} onClick={() => void launch()}
@@ -226,9 +228,18 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
                       className="inline-flex items-center gap-1 rounded border border-[var(--border-color)] px-2 py-1.5 disabled:opacity-40">
                       <Square size={12} /> Stop owned browser
                     </button>
-                    <button type="button" disabled={!selected || busy} onClick={() => { if (selected) void refreshTargets(selected); }}
+                    <button type="button" disabled={!selected || selected.lifecycle !== 'ready' || busy} onClick={() => { if (selected) void refreshTargets(selected); }}
                       className="rounded border border-[var(--border-color)] px-2 py-1.5 disabled:opacity-40">Refresh tabs</button>
                   </div>
+                  {selected?.lifecycle === 'disconnected' && (
+                    <p role="alert" className="text-amber-500">
+                      Chrome is still owned by T-Line, but its verified CDP endpoint is unavailable.
+                      Stop the owned browser or choose a fresh recovery profile; existing profile data will not be copied.
+                    </p>
+                  )}
+                  {profileId === 'recovery' && !selected && (
+                    <p className="text-[var(--text-muted)]">The recovery profile starts empty. Previous browser profile data remains untouched.</p>
+                  )}
                   {selected && <p className="font-mono text-[10px] text-[var(--text-muted)]">
                     {selected.profileId + ' · generation ' + selected.generation.slice(0, 24)}</p>}
                   {targets.length > 0 && (
@@ -237,7 +248,7 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
                         <div key={target.id} className="flex items-center gap-2 rounded border border-[var(--border-color)] p-1">
                           <span className="min-w-0 flex-1 truncate">{target.title || 'Untitled'} · {target.url}</span>
                           <button type="button" aria-label={'Pair agent with ' + (target.title || target.id)}
-                            disabled={busy} onClick={() => void pairTarget(target)}
+                            disabled={busy || selected?.lifecycle !== 'ready' || !selected.debuggingAvailable} onClick={() => void pairTarget(target)}
                             className="inline-flex shrink-0 items-center gap-1 rounded border border-[var(--border-color)] px-2 py-1 disabled:opacity-40">
                             <Link2 size={12} /> Pair agent
                           </button>
