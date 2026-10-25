@@ -61,6 +61,27 @@ describe('desktop assistant task fixed-action proxy', () => {
     expect((await fetch(base + '/events' + query + '&cursor=12')).status).toBe(200);
     expect(observed[2].path).toContain('cursor=12');
   });
+  it('proxies only fixed start/cancel/result actions with validated revisions', async () => {
+    const { base, observed } = await fixture({ role: 'admin' });
+    const taskId = 'c7ba78d0-1719-4a8e-90b4-15832cf48114';
+    const query = '?sessionId=session123&workspace=' + encodeURIComponent('D:/project');
+    expect((await fetch(base + '/' + taskId + '/run' + query, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expectedRevision: 2, ownerId: 'forged',
+        action: 'exec', shell: 'cmd' }),
+    })).status).toBe(200);
+    expect(observed[0].path).toContain('/run?');
+    expect(observed[0].method).toBe('POST');
+    expect(JSON.parse(observed[0].body)).toEqual({ expectedRevision: 2 });
+    expect((await fetch(base + '/' + taskId + '/result' + query)).status).toBe(200);
+    expect(observed[1].method).toBe('GET');
+    expect(observed[1].path).toContain('/result?');
+    expect((await fetch(base + '/' + taskId + '/run' + query, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expectedRevision: 0 }),
+    })).status).toBe(400);
+    expect(observed).toHaveLength(2);
+  });
   it('rejects nonoperator, unscoped and unknown actions before contacting Core', async () => {
     const denied = await fixture({ role: 'viewer' });
     const path = '?sessionId=session123&workspace=project';

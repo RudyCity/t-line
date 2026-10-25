@@ -1,3 +1,11 @@
+## [1.3.718] - 2026-10-25
+
+### Explicit background read-only assistant tasks
+- Enable user-confirmed Run for queued drafts using independent read-only Core worker instances without blocking desktop chat.
+- Add session-bound Run, Cancel and Result proxy operations with expected-revision guards, verified summary artifacts and live/unverified ownership markers.
+- Keep mutating tools and shell access disabled for unattended workers; preserve results and terminal metadata without unsafe automatic replays after interruption.
+- Add backend/UI tests and scoped design notes. Running workers remain owned by the Core process, not a separate surviving host; packaged E2E remains pending.
+
 ## [1.3.717] - 2026-10-25
 
 ### Managed Browser — Verified Agent Gateway Pairing (M2-A)

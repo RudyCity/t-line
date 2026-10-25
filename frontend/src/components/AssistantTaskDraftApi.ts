@@ -19,12 +19,13 @@ async function request<T>(route: string, auth: () => Record<string, string>,
 }
 export const getAssistantDrafts = (workspace: string, sessionId: string,
   auth: () => Record<string, string>, signal?: AbortSignal) =>
-  request<{ success: boolean; tasks: AssistantDraftTask[]; executionEnabled: false }>(
+  request<{ success: boolean; tasks: AssistantDraftTask[]; executionEnabled: boolean;
+    liveTaskIds: string[]; unverifiedTaskIds: string[]; executionPolicy: string }>(
     base + '?' + contextQuery(workspace, sessionId), auth, {}, signal);
 
 export const addAssistantDraft = (workspace: string, sessionId: string,
   title: string, auth: () => Record<string, string>, idempotencyKey: string) =>
-  request<{ success: boolean; task: AssistantDraftTask; executionEnabled: false }>(
+  request<{ success: boolean; task: AssistantDraftTask; executionEnabled: boolean }>(
     base + '?' + contextQuery(workspace, sessionId), auth, {
       method: 'POST', body: JSON.stringify({ title, goalId: idempotencyKey, idempotencyKey }),
     });
@@ -34,3 +35,15 @@ export const cancelAssistantDraft = (workspace: string, sessionId: string,
   request<{ success: boolean; task: AssistantDraftTask }>(
     base + '/' + encodeURIComponent(taskId) + '?' + contextQuery(workspace, sessionId),
     auth, { method: 'POST', body: JSON.stringify({ expectedRevision }) });
+
+export const runAssistantReadOnlyTask = (workspace: string, sessionId: string,
+  taskId: string, expectedRevision: number, auth: () => Record<string, string>) =>
+  request<{ success: boolean; scheduled: boolean; taskId: string }>(
+    base + '/' + encodeURIComponent(taskId) + '/run?' + contextQuery(workspace, sessionId),
+    auth, { method: 'POST', body: JSON.stringify({ expectedRevision }) });
+
+export const getAssistantTaskResult = (workspace: string, sessionId: string,
+  taskId: string, auth: () => Record<string, string>) =>
+  request<{ success: boolean; taskId: string; result: string }>(
+    base + '/' + encodeURIComponent(taskId) + '/result?' + contextQuery(workspace, sessionId),
+    auth);
