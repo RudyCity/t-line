@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Monitor, RefreshCw, Square } from 'lucide-react';
+import { Monitor, RefreshCw, Square, Link2, Copy } from 'lucide-react';
+import { gatewayPairingInstructions, type ManagedBrowserGatewayPairing } from './managedBrowserGateway';
+import { matchingGatewayClaim, type GatewayClaimProjection } from './managedGatewaySessions';
 import { DEFAULT_MANAGED_PROFILE, safeManagedLaunchUrl,
   type ManagedBrowserRuntime, type ManagedBrowserAvailability, type ManagedBrowserTarget } from './managedBrowserTypes';
 
@@ -17,6 +19,9 @@ export default function ManagedBrowserPanel({ active, initialUrl }: { active: bo
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [pairing, setPairing] = useState('');
+  const [pairedRuntime, setPairedRuntime] = useState<ManagedBrowserGatewayPairing | null>(null);
+  const [gatewayClaim, setGatewayClaim] = useState<GatewayClaimProjection | null>(null);
   const selected = runtimes.find(r => r.profileId === profileId);
 
   const refresh = useCallback(async () => {
@@ -46,6 +51,33 @@ export default function ManagedBrowserPanel({ active, initialUrl }: { active: bo
     return () => window.clearInterval(timer);
   }, [active, expanded, busy, refresh]);
   useEffect(() => {
+    if (!pairedRuntime) return;
+    if (!selected || selected.generation !== pairedRuntime.generation) {
+      setPairing('');
+      setPairedRuntime(null);
+      setGatewayClaim(null);
+    }
+  }, [selected?.generation, pairedRuntime?.generation]);
+  useEffect(() => {
+    if (!active || !expanded || !enabled || !pairedRuntime) return;
+    let cancelled = false;
+    const update = async () => {
+      try {
+        const response = await fetch('/api/superagent/browser/sessions', {
+          credentials: 'same-origin', cache: 'no-store',
+        });
+        if (!response.ok) throw new Error('Gateway session monitor unavailable.');
+        const current = matchingGatewayClaim(pairedRuntime, await response.json());
+        if (!cancelled) setGatewayClaim(current);
+      } catch {
+        if (!cancelled) setGatewayClaim(null);
+      }
+    };
+    void update();
+    const poll = window.setInterval(() => { void update(); }, 5000);
+    return () => { cancelled = true; window.clearInterval(poll); };
+  }, [active, expanded, enabled, pairedRuntime?.port, pairedRuntime?.targetId, pairedRuntime?.generation]);
+  useEffect(() => {
     if (!active || !expanded || !enabled) return;
     if (selected) void refreshTargets(selected);
     else setTargets([]);
@@ -66,6 +98,28 @@ export default function ManagedBrowserPanel({ active, initialUrl }: { active: bo
     } catch (err) { setError(String(err)); await refresh(); }
     finally { setBusy(false); }
   }
+  async function pairTarget(target: ManagedBrowserTarget) {
+    const invoke = getInvoke();
+    if (!invoke || !selected || busy || !enabled) return;
+    if (!window.confirm('Share local managed-browser target details for an authorized SuperAgent agent to claim through the existing CDP gateway? The agent must still claim or request access.')) return;
+    setBusy(true); setError(''); setPairing('');
+    try {
+      const info = await invoke('managed_browser_gateway_pairing', {
+        profileId: selected.profileId, generation: selected.generation, targetId: target.id,
+      }) as ManagedBrowserGatewayPairing;
+      const instruction = gatewayPairingInstructions(info);
+      setPairing(instruction);
+      setPairedRuntime(info);
+      setGatewayClaim(null);
+      setMessage('Verified gateway handoff prepared. Copy the instruction into T-Line chat to have SuperAgent attach through its MCP gateway.');
+    } catch (err) { setError(String(err)); }
+    finally { setBusy(false); }
+  }
+  async function copyPairing() {
+    if (!pairing) return;
+    try { await navigator.clipboard.writeText(pairing); setMessage('Gateway instructions copied for the assistant.'); }
+    catch { setError('Clipboard access denied. Select and copy the instructions manually.'); }
+  }
   async function stop() {
     const invoke = getInvoke();
     if (!invoke || busy || !selected) return;
@@ -74,6 +128,9 @@ export default function ManagedBrowserPanel({ active, initialUrl }: { active: bo
     try {
       await invoke('managed_browser_stop', { profileId, generation: selected.generation });
       setTargets([]);
+      setPairing('');
+      setPairedRuntime(null);
+      setGatewayClaim(null);
       await refresh();
       setMessage('Owned Chrome process stopped.');
     } catch (err) { setError(String(err)); }
@@ -94,7 +151,12 @@ export default function ManagedBrowserPanel({ active, initialUrl }: { active: bo
             <>
               <p className="text-[var(--text-muted)]">Opens Chrome in its own window with an isolated profile. This panel displays status and tab metadata, not an embedded Chrome viewport. Automatic agent attachment is not enabled yet.</p>
               <label className="inline-flex items-center gap-2">
-                <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)}
+                <input type="checkbox" checked={enabled} onChange={e => {
+                  setEnabled(e.target.checked);
+                  if (!e.target.checked) {
+                    setPairing(''); setPairedRuntime(null); setGatewayClaim(null);
+                  }
+                }}
                   aria-label="Enable managed browser" />
                 Enable managed browser controls
               </label>
@@ -102,7 +164,7 @@ export default function ManagedBrowserPanel({ active, initialUrl }: { active: bo
                 <>
                   <div className="flex flex-wrap items-center gap-2">
                     <label htmlFor="managed-profile">Profile</label>
-                    <select id="managed-profile" value={profileId} onChange={e => { setProfileId(e.target.value); setTargets([]); }}
+                    <select id="managed-profile" value={profileId} onChange={e => { setProfileId(e.target.value); setTargets([]); setPairing(''); setPairedRuntime(null); setGatewayClaim(null); }}
                       className="rounded border border-[var(--border-color)] bg-[var(--bg-main)] p-1">
                       <option value="default-managed">Default managed</option>
                       <option value="research">Research</option>
@@ -130,10 +192,34 @@ export default function ManagedBrowserPanel({ active, initialUrl }: { active: bo
                   {targets.length > 0 && (
                     <div aria-label="Managed browser targets" className="max-h-32 space-y-1 overflow-auto">
                       {targets.map(target => (
-                        <div key={target.id} className="truncate rounded border border-[var(--border-color)] p-1">
-                          {target.title || 'Untitled'} · {target.url}
+                        <div key={target.id} className="flex items-center gap-2 rounded border border-[var(--border-color)] p-1">
+                          <span className="min-w-0 flex-1 truncate">{target.title || 'Untitled'} · {target.url}</span>
+                          <button type="button" aria-label={'Pair agent with ' + (target.title || target.id)}
+                            disabled={busy} onClick={() => void pairTarget(target)}
+                            className="inline-flex shrink-0 items-center gap-1 rounded border border-[var(--border-color)] px-2 py-1 disabled:opacity-40">
+                            <Link2 size={12} /> Pair agent
+                          </button>
                         </div>
                       ))}
+                    </div>
+                  )}
+                  {pairing && (
+                    <div className="space-y-1">
+                      <p aria-label="Gateway claim status" role="status" className="text-[var(--text-muted)]">
+                        {gatewayClaim
+                          ? 'Gateway claim observed · ' + gatewayClaim.agentId + ' · ' + gatewayClaim.mode +
+                            ' · participants ' + (gatewayClaim.participants?.length ?? 0)
+                          : 'No active gateway claim observed for this target. Pairing is not an agent connection.'}
+                      </p>
+                      <label htmlFor="managed-pairing-instructions" className="text-[var(--text-muted)]">
+                        Verified MCP gateway handoff (manual; not yet an automatic agent connection)
+                      </label>
+                      <textarea id="managed-pairing-instructions" readOnly rows={6} value={pairing}
+                        className="w-full resize-y rounded border border-[var(--border-color)] bg-[var(--bg-main)] p-2 font-mono text-[10px]" />
+                      <button type="button" onClick={() => void copyPairing()}
+                        className="inline-flex items-center gap-1 rounded border border-[var(--border-color)] px-2 py-1">
+                        <Copy size={12} /> Copy for assistant
+                      </button>
                     </div>
                   )}
                   {error && <p role="alert" className="text-red-400">{error}</p>}

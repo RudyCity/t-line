@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-managed-browser-gateway-pairing"
+description = "Enables the managed_browser_gateway_pairing command without any pre-configured scope."
+commands.allow = ["managed_browser_gateway_pairing"]
+
+[[permission]]
+identifier = "deny-managed-browser-gateway-pairing"
+description = "Denies the managed_browser_gateway_pairing command without any pre-configured scope."
+commands.deny = ["managed_browser_gateway_pairing"]

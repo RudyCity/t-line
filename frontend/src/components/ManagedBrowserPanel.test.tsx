@@ -55,4 +55,34 @@ describe('managed browser safety contract', () => {
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('managed_browser_stop',
       { profileId: 'default-managed', generation: 'owned-generation' }));
   });
+  it('pairs only an owned tab after explicit confirmation and uses the native result', async () => {
+    const runtime = { profileId: 'default-managed', generation: '456-789', lifecycle: 'ready', debuggingAvailable: true };
+    const invoke = vi.fn(async (command: string) => {
+      if (command === 'managed_browser_discover') return { available: true, engine: 'system-chrome' };
+      if (command === 'managed_browser_status') return [runtime];
+      if (command === 'managed_browser_targets') return [{ id: 'TARGET1', title: 'Test page', url: 'https://example.org/' }];
+      if (command === 'managed_browser_gateway_pairing') return {
+        profileId: runtime.profileId, generation: runtime.generation, port: 53333,
+        targetId: 'TARGET1', transport: 'superagent_browser_gateway',
+      };
+      throw new Error('Unexpected native call');
+    });
+    vi.stubGlobal('__TAURI__', { core: { invoke } });
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<ManagedBrowserPanel active initialUrl="about:blank" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle managed browser' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Enable managed browser' }));
+    const pair = await screen.findByRole('button', { name: 'Pair agent with Test page' });
+    expect(invoke).not.toHaveBeenCalledWith('managed_browser_gateway_pairing', expect.anything());
+    fireEvent.click(pair);
+    expect(confirm).toHaveBeenCalled();
+    expect(invoke).not.toHaveBeenCalledWith('managed_browser_gateway_pairing', expect.anything());
+    confirm.mockReturnValue(true);
+    fireEvent.click(pair);
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('managed_browser_gateway_pairing',
+      { profileId: 'default-managed', generation: '456-789', targetId: 'TARGET1' }));
+    expect((await screen.findByLabelText('Verified MCP gateway handoff (manual; not yet an automatic agent connection)') as HTMLTextAreaElement).value)
+      .toContain('action=claim, port=53333, targetId=TARGET1');
+    expect(invoke).not.toHaveBeenCalledWith('managed_browser_launch', expect.anything());
+  });
 });

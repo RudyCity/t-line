@@ -115,6 +115,8 @@ UI: show browser engine, executable origin/version, managed profile, connection/
 - [ ] Browser action policy: allowlisted navigation/snapshot/screenshot/click/type/scroll by permission; destructive external submissions/purchases/uploads require separate user approval when applicable; do not autologin with copied personal Chrome secrets.
 - **Gate:** one user opens a real managed Chrome page; an authorized agent navigates it; a second observer cannot type; contributor edits serialize; forced crash/recovery preserves other agent and chat sessions.
 
+**M2-A checkpoint (2026-10-25):** native generation/target-verified pairing handoff and read-only gateway claim projection implemented. Operator copies an existing gateway `discover`/`claim` instruction. This does NOT complete the authenticated *automatic* attachment, recovery/rollback or packaged Windows E2E required for P0-C. See [M2 pairing checkpoint](2026-10-25-tline-browser-m2-pairing-checkpoint.md).
+
 ### P1-A — Browser Manager UI (functional real-window MVP)
 
 - [ ] Add `ManagedBrowserPanel.tsx` and small hooks/types under `frontend/src/components/browser-managed/` and `frontend/src/hooks/`.

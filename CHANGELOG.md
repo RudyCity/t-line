@@ -1,3 +1,12 @@
+## [1.3.717] - 2026-10-25
+
+### Managed Browser — Verified Agent Gateway Pairing (M2-A)
+
+- Added a native owned-browser pairing command that checks process generation and exact live CDP target before returning a narrow, nonsecret local handoff descriptor.
+- Added explicit per-tab Pair agent and Copy for assistant controls using the existing SuperAgent MCP gateway, with read-only monitoring of the resulting claim state.
+- Added strict redaction of participant projections, safe target URL metadata handling, and regression tests for forged targets, expired sessions and sensitive fields.
+- Automated authenticated handoff, direct agent attachment, live mirror and packaged Windows browser testing remain unfinished; no browser process was launched in this change.
+
 ## [1.3.716] - 2026-10-25
 
 ### Managed Desktop Browser — Native Supervisor Foundation

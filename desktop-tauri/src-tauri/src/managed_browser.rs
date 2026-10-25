@@ -306,6 +306,17 @@ pub struct ManagedTarget {
     title: String,
     url: String,
 }
+/// Debugging port is shared only after an explicit operator pairing request.
+/// It is *not* a credential; access to loopback CDP must remain local and protected.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GatewayPairing {
+    profile_id: String,
+    generation: String,
+    port: u16,
+    target_id: String,
+    transport: &'static str,
+}
 fn target_url(raw: &str) -> String {
     tauri::Url::parse(raw)
         .ok()
@@ -313,6 +324,8 @@ fn target_url(raw: &str) -> String {
             if !matches!(url.scheme(), "http" | "https") {
                 return None;
             }
+            let _ = url.set_username("");
+            let _ = url.set_password(None);
             let _ = url.set_query(None);
             url.set_fragment(None);
             Some(url.to_string())
@@ -379,6 +392,64 @@ pub fn managed_browser_targets(
         })
         .collect())
 }
+/// Strict browser + generation + *real page target* pairing. A tab title or a
+/// caller-selected port is never used as proof that the desktop owns Chrome.
+#[tauri::command]
+pub fn managed_browser_gateway_pairing(
+    webview: tauri::Webview,
+    state: tauri::State<'_, ManagedBrowserState>,
+    profile_id: String,
+    generation: String,
+    target_id: String,
+) -> Result<GatewayPairing, String> {
+    primary_ui(&webview)?;
+    if target_id.len() > 128
+        || target_id.is_empty()
+        || !target_id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+    {
+        return Err("Invalid target identifier.".into());
+    }
+    let mut guard = state
+        .children
+        .lock()
+        .map_err(|_| "Browser state unavailable.")?;
+    let entry = guard
+        .get_mut(&profile_id)
+        .ok_or("No owned browser matches the profile.")?;
+    if entry.generation != generation || !is_alive(entry) {
+        return Err("Browser runtime changed; refresh before pairing.".into());
+    }
+    let port = entry.port.ok_or("Managed browser is not CDP ready.")?;
+    let response = ureq::get(&format!("http://127.0.0.1:{port}/json/list"))
+        .timeout(Duration::from_secs(2))
+        .call()
+        .map_err(|_| "CDP discovery unavailable.")?;
+    use std::io::Read;
+    let mut body = String::new();
+    response
+        .into_reader()
+        .take(128 * 1024)
+        .read_to_string(&mut body)
+        .map_err(|_| "Cannot read managed browser targets.")?;
+    let json: serde_json::Value =
+        serde_json::from_str(&body).map_err(|_| "Invalid CDP response.")?;
+    if !json.as_array().is_some_and(|pages| {
+        pages
+            .iter()
+            .any(|page| page["type"] == "page" && page["id"].as_str() == Some(target_id.as_str()))
+    }) {
+        return Err("Target is no longer present in this owned browser.".into());
+    }
+    Ok(GatewayPairing {
+        profile_id,
+        generation,
+        port,
+        target_id,
+        transport: "superagent_browser_gateway",
+    })
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -397,6 +468,10 @@ mod tests {
             "https://example.com/path"
         );
         assert_eq!(target_url("file:///private/data"), "about:blank");
+        assert_eq!(
+            target_url("https://person:password@example.com/items?key=secret"),
+            "https://example.com/items"
+        );
     }
     #[test]
     fn refuses_unsafe_launch_urls() {
