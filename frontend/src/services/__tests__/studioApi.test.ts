@@ -50,6 +50,37 @@ describe('Studio Studio authenticated client', () => {
       .rejects.toThrow(/MP4 or WebM/);
     expect(mock).toHaveBeenCalledTimes(3);
   });
+  it('fetches read-only occlusion evidence through authenticated workspace scope and validates PNG',async()=>{
+    const videoId='video-'+'a'.repeat(64);
+    const png=new Uint8Array([137,80,78,71,13,10,26,10,...Array(24).fill(0)]);
+    const base64=btoa(String.fromCharCode(...png));
+    const payload={status:'review-only',frame:54,dimensions:{width:160,height:90},
+      observations:[{frame:42,objectCount:2},{frame:54,objectCount:1},{frame:66,objectCount:2}],
+      note:'Read-only evidence',previewPngBase64:base64};
+    const fetchMock=vi.fn().mockResolvedValueOnce(new Response(JSON.stringify(payload),{
+      status:200,headers:{'Content-Type':'application/json'},
+    })).mockResolvedValueOnce(new Response(JSON.stringify({...payload,previewPngBase64:btoa('bad')}),{
+      status:200,headers:{'Content-Type':'application/json'},
+    }));
+    vi.stubGlobal('fetch',fetchMock);
+    const makeUrl=vi.spyOn(URL,'createObjectURL').mockReturnValue('blob:p8-evidence');
+    const evidence=await studioApi.inspectOcclusionEvidence('D:/studio',videoId,54);
+    expect(evidence.status).toBe('review-only');
+    expect(evidence.previewUrl).toBe('blob:p8-evidence');
+    expect(evidence.observations.map(o=>o.objectCount)).toEqual([2,1,2]);
+    expect(JSON.stringify(evidence)).not.toContain('previewPngBase64');
+    const [route,init]=fetchMock.mock.calls[0] as [string,RequestInit];
+    expect(route).toContain('/reconstruct/multi/evidence?workspace=');
+    expect(route).not.toContain('tline-only-token');
+    expect(init.headers).toMatchObject({Authorization:'Bearer tline-only-token'});
+    expect(JSON.parse(init.body as string)).toEqual({videoId,frame:54});
+    await expect(studioApi.inspectOcclusionEvidence('D:/studio',videoId,54))
+      .rejects.toThrow(/Invalid Studio evidence PNG/);
+    expect(makeUrl).toHaveBeenCalledTimes(1);
+    await expect(studioApi.inspectOcclusionEvidence('D:/studio','../escape',54))
+      .rejects.toThrow(/Invalid Studio evidence request/);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
   it('reconstructs text only through authorized video ID and workspace scope', async () => {
     const id = 'video-' + 'e'.repeat(64);
     const report = { status:'experimental-ocr', projectId:'studio-'+'a'.repeat(20),

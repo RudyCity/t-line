@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { studioApi, type StudioProject, type StudioVideoCodeResult } from "../services/studioApi";
+import { studioApi, type StudioOcclusionEvidence, type StudioProject, type StudioVideoCodeResult } from "../services/studioApi";
 import { StudioReconstructionCorrectionPanel } from "./StudioReconstructionCorrectionPanel";
 
 interface Props {
@@ -28,10 +28,17 @@ export function StudioVideoToCodePanel({
   const [imageUrl, setImageUrl] = useState("");
   const [diffUrl, setDiffUrl] = useState("");
   const [diffWarning, setDiffWarning] = useState("");
+  const [evidenceSource, setEvidenceSource] = useState<{videoId:string;frame:number}|null>(null);
+  const [evidenceFrame, setEvidenceFrame] = useState(0);
+  const [evidence, setEvidence] = useState<StudioOcclusionEvidence|null>(null);
+  const [evidenceBusy, setEvidenceBusy] = useState(false);
+  const [evidenceError, setEvidenceError] = useState("");
   const runSeq = useRef(0);
 
   useEffect(() => () => { if (imageUrl) URL.revokeObjectURL(imageUrl); }, [imageUrl]);
   useEffect(() => () => { if (diffUrl) URL.revokeObjectURL(diffUrl); }, [diffUrl]);
+  useEffect(() => () => { if (evidence?.previewUrl) URL.revokeObjectURL(evidence.previewUrl); },
+    [evidence]);
   useEffect(() => {
     runSeq.current++;
     setFile(null);
@@ -40,6 +47,7 @@ export function StudioVideoToCodePanel({
     setError("");
     setPreviewWarning("");
     setImageUrl(""); setDiffUrl(""); setDiffWarning("");
+    setEvidenceSource(null); setEvidence(null); setEvidenceError(""); setEvidenceBusy(false);
   }, [workspacePath]);
 
   const reconstruct = async () => {
@@ -50,10 +58,13 @@ export function StudioVideoToCodePanel({
     const seq = ++runSeq.current;
     setWorking(true); setError(""); setPreviewWarning(""); setDiffWarning("");
     setReport(null); setImageUrl(""); setDiffUrl("");
+    setEvidenceSource(null); setEvidence(null); setEvidenceError("");
+    let uploadedVideoId="";
     try {
       setPhase("Uploading the local reference clip...");
       const imported = await studioApi.uploadVideo(workspacePath, file);
       if (runSeq.current !== seq) return;
+      uploadedVideoId=imported.id;
       setPhase(mode === 'timeline' ? "Detecting text changes and caption visibility..." :
         mode === 'text' ? "Reading stable captions with local English OCR..." :
         "Sampling frames and checking object identities...");
@@ -88,12 +99,43 @@ export function StudioVideoToCodePanel({
         if (runSeq.current === seq) setDiffWarning("Mask difference image is unavailable on this backend.");
       }
     } catch (cause) {
-      if (runSeq.current === seq) setError(cause instanceof Error ? cause.message : String(cause));
+      if (runSeq.current === seq) {
+        const message=cause instanceof Error ? cause.message : String(cause);
+        setError(message);
+        // Evidence is offered only for P6's explicit frame-scoped rejection,
+        // never as a bypass of failed topology or identity validation.
+        const rejected=message.match(/(?:occlusion|disappearance|re-identification|timeline drift).*?frame\s+(\d+)/i);
+        if (mode==='shapes' && uploadedVideoId && rejected) {
+          const at=Number(rejected[1]);
+          if(Number.isSafeInteger(at) && at>=0 && at<360) {
+            setEvidenceSource({videoId:uploadedVideoId,frame:at});
+            setEvidenceFrame(at);
+          }
+        }
+      }
     } finally {
       if (runSeq.current === seq) { setWorking(false); setPhase(""); }
     }
   };
 
+  const inspectEvidence=async()=>{
+    if(!evidenceSource || evidenceBusy || !Number.isSafeInteger(evidenceFrame) ||
+       evidenceFrame<0 || evidenceFrame>=360) {
+      setEvidenceError("Choose a valid 0–359 frame for this bounded clip.");
+      return;
+    }
+    const seq=runSeq.current;
+    setEvidenceBusy(true); setEvidenceError(""); setEvidence(null);
+    try {
+      const result=await studioApi.inspectOcclusionEvidence(
+        workspacePath,evidenceSource.videoId,evidenceFrame);
+      if(seq!==runSeq.current) URL.revokeObjectURL(result.previewUrl);
+      else setEvidence(result);
+    } catch(cause) {
+      if(seq===runSeq.current) setEvidenceError(
+        cause instanceof Error?cause.message:String(cause));
+    } finally {if(seq===runSeq.current) setEvidenceBusy(false);}
+  };
   return <section className="border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] px-3 py-2"
     aria-label="Studio Video to Code prototype">
     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -114,7 +156,10 @@ export function StudioVideoToCodePanel({
           Extraction mode
           <select aria-label="Video reconstruction mode" className={inputClass + " ml-2"}
             value={mode} disabled={working}
-            onChange={event => setMode(event.target.value as 'shapes' | 'text' | 'timeline')}>
+            onChange={event => {
+              setMode(event.target.value as 'shapes' | 'text' | 'timeline');
+              runSeq.current++; setEvidenceSource(null); setEvidence(null); setEvidenceError("");
+            }}>
             <option value="shapes">Editable SVG shapes</option>
             {ocrAvailable && <option value="text">Editable Text (stable OCR)</option>}
             {ocrTimelineAvailable && <option value="timeline">Caption timeline (changing OCR)</option>}
@@ -123,7 +168,11 @@ export function StudioVideoToCodePanel({
         <label className="text-[11px] text-[var(--text-muted)]">Reference video
           <input aria-label="Video reference file" type="file" accept="video/mp4,video/webm,.mp4,.webm"
             className={inputClass + " ml-2 max-w-[210px]"} disabled={working}
-            onChange={e => { setFile(e.target.files?.[0] ?? null); setError(""); }} />
+            onChange={e => {
+              runSeq.current++;
+              setFile(e.target.files?.[0] ?? null); setError("");
+              setEvidenceSource(null); setEvidence(null); setEvidenceError("");
+            }} />
         </label>
         <button type="button" className={buttonClass} disabled={!file || working}
           onClick={() => void reconstruct()}>
@@ -133,6 +182,44 @@ export function StudioVideoToCodePanel({
     </div>
     {phase && <p role="status" className="mt-2 text-xs text-[var(--text-muted)]">{phase}</p>}
     {error && <p role="alert" className="mt-2 text-xs text-red-400">{error}</p>}
+    {evidenceSource && <section aria-label="Occlusion rejection evidence"
+      className="mt-2 max-w-[720px] rounded border border-[var(--border-color)] p-2">
+      <p className="text-xs font-medium">Review rejected video frame</p>
+      <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+        Read-only frame evidence for a failed reconstruction.
+        Inspection does not approve an identity mapping or create editable layers.
+      </p>
+      <div className="mt-2 flex flex-wrap items-end gap-2">
+        <label className="text-[11px]">Inspect frame
+          <input aria-label="Occlusion inspection frame" type="number" min={0} max={359} step={1}
+            value={evidenceFrame} disabled={evidenceBusy}
+            onChange={event=>setEvidenceFrame(Number(event.target.value))}
+            className={inputClass+" ml-1 w-20"} />
+        </label>
+        <button type="button" className={buttonClass}
+          disabled={evidenceBusy || !Number.isSafeInteger(evidenceFrame) ||
+            evidenceFrame<0 || evidenceFrame>=360}
+          onClick={()=>void inspectEvidence()}>
+          {evidenceBusy?"Inspecting...":"Inspect before / flagged / after"}
+        </button>
+      </div>
+      {evidenceError && <p role="alert" className="mt-2 text-xs text-red-400">
+        {evidenceError}</p>}
+      {evidence && <div className="mt-2 space-y-2">
+        <img src={evidence.previewUrl} className="max-w-full object-contain"
+          alt="Three reference video frames before, during, and after rejected reconstruction with detected object bounding boxes" />
+        <table aria-label="Occlusion evidence component counts"
+          className="w-full text-left text-[11px]">
+          <thead><tr><th>Position</th><th>Frame</th><th>Detected objects</th></tr></thead>
+          <tbody>{evidence.observations.map((item,index)=><tr key={index}>
+            <td>{["Before","Flagged","After"][index]}</td>
+            <td>{item.frame}</td>
+            <td>{item.objectCount}</td>
+          </tr>)}</tbody>
+        </table>
+        <p className="text-[10px] text-[var(--text-muted)]">{evidence.note}</p>
+      </div>}
+    </section>}
     {report?.status === 'experimental-ocr' && <div className="mt-2 space-y-1 text-xs text-[var(--text-main)]">
       <p role="status">New editable text project {report.projectId}: {report.lines.length} stable
         line(s), average OCR confidence {(report.averageConfidence * 100).toFixed(1)}%.</p>

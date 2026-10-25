@@ -184,6 +184,13 @@ export interface StudioCaptionTimelineReconstruction {
 }
 export type StudioVideoCodeResult =
   StudioMultiVideoReconstruction | StudioTextOcrReconstruction | StudioCaptionTimelineReconstruction;
+export interface StudioOcclusionEvidence {
+  status: 'review-only'; frame: number;
+  dimensions: {width:number;height:number};
+  observations: Array<{frame:number;timeSeconds:number;objectCount:number;
+    objects:Array<{x:number;y:number;width:number;height:number;color:string}>}>;
+  previewUrl: string; note:string;
+}
 export interface StudioMultiVideoReconstruction {
   status: 'experimental-multi';
   projectId: string;
@@ -408,6 +415,31 @@ export const studioApi = {
     return json(workspace, '/videos', {
       method: 'POST', body: JSON.stringify({ base64: btoa(binary) }),
     });
+  },
+  /** Authenticated evidence on a rejected clip. Never creates/approves a Studio project. */
+  async inspectOcclusionEvidence(workspace: string,videoId:string,frame:number):
+    Promise<StudioOcclusionEvidence> {
+    if(!/^video-[a-f0-9]{64}$/.test(videoId) || !Number.isSafeInteger(frame) ||
+      frame<0 || frame>=360) throw new Error('Invalid Studio evidence request');
+    const result=await json<Omit<StudioOcclusionEvidence,'previewUrl'> & {
+      previewPngBase64:string
+    }>(workspace,'/reconstruct/multi/evidence',{
+      method:'POST',body:JSON.stringify({videoId,frame}),
+    });
+    if(result.status!=='review-only' || !Array.isArray(result.observations) ||
+       result.observations.length!==3 || typeof result.previewPngBase64!=='string' ||
+       result.previewPngBase64.length>2*1024*1024*4/3+8 ||
+       !/^[A-Za-z0-9+/]+={0,2}$/.test(result.previewPngBase64))
+      throw new Error('Invalid Studio evidence response');
+    const binary=atob(result.previewPngBase64);
+    const data=Uint8Array.from(binary,char=>char.charCodeAt(0));
+    const png=[137,80,78,71,13,10,26,10];
+    if(data.length<24 || data.length>2*1024*1024 ||
+      !png.every((byte,index)=>data[index]===byte))
+      throw new Error('Invalid Studio evidence PNG');
+    const previewUrl=URL.createObjectURL(new Blob([data],{type:'image/png'}));
+    const {previewPngBase64:_,...metadata}=result;
+    return {...metadata,previewUrl};
   },
   reconstructMultiVideo: (workspace: string, videoId: string): Promise<StudioMultiVideoReconstruction> => {
     if (!/^video-[a-f0-9]{64}$/.test(videoId)) throw new Error('Invalid Studio video ID');

@@ -158,6 +158,41 @@ describe("Studio Video-to-Code experimental panel", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(/12-MiB/);
     expect(importVideo).not.toHaveBeenCalled();
   });
+  it("offers three-frame read-only evidence for P6 rejection, without creating a Studio project",async()=>{
+    const videoId="video-"+"b".repeat(64);
+    vi.spyOn(studioApi,"uploadVideo").mockResolvedValue({id:videoId,bytes:80,format:"mp4"});
+    vi.spyOn(studioApi,"reconstructMultiVideo").mockRejectedValue(
+      new Error("Video-to-Code possible transient occlusion or object disappearance at frame 54: foreground count changed; manual review required"));
+    const inspect=vi.spyOn(studioApi,"inspectOcclusionEvidence").mockResolvedValue({
+      status:"review-only",frame:54,previewUrl:"blob:p8-evidence",
+      dimensions:{width:160,height:90},note:"Read-only evidence, no recovery",
+      observations:[
+        {frame:42,timeSeconds:1.4,objectCount:2,objects:[]},
+        {frame:54,timeSeconds:1.8,objectCount:1,objects:[]},
+        {frame:66,timeSeconds:2.2,objectCount:2,objects:[]},
+      ],
+    });
+    const revoke=vi.fn();
+    Object.defineProperty(URL,"revokeObjectURL",{value:revoke,configurable:true});
+    const created=vi.fn();
+    const {unmount}=render(<StudioVideoToCodePanel workspacePath="D:/demo" onCreated={created}/>);
+    fireEvent.change(screen.getByLabelText("Video reference file"),{target:{
+      files:[new File([new Uint8Array(80)],"occluded.mp4",{type:"video/mp4"})],
+    }});
+    fireEvent.click(screen.getByRole("button",{name:"Create editable layers"}));
+    await waitFor(()=>expect(screen.getByRole("alert")).toHaveTextContent(/frame 54/));
+    expect(screen.getByLabelText("Occlusion inspection frame")).toHaveValue(54);
+    expect(created).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button",{name:"Inspect before / flagged / after"}));
+    await waitFor(()=>expect(inspect).toHaveBeenCalledWith("D:/demo",videoId,54));
+    expect(screen.getByRole("img",{name:/Three reference video frames/})).toHaveAttribute(
+      "src","blob:p8-evidence");
+    expect(screen.getByRole("table",{name:"Occlusion evidence component counts"})).toBeInTheDocument();
+    expect(screen.getByText(/Read-only evidence, no recovery/)).toBeInTheDocument();
+    expect(created).not.toHaveBeenCalled();
+    unmount();
+    expect(revoke).toHaveBeenCalledWith("blob:p8-evidence");
+  });
   it("shows a recoverable reconstruction error without reporting a project", async () => {
     vi.spyOn(studioApi, "uploadVideo").mockResolvedValue({
       id: "video-" + "b".repeat(64), bytes: 80, format: "mp4",
