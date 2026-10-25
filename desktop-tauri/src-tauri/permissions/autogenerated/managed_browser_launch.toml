@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-managed-browser-launch"
+description = "Enables the managed_browser_launch command without any pre-configured scope."
+commands.allow = ["managed_browser_launch"]
+
+[[permission]]
+identifier = "deny-managed-browser-launch"
+description = "Denies the managed_browser_launch command without any pre-configured scope."
+commands.deny = ["managed_browser_launch"]

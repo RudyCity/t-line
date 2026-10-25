@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-managed-browser-discover"
+description = "Enables the managed_browser_discover command without any pre-configured scope."
+commands.allow = ["managed_browser_discover"]
+
+[[permission]]
+identifier = "deny-managed-browser-discover"
+description = "Denies the managed_browser_discover command without any pre-configured scope."
+commands.deny = ["managed_browser_discover"]

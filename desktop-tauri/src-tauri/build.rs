@@ -15,7 +15,12 @@ fn main() {
             "get_memory_usage",
             "focus_window",
             "check_tauri_update",
-            "install_tauri_update"
+            "install_tauri_update",
+             "managed_browser_discover",
+             "managed_browser_status",
+             "managed_browser_launch",
+             "managed_browser_stop",
+             "managed_browser_targets"
           ])
       )
   )

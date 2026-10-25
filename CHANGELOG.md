@@ -1,3 +1,12 @@
+## [1.3.716] - 2026-10-25
+
+### Managed Desktop Browser — Native Supervisor Foundation
+
+- Added an opt-in native desktop browser supervisor for installed Chrome, with T-Line-only profiles, dynamic local debugging ports, generation-checked process ownership, and read-only sanitized target discovery.
+- Connected an experimental browser-management panel with explicit launch/stop confirmation to the existing T-Line Browser UI without changing WebView2 preview or shared assistant runtime sessions.
+- Added native and frontend safety tests, typed browser runtime contracts, and implementation/acceptance notes at docs/plans/2026-10-25-tline-managed-browser-m1-checkpoint.md.
+- Not production-certified: authenticated agent-to-CDP binding, signed binary validation, interactive Chrome mirroring, optional browser bundling and packaged Windows E2E remain open.
+
 ## [1.3.715] - 2026-10-25
 
 ### Desktop conversational assistant channel

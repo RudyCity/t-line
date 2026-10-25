@@ -18,6 +18,7 @@ mod backend_identity;
 mod tray_logic;
 
 mod state;
+mod managed_browser;
 
 use backend_identity::{decide_port, verify_local_backend, PortDecision};
 
@@ -1707,7 +1708,13 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(state)
+        .manage(managed_browser::ManagedBrowserState::default())
         .invoke_handler(tauri::generate_handler![
+            managed_browser::managed_browser_discover,
+            managed_browser::managed_browser_status,
+            managed_browser::managed_browser_launch,
+            managed_browser::managed_browser_stop,
+            managed_browser::managed_browser_targets,
             get_memory_usage,
             open_webview_devtools,
             eval_webview_js,

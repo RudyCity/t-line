@@ -7,6 +7,7 @@ import { useBrowserListeners } from '../hooks/useBrowserListeners';
 import { getNativeNavigationJs, shouldPollNativeWebview } from './browserRuntimeUtils';
 import BrowserNavigationBar from './BrowserNavigationBar';
 import BrowserAgentSessions from './BrowserAgentSessions';
+import ManagedBrowserPanel from './ManagedBrowserPanel';
 import { useBrowserStorageAndHistory } from '../hooks/useBrowserStorageAndHistory';
 import { ConfirmModal } from './Modals';
 import { useBrowserScreenshot } from '../hooks/useBrowserScreenshot';
@@ -825,6 +826,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       />
 
       <BrowserAgentSessions active={isActive} />
+      <ManagedBrowserPanel active={isActive} initialUrl={activeUrl} />
 
       {/* Main Browser Viewport Area — min-h-0 so DevTools can claim space */}
       <div className="flex-1 bg-[var(--bg-main)] relative min-h-0 overflow-hidden flex flex-col">
