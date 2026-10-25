@@ -40,13 +40,20 @@ export function createAssistantTaskProxy(
     }
     const supplied = req.body;
     const body: Record<string, unknown> | undefined = action === 'create'
-      ? { goalId: supplied?.goalId, title: supplied?.title, idempotencyKey: supplied?.idempotencyKey }
+      ? { goalId: supplied?.goalId, title: supplied?.title,
+          idempotencyKey: supplied?.idempotencyKey, ...(supplied?.domain !== undefined
+            ? { domain: supplied.domain } : {}) }
       : (action === 'cancel' || action === 'run' || action === 'prepare' || action === 'reconcile')
         ? { expectedRevision: supplied?.expectedRevision } : undefined;
     if (action === 'create' &&
         (typeof body?.goalId !== 'string' || typeof body?.title !== 'string' ||
          typeof body?.idempotencyKey !== 'string')) {
       res.status(400).json({ error: 'Invalid task draft' });
+      return;
+    }
+    if (action === 'create' && body?.domain !== undefined &&
+        (typeof body.domain !== 'string' || !/^(general|research|analysis|planning|files|coding)$/.test(body.domain))) {
+      res.status(400).json({ error: 'Unsupported assistant task domain' });
       return;
     }
     if ((action === 'run' || action === 'cancel' ||

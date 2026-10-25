@@ -61,6 +61,28 @@ describe('desktop assistant task fixed-action proxy', () => {
     expect((await fetch(base + '/events' + query + '&cursor=12')).status).toBe(200);
     expect(observed[2].path).toContain('cursor=12');
   });
+  it('forwards only a supported task domain and rejects forged capabilities', async () => {
+    const { base, observed } = await fixture({ role: 'admin' });
+    const query = '?sessionId=session123&workspace=' + encodeURIComponent('D:/project');
+    const response = await fetch(base + query, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        goalId: 'g', title: 'Research news', idempotencyKey: 'key',
+        domain: 'research', toolNames: ['execute_command'], permission: 'full',
+      }),
+    });
+    expect(response.status).toBe(200);
+    expect(JSON.parse(observed[0].body)).toEqual({
+      goalId: 'g', title: 'Research news', idempotencyKey: 'key', domain: 'research',
+    });
+    const rejected = await fetch(base + query, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ goalId: 'g2', title: 'Unsupported',
+        idempotencyKey: 'key2', domain: 'browser' }),
+    });
+    expect(rejected.status).toBe(400);
+    expect(observed).toHaveLength(1);
+  });
   it('proxies only fixed start/cancel/result actions with validated revisions', async () => {
     const { base, observed } = await fixture({ role: 'admin' });
     const taskId = 'c7ba78d0-1719-4a8e-90b4-15832cf48114';

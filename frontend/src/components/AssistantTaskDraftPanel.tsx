@@ -4,6 +4,7 @@ import {
   addAssistantDraft, cancelAssistantDraft, getAssistantDrafts,
   runAssistantReadOnlyTask, getAssistantTaskResult, prepareAssistantPatch,
   getAssistantPatch, reconcileAssistantTask, type AssistantDraftTask,
+  type AssistantTaskDomain, type AssistantTaskDomainDescriptor,
 } from './AssistantTaskDraftApi';
 import { getAuthHeader } from './SuperAgentConsoleUtils';
 
@@ -13,6 +14,8 @@ export function AssistantTaskDraftPanel({ workspace, sessionId }: {
 }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
+  const [domain, setDomain] = useState<AssistantTaskDomain>('general');
+  const [domains, setDomains] = useState<AssistantTaskDomainDescriptor[]>([]);
   const [drafts, setDrafts] = useState<AssistantDraftTask[]>([]);
   const [enabled, setEnabled] = useState(false);
   const [patchEnabled, setPatchEnabled] = useState(false);
@@ -27,6 +30,7 @@ export function AssistantTaskDraftPanel({ workspace, sessionId }: {
   useEffect(() => {
     setDrafts([]); setTitle(''); setError(''); setResult(null);
     setLiveIds([]); setUnverifiedIds([]); setEnabled(false); setPatchEnabled(false);
+    setDomains([]);
     if (!open || !workspace || !sessionId) return;
     const controller = new AbortController();
     let alive = true;
@@ -35,6 +39,12 @@ export function AssistantTaskDraftPanel({ workspace, sessionId }: {
         const snapshot = await getAssistantDrafts(workspace, sessionId, getAuthHeader, controller.signal);
         if (!alive) return;
         setDrafts(snapshot.tasks);
+        const supported = snapshot.domains?.length ? snapshot.domains :
+          [{ id: 'analysis' as const, label: 'Analysis',
+            description: 'Read-only analysis (older Core)', patchPreview: false }];
+        setDomains(supported);
+        setDomain(previous => supported.some(item => item.id === previous) ?
+          previous : supported[0].id);
         setEnabled(snapshot.executionEnabled === true &&
           snapshot.executionPolicy === 'read-only-explicit-run');
         setPatchEnabled(snapshot.executionEnabled === true &&
@@ -59,7 +69,7 @@ export function AssistantTaskDraftPanel({ workspace, sessionId }: {
     setSaving(true); setError(''); setNotice('');
     try {
       const id = crypto.randomUUID();
-      await addAssistantDraft(workspace, sessionId, trimmed, getAuthHeader, id);
+      await addAssistantDraft(workspace, sessionId, trimmed, getAuthHeader, id, domain);
       setTitle('');
       setRefresh(n => n + 1);
     } catch (cause) {
@@ -146,24 +156,33 @@ export function AssistantTaskDraftPanel({ workspace, sessionId }: {
       <button type="button" aria-expanded={open} onClick={() => setOpen(v => !v)}
         className="w-full flex items-center gap-2 px-3 py-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)]">
         <ListTodo size={14}/><span>Assistant tasks</span>
-        <span className="opacity-70">(background analysis · read-only)</span>
+        <span className="opacity-70">(general assistant · independent tasks)</span>
         <span className="ml-auto">{open ? <ChevronDown size={14}/> : <ChevronUp size={14}/>}</span>
       </button>
       {open && (
         <div className="px-3 pb-2 max-h-64 overflow-y-auto" role="region" aria-label="Assistant tasks">
           <div className="flex items-center justify-between text-[var(--text-muted)] pb-1">
             <span>{enabled
-              ? 'Draft first, then explicitly run a read-only worker. Chat stays independent.'
+              ? 'Choose a task domain, draft it, then run independently. No unattended mutations.'
               : 'Drafts do not execute agents yet. Running requires a compatible Core.'}</span>
             <button type="button" aria-label="Refresh assistant tasks"
               onClick={() => setRefresh(v => v + 1)}><RefreshCw size={13}/></button>
           </div>
           <form onSubmit={event => { event.preventDefault(); void addDraft(); }}
-            className="flex gap-2 mb-2">
-            <input aria-label="Task draft title" maxLength={2048} placeholder="Describe analysis or research"
+            className="flex flex-wrap gap-2 mb-2">
+            <select aria-label="Task domain" value={domain}
+              disabled={saving || domains.length === 0}
+              onChange={event => setDomain(event.target.value as AssistantTaskDomain)}
+              title={domains.find(item => item.id === domain)?.description}
+              className="min-w-32 bg-[var(--bg-main)] border border-[var(--border-color)] rounded px-2 py-1">
+              {domains.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+            </select>
+            <input aria-label="Task draft title" maxLength={2048}
+              placeholder="Ask to research, plan, explain, inspect files or code"
               value={title} onChange={event => setTitle(event.target.value)}
               className="flex-1 min-w-0 bg-[var(--bg-main)] border border-[var(--border-color)] rounded px-2 py-1"/>
-            <button type="submit" disabled={saving || !title.trim() || !sessionId || !workspace}
+            <button type="submit" disabled={saving || !title.trim() || !sessionId || !workspace ||
+                !domains.some(item => item.id === domain)}
               className="px-2 border rounded border-[var(--border-color)] disabled:opacity-40">Add draft</button>
           </form>
           {error && <div role="alert" className="text-amber-400 pb-1">{error}</div>}
@@ -171,7 +190,9 @@ export function AssistantTaskDraftPanel({ workspace, sessionId }: {
           {drafts.length === 0 && !error && <div className="text-[var(--text-muted)]">No tasks for this session.</div>}
           {drafts.map(draft => (
             <div key={draft.taskId} className="py-1 border-t border-[var(--border-color)]/40 flex items-center gap-2">
-              <span className="min-w-0 flex-1 truncate" title={draft.title}>{draft.title}</span>
+              <span className="min-w-0 flex-1 truncate" title={draft.title}>
+                <span className="text-[var(--text-muted)]">[{draft.domain || 'analysis'}]</span> {draft.title}
+              </span>
               <span className="text-[var(--text-muted)]">
                 {unverifiedIds.includes(draft.taskId) ? 'needs reconciliation'
                   : liveIds.includes(draft.taskId) ? 'active'
@@ -182,7 +203,7 @@ export function AssistantTaskDraftPanel({ workspace, sessionId }: {
                   aria-label={'Run read-only ' + draft.title}
                   className="text-[var(--color-primary)] disabled:opacity-40">Run</button>
               )}
-              {draft.status === 'queued' && patchEnabled && (
+              {draft.status === 'queued' && patchEnabled && draft.domain === 'coding' && (
                 <button type="button" disabled={saving} onClick={() => { void preparePatch(draft); }}
                   aria-label={'Prepare patch ' + draft.title}
                   className="text-[var(--color-primary)] disabled:opacity-40">Patch</button>

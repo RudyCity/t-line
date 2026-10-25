@@ -4,7 +4,7 @@ import { AssistantTaskDraftPanel } from '../AssistantTaskDraftPanel';
 import {
   addAssistantDraft, cancelAssistantDraft, getAssistantDrafts,
   getAssistantTaskResult, runAssistantReadOnlyTask, prepareAssistantPatch,
-  getAssistantPatch, reconcileAssistantTask,
+  getAssistantPatch, reconcileAssistantTask, type AssistantTaskDomainDescriptor,
 } from '../AssistantTaskDraftApi';
 
 vi.mock('../AssistantTaskDraftApi', () => ({
@@ -17,13 +17,21 @@ vi.mock('../SuperAgentConsoleUtils', () => ({
 }));
 const draft = {
   taskId: 'c7ba78d0-1719-4a8e-90b4-15832cf48114',
-  goalId: 'goal', title: 'Investigate app', status: 'queued',
+  goalId: 'goal', title: 'Investigate app', domain: 'coding' as const, status: 'queued',
   revision: 1, createdAt: 1, updatedAt: 1, evidenceIds: [],
 };
 const snapshot = {
   success: true, tasks: [draft], executionEnabled: true,
   executionPolicy: 'read-only-explicit-run', supportedModes: ['analysis', 'patch-preview'],
   liveTaskIds: [], unverifiedTaskIds: [],
+  domains: [
+    { id: 'general', label: 'General Assistant', description: 'General conversation', patchPreview: false },
+    { id: 'research', label: 'Research', description: 'Online research', patchPreview: false },
+    { id: 'analysis', label: 'Analysis', description: 'Review', patchPreview: false },
+    { id: 'planning', label: 'Planning', description: 'Plan', patchPreview: false },
+    { id: 'files', label: 'Files & Documents', description: 'Local reading', patchPreview: false },
+    { id: 'coding', label: 'Coding', description: 'Code patch review', patchPreview: true },
+  ] as AssistantTaskDomainDescriptor[],
 };
 beforeEach(() => {
   vi.resetAllMocks();
@@ -56,7 +64,7 @@ describe('session-scoped background analysis panel', () => {
   }
   it('shows queued tasks with explicit read-only run and no implicit launch', async () => {
     await open();
-    expect(screen.getByText(/Draft first, then explicitly run/)).toBeTruthy();
+    expect(screen.getByText(/Choose a task domain, draft it/)).toBeTruthy();
     expect(screen.getByText('draft')).toBeTruthy();
     expect(runAssistantReadOnlyTask).not.toHaveBeenCalled();
     expect(vi.mocked(getAssistantDrafts).mock.calls[0].slice(0,2)).toEqual(['D:/project', 'sess_1']);
@@ -147,6 +155,25 @@ describe('session-scoped background analysis panel', () => {
     await waitFor(() => expect(screen.getByText(/diff --git a\/src\/file/)).toBeTruthy());
     expect(getAssistantPatch).toHaveBeenCalledOnce();
     expect(prepareAssistantPatch).not.toHaveBeenCalled();
+  });
+  it('creates research tasks without forcing coding', async () => {
+    await open();
+    expect((screen.getByRole('combobox', { name: 'Task domain' }) as HTMLSelectElement).value).toBe('general');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Task domain' }), { target: { value: 'research' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Task draft title' }),
+      { target: { value: 'Research recent technology' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add draft' }));
+    await waitFor(() => expect(addAssistantDraft).toHaveBeenCalledOnce());
+    expect(vi.mocked(addAssistantDraft).mock.calls[0][5]).toBe('research');
+    expect(prepareAssistantPatch).not.toHaveBeenCalled();
+  });
+  it('does not show patch for a general task', async () => {
+    vi.mocked(getAssistantDrafts).mockResolvedValue({
+      ...snapshot, tasks: [{ ...draft, domain: 'general' }],
+    });
+    await open();
+    expect(screen.queryByRole('button', { name: /Prepare patch/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Run read-only Investigate app' })).toBeTruthy();
   });
   it('keeps older Core drafts non-executable', async () => {
     vi.mocked(getAssistantDrafts).mockResolvedValue({

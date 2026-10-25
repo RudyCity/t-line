@@ -1,5 +1,10 @@
+export type AssistantTaskDomain = 'general' | 'research' | 'analysis' | 'planning' | 'files' | 'coding';
+export type AssistantTaskDomainDescriptor = {
+  id: AssistantTaskDomain; label: string; description: string; patchPreview: boolean;
+};
 export type AssistantDraftTask = {
-  taskId: string; goalId: string; title: string; status: string; revision: number;
+  taskId: string; goalId: string; title: string; domain?: AssistantTaskDomain;
+  status: string; revision: number;
   createdAt: number; updatedAt: number; evidenceIds: string[];
 };
 const base = '/api/superagent/assistant/tasks';
@@ -21,14 +26,15 @@ export const getAssistantDrafts = (workspace: string, sessionId: string,
   auth: () => Record<string, string>, signal?: AbortSignal) =>
   request<{ success: boolean; tasks: AssistantDraftTask[]; executionEnabled: boolean;
     liveTaskIds: string[]; unverifiedTaskIds: string[]; executionPolicy: string;
-    supportedModes?: string[] }>(
+    supportedModes?: string[]; domains?: AssistantTaskDomainDescriptor[] }>(
     base + '?' + contextQuery(workspace, sessionId), auth, {}, signal);
 
 export const addAssistantDraft = (workspace: string, sessionId: string,
-  title: string, auth: () => Record<string, string>, idempotencyKey: string) =>
+  title: string, auth: () => Record<string, string>, idempotencyKey: string,
+  domain: AssistantTaskDomain = 'analysis') =>
   request<{ success: boolean; task: AssistantDraftTask; executionEnabled: boolean }>(
     base + '?' + contextQuery(workspace, sessionId), auth, {
-      method: 'POST', body: JSON.stringify({ title, goalId: idempotencyKey, idempotencyKey }),
+      method: 'POST', body: JSON.stringify({ title, goalId: idempotencyKey, idempotencyKey, domain }),
     });
 
 const taskPath = (workspace: string, sessionId: string, taskId: string, action: string) =>
