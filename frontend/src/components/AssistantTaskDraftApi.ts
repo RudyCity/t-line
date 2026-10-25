@@ -7,6 +7,29 @@ export type AssistantDraftTask = {
   status: string; revision: number;
   createdAt: number; updatedAt: number; evidenceIds: string[];
 };
+export type AssistantTaskTransitionEvent = {
+  seq: number; taskId: string; status: string; at: number; revision: number;
+};
+export async function getAssistantTaskEvents(workspace: string, sessionId: string,
+  cursor: number, auth: () => Record<string, string>, signal?: AbortSignal):
+  Promise<{ events: AssistantTaskTransitionEvent[]; nextCursor: number }> {
+  if (!Number.isSafeInteger(cursor) || cursor < 0) throw Error('Invalid timeline cursor');
+  const data = await request<{ success: boolean; sessionId: string;
+    events: AssistantTaskTransitionEvent[]; nextCursor: number }>(
+    base + '/events?' + contextQuery(workspace, sessionId) + '&cursor=' + cursor, auth, {}, signal);
+  if (data.success !== true || data.sessionId !== sessionId || !Array.isArray(data.events) ||
+      data.events.length > 100 || !Number.isSafeInteger(data.nextCursor) ||
+      data.nextCursor < cursor || data.events.some((ev, i) =>
+        !ev || !Number.isSafeInteger(ev.seq) || ev.seq <= cursor ||
+        (i > 0 && ev.seq <= data.events[i - 1].seq) ||
+        typeof ev.taskId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(ev.taskId) ||
+        typeof ev.status !== 'string' || !Number.isFinite(ev.at) ||
+        !Number.isSafeInteger(ev.revision) || ev.revision < 1) ||
+      (data.events.length && data.nextCursor !== data.events[data.events.length - 1].seq)) {
+    throw Error('Invalid Core task timeline response');
+  }
+  return { events: data.events, nextCursor: data.nextCursor };
+}
 const base = '/api/superagent/assistant/tasks';
 const contextQuery = (workspace: string, sessionId: string) =>
   new URLSearchParams({ workspace, sessionId }).toString();

@@ -4,7 +4,7 @@ import { AlertTriangle, Bot, ChevronDown, ChevronRight,
 import { PermissionCard, type PendingPermission } from './SuperAgentInteractiveCards';
 import type { SubAgentItem } from './SubAgentTerminalModal';
 import type { ConsoleMessage } from './SuperAgentMessageItem';
-import type { AssistantDraftTask } from './AssistantTaskDraftApi';
+import type { AssistantDraftTask, AssistantTaskTransitionEvent } from './AssistantTaskDraftApi';
 
 type AgentEntry = { id: string; title: string; subtitle: string; state: string;
   events: TimelineStep[]; kind: 'main' | 'subagent' | 'task' };
@@ -39,6 +39,7 @@ export function buildAgentTimeline(
   messages: readonly ConsoleMessage[], subagents: readonly SubAgentItem[],
   drafts: readonly AssistantDraftTask[], pendingPermission: PendingPermission | null,
   unverifiedTaskIds: readonly string[] = [],
+  taskEvents: readonly AssistantTaskTransitionEvent[] = [],
 ): AgentEntry[] {
   const tools = messages.filter(m => m.role === 'tool');
   const main: TimelineStep[] = tools.slice(-60).map((m, i) => ({
@@ -88,10 +89,17 @@ export function buildAgentTimeline(
     const status = unverified.has(task.taskId) ? 'reconcile_required' : task.status;
     const created = validTime(task.createdAt);
     const updated = validTime(task.updatedAt);
-    const events: TimelineStep[] = [{
-      id: 'draft', label: 'Task created', timestamp: created, state: 'completed',
-    }];
-    if (status !== 'queued' || (created && updated && updated !== created)) {
+    const journal = taskEvents.filter(ev => ev.taskId === task.taskId).sort((a, b) => a.seq - b.seq);
+    const events: TimelineStep[] = journal.length ? journal.map(ev => ({
+      id: 'journal-' + ev.seq,
+      label: ev.status === 'queued' ? 'Task queued' : 'Transition: ' + (stateLabel[ev.status] || ev.status),
+      detail: 'Recorded by Core · revision ' + ev.revision,
+      timestamp: validTime(ev.at), state: statusState(ev.status),
+    })) : [{ id: 'draft', label: 'Task created', timestamp: created, state: 'completed' }];
+    if (unverified.has(task.taskId)) {
+      events.push({ id: 'unverified', label: 'Running worker not verified',
+        detail: 'Review before reconciliation; no tool calls will be replayed', state: 'review' });
+    } else if (journal.length === 0 && (status !== 'queued' || (created && updated && updated !== created))) {
       events.push({ id: 'status', label: 'Latest observed status: ' + (stateLabel[status] || status),
         detail: 'Snapshot state, not a reconstructed execution history',
         timestamp: updated, state: statusState(status) });
@@ -104,18 +112,18 @@ export function buildAgentTimeline(
 }
 
 export function AgentExecutionTimeline({ messages, subagents, drafts, pendingPermission,
-  unverifiedTaskIds, onPermissionDecision, connected = true }: {
+  unverifiedTaskIds, taskEvents, onPermissionDecision, connected = true }: {
   messages: readonly ConsoleMessage[]; subagents: readonly SubAgentItem[];
   drafts: readonly AssistantDraftTask[]; pendingPermission?: PendingPermission | null;
-  unverifiedTaskIds?: readonly string[];
+  unverifiedTaskIds?: readonly string[]; taskEvents?: readonly AssistantTaskTransitionEvent[];
   onPermissionDecision?: (decision: boolean | 'session' | 'always') => void;
   connected?: boolean;
 }) {
   const [selected, setSelected] = useState('main');
   const [showAll, setShowAll] = useState(false);
   const agents = useMemo(() => buildAgentTimeline(messages, subagents, drafts,
-    pendingPermission || null, unverifiedTaskIds || []),
-  [messages, subagents, drafts, pendingPermission, unverifiedTaskIds]);
+    pendingPermission || null, unverifiedTaskIds || [], taskEvents || []),
+  [messages, subagents, drafts, pendingPermission, unverifiedTaskIds, taskEvents]);
   useEffect(() => { if (!agents.some(a => a.id === selected)) setSelected('main'); },
     [agents, selected]);
   useEffect(() => { if (pendingPermission) setSelected('main'); },

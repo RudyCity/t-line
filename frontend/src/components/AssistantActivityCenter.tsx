@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Activity, ChevronDown, ChevronUp, MessageSquareText,
   Layers3, RefreshCw, AlertTriangle, GitBranch } from 'lucide-react';
 import { AgentExecutionTimeline } from './AgentExecutionTimeline';
@@ -8,7 +8,8 @@ import type { PendingPermission } from './SuperAgentInteractiveCards';
 import { AssistantTurnQueue } from './AssistantTurnQueue';
 import { AssistantTaskDraftPanel, type AssistantTaskHandoff } from './AssistantTaskDraftPanel';
 import { assistantTurnTotals, loadAssistantTurns } from './AssistantTurnApi';
-import { getAssistantDrafts, type AssistantDraftTask } from './AssistantTaskDraftApi';
+import { getAssistantDrafts, getAssistantTaskEvents,
+  type AssistantDraftTask, type AssistantTaskTransitionEvent } from './AssistantTaskDraftApi';
 import { getAuthHeader } from './SuperAgentConsoleUtils';
 
 type ActivityView = 'chat' | 'tasks' | 'timeline';
@@ -48,11 +49,15 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
   const [summary, setSummary] = useState<ActivitySummary>(empty);
   const [drafts, setDrafts] = useState<AssistantDraftTask[]>([]);
   const [unverifiedIds, setUnverifiedIds] = useState<string[]>([]);
+  const [taskEvents, setTaskEvents] = useState<AssistantTaskTransitionEvent[]>([]);
+  const eventCursor = useRef(0);
+  const [journalError, setJournalError] = useState('');
   const [errors, setErrors] = useState({ chat: '', tasks: '' });
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
     setOpen(false); setView('chat'); setSummary(empty); setDrafts([]); setUnverifiedIds([]);
+    eventCursor.current = 0; setTaskEvents([]); setJournalError('');
     setErrors({ chat: '', tasks: '' });
   }, [workspace, sessionId]);
 
@@ -107,6 +112,42 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [workspace, sessionId, revision]);
+
+  // Replay actual Core task-state transitions only while the timeline is visible.
+  useEffect(() => {
+    if (!open || view !== 'timeline' || !workspace || !sessionId) return;
+    const controller = new AbortController();
+    let active = true;
+    let pending = false;
+    const refreshEvents = async () => {
+      if (pending || !active || document.hidden) return;
+      pending = true;
+      try {
+        // Bounded pagination: 400 recorded transitions per refresh, last 600 retained in UI.
+        for (let pageIndex = 0; pageIndex < 4; pageIndex++) {
+          const snapshot = await getAssistantTaskEvents(workspace, sessionId,
+            eventCursor.current, getAuthHeader, controller.signal);
+          if (!active || controller.signal.aborted) return;
+          if (snapshot.events.length === 0) break;
+          eventCursor.current = snapshot.nextCursor;
+          setTaskEvents(previous => [...previous, ...snapshot.events].slice(-600));
+          if (snapshot.events.length < 100) break;
+        }
+        setJournalError('');
+      } catch (cause) {
+        if (active && !controller.signal.aborted)
+          setJournalError(cause instanceof Error ? cause.message : 'Task event history unavailable');
+      } finally { pending = false; }
+    };
+    void refreshEvents();
+    const timer = window.setInterval(() => { void refreshEvents(); }, 5000);
+    const onVisible = () => { if (!document.hidden) void refreshEvents(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      active = false; controller.abort(); window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [open, view, workspace, sessionId]);
 
   const currentCount = summary.chatRunning + summary.taskActive;
   const reviewCount = summary.chatRecoverable + summary.taskAttention + (pendingPermission ? 1 : 0);
@@ -200,8 +241,11 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
               </div>
               <div role="tabpanel" id="activity-panel-timeline" aria-labelledby="activity-tab-timeline"
                 hidden={view !== 'timeline'}>
+                {journalError && <p role="status" className="px-4 pt-2 text-xs text-amber-400">
+                  Core task history unavailable · {journalError}. Showing available snapshots.
+                </p>}
                 <AgentExecutionTimeline messages={messages} subagents={subagents} drafts={drafts}
-                  unverifiedTaskIds={unverifiedIds} pendingPermission={pendingPermission}
+                  taskEvents={taskEvents} unverifiedTaskIds={unverifiedIds} pendingPermission={pendingPermission}
                   onPermissionDecision={onPermissionDecision} connected={connected}/>
               </div>
             </>

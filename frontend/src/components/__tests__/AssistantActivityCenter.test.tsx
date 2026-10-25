@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { AssistantActivityCenter, summarizeBackgroundTasks } from '../AssistantActivityCenter';
 import { loadAssistantTurns, resumeAssistantTurns } from '../AssistantTurnApi';
-import { addAssistantDraft, getAssistantDrafts, runAssistantReadOnlyTask } from '../AssistantTaskDraftApi';
+import { addAssistantDraft, getAssistantDrafts, getAssistantTaskEvents, runAssistantReadOnlyTask } from '../AssistantTaskDraftApi';
 
 vi.mock('../AssistantTurnApi', async original => ({
   ...await original<typeof import('../AssistantTurnApi')>(),
@@ -10,7 +10,7 @@ vi.mock('../AssistantTurnApi', async original => ({
 }));
 vi.mock('../AssistantTaskDraftApi', async original => ({
   ...await original<typeof import('../AssistantTaskDraftApi')>(),
-  getAssistantDrafts: vi.fn(), addAssistantDraft: vi.fn(),
+  getAssistantDrafts: vi.fn(), getAssistantTaskEvents: vi.fn(), addAssistantDraft: vi.fn(),
   runAssistantReadOnlyTask: vi.fn(), cancelAssistantDraft: vi.fn(),
   getAssistantTaskResult: vi.fn(), prepareAssistantPatch: vi.fn(),
   getAssistantPatch: vi.fn(), reconcileAssistantTask: vi.fn(),
@@ -43,6 +43,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(loadAssistantTurns).mockResolvedValue(turns);
   vi.mocked(getAssistantDrafts).mockResolvedValue(snapshot);
+  vi.mocked(getAssistantTaskEvents).mockResolvedValue({ events: [], nextCursor: 0 });
   vi.mocked(resumeAssistantTurns).mockResolvedValue(1);
   vi.mocked(addAssistantDraft).mockResolvedValue({ success: true, task: research, executionEnabled: true });
   vi.stubGlobal('crypto', { randomUUID: () => 'request-one' });
@@ -155,6 +156,28 @@ describe('Unified Activity Center', () => {
     expect(within(panel).getByText(/Connection unavailable/)).toBeTruthy();
     expect(within(panel).queryByRole('button', { name: /Allow Once/ })).toBeNull();
     expect(onPermissionDecision).not.toHaveBeenCalled();
+  });
+
+  it('reads durable Core events only in timeline view, scoped to active session and advances cursor', async () => {
+    const transitions = [
+      { seq: 1, taskId: research.taskId, status: 'queued', at: 1792960000000, revision: 1 },
+      { seq: 2, taskId: research.taskId, status: 'planning', at: 1792960100000, revision: 2 },
+    ];
+    vi.mocked(getAssistantTaskEvents).mockResolvedValueOnce({ events: transitions, nextCursor: 2 })
+      .mockResolvedValue({ events: [], nextCursor: 2 });
+    render(<AssistantActivityCenter workspace="D:/project" sessionId="sess_1"/>);
+    await waitFor(() => expect(getAssistantDrafts).toHaveBeenCalled());
+    expect(getAssistantTaskEvents).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle Activity Center' }));
+    fireEvent.click(screen.getByRole('tab', { name: /Agent timeline/ }));
+    await waitFor(() => expect(getAssistantTaskEvents).toHaveBeenCalledWith(
+      'D:/project', 'sess_1', 0, expect.any(Function), expect.anything()));
+    fireEvent.click(screen.getByRole('button', { name: /Compare services/ }));
+    const timeline = screen.getByRole('list', { name: 'Timeline for Compare services' });
+    await waitFor(() => expect(within(timeline).getByText('Transition: Planning')).toBeTruthy());
+    expect(within(timeline).getByText('Task queued')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle Activity Center' }));
+    expect(screen.queryByRole('tablist')).toBeNull();
   });
 
   it('keeps last known summaries and reports partial service degradation', async () => {

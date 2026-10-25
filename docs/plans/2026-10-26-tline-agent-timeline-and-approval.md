@@ -13,10 +13,10 @@ Scope: T-Line desktop UI only; SuperAgent Core and Muse runtime untouched.
 - Third **Agent timeline** tab inside Activity Center, alongside Chat queue and Background tasks.
 - Main Agent: observed ordered tool action summaries from the active chat, never internal thoughts. No synthetic timestamps.
 - Individual subagents: only records observed on the current session's WebSocket `subagents_update` stream; role, status, prompt, optional log steps, timestamps if actually present. Workspace-global unscopeable sidebar agents are NOT copied to this per-session view.
-- Detached tasks: retained journal snapshots with task-created timestamp and latest state/update; explicitly not represented as a full event history.
+- Detached tasks: **Core-native durable status transitions** from the authenticated, session-scoped `/api/superagent/assistant/tasks/events?cursor=N` journal; each recorded state includes monotonic sequence, revision and source timestamp. If this endpoint is unreachable or has no record, the last known task snapshot is explicitly labeled a snapshot rather than historical evidence.
 - On genuine `permission_required`: the center opens the Agent timeline, shows the existing tool description/file diff preview and actual Core-bound **Allow Once / Allow for Session / Allow Always / Deny** action, and marks review outstanding. The main chat has a shortcut to this view instead of a second independent approval card. Ordinary tool/process actions never produce approval buttons.
 - A disconnected Core disables approval controls; the final decision handler additionally checks the current open WebSocket and active session. A persistent 'Always' rule requires additional user confirmation. Existing previously saved workspace permission rules remain respected, scoped to the active socket/session.
-- Recovered archived events, audit-perfect chronology and per-tool/event ID journal persistence are **not** present; a future Core event API is required to support exact Muse-style replay across desktop restarts.
+- Core already persists up to 2,500 owner/workspace-bound detached-task transition records and exposes bounded pages (up to 100). T-Line reads up to four pages per refresh only while timeline is visible and keeps the latest 600 in memory, advancing a validated cursor; this survives restarting the desktop application because Core owns the journal. Full durable chronological subagent/tool calls, detailed tool inputs/output and per-permission decision acknowledgements are **not** available from this task-state journal. These need a separate server-side event source to achieve exact Muse-style replay.
 
 ## Safety boundaries
 
@@ -32,6 +32,7 @@ Scope: T-Line desktop UI only; SuperAgent Core and Muse runtime untouched.
 bun run build:frontend
 cd frontend && bun --bun x vitest run --config vite.config.ts \
   src/components/__tests__/AgentExecutionTimeline.test.tsx \
+  src/components/__tests__/AssistantTaskJournal.test.ts \
   src/components/__tests__/AssistantActivityCenter.test.tsx \
   src/components/__tests__/AssistantTaskDraftPanel.test.tsx \
   src/components/__tests__/SuperAgentAssistantComposer.test.tsx \

@@ -45,6 +45,23 @@ describe('Per-agent timeline evidence and approval', () => {
     expect(timeline[2].events[1].detail).toContain('not a reconstructed');
   });
 
+  it('uses persisted Core transition journal with exact sequence, revisions and timestamps', () => {
+    const events = [
+      { seq: 3, taskId: 'task-1', status: 'running', at: 1792960120000, revision: 3 },
+      { seq: 1, taskId: 'task-1', status: 'queued', at: 1792960000000, revision: 1 },
+      { seq: 2, taskId: 'task-1', status: 'planning', at: 1792960060000, revision: 2 },
+    ];
+    const rows = buildAgentTimeline([], [], [task], null, [], events)[1].events;
+    expect(rows.map(row => row.label)).toEqual([
+      'Task queued', 'Transition: Planning', 'Transition: Running',
+    ]);
+    expect(rows.map(row => row.timestamp)).toEqual([
+      1792960000000, 1792960060000, 1792960120000,
+    ]);
+    expect(rows[1].detail).toBe('Recorded by Core · revision 2');
+    expect(rows.some(row => row.label.includes('Latest observed status'))).toBe(false);
+  });
+
   it('does not treat orphaned task as running and does not invent old transitions', () => {
     const result = buildAgentTimeline([], [], [task], null, ['task-1']);
     expect(result[1].state).toBe('reconcile_required');
