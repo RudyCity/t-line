@@ -23,6 +23,8 @@ export function StudioCodeToVideoPanel({ workspacePath, projectId, disabled = fa
   const [seconds, setSeconds] = useState(2);
   const [working, setWorking] = useState(false);
   const [job, setJob] = useState<StudioCodeVideoJob | null>(null);
+  const [history, setHistory] = useState<StudioCodeVideoJob[]>([]);
+  const [historyError, setHistoryError] = useState("");
   const jobId = useRef<string | null>(null);
   const lifetime = useRef(0);
   useEffect(() => () => { lifetime.current += 1; }, []);
@@ -30,6 +32,37 @@ export function StudioCodeToVideoPanel({ workspacePath, projectId, disabled = fa
   const [video, setVideo] = useState("");
   const [name, setName] = useState("");
   useEffect(() => () => { if (video) URL.revokeObjectURL(video); }, [video]);
+  useEffect(() => {
+    let active = true;
+    setHistory([]);
+    setHistoryError("");
+    void studioApi.listCodeVideoJobs(workspacePath).then(records => {
+      if (active) setHistory(records.slice(0, 8));
+    }).catch(() => {
+      if (active) setHistoryError("Job history unavailable from this backend");
+    });
+    return () => { active = false; };
+  }, [workspacePath, projectId]);
+  const refreshHistory = async () => {
+    try {
+      const records = await studioApi.listCodeVideoJobs(workspacePath);
+      setHistory(records.slice(0, 8));
+      setHistoryError("");
+    } catch {
+      setHistoryError("Job history refresh failed");
+    }
+  };
+  const openPrevious = async (saved: StudioCodeVideoJob) => {
+    if (working || disabled || saved.status !== "completed" || !saved.result) return;
+    try {
+      setError("");
+      const url = await studioApi.loadCodeVideo(workspacePath, saved.result.id);
+      setVideo(url);
+      setName(saved.result.id + ".mp4");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+  };
   useEffect(() => {
     lifetime.current += 1;
     setVideo(""); setError(""); setFile(null); setAudioFile(null); setTrusted(false);
@@ -57,20 +90,21 @@ export function StudioCodeToVideoPanel({ workspacePath, projectId, disabled = fa
       if (version !== lifetime.current) return;
       jobId.current = current.id;
       setJob(current);
-      while (!["completed", "cancelled", "failed"].includes(current.status)) {
+      while (!["completed", "cancelled", "failed", "interrupted"].includes(current.status)) {
         await new Promise<void>(resolve => setTimeout(resolve, 350));
         if (version !== lifetime.current) return;
         current = await studioApi.inspectCodeVideo(workspacePath, current.id);
         if (version !== lifetime.current) return;
         setJob(current);
       }
-      if (current.status === "failed" || current.status === "cancelled")
+      if (current.status === "failed" || current.status === "cancelled" || current.status === "interrupted")
         throw new Error(current.error ?? ("Code-to-Video " + current.status));
       if (!current.result) throw new Error("Code-to-Video completed without an MP4");
       const url = await studioApi.loadCodeVideo(workspacePath, current.result.id);
       if (version !== lifetime.current) { URL.revokeObjectURL(url); return; }
       setVideo(url);
       setName(current.result.id + ".mp4");
+      void refreshHistory();
     } catch (cause) {
       if (version === lifetime.current)
         setError(cause instanceof Error ? cause.message : String(cause));
@@ -155,6 +189,28 @@ export function StudioCodeToVideoPanel({ workspacePath, projectId, disabled = fa
       Do not load untrusted HTML.
     </p>
     {error && <p role="alert" className="mt-2 text-xs text-red-400">{error}</p>}
+    <div className="mt-2 border-t border-[var(--border-color)] pt-2" aria-label="Code video history">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-semibold text-[var(--text-main)]">Recent renders</span>
+        <button className={buttonClass} type="button" disabled={working}
+          onClick={() => void refreshHistory()} aria-label="Refresh code video history">Refresh</button>
+        {historyError && <span className="text-[10px] text-[var(--text-muted)]">{historyError}</span>}
+      </div>
+      {history.length > 0 && <ul className="mt-1 flex flex-wrap gap-2 text-[11px]" aria-label="Previous code video jobs">
+        {history.map(saved => <li key={saved.id}
+          className="flex items-center gap-2 rounded border border-[var(--border-color)] px-2 py-1">
+          <span className="font-mono">{saved.id.slice(-6)}</span>
+          <span>{saved.status}</span>
+          <span>{saved.framesCompleted}/{saved.frameCount}f</span>
+          {saved.status === "completed" && saved.result &&
+            <button className={buttonClass} type="button" disabled={working || disabled}
+              aria-label={"Open saved video " + saved.id}
+              onClick={() => void openPrevious(saved)}>Open MP4</button>}
+          {saved.status === "interrupted" && <span className="text-amber-400">
+            Restart interrupted this render; manual retry required</span>}
+        </li>)}
+      </ul>}
+    </div>
     {video && <div className="mt-2 flex flex-wrap items-center gap-2">
       <video aria-label="Rendered code to MP4" src={video} controls className="max-h-48 max-w-[420px]" />
       <a className={buttonClass} href={video} download={name}>Download MP4</a>

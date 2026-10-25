@@ -144,6 +144,20 @@ describe('Studio Studio authenticated client', () => {
     expect(() => studioApi.cancelCodeVideo('D:/studio','../bad')).toThrow(/Invalid/);
     expect(mock).toHaveBeenCalledTimes(3);
   });
+  it('lists durable Code-to-Video history through authenticated workspace scope', async () => {
+    const id = 'codejob-' + 'f'.repeat(24);
+    const data = [{id, status:'interrupted', framesCompleted:9, frameCount:60,
+      queuedAt:'2026-10-25T00:00:00.000Z'}];
+    const mock = vi.fn().mockResolvedValue(new Response(JSON.stringify(data), {
+      status:200, headers:{'Content-Type':'application/json'},
+    }));
+    vi.stubGlobal('fetch',mock);
+    expect(await studioApi.listCodeVideoJobs('D:/studio')).toEqual(data);
+    const [url,init] = mock.mock.calls[0] as [string,RequestInit];
+    expect(url).toContain('/code-to-video/jobs?workspace=');
+    expect(url).not.toContain('tline-only-token');
+    expect(init.headers).toMatchObject({Authorization:'Bearer tline-only-token'});
+  });
   it('downloads authenticated SVG/GSAP source without exposing access tokens', async () => {
     const id = 'studio-' + 'a'.repeat(20);
     const html = '<!doctype html><svg id="studio-stage"></svg>';

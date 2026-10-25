@@ -1,8 +1,11 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { StudioCodeToVideoPanel } from "../StudioCodeToVideoPanel";
 import { studioApi } from "../../services/studioApi";
 
+beforeEach(() => {
+  vi.spyOn(studioApi, "listCodeVideoJobs").mockResolvedValue([]);
+});
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("Studio Code-to-Video editor panel", () => {
@@ -107,12 +110,38 @@ describe("Studio Code-to-Video editor panel", () => {
     expect(screen.getByText("Download MP4")).toBeInTheDocument();
   });
 
-  it("locks actions when disabled", () => {
+  it("restores job history and opens a prior MP4 without submitting a new render", async () => {
+    const oldId = "codejob-" + "4".repeat(24);
+    const videoId = "codevideo-" + "a".repeat(24);
+    vi.mocked(studioApi.listCodeVideoJobs).mockResolvedValue([
+      { id: oldId, status: "completed", framesCompleted: 24, frameCount: 24,
+        queuedAt: new Date().toISOString(), result: {
+          id: videoId, bytes: 3500, width: 640, height: 360, fps: 12,
+          frameCount: 24, source: "studio",
+        }},
+      { id: "codejob-" + "5".repeat(24), status: "interrupted",
+        framesCompleted: 9, frameCount: 120, queuedAt: new Date().toISOString(),
+        error: "Renderer process stopped" },
+    ]);
+    const previous = vi.spyOn(studioApi, "loadCodeVideo").mockResolvedValue("blob:old-mp4");
+    const queue = vi.spyOn(studioApi, "queueCodeVideo");
+    render(<StudioCodeToVideoPanel workspacePath="D:/studio"
+      projectId={"studio-" + "b".repeat(20)} />);
+    const open = await screen.findByRole("button", { name: "Open saved video " + oldId });
+    expect(screen.getByText(/manual retry required/)).toBeInTheDocument();
+    fireEvent.click(open);
+    await waitFor(() => expect(previous).toHaveBeenCalledWith("D:/studio", videoId));
+    expect(screen.getByText("Download MP4")).toHaveAttribute("download", videoId + ".mp4");
+    expect(queue).not.toHaveBeenCalled();
+  });
+
+  it("locks actions when disabled", async () => {
     const start = vi.spyOn(studioApi, "queueCodeVideo");
     render(<StudioCodeToVideoPanel workspacePath="D:/studio" disabled
       projectId={"studio-" + "a".repeat(20)} />);
     expect(screen.getByRole("button", { name: "Render MP4" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Render MP4" }));
     expect(start).not.toHaveBeenCalled();
+    await waitFor(() => expect(studioApi.listCodeVideoJobs).toHaveBeenCalled());
   });
 });

@@ -350,7 +350,7 @@ export interface StudioCodeVideoArgs {
   audioAssetId?: string;
 }
 export interface StudioCodeVideoJob {
-  id: string; status: 'queued' | 'running' | 'cancelling' | 'completed' | 'failed' | 'cancelled';
+  id: string; status: 'queued' | 'running' | 'cancelling' | 'completed' | 'failed' | 'cancelled' | 'interrupted';
   framesCompleted: number; frameCount: number;
   queuedAt: string; startedAt?: string; finishedAt?: string; error?: string;
   result?: { id: string; bytes: number; width: number; height: number; fps: number;
@@ -650,6 +650,8 @@ export const studioApi = {
       method: 'POST', body: JSON.stringify(args),
     });
   },
+  listCodeVideoJobs: (workspace: string): Promise<StudioCodeVideoJob[]> =>
+    json(workspace, '/code-to-video/jobs'),
   inspectCodeVideo: (workspace: string, id: string): Promise<StudioCodeVideoJob> =>
     json(workspace, '/code-to-video/jobs/' + assertCodeVideoJob(id)),
   cancelCodeVideo: (workspace: string, id: string): Promise<StudioCodeVideoJob> =>
