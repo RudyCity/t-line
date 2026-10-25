@@ -5,6 +5,7 @@ interface Props {
   workspacePath: string;
   onCreated: (report: StudioVideoCodeResult) => void;
   ocrAvailable?: boolean;
+  ocrTimelineAvailable?: boolean;
 }
 const inputClass = "rounded border border-[var(--border-color)] bg-[var(--bg-main)] px-2 py-1.5 text-xs text-[var(--text-main)]";
 const buttonClass = "rounded border border-[var(--border-color)] bg-[var(--bg-card)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--surface-overlay-hover)] disabled:opacity-40";
@@ -12,9 +13,11 @@ const buttonClass = "rounded border border-[var(--border-color)] bg-[var(--bg-ca
 /** Visible only when a connected backend supports the experimental bounded
  * reconstruction. No file path, token, or plaintext video in any URL.
  */
-export function StudioVideoToCodePanel({ workspacePath, onCreated, ocrAvailable = false }: Props) {
+export function StudioVideoToCodePanel({
+  workspacePath, onCreated, ocrAvailable = false, ocrTimelineAvailable = false,
+}: Props) {
   const [file, setFile] = useState<File | null>(null);
-  const [mode, setMode] = useState<'shapes' | 'text'>('shapes');
+  const [mode, setMode] = useState<'shapes' | 'text' | 'timeline'>('shapes');
   const [working, setWorking] = useState(false);
   const [phase, setPhase] = useState("");
   const [error, setError] = useState("");
@@ -45,11 +48,14 @@ export function StudioVideoToCodePanel({ workspacePath, onCreated, ocrAvailable 
       setPhase("Uploading the local reference clip...");
       const imported = await studioApi.uploadVideo(workspacePath, file);
       if (runSeq.current !== seq) return;
-      setPhase(mode === 'text' ? "Reading stable captions with local English OCR..." :
+      setPhase(mode === 'timeline' ? "Detecting text changes and caption visibility..." :
+        mode === 'text' ? "Reading stable captions with local English OCR..." :
         "Sampling frames and checking object identities...");
-      const result = mode === 'text'
-        ? await studioApi.reconstructTextVideo(workspacePath, imported.id)
-        : await studioApi.reconstructMultiVideo(workspacePath, imported.id);
+      const result = mode === 'timeline'
+        ? await studioApi.reconstructTextTimelineVideo(workspacePath, imported.id)
+        : mode === 'text'
+          ? await studioApi.reconstructTextVideo(workspacePath, imported.id)
+          : await studioApi.reconstructMultiVideo(workspacePath, imported.id);
       if (runSeq.current !== seq) return;
       setReport(result);
       onCreated(result);
@@ -77,23 +83,25 @@ export function StudioVideoToCodePanel({ workspacePath, onCreated, ocrAvailable 
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="min-w-0">
         <h3 className="text-xs font-semibold text-[var(--text-main)]">Video → Editable Studio Code
-          <span className="ml-2 text-[10px] font-normal text-[var(--text-muted)]">Experimental · 2–4 shapes</span>
+          <span className="ml-2 text-[10px] font-normal text-[var(--text-muted)]">Experimental · shapes / OCR</span>
         </h3>
         <p className="max-w-[680px] text-[11px] text-[var(--text-muted)]">
           Local 1–12-second MP4/WebM, up to 12 MiB. Tracks 2–4 separated high-contrast 2D shapes
           against a stable solid-color background (light or dark). Gradients, occlusion and changing
-          backgrounds are not supported. No semantic AI, text recovery or exact source recovery.
+          backgrounds are not supported for vector reconstruction. Optional local English OCR
+          can recover simple stable or changing captions, with approximate font and timing. No exact source recovery.
           Use clips you have permission to process.
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {ocrAvailable && <label className="text-[11px] text-[var(--text-muted)]">
+        {(ocrAvailable || ocrTimelineAvailable) && <label className="text-[11px] text-[var(--text-muted)]">
           Extraction mode
           <select aria-label="Video reconstruction mode" className={inputClass + " ml-2"}
             value={mode} disabled={working}
-            onChange={event => setMode(event.target.value as 'shapes' | 'text')}>
+            onChange={event => setMode(event.target.value as 'shapes' | 'text' | 'timeline')}>
             <option value="shapes">Editable SVG shapes</option>
-            <option value="text">Editable Text (English OCR)</option>
+            {ocrAvailable && <option value="text">Editable Text (stable OCR)</option>}
+            {ocrTimelineAvailable && <option value="timeline">Caption timeline (changing OCR)</option>}
           </select>
         </label>}
         <label className="text-[11px] text-[var(--text-muted)]">Reference video
@@ -119,6 +127,20 @@ export function StudioVideoToCodePanel({ workspacePath, onCreated, ocrAvailable 
       </ul>
       <p className="text-[11px] text-[var(--text-muted)]">
         English-only local OCR. Font and appearance are approximate; review the project in Studio before publishing.
+      </p>
+    </div>}
+    {report?.status === 'experimental-ocr-timeline' && <div className="mt-2 space-y-2 text-xs text-[var(--text-main)]">
+      <p role="status">Created editable caption timeline {report.projectId}:
+        {" "}{report.captions.length} caption segments at
+        {" "}{report.sampleTimes.length} sampled times.</p>
+      <ul className="list-disc pl-4">
+        {report.captions.map(line => <li key={line.id}>{line.text} — frames
+          {" "}{line.startFrame}–{line.endFrame} ({(line.confidence * 100).toFixed(1)}% OCR)
+        </li>)}
+      </ul>
+      <p className="text-[11px] text-[var(--text-muted)]">
+        Appearance is approximate. Visibility boundaries are estimated halfway between samples;
+        check timing and correct all text before publishing.
       </p>
     </div>}
     {report?.status === 'experimental-multi' && <div className="mt-2 space-y-2 text-xs text-[var(--text-main)]">

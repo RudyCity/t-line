@@ -74,6 +74,37 @@ describe("Studio Video-to-Code experimental panel", () => {
     expect(screen.getByText(/Font and appearance are approximate/)).toBeInTheDocument();
     expect(preview).not.toHaveBeenCalled();
   });
+  it("creates separate editable timeline captions with explicitly approximate boundaries", async () => {
+    const videoId="video-"+ "b".repeat(64);
+    vi.spyOn(studioApi,"uploadVideo").mockResolvedValue({id:videoId,bytes:80,format:"mp4"});
+    const report={
+      status:"experimental-ocr-timeline" as const,
+      projectId:"studio-"+ "d".repeat(20),revision:2,
+      captions:[
+        {id:"ocr-caption-1",text:"STUDIO",confidence:.95,startFrame:0,endFrame:40,
+          box:{x:80,y:125,width:240,height:75}},
+        {id:"ocr-caption-2",text:"HELLO",confidence:.94,startFrame:41,endFrame:89,
+          box:{x:80,y:125,width:200,height:75}}],
+      sampleTimes:[0,.35,.7,1.05,1.4,1.75,2.1,2.45,2.8],
+      dimensions:{width:640,height:360},averageConfidence:.945,
+      limitations:["Approximate timing"],
+    };
+    const reconstruct=vi.spyOn(studioApi,"reconstructTextTimelineVideo").mockResolvedValue(report);
+    const preview=vi.spyOn(studioApi,"loadMultiVideoReviewUrl");
+    const created=vi.fn();
+    render(<StudioVideoToCodePanel workspacePath="D:/studio"
+      ocrAvailable ocrTimelineAvailable onCreated={created}/>);
+    fireEvent.change(screen.getByLabelText("Video reconstruction mode"),
+      {target:{value:"timeline"}});
+    fireEvent.change(screen.getByLabelText("Video reference file"),
+      {target:{files:[new File([new Uint8Array(80)],"captions.mp4",{type:"video/mp4"})]}});
+    fireEvent.click(screen.getByRole("button",{name:"Create editable layers"}));
+    await waitFor(()=>expect(created).toHaveBeenCalledWith(report));
+    expect(reconstruct).toHaveBeenCalledWith("D:/studio",videoId);
+    expect(screen.getByText(/STUDIO — frames/)).toBeInTheDocument();
+    expect(screen.getByText(/Visibility boundaries are estimated halfway/)).toBeInTheDocument();
+    expect(preview).not.toHaveBeenCalled();
+  });
   it("does not expose OCR mode on legacy Studio backends", () => {
     render(<StudioVideoToCodePanel workspacePath="D:/studio" onCreated={vi.fn()} />);
     expect(screen.queryByRole("combobox", { name: "Video reconstruction mode" })).not.toBeInTheDocument();

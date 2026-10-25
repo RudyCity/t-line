@@ -67,6 +67,22 @@ describe('Studio Studio authenticated client', () => {
     expect(() => studioApi.reconstructTextVideo('D:/studio','../outside')).toThrow(/Invalid/);
     expect(mock).toHaveBeenCalledTimes(1);
   });
+  it('uses authenticated workspace-scoped route for changing text timeline', async () => {
+    const id='video-'+'c'.repeat(64);
+    const mock=vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      status:'experimental-ocr-timeline',projectId:'studio-'+'d'.repeat(20),revision:2,
+      captions:[{text:'STUDIO',startFrame:0,endFrame:40}],
+    }),{status:201,headers:{'Content-Type':'application/json'}}));
+    vi.stubGlobal('fetch',mock);
+    expect((await studioApi.reconstructTextTimelineVideo('D:/studio',id)).captions).toHaveLength(1);
+    const [url,init]=mock.mock.calls[0] as [string,RequestInit];
+    expect(url).toContain('/reconstruct/text-timeline?workspace=');
+    expect(url).not.toContain('tline-only-token');
+    expect(init.headers).toMatchObject({Authorization:'Bearer tline-only-token'});
+    expect(JSON.parse(init.body as string).videoId).toBe(id);
+    expect(()=>studioApi.reconstructTextTimelineVideo('D:/studio','../untrusted')).toThrow(/Invalid/);
+    expect(mock).toHaveBeenCalledTimes(1);
+  });
   it('downloads authenticated SVG/GSAP source without exposing access tokens', async () => {
     const id = 'studio-' + 'a'.repeat(20);
     const html = '<!doctype html><svg id="studio-stage"></svg>';

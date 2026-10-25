@@ -237,3 +237,14 @@ packs are bundled with T-Line. For stable English captions only, confidence is
 estimated and the recreated typography is approximate. User should review and
 edit fonts/colors, positions and timing before publishing. Unsupported/changed
 captions return an explicit failure without saving an incorrect project.
+
+**Opt-in changing caption timeline:** Updated backends advertise
+`experimentalTextOcrTimeline=local-english-caption-timeline-v1` and require
+`localTextOcrReady=true`. Select **Caption timeline (changing OCR)** to
+recover sequences where English captions change or disappear over time.
+Nine bounded samples create separate editable text layers with estimated
+step-opacity visibility intervals, and the editor lists each caption and
+its approximate start/end frame. Single-sample OCR readings and unsupported
+scene changes fail rather than saving untrusted captions. Timing is only
+accurate to the approximate midpoint between samples; confirm all segment
+boundaries before publishing. Old stable OCR mode remains unchanged.
