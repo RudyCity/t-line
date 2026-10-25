@@ -1,4 +1,5 @@
 import React from 'react';
+import { redactStorageValue, type NetworkEntry } from './browserDiagnostics';
 import { 
   Bug, Code2, ChevronUp, ChevronDown, AlertCircle, ShieldAlert, 
   Layout, Check, Sparkles, Database, RefreshCw, Trash
@@ -26,8 +27,11 @@ export interface InspectedElement {
 interface BrowserDevToolsProps {
   logs: ConsoleErrorLog[];
   inspectedElement: InspectedElement | null;
-  activeSubTab: 'console' | 'inspector' | 'storage';
-  setActiveSubTab: (tab: 'console' | 'inspector' | 'storage') => void;
+  activeSubTab: 'console' | 'inspector' | 'storage' | 'network';
+  setActiveSubTab: (tab: 'console' | 'inspector' | 'storage' | 'network') => void;
+  networkEntries?: NetworkEntry[];
+  onClearNetwork?: () => void;
+  storageError?: string | null;
   isDevtoolsCollapsed: boolean;
   setIsDevtoolsCollapsed: (collapsed: boolean) => void;
   devtoolsHeight: number;
@@ -65,6 +69,9 @@ export default function BrowserDevTools({
   copiedId,
   copyToClipboard,
   storageData = { cookies: [], localStorage: [] },
+  storageError,
+  networkEntries = [],
+  onClearNetwork,
   onRefreshStorage,
   onDeleteCookie,
   onDeleteLocalStorage
@@ -158,6 +165,10 @@ export default function BrowserDevTools({
           >
             <Database size={13} />
             <span>Storage &amp; Cookies</span>
+          </button>
+          <button type="button" onClick={(e) => { e.stopPropagation(); setIsDevtoolsCollapsed(false); setActiveSubTab('network'); }}
+            className={activeSubTab === 'network' && !isDevtoolsCollapsed ? 'px-3 py-1 text-xs font-semibold text-purple-400 border border-[var(--border-color)] rounded' : 'px-3 py-1 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-main)]'}>
+            Network ({networkEntries.length})
           </button>
         </div>
         
@@ -330,6 +341,25 @@ export default function BrowserDevTools({
             </div>
           )}
 
+          {activeSubTab === 'network' && (
+            <section className="text-xs" aria-label="Network requests">
+              <div className="flex items-center justify-between mb-2">
+                <div>XHR / Fetch requests — metadata only; query strings, headers and bodies excluded</div>
+                <button type="button" onClick={onClearNetwork} className="px-2 py-1 rounded border border-[var(--border-color)]">Clear</button>
+              </div>
+              <div className="max-h-72 overflow-auto">
+                {networkEntries.map(entry => (
+                  <div key={entry.id} className="grid grid-cols-[auto_auto_minmax(0,1fr)_auto_auto] gap-2 border-b border-[var(--border-color)] py-1 font-mono">
+                    <span>{entry.time}</span><span>{entry.method}</span>
+                    <span className="truncate" title={entry.url}>{entry.url}</span>
+                    <span className={entry.status >= 400 || !entry.status ? 'text-red-400' : 'text-emerald-400'}>{entry.status || 'ERR'}</span>
+                    <span>{entry.durationMs} ms</span>
+                  </div>
+                ))}
+                {networkEntries.length === 0 && <p className="py-6 text-center text-[var(--text-muted)]">No requests captured. Native WebView capture starts when this tab is visible; earlier requests are not replayed.</p>}
+              </div>
+            </section>
+          )}
           {/* STORAGE & COOKIES TAB */}
           {activeSubTab === 'storage' && (
             <div className="h-full flex flex-col min-h-0 text-xs overflow-hidden">
@@ -349,6 +379,8 @@ export default function BrowserDevTools({
                 </button>
               </div>
 
+              {storageError && <p role="alert" className="mb-2 text-amber-400">{storageError}</p>}
+              <p className="mb-2 text-[10px] text-[var(--text-muted)]">Sensitive values and all cookies are masked. HttpOnly cookies cannot be inspected through page JavaScript.</p>
               {/* Grid content split: Local Storage & Cookies */}
               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0 overflow-y-auto pr-1">
                 {/* Local Storage */}
@@ -380,7 +412,7 @@ export default function BrowserDevTools({
                                 {item.key}
                               </td>
                               <td className="p-2 text-[var(--text-muted)] break-all select-text align-top">
-                                {item.value}
+                                {redactStorageValue(item.key, item.value)}
                               </td>
                               <td className="p-2 text-center align-top">
                                 <button
@@ -429,7 +461,7 @@ export default function BrowserDevTools({
                                 {item.name}
                               </td>
                               <td className="p-2 text-[var(--text-muted)] break-all select-text align-top">
-                                {item.value}
+                                {'[redacted]'}
                               </td>
                               <td className="p-2 text-center align-top">
                                 <button

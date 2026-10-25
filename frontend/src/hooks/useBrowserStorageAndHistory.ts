@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { getNativeStorageProbeJs, redactStorageValue } from '../components/browserDiagnostics';
 import { BookmarkItem, getFriendlyName } from '../components/browserUrlUtils';
 import { HistoryItem } from '../components/HistoryDropdown';
 
@@ -61,6 +62,36 @@ export function useBrowserStorageAndHistory({
     cookies: { name: string; value: string }[];
     localStorage: { key: string; value: string }[];
   }>({ cookies: [], localStorage: [] });
+  const [storageError, setStorageError] = useState<string | null>(null);
+  const pendingStorageRequest = useRef<string | null>(null);
+  useEffect(() => {
+    if (!useTauriWebview) return;
+    let disposed = false;
+    let unsubscribe: (() => void) | undefined;
+    void import('@tauri-apps/api/event').then(({ listen }) =>
+      listen<{ tabId: string; type: string; payload?: {
+        requestId: string; cookies: { name: string; value: string }[];
+        localStorage: { key: string; value: string }[];
+      } }>('tline-webview-event', event => {
+        if (disposed || event.payload.tabId !== tabId ||
+            event.payload.type !== 'tline-storage-snapshot') return;
+        const snapshot = event.payload.payload;
+        if (!snapshot || snapshot.requestId !== pendingStorageRequest.current ||
+            !Array.isArray(snapshot.cookies) || !Array.isArray(snapshot.localStorage)) return;
+        pendingStorageRequest.current = null;
+        setStorageError(null);
+        setStorageData({
+          cookies: snapshot.cookies.slice(0, 100).map(entry => ({ name: String(entry.name).slice(0, 100), value: '[redacted]' })),
+          localStorage: snapshot.localStorage.slice(0, 100).map(entry => ({
+            key: String(entry.key).slice(0, 100),
+            value: redactStorageValue(String(entry.key), String(entry.value)),
+          })),
+        });
+      })
+    ).then(fn => { if (disposed) fn(); else unsubscribe = fn; })
+      .catch(() => { if (!disposed) setStorageError('Native browser event channel unavailable'); });
+    return () => { disposed = true; pendingStorageRequest.current = null; unsubscribe?.(); };
+  }, [tabId, useTauriWebview]);
 
   // Add to History when activeUrl changes
   useEffect(() => {
@@ -119,7 +150,7 @@ export function useBrowserStorageAndHistory({
             var name = parts[0] ? parts[0].trim() : '';
             var val = parts[1] ? parts[1].trim() : '';
             if (name) {
-              cookies.push({ name: name, value: val });
+              cookies.push({ name: name, value: '[redacted]' });
             }
           }
         } catch(e) {}
@@ -129,7 +160,8 @@ export function useBrowserStorageAndHistory({
           for (var i = 0; i < localStorage.length; i++) {
             var k = localStorage.key(i);
             if (k) {
-              ls.push({ key: k, value: localStorage.getItem(k) || '' });
+              var value = localStorage.getItem(k) || '';
+              ls.push({ key: k, value: !/^(theme|appearance|color-?scheme|locale|language|lang|ui-?mode)$/i.test(k) || /token|secret|auth|cookie|session|pass|credential|csrf|xsrf|api.?key|bearer|private|jwt|refresh/i.test(k) || value.length > 128 || /^(Bearer |eyJ)/i.test(value) ? '[redacted]' : value.slice(0, 80) });
             }
           }
         } catch(e) {}
@@ -141,17 +173,22 @@ export function useBrowserStorageAndHistory({
     if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
       const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tabId);
       if (activeLabel) {
+        const requestId = crypto.randomUUID();
+        pendingStorageRequest.current = requestId;
+        setStorageError(null);
         try {
-          const res = await (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js });
-          if (res) {
-            const parsed = JSON.parse(res);
-            setStorageData({
-              cookies: parsed.cookies || [],
-              localStorage: parsed.localStorage || []
-            });
-          }
-        } catch (e) {
-          console.warn('[BrowserTab] Failed to fetch storage from Tauri webview:', e);
+          await (window as any).__TAURI__?.core?.invoke('eval_webview_js', {
+            label: activeLabel, js: getNativeStorageProbeJs(tabId, requestId),
+          });
+          window.setTimeout(() => {
+            if (pendingStorageRequest.current === requestId) {
+              pendingStorageRequest.current = null;
+              setStorageError('Storage unavailable: native event bridge did not respond.');
+            }
+          }, 2500);
+        } catch {
+          pendingStorageRequest.current = null;
+          setStorageError('Unable to inspect native WebView storage.');
         }
       }
     } else if (useElectronWebview && webviewEl && renderMode === 'electron-webview') {
@@ -160,8 +197,8 @@ export function useBrowserStorageAndHistory({
         if (res) {
           const parsed = JSON.parse(res);
           setStorageData({
-            cookies: parsed.cookies || [],
-            localStorage: parsed.localStorage || []
+            cookies: (parsed.cookies || []).slice(0, 100).map((entry: {name: string}) => ({ name: entry.name, value: '[redacted]' })),
+            localStorage: (parsed.localStorage || []).slice(0, 100).map((entry: {key: string; value: string}) => ({ key: entry.key, value: redactStorageValue(entry.key, entry.value) }))
           });
         }
       } catch (e) {
@@ -177,15 +214,14 @@ export function useBrowserStorageAndHistory({
           for (let i = 0; i < cookieArr.length; i++) {
             const parts = cookieArr[i].split('=');
             const name = parts[0] ? parts[0].trim() : '';
-            const val = parts[1] ? parts[1].trim() : '';
-            if (name) cookies.push({ name, value: val });
+            if (name) cookies.push({ name, value: '[redacted]' });
           }
 
           const ls: { key: string; value: string }[] = [];
           const winLs = iframe.contentWindow.localStorage;
           for (let i = 0; i < winLs.length; i++) {
             const k = winLs.key(i);
-            if (k) ls.push({ key: k, value: winLs.getItem(k) || '' });
+            if (k) ls.push({ key: k, value: redactStorageValue(k, winLs.getItem(k) || '') });
           }
 
           setStorageData({ cookies, localStorage: ls });
@@ -292,6 +328,7 @@ export function useBrowserStorageAndHistory({
     setHistory,
     removeHistoryItem,
     storageData,
+    storageError,
     fetchStorageData,
     deleteCookie,
     deleteLocalStorage,

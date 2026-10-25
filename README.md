@@ -33,7 +33,9 @@
 
 ### 🌐 Embedded Browser & DevTools
 * **Autonomous Web Scraping & Control**: Integrated Chrome extension listener, Network XHR logger, Console log inspector, and HTML/Markdown page extractor.
-* **Tab & Viewport Emulation**: Test mobile/tablet/desktop viewports and inspect storage/cookies directly from the t-line sidebar.
+* **Tab & Viewport Emulation**: Test mobile/tablet/desktop viewports and inspect privacy-masked storage/cookies directly from the t-line sidebar.
+* **Browser V2 Diagnostics**: Native Tauri WebView2 supports request-scoped Storage Inspector responses and bounded Fetch/XHR Network metadata; sensitive keys and cookie values are masked, query strings/headers/bodies omitted. Screenshot capture uses Electron direct capture or the explicit OS window/screen picker in Tauri, with the WebView left visible.
+* **Multi-Agent Browser Sessions**: Monitor and manage authorized SuperAgent Chrome-CDP shared sessions, roles, invitations and handover. Chrome CDP targets and Tauri WebView2 tabs are separate rendering engines and do not share session cookies. See [Browser V2 acceptance matrix](docs/plans/2026-10-25-tline-browser-v2.md).
 
 ### 🔐 Security & Remote Workspace Sharing
 * **Cloudflare Tunnel Integration**: Share your local dev server, terminal sessions, and workspace remotely with zero-trust access tokens and password protection.

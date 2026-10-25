@@ -9,6 +9,9 @@ import BrowserNavigationBar from './BrowserNavigationBar';
 import BrowserAgentSessions from './BrowserAgentSessions';
 import { useBrowserStorageAndHistory } from '../hooks/useBrowserStorageAndHistory';
 import { ConfirmModal } from './Modals';
+import { useBrowserScreenshot } from '../hooks/useBrowserScreenshot';
+import { getNativeNetworkProbeJs } from './browserDiagnostics';
+import { useBrowserNetwork } from '../hooks/useBrowserNetwork';
 
 interface BrowserTabProps {
   tab: TabData;
@@ -25,7 +28,8 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   useEffect(() => {
     activeUrlRef.current = activeUrl;
   }, [activeUrl]);
-  const [activeSubTab, setActiveSubTab] = useState<'console' | 'inspector' | 'storage'>('console');
+  const [activeSubTab, setActiveSubTab] = useState<'console' | 'inspector' | 'storage' | 'network'>('console');
+  const { networkEntries, clearNetworkEntries } = useBrowserNetwork(tab.id, true);
   
   const [logs, setLogs] = useState<ConsoleErrorLog[]>([]);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
@@ -323,6 +327,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     setHistory,
     removeHistoryItem,
     storageData,
+    storageError,
     fetchStorageData,
     deleteCookie,
     deleteLocalStorage,
@@ -524,7 +529,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       try {
         // Only poll a visible tab, and never overlap IPC requests.
         // The injection sets up preview helpers and reports URL changes.
-        await invoke('eval_webview_js', { label, js: getPollWebviewJs(tab.id, zoomFactor) });
+        await invoke('eval_webview_js', { label, js: getPollWebviewJs(tab.id, zoomFactor) + getNativeNetworkProbeJs(tab.id) });
         const liveUrl: string = await invoke('get_webview_url', { label });
         if (!subscribed || !isActiveRef.current || nativeWebview !== tauriWebviewRef.current || !liveUrl) return;
         const cleanUrl = getCleanUrl(liveUrl);
@@ -733,76 +738,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     setHistory([]);
   };
 
-  const handleCaptureScreenshot = async () => {
-    const fileName = `screenshot-${tab.id}-${Date.now()}.png`;
-
-    let savePath = `Downloads/${fileName}`;
-    try {
-      if (useTauriWebview && (window as any).__TAURI__) {
-        const { downloadDir } = await import('@tauri-apps/api/path');
-        const dir = await downloadDir();
-        if (dir) {
-          const sep = dir.endsWith('\\') || dir.endsWith('/') ? '' : '\\';
-          savePath = `${dir}${sep}${fileName}`;
-        }
-      }
-    } catch (_) {}
-
-    if (useElectronWebview && webviewEl) {
-      try {
-        const img = await (webviewEl as any).capturePage();
-        const dataUrl = img.toDataURL();
-        const link = document.createElement('a');
-        link.download = fileName;
-        link.href = dataUrl;
-        link.click();
-        window.dispatchEvent(
-          new CustomEvent('tline-toast', {
-            detail: { message: `Screenshot tersimpan: ${savePath}` }
-          })
-        );
-      } catch (err) {
-        console.error('Failed to capture page in Electron:', err);
-      }
-    } else {
-      try {
-        window.dispatchEvent(new CustomEvent('tline-hide-native-webview', { detail: { hide: true } }));
-        const stream = await navigator.mediaDevices.getDisplayMedia({
-          video: { displaySurface: "browser" },
-          audio: false
-        });
-        const video = document.createElement('video');
-        video.srcObject = stream;
-        video.play();
-        
-        await new Promise(resolve => video.onloadedmetadata = resolve);
-        
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        stream.getTracks().forEach(track => track.stop());
-        
-        const dataUrl = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.download = fileName;
-        link.href = dataUrl;
-        link.click();
-
-        window.dispatchEvent(
-          new CustomEvent('tline-toast', {
-            detail: { message: `Screenshot tersimpan: ${savePath}` }
-          })
-        );
-      } catch (err) {
-        alert('Gagal mengambil screenshot: Media devices tidak didukung atau dibatalkan.');
-      } finally {
-        window.dispatchEvent(new CustomEvent('tline-hide-native-webview', { detail: { hide: false } }));
-      }
-    }
-  };
+  const handleCaptureScreenshot = useBrowserScreenshot(tab.id, useElectronWebview, webviewEl);
 
   useEffect(() => {
     if (activeSubTab === 'storage') {
@@ -1024,6 +960,9 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
         copiedId={copiedId}
         copyToClipboard={copyToClipboard}
         storageData={storageData}
+        storageError={storageError}
+        networkEntries={networkEntries}
+        onClearNetwork={clearNetworkEntries}
         onRefreshStorage={fetchStorageData}
         onDeleteCookie={deleteCookie}
         onDeleteLocalStorage={deleteLocalStorage}

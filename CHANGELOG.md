@@ -1,3 +1,13 @@
+## [1.3.711] - 2026-10-25
+
+### Embedded Browser V2: diagnostics, storage privacy and screenshot hardening
+
+- Added native WebView2 async storage snapshot event bridge with request-scoped response IDs and explicit timeout/error messages, avoiding the old void-eval trap.
+- Masked cookie values and sensitive localStorage entries at capture and presentation; bounded results and added native Fetch/XHR Network Inspector with query/body/header-free metadata.
+- Refactored screenshot capture into dedicated hook; removed hiding of native WebView before OS capture. Electron direct capture preserved. Native Tauri screen/window picker remains consent-based rather than page-only CapturePreview.
+- Reduced BrowserTab below the 1,000-line module rule, preserved existing CDP multi-agent session sharing controls, and added diagnostics/screenshot tests.
+- Frontend TypeScript typecheck, complete Vitest suite and Vite production build passed. Installed Windows WebView2 acceptance and genuinely unified native/CDP rendering remain open, described in docs/plans/2026-10-25-tline-browser-v2.md.
+
 ## [1.3.701] - 2026-10-25
 
 ### Motion Studio Resolution Upscaling & 4K UHD Parity
