@@ -401,35 +401,14 @@ function ensureSuperAgentServer(
   ws: WebSocket,
   callback: () => void
 ): void {
-  const isWin = os.platform() === 'win32';
-
-  const modeChanged = currentAgentMode !== agentMode;
-  const argsChanged = currentCustomArgs !== customArgs;
-
-  if (autoSuperAgentProcess && (modeChanged || argsChanged)) {
-    const msgRestart = 'Settings changed (mode/args). Restarting SuperAgent server process...';
-    console.log(`[WS-Agent] ${msgRestart}`);
-    logToSuperAgentFile(`[WS-Agent] ${msgRestart}`);
-    ws.send(JSON.stringify({ type: 'status', text: 'Settings changed. Restarting SuperAgent server...' }));
-    try {
-      if (isWin) {
-        const pid = autoSuperAgentProcess.pid;
-        if (pid) {
-          logToSuperAgentFile(`[WS-Agent] Killing process PID ${pid} via taskkill`);
-          execSync(`taskkill /pid ${pid} /T /F`, { stdio: 'ignore' });
-        }
-      } else {
-        logToSuperAgentFile(`[WS-Agent] Killing process PID ${autoSuperAgentProcess.pid} via kill()`);
-        autoSuperAgentProcess.kill();
-      }
-    } catch (e: any) {
-      const msgKillFailed = `Failed to kill previous process: ${e.message}`;
-      console.error(`[WS-Agent] ${msgKillFailed}`);
-      logToSuperAgentFile(`[WS-Agent][error] ${msgKillFailed}`);
-    }
-    autoSuperAgentProcess = null;
-    isStartingSuperAgent = false;
-    drainPendingCallbacks(new Error('SuperAgent server restart requested.'));
+  // Execution mode belongs to the /api/init session, not this shared listener.
+  // Never terminate the core process (or other sessions/agents) on mode changes.
+  // Custom startup flags remain pinned until an explicit supervised restart.
+  if (autoSuperAgentProcess && currentCustomArgs !== customArgs) {
+    ws.send(JSON.stringify({
+      type: 'status',
+      text: 'Startup flags have not changed on the running shared server. Use supervised core restart to apply them.'
+    }));
   }
 
   // A spawn is already in flight — queue this callback to be resolved when it finishes

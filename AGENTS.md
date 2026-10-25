@@ -67,7 +67,7 @@ SuperAgent HTTP Server (port 7888)
 - SuperAgent always runs its HTTP server on **port 7888** (hardcoded in both projects — do NOT change).
 - The t-line backend **auto-starts** SuperAgent via `bunx superagent --server [--multi]` when a WebSocket connection arrives and port 7888 is not responding.
 - Before spawning, the bridge **pings** `GET /api/instances` to avoid double-starting an already-running server.
-- If mode (`single`/`multi`) or custom args change, the bridge **kills and restarts** the process automatically.
+- Mode (`single`/`multi`) is scoped to the chat session: switching mode opens a new chat session without killing the shared core, existing tasks, or unrelated connections. Startup arguments remain fixed until an explicit supervised restart; T-Line never force-restarts the shared core on mode changes.
 - Use `forceKillPort7888()` only as a last-resort cleanup utility; prefer graceful restart via the bridge.
 
 ### Session & Workspace Rules

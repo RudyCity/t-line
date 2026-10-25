@@ -167,6 +167,15 @@ Existing tools: CDP, CLI bridge, MCP, RMemory, Brain, daemon, gateway
 - The repository names and necessary technical identifiers can remain in source code and documentation; the no-brand rule specifically governs **commit messages**.
 - Never stage unrelated files or automatically rewrite prior commits.
 
+## Implementation checkpoint — 2026-10-25
+
+- **P0-A partially implemented:** typed persistent task state machine, owner/workspace journal, revision guards, bounded event sequence and tested model mode resolver. Full authorization contract and runtime endpoint are open.
+- **P0-B foundation implemented in SuperAgent:** bounded in-process parallel dispatcher with per-resource read/write locks, verified CAS task claim, idempotent durable task creation, and no automatic replay of unknown side effects. This module is not yet wired to real agent spawning, task API or desktop actions.
+- **P0-C mode-switch safety implemented:** desktop now creates a separate mode-scoped chat session and shared backend no longer kills the core process on changes to chat mode. Startup flag changes require explicit supervised restart. Session restart/disconnect E2E remains open.
+- **Verification:** SuperAgent 13 focused tests and TypeScript build pass; T-Line 2 mode tests and backend/frontend builds pass. No packaged desktop or live concurrent model-worker acceptance was run.
+- **Remaining milestones:** task-to-worker adapter, scoped authenticated orchestration APIs, durable streamed events, task control UI, crash reconciliation, proactive goals and packaged desktop acceptance.
+- **Evidence:** `superagent/docs/plans/2026-10-25-persistent-parallel-task-runtime.md`.
+
 ## 9. Starting order
 
 1. P0-A contract + lifecycle audit.

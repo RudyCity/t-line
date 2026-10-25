@@ -195,7 +195,7 @@ export function getSlashCommands({
       description: BUILTIN_COMMAND_DESCRIPTIONS['/single'],
       action: () => {
         setAgentMode('single');
-        setMessages(prev => [...prev, { role: 'system', text: 'CLI Mode switched to Single Agent. Restarting bridge...' }]);
+        setMessages(prev => [...prev, { role: 'system', text: 'Agent mode switched. Opened a separate chat session; other tasks remain active.' }]);
         setConnectTrigger(prev => prev + 1);
       }
     },
@@ -204,7 +204,7 @@ export function getSlashCommands({
       description: BUILTIN_COMMAND_DESCRIPTIONS['/multi'],
       action: () => {
         setAgentMode('multi');
-        setMessages(prev => [...prev, { role: 'system', text: 'CLI Mode switched to Multi-Agent. Restarting bridge...' }]);
+        setMessages(prev => [...prev, { role: 'system', text: 'Multi-agent mode selected in a separate chat session; other tasks remain active.' }]);
         setConnectTrigger(prev => prev + 1);
       }
     },

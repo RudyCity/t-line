@@ -1,3 +1,11 @@
+## [1.3.712] - 2026-10-25
+
+### Assistant session mode isolation (P0)
+- Avoid destructive shared-core restarts on switching a chat between single-agent and multi-agent modes. New modes create separate sessions; prior agent work is not automatically aborted.
+- Preserve explicit per-session model selection through the SuperAgent runtime; unchanged startup flags require supervised restart.
+- Add tests for session-mode selection and the no-process-kill bridge invariant; backend and frontend builds pass.
+- Update agent development rules and implementation roadmap. Durable parallel execution and desktop control API remain under development.
+
 ## [1.3.711] - 2026-10-25
 
 ### Embedded Browser V2: diagnostics, storage privacy and screenshot hardening

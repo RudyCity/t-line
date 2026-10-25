@@ -8,6 +8,7 @@ import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSi
 import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
 import { ActiveTasksBar, ChecklistTaskItem } from './ActiveTasksBar';
 import { SuperAgentTaskMonitor } from './SuperAgentTaskMonitor';
+import { resolveAgentChatModeSwitch } from './agentModeSession';
 import { SuperAgentBrainExplorer } from './SuperAgentBrainExplorer';
 import { SuperAgentInputContainer } from './SuperAgentInputContainer';
 import { SuperAgentSettingsMenu } from './SuperAgentSettingsMenu';
@@ -75,6 +76,16 @@ export function SuperAgentConsole({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const [agentMode, setAgentMode] = useState<'single' | 'multi'>('single');
+
+  // Server sessions are mode-bound. Preserve the previous session and open a
+  // fresh one when switching modes, instead of replacing its active agent.
+  const selectAgentMode: React.Dispatch<React.SetStateAction<'single' | 'multi'>> = update => {
+    const nextMode = typeof update === 'function' ? update(agentMode) : update;
+    const selection = resolveAgentChatModeSwitch(agentMode, nextMode);
+    if (!selection.createSession) return;
+    handleNewChat();
+    setAgentMode(selection.mode);
+  };
   const [customArgs, setCustomArgs] = useState('');
   const [connectTrigger, setConnectTrigger] = useState(0);
   const isAbortedRef = useRef<boolean>(false);
@@ -728,7 +739,7 @@ export function SuperAgentConsole({
       agentMode,
       customArgs,
       setMessages,
-      setAgentMode,
+      setAgentMode: selectAgentMode,
       setCustomArgs,
       setWorkspace,
       setConnectTrigger,
@@ -1095,7 +1106,7 @@ export function SuperAgentConsole({
             workspace={workspace}
             setWorkspace={setWorkspace}
             agentMode={agentMode}
-            setAgentMode={setAgentMode}
+            setAgentMode={selectAgentMode}
             customArgs={customArgs}
             setCustomArgs={setCustomArgs}
             setConnectTrigger={setConnectTrigger}
@@ -1384,7 +1395,7 @@ export function SuperAgentConsole({
       <SuperAgentSettingsModal
         isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)}
         workspaces={workspaces} workspace={workspace} setWorkspace={setWorkspace}
-        agentMode={agentMode} setAgentMode={setAgentMode}
+        agentMode={agentMode} setAgentMode={selectAgentMode}
         customArgs={customArgs} setCustomArgs={setCustomArgs}
         setConnectTrigger={setConnectTrigger}
         showSidebar={showSidebar} setShowSidebar={setShowSidebar}
