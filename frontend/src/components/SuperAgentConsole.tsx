@@ -8,8 +8,8 @@ import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSi
 import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
 import { ActiveTasksBar, ChecklistTaskItem } from './ActiveTasksBar';
 import { SuperAgentTaskMonitor } from './SuperAgentTaskMonitor';
-import { AssistantTaskDraftPanel, type AssistantTaskHandoff } from './AssistantTaskDraftPanel';
-import { AssistantTurnQueue } from './AssistantTurnQueue';
+import { type AssistantTaskHandoff } from './AssistantTaskDraftPanel';
+import { AssistantActivityCenter } from './AssistantActivityCenter';
 import { resolveAgentChatModeSwitch } from './agentModeSession';
 import { SuperAgentBrainExplorer } from './SuperAgentBrainExplorer';
 import { SuperAgentInputContainer } from './SuperAgentInputContainer';
@@ -1337,14 +1337,12 @@ export function SuperAgentConsole({
           {/* Workspace-scoped retained CLI / daemon / Muse task monitor. */}
           <SuperAgentTaskMonitor key={workspace + '::' + activeSessionId}
             workspace={workspace} sessionId={activeSessionId} />
-          <AssistantTaskDraftPanel key={'draft::' + workspace + '::' + activeSessionId}
+          <AssistantActivityCenter key={'activity::' + workspace + '::' + activeSessionId}
             workspace={workspace} sessionId={activeSessionId}
             handoff={delegateHandoff?.workspace === workspace && delegateHandoff?.sessionId === activeSessionId
               ? delegateHandoff : null}
             onDraftCreated={submitted => setInput(previous =>
               previous.trim() === submitted ? '' : previous)} />
-          <AssistantTurnQueue key={'turn::' + workspace + '::' + activeSessionId}
-            workspace={workspace} sessionId={activeSessionId} />
 
           {/* Active Tasks Widget — pinned above input, outside scroll area */}
           <ActiveTasksBar

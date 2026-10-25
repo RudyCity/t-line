@@ -18,11 +18,12 @@ const LEGACY_DOMAINS: AssistantTaskDomainDescriptor[] = [
 ];
 
 /** Natural-language, session-scoped task workspace. Never executes a draft implicitly. */
-export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraftCreated }: {
+export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraftCreated, embedded = false, visible = true }: {
   workspace: string; sessionId: string; handoff?: AssistantTaskHandoff | null;
-  onDraftCreated?: (submitted: string) => void;
+  onDraftCreated?: (submitted: string) => void; embedded?: boolean; visible?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const expanded = embedded || open;
   const [title, setTitle] = useState('');
   const [domain, setDomain] = useState<AssistantTaskDomain>('general');
   const [domains, setDomains] = useState<AssistantTaskDomainDescriptor[]>([]);
@@ -63,7 +64,7 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
   }, [handoff, workspace, sessionId]);
 
   useEffect(() => {
-    if (!open || !workspace || !sessionId) return;
+    if (!expanded || !visible || !workspace || !sessionId) return;
     const controller = new AbortController();
     let active = true;
     let requestIndex = 0;
@@ -93,15 +94,15 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
     const interval = window.setInterval(() => {
       if (!document.hidden) void load();
     }, 3000);
-    const visible = () => { if (!document.hidden) void load(); };
-    document.addEventListener('visibilitychange', visible);
+    const onVisibilityChange = () => { if (!document.hidden) void load(); };
+    document.addEventListener('visibilitychange', onVisibilityChange);
     return () => {
       active = false;
       controller.abort();
       window.clearInterval(interval);
-      document.removeEventListener('visibilitychange', visible);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, [open, workspace, sessionId, refresh]);
+  }, [expanded, visible, workspace, sessionId, refresh]);
 
   const stats = useMemo(() => ({
     active: drafts.filter(task => ACTIVE_STATES.includes(task.status) && !unverifiedIds.includes(task.taskId)).length,
@@ -216,9 +217,10 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
     { id: 'attention', label: 'Needs review', count: stats.attention },
   ];
   return (
-    <section className="shrink-0 border-t border-[var(--border-color)] bg-[var(--bg-card)] font-sans"
+    <section className={embedded ? 'bg-[var(--bg-card)] font-sans' :
+      'shrink-0 border-t border-[var(--border-color)] bg-[var(--bg-card)] font-sans'}
       aria-label="Assistant task workspace">
-      <button type="button" aria-expanded={open} aria-controls="assistant-task-workspace-body"
+      {!embedded && <button type="button" aria-expanded={open} aria-controls="assistant-task-workspace-body"
         onClick={() => setOpen(v => !v)}
         className="flex w-full items-center gap-2.5 px-3 sm:px-4 py-2 text-left text-[var(--text-main)] hover:bg-[var(--bg-card-hover)] focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--color-primary-glow)] text-[var(--color-primary)]">
@@ -240,10 +242,11 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
           </span>}
         {open ? <ChevronDown size={16} className="text-[var(--text-muted)]"/> :
           <ChevronUp size={16} className="text-[var(--text-muted)]"/>}
-      </button>
-      {open && (
+      </button>}
+      {expanded && (
         <div id="assistant-task-workspace-body" role="region" aria-label="Assistant tasks"
-          className="max-h-[60vh] min-h-0 overflow-y-auto border-t border-[var(--border-color)] px-3 sm:px-4 py-3">
+          className={embedded ? 'max-h-[56vh] min-h-0 overflow-y-auto px-3 sm:px-4 py-3' :
+            'max-h-[60vh] min-h-0 overflow-y-auto border-t border-[var(--border-color)] px-3 sm:px-4 py-3'}>
           <div className="mx-auto max-w-3xl space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div>
