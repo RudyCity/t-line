@@ -11,6 +11,7 @@ import { assistantTurnTotals, loadAssistantTurns } from './AssistantTurnApi';
 import { getAssistantDrafts, getAssistantTaskEvents,
   type AssistantDraftTask, type AssistantTaskTransitionEvent } from './AssistantTaskDraftApi';
 import { getAuthHeader } from './SuperAgentConsoleUtils';
+import { getCoreAgentTimeline, type CoreAgentTimelineEvent } from './CoreAgentTimelineApi';
 
 type ActivityView = 'chat' | 'tasks' | 'timeline';
 type ActivitySummary = {
@@ -52,12 +53,17 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
   const [taskEvents, setTaskEvents] = useState<AssistantTaskTransitionEvent[]>([]);
   const eventCursor = useRef(0);
   const [journalError, setJournalError] = useState('');
+  const [coreEvents, setCoreEvents] = useState<CoreAgentTimelineEvent[]>([]);
+  const coreCursor = useRef(0);
+  const [coreError, setCoreError] = useState('');
+  const [coreGap, setCoreGap] = useState(false);
   const [errors, setErrors] = useState({ chat: '', tasks: '' });
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
     setOpen(false); setView('chat'); setSummary(empty); setDrafts([]); setUnverifiedIds([]);
     eventCursor.current = 0; setTaskEvents([]); setJournalError('');
+    coreCursor.current = 0; setCoreEvents([]); setCoreError(''); setCoreGap(false);
     setErrors({ chat: '', tasks: '' });
   }, [workspace, sessionId]);
 
@@ -146,6 +152,42 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
     return () => {
       active = false; controller.abort(); window.clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [open, view, workspace, sessionId]);
+
+  useEffect(() => {
+    if (!open || view !== 'timeline' || !workspace || !sessionId) return;
+    const controller = new AbortController();
+    let active = true;
+    let busy = false;
+    const fetchEvents = async () => {
+      if (!active || busy || document.hidden) return;
+      busy = true;
+      try {
+        // 400-entry Core cap; read four authorized pages at most per refresh.
+        for (let i = 0; i < 4; i++) {
+          const page = await getCoreAgentTimeline(workspace, sessionId, coreCursor.current,
+            getAuthHeader, controller.signal);
+          if (!active || controller.signal.aborted) return;
+          if (page.gap) setCoreGap(true);
+          if (!page.events.length) break;
+          coreCursor.current = page.nextCursor;
+          setCoreEvents(old => [...old, ...page.events].slice(-400));
+          if (page.events.length < 100) break;
+        }
+        setCoreError('');
+      } catch (e) {
+        if (active && !controller.signal.aborted)
+          setCoreError(e instanceof Error ? e.message : 'Core execution history unavailable');
+      } finally { busy = false; }
+    };
+    void fetchEvents();
+    const timer = window.setInterval(() => { void fetchEvents(); }, 5000);
+    const visible = () => { if (!document.hidden) void fetchEvents(); };
+    document.addEventListener('visibilitychange', visible);
+    return () => {
+      active = false; controller.abort(); window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', visible);
     };
   }, [open, view, workspace, sessionId]);
 
@@ -244,8 +286,14 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
                 {journalError && <p role="status" className="px-4 pt-2 text-xs text-amber-400">
                   Core task history unavailable · {journalError}. Showing available snapshots.
                 </p>}
+                {coreError && <p role="status" className="px-4 pt-2 text-xs text-amber-400">
+                  Core execution history unavailable · {coreError}. Showing available live actions.
+                </p>}
+                {coreGap && <p role="status" className="px-4 pt-2 text-xs text-amber-400">
+                  Older Core execution events were pruned. Recorded sequence may have gaps.
+                </p>}
                 <AgentExecutionTimeline messages={messages} subagents={subagents} drafts={drafts}
-                  taskEvents={taskEvents} unverifiedTaskIds={unverifiedIds} pendingPermission={pendingPermission}
+                  coreEvents={coreEvents} taskEvents={taskEvents} unverifiedTaskIds={unverifiedIds} pendingPermission={pendingPermission}
                   onPermissionDecision={onPermissionDecision} connected={connected}/>
               </div>
             </>

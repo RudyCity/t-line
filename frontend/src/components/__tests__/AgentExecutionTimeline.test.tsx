@@ -62,6 +62,37 @@ describe('Per-agent timeline evidence and approval', () => {
     expect(rows.some(row => row.label.includes('Latest observed status'))).toBe(false);
   });
 
+  it('replays actual main and subagent tool actions from the Core journal without enabling old approvals', () => {
+    const hash = 'abcdef0123456789abcd';
+    const core = [
+      { seq: 1, kind: 'tool_start' as const, actor: 'main', tool: 'read_files',
+        at: 1792960000000, status: 'running' },
+      { seq: 2, kind: 'permission_requested' as const, actor: 'main', tool: 'write_file',
+        at: 1792960001000, status: 'queued' },
+      { seq: 3, kind: 'permission_decided' as const, actor: 'main',
+        at: 1792960003000, status: 'denied' },
+      { seq: 4, kind: 'tool_start' as const, actor: 'sub:' + hash, tool: 'web_search',
+        at: 1792960005000, status: 'running' },
+      { seq: 5, kind: 'tool_end' as const, actor: 'sub:' + hash, tool: 'web_search',
+        at: 1792960009000, status: 'completed' },
+    ];
+    const items = buildAgentTimeline(mainMessages, [], [], null, [], [], core);
+    expect(items[0].events.map(e => e.label)).toEqual([
+      'Tool started · read_files', 'Approval requested · write_file',
+      'Approval decision · denied',
+    ]);
+    expect(items[0].events).toHaveLength(3); // No duplicate from live message history.
+    expect(items[1].events.map(e => e.label)).toEqual([
+      'Tool started · web_search', 'Tool finished · web_search',
+    ]);
+    expect(items[1].events.map(e => e.timestamp)).toEqual([1792960005000, 1792960009000]);
+    render(<AgentExecutionTimeline messages={mainMessages} subagents={[]} drafts={[]}
+      coreEvents={core}/>);
+    expect(screen.queryByRole('button', { name: /Allow Once/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Subagent history/ }));
+    expect(screen.getByRole('list', { name: /Timeline for Subagent history/ })).toBeTruthy();
+  });
+
   it('does not treat orphaned task as running and does not invent old transitions', () => {
     const result = buildAgentTimeline([], [], [task], null, ['task-1']);
     expect(result[1].state).toBe('reconcile_required');

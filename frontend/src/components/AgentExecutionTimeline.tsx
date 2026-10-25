@@ -5,6 +5,7 @@ import { PermissionCard, type PendingPermission } from './SuperAgentInteractiveC
 import type { SubAgentItem } from './SubAgentTerminalModal';
 import type { ConsoleMessage } from './SuperAgentMessageItem';
 import type { AssistantDraftTask, AssistantTaskTransitionEvent } from './AssistantTaskDraftApi';
+import type { CoreAgentTimelineEvent } from './CoreAgentTimelineApi';
 
 type AgentEntry = { id: string; title: string; subtitle: string; state: string;
   events: TimelineStep[]; kind: 'main' | 'subagent' | 'task' };
@@ -40,9 +41,26 @@ export function buildAgentTimeline(
   drafts: readonly AssistantDraftTask[], pendingPermission: PendingPermission | null,
   unverifiedTaskIds: readonly string[] = [],
   taskEvents: readonly AssistantTaskTransitionEvent[] = [],
+  coreEvents: readonly CoreAgentTimelineEvent[] = [],
 ): AgentEntry[] {
   const tools = messages.filter(m => m.role === 'tool');
-  const main: TimelineStep[] = tools.slice(-60).map((m, i) => ({
+  // Core journal is authoritative when available. Never merge/replay live tool
+  // calls on top of persisted records; that would double-count execution.
+  const mainJournal = coreEvents.filter(e => e.actor === 'main').sort((a, b) => a.seq - b.seq);
+  const main: TimelineStep[] = mainJournal.length ? mainJournal.map(ev => ({
+    id: 'core-' + ev.seq,
+    label: ev.kind === 'tool_start' ? 'Tool started · ' + (ev.tool || 'tool') :
+      ev.kind === 'tool_end' ? 'Tool finished · ' + (ev.tool || 'tool') :
+      ev.kind === 'permission_requested' ? 'Approval requested · ' + (ev.tool || 'tool') :
+      ev.kind === 'permission_decided' ? 'Approval decision · ' + (stateLabel[ev.status || ''] || ev.status || 'unknown') :
+      'Agent turn completed',
+    detail: 'Core event #' + ev.seq + ' · metadata only',
+    timestamp: validTime(ev.at),
+    state: ev.kind === 'permission_requested' ? 'review' :
+      ev.kind === 'tool_start' ? 'running' :
+      ev.kind === 'permission_decided' && ev.status === 'denied' ? 'failed' :
+      ev.kind === 'tool_end' && ev.status === 'failed' ? 'failed' : 'completed',
+  })) : tools.slice(-60).map((m, i) => ({
     id: 'tool-' + i, label: m.toolName || 'Tool action',
     detail: m.result === undefined ? 'Execution reported; result not yet confirmed' :
       'Result observed in this chat session',
@@ -55,7 +73,8 @@ export function buildAgentTimeline(
     state: 'review',
   });
   const agents: AgentEntry[] = [{
-    id: 'main', title: 'Main Agent', subtitle: 'Current chat · recorded tool actions',
+    id: 'main', title: 'Main Agent',
+    subtitle: mainJournal.length ? 'Core execution journal · source timestamps' : 'Current chat · live tool actions',
     state: pendingPermission ? 'awaiting_approval' :
       tools.some(message => message.result === undefined) ? 'running' : 'idle',
     events: main, kind: 'main',
@@ -83,6 +102,31 @@ export function buildAgentTimeline(
       state: statusState(state) });
     agents.push({ id: 'sub:' + sa.id, kind: 'subagent', title: sa.role || sa.typeName || 'Subagent',
       subtitle: sa.id, state, events });
+  }
+  // Stable hashed agent identity is safe for durable storage. Historical
+  // subagents intentionally do not expose prompts, logs or original IDs.
+  const historicalAgents = new Map<string, CoreAgentTimelineEvent[]>();
+  for (const ev of coreEvents) {
+    if (!ev.actor.startsWith('sub:')) continue;
+    const events = historicalAgents.get(ev.actor) || [];
+    events.push(ev);
+    historicalAgents.set(ev.actor, events);
+  }
+  for (const [actor, history] of historicalAgents) {
+    const ordered = [...history].sort((a, b) => a.seq - b.seq);
+    const status = ordered[ordered.length - 1]?.status || 'unknown';
+    agents.push({
+      id: 'history:' + actor, kind: 'subagent', title: 'Subagent history · ' + actor.slice(4, 12),
+      subtitle: 'Durable Core metadata · private ID hashed', state: status,
+      events: ordered.map(ev => ({
+        id: 'core-' + ev.seq,
+        label: ev.kind === 'tool_start' ? 'Tool started · ' + (ev.tool || 'tool') :
+          ev.kind === 'tool_end' ? 'Tool finished · ' + (ev.tool || 'tool') :
+          'Subagent: ' + (stateLabel[ev.status || ''] || ev.status || 'unknown'),
+        detail: 'Core event #' + ev.seq + ' · metadata only',
+        timestamp: validTime(ev.at), state: statusState(ev.status || 'unknown'),
+      })),
+    });
   }
   const unverified = new Set(unverifiedTaskIds);
   for (const task of drafts.slice(0, 60)) {
@@ -112,18 +156,19 @@ export function buildAgentTimeline(
 }
 
 export function AgentExecutionTimeline({ messages, subagents, drafts, pendingPermission,
-  unverifiedTaskIds, taskEvents, onPermissionDecision, connected = true }: {
+  unverifiedTaskIds, taskEvents, coreEvents, onPermissionDecision, connected = true }: {
   messages: readonly ConsoleMessage[]; subagents: readonly SubAgentItem[];
   drafts: readonly AssistantDraftTask[]; pendingPermission?: PendingPermission | null;
   unverifiedTaskIds?: readonly string[]; taskEvents?: readonly AssistantTaskTransitionEvent[];
+  coreEvents?: readonly CoreAgentTimelineEvent[];
   onPermissionDecision?: (decision: boolean | 'session' | 'always') => void;
   connected?: boolean;
 }) {
   const [selected, setSelected] = useState('main');
   const [showAll, setShowAll] = useState(false);
   const agents = useMemo(() => buildAgentTimeline(messages, subagents, drafts,
-    pendingPermission || null, unverifiedTaskIds || [], taskEvents || []),
-  [messages, subagents, drafts, pendingPermission, unverifiedTaskIds, taskEvents]);
+    pendingPermission || null, unverifiedTaskIds || [], taskEvents || [], coreEvents || []),
+  [messages, subagents, drafts, pendingPermission, unverifiedTaskIds, taskEvents, coreEvents]);
   useEffect(() => { if (!agents.some(a => a.id === selected)) setSelected('main'); },
     [agents, selected]);
   useEffect(() => { if (pendingPermission) setSelected('main'); },

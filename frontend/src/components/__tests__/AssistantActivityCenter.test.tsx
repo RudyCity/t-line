@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { AssistantActivityCenter, summarizeBackgroundTasks } from '../AssistantActivityCenter';
 import { loadAssistantTurns, resumeAssistantTurns } from '../AssistantTurnApi';
 import { addAssistantDraft, getAssistantDrafts, getAssistantTaskEvents, runAssistantReadOnlyTask } from '../AssistantTaskDraftApi';
+import { getCoreAgentTimeline } from '../CoreAgentTimelineApi';
 
 vi.mock('../AssistantTurnApi', async original => ({
   ...await original<typeof import('../AssistantTurnApi')>(),
@@ -15,6 +16,7 @@ vi.mock('../AssistantTaskDraftApi', async original => ({
   getAssistantTaskResult: vi.fn(), prepareAssistantPatch: vi.fn(),
   getAssistantPatch: vi.fn(), reconcileAssistantTask: vi.fn(),
 }));
+vi.mock('../CoreAgentTimelineApi', () => ({ getCoreAgentTimeline: vi.fn() }));
 vi.mock('../SuperAgentConsoleUtils', () => ({
   getAuthHeader: () => ({ Authorization: 'Bearer activity-test' }),
 }));
@@ -44,6 +46,7 @@ beforeEach(() => {
   vi.mocked(loadAssistantTurns).mockResolvedValue(turns);
   vi.mocked(getAssistantDrafts).mockResolvedValue(snapshot);
   vi.mocked(getAssistantTaskEvents).mockResolvedValue({ events: [], nextCursor: 0 });
+  vi.mocked(getCoreAgentTimeline).mockResolvedValue({ events: [], nextCursor: 0, gap: false });
   vi.mocked(resumeAssistantTurns).mockResolvedValue(1);
   vi.mocked(addAssistantDraft).mockResolvedValue({ success: true, task: research, executionEnabled: true });
   vi.stubGlobal('crypto', { randomUUID: () => 'request-one' });
