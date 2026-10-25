@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 
-import { PermissionCard, QuestionCard, PlanCard, TokenUsageCard, PendingPermission, PendingQuestion, TokenUsageData } from './SuperAgentInteractiveCards';
+import { QuestionCard, PlanCard, TokenUsageCard, PendingPermission, PendingQuestion, TokenUsageData } from './SuperAgentInteractiveCards';
 import { getSlashCommands, getSubCommands, getCliOnlySuggestions, isCliOnlyCommand, SlashCommand } from './SuperAgentCommands';
 import { parseParityCommand, runParityCommand } from './SuperAgentParityActions';
 import { SuperAgentSidebar, RecentChangeItem, ProcessItem } from './SuperAgentSidebar';
@@ -26,6 +26,8 @@ import { useSidebarResize } from './useSidebarResize';
 import { getAuthHeader, readFileAsText, readFileAsDataURL, getMainModelLabel as getModelLabelUtil, handleAgentEventPayload, fetchCliPromptHistory } from './SuperAgentConsoleUtils';
 import { History, Folder, Activity, Sparkles, RefreshCw, ArrowDown, MoreVertical, Brain } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
+import { parseCoreReconnectNotice, type CoreReconnectNotice } from '../services/coreReconnectNotice';
+import { CoreReconnectBanner } from './CoreReconnectBanner';
 import { addRule, loadRules, matchesRule, patternFromPermission, toolNameFromPermission } from '../utils/permissionRules';
 
 interface SuperAgentConsoleProps {
@@ -81,6 +83,7 @@ export function SuperAgentConsole({
   const [loading, setLoading] = useState(false);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [browserBridgeReady, setBrowserBridgeReady] = useState(false);
+  const [coreReconnectNotice, setCoreReconnectNotice] = useState<CoreReconnectNotice | null>(null);
   const handledBrowserHandoffRef = useRef<string>('');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -150,6 +153,10 @@ export function SuperAgentConsole({
 
   // Sidebar Monitor & Subagent Terminal states
   const [subagentList, setSubagentList] = useState<SubAgentItem[]>([]);
+  // Session-scoped activity only: the sidebar list also contains workspace-wide instances.
+  const [timelineSubagents, setTimelineSubagents] = useState<SubAgentItem[]>([]);
+  const [approvalJump, setApprovalJump] = useState(0);
+  useEffect(() => { setTimelineSubagents([]); }, [workspace, activeSessionId]);
   const [procList, setProcList] = useState<ProcessItem[]>([]);
   const [recentChangeList, setRecentChangeList] = useState<RecentChangeItem[]>([]);
   const [bgTaskList, setBgTaskList] = useState<any[]>([]);
@@ -530,14 +537,42 @@ export function SuperAgentConsole({
       console.log(`[SuperAgent WS] Connection established. Workspace: ${workspace || 'Default'}`);
       reconnectAttemptsRef.current = 0;
       setBrowserBridgeReady(true);
+      // Read-only status check after WS reconnect: never resubmit chat or tools.
+      socket.send(JSON.stringify({ type: 'core_health_probe', sessionId: activeSessionIdRef.current }));
     };
 
     socket.onmessage = (event) => {
+      if (activeWsUrlRef.current !== wsUrl) return; // Ignore stale socket events after session/workspace switch.
       try {
         const payload = JSON.parse(event.data);
+        if (payload?.type === 'core_reconnect_state') {
+          const notice = parseCoreReconnectNotice(payload, activeSessionIdRef.current);
+          if (notice) setCoreReconnectNotice(notice.phase === 'connected' ? null : notice);
+          return;
+        }
 
-        // Auto-approve permission requests matching persistent rules.
-        if (payload?.type === 'permission_required' && ws) {
+        if (payload?.sessionId && payload.sessionId !== activeSessionIdRef.current) return;
+        if (payload?.type === 'subagents_update' && Array.isArray(payload.subagents)) {
+          setTimelineSubagents(prev => {
+            const merged = [...prev];
+            for (const sa of payload.subagents) {
+              if (!sa || typeof sa.id !== 'string' || !sa.id) continue;
+              const record: SubAgentItem = {
+                id: sa.id, typeName: sa.typeName, role: sa.role || sa.typeName,
+                status: sa.status || 'RUNNING', prompt: sa.prompt, result: sa.result,
+                logs: Array.isArray(sa.logs) ? sa.logs : [],
+                startedAt: sa.startedAt, completedAt: sa.completedAt, model: sa.model,
+              };
+              const at = merged.findIndex(agent => agent.id === sa.id);
+              if (at < 0) merged.push(record);
+              else merged[at] = { ...merged[at], ...record };
+            }
+            return merged.slice(-40);
+          });
+        }
+        // Existing explicit workspace rules. Scope auto-approval to this active socket/session.
+        if (payload?.type === 'permission_required' && socket.readyState === WebSocket.OPEN &&
+            activeWsUrlRef.current === wsUrl && !isAbortedRef.current) {
           const candidate = {
             permissionId: payload.permissionId,
             toolCall: payload.toolCall,
@@ -545,7 +580,7 @@ export function SuperAgentConsole({
           };
           const rules = loadRules(workspace || '');
           if (matchesRule(candidate, rules)) {
-            ws.send(JSON.stringify({
+            socket.send(JSON.stringify({
               type: 'approve_permission',
               permissionId: payload.permissionId,
               approval: true,
@@ -572,8 +607,17 @@ export function SuperAgentConsole({
       if (activeWsUrlRef.current !== wsUrl) return; // intentional unmount
       setBrowserBridgeReady(false);
       setLoading(false);
+      setCoreReconnectNotice({
+        type: 'core_reconnect_state', sessionId: activeSessionIdRef.current,
+        phase: 'offline', code: 'BRIDGE_DISCONNECTED',
+        message: 'Desktop bridge disconnected. Connection checks will retry; pending prompts and tools are not resent.',
+        automaticChatReplayAllowed: false,
+      });
       const attempts = reconnectAttemptsRef.current + 1;
       reconnectAttemptsRef.current = attempts;
+      // Bounded retry. After eight bridge failures the user can explicitly
+      // choose Check connection; no background chat/tool re-dispatch occurs.
+      if (attempts > 8) return;
       const delay = Math.min(30000, 500 * Math.pow(2, attempts - 1));
       console.log(`[SuperAgent WS] Reconnect attempt ${attempts} in ${delay}ms`);
       reconnectTimerRef.current = window.setTimeout(() => {
@@ -1022,20 +1066,27 @@ export function SuperAgentConsole({
   };
 
   const handlePermissionDecision = (approval: boolean | 'session' | 'always') => {
-    if (!pendingPermission || !ws) return;
+    if (!pendingPermission || !ws || ws.readyState !== WebSocket.OPEN ||
+        wsRef.current !== ws || !activeSessionId) return;
     if (approval === 'always') {
+      if (!window.confirm('Allow this tool automatically for future actions in this workspace? Review tool scope carefully.')) return;
       const perm = { ...pendingPermission };
       const rule = {
         pattern: patternFromPermission(perm),
         description: toolNameFromPermission(perm),
         createdAt: Date.now(),
       };
-      addRule(workspace || '', rule);
-      ws.send(JSON.stringify({
-        type: 'approve_permission',
-        permissionId: pendingPermission.permissionId,
-        approval: true
-      }));
+      try {
+        ws.send(JSON.stringify({
+          type: 'approve_permission',
+          permissionId: pendingPermission.permissionId,
+          approval: true
+        }));
+        addRule(workspace || '', rule);
+      } catch {
+        setMessages(prev => [...prev, { role: 'system', text: 'Approval dispatch failed; no persistent rule was saved.' }]);
+        return;
+      }
       setPendingPermission(null);
       setMessages(prev => [...prev, { role: 'system', text: `Auto-approve rule saved: ${rule.pattern}` }]);
       return;
@@ -1171,6 +1222,21 @@ export function SuperAgentConsole({
         </div>
       </div>
 
+      <CoreReconnectBanner
+        notice={coreReconnectNotice?.sessionId === activeSessionId ? coreReconnectNotice : null}
+        canSend={ws?.readyState === WebSocket.OPEN}
+        onCheck={() => {
+          if (ws?.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'core_health_probe', sessionId: activeSessionId }));
+          } else {
+            setConnectTrigger(n => n + 1);
+          }
+        }}
+        onResume={() => ws?.send(JSON.stringify({
+          type: 'resume_session', sessionId: activeSessionId, approved: true,
+        }))}
+      />
+
       <div className="flex-1 flex overflow-hidden relative w-full" ref={mainConsoleRef}>
           {showBrainExplorer && (
             <div className="absolute right-0 inset-y-0 z-40 w-full max-w-[760px]">
@@ -1264,12 +1330,13 @@ export function SuperAgentConsole({
               </div>
             )}
 
-            {/* Interactive Permission Request Card */}
+            {/* Approval action belongs to the session-scoped Agent Timeline, not an unrelated tool log. */}
             {pendingPermission && (
-              <PermissionCard
-                pendingPermission={pendingPermission}
-                handlePermissionDecision={handlePermissionDecision}
-              />
+              <button type="button" onClick={() => setApprovalJump(value => value + 1)}
+                className="w-full rounded-xl border border-amber-500/45 bg-amber-500/10 px-4 py-3 text-left text-xs text-amber-400 hover:bg-amber-500/15">
+                <span className="font-semibold">Action needs approval</span>
+                <span className="ml-2">Review the tool, changes and options in Activity Center → Agent timeline.</span>
+              </button>
             )}
 
             {/* Token Usage & Cost Card (B5) */}
@@ -1339,6 +1406,9 @@ export function SuperAgentConsole({
             workspace={workspace} sessionId={activeSessionId} />
           <AssistantActivityCenter key={'activity::' + workspace + '::' + activeSessionId}
             workspace={workspace} sessionId={activeSessionId}
+            messages={messages} subagents={timelineSubagents}
+            pendingPermission={pendingPermission} onPermissionDecision={handlePermissionDecision}
+            connected={Boolean(ws && ws.readyState === WebSocket.OPEN)} approvalJump={approvalJump}
             handoff={delegateHandoff?.workspace === workspace && delegateHandoff?.sessionId === activeSessionId
               ? delegateHandoff : null}
             onDraftCreated={submitted => setInput(previous =>

@@ -10,6 +10,7 @@ import { rotateAllKnownLogs } from './logRotation';
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
 import { selectSuperAgentLaunch } from './superAgentRuntime';
 import { probeSuperAgentPort } from './superAgentPortProbe';
+import { classifyCoreReconnect, isExplicitResumeRequest } from './coreReconnectSafety';
 
 const SUPERAGENT_LOG_FILE = path.join(os.homedir(), '.tline-superagent.log');
 
@@ -619,7 +620,10 @@ export function sendSuperAgentRequest(pathName: string, payload: any, workspaceP
         if (statusCode < 200 || statusCode >= 300) {
           try {
             const parsed = JSON.parse(body);
-            resolve({ error: parsed.error || parsed.message || `SuperAgent server returned HTTP ${statusCode}`, statusCode });
+            resolve({ error: parsed.error || parsed.message || `SuperAgent server returned HTTP ${statusCode}`,
+              statusCode, code: typeof parsed.code === 'string' ? parsed.code : undefined,
+              requiresExplicitResume: parsed.requiresExplicitResume === true,
+              automaticChatReplayAllowed: false });
           } catch {
             resolve({ error: `SuperAgent server returned HTTP ${statusCode}: ${body.slice(0, 200)}`, statusCode });
           }
@@ -643,6 +647,39 @@ export function sendSuperAgentRequest(pathName: string, payload: any, workspaceP
     req.on('error', (err) => reject(err));
     req.write(postData);
     req.end();
+  });
+}
+
+// Read-only health query for one already-bound session. This never uses chat or
+// init and never changes Core owner/session affinity.
+async function readCoreSessionForReconnect(sessionId: string, workspacePath: string):
+    Promise<{ statusCode: number; code?: string }> {
+  return new Promise(resolve => {
+    const pathName = '/api/status?sessionId=' + encodeURIComponent(sessionId) +
+      '&workspace=' + encodeURIComponent(workspacePath);
+    const request = http.request({
+      host: '127.0.0.1', port: 7888, method: 'GET', path: pathName,
+      timeout: 2200, headers: {
+        'x-client-mode': 'tline', 'x-workspace-path': workspacePath,
+        ...getSuperAgentServiceHeaders(),
+      },
+    }, response => {
+      let body = '';
+      response.setEncoding('utf8');
+      response.on('data', chunk => {
+        body += chunk;
+        if (body.length > 4096) request.destroy();
+      });
+      response.once('end', () => {
+        let code: string | undefined;
+        try { const data = JSON.parse(body); if (typeof data?.code === 'string') code = data.code; }
+        catch {}
+        resolve({ statusCode: response.statusCode || 0, code });
+      });
+    });
+    request.once('timeout', () => request.destroy());
+    request.once('error', () => resolve({ statusCode: 0 }));
+    request.end();
   });
 }
 
@@ -672,9 +709,31 @@ let replayCursor = 0;
 let suppressBufferWrite = false;
   let connectionAttempts = 0;
   let isClosed = false;
+  let sseConnected = false;
+
+  function scheduleSseRetry() {
+    if (isClosed || ws.readyState !== WebSocket.OPEN) return;
+    // Connection probing is read-only, but bound it to avoid infinite traffic
+    // when no Core owner survives machine reboot.
+    if (sseReconnectAttempts >= 8) {
+      if (initialSessionId) ws.send(JSON.stringify(classifyCoreReconnect({
+        sessionId: initialSessionId, statusCode: 503,
+      })));
+      return;
+    }
+    sseReconnectAttempts++;
+    const delay = Math.min(30000, 500 * (2 ** (sseReconnectAttempts - 1)));
+    if (sseReconnectTimeout) clearTimeout(sseReconnectTimeout);
+    sseReconnectTimeout = setTimeout(connectToSuperAgentSSE, delay);
+  }
 
   function connectToSuperAgentSSE() {
     if (isClosed || ws.readyState !== WebSocket.OPEN) return;
+    sseConnected = false;
+    if (sseReconnectTimeout) {
+      clearTimeout(sseReconnectTimeout);
+      sseReconnectTimeout = null;
+    }
     if (sseReq) {
       try { sseReq.destroy(); } catch {}
       activeSseReqs.delete(sseReq);
@@ -698,8 +757,40 @@ let suppressBufferWrite = false;
         ...(lastBufferedEventId > 0 ? { 'Last-Event-ID': String(lastBufferedEventId) } : {})
       }
     }, (res) => {
-      // Successful response: the request is now tracked until 'close' fires.
-      // Reset connectionAttempts on successful connection
+      if (res.statusCode !== 200) {
+        // Never label an HTTP 503 (including dead-session routing) as a
+        // successful SSE connection. Preserve the explicit-resume decision.
+        let errorBody = '';
+        res.setEncoding('utf8');
+        res.on('data', chunk => {
+          errorBody += chunk;
+          if (errorBody.length > 4096) res.destroy();
+        });
+        res.once('end', () => {
+          let upstreamCode: string | undefined;
+          try {
+            const parsed = JSON.parse(errorBody);
+            if (typeof parsed.code === 'string') upstreamCode = parsed.code;
+          } catch {}
+          const initializing = res.statusCode === 400 &&
+            /session not initialized/i.test(errorBody);
+          if (initialSessionId && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(classifyCoreReconnect({
+              sessionId: initialSessionId,
+              statusCode: initializing ? 503 : (res.statusCode || 0),
+              upstreamCode: initializing ? 'CORE_SUPERVISOR_UNAVAILABLE' : upstreamCode,
+            })));
+          }
+          // Initial SSE may race with the one eager init performed for a new
+          // session. Retrying GET is safe; sending the prompt again is not.
+          if ((res.statusCode === 503 || initializing) &&
+              upstreamCode !== 'SESSION_WORKER_DEAD' &&
+              upstreamCode !== 'SESSION_OWNER_UNAVAILABLE') scheduleSseRetry();
+        });
+        return;
+      }
+      // Only a verified HTTP 200 stream resets the bounded SSE retry budget.
+      sseConnected = true;
       connectionAttempts = 0;
       sseReconnectAttempts = 0;
       ws.send(JSON.stringify({ type: 'status', text: `Connected to SuperAgent server (${path.basename(workspacePath)})` }));
@@ -782,39 +873,32 @@ let suppressBufferWrite = false;
       });
 
       res.on('end', () => {
+        if (currentSseReq !== sseReq) return; // superseded stream
+        sseConnected = false;
         console.log('[WS-Agent] SuperAgent SSE connection ended by server.');
         // Capture replay cursor before closing so next connect replays missed events.
         replayCursor = lastSseEventIdRef;
         suppressBufferWrite = true;
         if (!isClosed && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'status', text: 'SSE connection ended. Reconnecting...' }));
-          sseReconnectAttempts += 1;
-          const delay = Math.min(30000, 500 * Math.pow(2, sseReconnectAttempts - 1));
-          if (sseReconnectTimeout) clearTimeout(sseReconnectTimeout);
-          sseReconnectTimeout = setTimeout(connectToSuperAgentSSE, delay);
+          scheduleSseRetry();
         }
       });
     });
 
-    sseReq.on('error', (err: any) => {
-      connectionAttempts++;
-
-      if (connectionAttempts === 1 && !isClosed && ws.readyState === WebSocket.OPEN) {
-        ensureSuperAgentServer(workspacePath, agentMode, customArgs, ws, () => {
-          connectToSuperAgentSSE();
-        });
-      } else {
-        if (!isClosed && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({
-            type: 'status',
-            text: 'SuperAgent server not running on port 7888. Retrying connection...'
-          }));
-          sseReconnectAttempts += 1;
-          const delay = Math.min(30000, 500 * Math.pow(2, sseReconnectAttempts - 1));
-          if (sseReconnectTimeout) clearTimeout(sseReconnectTimeout);
-          sseReconnectTimeout = setTimeout(connectToSuperAgentSSE, delay);
-        }
+    const currentSseReq = sseReq;
+    sseReq.on('error', () => {
+      if (currentSseReq !== sseReq) return; // intentional stream replacement
+      sseConnected = false;
+      // A failed GET/SSE is safe to retry with a bounded budget; never
+      // auto-launch a potentially foreign Core listener during reconnection.
+      if (initialSessionId && !isClosed && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(classifyCoreReconnect({
+          sessionId: initialSessionId, statusCode: 503,
+          upstreamCode: 'CORE_SUPERVISOR_UNAVAILABLE',
+        })));
       }
+      scheduleSseRetry();
     });
 
     // Track this SSE handle so a WS disconnect can destroy every outstanding
@@ -849,6 +933,47 @@ let suppressBufferWrite = false;
         return;
       }
 
+      if (actionType === 'core_health_probe') {
+        const health = await readCoreSessionForReconnect(initialSessionId, workspacePath);
+        if (health.statusCode === 200 && !sseConnected) {
+          sseReconnectAttempts = 0; // manual/read-only retry is a fresh probe budget
+          connectToSuperAgentSSE();
+        }
+        ws.send(JSON.stringify(classifyCoreReconnect({
+          sessionId: initialSessionId, statusCode: health.statusCode,
+          upstreamCode: health.code,
+        })));
+        return;
+      }
+      if (actionType === 'resume_session') {
+        if (!isExplicitResumeRequest({
+          channelSessionId: initialSessionId, requestedSessionId: parsed.sessionId,
+          approval: parsed.approved,
+        })) {
+          ws.send(JSON.stringify(classifyCoreReconnect({
+            sessionId: initialSessionId, statusCode: 409,
+          })));
+          return;
+        }
+        const result = await sendSuperAgentRequest('/api/init', {
+          workspace: workspacePath, mode: agentMode === 'multi' ? 'multi' : 'single',
+          clientMode: 'tline', sessionId: initialSessionId, resume: initialSessionId,
+        }, workspacePath);
+        if (result?.success === true && result.sessionId === initialSessionId) {
+          ws.send(JSON.stringify(classifyCoreReconnect({
+            sessionId: initialSessionId, statusCode: 200,
+          })));
+          connectToSuperAgentSSE(); // GET only; never reissue a chat/tool request.
+        } else {
+          const notice = classifyCoreReconnect({
+            sessionId: initialSessionId, statusCode: result?.statusCode || 409,
+            upstreamCode: result?.code,
+          });
+          // The explicit resume was denied by Core; do not retry it.
+          ws.send(JSON.stringify(notice));
+        }
+        return;
+      }
       if (actionType === 'prompt') {
         // The transport is a session-bound channel, not a general-purpose
         // agent execution proxy. Deny stale-tab and cross-session sends.
@@ -898,39 +1023,40 @@ let suppressBufferWrite = false;
         try {
           const chatPayload: any = { message: text, sessionId: initialSessionId };
           if (parsed.clientMessageId) chatPayload.clientMessageId = parsed.clientMessageId;
+          // A transport failure after a POST is an unknown outcome. Never
+          // call /api/chat again, regardless of whether the connection refused,
+          // timed out, or closed after Core accepted the request.
           let response: any;
           try {
             response = await sendSuperAgentRequest('/api/chat', chatPayload, workspacePath);
-          } catch (err: any) {
-            if (err?.code === 'ECONNREFUSED' || err?.message?.includes('ECONNREFUSED')) {
-              console.log('[WS-Agent] Connection refused on port 7888. Reconnecting to Core...');
-              ws.send(JSON.stringify({ type: 'status', text: 'Core unreachable. Reconnecting...' }));
-              autoSuperAgentProcess = null;
-              isStartingSuperAgent = false;
-              await new Promise<void>(resolve =>
-                ensureSuperAgentServer(workspacePath, agentMode, customArgs, ws, resolve));
-              const initOk = await initializeSuperAgentSession(workspacePath, agentMode, initialSessionId);
-              if (!initOk) throw new Error('Core restarted but session initialization failed.');
-              try {
-                response = await sendSuperAgentRequest('/api/chat', chatPayload, workspacePath);
-              } catch (retryErr: any) {
-                if (retryErr?.code === 'ECONNREFUSED' ||
-                    String(retryErr?.message || '').includes('ECONNREFUSED')) {
-                  throw new Error('Core still unreachable after reconnect. Check the local server.');
-                }
-                throw retryErr;
-              }
-            } else {
-              throw err;
-            }
+          } catch (_err: any) {
+            const notice = classifyCoreReconnect({
+              sessionId: initialSessionId, uncertainWrite: true,
+            });
+            ws.send(JSON.stringify(notice));
+            ws.send(JSON.stringify({ type: 'chat_response', sessionId: initialSessionId,
+              success: false, result: { error: notice.message } }));
+            return;
           }
 
-          // The core may be ready before this session has been initialized.
-          // Initialization is idempotent and must preserve the pinned identity.
+          // A definite session-not-initialized response still needs a user
+          // decision; never silently reinitialize and resend the same prompt.
           if (response?.error === 'Session not initialized') {
-            const initOk = await initializeSuperAgentSession(workspacePath, agentMode, initialSessionId);
-            if (!initOk) throw new Error('Assistant session initialization failed.');
-            response = await sendSuperAgentRequest('/api/chat', chatPayload, workspacePath);
+            const notice = classifyCoreReconnect({
+              sessionId: initialSessionId, statusCode: 409,
+            });
+            ws.send(JSON.stringify(notice));
+            ws.send(JSON.stringify({ type: 'chat_response', sessionId: initialSessionId,
+              success: false, result: { error: notice.message } }));
+            return;
+          }
+          if (response?.error && (response.statusCode === 503 ||
+              response.code === 'SESSION_WORKER_DEAD' ||
+              response.code === 'SESSION_OWNER_UNAVAILABLE')) {
+            ws.send(JSON.stringify(classifyCoreReconnect({
+              sessionId: initialSessionId, statusCode: response.statusCode,
+              upstreamCode: response.code,
+            })));
           }
 
           // Determine if response indicates an error
