@@ -9,6 +9,7 @@ import { SubAgentTerminalModal, SubAgentItem } from './SubAgentTerminalModal';
 import { ActiveTasksBar, ChecklistTaskItem } from './ActiveTasksBar';
 import { SuperAgentTaskMonitor } from './SuperAgentTaskMonitor';
 import { AssistantTaskDraftPanel } from './AssistantTaskDraftPanel';
+import { AssistantTurnQueue } from './AssistantTurnQueue';
 import { resolveAgentChatModeSwitch } from './agentModeSession';
 import { SuperAgentBrainExplorer } from './SuperAgentBrainExplorer';
 import { SuperAgentInputContainer } from './SuperAgentInputContainer';
@@ -729,7 +730,8 @@ export function SuperAgentConsole({
     ws.send(JSON.stringify({
       type: 'prompt',
       text: finalPrompt,
-      sessionId: targetSessionId
+      sessionId: targetSessionId,
+      clientMessageId: crypto.randomUUID()
     }));
   };
 
@@ -1286,6 +1288,8 @@ export function SuperAgentConsole({
           <SuperAgentTaskMonitor key={workspace + '::' + activeSessionId}
             workspace={workspace} sessionId={activeSessionId} />
           <AssistantTaskDraftPanel key={'draft::' + workspace + '::' + activeSessionId}
+            workspace={workspace} sessionId={activeSessionId} />
+          <AssistantTurnQueue key={'turn::' + workspace + '::' + activeSessionId}
             workspace={workspace} sessionId={activeSessionId} />
 
           {/* Active Tasks Widget — pinned above input, outside scroll area */}

@@ -1,3 +1,11 @@
+## [1.3.715] - 2026-10-25
+
+### Desktop conversational assistant channel
+- Accept follow-up chat instructions while the agent is active and queue them durably in the existing Core session executor.
+- Display session-scoped running, pending and recoverable chat turns with explicit confirmation before recovering only never-started messages.
+- Pin message, approval, answer, plan and abort requests to the originating session; add per-message idempotency keys.
+- Add authenticated, bounded read/recovery proxy with sanitized status metadata, tests and implementation notes. No autonomous detached parallel worker is enabled.
+
 ## [1.3.714] - 2026-10-25
 
 ### Managed Browser Runtime — Architecture and Delivery Plan

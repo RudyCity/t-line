@@ -200,12 +200,12 @@ export function SuperAgentInputContainer({
               !hasActivePreset
                 ? "No active model preset selected. Please select a preset first..."
                 : ws?.readyState === WebSocket.OPEN
-                  ? "Enter prompt or command (e.g. /schedule, /goal, /grill-me)..."
+                  ? (loading ? "Send another instruction; it will queue behind the active turn..." : "Enter prompt or command (e.g. /schedule, /goal, /grill-me)...")
                   : "Connecting to SuperAgent bridge..."
             }
             className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 text-sm text-[var(--text-main)] placeholder-[var(--text-muted)] font-mono py-0.5 px-0 resize-none overflow-y-auto max-h-[220px] leading-relaxed"
             rows={1}
-            disabled={loading || !ws || ws.readyState !== WebSocket.OPEN || !hasActivePreset}
+            disabled={!ws || ws.readyState !== WebSocket.OPEN || !hasActivePreset}
             style={{ minHeight: '36px' }}
           />
         </div>
@@ -216,7 +216,7 @@ export function SuperAgentInputContainer({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={loading || !ws || ws.readyState !== WebSocket.OPEN || !hasActivePreset}
+              disabled={!ws || ws.readyState !== WebSocket.OPEN || !hasActivePreset}
               className="flex items-center justify-center text-[10px] font-mono text-[var(--text-muted)] hover:text-[var(--text-main)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] rounded-md p-1.5 transition cursor-pointer disabled:opacity-40 shrink-0"
               title="Attach Files"
             >
@@ -341,26 +341,26 @@ export function SuperAgentInputContainer({
               {input.length} chars
             </span>
 
-            {loading ? (
+            {loading && (
               <button
                 onClick={handleAbort}
                 disabled={!ws || ws.readyState !== WebSocket.OPEN}
                 className="flex items-center gap-1.5 bg-rose-950/90 hover:bg-rose-900 border border-rose-800 text-rose-200 text-[10px] font-mono font-bold px-3 py-1 rounded-md transition cursor-pointer active:scale-95 focus:outline-none"
-                title="Stop Execution"
+                title="Abort active session execution"
               >
                 <Square className="w-3 h-3 fill-current text-rose-400" />
                 <span>ABORT</span>
               </button>
-            ) : (
-              <button
-                onClick={() => handleSend()}
-                disabled={(!input.trim() && attachments.length === 0) || !ws || ws.readyState !== WebSocket.OPEN || !hasActivePreset}
-                className="flex items-center justify-center bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] active:scale-95 disabled:bg-[var(--bg-card)] disabled:text-[var(--text-muted)] disabled:border-[var(--border-color)] border border-[var(--color-primary)] text-white rounded-md p-1.5   transition-all cursor-pointer shrink-0 focus:outline-none"
-                title="Send Message (↵)"
-              >
-                <Send className="w-3.5 h-3.5" />
-              </button>
             )}
+            <button
+              onClick={() => handleSend()}
+              disabled={(!input.trim() && attachments.length === 0) || !ws || ws.readyState !== WebSocket.OPEN || !hasActivePreset}
+              className="flex items-center justify-center bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] active:scale-95 disabled:bg-[var(--bg-card)] disabled:text-[var(--text-muted)] disabled:border-[var(--border-color)] border border-[var(--color-primary)] text-white rounded-md p-1.5 transition-all cursor-pointer shrink-0 focus:outline-none"
+              title={loading ? "Queue follow-up instruction (↵)" : "Send message (↵)"}
+              aria-label={loading ? "Queue follow-up" : "Send message"}
+            >
+              <Send className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </div>

@@ -599,6 +599,7 @@ export function sendSuperAgentRequest(pathName: string, payload: any, workspaceP
         'Content-Length': Buffer.byteLength(postData),
         'x-workspace-path': workspacePath,
         'x-client-mode': 'tline',
+        ...(typeof payload?.sessionId === 'string' ? { 'x-session-id': payload.sessionId } : {}),
         ...getSuperAgentServiceHeaders()
       },
       timeout: timeoutMs
@@ -840,8 +841,30 @@ let suppressBufferWrite = false;
     try {
       const parsed = JSON.parse(message);
       const actionType = parsed.type;
+      // Every interactive operation must originate from a valid session-bound
+      // transport, including approvals and aborts (not just chat prompts).
+      if (!initialSessionId || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(initialSessionId)) {
+        ws.send(JSON.stringify({ type: 'chat_response', success: false,
+          result: { error: 'Open a valid assistant session before using this channel.' } }));
+        return;
+      }
 
       if (actionType === 'prompt') {
+        // The transport is a session-bound channel, not a general-purpose
+        // agent execution proxy. Deny stale-tab and cross-session sends.
+        const { isBoundAssistantSession, validAssistantTurnId } = await import('./tlineAssistantSession');
+        if (!isBoundAssistantSession(initialSessionId, parsed.sessionId)) {
+          ws.send(JSON.stringify({ type: 'chat_response', success: false,
+            sessionId: initialSessionId,
+            result: { error: 'Session changed. Reconnect the assistant before sending.' } }));
+          return;
+        }
+        if (parsed.clientMessageId !== undefined && !validAssistantTurnId(parsed.clientMessageId)) {
+          ws.send(JSON.stringify({ type: 'chat_response', success: false,
+            sessionId: initialSessionId,
+            result: { error: 'Invalid message identity.' } }));
+          return;
+        }
         const text = parsed.text || '';
         console.log(`[WS-Agent] Prompt received (${workspacePath}, ${text.length} chars)`);
         logToSuperAgentFile(`[WS-Agent] Prompt received (${workspacePath}, ${text.length} chars)`);
@@ -872,38 +895,28 @@ let suppressBufferWrite = false;
         } catch (presetCheckErr: any) {
           console.warn('[WS-Agent] Active preset check warning:', presetCheckErr?.message);
         }
-
         try {
-          const chatPayload: any = { message: text };
-          if (parsed.sessionId) {
-            chatPayload.sessionId = parsed.sessionId;
-          }
-
+          const chatPayload: any = { message: text, sessionId: initialSessionId };
+          if (parsed.clientMessageId) chatPayload.clientMessageId = parsed.clientMessageId;
           let response: any;
           try {
             response = await sendSuperAgentRequest('/api/chat', chatPayload, workspacePath);
           } catch (err: any) {
             if (err?.code === 'ECONNREFUSED' || err?.message?.includes('ECONNREFUSED')) {
-              console.log('[WS-Agent] Connection refused on port 7888. Auto-restarting SuperAgent server process...');
-              ws.send(JSON.stringify({ type: 'status', text: 'SuperAgent server unreachable. Auto-restarting...' }));
-              // Reset process state so ensureSuperAgentServer will respawn
+              console.log('[WS-Agent] Connection refused on port 7888. Reconnecting to Core...');
+              ws.send(JSON.stringify({ type: 'status', text: 'Core unreachable. Reconnecting...' }));
               autoSuperAgentProcess = null;
               isStartingSuperAgent = false;
-              // Wait for the server to fully come up before retrying
-              await new Promise<void>((resolve) => {
-                ensureSuperAgentServer(workspacePath, agentMode, customArgs, ws, resolve);
-              });
-              // Re-initialize session on the freshly started server
-              const initOk = await initializeSuperAgentSession(workspacePath, agentMode, parsed.sessionId);
-              if (!initOk) {
-                throw new Error('SuperAgent server restarted but session initialization failed.');
-              }
-              // Retry chat — if it fails again, let the outer catch surface the error
+              await new Promise<void>(resolve =>
+                ensureSuperAgentServer(workspacePath, agentMode, customArgs, ws, resolve));
+              const initOk = await initializeSuperAgentSession(workspacePath, agentMode, initialSessionId);
+              if (!initOk) throw new Error('Core restarted but session initialization failed.');
               try {
                 response = await sendSuperAgentRequest('/api/chat', chatPayload, workspacePath);
               } catch (retryErr: any) {
-                if (retryErr?.code === 'ECONNREFUSED' || retryErr?.message?.includes('ECONNREFUSED')) {
-                  throw new Error('SuperAgent server is still unreachable after restart. Please check that "superagent --server" can run in this workspace.');
+                if (retryErr?.code === 'ECONNREFUSED' ||
+                    String(retryErr?.message || '').includes('ECONNREFUSED')) {
+                  throw new Error('Core still unreachable after reconnect. Check the local server.');
                 }
                 throw retryErr;
               }
@@ -912,9 +925,11 @@ let suppressBufferWrite = false;
             }
           }
 
-          // Retry once if session wasn't initialized
-          if (response && response.error === 'Session not initialized') {
-            await initializeSuperAgentSession(workspacePath, agentMode, parsed.sessionId);
+          // The core may be ready before this session has been initialized.
+          // Initialization is idempotent and must preserve the pinned identity.
+          if (response?.error === 'Session not initialized') {
+            const initOk = await initializeSuperAgentSession(workspacePath, agentMode, initialSessionId);
+            if (!initOk) throw new Error('Assistant session initialization failed.');
             response = await sendSuperAgentRequest('/api/chat', chatPayload, workspacePath);
           }
 
@@ -923,33 +938,33 @@ let suppressBufferWrite = false;
           const errorMsg = response?.error || (response?.raw ? `Unexpected response from server: ${String(response.raw).slice(0, 200)}` : null);
 
           if (hasError) {
-            ws.send(JSON.stringify({ type: 'chat_response', success: false, result: { error: errorMsg } }));
+            ws.send(JSON.stringify({ type: 'chat_response', sessionId: initialSessionId, success: false, result: { error: errorMsg } }));
             logSuperAgentEvent('chat_response_error', { error: errorMsg });
           } else {
-            ws.send(JSON.stringify({ type: 'chat_response', success: true, result: response }));
+            ws.send(JSON.stringify({ type: 'chat_response', sessionId: initialSessionId, success: true, result: response }));
             logSuperAgentEvent('chat_response', response);
           }
         } catch (err: any) {
           const errMsg = `Failed to send prompt: ${err.message}`;
-          ws.send(JSON.stringify({ type: 'chat_response', success: false, result: { error: errMsg } }));
+          ws.send(JSON.stringify({ type: 'chat_response', sessionId: initialSessionId, success: false, result: { error: errMsg } }));
           logSuperAgentEvent('system_error', { message: 'Failed to send prompt to SuperAgent', error: err.message });
         }
       } else if (actionType === 'approve_permission') {
         const { permissionId, approval } = parsed;
         logSuperAgentEvent('permission_response', { permissionId, approval });
-        await sendSuperAgentRequest('/api/approve', { permissionId, approval }, workspacePath);
+        await sendSuperAgentRequest('/api/approve', { permissionId, approval, sessionId: initialSessionId }, workspacePath);
       } else if (actionType === 'answer_question') {
         const { questionId, answer } = parsed;
         logSuperAgentEvent('question_response', { questionId, answer });
-        await sendSuperAgentRequest('/api/answer', { questionId, answer }, workspacePath);
+        await sendSuperAgentRequest('/api/answer', { questionId, answer, sessionId: initialSessionId }, workspacePath);
       } else if (actionType === 'approve_plan') {
         const { action } = parsed;
         logSuperAgentEvent('plan_response', { action });
-        await sendSuperAgentRequest('/api/plan/approve', { action }, workspacePath);
+        await sendSuperAgentRequest('/api/plan/approve', { action, sessionId: initialSessionId }, workspacePath);
       } else if (actionType === 'abort') {
         logSuperAgentEvent('abort_request', { workspace: workspacePath });
         try {
-          await sendSuperAgentRequest('/api/abort', {}, workspacePath, 2000);
+          await sendSuperAgentRequest('/api/abort', { sessionId: initialSessionId }, workspacePath, 2000);
         } catch (err: any) {
           console.log('[WS-Agent] /api/abort request failed or timed out:', err.message);
         }
