@@ -431,6 +431,19 @@ export const studioApi = {
       throw new Error('Invalid Studio reconstruction PNG');
     return URL.createObjectURL(image);
   },
+  async loadMultiVideoDiffUrl(workspace: string, projectId: string, revision: number): Promise<string> {
+    if (!Number.isSafeInteger(revision) || revision < 1)
+      throw new Error('Invalid Studio review revision');
+    const result = await motionFetch(workspace,
+      '/projects/' + assertId(projectId) + '/reconstruction-diff.png?revision=' + revision);
+    const length = Number(result.headers.get('content-length'));
+    if (Number.isFinite(length) && length > 2 * 1024 * 1024)
+      throw new Error('Studio mask diff preview exceeds 2 MiB');
+    const image = await result.blob();
+    if (image.type !== 'image/png' || image.size < 24 || image.size > 2 * 1024 * 1024)
+      throw new Error('Invalid Studio reconstruction PNG');
+    return URL.createObjectURL(image);
+  },
   /** Accepts image bytes only; browser paths never cross the API boundary. */
   async uploadImage(workspace: string, file: File): Promise<{ id: string; bytes: number; width: number; height: number }> {
     if (file.size < 24 || file.size > 1024 * 1024) throw new Error('Studio image must be 1 MB or smaller');

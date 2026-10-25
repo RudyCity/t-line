@@ -42,6 +42,7 @@ describe("Studio Video-to-Code experimental panel", () => {
     });
     const reconstruct = vi.spyOn(studioApi, "reconstructMultiVideo").mockResolvedValue(result);
     const preview = vi.spyOn(studioApi, "loadMultiVideoReviewUrl").mockResolvedValue("blob:local-review");
+    const diffPreview = vi.spyOn(studioApi, "loadMultiVideoDiffUrl").mockResolvedValue("blob:local-diff");
     const revoke = vi.fn();
     Object.defineProperty(URL, "revokeObjectURL", { value: revoke, configurable: true });
     const created = vi.fn();
@@ -53,8 +54,12 @@ describe("Studio Video-to-Code experimental panel", () => {
     expect(importVideo).toHaveBeenCalledWith("D:/demo", file);
     expect(reconstruct).toHaveBeenCalledWith("D:/demo", "video-" + "b".repeat(64));
     await waitFor(() => expect(preview).toHaveBeenCalledWith("D:/demo", result.projectId, 2));
+    await waitFor(() => expect(diffPreview).toHaveBeenCalledWith("D:/demo", result.projectId, 2));
     expect(screen.getByRole("img", { name: /original video on the left/ })).toHaveAttribute(
       "src", "blob:local-review");
+    expect(screen.getByText("Show mask difference heatmap")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Mask difference heatmap/ })).toHaveAttribute(
+      "src", "blob:local-diff");
     expect(screen.getAllByText(/92.0%/).length).toBeGreaterThan(0);
     expect(screen.getByText(/unseen-frame checks: 84.0% \/ 82.0%/)).toBeInTheDocument();
     expect(screen.getByText(/Visual parity · 5 checked frames/)).toBeInTheDocument();
@@ -64,6 +69,7 @@ describe("Studio Video-to-Code experimental panel", () => {
     expect(screen.getAllByText("keyframe")).toHaveLength(3);
     unmount();
     expect(revoke).toHaveBeenCalledWith("blob:local-review");
+    expect(revoke).toHaveBeenCalledWith("blob:local-diff");
   });
   it("reconstructs recognized English captions into editable text without a fake image preview", async () => {
     const videoId = "video-" + "b".repeat(64);

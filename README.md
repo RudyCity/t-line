@@ -226,6 +226,16 @@ declarative rules panel, not the planned free-form graph/state-machine editor.
 
 **Code-to-Video durable job history:** Current Studio backends persist only allowlisted job status/MP4 metadata per authorized workspace. Use the **Recent renders** section in Code → MP4 to refresh status or reopen completed MP4 without re-rendering. In-progress jobs lost to a backend restart display **interrupted** and require manual retry; no automatic rerun, cross-process scheduler or exactly-once guarantee. Authenticated `GET /api/studio/code-to-video/jobs` lists up to 20 jobs. Chrome/Edge and FFmpeg still required locally; production release remains gated.
 
+**P5 mask-difference heatmap and bounded rotation:** Backends with the
+experimental orientation extension can generate editable `rotation`
+keyframes for near-horizontal, visibly elongated non-occluded shapes,
+limited to ±32°. The Video → Editable Studio Code panel optionally loads a
+private mask heatmap for three inspected source-versus-SVG frames: red marks
+missing output, cyan excess reconstructed shapes, grey overlap. If the
+backend does not support this additional PNG, the existing comparison
+and numeric holdout metrics continue to work. No general occlusion,
+deformable shape or all-frame visual-parity claim is made.
+
 **Video-to-Code P5 metrics:** Updated Studio backends additionally track bounded
 axis-aligned `scaleX/scaleY` for separated growing/shrinking objects. The
 Video → Editable Studio Code panel displays an expandable **Visual parity**

@@ -24,9 +24,12 @@ export function StudioVideoToCodePanel({
   const [previewWarning, setPreviewWarning] = useState("");
   const [report, setReport] = useState<StudioVideoCodeResult | null>(null);
   const [imageUrl, setImageUrl] = useState("");
+  const [diffUrl, setDiffUrl] = useState("");
+  const [diffWarning, setDiffWarning] = useState("");
   const runSeq = useRef(0);
 
   useEffect(() => () => { if (imageUrl) URL.revokeObjectURL(imageUrl); }, [imageUrl]);
+  useEffect(() => () => { if (diffUrl) URL.revokeObjectURL(diffUrl); }, [diffUrl]);
   useEffect(() => {
     runSeq.current++;
     setFile(null);
@@ -34,7 +37,7 @@ export function StudioVideoToCodePanel({
     setReport(null);
     setError("");
     setPreviewWarning("");
-    setImageUrl("");
+    setImageUrl(""); setDiffUrl(""); setDiffWarning("");
   }, [workspacePath]);
 
   const reconstruct = async () => {
@@ -43,7 +46,8 @@ export function StudioVideoToCodePanel({
       setError("Choose a 32-byte to 12-MiB MP4 or WebM file."); return;
     }
     const seq = ++runSeq.current;
-    setWorking(true); setError(""); setPreviewWarning(""); setReport(null); setImageUrl("");
+    setWorking(true); setError(""); setPreviewWarning(""); setDiffWarning("");
+    setReport(null); setImageUrl(""); setDiffUrl("");
     try {
       setPhase("Uploading the local reference clip...");
       const imported = await studioApi.uploadVideo(workspacePath, file);
@@ -70,6 +74,16 @@ export function StudioVideoToCodePanel({
           setPreviewWarning("Saved, but the comparison image could not be loaded: " +
             (cause instanceof Error ? cause.message : String(cause)));
         }
+      }
+      // Older backends do not provide a visual difference PNG. Keep the
+      // original review usable even if this optional second request fails.
+      try {
+        const diagnostic = await studioApi.loadMultiVideoDiffUrl(
+          workspacePath, result.projectId, result.revision);
+        if (runSeq.current !== seq) URL.revokeObjectURL(diagnostic);
+        else setDiffUrl(diagnostic);
+      } catch {
+        if (runSeq.current === seq) setDiffWarning("Mask difference image is unavailable on this backend.");
       }
     } catch (cause) {
       if (runSeq.current === seq) setError(cause instanceof Error ? cause.message : String(cause));
@@ -191,6 +205,19 @@ export function StudioVideoToCodePanel({
           Original (left) compared with editable Studio vector reconstruction (right), three sampled times.
         </figcaption>
       </figure>}
+      {diffUrl && <details className="max-w-[720px] rounded border border-[var(--border-color)] p-2">
+        <summary className="cursor-pointer text-[11px] font-medium">
+          Show mask difference heatmap
+        </summary>
+        <p className="my-1 text-[10px] text-[var(--text-muted)]">
+          Red = missing source area, cyan = extra reconstruction, grey = overlap.
+          Three sampled keyframes only; no full-video parity claim.
+        </p>
+        <img src={diffUrl}
+          alt="Mask difference heatmap showing missed red pixels, extra cyan pixels and grey overlap for three video frames"
+          className="max-h-72 max-w-full object-contain" />
+      </details>}
+      {diffWarning && <p className="text-[10px] text-[var(--text-muted)]">{diffWarning}</p>}
       {previewWarning && <p role="alert" className="text-[11px] text-yellow-400">{previewWarning}</p>}
     </div>}
   </section>;
