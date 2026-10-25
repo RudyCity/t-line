@@ -48,6 +48,36 @@ describe("Studio Video-to-Code experimental panel", () => {
     unmount();
     expect(revoke).toHaveBeenCalledWith("blob:local-review");
   });
+  it("reconstructs recognized English captions into editable text without a fake image preview", async () => {
+    const videoId = "video-" + "b".repeat(64);
+    vi.spyOn(studioApi, "uploadVideo").mockResolvedValue({ id: videoId, bytes: 80, format: "mp4" });
+    const ocr = {
+      status: "experimental-ocr" as const,
+      projectId: "studio-" + "c".repeat(20), revision: 2,
+      lines: [{ id: "ocr-caption-1", text: "STUDIO", confidence: .963,
+        box: { x: 30, y: 50, width: 250, height: 90 } }],
+      sampleTimes: [0,1.4,2.8], dimensions: { width: 640, height: 360 },
+      averageConfidence: .963, limitations: ["English only"],
+    };
+    const reconstruct = vi.spyOn(studioApi, "reconstructTextVideo").mockResolvedValue(ocr);
+    const preview = vi.spyOn(studioApi, "loadMultiVideoReviewUrl");
+    const created = vi.fn();
+    render(<StudioVideoToCodePanel workspacePath="D:/studio" ocrAvailable onCreated={created} />);
+    fireEvent.change(screen.getByLabelText("Video reconstruction mode"), { target: { value: "text" } });
+    fireEvent.change(screen.getByLabelText("Video reference file"), { target: {
+      files: [new File([new Uint8Array(80)], "captions.mp4", { type: "video/mp4" })],
+    } });
+    fireEvent.click(screen.getByRole("button", { name: "Create editable layers" }));
+    await waitFor(() => expect(created).toHaveBeenCalledWith(ocr));
+    expect(reconstruct).toHaveBeenCalledWith("D:/studio", videoId);
+    expect(screen.getByText(/STUDIO \(96.3%\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Font and appearance are approximate/)).toBeInTheDocument();
+    expect(preview).not.toHaveBeenCalled();
+  });
+  it("does not expose OCR mode on legacy Studio backends", () => {
+    render(<StudioVideoToCodePanel workspacePath="D:/studio" onCreated={vi.fn()} />);
+    expect(screen.queryByRole("combobox", { name: "Video reconstruction mode" })).not.toBeInTheDocument();
+  });
   it("refuses oversized media before upload and preserves explicit warnings", () => {
     const importVideo = vi.spyOn(studioApi, "uploadVideo");
     render(<StudioVideoToCodePanel workspacePath="D:/demo" onCreated={vi.fn()} />);

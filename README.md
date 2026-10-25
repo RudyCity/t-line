@@ -225,3 +225,15 @@ oversized/unsupported files, limits API routes to the selected workspace, and
 never exposes bearer tokens or source file paths in URLs. Changes do not
 automatically publish to any website, run arbitrary video-to-code AI, or
 replace the existing video renderer.
+
+**Optional English OCR:** When the Studio backend advertises
+`experimentalTextOcrReconstruction=local-english-stable-captions-v1`, the
+**Extraction mode** menu adds `Editable Text (English OCR)`. It uses the
+same authenticated 12-MiB video upload, then calls
+`POST /api/studio/reconstruct/text` to create a new revisioned text-layer
+project. The UI displays recognized lines and confidence scores. This requires
+local Tesseract with `eng` language data; neither Tesseract nor language
+packs are bundled with T-Line. For stable English captions only, confidence is
+estimated and the recreated typography is approximate. User should review and
+edit fonts/colors, positions and timing before publishing. Unsupported/changed
+captions return an explicit failure without saving an incorrect project.

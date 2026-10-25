@@ -157,6 +157,22 @@ export type StudioEdit =
   | { type: 'set-interaction-graph'; graph: StudioInteractionGraph | null }
   | { type: 'set-audio'; audio: StudioAudioTrack | null }
   | { type: 'set-audio-tracks'; audioTracks: StudioAudioTrack[] };
+export interface StudioTextOcrReconstruction {
+  status: 'experimental-ocr';
+  projectId: string;
+  revision: number;
+  lines: Array<{
+    id: string;
+    text: string;
+    confidence: number;
+    box: { x: number; y: number; width: number; height: number };
+  }>;
+  sampleTimes: number[];
+  dimensions: { width: number; height: number };
+  averageConfidence: number;
+  limitations: string[];
+}
+export type StudioVideoCodeResult = StudioMultiVideoReconstruction | StudioTextOcrReconstruction;
 export interface StudioMultiVideoReconstruction {
   status: 'experimental-multi';
   projectId: string;
@@ -175,7 +191,7 @@ export interface StudioMultiVideoReconstruction {
   limitations: string[];
 }
 export interface StudioCapabilities {
-  capabilities?: { motionAdvancedTypography?: string[]; motionCpuParticleOverlays?: boolean; aiStoryboardReview?: boolean; motionExtraExportFormats?: string[]; motionAudioBeatSync?: boolean; motionBatchAspectVariants?: boolean; motionBrandKit?: boolean; motionTemplateLibrary?: boolean; motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean; studioToCodeExport?: string; studioToCodeTriggers?: string[]; studioToCodeFormats?: string[]; studioInteractionRules?: string; studioInteractionRulesMax?: number; experimentalMultiVectorReconstruction?: string };
+  capabilities?: { motionAdvancedTypography?: string[]; motionCpuParticleOverlays?: boolean; aiStoryboardReview?: boolean; motionExtraExportFormats?: string[]; motionAudioBeatSync?: boolean; motionBatchAspectVariants?: boolean; motionBrandKit?: boolean; motionTemplateLibrary?: boolean; motionRevisionHistory?: boolean; motionRevisionHistoryLimit?: number; committedEditsAutoPersisted?: boolean; nondestructiveEffectStack?: boolean; effectsEngine?: boolean; effectsCount?: number; compoundPresets?: boolean; compoundPresetsCount?: number; aiPromptDirector?: string; aiSemanticRevision?: boolean; aiWorkspaceMedia?: string; aiSceneImagesMax?: number; aiAudioLoop?: boolean; localVoiceoverConfigured?: boolean; aiAspectRatios?: string[]; aiAutoSceneNarration?: string; aiMusicVoiceDucking?: boolean; authenticatedFrameSnapshots?: boolean; sampledModelVisionReview?: string; boundedModelVisionRepair?: string; exportSceneCaptionsSrt?: boolean; studioToCodeExport?: string; studioToCodeTriggers?: string[]; studioToCodeFormats?: string[]; studioInteractionRules?: string; studioInteractionRulesMax?: number; experimentalMultiVectorReconstruction?: string; experimentalTextOcrReconstruction?: string; localTextOcrReady?: boolean };
 }
 export interface StudioQualityIssue {
   severity: 'warning' | 'error'; code: string; scene: number; message: string;
@@ -335,6 +351,12 @@ export const studioApi = {
   reconstructMultiVideo: (workspace: string, videoId: string): Promise<StudioMultiVideoReconstruction> => {
     if (!/^video-[a-f0-9]{64}$/.test(videoId)) throw new Error('Invalid Studio video ID');
     return json(workspace, '/reconstruct/multi', {
+      method: 'POST', body: JSON.stringify({ videoId }),
+    });
+  },
+  reconstructTextVideo: (workspace: string, videoId: string): Promise<StudioTextOcrReconstruction> => {
+    if (!/^video-[a-f0-9]{64}$/.test(videoId)) throw new Error('Invalid Studio video ID');
+    return json(workspace, '/reconstruct/text', {
       method: 'POST', body: JSON.stringify({ videoId }),
     });
   },

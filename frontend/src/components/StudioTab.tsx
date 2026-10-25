@@ -113,6 +113,7 @@ export function StudioTab({ workspacePath, isActive }: Props) {
   const [codeExportAvailable, setCodeExportAvailable] = useState(false);
   const [interactionRulesAvailable, setInteractionRulesAvailable] = useState(false);
   const [multiVideoAvailable, setMultiVideoAvailable] = useState(false);
+  const [textOcrAvailable, setTextOcrAvailable] = useState(false);
   const [codeTrigger, setCodeTrigger] = useState<'autoplay' | 'scroll' | 'click' | 'hover'>('autoplay');
   const [reactCodeAvailable, setReactCodeAvailable] = useState(false);
   const [codeFormat, setCodeFormat] = useState<'html' | 'react'>('html');
@@ -151,7 +152,7 @@ export function StudioTab({ workspacePath, isActive }: Props) {
     setPromptVoiceover(''); setPromptVoiceoverGain(1); setQuality(null); setVisionReview(null);
     setVisionAvailable(false); setVisionRepairAvailable(false); setCaptionsAvailable(false);
     setCompoundAvailable(false); setEffectsAvailable(false); setStackAvailable(false); setHistoryAvailable(false);
-    setBrandAvailable(false); setTemplatesAvailable(false); setBatchAvailable(false); setBeatAvailable(false); setParticlesAvailable(false); setParticlePreview(null); setTypographyAvailable(false); setTypographyPreview(null); setExtraExportsAvailable(false); setCodeExportAvailable(false); setInteractionRulesAvailable(false); setMultiVideoAvailable(false); setReactCodeAvailable(false); setCodeFormat('html'); setStoryboardAvailable(false); setBeatPreview(null); setTemplatePreview(null); setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null); setBeatPreview(null); setParticlePreview(null); setTypographyPreview(null);
+    setBrandAvailable(false); setTemplatesAvailable(false); setBatchAvailable(false); setBeatAvailable(false); setParticlesAvailable(false); setParticlePreview(null); setTypographyAvailable(false); setTypographyPreview(null); setExtraExportsAvailable(false); setCodeExportAvailable(false); setInteractionRulesAvailable(false); setMultiVideoAvailable(false); setTextOcrAvailable(false); setReactCodeAvailable(false); setCodeFormat('html'); setStoryboardAvailable(false); setBeatPreview(null); setTemplatePreview(null); setPresetPreview(null); setEffectPreview(null); setTemplatePreview(null); setBeatPreview(null); setParticlePreview(null); setTypographyPreview(null);
     setViewport(DEFAULT_MOTION_VIEWPORT); setPanMode(false); panGesture.current = null;
     setJobs([]); setActiveJobId(''); setError(''); setSuccess('');
     setScheduler(null); setSupervisor(null); setSupervisedRender(false);
@@ -195,6 +196,8 @@ export function StudioTab({ workspacePath, isActive }: Props) {
         setReactCodeAvailable(motionInfo?.capabilities?.studioToCodeFormats?.includes('react') === true);
         setInteractionRulesAvailable(motionInfo?.capabilities?.studioInteractionRules === 'declarative-bindings-v1');
         setMultiVideoAvailable(motionInfo?.capabilities?.experimentalMultiVectorReconstruction === 'two-to-four-bright-separated-objects-api-v1');
+        setTextOcrAvailable(motionInfo?.capabilities?.experimentalTextOcrReconstruction === 'local-english-stable-captions-v1'
+          && motionInfo?.capabilities?.localTextOcrReady === true);
         setStoryboardAvailable(motionInfo?.capabilities?.aiStoryboardReview === true);
         const latest = existingJobs.find(job => job.status === 'completed') || existingJobs[0];
         setActiveJobId(latest?.id || '');
@@ -951,12 +954,15 @@ export function StudioTab({ workspacePath, isActive }: Props) {
         </div>
       </header>
       {multiVideoAvailable && <StudioVideoToCodePanel key={workspacePath} workspacePath={workspacePath}
+        ocrAvailable={textOcrAvailable}
         onCreated={result => {
           setProjects(prev => [{
             id: result.projectId, name: 'Reconstructed video shapes', revision: result.revision,
           }, ...prev.filter(item => item.id !== result.projectId)]);
           setSelectedId(result.projectId);
-          setSuccess('Video reconstructed into ' + result.objects.length + ' editable Studio layers');
+          setSuccess(result.status === 'experimental-ocr'
+            ? 'Video OCR extracted ' + result.lines.length + ' editable text layers'
+            : 'Video reconstructed into ' + result.objects.length + ' editable Studio layers');
         }} />}
       {storyboardAvailable && (
         <StudioStoryboardPanel workspacePath={workspacePath} busy={busy} renderWidth={renderWidth}

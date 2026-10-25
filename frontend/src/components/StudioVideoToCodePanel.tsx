@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { studioApi, type StudioMultiVideoReconstruction } from "../services/studioApi";
+import { studioApi, type StudioVideoCodeResult } from "../services/studioApi";
 
 interface Props {
   workspacePath: string;
-  onCreated: (report: StudioMultiVideoReconstruction) => void;
+  onCreated: (report: StudioVideoCodeResult) => void;
+  ocrAvailable?: boolean;
 }
 const inputClass = "rounded border border-[var(--border-color)] bg-[var(--bg-main)] px-2 py-1.5 text-xs text-[var(--text-main)]";
 const buttonClass = "rounded border border-[var(--border-color)] bg-[var(--bg-card)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--surface-overlay-hover)] disabled:opacity-40";
@@ -11,13 +12,14 @@ const buttonClass = "rounded border border-[var(--border-color)] bg-[var(--bg-ca
 /** Visible only when a connected backend supports the experimental bounded
  * reconstruction. No file path, token, or plaintext video in any URL.
  */
-export function StudioVideoToCodePanel({ workspacePath, onCreated }: Props) {
+export function StudioVideoToCodePanel({ workspacePath, onCreated, ocrAvailable = false }: Props) {
   const [file, setFile] = useState<File | null>(null);
+  const [mode, setMode] = useState<'shapes' | 'text'>('shapes');
   const [working, setWorking] = useState(false);
   const [phase, setPhase] = useState("");
   const [error, setError] = useState("");
   const [previewWarning, setPreviewWarning] = useState("");
-  const [report, setReport] = useState<StudioMultiVideoReconstruction | null>(null);
+  const [report, setReport] = useState<StudioVideoCodeResult | null>(null);
   const [imageUrl, setImageUrl] = useState("");
   const runSeq = useRef(0);
 
@@ -25,6 +27,7 @@ export function StudioVideoToCodePanel({ workspacePath, onCreated }: Props) {
   useEffect(() => {
     runSeq.current++;
     setFile(null);
+    setMode('shapes');
     setReport(null);
     setError("");
     setPreviewWarning("");
@@ -42,11 +45,15 @@ export function StudioVideoToCodePanel({ workspacePath, onCreated }: Props) {
       setPhase("Uploading the local reference clip...");
       const imported = await studioApi.uploadVideo(workspacePath, file);
       if (runSeq.current !== seq) return;
-      setPhase("Sampling frames and checking object identities...");
-      const result = await studioApi.reconstructMultiVideo(workspacePath, imported.id);
+      setPhase(mode === 'text' ? "Reading stable captions with local English OCR..." :
+        "Sampling frames and checking object identities...");
+      const result = mode === 'text'
+        ? await studioApi.reconstructTextVideo(workspacePath, imported.id)
+        : await studioApi.reconstructMultiVideo(workspacePath, imported.id);
       if (runSeq.current !== seq) return;
       setReport(result);
       onCreated(result);
+      if (result.status !== 'experimental-multi') return;
       setPhase("Loading reconstruction comparison...");
       try {
         const image = await studioApi.loadMultiVideoReviewUrl(workspacePath, result.projectId, result.revision);
@@ -80,6 +87,15 @@ export function StudioVideoToCodePanel({ workspacePath, onCreated }: Props) {
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
+        {ocrAvailable && <label className="text-[11px] text-[var(--text-muted)]">
+          Extraction mode
+          <select aria-label="Video reconstruction mode" className={inputClass + " ml-2"}
+            value={mode} disabled={working}
+            onChange={event => setMode(event.target.value as 'shapes' | 'text')}>
+            <option value="shapes">Editable SVG shapes</option>
+            <option value="text">Editable Text (English OCR)</option>
+          </select>
+        </label>}
         <label className="text-[11px] text-[var(--text-muted)]">Reference video
           <input aria-label="Video reference file" type="file" accept="video/mp4,video/webm,.mp4,.webm"
             className={inputClass + " ml-2 max-w-[210px]"} disabled={working}
@@ -93,7 +109,19 @@ export function StudioVideoToCodePanel({ workspacePath, onCreated }: Props) {
     </div>
     {phase && <p role="status" className="mt-2 text-xs text-[var(--text-muted)]">{phase}</p>}
     {error && <p role="alert" className="mt-2 text-xs text-red-400">{error}</p>}
-    {report && <div className="mt-2 space-y-2 text-xs text-[var(--text-main)]">
+    {report?.status === 'experimental-ocr' && <div className="mt-2 space-y-1 text-xs text-[var(--text-main)]">
+      <p role="status">New editable text project {report.projectId}: {report.lines.length} stable
+        line(s), average OCR confidence {(report.averageConfidence * 100).toFixed(1)}%.</p>
+      <ul className="list-disc pl-4">
+        {report.lines.map(line => <li key={line.id}>
+          {line.text} ({(line.confidence * 100).toFixed(1)}%)
+        </li>)}
+      </ul>
+      <p className="text-[11px] text-[var(--text-muted)]">
+        English-only local OCR. Font and appearance are approximate; review the project in Studio before publishing.
+      </p>
+    </div>}
+    {report?.status === 'experimental-multi' && <div className="mt-2 space-y-2 text-xs text-[var(--text-main)]">
       <p role="status">Created project {report.projectId}: {report.objects.length} vector layers,
         {report.sampleTimes.length} tracked frames, sampled foreground similarity
         {" "}{report.measuredForegroundIoU.map(x => (x * 100).toFixed(1) + "%").join(" / ")}.</p>

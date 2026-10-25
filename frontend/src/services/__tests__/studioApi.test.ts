@@ -50,6 +50,23 @@ describe('Studio Studio authenticated client', () => {
       .rejects.toThrow(/MP4 or WebM/);
     expect(mock).toHaveBeenCalledTimes(3);
   });
+  it('reconstructs text only through authorized video ID and workspace scope', async () => {
+    const id = 'video-' + 'e'.repeat(64);
+    const report = { status:'experimental-ocr', projectId:'studio-'+'a'.repeat(20),
+      revision:2,lines:[{id:'ocr-caption-1',text:'STUDIO',confidence:.96}],averageConfidence:.96 };
+    const mock = vi.fn().mockResolvedValue(new Response(JSON.stringify(report), {
+      status: 201, headers: { 'Content-Type':'application/json' },
+    }));
+    vi.stubGlobal('fetch',mock);
+    expect(await studioApi.reconstructTextVideo('D:/studio',id)).toMatchObject(report);
+    const [route,init] = mock.mock.calls[0] as [string,RequestInit];
+    expect(route).toContain('/reconstruct/text?workspace=');
+    expect(route).not.toContain('tline-only-token');
+    expect(init.headers).toMatchObject({Authorization:'Bearer tline-only-token'});
+    expect(JSON.parse(init.body as string).videoId).toBe(id);
+    expect(() => studioApi.reconstructTextVideo('D:/studio','../outside')).toThrow(/Invalid/);
+    expect(mock).toHaveBeenCalledTimes(1);
+  });
   it('downloads authenticated SVG/GSAP source without exposing access tokens', async () => {
     const id = 'studio-' + 'a'.repeat(20);
     const html = '<!doctype html><svg id="studio-stage"></svg>';
