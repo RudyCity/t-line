@@ -199,6 +199,15 @@ export interface StudioMultiVideoReconstruction {
   measuredForegroundIoU: number[];
   /** Optional for older experimental backends. At most two unsampled checks. */
   interpolationCheckIoU?: number[];
+  /** P6: bounded additional temporal probes; never full-frame or occlusion recovery. */
+  timelineValidation?: {
+    status: 'passed-sampled';
+    checks: Array<{ frame: number; identityGap: number; foregroundIoU: number;
+      foregroundPrecision: number; foregroundRecall: number; foregroundF1: number;
+      rgbMeanAbsoluteError: number; foregroundRgbMeanAbsoluteError: number }>;
+    minimumForegroundIoU: number; meanForegroundIoU: number;
+    minIdentityGap: number; note: string;
+  };
   /** P5 optional bounded keyframe/holdout comparison metrics. */
   parityReport?: Array<{
     frame: number; sampleType: 'keyframe' | 'holdout';

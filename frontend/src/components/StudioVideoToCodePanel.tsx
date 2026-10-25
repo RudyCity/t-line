@@ -165,8 +165,33 @@ export function StudioVideoToCodePanel({
         The three preview comparisons show reconstructed mask overlap, not full color/animation fidelity.
         {report.interpolationCheckIoU?.length ? " Additional unseen-frame checks: " +
           report.interpolationCheckIoU.map(x => (x * 100).toFixed(1) + "%").join(" / ") + "." : ""}
-        {" "}Position and bounded scale keyframes are editable in Studio.
+        {" "}Position, bounded scale and eligible rotation keyframes are editable in Studio.
       </p>
+      {report.timelineValidation?.checks.length ? <details
+        className="max-w-[720px] rounded border border-[var(--border-color)] p-2">
+        <summary className="cursor-pointer text-[11px] font-medium">
+          Timeline QA · {report.timelineValidation.checks.length} additional frames
+          {" · minimum IoU "}{(report.timelineValidation.minimumForegroundIoU*100).toFixed(1)}%
+        </summary>
+        <p className="my-1 text-[10px] text-[var(--text-muted)]">
+          Checked foreground counts, identity associations, and rendered-mask similarity at
+          additional timeline positions. These are sampled checks, not occlusion recovery
+          or a guarantee that all video frames match.
+        </p>
+        <div className="max-h-44 overflow-auto">
+          <table aria-label="Video-to-Code timeline QA frames"
+            className="w-full text-left text-[10px]">
+            <thead><tr><th>Frame</th><th>Mask IoU</th><th>F1</th>
+              <th>Identity gap</th></tr></thead>
+            <tbody>{report.timelineValidation.checks.map(item=><tr key={item.frame}>
+              <td>{item.frame}</td>
+              <td>{(item.foregroundIoU*100).toFixed(1)}%</td>
+              <td>{(item.foregroundF1*100).toFixed(1)}%</td>
+              <td>{item.identityGap.toFixed(3)}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+      </details> : null}
       {report.parityReport?.length ? <details className="max-w-[720px] rounded border border-[var(--border-color)] p-2">
         <summary className="cursor-pointer text-[11px] font-medium">
           Visual parity · {report.parityReport.length} checked frames

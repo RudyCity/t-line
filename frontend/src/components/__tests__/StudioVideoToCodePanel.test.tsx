@@ -16,6 +16,19 @@ const result: StudioMultiVideoReconstruction = {
   confidence: .68,
   measuredForegroundIoU: [.92, .91, .90],
   interpolationCheckIoU: [.84, .82],
+  timelineValidation: {
+    status: "passed-sampled",
+    checks: [
+      {frame:16,identityGap:.35,foregroundIoU:.90,foregroundPrecision:.92,
+        foregroundRecall:.94,foregroundF1:.93,rgbMeanAbsoluteError:.03,
+        foregroundRgbMeanAbsoluteError:.09},
+      {frame:54,identityGap:.23,foregroundIoU:.82,foregroundPrecision:.87,
+        foregroundRecall:.91,foregroundF1:.89,rgbMeanAbsoluteError:.06,
+        foregroundRgbMeanAbsoluteError:.12},
+    ],
+    minimumForegroundIoU:.82,meanForegroundIoU:.86,minIdentityGap:.23,
+    note:"Sampled only",
+  },
   parityReport: [
     {frame:0,sampleType:"keyframe",foregroundIoU:.92,foregroundPrecision:.94,
       foregroundRecall:.96,foregroundF1:.95,rgbMeanAbsoluteError:.025,foregroundRgbMeanAbsoluteError:.08},
@@ -63,6 +76,9 @@ describe("Studio Video-to-Code experimental panel", () => {
     expect(screen.getAllByText(/92.0%/).length).toBeGreaterThan(0);
     expect(screen.getByText(/unseen-frame checks: 84.0% \/ 82.0%/)).toBeInTheDocument();
     expect(screen.getByText(/Visual parity · 5 checked frames/)).toBeInTheDocument();
+    expect(screen.getByText(/Timeline QA · 2 additional frames/)).toBeInTheDocument();
+    expect(screen.getByRole("table", {name:"Video-to-Code timeline QA frames"}))
+      .toBeInTheDocument();
     const table = screen.getByRole("table", { name: "Video source versus reconstructed frames" });
     expect(table).toBeInTheDocument();
     expect(screen.getAllByText("holdout")).toHaveLength(2);
