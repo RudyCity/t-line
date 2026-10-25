@@ -462,32 +462,104 @@ fn local_core_token() -> Result<String, String> {
     let home = std::env::var_os("USERPROFILE")
         .or_else(|| std::env::var_os("HOME"))
         .ok_or("User home directory unavailable.")?;
-    let info_path = std::path::PathBuf::from(home).join(".superagent-r")
+    let info_path = std::path::PathBuf::from(home)
+        .join(".superagent-r")
         .join("server-info-7888.json");
-    let metadata = fs::symlink_metadata(&info_path)
-        .map_err(|_| "Core service information unavailable.")?;
-    if !metadata.file_type().is_file() || metadata.file_type().is_symlink()
-        || metadata.len() > 16_384 {
+    let metadata =
+        fs::symlink_metadata(&info_path).map_err(|_| "Core service information unavailable.")?;
+    if !metadata.file_type().is_file()
+        || metadata.file_type().is_symlink()
+        || metadata.len() > 16_384
+    {
         return Err("Untrusted Core service information file.".into());
     }
-    let contents = fs::read_to_string(info_path)
-        .map_err(|_| "Core service information unreadable.")?;
-    let data: serde_json::Value = serde_json::from_str(&contents)
-        .map_err(|_| "Invalid Core service information.")?;
+    let contents =
+        fs::read_to_string(info_path).map_err(|_| "Core service information unreadable.")?;
+    let data: serde_json::Value =
+        serde_json::from_str(&contents).map_err(|_| "Invalid Core service information.")?;
     if data["port"] != 7888 {
         return Err("Core service port is not the expected local port.".into());
     }
-    let token = data["authToken"].as_str().ok_or("Core service credential unavailable.")?;
+    let token = data["authToken"]
+        .as_str()
+        .ok_or("Core service credential unavailable.")?;
     if token.len() != 48 || !token.bytes().all(|b| b.is_ascii_hexdigit()) {
         return Err("Invalid Core service credential format.".into());
     }
     Ok(token.to_string())
 }
-fn register_with_core(pair: GatewayPairing) -> Result<RegistrationReceipt, String> {
+fn owned_browser_fingerprint(
+    port: u16,
+    owned_port: u16,
+    expected: &str,
+    websocket: &str,
+) -> Result<String, String> {
+    if owned_port != port {
+        return Err("Owned browser debugging port changed.".into());
+    }
+    let guid = expected
+        .strip_prefix("/devtools/browser/")
+        .ok_or("Invalid owned browser identity path.")?;
+    if guid.len() != 36 || !guid.bytes().all(|b| b.is_ascii_hexdigit() || b == b'-') {
+        return Err("Invalid owned browser identity path.".into());
+    }
+    let url = tauri::Url::parse(websocket).map_err(|_| "Invalid browser identity URL.")?;
+    if url.scheme() != "ws"
+        || url.host_str() != Some("127.0.0.1")
+        || url.port() != Some(port)
+        || url.path() != expected
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.query().is_some()
+        || url.fragment().is_some()
+    {
+        return Err("Managed browser identity does not match the owned profile.".into());
+    }
+    let fingerprint = ring::digest::digest(&ring::digest::SHA256, expected.as_bytes());
+    Ok(fingerprint
+        .as_ref()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect())
+}
+fn verified_browser_fingerprint(port: u16, profile: &std::path::Path) -> Result<String, String> {
+    let active = fs::read_to_string(profile.join("DevToolsActivePort"))
+        .map_err(|_| "Managed browser no longer has an active profile endpoint.")?;
+    let mut lines = active.lines();
+    let owned_port = lines
+        .next()
+        .unwrap_or("")
+        .trim()
+        .parse::<u16>()
+        .map_err(|_| "Invalid owned browser debugging port.")?;
+    let expected = lines.next().unwrap_or("").trim();
+    let response = ureq::get(&format!("http://127.0.0.1:{port}/json/version"))
+        .timeout(Duration::from_secs(2))
+        .call()
+        .map_err(|_| "Browser identity endpoint unavailable.")?;
+    use std::io::Read;
+    let mut body = String::new();
+    response
+        .into_reader()
+        .take(8192)
+        .read_to_string(&mut body)
+        .map_err(|_| "Cannot inspect browser identity.")?;
+    let data: serde_json::Value =
+        serde_json::from_str(&body).map_err(|_| "Invalid browser identity response.")?;
+    let websocket = data["webSocketDebuggerUrl"]
+        .as_str()
+        .ok_or("Missing CDP browser identity.")?;
+    owned_browser_fingerprint(port, owned_port, expected, websocket)
+}
+fn register_with_core(
+    pair: GatewayPairing,
+    profile: PathBuf,
+) -> Result<RegistrationReceipt, String> {
+    let fingerprint = verified_browser_fingerprint(pair.port, &profile)?;
     let token = local_core_token()?;
     let payload = serde_json::json!({
         "profileId": pair.profile_id, "generation": pair.generation,
-        "port": pair.port, "targetId": pair.target_id
+        "port": pair.port, "targetId": pair.target_id, "browserFingerprint": fingerprint
     });
     let response = ureq::post("http://127.0.0.1:7888/api/browser/managed/register")
         .set("Authorization", &format!("Bearer {token}"))
@@ -497,28 +569,39 @@ fn register_with_core(pair: GatewayPairing) -> Result<RegistrationReceipt, Strin
         .map_err(|_| "Authenticated local Core browser registration unavailable.")?;
     use std::io::Read;
     let mut body = String::new();
-    response.into_reader().take(4096).read_to_string(&mut body)
+    response
+        .into_reader()
+        .take(4096)
+        .read_to_string(&mut body)
         .map_err(|_| "Could not read local Core registration response.")?;
-    let result: serde_json::Value = serde_json::from_str(&body)
-        .map_err(|_| "Invalid Core registration response.")?;
-    let expires = result["registration"]["expiresAt"].as_u64()
+    let result: serde_json::Value =
+        serde_json::from_str(&body).map_err(|_| "Invalid Core registration response.")?;
+    let expires = result["registration"]["expiresAt"]
+        .as_u64()
         .ok_or("Core response did not confirm registration expiry.")?;
     if result["success"] != true {
         return Err("Core did not confirm target registration.".into());
     }
-    Ok(RegistrationReceipt { registered: true, expires_at: expires })
+    Ok(RegistrationReceipt {
+        registered: true,
+        expires_at: expires,
+    })
 }
 #[tauri::command]
 pub async fn managed_browser_gateway_register(
+    app: tauri::AppHandle,
     webview: tauri::Webview,
     state: tauri::State<'_, ManagedBrowserState>,
     profile_id: String,
     generation: String,
     target_id: String,
 ) -> Result<RegistrationReceipt, String> {
-    let verified = managed_browser_gateway_pairing(webview, state, profile_id, generation, target_id)?;
-    tauri::async_runtime::spawn_blocking(move || register_with_core(verified))
-        .await.map_err(|_| "Local Core registration worker failed.".to_string())?
+    let verified =
+        managed_browser_gateway_pairing(webview, state, profile_id, generation, target_id)?;
+    let profile = profile_path(&app, &verified.profile_id)?;
+    tauri::async_runtime::spawn_blocking(move || register_with_core(verified, profile))
+        .await
+        .map_err(|_| "Local Core registration worker failed.".to_string())?
 }
 #[cfg(test)]
 mod tests {
@@ -542,6 +625,30 @@ mod tests {
             target_url("https://person:password@example.com/items?key=secret"),
             "https://example.com/items"
         );
+    }
+    #[test]
+    fn rejects_reused_or_untrusted_browser_identity() {
+        let path = "/devtools/browser/01234567-89ab-cdef-0123-456789abcdef";
+        let valid = "ws://127.0.0.1:53331/devtools/browser/01234567-89ab-cdef-0123-456789abcdef";
+        let fingerprint = owned_browser_fingerprint(53331, 53331, path, valid).unwrap();
+        assert_eq!(fingerprint.len(), 64);
+        for (owned_port, url) in [
+            (53332, valid),
+            (
+                53331,
+                "ws://127.0.0.1:53332/devtools/browser/01234567-89ab-cdef-0123-456789abcdef",
+            ),
+            (
+                53331,
+                "ws://evil.example:53331/devtools/browser/01234567-89ab-cdef-0123-456789abcdef",
+            ),
+            (
+                53331,
+                "ws://127.0.0.1:53331/devtools/browser/ffffffff-ffff-ffff-ffff-ffffffffffff",
+            ),
+        ] {
+            assert!(owned_browser_fingerprint(53331, owned_port, path, url).is_err());
+        }
     }
     #[test]
     fn refuses_unsafe_launch_urls() {

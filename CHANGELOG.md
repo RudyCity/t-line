@@ -1,3 +1,11 @@
+## [1.3.721] - 2026-10-25
+
+### Managed Browser — Runtime Identity and Windows Smoke (M2-D)
+
+- Verified a real, installed Windows Chrome in a temporary headless profile with two independent gateway agent sessions, owner claim, denied unapproved access, approved observer access, and safe release.
+- Added native browser identity fingerprint checks before authenticated Core registration. Core gateway now filters stale/changed browser fingerprints and rejects control from pre-restart managed session claims.
+- Added Rust identity mismatch tests and repeatable Windows smoke documentation. Packaged Tauri GUI, live installed-Core HTTP bearer exchange and in-panel mirroring remain unverified.
+
 ## [1.3.720] - 2026-10-25
 
 ### Managed Browser — Authenticated Native Runtime Directory (M2-C)

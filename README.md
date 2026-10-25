@@ -40,6 +40,8 @@
 
 **Native Core registration (M2-C):** The confirmed Pair agent action now requires an authenticated announcement from Tauri's Rust process to the local Core service before automatically requesting the workspace assistant to attach. Core validates the page target and publishes 90-second, token-free entries to the cross-process registry readable via the MCP gateway's `managed` action. The UI revalidates every 45 seconds while open. A registry entry is **not** a CDP claim; the MCP agent still needs normal target ownership/approval. If Core is unavailable, pairing fails closed to manual instructions. See [M2-C acceptance notes](docs/plans/2026-10-25-tline-browser-m2c-native-registry.md).
 
+**Windows browser integration acceptance:** A headless Chrome installed on Windows has been exercised with isolated temporary profiles and multi-agent gateway ownership/approval. The Core registration now pins the hashed real browser identity so a restarted browser cannot silently inherit a stale managed lease; see [M2-D Windows smoke results](docs/plans/2026-10-25-tline-browser-m2d-windows-smoke.md). This **does not** prove the Tauri packaged GUI or system Core authentication path is working end-to-end; those gates are still pending.
+
 ### 🔐 Security & Remote Workspace Sharing
 * **Cloudflare Tunnel Integration**: Share your local dev server, terminal sessions, and workspace remotely with zero-trust access tokens and password protection.
 * **Tauri v2 Desktop Native**: Native C++/Rust desktop wrapper keeping RAM footprint under 100MB with system tray support.
