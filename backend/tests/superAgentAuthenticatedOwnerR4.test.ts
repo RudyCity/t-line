@@ -32,7 +32,9 @@ describe("R4 private control-plane attestation (read-only)",()=>{
   process.env.TLINE_SUPERAGENT_OWNER_MODE="supervised-external";
   const root=fs.mkdtempSync(path.join(os.tmpdir(),"r4-control-owner-"));
   const publicPort=58991,pid=24501,token="a".repeat(64);
-  let identity={publicPort,supervisorPid:pid,active:{pid:24502}};
+  let identity={publicPort,supervisorPid:pid,active:{pid:24502},
+    ownerContract:{version:1,role:"core-supervisor",
+      mcpLifecycle:"not-owned",replayPolicy:"explicit-resume-only"}};
   const control=await serverFor(()=>identity,token);
   try{
     const file=path.join(root,"core-supervisor-"+publicPort+".json");
@@ -47,6 +49,18 @@ describe("R4 private control-plane attestation (read-only)",()=>{
     expect(await verifyAuthenticatedExternalCoreOwner(publicPort,root,pid)).toBe(false);
     identity={...identity,active:{pid:24502}};
     expect(await verifyAuthenticatedExternalCoreOwner(publicPort,root,24504)).toBe(false);
+    identity={...identity,ownerContract:{...identity.ownerContract,
+      mcpLifecycle:"shared"}};
+    expect(await verifyAuthenticatedExternalCoreOwner(publicPort,root,pid)).toBe(false);
+    identity={...identity,ownerContract:{...identity.ownerContract,
+      mcpLifecycle:"not-owned",version:2}};
+    expect(await verifyAuthenticatedExternalCoreOwner(publicPort,root,pid)).toBe(false);
+    identity={...identity,ownerContract:{...identity.ownerContract,
+      version:1,replayPolicy:"auto-replay"}};
+    expect(await verifyAuthenticatedExternalCoreOwner(publicPort,root,pid)).toBe(false);
+    identity={...identity,ownerContract:{version:1,role:"core-supervisor",
+      mcpLifecycle:"not-owned",replayPolicy:"explicit-resume-only"}};
+    expect(await verifyAuthenticatedExternalCoreOwner(publicPort,root,pid)).toBe(true);
     fs.writeFileSync(file,JSON.stringify({
       publicPort,supervisorPid:pid,
       controlPort:control.port,controlToken:"b".repeat(64),

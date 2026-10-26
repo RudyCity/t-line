@@ -1,3 +1,18 @@
+## [1.3.736] - 2026-10-26
+
+### Dual-Pillar Studio Architecture & Prompt Console
+- Redesigned the SuperAgent Studio interface (`StudioTab.tsx`) into two explicit, dedicated pillars: a prominent **Prompt & AI Director Console** on the left and an interactive **Visual & Timeline Editor** on the right.
+- Added a Workspace Mode Ribbon allowing instant switching between **Split View** (side-by-side prompt and canvas editor), **Prompt Focus** (maximized prompt and creative ideation view), and **Editor Focus** (maximized visual canvas, layer positioning, and timeline scrubbing).
+- Reorganized layer and property management inside the Editor section so `StudioLayersSection` and `StudioInspectorSection` sit together next to the canvas stage, eliminating nested collapsible accordions.
+- Added quick prompt inspiration presets (SaaS Promo, Code Tour, Metric KPI, Release Reel) to `StudioDirectorSection.tsx` and updated placeholders to English.
+- Added automated unit tests verifying the dual-pillar layout and view mode switching.
+
+## [1.3.735] - 2026-10-26
+
+### Supervised Core Ownership Protocol
+- Required a versioned authenticated Core-only capability contract before T-Line attaches in opt-in external-supervisor mode. Rejects missing/mismatched owner role, MCP ownership and session replay guarantees, rather than trusting a matching PID alone.
+- Extended negative authentication tests and documented the contract; legacy Core routing remains backward compatible until explicitly switched.
+
 ## [1.3.734] - 2026-10-26
 
 ### Agent Crash Log Triage Instructions

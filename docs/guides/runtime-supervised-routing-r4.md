@@ -25,3 +25,32 @@ result is classified as unverified/occupied, never as a spawnable free port.
 The runtime must not start a replacement Core if the external supervisor is
 missing or late after reboot. This is source-level failure safety; the native
 installed package remains an independent R6 certification gate.
+
+
+### Authenticated Core owner contract v1 (2026-10-26)
+
+The `supervised-external` opt-in now requires an authenticated Core
+private `GET /status` to return a versioned owner contract in addition
+to the supervisor PID and active worker PID:
+
+```json
+{
+  "ownerContract": {
+    "version": 1,
+    "role": "core-supervisor",
+    "mcpLifecycle": "not-owned",
+    "replayPolicy": "explicit-resume-only"
+  }
+}
+```
+
+Missing/unknown versions, Core owners claiming MCP lifecycle control,
+and implicit replay policies are rejected as incompatible/occupied.
+This is a conservative fail-closed upgrade: earlier Core versions
+without the new private contract are intentionally not accepted in
+opt-in external mode. Legacy default mode remains unchanged.
+
+This handshake is source-level implementation and has passed backend
+negative tests and an independently started private Core stage;
+it does NOT certify installed desktop, transport encryption, or
+production client migration.

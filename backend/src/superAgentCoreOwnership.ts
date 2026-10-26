@@ -83,10 +83,18 @@ export async function verifyAuthenticatedExternalCoreOwner(
       if(res.statusCode!==200)return done(false);
       try{
        const data=JSON.parse(body) as {
-        publicPort?:number;supervisorPid?:number;active?:{pid?:number}
+        publicPort?:number;supervisorPid?:number;active?:{pid?:number};
+        ownerContract?: {
+          version?:number;role?:string;mcpLifecycle?:string;
+          replayPolicy?:string;
+        };
        };
+       const contract=data.ownerContract;
        done(data.publicPort===port&&data.supervisorPid===kernelPid&&
-        typeof data.active?.pid==="number"&&data.active.pid>0);
+        typeof data.active?.pid==="number"&&data.active.pid>0&&
+        contract?.version===1&&contract.role==="core-supervisor"&&
+        contract.mcpLifecycle==="not-owned"&&
+        contract.replayPolicy==="explicit-resume-only");
       }catch{done(false)}
     });
    });
