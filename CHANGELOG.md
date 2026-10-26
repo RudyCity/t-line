@@ -1,3 +1,13 @@
+## [1.3.730] - 2026-10-26
+
+### UI & Theme Calibration (Anti-Slop Color System)
+
+- Removed generic AI-slop color gradients, artificial purple/cyan radial background orbs, and excessive 35% neon halos across all theme presets.
+- Calibrated core theme presets (`default`, `cyberpunk`, `forest`, `dracula`, `nord`, `light`) with intentional neutral surface hierarchy and strict WCAG AA contrast compliance across main text, muted metadata, and primary accents.
+- Replaced hardcoded purple/indigo color codes across workbench split indicators, terminal grid headers, tab drag states, and search components with semantic theme tokens (`--color-primary`, `--color-primary-glow`, `--border-glow`).
+- Replaced gradient text headings in terminal grid and branding headers with clean, solid, high-legibility typography.
+- Refined primary accent options in appearance settings with calibrated palette options (Blue, Teal, Emerald, Amber, Rose, Steel, Indigo, Violet) and subtle ring-focus indicators.
+
 ## [1.3.729] - 2026-10-26
 
 ### Auth & Token Persistence Synchronization

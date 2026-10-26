@@ -265,20 +265,20 @@ export function DiffViewerTab({
           align-items: center;
           gap: 6px;
           padding: 3px 10px;
-          background: rgba(99, 102, 241, 0.08);
-          color: #818cf8;
+          background: var(--color-primary-glow);
+          color: var(--color-primary);
           font-size: 0.7rem;
           cursor: pointer;
           user-select: none;
-          border-top: 1px solid rgba(99, 102, 241, 0.15);
+          border-top: 1px solid var(--border-glow);
         }
         .dvt-hunk-header:hover {
-          background: rgba(99, 102, 241, 0.14);
+          background: color-mix(in srgb, var(--color-primary) 18%, transparent);
         }
         .dvt-hunk-label {
           font-family: monospace;
           font-size: 0.68rem;
-          color: #6366f1;
+          color: var(--color-primary);
           white-space: pre;
         }
         .dvt-lines {}
@@ -352,7 +352,7 @@ export function DiffViewerTab({
         .theme-light .dvt-line-del .dvt-text { color: #b91c1c; }
         .theme-light .dvt-line-add .dvt-sign { color: #16a34a; }
         .theme-light .dvt-line-del .dvt-sign { color: #dc2626; }
-        .theme-light .dvt-hunk-header { background: rgba(99, 102, 241, 0.05); }
+        .theme-light .dvt-hunk-header { background: var(--color-primary-glow); }
       `}</style>
 
       {/* Header */}

@@ -31,81 +31,81 @@ export const THEMES: Record<string, ThemePreset> = {
   },
   default: {
     name: 'Default Dark',
-    bgMain: '#05070c',
-    bgSidebar: '#090c14',
-    bgCard: 'rgba(17, 24, 39, 0.45)',
-    bgCardHover: 'rgba(31, 41, 55, 0.55)',
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    textMain: '#f8fafc',
+    bgMain: '#0e1117',
+    bgSidebar: '#0a0d12',
+    bgCard: '#151921',
+    bgCardHover: '#1c222c',
+    borderColor: '#242a36',
+    textMain: '#f1f5f9',
     textMuted: '#94a3b8',
     textDark: '#64748b',
-    defaultAccent: '#6366f1',
-    bgRadialDot: 'rgba(255, 255, 255, 0.02)',
+    defaultAccent: '#3b82f6',
+    bgRadialDot: 'transparent',
   },
   dracula: {
     name: 'Dracula',
-    bgMain: '#1e1f29',
-    bgSidebar: '#282a36',
-    bgCard: 'rgba(40, 42, 54, 0.5)',
-    bgCardHover: 'rgba(68, 71, 90, 0.5)',
-    borderColor: 'rgba(98, 114, 164, 0.2)',
+    bgMain: '#21222c',
+    bgSidebar: '#191a21',
+    bgCard: '#282a36',
+    bgCardHover: '#343746',
+    borderColor: '#44475a',
     textMain: '#f8f8f2',
-    textMuted: '#6272a4',
-    textDark: '#44475a',
+    textMuted: '#a2aabc',
+    textDark: '#6272a4',
     defaultAccent: '#bd93f9',
-    bgRadialDot: 'rgba(255, 255, 255, 0.01)',
+    bgRadialDot: 'transparent',
   },
   cyberpunk: {
     name: 'Cyberpunk Neon',
-    bgMain: '#0b0813',
-    bgSidebar: '#120924',
-    bgCard: 'rgba(26, 15, 46, 0.45)',
-    bgCardHover: 'rgba(50, 24, 85, 0.55)',
-    borderColor: 'rgba(255, 0, 127, 0.15)',
+    bgMain: '#110e1b',
+    bgSidebar: '#0c0914',
+    bgCard: '#1a1628',
+    bgCardHover: '#251f38',
+    borderColor: '#2e2642',
     textMain: '#f8fafc',
-    textMuted: '#ff007f',
-    textDark: '#861f68',
-    defaultAccent: '#ff007f',
-    bgRadialDot: 'rgba(255, 255, 255, 0.02)',
+    textMuted: '#a3a6b8',
+    textDark: '#6b6e82',
+    defaultAccent: '#f43f5e',
+    bgRadialDot: 'transparent',
   },
   forest: {
     name: 'Forest Green',
-    bgMain: '#070d0a',
-    bgSidebar: '#0c1712',
-    bgCard: 'rgba(16, 28, 21, 0.45)',
-    bgCardHover: 'rgba(24, 45, 34, 0.55)',
-    borderColor: 'rgba(16, 185, 129, 0.1)',
-    textMain: '#f0fdf4',
-    textMuted: '#86efac',
-    textDark: '#3f6212',
+    bgMain: '#0c1410',
+    bgSidebar: '#080e0b',
+    bgCard: '#131e19',
+    bgCardHover: '#1a2922',
+    borderColor: '#21332a',
+    textMain: '#ecfdf5',
+    textMuted: '#8da398',
+    textDark: '#566a60',
     defaultAccent: '#10b981',
-    bgRadialDot: 'rgba(255, 255, 255, 0.01)',
+    bgRadialDot: 'transparent',
   },
   nord: {
     name: 'Nord Frost',
-    bgMain: '#2e3440',
-    bgSidebar: '#242933',
-    bgCard: 'rgba(46, 52, 64, 0.5)',
-    bgCardHover: 'rgba(59, 66, 82, 0.5)',
-    borderColor: 'rgba(76, 86, 106, 0.3)',
+    bgMain: '#242933',
+    bgSidebar: '#1e222a',
+    bgCard: '#2e3440',
+    bgCardHover: '#3b4252',
+    borderColor: '#434c5e',
     textMain: '#eceff4',
     textMuted: '#d8dee9',
-    textDark: '#4c566a',
+    textDark: '#7b88a1',
     defaultAccent: '#88c0d0',
-    bgRadialDot: 'rgba(255, 255, 255, 0.01)',
+    bgRadialDot: 'transparent',
   },
   light: {
     name: 'Light Mode',
     bgMain: '#f8fafc',
     bgSidebar: '#f1f5f9',
-    bgCard: 'rgba(255, 255, 255, 0.7)',
-    bgCardHover: 'rgba(241, 245, 249, 0.9)',
-    borderColor: 'rgba(0, 0, 0, 0.08)',
+    bgCard: '#ffffff',
+    bgCardHover: '#f1f5f9',
+    borderColor: '#e2e8f0',
     textMain: '#0f172a',
-    textMuted: '#64748b',
-    textDark: '#94a3b8',
-    defaultAccent: '#6366f1',
-    bgRadialDot: 'rgba(0, 0, 0, 0.02)',
+    textMuted: '#475569',
+    textDark: '#64748b',
+    defaultAccent: '#2563eb',
+    bgRadialDot: 'transparent',
   }
 };
 
@@ -280,21 +280,21 @@ export function useThemeAndFonts() {
     );
     root.style.setProperty(
       '--color-primary-glow',
-      `color-mix(in srgb, ${accentColor} ${isCalm ? '8%' : '35%'}, transparent)`
+      `color-mix(in srgb, ${accentColor} ${isCalm ? '6%' : '12%'}, transparent)`
     );
     root.style.setProperty(
       '--border-glow',
-      `color-mix(in srgb, ${accentColor} ${isCalm ? '6%' : '15%'}, transparent)`
+      `color-mix(in srgb, ${accentColor} ${isCalm ? '6%' : '12%'}, transparent)`
     );
 
     root.style.setProperty('--bg-radial-dot', preset.bgRadialDot);
     root.style.setProperty(
       '--bg-radial-glow1',
-      `color-mix(in srgb, ${accentColor} ${isCalm ? '0%' : '8%'}, transparent)`
+      'transparent'
     );
     root.style.setProperty(
       '--bg-radial-glow2',
-      `color-mix(in srgb, ${preset.textMain} ${isCalm ? '0%' : '4%'}, transparent)`
+      'transparent'
     );
 
     // Light/dark adaptive semantic tokens

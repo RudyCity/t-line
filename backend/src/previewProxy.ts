@@ -422,14 +422,16 @@ export const previewProxy = createPreviewProxy({
             <script>
               try {
                 const theme = localStorage.getItem('tline-theme') || 'default';
-                const accent = localStorage.getItem('tline-accent-color') || '#6366f1';
+                const accent = localStorage.getItem('tline-accent-color') || '#3b82f6';
                 const themes = {
-                  default: { bgMain: '#05070c', textMain: '#f8fafc', bgCard: 'rgba(17, 24, 39, 0.45)', border: 'rgba(255, 255, 255, 0.06)', textMuted: '#94a3b8' },
-                  dracula: { bgMain: '#1e1f29', textMain: '#f8f8f2', bgCard: 'rgba(40, 42, 54, 0.5)', border: 'rgba(98, 114, 164, 0.2)', textMuted: '#6272a4' },
-                  cyberpunk: { bgMain: '#0b0813', textMain: '#f8fafc', bgCard: 'rgba(26, 15, 46, 0.45)', border: 'rgba(50, 24, 85, 0.55)', border: 'rgba(255, 0, 127, 0.15)', textMuted: '#ff007f' },
-                  forest: { bgMain: '#070d0a', textMain: '#f0fdf4', bgCard: 'rgba(16, 28, 21, 0.45)', border: 'rgba(16, 185, 129, 0.1)', textMuted: '#86efac' },
-                  nord: { bgMain: '#2e3440', textMain: '#eceff4', bgCard: 'rgba(46, 52, 64, 0.5)', border: 'rgba(76, 86, 106, 0.3)', textMuted: '#d8dee9' },
-                  light: { bgMain: '#f8fafc', textMain: '#0f172a', bgCard: 'rgba(255, 255, 255, 0.7)', border: 'rgba(0, 0, 0, 0.08)', textMuted: '#64748b' }
+                  'calm-light': { bgMain: '#F8F9FB', textMain: '#242B38', bgCard: '#FFFFFF', border: '#DDE3EB', textMuted: '#586578' },
+                  'calm-dark': { bgMain: '#1B2029', textMain: '#F0F2F7', bgCard: '#242B36', border: '#3B4554', textMuted: '#B8C3D2' },
+                  default: { bgMain: '#0e1117', textMain: '#f1f5f9', bgCard: '#151921', border: '#242a36', textMuted: '#94a3b8' },
+                  dracula: { bgMain: '#21222c', textMain: '#f8f8f2', bgCard: '#282a36', border: '#44475a', textMuted: '#a2aabc' },
+                  cyberpunk: { bgMain: '#110e1b', textMain: '#f8fafc', bgCard: '#1a1628', border: '#2e2642', textMuted: '#a3a6b8' },
+                  forest: { bgMain: '#0c1410', textMain: '#ecfdf5', bgCard: '#131e19', border: '#21332a', textMuted: '#8da398' },
+                  nord: { bgMain: '#242933', textMain: '#eceff4', bgCard: '#2e3440', border: '#434c5e', textMuted: '#d8dee9' },
+                  light: { bgMain: '#f8fafc', textMain: '#0f172a', bgCard: '#ffffff', border: '#e2e8f0', textMuted: '#475569' }
                 };
                 const preset = themes[theme] || themes.default;
                 const root = document.documentElement;
@@ -445,10 +447,10 @@ export const previewProxy = createPreviewProxy({
               body { background: var(--bg-main, #0b0f19); color: var(--text-main, #f3f4f6); font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
               .card { max-width: 420px; width: 85%; background: var(--bg-card, rgba(17, 24, 39, 0.45)); border: 1px solid var(--border-color, rgba(255, 255, 255, 0.06)); border-radius: 12px; padding: 32px 24px; text-align: center; }
               .icon { font-size: 32px; margin-bottom: 16px; display: inline-block; }
-              h1 { font-size: 20px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, var(--accent-color, #a855f7), var(--accent-color, #6366f1)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+              h1 { font-size: 20px; font-weight: 700; margin: 0 0 8px; color: var(--text-main, #f1f5f9); }
               p { color: var(--text-muted, #9ca3af); font-size: 13px; line-height: 1.5; margin: 0 0 20px; }
-              code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; color: var(--accent-color, #e9d5ff); font-family: monospace; }
-              .btn { background: linear-gradient(135deg, var(--accent-color, #a855f7), var(--accent-color, #6366f1)); color: white; border: none; padding: 10px 24px; font-size: 13px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+              code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; color: var(--accent-color, #60a5fa); font-family: monospace; }
+              .btn { background: var(--accent-color, #3b82f6); color: white; border: none; padding: 10px 24px; font-size: 13px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
               .btn:hover { transform: translateY(-1px); }
             </style>
           </head>

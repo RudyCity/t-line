@@ -50,7 +50,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   latestVersion,
   theme = 'default',
   setTheme = () => {},
-  accentColor = '#6366f1',
+  accentColor = '#3b82f6',
   setAccentColor = () => {},
   fontSans = 'Outfit',
   setFontSans = () => {},
@@ -416,7 +416,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   )}
                   {updateCheckStatus === 'available' && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#6366f1' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--color-primary)' }}>
                         <ArrowUpCircle size={12} />
                         {updateCheckVersion ? `v${updateCheckVersion} available` : 'Available'}
                       </span>
@@ -430,9 +430,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             display: 'flex', alignItems: 'center', gap: '4px',
                             fontSize: '0.75rem', fontWeight: 600,
                             padding: '3px 10px', borderRadius: '6px',
-                            background: 'rgba(99, 102, 241, 0.2)',
-                            border: '1px solid rgba(99, 102, 241, 0.4)',
-                            color: '#818cf8', cursor: 'pointer'
+                            background: 'var(--color-primary-glow)',
+                            border: '1px solid var(--border-glow)',
+                            color: 'var(--color-primary)', cursor: 'pointer'
                           }}
                         >
                           <Download size={11} />
@@ -473,9 +473,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         display: 'flex', alignItems: 'center', gap: '4px',
                         fontSize: '0.75rem', fontWeight: 600,
                         padding: '3px 10px', borderRadius: '6px',
-                        background: 'rgba(99, 102, 241, 0.2)',
-                        border: '1px solid rgba(99, 102, 241, 0.4)',
-                        color: '#818cf8', cursor: 'pointer'
+                        background: 'var(--color-primary-glow)',
+                        border: '1px solid var(--border-glow)',
+                        color: 'var(--color-primary)', cursor: 'pointer'
                       }}
                     >
                       <RefreshCw size={11} />
@@ -608,13 +608,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </h4>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
                     {[
-                      { name: 'Violet', value: '#a855f7' },
                       { name: 'Blue', value: '#3b82f6' },
+                      { name: 'Teal', value: '#0d9488' },
                       { name: 'Emerald', value: '#10b981' },
                       { name: 'Amber', value: '#f59e0b' },
-                      { name: 'Rose', value: '#ef4444' },
-                      { name: 'Cyan', value: '#06b6d4' },
+                      { name: 'Rose', value: '#f43f5e' },
+                      { name: 'Steel', value: '#64748b' },
                       { name: 'Indigo', value: '#6366f1' },
+                      { name: 'Violet', value: '#8b5cf6' },
                     ].map(preset => {
                       const isSelected = accentColor.toLowerCase() === preset.value.toLowerCase();
                       return (
@@ -630,7 +631,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             border: isSelected ? '2px solid var(--text-main, #ffffff)' : '1px solid var(--border-color, rgba(255,255,255,0.2))',
                             cursor: 'pointer',
                             padding: 0,
-                            boxShadow: isSelected ? 'var(--accent-shadow-glow, 0 0 6px ' + preset.value + ')' : 'none',
+                            boxShadow: isSelected ? '0 0 0 2px var(--bg-card), 0 0 0 4px ' + preset.value : 'none',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',

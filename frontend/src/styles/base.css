@@ -4,18 +4,18 @@
     --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 
-    /* Premium Dark Palette */
-    --bg-main: #05070c;
-    --bg-sidebar: #090c14;
-    --bg-card: rgba(17, 24, 39, 0.45);
-    --bg-card-hover: rgba(31, 41, 55, 0.55);
-    --border-color: rgba(255, 255, 255, 0.06);
-    --border-glow: rgba(99, 102, 241, 0.15);
+    /* Calibrated Dark Palette */
+    --bg-main: #0e1117;
+    --bg-sidebar: #0a0d12;
+    --bg-card: #151921;
+    --bg-card-hover: #1c222c;
+    --border-color: #242a36;
+    --border-glow: rgba(59, 130, 246, 0.12);
 
-    /* Neon Accents */
-    --color-primary: #6366f1; /* Indigo */
-    --color-primary-hover: #818cf8;
-    --color-primary-glow: rgba(99, 102, 241, 0.35);
+    /* Core Accents */
+    --color-primary: #3b82f6; /* Electric Blue */
+    --color-primary-hover: #60a5fa;
+    --color-primary-glow: rgba(59, 130, 246, 0.12);
     
     --color-success: #10b981; /* Emerald */
     --color-warning: #f59e0b; /* Amber */
@@ -23,7 +23,7 @@
     --color-info: #0ea5e9;    /* Sky Blue */
 
     /* Text Colors */
-    --text-main: #f8fafc;
+    --text-main: #f1f5f9;
     --text-muted: #94a3b8;
     --text-dark: #64748b;
 
@@ -56,10 +56,8 @@
     width: 100vw;
     -webkit-font-smoothing: antialiased;
     background-image: 
-      radial-gradient(var(--bg-radial-dot, rgba(255, 255, 255, 0.02)) 1px, transparent 1px),
-      radial-gradient(at 0% 0%, var(--bg-radial-glow1, rgba(99, 102, 241, 0.08)) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, var(--bg-radial-glow2, rgba(14, 165, 233, 0.04)) 0px, transparent 50%);
-    background-size: 24px 24px, 100% 100%, 100% 100%;
+      radial-gradient(var(--bg-radial-dot, transparent) 1px, transparent 1px);
+    background-size: 24px 24px;
   }
 
   button, input, select, textarea {

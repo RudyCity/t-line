@@ -93,8 +93,8 @@
 }
 
 .activity-bar-item.active {
-  color: var(--color-primary, #6366f1);
-  background: rgba(99, 102, 241, 0.12);
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-glow);
   border: none;
 }
 
@@ -705,8 +705,8 @@ body.tab-dragging .drag-drop-overlay {
 
 .drag-drop-zone {
   position: absolute;
-  background: rgba(99, 102, 241, 0.02);
-  border: 2px dashed rgba(99, 102, 241, 0.3);
+  background: color-mix(in srgb, var(--color-primary, #3b82f6) 4%, transparent);
+  border: 2px dashed var(--border-glow);
   pointer-events: auto;
   display: flex;
   align-items: center;
@@ -717,16 +717,16 @@ body.tab-dragging .drag-drop-overlay {
 }
 
 .drag-drop-zone:hover {
-  background: rgba(99, 102, 241, 0.18) !important;
-  border-color: #818cf8 !important;
+  background: var(--color-primary-glow) !important;
+  border-color: var(--color-primary) !important;
 }
 
 .drag-drop-zone span {
-  color: #818cf8;
+  color: var(--color-primary);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   user-select: none;
 }
 
