@@ -1,4 +1,4 @@
-import { Clapperboard, Film, Plus, RefreshCw, Undo2, Redo2, X } from 'lucide-react';
+import { Clapperboard, Columns, Film, Plus, RefreshCw, Undo2, Redo2, SlidersHorizontal, Sparkles, X } from 'lucide-react';
 import { STUDIO_DISPLAY_NAME } from '../../services/studioBranding';
 import type {
   StudioProject,
@@ -36,6 +36,8 @@ interface Props {
   onChangeProjectName: (name: string) => void;
   onCreateProject: () => void;
   onCancelCreating: () => void;
+  layout?: 'split' | 'prompt' | 'editor';
+  onChangeLayout?: (layout: 'split' | 'prompt' | 'editor') => void;
 }
 
 const control = 'rounded border border-[var(--border-color)] bg-[var(--bg-main)] px-2.5 py-1.5 text-xs text-[var(--text-main)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]';
@@ -69,6 +71,8 @@ export function StudioTopBar({
   onChangeProjectName,
   onCreateProject,
   onCancelCreating,
+  layout = 'split',
+  onChangeLayout,
 }: Props) {
   return (
     <>
@@ -97,6 +101,60 @@ export function StudioTopBar({
             <span className="rounded-md border border-[var(--border-color)] bg-[var(--bg-card)] px-2 py-0.5 font-mono text-[10px] font-semibold text-[var(--color-primary)] shadow-inner">
               r{project.revision}
             </span>
+          )}
+
+          {onChangeLayout && (
+            <div
+              className="flex items-center rounded-lg border border-[var(--border-color)] bg-[var(--bg-main)] p-0.5 shadow-xs"
+              role="tablist"
+              aria-label="Studio mode switch"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={layout === 'prompt'}
+                onClick={() => onChangeLayout('prompt')}
+                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
+                  layout === 'prompt'
+                    ? 'bg-[var(--color-primary)] text-white shadow-xs'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)]'
+                }`}
+                title="AI Prompt Mode: Focused on prompt directing, audio narrations, and storyboard"
+              >
+                <Sparkles size={12} />
+                <span>Prompt</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={layout === 'editor'}
+                onClick={() => onChangeLayout('editor')}
+                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
+                  layout === 'editor'
+                    ? 'bg-[var(--color-primary)] text-white shadow-xs'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)]'
+                }`}
+                title="Studio Editor Mode: Fullscreen visual canvas, layers, timeline, and property inspector"
+              >
+                <SlidersHorizontal size={12} />
+                <span>Editor</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={layout === 'split'}
+                onClick={() => onChangeLayout('split')}
+                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
+                  layout === 'split'
+                    ? 'bg-[var(--color-primary)] text-white shadow-xs'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)]'
+                }`}
+                title="Split View: Both Prompt Director and Studio Editor"
+              >
+                <Columns size={12} />
+                <span>Split</span>
+              </button>
+            </div>
           )}
 
           {supervisor && (

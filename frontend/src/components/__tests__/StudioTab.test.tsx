@@ -925,29 +925,23 @@ describe('Native T-Line Studio Studio editor', () => {
     await act(async () => { resolveList?.([{ id, name: 'Old scene', revision: 1 }]); });
     expect(studioApi.inspect).not.toHaveBeenCalled();
   });
-  it('supports dual-pillar layout switching between split, prompt focus, and editor focus', async () => {
+  it('switches between Prompt, Editor and Split workstation views', async () => {
     render(<StudioTab workspacePath="D:/projects/studio" isActive />);
     await screen.findByText('Choose a scene to edit');
     fireEvent.change(screen.getByLabelText('Select Studio project'), { target: { value: id } });
-    await screen.findByTestId('motion-canvas');
+    await screen.findByDisplayValue('Product intro');
 
-    // Split view displays both sections by default
-    expect(screen.getByLabelText('Studio Prompt Section')).toBeInTheDocument();
-    expect(screen.getByLabelText('Studio Editor Section')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Split/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('motion-canvas')).toBeInTheDocument();
 
-    // Prompt Focus hides Editor Section and focuses on Prompt Console
-    fireEvent.click(screen.getByRole('button', { name: 'Prompt Focus' }));
-    expect(screen.getByLabelText('Studio Prompt Section')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Studio Editor Section')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: /Prompt/i }));
+    expect(await screen.findByText('AI Studio Director Mode')).toBeInTheDocument();
+    expect(screen.getByText('Scene Live Preview')).toBeInTheDocument();
 
-    // Editor Focus hides Prompt Section and maximizes the Canvas/Inspector
-    fireEvent.click(screen.getByRole('button', { name: 'Editor Focus' }));
-    expect(screen.queryByLabelText('Studio Prompt Section')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Studio Editor Section')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: /Editor/i }));
+    expect(await screen.findByText('Need AI assistance?')).toBeInTheDocument();
 
-    // Return to Split View
-    fireEvent.click(screen.getByRole('button', { name: 'Split View' }));
-    expect(screen.getByLabelText('Studio Prompt Section')).toBeInTheDocument();
-    expect(screen.getByLabelText('Studio Editor Section')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: /Split/i }));
+    expect(screen.getByRole('tab', { name: /Split/i })).toHaveAttribute('aria-selected', 'true');
   });
 });

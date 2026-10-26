@@ -24,7 +24,7 @@ import { StudioInteractionPanel } from './StudioInteractionPanel';
 import { StudioVideoToCodePanel } from './StudioVideoToCodePanel';
 import { StudioCodeToVideoPanel } from './StudioCodeToVideoPanel';
 import { studioApi } from '../services/studioApi';
-import { AlertCircle, CheckCircle2, Film, Loader2, Sparkles, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Film, Loader2, Plus, SlidersHorizontal, Sparkles, X } from 'lucide-react';
 
 interface Props {
   workspacePath: string;
@@ -92,6 +92,8 @@ export function StudioTab({ workspacePath, isActive }: Props) {
         onChangeProjectName={s.setProjectName}
         onCreateProject={s.createProject}
         onCancelCreating={() => s.setCreating(false)}
+        layout={studioLayout}
+        onChangeLayout={setStudioLayout}
       />
 
       {(s.error || s.success) && (
@@ -116,64 +118,6 @@ export function StudioTab({ workspacePath, isActive }: Props) {
           </button>
         </div>
       )}
-
-      {/* Studio Dual-Pillar Workspace Mode Ribbon */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-color)] bg-[var(--bg-sidebar)]/80 px-4 py-1.5 text-xs">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 font-semibold text-xs text-[var(--text-main)]">
-            <span className="flex h-5 w-5 items-center justify-center rounded bg-[var(--color-primary)]/20 text-[var(--color-primary)]">
-              <Sparkles size={12} />
-            </span>
-            <span>Prompt & AI Director</span>
-          </div>
-          <span className="text-[var(--border-color)]">│</span>
-          <div className="flex items-center gap-1.5 font-semibold text-xs text-[var(--text-muted)]">
-            <span className="flex h-5 w-5 items-center justify-center rounded bg-purple-500/15 text-purple-400">
-              <Film size={12} />
-            </span>
-            <span>Visual & Timeline Editor</span>
-          </div>
-        </div>
-
-        <div className="flex items-center rounded-lg border border-[var(--border-color)] bg-[var(--bg-main)] p-0.5">
-          <button
-            type="button"
-            className={`rounded px-2.5 py-1 text-[11px] font-medium transition-colors ${
-              studioLayout === 'split'
-                ? 'bg-[var(--color-primary)] text-white shadow-sm font-semibold'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-            }`}
-            onClick={() => setStudioLayout('split')}
-            title="Side-by-side: Prompt console on left, Canvas & Inspector on right"
-          >
-            Split View
-          </button>
-          <button
-            type="button"
-            className={`rounded px-2.5 py-1 text-[11px] font-medium transition-colors ${
-              studioLayout === 'prompt'
-                ? 'bg-[var(--color-primary)] text-white shadow-sm font-semibold'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-            }`}
-            onClick={() => setStudioLayout('prompt')}
-            title="Focus on prompting and AI scene direction"
-          >
-            Prompt Focus
-          </button>
-          <button
-            type="button"
-            className={`rounded px-2.5 py-1 text-[11px] font-medium transition-colors ${
-              studioLayout === 'editor'
-                ? 'bg-[var(--color-primary)] text-white shadow-sm font-semibold'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-            }`}
-            onClick={() => setStudioLayout('editor')}
-            title="Focus on visual canvas, layer positioning, and timeline scrubbing"
-          >
-            Editor Focus
-          </button>
-        </div>
-      </div>
 
       {/* Experimental Video Reconstruct & Storyboard panels */}
       {s.multiVideoAvailable && (
@@ -256,424 +200,516 @@ export function StudioTab({ workspacePath, isActive }: Props) {
           </div>
           {s.busy && <Loader2 size={20} className="animate-spin text-[var(--color-primary)]" />}
 
-          <div className="w-full max-w-xl rounded-xl border border-[var(--border-color)] bg-[var(--bg-sidebar)] text-left shadow-lg overflow-hidden mt-2">
-            <StudioDirectorSection
-              selectedId={s.selectedId}
-              busy={s.busy}
-              directorAvailable={s.directorAvailable}
-              directorMediaAvailable={s.directorMediaAvailable}
-              directorSceneImagesAvailable={s.directorSceneImagesAvailable}
-              directorAudioLoopAvailable={s.directorAudioLoopAvailable}
-              directorVoiceoverAvailable={s.directorVoiceoverAvailable}
-              directorAspectAvailable={s.directorAspectAvailable}
-              directorSnapshotAvailable={s.directorSnapshotAvailable}
-              directorAutoNarration={s.directorAutoNarration}
-              onToggleAutoNarration={s.setDirectorAutoNarration}
-              motionPrompt={s.motionPrompt}
-              onChangePrompt={s.setStudioPrompt}
-              onSubmitPrompt={s.submitStudioPrompt}
-              promptHistory={s.promptHistory}
-              promptAspectRatio={s.promptAspectRatio}
-              onChangeAspectRatio={s.setPromptAspectRatio}
-              promptImages={s.promptImages}
-              onAttachImages={s.attachDirectorImages}
-              onRemoveImage={i => s.setPromptImages(prev => prev.filter((_, index) => index !== i))}
-              promptAudio={s.promptAudio}
-              onAttachAudio={s.attachDirectorFile}
-              onRemoveAudio={() => s.setPromptAudio(null)}
-              promptAudioGain={s.promptAudioGain}
-              onChangeAudioGain={s.setPromptAudioGain}
-              promptAudioLoop={s.promptAudioLoop}
-              onToggleAudioLoop={s.setPromptAudioLoop}
-              promptVoiceover={s.promptVoiceover}
-              onChangeVoiceover={s.setPromptVoiceover}
-              promptVoiceoverGain={s.promptVoiceoverGain}
-              onChangeVoiceoverGain={s.setPromptVoiceoverGain}
-              quality={s.quality}
-              captionsAvailable={s.captionsAvailable}
-              onExportCaptions={s.exportCaptions}
-              visionRepairAvailable={s.visionRepairAvailable}
-              onRepairVision={s.repairVision}
-              visionAvailable={s.visionAvailable}
-              onReviewVision={s.reviewVision}
-              visionReview={s.visionReview}
-              onPrepareSuggestedRevision={s.setStudioPrompt}
-              motionSnapshots={s.motionSnapshots}
-              onLoadDirectorSnapshots={s.loadDirectorSnapshots}
-            />
+          {studioLayout === 'editor' && !s.projects.length ? (
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                onClick={() => setStudioLayout('prompt')}
+                className={action + ' font-semibold text-[var(--color-primary)]'}
+              >
+                <Sparkles size={13} /> Open AI Prompt Mode
+              </button>
+              <button
+                onClick={() => s.setCreating(true)}
+                className={action}
+              >
+                <Plus size={13} /> Create Blank Project
+              </button>
+            </div>
+          ) : (
+            <div className="w-full max-w-xl rounded-xl border border-[var(--border-color)] bg-[var(--bg-sidebar)] text-left shadow-lg overflow-hidden mt-2">
+              <StudioDirectorSection
+                selectedId={s.selectedId}
+                busy={s.busy}
+                directorAvailable={s.directorAvailable}
+                directorMediaAvailable={s.directorMediaAvailable}
+                directorSceneImagesAvailable={s.directorSceneImagesAvailable}
+                directorAudioLoopAvailable={s.directorAudioLoopAvailable}
+                directorVoiceoverAvailable={s.directorVoiceoverAvailable}
+                directorAspectAvailable={s.directorAspectAvailable}
+                directorSnapshotAvailable={s.directorSnapshotAvailable}
+                directorAutoNarration={s.directorAutoNarration}
+                onToggleAutoNarration={s.setDirectorAutoNarration}
+                motionPrompt={s.motionPrompt}
+                onChangePrompt={s.setStudioPrompt}
+                onSubmitPrompt={s.submitStudioPrompt}
+                promptHistory={s.promptHistory}
+                promptAspectRatio={s.promptAspectRatio}
+                onChangeAspectRatio={s.setPromptAspectRatio}
+                promptImages={s.promptImages}
+                onAttachImages={s.attachDirectorImages}
+                onRemoveImage={i => s.setPromptImages(prev => prev.filter((_, index) => index !== i))}
+                promptAudio={s.promptAudio}
+                onAttachAudio={s.attachDirectorFile}
+                onRemoveAudio={() => s.setPromptAudio(null)}
+                promptAudioGain={s.promptAudioGain}
+                onChangeAudioGain={s.setPromptAudioGain}
+                promptAudioLoop={s.promptAudioLoop}
+                onToggleAudioLoop={s.setPromptAudioLoop}
+                promptVoiceover={s.promptVoiceover}
+                onChangeVoiceover={s.setPromptVoiceover}
+                promptVoiceoverGain={s.promptVoiceoverGain}
+                onChangeVoiceoverGain={s.setPromptVoiceoverGain}
+                quality={s.quality}
+                captionsAvailable={s.captionsAvailable}
+                onExportCaptions={s.exportCaptions}
+                visionRepairAvailable={s.visionRepairAvailable}
+                onRepairVision={s.repairVision}
+                visionAvailable={s.visionAvailable}
+                onReviewVision={s.reviewVision}
+                visionReview={s.visionReview}
+                onPrepareSuggestedRevision={s.setStudioPrompt}
+                motionSnapshots={s.motionSnapshots}
+                onLoadDirectorSnapshots={s.loadDirectorSnapshots}
+              />
+            </div>
+          )}
+        </div>
+      ) : studioLayout === 'prompt' ? (
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)]">
+          {/* Left Column: AI Director Form & Actions */}
+          <div className="flex min-h-0 flex-col overflow-y-auto border-b border-[var(--border-color)] bg-[var(--bg-main)] p-4 lg:border-b-0 lg:border-r">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-3.5 shadow-xs">
+              <div className="space-y-0.5">
+                <h3 className="flex items-center gap-2 text-xs font-semibold text-[var(--text-main)]">
+                  <Sparkles size={14} className="text-[var(--color-primary)]" />
+                  AI Studio Director Mode
+                </h3>
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  Describe scenes, attach audio, generate variations, or run AI vision reviews.
+                </p>
+              </div>
+              <button
+                onClick={() => setStudioLayout('editor')}
+                className="inline-flex items-center gap-1.5 rounded-md bg-[var(--color-primary)] px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition-all hover:brightness-110 active:scale-[0.98]"
+              >
+                <SlidersHorizontal size={12} />
+                Open in Full Editor →
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-sidebar)] shadow-xs overflow-hidden">
+              <StudioDirectorSection
+                selectedId={s.selectedId}
+                busy={s.busy}
+                directorAvailable={s.directorAvailable}
+                directorMediaAvailable={s.directorMediaAvailable}
+                directorSceneImagesAvailable={s.directorSceneImagesAvailable}
+                directorAudioLoopAvailable={s.directorAudioLoopAvailable}
+                directorVoiceoverAvailable={s.directorVoiceoverAvailable}
+                directorAspectAvailable={s.directorAspectAvailable}
+                directorSnapshotAvailable={s.directorSnapshotAvailable}
+                directorAutoNarration={s.directorAutoNarration}
+                onToggleAutoNarration={s.setDirectorAutoNarration}
+                motionPrompt={s.motionPrompt}
+                onChangePrompt={s.setStudioPrompt}
+                onSubmitPrompt={s.submitStudioPrompt}
+                promptHistory={s.promptHistory}
+                promptAspectRatio={s.promptAspectRatio}
+                onChangeAspectRatio={s.setPromptAspectRatio}
+                promptImages={s.promptImages}
+                onAttachImages={s.attachDirectorImages}
+                onRemoveImage={i => s.setPromptImages(prev => prev.filter((_, index) => index !== i))}
+                promptAudio={s.promptAudio}
+                onAttachAudio={s.attachDirectorFile}
+                onRemoveAudio={() => s.setPromptAudio(null)}
+                promptAudioGain={s.promptAudioGain}
+                onChangeAudioGain={s.setPromptAudioGain}
+                promptAudioLoop={s.promptAudioLoop}
+                onToggleAudioLoop={s.setPromptAudioLoop}
+                promptVoiceover={s.promptVoiceover}
+                onChangeVoiceover={s.setPromptVoiceover}
+                promptVoiceoverGain={s.promptVoiceoverGain}
+                onChangeVoiceoverGain={s.setPromptVoiceoverGain}
+                quality={s.quality}
+                captionsAvailable={s.captionsAvailable}
+                onExportCaptions={s.exportCaptions}
+                visionRepairAvailable={s.visionRepairAvailable}
+                onRepairVision={s.repairVision}
+                visionAvailable={s.visionAvailable}
+                onReviewVision={s.reviewVision}
+                visionReview={s.visionReview}
+                onPrepareSuggestedRevision={s.setStudioPrompt}
+                motionSnapshots={s.motionSnapshots}
+                onLoadDirectorSnapshots={s.loadDirectorSnapshots}
+              />
+            </div>
+          </div>
+
+          {/* Right Column: Live Scene Preview & Handoff */}
+          <div className="flex min-h-0 flex-col overflow-hidden bg-[var(--bg-sidebar)]">
+            <div className="flex items-center justify-between border-b border-[var(--border-color)] px-4 py-2.5 text-xs">
+              <span className="font-semibold text-[var(--text-main)]">Scene Live Preview</span>
+              <span className="font-mono text-[11px] text-[var(--text-muted)]">
+                {s.project.composition.width}×{s.project.composition.height} · r{s.project.revision}
+              </span>
+            </div>
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <StudioCanvasStage
+                project={s.project}
+                activeProject={s.activeProject || s.project}
+                frame={s.frame}
+                setFrame={s.setFrame}
+                playing={s.playing}
+                setPlaying={s.setPlaying}
+                totalFrames={s.totalFrames}
+                fps={s.fps}
+                viewport={s.viewport}
+                setViewport={s.setViewport}
+                panMode={s.panMode}
+                setPanMode={s.setPanMode}
+                canvasSnapping={s.canvasSnapping}
+                setCanvasSnapping={s.setCanvasSnapping}
+                selectedLayer={s.selectedLayer}
+                onSelectLayer={s.setSelectedLayer}
+                imageUrls={s.imageUrls}
+                isActive={isActive}
+                busy={s.busy}
+                hasPreview={s.hasPreview}
+                onApplyEdits={s.applyEditorEdits}
+              />
+            </div>
+            <div className="border-t border-[var(--border-color)] bg-[var(--bg-card)] p-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-[var(--text-muted)]">
+                  {s.project.composition.layers.length} layer(s) · {s.totalFrames} frames
+                </div>
+                <button
+                  onClick={() => setStudioLayout('editor')}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20"
+                >
+                  <SlidersHorizontal size={12} />
+                  Customize in Full Editor →
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       ) : (
         <>
-          {/* Main Studio Dual-Pillar Workstation */}
-          <div
-            className={`grid min-h-0 flex-1 overflow-hidden ${
-              studioLayout === 'split'
-                ? 'grid-cols-1 lg:grid-cols-[380px_minmax(0,1fr)] xl:grid-cols-[420px_minmax(0,1fr)]'
-                : 'grid-cols-1'
-            }`}
-          >
-            {/* ======================================================================== */}
-            {/* ZONE 1: PROMPT SECTION (AI Studio Director & Creative Toolboxes)          */}
-            {/* ======================================================================== */}
-            {studioLayout !== 'editor' && (
-              <div
-                className={`flex min-h-0 flex-col border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] lg:border-b-0 lg:border-r overflow-y-auto transition-all ${
-                  studioLayout === 'prompt' ? 'w-full max-w-4xl mx-auto border-r-0' : 'w-full'
-                }`}
-                aria-label="Studio Prompt Section"
-              >
-                {/* Prompt Section Header */}
-                <div className="flex items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-card)] px-3.5 py-2.5 shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[var(--color-primary)]/15 text-[var(--color-primary)]">
-                      <Sparkles size={14} />
-                    </span>
-                    <div>
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-main)]">Prompt Console</h3>
-                      <p className="text-[10px] text-[var(--text-muted)] font-mono">AI Scene Director & Revisions</p>
-                    </div>
-                  </div>
-                  <span className="rounded border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-[var(--color-primary)]">
-                    Revision #{s.project.revision}
-                  </span>
-                </div>
+          {/* Main Studio 3-Column Workstation */}
+          <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[300px_minmax(0,1fr)_270px]">
+            {/* Left Column: Layers & Creative Tool Modules */}
+            <div className="flex min-h-0 flex-col border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] lg:border-b-0 lg:border-r overflow-y-auto">
+              <StudioLayersSection
+                layers={s.project.composition.layers}
+                selectedLayer={s.selectedLayer}
+                onSelectLayer={s.setSelectedLayer}
+                onInsertLayer={s.insertLayer}
+                onImportImage={s.importImage}
+                onReorderLayer={s.reorderLayer}
+                onRemoveSelectedLayer={s.removeSelectedLayer}
+                busy={s.busy}
+              />
 
-                {/* AI Studio Director Console (Open by default, not hidden!) */}
-                <details open className="border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] text-xs" aria-label="AI Studio Director Panel">
-                  <summary className="flex cursor-pointer items-center justify-between px-3.5 py-2 font-semibold text-xs text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]">
-                    <span className="flex items-center gap-2">
+              {/* Creative Suites Collapsible Shelf */}
+              <div className="border-t border-[var(--border-color)]">
+                {studioLayout === 'split' ? (
+                  <details className="border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] text-xs" aria-label="AI Studio Director Panel">
+                    <summary className="flex cursor-pointer items-center gap-2 px-3 py-2.5 font-semibold text-xs text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]">
                       <Sparkles size={13} className="text-[var(--color-primary)]" />
-                      <span className="uppercase tracking-wider">AI Studio Director</span>
-                    </span>
-                    <span className="text-[10px] text-[var(--color-primary)] font-mono">Active</span>
-                  </summary>
-                  <StudioDirectorSection
-                    selectedId={s.selectedId}
-                    busy={s.busy}
-                    directorAvailable={s.directorAvailable}
-                    directorMediaAvailable={s.directorMediaAvailable}
-                    directorSceneImagesAvailable={s.directorSceneImagesAvailable}
-                    directorAudioLoopAvailable={s.directorAudioLoopAvailable}
-                    directorVoiceoverAvailable={s.directorVoiceoverAvailable}
-                    directorAspectAvailable={s.directorAspectAvailable}
-                    directorSnapshotAvailable={s.directorSnapshotAvailable}
-                    directorAutoNarration={s.directorAutoNarration}
-                    onToggleAutoNarration={s.setDirectorAutoNarration}
-                    motionPrompt={s.motionPrompt}
-                    onChangePrompt={s.setStudioPrompt}
-                    onSubmitPrompt={s.submitStudioPrompt}
-                    promptHistory={s.promptHistory}
-                    promptAspectRatio={s.promptAspectRatio}
-                    onChangeAspectRatio={s.setPromptAspectRatio}
-                    promptImages={s.promptImages}
-                    onAttachImages={s.attachDirectorImages}
-                    onRemoveImage={i => s.setPromptImages(prev => prev.filter((_, index) => index !== i))}
-                    promptAudio={s.promptAudio}
-                    onAttachAudio={s.attachDirectorFile}
-                    onRemoveAudio={() => s.setPromptAudio(null)}
-                    promptAudioGain={s.promptAudioGain}
-                    onChangeAudioGain={s.setPromptAudioGain}
-                    promptAudioLoop={s.promptAudioLoop}
-                    onToggleAudioLoop={s.setPromptAudioLoop}
-                    promptVoiceover={s.promptVoiceover}
-                    onChangeVoiceover={s.setPromptVoiceover}
-                    promptVoiceoverGain={s.promptVoiceoverGain}
-                    onChangeVoiceoverGain={s.setPromptVoiceoverGain}
-                    quality={s.quality}
-                    captionsAvailable={s.captionsAvailable}
-                    onExportCaptions={s.exportCaptions}
-                    visionRepairAvailable={s.visionRepairAvailable}
-                    onRepairVision={s.repairVision}
-                    visionAvailable={s.visionAvailable}
-                    onReviewVision={s.reviewVision}
-                    visionReview={s.visionReview}
-                    onPrepareSuggestedRevision={s.setStudioPrompt}
-                    motionSnapshots={s.motionSnapshots}
-                    onLoadDirectorSnapshots={s.loadDirectorSnapshots}
-                  />
-                </details>
-
-                {/* Creative Toolboxes Subheader */}
-                <div className="border-b border-[var(--border-color)] bg-[var(--bg-main)]/50 px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                  Creative Presets & Toolboxes
-                </div>
-
-                {/* Creative Suites Collapsible Shelf */}
-                <div className="border-t border-[var(--border-color)]">
-                  {s.brandAvailable && <StudioBrandKitPanel workspacePath={workspacePath} />}
-
-                  {s.templatesAvailable && (
-                    <StudioTemplatePanel
-                      key={workspacePath + ':' + s.project.id}
-                      workspacePath={workspacePath}
-                      project={s.project}
+                      <span>AI Studio Director</span>
+                    </summary>
+                    <StudioDirectorSection
+                      selectedId={s.selectedId}
                       busy={s.busy}
-                      preview={s.templatePreview}
-                      onPreview={next => {
-                        s.setTemplatePreview(next);
-                        if (next) {
-                          s.setPresetPreview(null);
-                          s.setEffectPreview(null);
-                        }
-                      }}
-                      onApply={s.applySceneTemplate}
+                      directorAvailable={s.directorAvailable}
+                      directorMediaAvailable={s.directorMediaAvailable}
+                      directorSceneImagesAvailable={s.directorSceneImagesAvailable}
+                      directorAudioLoopAvailable={s.directorAudioLoopAvailable}
+                      directorVoiceoverAvailable={s.directorVoiceoverAvailable}
+                      directorAspectAvailable={s.directorAspectAvailable}
+                      directorSnapshotAvailable={s.directorSnapshotAvailable}
+                      directorAutoNarration={s.directorAutoNarration}
+                      onToggleAutoNarration={s.setDirectorAutoNarration}
+                      motionPrompt={s.motionPrompt}
+                      onChangePrompt={s.setStudioPrompt}
+                      onSubmitPrompt={s.submitStudioPrompt}
+                      promptHistory={s.promptHistory}
+                      promptAspectRatio={s.promptAspectRatio}
+                      onChangeAspectRatio={s.setPromptAspectRatio}
+                      promptImages={s.promptImages}
+                      onAttachImages={s.attachDirectorImages}
+                      onRemoveImage={i => s.setPromptImages(prev => prev.filter((_, index) => index !== i))}
+                      promptAudio={s.promptAudio}
+                      onAttachAudio={s.attachDirectorFile}
+                      onRemoveAudio={() => s.setPromptAudio(null)}
+                      promptAudioGain={s.promptAudioGain}
+                      onChangeAudioGain={s.setPromptAudioGain}
+                      promptAudioLoop={s.promptAudioLoop}
+                      onToggleAudioLoop={s.setPromptAudioLoop}
+                      promptVoiceover={s.promptVoiceover}
+                      onChangeVoiceover={s.setPromptVoiceover}
+                      promptVoiceoverGain={s.promptVoiceoverGain}
+                      onChangeVoiceoverGain={s.setPromptVoiceoverGain}
+                      quality={s.quality}
+                      captionsAvailable={s.captionsAvailable}
+                      onExportCaptions={s.exportCaptions}
+                      visionRepairAvailable={s.visionRepairAvailable}
+                      onRepairVision={s.repairVision}
+                      visionAvailable={s.visionAvailable}
+                      onReviewVision={s.reviewVision}
+                      visionReview={s.visionReview}
+                      onPrepareSuggestedRevision={s.setStudioPrompt}
+                      motionSnapshots={s.motionSnapshots}
+                      onLoadDirectorSnapshots={s.loadDirectorSnapshots}
                     />
-                  )}
-
-                  {s.typographyAvailable && (
-                    <StudioTypographyPanel
-                      key={s.project.id}
-                      workspacePath={workspacePath}
-                      project={s.project}
-                      selectedLayer={s.selectedLayer}
-                      busy={s.busy}
-                      preview={s.typographyPreview}
-                      onPreview={next => {
-                        s.setTypographyPreview(next);
-                        if (next) {
-                          s.setParticlePreview(null);
-                          s.setBeatPreview(null);
-                          s.setTemplatePreview(null);
-                          s.setPresetPreview(null);
-                          s.setEffectPreview(null);
-                        }
-                      }}
-                      onApply={s.applyTypography}
-                    />
-                  )}
-
-                  {s.particlesAvailable && (
-                    <StudioParticlesPanel
-                      key={s.project.id}
-                      workspacePath={workspacePath}
-                      project={s.project}
-                      busy={s.busy}
-                      preview={s.particlePreview}
-                      onPreview={next => {
-                        s.setParticlePreview(next);
-                        if (next) {
-                          s.setBeatPreview(null);
-                          s.setTemplatePreview(null);
-                          s.setPresetPreview(null);
-                          s.setEffectPreview(null);
-                        }
-                      }}
-                      onApply={s.applyParticleOverlay}
-                    />
-                  )}
-
-                  {s.beatAvailable && (
-                    <StudioBeatSyncPanel
-                      key={s.project.id}
-                      workspacePath={workspacePath}
-                      project={s.project}
-                      selectedLayer={s.selectedLayer}
-                      busy={s.busy}
-                      preview={s.beatPreview}
-                      onPreview={next => {
-                        s.setBeatPreview(next);
-                        if (next) {
-                          s.setTemplatePreview(null);
-                          s.setPresetPreview(null);
-                          s.setEffectPreview(null);
-                          s.setParticlePreview(null);
-                        }
-                      }}
-                      onApply={s.applyAudioBeatSync}
-                    />
-                  )}
-
-                  {s.batchAvailable && (
-                    <StudioBatchVariantsPanel
-                      key={s.project.id}
-                      workspacePath={workspacePath}
-                      project={s.project}
-                      busy={s.busy}
-                      onQueued={result => {
-                        s.setSuccess('Batch created ' + result.variants.filter(v => v.projectId).length + ' project variant(s). Check queue status for MP4.');
-                        void s.refreshProjects().catch(cause => s.message(cause instanceof Error ? cause.message : String(cause)));
-                        void studioApi
-                          .jobs(workspacePath)
-                          .then(next => {
-                            s.setJobs(next);
-                          })
-                          .catch(cause => s.message(cause instanceof Error ? cause.message : String(cause)));
-                      }}
-                    />
-                  )}
-
-                  {s.historyAvailable && (
-                    <StudioRecoveryPanel
-                      workspacePath={workspacePath}
-                      projectId={s.project.id}
-                      revision={s.project.revision}
-                      busy={s.busy}
-                      onRestore={s.recoverSavedRevision}
-                    />
-                  )}
-
-                  {s.compoundAvailable && (
-                    <StudioPresetPanel
-                      key={s.project.id}
-                      workspacePath={workspacePath}
-                      project={s.project}
-                      selectedLayer={s.selectedLayer}
-                      busy={s.busy}
-                      preview={s.presetPreview}
-                      onPreview={next => {
-                        s.setPresetPreview(next);
-                        if (next) {
-                          s.setEffectPreview(null);
-                          s.setTemplatePreview(null);
-                        }
-                      }}
-                      onApply={s.applyCompound}
-                    />
-                  )}
-
-                  {s.stackAvailable && (
-                    <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] px-3 py-2">
-                      <label htmlFor="motion-resize-ratio" className="text-xs">
-                        Smart Resize
-                      </label>
-                      <select
-                        id="motion-resize-ratio"
-                        aria-label="Studio output aspect ratio"
-                        className={control + ' max-w-[90px] text-[11px]'}
-                        value={s.resizeRatio}
-                        onChange={event => s.setResizeRatio(event.target.value as '16:9' | '1:1' | '9:16')}
-                      >
-                        <option value="16:9">16:9</option>
-                        <option value="1:1">1:1</option>
-                        <option value="9:16">9:16</option>
-                      </select>
-                      <button className={action} disabled={s.busy} onClick={s.resizeProject}>
-                        Resize scene
-                      </button>
-
-                      <div className="mx-1 h-3.5 w-px bg-[var(--border-color)]" />
-
-                      <label htmlFor="motion-upscale-target" className="text-xs">
-                        Upscale
-                      </label>
-                      <select
-                        id="motion-upscale-target"
-                        aria-label="Studio upscale target"
-                        className={control + ' max-w-[100px] text-[11px]'}
-                        value={s.upscaleTarget}
-                        onChange={event => s.setUpscaleTarget(event.target.value as '2x' | '4x' | '1080p' | '2k' | '4k')}
-                      >
-                        <option value="2x">2× (Factor)</option>
-                        <option value="4x">4× (Factor)</option>
-                        <option value="1080p">1080p (FHD)</option>
-                        <option value="2k">2K (1440p)</option>
-                        <option value="4k">4K (2160p UHD)</option>
-                      </select>
-                      <button className={action} disabled={s.busy} onClick={s.upscaleProject}>
-                        Upscale scene
-                      </button>
-                    </div>
-                  )}
-
-                  {s.stackAvailable && <StudioEffectStackPanel project={s.project} busy={s.busy} onChange={s.changeEffectStack} />}
-
-                  {s.effectsAvailable && (
-                    <StudioEffectLibrary
-                      key={workspacePath + ':' + s.project.id}
-                      workspacePath={workspacePath}
-                      project={s.project}
-                      selectedLayer={s.selectedLayer}
-                      busy={s.busy}
-                      preview={s.effectPreview}
-                      onPreview={next => {
-                        s.setEffectPreview(next);
-                        if (next) {
-                          s.setPresetPreview(null);
-                          s.setTemplatePreview(null);
-                        }
-                      }}
-                      onApply={s.applySingleEffect}
-                    />
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ======================================================================== */}
-            {/* ZONE 2: EDITOR SECTION (Canvas Stage, Layers & Properties Inspector)      */}
-            {/* ======================================================================== */}
-            {studioLayout !== 'prompt' && (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--bg-main)]" aria-label="Studio Editor Section">
-                <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_280px]">
-                  {/* Center Stage: Viewport, Canvas & Floating HUD */}
-                  <StudioCanvasStage
-                    project={s.project}
-                    activeProject={s.activeProject || s.project}
-                    frame={s.frame}
-                    setFrame={s.setFrame}
-                    playing={s.playing}
-                    setPlaying={s.setPlaying}
-                    totalFrames={s.totalFrames}
-                    fps={s.fps}
-                    viewport={s.viewport}
-                    setViewport={s.setViewport}
-                    panMode={s.panMode}
-                    setPanMode={s.setPanMode}
-                    canvasSnapping={s.canvasSnapping}
-                    setCanvasSnapping={s.setCanvasSnapping}
-                    selectedLayer={s.selectedLayer}
-                    onSelectLayer={s.setSelectedLayer}
-                    imageUrls={s.imageUrls}
-                    isActive={isActive}
-                    busy={s.busy}
-                    hasPreview={s.hasPreview}
-                    onApplyEdits={s.applyEditorEdits}
-                  />
-
-                  {/* Right Column: Layer Management (Top) & Property Inspector (Bottom) */}
-                  <div className="flex min-h-0 flex-col border-t border-[var(--border-color)] bg-[var(--bg-sidebar)] lg:border-l lg:border-t-0 overflow-hidden">
-                    {/* Layers Section */}
-                    <div className="border-b border-[var(--border-color)] max-h-[260px] shrink-0 overflow-y-auto">
-                      <StudioLayersSection
-                        layers={s.project.composition.layers}
-                        selectedLayer={s.selectedLayer}
-                        onSelectLayer={s.setSelectedLayer}
-                        onInsertLayer={s.insertLayer}
-                        onImportImage={s.importImage}
-                        onReorderLayer={s.reorderLayer}
-                        onRemoveSelectedLayer={s.removeSelectedLayer}
-                        busy={s.busy}
-                      />
-                    </div>
-
-                    {/* Layer Inspector */}
-                    <div className="flex-1 min-h-[260px] overflow-y-auto">
-                      <StudioInspectorSection
-                        layer={s.layer}
-                        frame={s.frame}
-                        draftText={s.draftText}
-                        onChangeDraftText={s.setDraftText}
-                        onSaveText={s.saveText}
-                        cornerDraft={s.cornerDraft}
-                        onChangeCornerDraft={s.setCornerDraft}
-                        onSaveCornerRadius={s.saveCornerRadius}
-                        propertyDraft={s.propertyDraft}
-                        onChangePropertyDraft={s.setPropertyDraft}
-                        onSaveProperty={s.saveProperty}
-                        onKeyframe={s.keyframe}
-                        onJumpToFrame={(f, field, val) => {
-                          s.setFrame(f);
-                          s.setPlaying(false);
-                          s.setPropertyDraft({ field, value: String(val) });
-                        }}
-                        busy={s.busy}
-                      />
-                    </div>
+                  </details>
+                ) : (
+                  <div className="flex items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-card)] px-3 py-2 text-xs">
+                    <span className="text-[var(--text-muted)] font-medium">Need AI assistance?</span>
+                    <button
+                      onClick={() => setStudioLayout('prompt')}
+                      className="inline-flex items-center gap-1 font-semibold text-[var(--color-primary)] hover:underline"
+                    >
+                      <Sparkles size={11} /> Open Prompt Director
+                    </button>
                   </div>
-                </div>
+                )}
+
+                {s.brandAvailable && <StudioBrandKitPanel workspacePath={workspacePath} />}
+
+                {s.templatesAvailable && (
+                  <StudioTemplatePanel
+                    key={workspacePath + ':' + s.project.id}
+                    workspacePath={workspacePath}
+                    project={s.project}
+                    busy={s.busy}
+                    preview={s.templatePreview}
+                    onPreview={next => {
+                      s.setTemplatePreview(next);
+                      if (next) {
+                        s.setPresetPreview(null);
+                        s.setEffectPreview(null);
+                      }
+                    }}
+                    onApply={s.applySceneTemplate}
+                  />
+                )}
+
+                {s.typographyAvailable && (
+                  <StudioTypographyPanel
+                    key={s.project.id}
+                    workspacePath={workspacePath}
+                    project={s.project}
+                    selectedLayer={s.selectedLayer}
+                    busy={s.busy}
+                    preview={s.typographyPreview}
+                    onPreview={next => {
+                      s.setTypographyPreview(next);
+                      if (next) {
+                        s.setParticlePreview(null);
+                        s.setBeatPreview(null);
+                        s.setTemplatePreview(null);
+                        s.setPresetPreview(null);
+                        s.setEffectPreview(null);
+                      }
+                    }}
+                    onApply={s.applyTypography}
+                  />
+                )}
+
+                {s.particlesAvailable && (
+                  <StudioParticlesPanel
+                    key={s.project.id}
+                    workspacePath={workspacePath}
+                    project={s.project}
+                    busy={s.busy}
+                    preview={s.particlePreview}
+                    onPreview={next => {
+                      s.setParticlePreview(next);
+                      if (next) {
+                        s.setBeatPreview(null);
+                        s.setTemplatePreview(null);
+                        s.setPresetPreview(null);
+                        s.setEffectPreview(null);
+                      }
+                    }}
+                    onApply={s.applyParticleOverlay}
+                  />
+                )}
+
+                {s.beatAvailable && (
+                  <StudioBeatSyncPanel
+                    key={s.project.id}
+                    workspacePath={workspacePath}
+                    project={s.project}
+                    selectedLayer={s.selectedLayer}
+                    busy={s.busy}
+                    preview={s.beatPreview}
+                    onPreview={next => {
+                      s.setBeatPreview(next);
+                      if (next) {
+                        s.setTemplatePreview(null);
+                        s.setPresetPreview(null);
+                        s.setEffectPreview(null);
+                        s.setParticlePreview(null);
+                      }
+                    }}
+                    onApply={s.applyAudioBeatSync}
+                  />
+                )}
+
+                {s.batchAvailable && (
+                  <StudioBatchVariantsPanel
+                    key={s.project.id}
+                    workspacePath={workspacePath}
+                    project={s.project}
+                    busy={s.busy}
+                    onQueued={result => {
+                      s.setSuccess('Batch created ' + result.variants.filter(v => v.projectId).length + ' project variant(s). Check queue status for MP4.');
+                      void s.refreshProjects().catch(cause => s.message(cause instanceof Error ? cause.message : String(cause)));
+                      void studioApi
+                        .jobs(workspacePath)
+                        .then(next => {
+                          s.setJobs(next);
+                        })
+                        .catch(cause => s.message(cause instanceof Error ? cause.message : String(cause)));
+                    }}
+                  />
+                )}
+
+                {s.historyAvailable && (
+                  <StudioRecoveryPanel
+                    workspacePath={workspacePath}
+                    projectId={s.project.id}
+                    revision={s.project.revision}
+                    busy={s.busy}
+                    onRestore={s.recoverSavedRevision}
+                  />
+                )}
+
+                {s.compoundAvailable && (
+                  <StudioPresetPanel
+                    key={s.project.id}
+                    workspacePath={workspacePath}
+                    project={s.project}
+                    selectedLayer={s.selectedLayer}
+                    busy={s.busy}
+                    preview={s.presetPreview}
+                    onPreview={next => {
+                      s.setPresetPreview(next);
+                      if (next) {
+                        s.setEffectPreview(null);
+                        s.setTemplatePreview(null);
+                      }
+                    }}
+                    onApply={s.applyCompound}
+                  />
+                )}
+
+                {s.stackAvailable && (
+                  <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] px-3 py-2">
+                    <label htmlFor="motion-resize-ratio" className="text-xs">
+                      Smart Resize
+                    </label>
+                    <select
+                      id="motion-resize-ratio"
+                      aria-label="Studio output aspect ratio"
+                      className={control + ' max-w-[90px] text-[11px]'}
+                      value={s.resizeRatio}
+                      onChange={event => s.setResizeRatio(event.target.value as '16:9' | '1:1' | '9:16')}
+                    >
+                      <option value="16:9">16:9</option>
+                      <option value="1:1">1:1</option>
+                      <option value="9:16">9:16</option>
+                    </select>
+                    <button className={action} disabled={s.busy} onClick={s.resizeProject}>
+                      Resize scene
+                    </button>
+
+                    <div className="mx-1 h-3.5 w-px bg-[var(--border-color)]" />
+
+                    <label htmlFor="motion-upscale-target" className="text-xs">
+                      Upscale
+                    </label>
+                    <select
+                      id="motion-upscale-target"
+                      aria-label="Studio upscale target"
+                      className={control + ' max-w-[100px] text-[11px]'}
+                      value={s.upscaleTarget}
+                      onChange={event => s.setUpscaleTarget(event.target.value as '2x' | '4x' | '1080p' | '2k' | '4k')}
+                    >
+                      <option value="2x">2× (Factor)</option>
+                      <option value="4x">4× (Factor)</option>
+                      <option value="1080p">1080p (FHD)</option>
+                      <option value="2k">2K (1440p)</option>
+                      <option value="4k">4K (2160p UHD)</option>
+                    </select>
+                    <button className={action} disabled={s.busy} onClick={s.upscaleProject}>
+                      Upscale scene
+                    </button>
+                  </div>
+                )}
+
+                {s.stackAvailable && <StudioEffectStackPanel project={s.project} busy={s.busy} onChange={s.changeEffectStack} />}
+
+                {s.effectsAvailable && (
+                  <StudioEffectLibrary
+                    key={workspacePath + ':' + s.project.id}
+                    workspacePath={workspacePath}
+                    project={s.project}
+                    selectedLayer={s.selectedLayer}
+                    busy={s.busy}
+                    preview={s.effectPreview}
+                    onPreview={next => {
+                      s.setEffectPreview(next);
+                      if (next) {
+                        s.setPresetPreview(null);
+                        s.setTemplatePreview(null);
+                      }
+                    }}
+                    onApply={s.applySingleEffect}
+                  />
+                )}
               </div>
-            )}
+            </div>
+
+            {/* Center Stage: Viewport, Canvas & Floating HUD */}
+            <StudioCanvasStage
+              project={s.project}
+              activeProject={s.activeProject || s.project}
+              frame={s.frame}
+              setFrame={s.setFrame}
+              playing={s.playing}
+              setPlaying={s.setPlaying}
+              totalFrames={s.totalFrames}
+              fps={s.fps}
+              viewport={s.viewport}
+              setViewport={s.setViewport}
+              panMode={s.panMode}
+              setPanMode={s.setPanMode}
+              canvasSnapping={s.canvasSnapping}
+              setCanvasSnapping={s.setCanvasSnapping}
+              selectedLayer={s.selectedLayer}
+              onSelectLayer={s.setSelectedLayer}
+              imageUrls={s.imageUrls}
+              isActive={isActive}
+              busy={s.busy}
+              hasPreview={s.hasPreview}
+              onApplyEdits={s.applyEditorEdits}
+            />
+
+            {/* Right Column: Layer Inspector */}
+            <StudioInspectorSection
+              layer={s.layer}
+              frame={s.frame}
+              draftText={s.draftText}
+              onChangeDraftText={s.setDraftText}
+              onSaveText={s.saveText}
+              cornerDraft={s.cornerDraft}
+              onChangeCornerDraft={s.setCornerDraft}
+              onSaveCornerRadius={s.saveCornerRadius}
+              propertyDraft={s.propertyDraft}
+              onChangePropertyDraft={s.setPropertyDraft}
+              onSaveProperty={s.saveProperty}
+              onKeyframe={s.keyframe}
+              onJumpToFrame={(f, field, val) => {
+                s.setFrame(f);
+                s.setPlaying(false);
+                s.setPropertyDraft({ field, value: String(val) });
+              }}
+              busy={s.busy}
+            />
           </div>
 
           {/* Bottom Dock: Multi-Track Timeline & Audio */}

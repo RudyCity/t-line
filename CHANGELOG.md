@@ -1,3 +1,12 @@
+## [1.3.738] - 2026-10-26
+
+### Dedicated Prompt and Editor Workstation Modes in Studio
+- Implemented segmented view switcher (`Prompt`, `Editor`, and `Split`) in `StudioTopBar.tsx` and `StudioTab.tsx`.
+- **Prompt Mode**: Dedicated, focused view for AI Director prompting, media/audio attachments, voiceover narration, and quality review, with live canvas preview and one-click handoff to Editor.
+- **Editor Mode**: Uncluttered, full-screen canvas stage, layers list, creative tools shelf, timeline, and inspector, hiding bulky prompt accordions from the layers hierarchy.
+- **Split Mode**: Retained side-by-side workstation layout for multi-monitor productivity and 100% backward compatibility.
+- Added comprehensive unit test coverage in `StudioTab.test.tsx` verifying interactive mode transitions.
+
 ## [1.3.737] - 2026-10-26
 
 ### Dual-Pillar Studio Architecture & Prompt Console
