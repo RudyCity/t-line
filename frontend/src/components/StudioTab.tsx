@@ -119,150 +119,184 @@ export function StudioTab({ workspacePath, isActive }: Props) {
         </div>
       )}
 
-      {/* Experimental Video Reconstruct & Storyboard panels */}
-      {s.multiVideoAvailable && (
-        <StudioVideoToCodePanel
-          key={workspacePath}
-          workspacePath={workspacePath}
-          ocrAvailable={s.textOcrAvailable}
-          ocrTimelineAvailable={s.textOcrTimelineAvailable}
-          onUpdated={(next, layerId, at) => {
-            if (s.selectedId === next.id && s.project && s.project.revision === next.revision - 1)
-              s.setUndoStack(prev => [...prev.slice(-29), structuredClone(s.project!.composition)]);
-            else s.setUndoStack([]);
-            s.setRedoStack([]);
-            s.setProject(next);
-            s.setSelectedId(next.id);
-            s.setSelectedLayer(layerId);
-            s.setFrame(at);
-            s.setProjects(prev => prev.map(item => (item.id === next.id ? { id: next.id, name: next.name, revision: next.revision } : item)));
-            s.setSuccess('Tracked layer correction saved at frame ' + at);
-          }}
-          onCreated={result => {
-            s.setProjects(prev => [
-              {
-                id: result.projectId,
-                name: 'Reconstructed video shapes',
-                revision: result.revision,
-              },
-              ...prev.filter(item => item.id !== result.projectId),
-            ]);
-            s.setSelectedId(result.projectId);
-            s.setSuccess(
-              result.status === 'experimental-ocr'
-                ? 'Video OCR extracted ' + result.lines.length + ' editable text layers'
-                : result.status === 'experimental-ocr-timeline'
-                ? 'Video timeline reconstructed into ' + result.captions.length + ' editable captions'
-                : 'Video reconstructed into ' + result.objects.length + ' editable Studio layers'
-            );
-          }}
-        />
-      )}
+      {/* Tools & Reconstruct Drawers */}
+      {(s.storyboardAvailable || s.multiVideoAvailable) && (
+        <div className="border-b border-[var(--border-color)] bg-[var(--bg-card)] px-4 py-1.5 text-xs space-y-1">
+          {s.storyboardAvailable && (
+            <details className="py-0.5">
+              <summary className="cursor-pointer font-medium text-[var(--color-primary)] hover:underline flex items-center gap-1.5">
+                <Sparkles size={12} />
+                <span>AI Studio Director 2.0 - Storyboard Review</span>
+              </summary>
+              <div className="mt-2 pt-2 border-t border-[var(--border-color)]">
+                <StudioStoryboardPanel
+                  workspacePath={workspacePath}
+                  busy={s.busy}
+                  renderWidth={s.renderWidth}
+                  onCreated={result => {
+                    s.setProjects(prev => [
+                      { id: result.project.id, name: result.project.name, revision: result.project.revision },
+                      ...prev.filter(item => item.id !== result.project.id),
+                    ]);
+                    s.setSelectedId(result.project.id);
+                    s.setProject(result.project);
+                    s.setSelectedLayer(result.project.composition.layers.find(item => item.kind === 'text')?.id ?? null);
+                    s.setFrame(0);
+                    s.setUndoStack([]);
+                    s.setRedoStack([]);
+                    s.setJobs(prev => [result.job, ...prev.filter(item => item.id !== result.job.id)]);
+                    s.setActiveJobId(result.job.id);
+                    s.setQuality(result.quality ?? null);
+                    s.setSuccess(
+                      result.job.status === 'failed' ? 'Approved storyboard saved, but MP4 render failed to start' : 'Approved storyboard saved · MP4 rendering queued'
+                    );
+                  }}
+                />
+              </div>
+            </details>
+          )}
 
-      {s.storyboardAvailable && (
-        <StudioStoryboardPanel
-          workspacePath={workspacePath}
-          busy={s.busy}
-          renderWidth={s.renderWidth}
-          onCreated={result => {
-            s.setProjects(prev => [
-              { id: result.project.id, name: result.project.name, revision: result.project.revision },
-              ...prev.filter(item => item.id !== result.project.id),
-            ]);
-            s.setSelectedId(result.project.id);
-            s.setProject(result.project);
-            s.setSelectedLayer(result.project.composition.layers.find(item => item.kind === 'text')?.id ?? null);
-            s.setFrame(0);
-            s.setUndoStack([]);
-            s.setRedoStack([]);
-            s.setJobs(prev => [result.job, ...prev.filter(item => item.id !== result.job.id)]);
-            s.setActiveJobId(result.job.id);
-            s.setQuality(result.quality ?? null);
-            s.setSuccess(
-              result.job.status === 'failed' ? 'Approved storyboard saved, but MP4 render failed to start' : 'Approved storyboard saved · MP4 rendering queued'
-            );
-          }}
-        />
+          {s.multiVideoAvailable && (
+            <details className="py-0.5">
+              <summary className="cursor-pointer font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center gap-1.5">
+                <Film size={12} />
+                <span>Video → Editable Studio Code (Experimental shapes/OCR)</span>
+              </summary>
+              <div className="mt-2 pt-2 border-t border-[var(--border-color)]">
+                <StudioVideoToCodePanel
+                  key={workspacePath}
+                  workspacePath={workspacePath}
+                  ocrAvailable={s.textOcrAvailable}
+                  ocrTimelineAvailable={s.textOcrTimelineAvailable}
+                  onUpdated={(next, layerId, at) => {
+                    if (s.selectedId === next.id && s.project && s.project.revision === next.revision - 1)
+                      s.setUndoStack(prev => [...prev.slice(-29), structuredClone(s.project!.composition)]);
+                    else s.setUndoStack([]);
+                    s.setRedoStack([]);
+                    s.setProject(next);
+                    s.setSelectedId(next.id);
+                    s.setSelectedLayer(layerId);
+                    s.setFrame(at);
+                    s.setProjects(prev => prev.map(item => (item.id === next.id ? { id: next.id, name: next.name, revision: next.revision } : item)));
+                    s.setSuccess('Tracked layer correction saved at frame ' + at);
+                  }}
+                  onCreated={result => {
+                    s.setProjects(prev => [
+                      {
+                        id: result.projectId,
+                        name: 'Reconstructed video shapes',
+                        revision: result.revision,
+                      },
+                      ...prev.filter(item => item.id !== result.projectId),
+                    ]);
+                    s.setSelectedId(result.projectId);
+                    s.setSuccess(
+                      result.status === 'experimental-ocr'
+                        ? 'Video OCR extracted ' + result.lines.length + ' editable text layers'
+                        : result.status === 'experimental-ocr-timeline'
+                        ? 'Video timeline reconstructed into ' + result.captions.length + ' editable captions'
+                        : 'Video reconstructed into ' + result.objects.length + ' editable Studio layers'
+                    );
+                  }}
+                />
+              </div>
+            </details>
+          )}
+        </div>
       )}
 
       {!s.project ? (
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-6 text-center bg-[#0d1017]">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-lg text-[var(--color-primary)]">
-            <Film size={32} />
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[380px_minmax(0,1fr)]">
+          {/* Left Column: AI Chat Co-Pilot */}
+          <div className="flex min-h-0 flex-col border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] lg:border-b-0 lg:border-r overflow-hidden shadow-xs">
+            <StudioDirectorSection
+              selectedId={s.selectedId}
+              busy={s.busy}
+              directorAvailable={s.directorAvailable}
+              directorMediaAvailable={s.directorMediaAvailable}
+              directorSceneImagesAvailable={s.directorSceneImagesAvailable}
+              directorAudioLoopAvailable={s.directorAudioLoopAvailable}
+              directorVoiceoverAvailable={s.directorVoiceoverAvailable}
+              directorAspectAvailable={s.directorAspectAvailable}
+              directorSnapshotAvailable={s.directorSnapshotAvailable}
+              directorAutoNarration={s.directorAutoNarration}
+              onToggleAutoNarration={s.setDirectorAutoNarration}
+              motionPrompt={s.motionPrompt}
+              onChangePrompt={s.setStudioPrompt}
+              onSubmitPrompt={s.submitStudioPrompt}
+              promptHistory={s.promptHistory}
+              promptAspectRatio={s.promptAspectRatio}
+              onChangeAspectRatio={s.setPromptAspectRatio}
+              promptImages={s.promptImages}
+              onAttachImages={s.attachDirectorImages}
+              onRemoveImage={i => s.setPromptImages(prev => prev.filter((_, index) => index !== i))}
+              promptAudio={s.promptAudio}
+              onAttachAudio={s.attachDirectorFile}
+              onRemoveAudio={() => s.setPromptAudio(null)}
+              promptAudioGain={s.promptAudioGain}
+              onChangeAudioGain={s.setPromptAudioGain}
+              promptAudioLoop={s.promptAudioLoop}
+              onToggleAudioLoop={s.setPromptAudioLoop}
+              promptVoiceover={s.promptVoiceover}
+              onChangeVoiceover={s.setPromptVoiceover}
+              promptVoiceoverGain={s.promptVoiceoverGain}
+              onChangeVoiceoverGain={s.setPromptVoiceoverGain}
+              quality={s.quality}
+              captionsAvailable={s.captionsAvailable}
+              onExportCaptions={s.exportCaptions}
+              visionRepairAvailable={s.visionRepairAvailable}
+              onRepairVision={s.repairVision}
+              visionAvailable={s.visionAvailable}
+              onReviewVision={s.reviewVision}
+              visionReview={s.visionReview}
+              onPrepareSuggestedRevision={s.setStudioPrompt}
+              motionSnapshots={s.motionSnapshots}
+              onLoadDirectorSnapshots={s.loadDirectorSnapshots}
+            />
           </div>
-          <div className="max-w-md space-y-1.5">
-            <h3 className="text-sm font-semibold tracking-wide text-[var(--text-main)]">
-              {s.projects.length ? 'Choose a scene to edit' : 'Your motion workspace is empty'}
-            </h3>
-            <p className="text-xs leading-relaxed text-[var(--text-muted)]">
-              Create a project to edit built-in text and rectangle layers, animate keyframes, and render a local MP4 preview.
-            </p>
-          </div>
-          {s.busy && <Loader2 size={20} className="animate-spin text-[var(--color-primary)]" />}
 
-          {studioLayout === 'editor' && !s.projects.length ? (
-            <div className="flex items-center gap-2 mt-2">
-              <button
-                onClick={() => setStudioLayout('prompt')}
-                className={action + ' font-semibold text-[var(--color-primary)]'}
-              >
-                <Sparkles size={13} /> Open AI Prompt Mode
-              </button>
-              <button
-                onClick={() => s.setCreating(true)}
-                className={action}
-              >
-                <Plus size={13} /> Create Blank Project
-              </button>
+          {/* Center & Bottom: CapCut Monitor Stage + Timeline Standby */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[#0d1017]">
+            {/* Monitor Stage */}
+            <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-6 relative">
+              <div className="w-full max-w-2xl aspect-video rounded-xl border border-[var(--border-color)] bg-[#141824] shadow-2xl flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-lg text-[var(--color-primary)] mb-3">
+                  <Film size={26} />
+                </div>
+                <h3 className="text-sm font-semibold tracking-wide text-[var(--text-main)]">
+                  {s.projects.length ? 'Choose a scene to edit' : 'Your motion workspace is empty'}
+                </h3>
+                <p className="max-w-md mt-1.5 text-xs text-[var(--text-muted)] leading-relaxed">
+                  Create a project to edit built-in text and rectangle layers, animate keyframes, and render a local MP4 preview.
+                </p>
+
+                <div className="mt-4 flex items-center gap-2">
+                  <button
+                    onClick={() => s.setCreating(true)}
+                    className={action + ' font-medium text-xs'}
+                  >
+                    <Plus size={12} /> Create Blank Scene
+                  </button>
+                </div>
+
+                {s.busy && (
+                  <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center gap-2 text-xs font-medium text-[var(--color-primary)]">
+                    <Loader2 size={18} className="animate-spin" />
+                    <span>Generating motion scene…</span>
+                  </div>
+                )}
+              </div>
             </div>
-          ) : (
-            <div className="w-full max-w-xl rounded-xl border border-[var(--border-color)] bg-[var(--bg-sidebar)] text-left shadow-lg overflow-hidden mt-2">
-              <StudioDirectorSection
-                selectedId={s.selectedId}
-                busy={s.busy}
-                directorAvailable={s.directorAvailable}
-                directorMediaAvailable={s.directorMediaAvailable}
-                directorSceneImagesAvailable={s.directorSceneImagesAvailable}
-                directorAudioLoopAvailable={s.directorAudioLoopAvailable}
-                directorVoiceoverAvailable={s.directorVoiceoverAvailable}
-                directorAspectAvailable={s.directorAspectAvailable}
-                directorSnapshotAvailable={s.directorSnapshotAvailable}
-                directorAutoNarration={s.directorAutoNarration}
-                onToggleAutoNarration={s.setDirectorAutoNarration}
-                motionPrompt={s.motionPrompt}
-                onChangePrompt={s.setStudioPrompt}
-                onSubmitPrompt={s.submitStudioPrompt}
-                promptHistory={s.promptHistory}
-                promptAspectRatio={s.promptAspectRatio}
-                onChangeAspectRatio={s.setPromptAspectRatio}
-                promptImages={s.promptImages}
-                onAttachImages={s.attachDirectorImages}
-                onRemoveImage={i => s.setPromptImages(prev => prev.filter((_, index) => index !== i))}
-                promptAudio={s.promptAudio}
-                onAttachAudio={s.attachDirectorFile}
-                onRemoveAudio={() => s.setPromptAudio(null)}
-                promptAudioGain={s.promptAudioGain}
-                onChangeAudioGain={s.setPromptAudioGain}
-                promptAudioLoop={s.promptAudioLoop}
-                onToggleAudioLoop={s.setPromptAudioLoop}
-                promptVoiceover={s.promptVoiceover}
-                onChangeVoiceover={s.setPromptVoiceover}
-                promptVoiceoverGain={s.promptVoiceoverGain}
-                onChangeVoiceoverGain={s.setPromptVoiceoverGain}
-                quality={s.quality}
-                captionsAvailable={s.captionsAvailable}
-                onExportCaptions={s.exportCaptions}
-                visionRepairAvailable={s.visionRepairAvailable}
-                onRepairVision={s.repairVision}
-                visionAvailable={s.visionAvailable}
-                onReviewVision={s.reviewVision}
-                visionReview={s.visionReview}
-                onPrepareSuggestedRevision={s.setStudioPrompt}
-                motionSnapshots={s.motionSnapshots}
-                onLoadDirectorSnapshots={s.loadDirectorSnapshots}
-              />
+
+            {/* CapCut Timeline Standby Dock */}
+            <div className="border-t border-[var(--border-color)] bg-[var(--bg-sidebar)] p-3 text-xs text-[var(--text-muted)] flex items-center justify-between">
+              <div className="flex items-center gap-2 font-mono text-[11px]">
+                <span className="flex h-2 w-2 rounded-full bg-[var(--color-primary)]" />
+                <span>Timeline Standby · Tracks and keyframes will populate upon scene creation</span>
+              </div>
+              <span className="font-mono text-[10px] text-[var(--text-muted)]">00:00:00 / 00:00:00</span>
             </div>
-          )}
+          </div>
         </div>
       ) : studioLayout === 'prompt' ? (
         <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)]">

@@ -1,3 +1,11 @@
+## [1.3.740] - 2026-10-26
+
+### Shared Embedded Browser Human / Agent Control
+- Added a unified T-Line Chrome tab toolbar with **Connect Agent**, **Take Control**, and **Return to Agent**.
+- Authenticated native-to-Core browser control uses a verified live target and the canonical per-target CDP write coordinator, pausing official agent mutations while a human takes control and resuming after handoff.
+- Reused the existing persistent managed browser profile and renderer; did not clone cookies, create a second session, restart shared services or attempt CAPTCHA bypass.
+- Frontend browser/handoff unit tests, native Rust checking and isolated Core write-lock regression tests passed. Packaged Windows GUI E2E remains pending.
+
 ## [1.3.739] - 2026-10-26
 
 ### Single SuperAgent Runtime Target

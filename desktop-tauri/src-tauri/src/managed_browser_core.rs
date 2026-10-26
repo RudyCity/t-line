@@ -49,6 +49,34 @@ pub fn post_registration(
     })
 }
 
+#[derive(serde::Serialize)]
+pub struct ControlReceipt {
+    pub mode: String,
+}
+
+/// A fixed authenticated loopback handoff; credentials never enter React.
+pub fn post_control(port: u16, token: &str, payload: &serde_json::Value) -> Result<ControlReceipt, String> {
+    if port != 7888 || token.len() != 48 || !token.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return Err("Invalid local control transport.".into());
+    }
+    let response = ureq::post("http://127.0.0.1:7888/api/browser/managed/control")
+        .set("Authorization", &format!("Bearer {token}"))
+        .set("Content-Type", "application/json")
+        .timeout(Duration::from_secs(5))
+        .send_string(&payload.to_string())
+        .map_err(|_| "Authenticated Core browser control handoff unavailable.")?;
+    let mut body = String::new();
+    response.into_reader().take(2048).read_to_string(&mut body)
+        .map_err(|_| "Unable to read browser control acknowledgement.")?;
+    let data: serde_json::Value = serde_json::from_str(&body)
+        .map_err(|_| "Invalid browser control acknowledgement.")?;
+    let expected = payload["mode"].as_str().ok_or("Invalid requested control mode.")?;
+    if data["success"] != true || data["mode"] != expected {
+        return Err("Core did not acknowledge requested browser control mode.".into());
+    }
+    Ok(ControlReceipt { mode: expected.to_owned() })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

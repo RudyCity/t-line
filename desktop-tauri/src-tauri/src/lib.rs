@@ -1762,6 +1762,7 @@ pub fn run() {
             managed_browser::managed_browser_targets,
             managed_browser::managed_browser_gateway_pairing,
             managed_browser::managed_browser_gateway_register,
+            managed_browser::managed_browser_control_mode,
             managed_browser_capture::managed_browser_capture,
             managed_browser_input::managed_browser_interact,
             managed_browser_stream::managed_browser_stream_start,

@@ -34,6 +34,9 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent,
   const [pairing, setPairing] = useState('');
   const [pairedRuntime, setPairedRuntime] = useState<ManagedBrowserGatewayPairing | null>(null);
   const [gatewayClaim, setGatewayClaim] = useState<GatewayClaimProjection | null>(null);
+  // A mode is trusted only for the exact active browser generation and tab.
+  // Never infer a capability from a CDP port or a previously paired tab.
+  const [controller, setController] = useState<{ key: string; mode: 'human' | 'agent' } | null>(null);
   const [registeredUntil, setRegisteredUntil] = useState<number | null>(null);
   const [previewTarget, setPreviewTarget] = useState<{
     profileId: string; generation: string; targetId: string;
@@ -46,6 +49,11 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent,
   const currentTarget = targets.find(target => target.id === previewTarget?.targetId);
   const embeddedReady = !!(active && expanded && enabled && embedded && selected?.embedded &&
     selected.lifecycle === 'ready' && selected.debuggingAvailable && currentTarget);
+  const controlKey = previewTarget
+    ? [previewTarget.profileId, previewTarget.generation, previewTarget.targetId].join(':') : '';
+  const controlledMode = controller?.key === controlKey ? controller.mode : null;
+  const canHumanInput = embeddedReady && controlledMode !== 'agent' &&
+    (!gatewayClaim || controlledMode === 'human');
   useEffect(() => {
     inputEpoch.current += 1;
   }, [selected?.generation, previewTarget?.targetId, embeddedReady]);
@@ -62,7 +70,7 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent,
     catch { /* saving bookmarks is optional */ }
   }, [savedUrls]);
   const sendEmbeddedInput = (interaction: BrowserInputAction) => {
-    if (!embeddedReady || !selected || !currentTarget) return Promise.resolve();
+    if (!canHumanInput || busy || !selected || !currentTarget) return Promise.resolve();
     const invoke = getInvoke();
     if (!invoke) return Promise.resolve();
     const request = {
@@ -221,6 +229,32 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent,
     } catch (err) { setError(String(err)); await refresh(); }
     finally { setBusy(false); }
   }
+  async function applyControlMode(mode: 'human' | 'agent', target: ManagedBrowserTarget) {
+    const invoke = getInvoke();
+    if (!invoke || !selected || selected.lifecycle !== 'ready' || !selected.embedded) {
+      throw new Error('The verified embedded browser is not ready.');
+    }
+    const exactKey = [selected.profileId, selected.generation, target.id].join(':');
+    // Drain old human input before permitting a new agent write.
+    if (mode === 'agent') await inputQueue.current;
+    const result = await invoke('managed_browser_control_mode', {
+      profileId: selected.profileId, generation: selected.generation,
+      targetId: target.id, mode,
+    }) as { mode: 'human' | 'agent' };
+    if (result?.mode !== mode) throw new Error('Core did not confirm browser ownership.');
+    inputEpoch.current += 1;
+    setController({ key: exactKey, mode });
+    setMessage(mode === 'human'
+      ? 'Human control confirmed. Agent writes to this tab are paused.'
+      : 'Agent control enabled. Human input is paused until Take Control.');
+  }
+  async function changeControl(mode: 'human' | 'agent') {
+    if (busy || !embeddedReady || !currentTarget) return;
+    setBusy(true); setError('');
+    try { await applyControlMode(mode, currentTarget); }
+    catch (err) { setError('Control transfer failed: ' + String(err)); }
+    finally { setBusy(false); }
+  }
   async function pairTarget(target: ManagedBrowserTarget) {
     const invoke = getInvoke();
     if (!invoke || !selected || busy || !enabled) return;
@@ -244,9 +278,11 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent,
       } catch {
         setError('Core registration is unavailable. Manual gateway instructions remain available; automatic assignment was not sent.');
       }
-      const handedOff = registered && onSendToAgent?.(instruction) === true;
+       if (!registered) throw new Error('Cannot pair safely before Core registration.');
+       if (selected.embedded) await applyControlMode('human', target);
+       const handedOff = onSendToAgent?.(instruction) === true;
       setMessage(handedOff
-        ? 'Pairing instruction routed to your workspace assistant. Gateway claim will appear once the agent attaches.'
+        ? 'Pairing instruction routed to your workspace assistant. Agent can attach, but must wait for Return to Agent before writing.'
         : 'Verified gateway handoff prepared. Copy the instruction into T-Line chat to have SuperAgent attach through its MCP gateway.');
     } catch (err) { setError(String(err)); }
     finally { setBusy(false); }
@@ -415,12 +451,33 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent,
                       </select>
                     </form>
                   )}
+                   {embeddedReady && currentTarget && (
+                     <div role="group" aria-label="Shared Chrome control"
+                       className="flex flex-wrap items-center gap-2 rounded border border-[var(--border-color)] px-2 py-1.5">
+                       <span role="status" aria-label="Chrome control owner" className="flex-1 text-[11px] text-[var(--text-muted)]">
+                         {controlledMode === 'human' ? 'Human control · agent actions paused'
+                           : controlledMode === 'agent' ? 'Agent enabled · human input paused'
+                           : gatewayClaim ? 'Agent attached · take control before interacting'
+                           : 'Human browsing · no verified handoff yet'}
+                       </span>
+                       <button type="button" disabled={busy} onClick={() => void pairTarget(currentTarget)}
+                         className="inline-flex items-center gap-1 rounded border border-[var(--border-color)] px-2 py-1 disabled:opacity-40">
+                         <Link2 size={12}/> {pairedRuntime?.targetId === currentTarget.id ? 'Reconnect Agent' : 'Connect Agent'}
+                       </button>
+                       {controlledMode === 'human'
+                         ? <button type="button" disabled={busy} onClick={() => void changeControl('agent')}
+                             className="rounded border border-purple-500 px-2 py-1 disabled:opacity-40">Return to Agent</button>
+                         : <button type="button" disabled={busy} onClick={() => void changeControl('human')}
+                             className="rounded bg-purple-600 px-2 py-1 text-white disabled:opacity-40">Take Control</button>}
+                     </div>
+                   )}
+                   {embeddedReady && error && <p role="alert" className="text-red-400">{error}</p>}
                   {previewTarget && selected?.generation === previewTarget.generation &&
                     selected?.profileId === previewTarget.profileId && selected.lifecycle === 'ready' &&
                     <ManagedBrowserLivePreview key={previewTarget.generation + previewTarget.targetId}
                       profileId={previewTarget.profileId} generation={previewTarget.generation}
                       targetId={previewTarget.targetId} active={active && enabled && expanded}
-                      interactive={embeddedReady} fill={embeddedReady}
+                      interactive={canHumanInput && !busy} fill={embeddedReady} controlOwner={controlledMode}
                       onInteraction={action => { void sendEmbeddedInput(action); }}
                       onClose={() => {
                         setPreviewTarget(null);
@@ -450,7 +507,7 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent,
                       </button>
                     </div>
                   )}
-                  {error && <p role="alert" className="text-red-400">{error}</p>}
+                   {error && !embeddedReady && <p role="alert" className="text-red-400">{error}</p>}
                   {message && !embeddedReady && <p role="status" className="text-[var(--text-muted)]">{message}</p>}
                 </>
               )}

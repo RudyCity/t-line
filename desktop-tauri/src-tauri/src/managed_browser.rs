@@ -770,6 +770,39 @@ pub async fn managed_browser_gateway_register(
         .await
         .map_err(|_| "Local Core registration worker failed.".to_string())?
 }
+/// Transfers the same verified Chrome target between local human input and
+/// an authorized CDP agent. The Core coordinator waits for in-flight writes.
+#[tauri::command]
+pub async fn managed_browser_control_mode(
+    app: tauri::AppHandle,
+    webview: tauri::Webview,
+    state: tauri::State<'_, ManagedBrowserState>,
+    profile_id: String,
+    generation: String,
+    target_id: String,
+    mode: String,
+) -> Result<crate::managed_browser_core::ControlReceipt, String> {
+    if mode != "human" && mode != "agent" {
+        return Err("Invalid browser control mode.".into());
+    }
+    let verified = managed_browser_gateway_pairing(webview, state, profile_id, generation, target_id)?;
+    let profile = profile_path(&app, &verified.profile_id)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let fingerprint = verified_browser_fingerprint(verified.port, &profile)?;
+        let token = local_core_token()?;
+        let payload = serde_json::json!({
+            "profileId": verified.profile_id, "generation": verified.generation,
+            "port": verified.port, "targetId": verified.target_id,
+            "browserFingerprint": fingerprint
+        });
+        // Refresh the short-lived registration before every handoff.
+        crate::managed_browser_core::post_registration(7888, &token, &payload)?;
+        let mut control = payload;
+        control["mode"] = serde_json::json!(mode);
+        crate::managed_browser_core::post_control(7888, &token, &control)
+    }).await.map_err(|_| "Core control handoff worker failed.".to_string())?
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

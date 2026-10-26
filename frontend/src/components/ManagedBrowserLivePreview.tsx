@@ -52,11 +52,11 @@ export type BrowserInputAction =
   | { type: 'back' | 'forward' | 'reload' };
 
 export default function ManagedBrowserLivePreview({
-  profileId, generation, targetId, active, onClose, interactive = false, fill = false, onInteraction,
+  profileId, generation, targetId, active, onClose, interactive = false, fill = false, controlOwner, onInteraction,
 }: {
   profileId: string; generation: string; targetId: string;
   active: boolean; onClose: () => void;
-  interactive?: boolean; fill?: boolean;
+  interactive?: boolean; fill?: boolean; controlOwner?: 'human' | 'agent' | null;
   onInteraction?: (action: BrowserInputAction) => void;
 }) {
   const [frame, setFrame] = useState<(ManagedBrowserFrame | BrowserStreamEvent) | null>(null);
@@ -295,7 +295,7 @@ export default function ManagedBrowserLivePreview({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-color)] px-2 py-1.5">
         <span className="inline-flex items-center gap-1 font-semibold">
           <RefreshCw size={12} className={capturing ? 'animate-spin' : ''} />
-          {interactive ? 'Chrome inside T-Line · interactive' : 'Live preview · read-only'} · {mode}
+          {fill ? (controlOwner === 'agent' ? 'Chrome inside T-Line · agent enabled' : 'Chrome inside T-Line · human') : 'Live preview · read-only'} · {mode}
         </span>
         <button type="button" onClick={onClose}
           className="inline-flex items-center gap-1 rounded border border-[var(--border-color)] px-2 py-1"
