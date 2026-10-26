@@ -156,6 +156,30 @@ describe('desktop assistant task fixed-action proxy', () => {
     })).status).toBe(400);
     expect(observed).toHaveLength(4);
   });
+  it('forwards only scoped checkpoint review acknowledgement for retry', async () => {
+    const { base, observed } = await fixture({role:'admin'});
+    const id='c7ba78d0-1719-4a8e-90b4-15832cf48114';
+    const url=base+'/'+id+'/retry?sessionId=session123&workspace=D%3A%2Fproject';
+    const result=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({expectedRevision:4,idempotencyKey:'retry1',
+        acknowledgeUnverifiedEffects:true,expectedEvidenceSeq:2,
+        toolArguments:{apiKey:'LEAK'},runImmediately:true}),
+    });
+    expect(result.status).toBe(200);
+    expect(JSON.parse(observed[0].body)).toEqual({
+      expectedRevision:4,idempotencyKey:'retry1',
+      acknowledgeUnverifiedEffects:true,expectedEvidenceSeq:2,
+    });
+    expect((await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({expectedRevision:4,idempotencyKey:'retry2',
+        acknowledgeUnverifiedEffects:'true',expectedEvidenceSeq:2}),
+    })).status).toBe(400);
+    expect((await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({expectedRevision:4,idempotencyKey:'retry3',
+        acknowledgeUnverifiedEffects:true,expectedEvidenceSeq:-1}),
+    })).status).toBe(400);
+    expect(observed).toHaveLength(1);
+  });
   it('rejects nonoperator, unscoped and unknown actions before contacting Core', async () => {
     const denied = await fixture({ role: 'viewer' });
     const path = '?sessionId=session123&workspace=project';

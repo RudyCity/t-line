@@ -103,6 +103,32 @@ describe('session-scoped background analysis panel', () => {
     expect(screen.getByText(/Checkpoint verified: unstarted draft/)).toBeTruthy();
     expect(runAssistantReadOnlyTask).not.toHaveBeenCalled();
   });
+  it('renders sanitized step evidence and manual-review warning without execution', async () => {
+    vi.mocked(getAssistantCheckpoint).mockResolvedValue({
+      success:true,taskId:draft.taskId,revision:3,status:'running',
+      checkpoint:'manual-review-only',canResumeWithoutExecution:false,
+      executionResumptionSupported:false,
+      execution:{
+        schemaVersion:1,taskId:draft.taskId,executionResumptionSupported:false,
+        incomplete:1,externalUnverified:1,manualReviewRequired:true,
+        steps:[
+          {seq:1,at:1000,callRef:'a'.repeat(24),tool:'read',phase:'started',effect:'local_read'},
+          {seq:2,at:2000,callRef:'b'.repeat(24),tool:'web_search',phase:'started',effect:'external_unverified'},
+          {seq:3,at:2100,callRef:'b'.repeat(24),tool:'web_search',phase:'finished',effect:'external_unverified',outcome:'unverified'},
+        ],
+      },
+    });
+    await open();
+    fireEvent.click(screen.getByRole('button',{name:'Inspect checkpoint Investigate app'}));
+    expect(await screen.findByRole('region',{name:'Execution step evidence'})).toBeTruthy();
+    expect(screen.getByText(/Manual review required:/)).toBeTruthy();
+    expect(screen.getByText(/3 observations/)).toBeTruthy();
+    expect(screen.getByText(/web_search · finished/)).toBeTruthy();
+    expect(runAssistantReadOnlyTask).not.toHaveBeenCalled();
+    expect(retryAssistantAsDraft).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button',{name:'Close execution evidence'}));
+    expect(screen.queryByRole('region',{name:'Execution step evidence'})).toBeNull();
+  });
   it('pauses and resumes only unstarted drafts; neither action launches a worker', async () => {
     vi.spyOn(window,'confirm').mockReturnValue(true);
     await open();
@@ -126,6 +152,9 @@ describe('session-scoped background analysis panel', () => {
     expect(prepareAssistantPatch).not.toHaveBeenCalled();
   });
   it('creates a new retry draft from failed work but never auto-runs old or new workers', async () => {
+    vi.mocked(getAssistantCheckpoint).mockResolvedValue({ success:true,taskId:draft.taskId,
+      revision:4,status:'failed',checkpoint:'manual-review-only',
+      canResumeWithoutExecution:false,executionResumptionSupported:false });
     vi.mocked(getAssistantDrafts).mockResolvedValue({
       ...snapshot,tasks:[{...draft,status:'failed',revision:4}],
     });
@@ -138,6 +167,36 @@ describe('session-scoped background analysis panel', () => {
     expect(params[5]).toBe('draft_request_123');
     expect(runAssistantReadOnlyTask).not.toHaveBeenCalled();
     expect(prepareAssistantPatch).not.toHaveBeenCalled();
+  });
+  it('requires explicit review of unverified steps before creating a new retry draft', async () => {
+    vi.mocked(getAssistantDrafts).mockResolvedValue({
+      ...snapshot,
+      supportedModes:[...snapshot.supportedModes,'execution-step-observation'],
+      tasks:[{...draft,status:'failed',revision:4}],
+    });
+    vi.mocked(getAssistantCheckpoint).mockResolvedValue({
+      success:true,taskId:draft.taskId,revision:4,status:'failed',
+      checkpoint:'manual-review-only',canResumeWithoutExecution:false,
+      executionResumptionSupported:false,
+      execution:{schemaVersion:1,taskId:draft.taskId,incomplete:1,
+        externalUnverified:1,manualReviewRequired:true,executionResumptionSupported:false,
+        steps:[{seq:1,at:100,callRef:'a'.repeat(24),tool:'web_search',phase:'started',
+          effect:'external_unverified'}]},
+    });
+    const confirm=vi.spyOn(window,'confirm').mockReturnValue(false);
+    await open();
+    fireEvent.click(screen.getByRole('button',{name:'Retry as new draft Investigate app'}));
+    await waitFor(()=>expect(getAssistantCheckpoint).toHaveBeenCalledOnce());
+    expect(await screen.findByText(/Manual review required:/)).toBeTruthy();
+    expect(retryAssistantAsDraft).not.toHaveBeenCalled();
+    expect(runAssistantReadOnlyTask).not.toHaveBeenCalled();
+    confirm.mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button',{name:'Retry as new draft Investigate app'}));
+    await waitFor(()=>expect(retryAssistantAsDraft).toHaveBeenCalledOnce());
+    expect(vi.mocked(retryAssistantAsDraft).mock.calls[0][6]).toEqual({
+      acknowledgeUnverifiedEffects:true,expectedEvidenceSeq:1,
+    });
+    expect(runAssistantReadOnlyTask).not.toHaveBeenCalled();
   });
   it('requires approval to launch a task and forwards only task id/revision', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);

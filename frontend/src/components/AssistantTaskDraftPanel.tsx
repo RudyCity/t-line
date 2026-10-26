@@ -8,6 +8,7 @@ import {
   resumeAssistantDraft, retryAssistantAsDraft, getAssistantCheckpoint,
   type AssistantDraftTask,
   type AssistantTaskDomain, type AssistantTaskDomainDescriptor,
+  type AssistantExecutionEvidence,
 } from './AssistantTaskDraftApi';
 import { AssistantDomainPicker, AssistantTaskCard } from './AssistantTaskCards';
 import { getAuthHeader } from './SuperAgentConsoleUtils';
@@ -33,6 +34,7 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
   const [enabled, setEnabled] = useState(false);
   const [patchEnabled, setPatchEnabled] = useState(false);
   const [checkpointEnabled, setCheckpointEnabled] = useState(false);
+  const [stepObservationEnabled, setStepObservationEnabled] = useState(false);
   const [liveIds, setLiveIds] = useState<string[]>([]);
   const [unverifiedIds, setUnverifiedIds] = useState<string[]>([]);
   const [filter, setFilter] = useState<Filter>('all');
@@ -42,6 +44,7 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
   const [refresh, setRefresh] = useState(0);
   const [result, setResult] = useState<{ taskId: string; text: string; kind: 'summary' | 'patch' } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [executionEvidence, setExecutionEvidence] = useState<AssistantExecutionEvidence | null>(null);
   const processedHandoff = useRef<number | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -49,9 +52,11 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
   // Only a genuine session/workspace boundary resets private in-progress state.
   useEffect(() => {
     setTitle(''); setDrafts([]); setDomains([]); setDomain('general');
-    setError(''); setNotice(''); setResult(null); setFilter('all');
+    setError(''); setNotice(''); setResult(null);
+    setExecutionEvidence(null); setFilter('all');
     setLiveIds([]); setUnverifiedIds([]);
     setEnabled(false); setPatchEnabled(false); setCheckpointEnabled(false);
+    setStepObservationEnabled(false);
     processedHandoff.current = null;
   }, [workspace, sessionId]);
 
@@ -86,6 +91,7 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
         setPatchEnabled(snapshot.executionEnabled === true &&
           snapshot.supportedModes?.includes('patch-preview') === true);
         setCheckpointEnabled(snapshot.supportedModes?.includes('draft-checkpoint') === true);
+        setStepObservationEnabled(snapshot.supportedModes?.includes('execution-step-observation') === true);
         setLiveIds(snapshot.liveTaskIds || []);
         setUnverifiedIds(snapshot.unverifiedTaskIds || []);
         setError('');
@@ -185,11 +191,27 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
   const retry = async (task: AssistantDraftTask) => {
     if (saving || !['failed','cancelled','reconcile_required'].includes(task.status) ||
         liveIds.includes(task.taskId) || unverifiedIds.includes(task.taskId)) return;
-    if (!window.confirm('Create a new unstarted draft for this task? The old worker will NOT be resumed or replayed. Review before Run.')) return;
     setSaving(true); setError(''); setNotice('');
     try {
+      // Read evidence first; never send an acknowledgement for a stale snapshot.
+      const checkpoint = await getAssistantCheckpoint(workspace, sessionId, task.taskId, getAuthHeader);
+      if (checkpoint.revision !== task.revision) throw Error('Task changed; refresh before reviewing retry');
+      if (stepObservationEnabled && !checkpoint.execution)
+        throw Error('Execution evidence unavailable; refresh Core before reviewing retry');
+      setExecutionEvidence(checkpoint.execution ?? null);
+      const needsReview = checkpoint.execution?.manualReviewRequired === true;
+      const message = needsReview
+        ? 'Manual review required. ' + checkpoint.execution!.incomplete + ' unfinished steps and ' +
+          checkpoint.execution!.externalUnverified + ' unverified external operations were recorded. ' +
+          'These actions may already have taken effect. Create a NEW, unstarted draft after reviewing? Nothing will replay automatically.'
+        : 'Create a new unstarted draft? The old worker will NOT be resumed or replayed. Review before Run.';
+      if (!window.confirm(message)) return;
+      const review = needsReview ? {
+        acknowledgeUnverifiedEffects: true as const,
+        expectedEvidenceSeq: checkpoint.execution!.steps.at(-1)?.seq ?? 0,
+      } : undefined;
       await retryAssistantAsDraft(workspace, sessionId, task.taskId, task.revision,
-        getAuthHeader, crypto.randomUUID());
+        getAuthHeader, crypto.randomUUID(), review);
       setFilter('all');
       setNotice('New retry draft saved. Review it and choose Run separately.');
       setRefresh(n => n + 1);
@@ -201,12 +223,14 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
     if (saving) return;
     setSaving(true); setError('');
     try {
+      setExecutionEvidence(null);
       const checkpoint = await getAssistantCheckpoint(workspace, sessionId, task.taskId, getAuthHeader);
+      setExecutionEvidence(checkpoint.execution ?? null);
       setNotice(checkpoint.checkpoint === 'draft-boundary'
         ? checkpoint.canResumeWithoutExecution
           ? 'Checkpoint verified: paused draft. Resume only prepares a draft; you must Run separately.'
           : 'Checkpoint verified: unstarted draft. No worker has been resumed.'
-        : 'Only task metadata is stored. Running work cannot resume from this checkpoint; review and use a new draft.');
+        : 'Execution observations are not restorable model state. Review recorded tool steps before choosing a new draft; running work cannot resume from this checkpoint.');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Checkpoint unavailable');
     } finally { setSaving(false); }
@@ -393,6 +417,42 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
                 </div>
               )}
             </div>
+            {executionEvidence && (
+              <section aria-label="Execution step evidence" className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-main)] p-3 space-y-2 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <strong>Recorded execution steps</strong>
+                  <button type="button" aria-label="Close execution evidence"
+                    onClick={() => setExecutionEvidence(null)} className="rounded p-1 text-[var(--text-muted)]">
+                    <X size={14}/>
+                  </button>
+                </div>
+                <p className="text-[var(--text-muted)]">
+                  {executionEvidence.steps.length} observations · {executionEvidence.incomplete} unfinished ·{' '}
+                  {executionEvidence.externalUnverified} external unverified
+                </p>
+                {executionEvidence.manualReviewRequired && (
+                  <p role="note" className="text-amber-400">
+                    Manual review required: execution or external effects cannot be reconstructed safely.
+                  </p>
+                )}
+                <p className="text-[var(--text-muted)]">
+                  This journal contains observations, not restorable model state. Running-worker resume is unavailable.
+                </p>
+                <ol className="max-h-40 overflow-y-auto space-y-1" aria-label="Recorded step timeline">
+                  {executionEvidence.steps.slice(-16).map(step => (
+                    <li key={step.seq} className="flex items-center justify-between gap-2 rounded border border-[var(--border-color)] px-2 py-1.5">
+                      <span className="min-w-0 truncate">{step.seq}. {step.tool} · {step.phase}</span>
+                      <span className="shrink-0 text-[var(--text-muted)]">{step.outcome ?? step.effect}</span>
+                    </li>
+                  ))}
+                </ol>
+                {!executionEvidence.steps.length && (
+                  <p className="text-[var(--text-muted)]">
+                    No tool steps recorded. This does not prove no external operations occurred.
+                  </p>
+                )}
+              </section>
+            )}
             {result && (
               <section aria-label="Task result" className="overflow-hidden rounded-xl border border-[var(--border-color)] bg-[var(--bg-main)]">
                 <div className="flex items-center justify-between gap-2 border-b border-[var(--border-color)] px-3 py-2">

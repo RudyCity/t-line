@@ -51,7 +51,12 @@ export function createAssistantTaskProxy(
           action === 'reconcile' || action === 'pause' || action === 'resume')
         ? { expectedRevision: supplied?.expectedRevision } :
         action === 'retry' ? { expectedRevision: supplied?.expectedRevision,
-          idempotencyKey: supplied?.idempotencyKey } : undefined;
+          idempotencyKey: supplied?.idempotencyKey,
+          ...(supplied?.acknowledgeUnverifiedEffects !== undefined ?
+            { acknowledgeUnverifiedEffects: supplied.acknowledgeUnverifiedEffects } : {}),
+          ...(supplied?.expectedEvidenceSeq !== undefined ?
+            { expectedEvidenceSeq: supplied.expectedEvidenceSeq } : {}),
+        } : undefined;
     if (action === 'create' &&
         (typeof body?.goalId !== 'string' || typeof body?.title !== 'string' ||
          typeof body?.idempotencyKey !== 'string')) {
@@ -73,6 +78,14 @@ export function createAssistantTaskProxy(
     if (action === 'retry' && (typeof body?.idempotencyKey !== 'string' ||
         !/^[a-zA-Z0-9_-]{1,128}$/.test(body.idempotencyKey))) {
       res.status(400).json({ error: 'Retry idempotency key required' }); return;
+    }
+    if (action === 'retry' &&
+        ((body?.acknowledgeUnverifiedEffects !== undefined &&
+          body.acknowledgeUnverifiedEffects !== true) ||
+         (body?.expectedEvidenceSeq !== undefined &&
+          (!Number.isSafeInteger(body.expectedEvidenceSeq) ||
+           (body.expectedEvidenceSeq as number) < 0 || (body.expectedEvidenceSeq as number) > 256)))) {
+      res.status(400).json({ error: 'Invalid checkpoint review acknowledgement' }); return;
     }
     const payload = body ? JSON.stringify(body) : '';
     if (Buffer.byteLength(payload) > 4096) {

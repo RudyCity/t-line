@@ -95,17 +95,30 @@ export const resumeAssistantDraft = (workspace: string, sessionId: string,
 
 export const retryAssistantAsDraft = (workspace: string, sessionId: string,
   taskId: string, expectedRevision: number, auth: () => Record<string, string>,
-  idempotencyKey: string) =>
+  idempotencyKey: string, review?: { acknowledgeUnverifiedEffects: true;
+    expectedEvidenceSeq: number }) =>
   request<{ success: boolean; task: AssistantDraftTask; executed: false }>(
     taskPath(workspace, sessionId, taskId, 'retry'), auth, {
-      method: 'POST', body: JSON.stringify({ expectedRevision, idempotencyKey }),
+      method: 'POST', body: JSON.stringify({ expectedRevision, idempotencyKey, ...review }),
     });
 
+export type AssistantExecutionStep = {
+  seq: number; at: number; callRef: string; tool: string;
+  phase: 'started' | 'finished';
+  effect: 'local_read' | 'external_unverified' | 'unknown';
+  outcome?: 'completed' | 'failed' | 'unverified';
+};
+export type AssistantExecutionEvidence = {
+  schemaVersion: 1; taskId: string; steps: AssistantExecutionStep[];
+  incomplete: number; externalUnverified: number; manualReviewRequired: boolean;
+  executionResumptionSupported: false;
+};
 export const getAssistantCheckpoint = (workspace: string, sessionId: string,
   taskId: string, auth: () => Record<string, string>) =>
   request<{ success: boolean; taskId: string; revision: number; status: string;
     checkpoint: 'draft-boundary'|'manual-review-only';
-    canResumeWithoutExecution: boolean; executionResumptionSupported: false }>(
+    canResumeWithoutExecution: boolean; executionResumptionSupported: false;
+    execution?: AssistantExecutionEvidence }>(
       taskPath(workspace, sessionId, taskId, 'checkpoint'), auth);
 
 export const getAssistantTaskResult = (workspace: string, sessionId: string,
