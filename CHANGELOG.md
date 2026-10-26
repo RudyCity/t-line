@@ -1,3 +1,11 @@
+## [1.3.739] - 2026-10-26
+
+### Single SuperAgent Runtime Target
+- Added a startup-only `primary` / `testing` selector to the existing T-Line backend; no parallel T-Line backend or duplicate Core is started for testing. A private staging profile, separate nonlegacy port, verified owner PID and authenticated Core contract are required for testing.
+- Invalid target/profile configuration now refuses T-Line backend startup before accepting chat and tool routes, and the stage probe never falls back to the primary Core.
+- Added authenticated, read-only runtime-target status to SuperAgent Execution & Workspace settings with target port and verified readiness; no live hot-switch or session replay.
+- Verified 9/9 real short-lived SuperAgent stage connectivity checks and 25/25 backend routing/security tests, with stage cleanup and unchanged protected listener ownership; documented primary/staging startup and return procedure.
+
 ## [1.3.738] - 2026-10-26
 
 ### Dedicated Prompt and Editor Workstation Modes in Studio

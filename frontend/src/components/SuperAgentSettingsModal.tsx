@@ -74,6 +74,32 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
       setActiveTab(defaultTab as any);
     }
   }, [isOpen, defaultTab]);
+  const [runtimeTarget, setRuntimeTarget] = useState<{
+    selected: 'primary' | 'testing';
+    corePort: number;
+    ready: boolean;
+    backendCount: number;
+    startupOnly: boolean;
+    temporary: boolean;
+  } | null>(null);
+  const [runtimeTargetError, setRuntimeTargetError] = useState('');
+  useEffect(() => {
+    if (!isOpen || activeTab !== 'execution') return;
+    let active = true;
+    setRuntimeTarget(null);
+    setRuntimeTargetError('');
+    fetch('/api/superagent/runtime-target', {
+      headers: getAuthHeader(), cache: 'no-store'
+    }).then(async response => {
+      if (!response.ok) throw new Error('Runtime target cannot be verified');
+      return await response.json();
+    }).then(data => {
+      if (active) setRuntimeTarget(data);
+    }).catch(() => {
+      if (active) setRuntimeTargetError('Runtime target configuration needs review');
+    });
+    return () => { active = false; };
+  }, [isOpen, activeTab]);
   const [execSettings, setExecSettings] = useState<Record<string, any>>({});
   const [trustedDirs,  setTrustedDirs]  = useState<string[]>([]);
   const [newDir,       setNewDir]       = useState('');
@@ -219,6 +245,36 @@ export const SuperAgentSettingsModal: React.FC<SuperAgentSettingsModalProps> = (
 
           {activeTab === 'execution' && (
             <div className="space-y-4">
+              <div className="bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-xl p-4 space-y-2">
+                <div className="flex items-center gap-2 font-semibold text-[var(--text-main)]">
+                  <Server className="w-4 h-4 text-[var(--color-primary)]" />
+                  SuperAgent Runtime Target
+                </div>
+                {runtimeTarget ? (
+                  <>
+                    <div className="flex items-center gap-2 flex-wrap text-[var(--text-main)]">
+                      <span className="font-semibold">
+                        {runtimeTarget.selected === 'testing' ? 'Temporary Testing' : 'Primary Runtime'}
+                      </span>
+                      <span className="font-mono text-[var(--text-muted)]">127.0.0.1:{runtimeTarget.corePort}</span>
+                      <span className={runtimeTarget.ready ? 'text-emerald-500' : 'text-amber-500'}>
+                        {runtimeTarget.ready ? 'Verified connection' : 'Not ready / unverified'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[var(--text-muted)]">
+                      One T-Line backend connects to one selected runtime. The testing
+                      runtime uses separate SuperAgent data and must already be running.
+                      Switching targets requires ending active sessions and restarting T-Line
+                      with the selected startup profile; no live sessions or tool actions
+                      are automatically transferred.
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-[11px] text-[var(--text-muted)]" role="status">
+                    {runtimeTargetError || 'Reading runtime target...'}
+                  </p>
+                )}
+              </div>
               <div className="bg-[var(--bg-sidebar)] p-4 rounded-xl border border-[var(--border-color)] space-y-3">
                 <div className="flex items-center gap-2 font-semibold text-[var(--text-main)] text-xs">
                   <Folder className="w-4 h-4 text-[var(--color-primary)]" />

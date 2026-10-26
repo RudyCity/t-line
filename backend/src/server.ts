@@ -38,9 +38,13 @@ import { handleSuperAgentConnection, startSuperAgentEager } from './superAgentBr
 import superAgentRouter from './superAgentRoutes';
 import { closeSessionDb } from './sessionManager';
 import { installBackendCrashDiagnostics } from './crashDiagnostics';
+import { resolveRuntimeTarget } from './superAgentRuntimeTarget';
 import { capLogFile } from './logRotation';
 
 dotenv.config();
+// Freeze and validate the selected Core destination before accepting ANY
+// routes/websockets. Invalid stage settings must never proxy to primary.
+resolveRuntimeTarget();
 installBackendCrashDiagnostics();
 
 

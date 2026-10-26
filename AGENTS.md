@@ -103,7 +103,7 @@ SuperAgent HTTP Server (port 7888)
 | `src/core/config.js` | Config helpers: `loadModelConfig()`, `saveModelConfig()`, `getSettings()`, `getPresets()` etc. |
 
 ### Port & Process Convention
-- SuperAgent always runs its HTTP server on **port 7888** (hardcoded in both projects — do NOT change).
+- Primary SuperAgent Core defaults to **port 7888**; a test-only Core may use a separate, verified loopback port and private profile. T-Line retains ONE backend. See `docs/guides/single-superagent-runtime-target.md`.
 - The t-line backend **auto-starts** SuperAgent via `bunx superagent --server [--multi]` when a WebSocket connection arrives and port 7888 is not responding.
 - Before spawning, the bridge **pings** `GET /api/instances` to avoid double-starting an already-running server.
 - Mode (`single`/`multi`) is scoped to the chat session: switching mode opens a new chat session without killing the shared core, existing tasks, or unrelated connections. Startup arguments remain fixed until an explicit supervised restart; T-Line never force-restarts the shared core on mode changes.
@@ -137,7 +137,7 @@ When a new feature requires a new SuperAgent HTTP endpoint:
 ### Forbidden Patterns
 - ❌ Do NOT read or write `~/.superagent-r/*` files directly inside `superAgentRoutes.ts`. Always proxy to SuperAgent port 7888.
 - ❌ Do NOT hardcode any SuperAgent HTTP calls outside of `superAgentBridge.ts` or `superAgentRoutes.ts`.
-- ❌ Do NOT use `process.env` to configure the SuperAgent port, model, or provider. Use SuperAgent's HTTP config endpoints.
+- ✅ Only the startup selector may read `TLINE_SUPERAGENT_RUNTIME`, `TLINE_SUPERAGENT_CORE_PORT`, `TLINE_SUPERAGENT_OWNER_MODE` and `SUPERAGENT_CONFIG_DIR` for a verified existing Core. Never switch active agent sessions; model/provider settings still use Core HTTP APIs.
 - ❌ Do NOT swallow ECONNREFUSED silently — always attempt one auto-restart before surfacing an error.
 - ❌ Do NOT add SuperAgent HTTP logic directly to `server.ts` of t-line; keep it isolated in `superAgentRoutes.ts` and `superAgentBridge.ts`.
 - ❌ Do NOT modify SuperAgent's `activeSessions` map behavior without updating the session resolution logic in `superAgentBridge.ts` accordingly.

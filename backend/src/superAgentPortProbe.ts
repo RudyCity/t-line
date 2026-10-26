@@ -2,6 +2,7 @@ import { resolveSuperAgentCorePort } from './superAgentCorePort';
 import {resolveCoreOwnershipMode,verifyAuthenticatedExternalCoreOwner} from './superAgentCoreOwnership';
 import http from 'node:http';
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
+import { resolveRuntimeTarget } from './superAgentRuntimeTarget';
 
 export type SuperAgentPortState = 'compatible' | 'occupied' | 'free';
 
@@ -12,7 +13,12 @@ export type SuperAgentPortState = 'compatible' | 'occupied' | 'free';
 export async function probeSuperAgentPort(
   port = resolveSuperAgentCorePort(), headers: Record<string, string> = getSuperAgentServiceHeaders(),
 ): Promise<SuperAgentPortState> {
-  // An external-manager opt-in must NEVER fall back to spawning legacy 7888.
+  // Invalid / nonisolated targets are never candidates for auto-spawn.
+  // Selection remains fixed for this backend instance (not per request).
+  try {
+    const target = resolveRuntimeTarget();
+    if (target.selected === 'testing' && port !== target.corePort) return 'occupied';
+  } catch { return 'occupied'; }
   if (process.env.TLINE_SUPERAGENT_OWNER_MODE==='supervised-external' && port===7888)
     return 'occupied';
   return new Promise((resolve) => {

@@ -5,6 +5,8 @@ import http from 'http';
 import { authMiddleware } from './auth';
 import { sendSuperAgentRequest } from './superAgentBridge';
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
+import {resolveRuntimeTarget} from './superAgentRuntimeTarget';
+import {probeSuperAgentPort} from './superAgentPortProbe';
 import { fetchParityReadAction, PARITY_READ_ACTIONS, type ParityReadAction } from './superAgentParityBridge';
 import { streamTlineTaskEvents } from './superAgentTaskEvents';
 import { forwardTaskCancel } from './superAgentTaskCancel';
@@ -33,6 +35,20 @@ router.use('/assistant/agent-timeline', createAgentTimelineProxy());
 router.use('/assistant/approvals', createApprovalStatusProxy());
 router.use('/assistant/agent-stream', createAgentTimelineStreamProxy());
 router.use('/assistant/turns', createTlineAssistantTurnsRouter());
+
+// Read-only runtime choice: T-Line never runs a second backend for testing.
+// There is intentionally no hot-switch POST: agent effects/sessions must not
+// silently cross runtimes in an active desktop process.
+router.get('/runtime-target', async (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    const target = resolveRuntimeTarget();
+    const state = await probeSuperAgentPort(target.corePort);
+    res.json({...target, ready: state === 'compatible'});
+  } catch {
+    res.status(409).json({error: 'Invalid or unavailable SuperAgent runtime target configuration'});
+  }
+});
 
 // Read-only, authenticated browser session monitoring for the T-Line browser.
 // The endpoint never returns CDP session capabilities or cookie data.
