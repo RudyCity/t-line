@@ -1,3 +1,12 @@
+## [1.3.729] - 2026-10-26
+
+### Auth & Token Persistence Synchronization
+
+- Centralized client authentication token resolution and multi-storage persistence across `sessionStorage` and `localStorage`.
+- Fixed token mismatch causing premature logout race condition on background API requests (`/api/terminal/shells/availability`, `/api/system/stats`, `/api/workspaces`).
+- Added automatic Bearer token injection in global fetch interceptor to prevent unauthenticated 401 response loops after setup or login.
+- Gated pre-authentication background fetch triggers in root application component until authentication state is confirmed.
+
 ## [1.3.728] - 2026-10-26
 
 ### Managed Browser — Renderer ACK, Bounded Queue and Performance Telemetry (M4-C)

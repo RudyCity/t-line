@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { wsManager } from '../services/websocket';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { logFetchError } from '../utils/network';
+import { getAuthToken, setAuthToken, clearAuthToken } from '../utils/tokenStorage';
 
 export function useAuth() {
   const [setupRequired, setSetupRequired] = useState<boolean | null>(null);
@@ -15,11 +16,11 @@ export function useAuth() {
       const urlParams = getRuntimeSearchParams();
       const urlToken = urlParams.get('token');
       if (urlToken) {
-        sessionStorage.setItem('token', urlToken);
+        setAuthToken(urlToken);
         wsManager.setToken(urlToken);
       }
 
-      const token = sessionStorage.getItem('token');
+      const token = getAuthToken();
       
       // 1. Check setup status
       const setupRes = await fetch('/api/auth/setup-status');
@@ -40,7 +41,7 @@ export function useAuth() {
         if (verifyData.valid) {
           setIsAuthenticated(true);
         } else {
-          sessionStorage.removeItem('token');
+          clearAuthToken();
         }
       }
     } catch (e) {
@@ -65,7 +66,7 @@ export function useAuth() {
       });
       const data = await res.json();
       if (data.success) {
-        sessionStorage.setItem('token', data.token);
+        setAuthToken(data.token);
         wsManager.setToken(data.token);
         setIsAuthenticated(true);
         setSetupRequired(false);
@@ -88,7 +89,7 @@ export function useAuth() {
       });
       const data = await res.json();
       if (data.success) {
-        sessionStorage.setItem('token', data.token);
+        setAuthToken(data.token);
         wsManager.setToken(data.token);
         setIsAuthenticated(true);
       } else {
@@ -104,7 +105,7 @@ export function useAuth() {
     setTerminalInstances: React.Dispatch<React.SetStateAction<Record<string, any>>>,
     setActiveTabId: (id: string) => void
   ) => {
-    sessionStorage.removeItem('token');
+    clearAuthToken();
     localStorage.removeItem('tline-tabs-v2');
     localStorage.removeItem('tline-terminal-instances-v2');
     localStorage.removeItem('tline-active-tab-id');
@@ -127,59 +128,69 @@ export function useAuth() {
     const originalFetch = window.fetch;
     window.fetch = async (input, init) => {
       const requestInit: RequestInit = init || {};
-      const response = await originalFetch(input, requestInit);
+      const urlStr = typeof input === 'string' ? input : (input as Request).url;
+      const isAuthEndpoint = urlStr.includes('/api/auth/login') || 
+                             urlStr.includes('/api/auth/setup') || 
+                             urlStr.includes('/api/auth/verify') ||
+                             urlStr.includes('/api/auth/setup-status');
 
-      if (response.status === 401) {
-        const urlStr = typeof input === 'string' ? input : (input as Request).url;
-        const isAuthEndpoint = urlStr.includes('/api/auth/login') || 
-                               urlStr.includes('/api/auth/setup') || 
-                               urlStr.includes('/api/auth/verify') ||
-                               urlStr.includes('/api/auth/setup-status');
-        
-        if (!isAuthEndpoint) {
-          const oldToken = sessionStorage.getItem('token');
-          let tokenUpdated = false;
-          let newToken = '';
+      // Auto-inject Authorization header for non-auth endpoints if missing or null
+      let reqInit = requestInit;
+      const currentToken = getAuthToken();
+      if (currentToken && !isAuthEndpoint) {
+        const headers = new Headers(requestInit.headers || {});
+        const auth = headers.get('Authorization');
+        if (!auth || auth === 'Bearer' || auth === 'Bearer ' || auth === 'Bearer null' || auth === 'Bearer undefined') {
+          headers.set('Authorization', `Bearer ${currentToken}`);
+          reqInit = { ...requestInit, headers };
+        }
+      }
 
-          // 1. Try to recover token if running in Tauri
-          if ((window as any).__TAURI__?.core?.invoke) {
-            try {
-              const appUrl: string = await (window as any).__TAURI__.core.invoke('get_app_url');
-              if (appUrl) {
-                const urlObj = appUrl.startsWith('http://') || appUrl.startsWith('https://')
-                  ? new URL(appUrl)
-                  : new URL(appUrl, window.location.origin);
-                const tokenParam = urlObj.searchParams.get('token');
-                if (tokenParam && tokenParam !== oldToken) {
-                  newToken = tokenParam;
-                  sessionStorage.setItem('token', newToken);
-                  wsManager.setToken(newToken);
-                  wsManager.reconnect();
-                  tokenUpdated = true;
-                }
+      const response = await originalFetch(input, reqInit);
+
+      if (response.status === 401 && !isAuthEndpoint) {
+        const oldToken = getAuthToken();
+        let tokenUpdated = false;
+        let newToken = '';
+
+        // 1. Try to recover token if running in Tauri
+        if ((window as any).__TAURI__?.core?.invoke) {
+          try {
+            const appUrl: string = await (window as any).__TAURI__.core.invoke('get_app_url');
+            if (appUrl) {
+              const urlObj = appUrl.startsWith('http://') || appUrl.startsWith('https://')
+                ? new URL(appUrl)
+                : new URL(appUrl, window.location.origin);
+              const tokenParam = urlObj.searchParams.get('token');
+              if (tokenParam && tokenParam !== oldToken) {
+                newToken = tokenParam;
+                setAuthToken(newToken);
+                wsManager.setToken(newToken);
+                wsManager.reconnect();
+                tokenUpdated = true;
               }
-            } catch (e) {
-              console.error('Failed to auto-recover bypass token from Tauri:', e);
             }
+          } catch (e) {
+            console.error('Failed to auto-recover bypass token from Tauri:', e);
           }
+        }
 
-          if (tokenUpdated && newToken) {
-            // 2. Retry the request with the new token
-            const headers = new Headers(requestInit.headers || {});
-            headers.set('Authorization', `Bearer ${newToken}`);
-            const retryInit = {
-              ...requestInit,
-              headers
-            };
-            console.log(`Retrying request to ${urlStr} with recovered token.`);
-            return originalFetch(input, retryInit);
-          } else {
-            // 3. Fallback to logout
-            console.warn(`Unauthorized request to ${urlStr}. Logging out.`);
-            sessionStorage.removeItem('token');
-            wsManager.disconnect();
-            setIsAuthenticated(false);
-          }
+        if (tokenUpdated && newToken) {
+          // 2. Retry the request with the new token
+          const headers = new Headers(reqInit.headers || {});
+          headers.set('Authorization', `Bearer ${newToken}`);
+          const retryInit = {
+            ...reqInit,
+            headers
+          };
+          console.log(`Retrying request to ${urlStr} with recovered token.`);
+          return originalFetch(input, retryInit);
+        } else if (oldToken) {
+          // 3. Fallback to logout ONLY if we previously had an active token that got rejected
+          console.warn(`Unauthorized request to ${urlStr}. Logging out.`);
+          clearAuthToken();
+          wsManager.disconnect();
+          setIsAuthenticated(false);
         }
       }
       return response;

@@ -1,5 +1,6 @@
 import { enqueueOutbound, type QueuedOutboundMessage } from './outboundQueue';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
+import { getAuthToken, setAuthToken } from '../utils/tokenStorage';
 
 class TerminalWebSocketManager {
   private ws: WebSocket | null = null;
@@ -21,13 +22,13 @@ class TerminalWebSocketManager {
   }
 
   constructor() {
-    this.token = sessionStorage.getItem('token') || '';
+    this.token = getAuthToken() || '';
     // Check if token in query string (Electron bypass setup)
     const urlParams = getRuntimeSearchParams();
     const urlToken = urlParams.get('token');
     if (urlToken) {
       this.token = urlToken;
-      sessionStorage.setItem('token', urlToken);
+      setAuthToken(urlToken);
     }
   }
 

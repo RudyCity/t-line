@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { areWorkspacesEqual } from '../utils/workspaceEquality';
 import { logFetchError } from '../utils/network';
+import { getAuthToken } from '../utils/tokenStorage';
 
 export interface WorktreeInfo {
   path: string;
@@ -23,9 +24,10 @@ export interface WorkspaceInfo {
 
 export function useWorkspaces(
   isAuthenticated: boolean,
-  token: string | null,
+  tokenProp: string | null,
   showAlert: (title: string, message: string) => void
 ) {
+  const token = tokenProp || getAuthToken() || '';
   const [workspaces, setWorkspaces] = useState<WorkspaceInfo[]>([]);
   const [showWorkspaceModal, setShowWorkspaceModal] = useState<boolean>(false);
   const [newWorkspacePath, setNewWorkspacePath] = useState<string>('');

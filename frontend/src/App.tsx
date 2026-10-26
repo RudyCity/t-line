@@ -78,6 +78,7 @@ import { useUpdateChecker } from './hooks/useUpdateChecker';
 import { useThemeAndFonts } from './hooks/useThemeAndFonts';
 import { useTabUiHandlers } from './hooks/useTabUiHandlers';
 import { useAuth } from './hooks/useAuth';
+import { getAuthToken } from './utils/tokenStorage';
 import { useTerminals, WorkspaceInfo, TabData, getTerminalIds } from './hooks/useTerminals';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
@@ -180,7 +181,7 @@ export default function App() {
 
   const buildDetachedTabQuery = (tabId: string) => {
     const params = new URLSearchParams();
-    const token = localStorage.getItem('token') || '';
+    const token = getAuthToken() || '';
     if (token) {
       params.set('token', token);
     }
@@ -310,7 +311,7 @@ export default function App() {
     handleUpdateWorkspace,
     deletingWorkspacePaths,
     deletingWorktreePaths
-  } = useWorkspaces(isAuthenticated, localStorage.getItem('token'), showAlert);
+  } = useWorkspaces(isAuthenticated, getAuthToken(), showAlert);
 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
@@ -349,15 +350,17 @@ export default function App() {
   const [recentShells, setRecentShells] = useState<string[]>([]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     let cancelled = false;
-    fetch('/api/terminal/shells/availability', { headers: { Authorization: `Bearer ${localStorage.getItem('tline-token') || ''}` } })
+    const token = getAuthToken();
+    fetch('/api/terminal/shells/availability', { headers: { Authorization: `Bearer ${token || ''}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => { if (!cancelled && data) setShellAvailability(data); })
       .catch(() => {});
     const stored = typeof localStorage !== 'undefined' ? JSON.parse(localStorage.getItem('tline-recent-shells') || '[]') : [];
     setRecentShells(Array.isArray(stored) ? stored : []);
     return () => { cancelled = true; };
-  }, []);
+  }, [isAuthenticated]);
 
   const activeWorkspacePrompts = useMemo(() => {
     if (!panelWorkspace) return savedPrompts;
