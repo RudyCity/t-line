@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Film, Image as ImageIcon, Sparkles, AlertCircle, CheckCircle2, Bot, User, Mic, Send, Volume2 } from 'lucide-react';
 import type {
   StudioQualityReport,
@@ -105,8 +104,6 @@ export function StudioDirectorSection({
   motionSnapshots,
   onLoadDirectorSnapshots,
 }: Props) {
-  const [showVoiceoverOptions, setShowVoiceoverOptions] = useState(false);
-
   return (
     <div className="flex h-full flex-col bg-[var(--bg-sidebar)] text-[var(--text-main)] font-sans" aria-label="AI Studio Director">
       {/* CapCut Co-Pilot Header */}
@@ -390,9 +387,9 @@ export function StudioDirectorSection({
           </div>
         )}
 
-        {/* Expandable Voiceover drawer */}
-        {directorVoiceoverAvailable && showVoiceoverOptions && (
-          <div className="space-y-1.5 p-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-main)] animate-fadeIn">
+        {/* Voiceover options when available */}
+        {directorVoiceoverAvailable && (
+          <div className="space-y-1.5 p-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-main)]">
             {!selectedId && (
               <label className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] cursor-pointer">
                 <input
@@ -411,22 +408,20 @@ export function StudioDirectorSection({
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
                   <span>Narration script (local Piper)</span>
-                  {promptVoiceover.trim() && (
-                    <label className="inline-flex items-center gap-1 text-[10px]">
-                      Gain
-                      <input
-                        type="number"
-                        aria-label="Studio voice-over gain"
-                        min={0}
-                        max={2}
-                        step={0.1}
-                        className={control + ' w-12 py-0.5 text-center font-mono'}
-                        disabled={busy}
-                        value={promptVoiceoverGain}
-                        onChange={event => onChangeVoiceoverGain(Number(event.target.value))}
-                      />
-                    </label>
-                  )}
+                  <label className="inline-flex items-center gap-1 text-[10px]">
+                    Gain
+                    <input
+                      type="number"
+                      aria-label="Studio voice-over gain"
+                      min={0}
+                      max={2}
+                      step={0.1}
+                      className={control + ' w-12 py-0.5 text-center font-mono'}
+                      disabled={busy}
+                      value={promptVoiceoverGain}
+                      onChange={event => onChangeVoiceoverGain(Number(event.target.value))}
+                    />
+                  </label>
                 </div>
                 <textarea
                   className={control + ' w-full resize-y text-xs'}
@@ -518,21 +513,19 @@ export function StudioDirectorSection({
                     />
                   </label>
 
-                  {/* Voiceover toggle */}
+                  {/* Voiceover indicator/badge */}
                   {directorVoiceoverAvailable && (
-                    <button
-                      type="button"
-                      onClick={() => setShowVoiceoverOptions(v => !v)}
-                      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] transition-colors ${
-                        showVoiceoverOptions || promptVoiceover.trim()
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
+                        promptVoiceover.trim()
                           ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/10'
-                          : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)]'
+                          : 'text-[var(--text-muted)]'
                       }`}
-                      title="Voiceover narration (Piper)"
+                      title="Voiceover narration enabled (local Piper)"
                     >
-                      <Mic size={13} />
+                      <Mic size={13} className="text-[var(--color-primary)]" />
                       <span className="hidden sm:inline">Voiceover</span>
-                    </button>
+                    </span>
                   )}
 
                   {/* Aspect Ratio */}
@@ -565,10 +558,11 @@ export function StudioDirectorSection({
           </div>
         </form>
 
-        <p className="text-[10px] text-[var(--text-muted)] leading-tight">
+        <p className="text-[10px] leading-relaxed text-[var(--text-muted)]">
           {directorAvailable
-            ? 'Didukung model AI SuperAgent lokal. Menghasilkan animasi, layout adegan, dan sinkronisasi audio otomatis.'
-            : 'AI Studio Director membutuhkan SuperAgent server yang aktif.'}
+            ? 'AI uses the configured SuperAgent model. Attach up to 3 scene images and WAV (1 MB image / 2 MB WAV); Piper narration requires a local voice model, footage/3D and AI music generation are unsupported.'
+            : 'AI Studio Director needs an updated SuperAgent server with prompt support. The manual editor remains available.'}
+          {!directorMediaAvailable && directorAvailable ? ' Media attachments require an updated SuperAgent server.' : ''} Select “Select a project” to start a new video.
         </p>
       </div>
     </div>

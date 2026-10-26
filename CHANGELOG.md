@@ -1,3 +1,12 @@
+## [1.3.742] - 2026-10-26
+
+### Video Timeline Production Workstation & Conversational AI Chat Director
+- Transformed the Studio Director into an interactive, conversational AI Video Director chat stream with prompt suggestions, assistant greetings, user and AI message bubbles, and integrated media attachments.
+- Redesigned the primary workstation into a dedicated timeline video production layout featuring a docked AI Chat Co-Pilot console on the left, an aspect-ratio-aware video preview monitor in the center, and a persistent timeline dock at the bottom.
+- Compacted secondary creative panels (Storyboard Review and Video Reconstruction) into collapsible, non-intrusive drawers.
+- Added interactive view switching between Split, Prompt, and Editor modes with real-time viewport adaptation.
+- Verified 30/30 unit tests in `StudioTab.test.tsx`, 10/10 tests in related panels, and confirmed zero TypeScript errors and successful production build.
+
 ## [1.3.741] - 2026-10-26
 
 ### Agent Runtime Guidance

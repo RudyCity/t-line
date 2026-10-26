@@ -123,37 +123,29 @@ export function StudioTab({ workspacePath, isActive }: Props) {
       {(s.storyboardAvailable || s.multiVideoAvailable) && (
         <div className="border-b border-[var(--border-color)] bg-[var(--bg-card)] px-4 py-1.5 text-xs space-y-1">
           {s.storyboardAvailable && (
-            <details className="py-0.5">
-              <summary className="cursor-pointer font-medium text-[var(--color-primary)] hover:underline flex items-center gap-1.5">
-                <Sparkles size={12} />
-                <span>AI Studio Director 2.0 - Storyboard Review</span>
-              </summary>
-              <div className="mt-2 pt-2 border-t border-[var(--border-color)]">
-                <StudioStoryboardPanel
-                  workspacePath={workspacePath}
-                  busy={s.busy}
-                  renderWidth={s.renderWidth}
-                  onCreated={result => {
-                    s.setProjects(prev => [
-                      { id: result.project.id, name: result.project.name, revision: result.project.revision },
-                      ...prev.filter(item => item.id !== result.project.id),
-                    ]);
-                    s.setSelectedId(result.project.id);
-                    s.setProject(result.project);
-                    s.setSelectedLayer(result.project.composition.layers.find(item => item.kind === 'text')?.id ?? null);
-                    s.setFrame(0);
-                    s.setUndoStack([]);
-                    s.setRedoStack([]);
-                    s.setJobs(prev => [result.job, ...prev.filter(item => item.id !== result.job.id)]);
-                    s.setActiveJobId(result.job.id);
-                    s.setQuality(result.quality ?? null);
-                    s.setSuccess(
-                      result.job.status === 'failed' ? 'Approved storyboard saved, but MP4 render failed to start' : 'Approved storyboard saved · MP4 rendering queued'
-                    );
-                  }}
-                />
-              </div>
-            </details>
+            <StudioStoryboardPanel
+              workspacePath={workspacePath}
+              busy={s.busy}
+              renderWidth={s.renderWidth}
+              onCreated={result => {
+                s.setProjects(prev => [
+                  { id: result.project.id, name: result.project.name, revision: result.project.revision },
+                  ...prev.filter(item => item.id !== result.project.id),
+                ]);
+                s.setSelectedId(result.project.id);
+                s.setProject(result.project);
+                s.setSelectedLayer(result.project.composition.layers.find(item => item.kind === 'text')?.id ?? null);
+                s.setFrame(0);
+                s.setUndoStack([]);
+                s.setRedoStack([]);
+                s.setJobs(prev => [result.job, ...prev.filter(item => item.id !== result.job.id)]);
+                s.setActiveJobId(result.job.id);
+                s.setQuality(result.quality ?? null);
+                s.setSuccess(
+                  result.job.status === 'failed' ? 'Approved storyboard saved, but MP4 render failed to start' : 'Approved storyboard saved · MP4 rendering queued'
+                );
+              }}
+            />
           )}
 
           {s.multiVideoAvailable && (
