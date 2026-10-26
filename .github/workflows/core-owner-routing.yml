@@ -7,6 +7,7 @@ on:
       - "backend/src/superAgentPortProbe.ts"
       - "backend/src/superAgentAuth.ts"
       - "backend/tests/superAgentCoreOwnershipR4.test.ts"
+      - "backend/tests/superAgentAuthenticatedOwnerR4.test.ts"
       - "backend/tests/superAgentCorePort.test.ts"
       - "backend/tests/coreReconnectSafety.test.ts"
       - "backend/tests/superAgentAuthConfig.test.ts"
@@ -18,6 +19,7 @@ on:
       - "backend/src/superAgentPortProbe.ts"
       - "backend/src/superAgentAuth.ts"
       - "backend/tests/superAgentCoreOwnershipR4.test.ts"
+      - "backend/tests/superAgentAuthenticatedOwnerR4.test.ts"
       - ".github/workflows/core-owner-routing.yml"
   workflow_dispatch:
 jobs:
@@ -36,4 +38,4 @@ jobs:
       - name: Type-check local backend
         run: bun --bun x tsc --noEmit --project backend/tsconfig.json
       - name: Core routing, owner identity and no-replay tests
-        run: bun --bun x vitest run backend/tests/superAgentCoreOwnershipR4.test.ts backend/tests/superAgentCorePort.test.ts backend/tests/coreReconnectSafety.test.ts backend/tests/superAgentAuthConfig.test.ts
+        run: bun --bun x vitest run backend/tests/superAgentCoreOwnershipR4.test.ts backend/tests/superAgentAuthenticatedOwnerR4.test.ts backend/tests/superAgentCorePort.test.ts backend/tests/coreReconnectSafety.test.ts backend/tests/superAgentAuthConfig.test.ts

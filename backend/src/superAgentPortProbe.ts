@@ -1,5 +1,5 @@
 import { resolveSuperAgentCorePort } from './superAgentCorePort';
-import {resolveCoreOwnershipMode,verifyExternalCoreOwner} from './superAgentCoreOwnership';
+import {resolveCoreOwnershipMode,verifyAuthenticatedExternalCoreOwner} from './superAgentCoreOwnership';
 import http from 'node:http';
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
 
@@ -29,7 +29,7 @@ export async function probeSuperAgentPort(
         data += String(chunk);
         if (data.length > 4096) req.destroy(new Error('SuperAgent ping body too large.'));
       });
-      res.on('end', () => {
+      res.on('end', async () => {
         try {
           const parsed = JSON.parse(data);
           if (res.statusCode === 200 && parsed?.status === 'ok' &&
@@ -38,8 +38,9 @@ export async function probeSuperAgentPort(
               const mode=resolveCoreOwnershipMode(undefined,port);
               // An authenticated Core ping is insufficient if the external
               // supervisor metadata does not match its actual kernel PID.
-              done(mode==='supervised-external'&&!verifyExternalCoreOwner(port)
-                ? 'occupied':'compatible');
+              const authorized=mode!=='supervised-external' ||
+                await verifyAuthenticatedExternalCoreOwner(port);
+              done(authorized?'compatible':'occupied');
             }catch{done('occupied');}
           } else done('occupied');
         } catch { done('occupied'); }
