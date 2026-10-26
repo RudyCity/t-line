@@ -1,3 +1,10 @@
+## [1.3.744] - 2026-10-26
+
+### Assistant Model Preset Synchronization & Subagent Inheritance Control
+- Added interactive inheritance toggle ("Same as Main SuperAgent") in the preset configuration modal, allowing subagent default model and provider configuration to automatically mirror or decouple from the primary agent.
+- Displayed real-time inheritance status badge and synced model indicators when coupled, with automatic state propagation on primary model changes.
+- Refactored and modularized preset dialog architecture by extracting `SuperAgentPresetModal.tsx`, keeping component file sizes strictly below the 1000-line limit.
+
 ## [1.3.743] - 2026-10-26
 
 ### Assistant Model Preset Synchronization & Dynamic Tier Resolution
