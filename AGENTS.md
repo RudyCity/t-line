@@ -16,6 +16,23 @@ This document defines style guidelines, behavioral constraints, and coding stand
 
 ---
 
+## One SuperAgent Runtime Target — Mandatory (2026-10-26)
+
+- **Exactly ONE T-Line backend per installed desktop instance**. Keep one normal **primary** SuperAgent runtime stack; Core, MCP and OAuth can be independently owned processes within that one stack. A bounded, private **temporary SuperAgent testing profile** is permitted for migration/QA, but **do not create a second T-Line backend**, duplicate provider state or permanent test daemon.
+- **Runtime selection is fixed at T-Line backend startup**. `primary` (default Core port 7888) and `testing` (separate existing private Core owner) are defined in `backend/src/superAgentRuntimeTarget.ts`. Configuration variables: `TLINE_SUPERAGENT_RUNTIME`, `TLINE_SUPERAGENT_CORE_PORT`, `TLINE_SUPERAGENT_OWNER_MODE`, and `SUPERAGENT_CONFIG_DIR`. Testing requires an authenticated `supervised-external` Core whose profile is an existing nonlinked child of `~/.superagent-local-staging/`.
+- **No hot switching** across ongoing sessions, chats, approvals, WebSockets or unfinished tool operations. End/drain work and restart the same T-Line application with the selected profile. The UI in `SuperAgentSettingsModal.tsx` reports current selection; `GET /api/superagent/runtime-target` is authenticated, read-only and MUST NOT return secrets or permit rerouting via a POST.
+- **Fail closed for testing**. Never auto-start, adopt, kill, reroute to primary, reuse old session IDs or replay POST/tool effects when a temporary Core is offline or has an unverifiable owner. Readiness requires kernel listener PID, private owner status/bearer, correct profile and versioned Core-only ownership contract. Known legacy ports **6759, 6789, 7888, 9877** are protected; inspect current OS ownership instead of assuming old snapshots remain accurate.
+- **Legacy primary remains untouched during certification**. Do not stop legacy shared Core/MCP processes or migrate OAuth tokens. Installed desktop E2E, real public TLS, Windows recovery, extended soak, per-client PKCE reauthorization, safe rollback and operator approval are independent R0–R7 gates; passing source tests does not mean production certification.
+- **Reuse components first**. Inspect existing routing, hooks, selectors, dialogs, layout, state stores and API helpers before creating a new component. Extend shared UI components and canonical Core APIs rather than duplicating dashboards, backends, ingress or agent registries. Preserve tenant/workspace/session isolation.
+- **Git discipline**. Every completed change must be tested, versioned, documented in CHANGELOG and committed using explicit file staging. Do not stage unrelated dirty files; other agents may be editing browser/Studio paths concurrently. Use neutral engineering commit messages without competitor references.
+
+See `docs/guides/single-superagent-runtime-target.md` (T-Line) and
+`docs/guides/runtime-primary-and-temporary-test-profile.md` (SuperAgent).
+Record ownership evidence in the R0–R7 execution/evidence documents; do not
+claim an installed native app or public rollout from a loopback-only smoke test.
+
+---
+
 ## Mandatory T-Line Backend Crash Log Triage (Windows)
 
 **Always inspect crash logs BEFORE changing code, restarting a service, or claiming a Desktop Bridge disconnect is a backend crash.** Full guide: `docs/guides/backend-crash-diagnostics.md`.
@@ -75,7 +92,7 @@ t-line Backend (Express)
     │  superAgentBridge.ts  ← process lifecycle manager + HTTP proxy
     │  superAgentRoutes.ts  ← REST API bridge (sessions, config, history)
     ▼
-SuperAgent HTTP Server (port 7888)
+Selected SuperAgent Core (primary :7888; testing verified isolated port)
     │  POST /api/init        ← initialize/resume a session
     │  POST /api/chat        ← send a prompt
     │  GET  /api/events      ← SSE stream (agent events)
@@ -90,7 +107,9 @@ SuperAgent HTTP Server (port 7888)
 | File | Responsibility |
 |------|---------------|
 | `backend/src/superAgentBridge.ts` | Process lifecycle (auto-start/restart), SSE relay, WebSocket message dispatch |
-| `backend/src/superAgentRoutes.ts` | 100% Proxy REST API bridge to SuperAgent port 7888 (all 45 endpoints) |
+| `backend/src/superAgentRuntimeTarget.ts` | Startup-only primary/testing target validation; exactly one backend |
+| `backend/src/superAgentCoreOwnership.ts` | Authenticated owner contract and OS listener PID verification |
+| `backend/src/superAgentRoutes.ts` | Authenticated REST proxy to the selected Core; no duplicate backend or arbitrary upstream URL |
 | `backend/src/sessionManager.ts` | Server-based prompt history fallback helpers |
 | `backend/src/presetUtils.ts` | Deprecated direct file access — all config CRUD is proxied via `superAgentRoutes.ts` |
 
@@ -104,10 +123,10 @@ SuperAgent HTTP Server (port 7888)
 
 ### Port & Process Convention
 - Primary SuperAgent Core defaults to **port 7888**; a test-only Core may use a separate, verified loopback port and private profile. T-Line retains ONE backend. See `docs/guides/single-superagent-runtime-target.md`.
-- The t-line backend **auto-starts** SuperAgent via `bunx superagent --server [--multi]` when a WebSocket connection arrives and port 7888 is not responding.
-- Before spawning, the bridge **pings** `GET /api/instances` to avoid double-starting an already-running server.
+- **Primary/legacy only:** the bridge may start the Core only after a verified free/default port and existing controlled startup checks. **Testing/supervised-external never spawns a Core**; an unavailable test target is a visible error, not permission to fall back to 7888.
+- Before any optional primary Core launch, probe the authenticated `GET /api/ping` response and verify its ownership classification. A malformed, occupied or untrusted listener must not be adopted or killed.
 - Mode (`single`/`multi`) is scoped to the chat session: switching mode opens a new chat session without killing the shared core, existing tasks, or unrelated connections. Startup arguments remain fixed until an explicit supervised restart; T-Line never force-restarts the shared core on mode changes.
-- Use `forceKillPort7888()` only as a last-resort cleanup utility; prefer graceful restart via the bridge.
+- `forceKillPort7888()` is **permanently disabled** and MUST NOT be used for cleanup. For independently test-owned processes, use only authenticated owner drain and OS identity proof; production shared PIDs are off limits.
 
 ### Session & Workspace Rules
 - Every SuperAgent HTTP interaction **must** include the `x-workspace-path` header **and** the `?workspace=` query param. Both are read by `resolveSession()` in `server.ts`.
@@ -116,7 +135,7 @@ SuperAgent HTTP Server (port 7888)
 - Session IDs (`sessionId`) must be passed through consistently from the frontend WebSocket message → bridge → SuperAgent HTTP request.
 
 ### Error Handling Standards
-- **ECONNREFUSED on port 7888**: Reset `autoSuperAgentProcess` + `isStartingSuperAgent` to `null`/`false`, call `ensureSuperAgentServer()` to restart, re-initialize session, then retry the request. Do NOT propagate a raw `ECONNREFUSED` error to the frontend.
+- **ECONNREFUSED / offline Core**: only primary/legacy mode may use the existing verified-free-port startup path. Testing/supervised-external MUST fail closed and surface unavailable status. Never blindly resend an accepted chat/tool POST, reinitialize/replay ambiguous effects, or turn an occupied port into a spawn candidate.
 - **HTML error pages**: Detect `<!doctype` / `<html>` in response body and convert to a descriptive JSON error. Never forward raw HTML to the frontend.
 - **Timeouts**: Wrap all HTTP proxy calls in try/catch with `timeoutMs`. Default 30s for chat, 2s for abort. On timeout, surface a clear user-facing message.
 
@@ -124,7 +143,7 @@ SuperAgent HTTP Server (port 7888)
 ### Config & Preset Rules (100% Server Proxy Architecture)
 - All model configs, presets, provider profiles, memory, history, and workspace files live in and are managed **exclusively by SuperAgent**.
 - The t-line backend **MUST NOT** read or write `~/.superagent-r/model-config.json` or session files directly from disk in route handlers.
-- All REST requests in `superAgentRoutes.ts` MUST be proxied to SuperAgent on port 7888 using `proxyToSuperAgent()` or `sendSuperAgentRequest()`.
+- All REST requests in `superAgentRoutes.ts` MUST use existing authenticated Core proxy helpers with `resolveSuperAgentCorePort()` for the **selected startup target**. Never hardcode an alternate service, public ingress or per-workspace port.
 - SuperAgent HTTP server is the **Single Source of Truth** for all application state.
 
 ### Adding New SuperAgent API Endpoints (Cross-Project Workflow)
@@ -135,9 +154,9 @@ When a new feature requires a new SuperAgent HTTP endpoint:
 4. Run `bun run build` in **both** `backend` and `superagent` to verify zero TypeScript errors.
 
 ### Forbidden Patterns
-- ❌ Do NOT read or write `~/.superagent-r/*` files directly inside `superAgentRoutes.ts`. Always proxy to SuperAgent port 7888.
+- ❌ Do NOT read/write SuperAgent model, token, history or session stores inside `superAgentRoutes.ts`. Proxy to the selected Core. The narrow, read-only owner/service-token discovery in dedicated auth/ownership modules is an exception; never expose these credentials to the renderer.
 - ❌ Do NOT hardcode any SuperAgent HTTP calls outside of `superAgentBridge.ts` or `superAgentRoutes.ts`.
 - ✅ Only the startup selector may read `TLINE_SUPERAGENT_RUNTIME`, `TLINE_SUPERAGENT_CORE_PORT`, `TLINE_SUPERAGENT_OWNER_MODE` and `SUPERAGENT_CONFIG_DIR` for a verified existing Core. Never switch active agent sessions; model/provider settings still use Core HTTP APIs.
-- ❌ Do NOT swallow ECONNREFUSED silently — always attempt one auto-restart before surfacing an error.
+- ❌ Do NOT suppress connection errors or auto-restart an unowned/testing Core. Show a clear unavailable/owner-verification error; primary startup is allowed only after existing safe port-ownership checks.
 - ❌ Do NOT add SuperAgent HTTP logic directly to `server.ts` of t-line; keep it isolated in `superAgentRoutes.ts` and `superAgentBridge.ts`.
 - ❌ Do NOT modify SuperAgent's `activeSessions` map behavior without updating the session resolution logic in `superAgentBridge.ts` accordingly.

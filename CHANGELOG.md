@@ -1,3 +1,10 @@
+## [1.3.741] - 2026-10-26
+
+### Agent Runtime Guidance
+- Updated AGENTS.md for one primary SuperAgent runtime and one T-Line backend, with a bounded private test profile and startup-only target selection.
+- Corrected outdated guidance that suggested unconditional Core auto-start, blind chat retry or force-killing the legacy port owner; test Core connections now explicitly fail closed, and no ongoing session may be silently hot-switched.
+- Required reuse of existing components, explicit file staging and independent production certification evidence. Documentation only; no active Core, MCP, OAuth, or T-Line instance was restarted.
+
 ## [1.3.740] - 2026-10-26
 
 ### Shared Embedded Browser Human / Agent Control
