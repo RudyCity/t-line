@@ -14,7 +14,7 @@ describe('T-Line native managed browser read-only preview', () => {
     expect(isSafeManagedFrame({ ...frame, dataUrl: 'data:image/jpeg;base64,/9j/' + 'A'.repeat(2_010_000) }, 'TAB1')).toBe(false);
   });
   it('rejects stale stream IDs and wrong target frames', () => {
-    const safe = { ...frame, streamId: '100-1', transport: 'screencast' };
+    const safe = { ...frame, streamId: '100-1', transport: 'screencast', sequence: 1 };
     expect(isSafeBrowserStreamEvent(safe, '100-1', 'TAB1')).toBe(true);
     expect(isSafeBrowserStreamEvent(safe, '100-2', 'TAB1')).toBe(false);
     expect(isSafeBrowserStreamEvent(safe, '100-1', 'OTHER')).toBe(false);
@@ -29,7 +29,10 @@ describe('T-Line native managed browser read-only preview', () => {
     });
     const invoke = vi.fn(async (name: string) => {
       if (name === 'managed_browser_stream_start') return { streamId: '100-1' };
-      if (name === 'managed_browser_stream_stop') return undefined;
+      if (name === 'managed_browser_stream_stop' || name === 'managed_browser_stream_ack') return undefined;
+      if (name === 'managed_browser_stream_stats') return {
+        streamId: '100-1', sent: 1, acknowledged: 1, dropped: 0, inFlight: false, lastAckMs: 13, elapsedMs: 1000,
+      };
       throw new Error('Unexpected command ' + name);
     });
     vi.stubGlobal('__TAURI__', { core: { invoke }, event: { listen } });
@@ -39,15 +42,81 @@ describe('T-Line native managed browser read-only preview', () => {
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('managed_browser_stream_start', {
       profileId: 'default-managed', generation: '1-2', targetId: 'TAB1',
     }));
-    act(() => listener?.({ payload: { ...frame, streamId: 'wrong', transport: 'screencast' } }));
+    act(() => listener?.({ payload: { ...frame, streamId: 'wrong', transport: 'screencast', sequence: 1 } }));
     expect(screen.queryByAltText('Live screenshot of the selected T-Line-managed browser tab')).toBeNull();
-    act(() => listener?.({ payload: { ...frame, streamId: '100-1', transport: 'snapshot' } }));
+    act(() => listener?.({ payload: { ...frame, streamId: '100-1', transport: 'snapshot', sequence: 1 } }));
     expect(await screen.findByAltText('Live screenshot of the selected T-Line-managed browser tab')).toBeTruthy();
     expect(screen.getByText(/Live preview · read-only · snapshot/)).toBeTruthy();
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('managed_browser_stream_ack', {
+      streamId: '100-1', sequence: 1,
+    }));
     ui.rerender(<ManagedBrowserLivePreview {...props} active={false}/>);
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('managed_browser_stream_stop', { streamId: '100-1' }));
     expect(unlisten).toHaveBeenCalledTimes(1);
     expect(screen.queryByAltText('Live screenshot of the selected T-Line-managed browser tab')).toBeNull();
+  });
+  it('buffers the first frame until native start returns its verified stream ID', async () => {
+    let listener: ((event: { payload?: unknown }) => void) | undefined;
+    const unlisten = vi.fn();
+    let resolveStart!: (value: unknown) => void;
+    const start = new Promise<unknown>(resolve => { resolveStart = resolve; });
+    const invoke = vi.fn(async (name: string) => {
+      if (name === 'managed_browser_stream_start') return await start;
+      if (name === 'managed_browser_stream_ack' || name === 'managed_browser_stream_stop') return undefined;
+      if (name === 'get_memory_usage') return { desktopTotal: 104857600 };
+      throw new Error('Unexpected native command: ' + name);
+    });
+    vi.stubGlobal('__TAURI__', { core: { invoke }, event: {
+      listen: vi.fn(async (_topic: string, callback: typeof listener) => {
+        listener = callback;
+        return unlisten;
+      }),
+    } });
+    const props = { profileId: 'default-managed', generation: '7-8',
+      targetId: 'TAB1', active: true, onClose: vi.fn() };
+    const ui = render(<ManagedBrowserLivePreview {...props} />);
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('managed_browser_stream_start', {
+      profileId: 'default-managed', generation: '7-8', targetId: 'TAB1',
+    }));
+    act(() => listener?.({ payload: { ...frame, streamId: '999-1', transport: 'snapshot', sequence: 1 } }));
+    expect(screen.queryByAltText('Live screenshot of the selected T-Line-managed browser tab')).toBeNull();
+    await act(async () => { resolveStart({ streamId: '999-1' }); });
+    expect(await screen.findByAltText('Live screenshot of the selected T-Line-managed browser tab')).toBeTruthy();
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('managed_browser_stream_ack', {
+      streamId: '999-1', sequence: 1,
+    }));
+    ui.rerender(<ManagedBrowserLivePreview {...props} active={false}/>);
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('managed_browser_stream_stop', { streamId: '999-1' }));
+    expect(unlisten).toHaveBeenCalledTimes(1);
+  });
+  it('stops the exact native stream and clears browser pixels when window becomes hidden', async () => {
+    let listener: ((event: { payload?: unknown }) => void) | undefined;
+    const invoke = vi.fn(async (name: string) => {
+      if (name === 'managed_browser_stream_start') return { streamId: '300-1' };
+      if (name === 'managed_browser_stream_stop' || name === 'managed_browser_stream_ack') return undefined;
+      if (name === 'get_memory_usage') return { desktopTotal: 80 * 1024 * 1024 };
+      throw new Error('Unexpected native command ' + name);
+    });
+    vi.stubGlobal('__TAURI__', { core: { invoke }, event: {
+      listen: async (_topic: string, callback: typeof listener) => {
+        listener = callback;
+        return () => {};
+      },
+    } });
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
+    const ui = render(<ManagedBrowserLivePreview profileId="default-managed" generation="300-400"
+      targetId="TAB1" active onClose={() => {}}/>);
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('managed_browser_stream_start', {
+      profileId: 'default-managed', generation: '300-400', targetId: 'TAB1',
+    }));
+    act(() => listener?.({ payload: { ...frame, streamId: '300-1', sequence: 1, transport: 'snapshot' } }));
+    expect(await screen.findByAltText('Live screenshot of the selected T-Line-managed browser tab')).toBeTruthy();
+    hidden.mockReturnValue(true);
+    act(() => document.dispatchEvent(new Event('visibilitychange')));
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('managed_browser_stream_stop', { streamId: '300-1' }));
+    expect(screen.queryByAltText('Live screenshot of the selected T-Line-managed browser tab')).toBeNull();
+    expect(screen.getByText(/Live preview · read-only · paused/)).toBeTruthy();
+    ui.unmount();
   });
   it('captures only when explicitly opened, then clears pixels when closed', async () => {
     const invoke = vi.fn(async () => frame);

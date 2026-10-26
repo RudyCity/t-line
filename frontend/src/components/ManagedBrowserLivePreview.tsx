@@ -9,6 +9,18 @@ export type ManagedBrowserFrame = {
 type BrowserStreamEvent = ManagedBrowserFrame & {
   streamId: string;
   transport: 'screencast' | 'snapshot';
+  sequence: number;
+};
+type BrowserStreamStats = {
+  streamId: string;
+  sent: number;
+  acknowledged: number;
+  dropped: number;
+  inFlight: boolean;
+  lastAckMs: number | null;
+  elapsedMs: number;
+  hostCpuPercent?: number;
+  hostRssBytes?: number;
 };
 export function isSafeManagedFrame(frame: unknown, expectedTarget: string): frame is ManagedBrowserFrame {
   if (!frame || typeof frame !== 'object') return false;
@@ -23,6 +35,8 @@ export function isSafeBrowserStreamEvent(
 ): event is BrowserStreamEvent {
   return !!event && typeof event === 'object' &&
     (event as Partial<BrowserStreamEvent>).streamId === streamId &&
+    Number.isSafeInteger((event as Partial<BrowserStreamEvent>).sequence) &&
+    (event as BrowserStreamEvent).sequence > 0 &&
     ['screencast', 'snapshot'].includes((event as Partial<BrowserStreamEvent>).transport || '') &&
     isSafeManagedFrame(event, targetId);
 }
@@ -35,13 +49,19 @@ export default function ManagedBrowserLivePreview({
   profileId: string; generation: string; targetId: string;
   active: boolean; onClose: () => void;
 }) {
-  const [frame, setFrame] = useState<ManagedBrowserFrame | null>(null);
+  const [frame, setFrame] = useState<(ManagedBrowserFrame | BrowserStreamEvent) | null>(null);
+  const [fps, setFps] = useState(0);
+  const [stats, setStats] = useState<BrowserStreamStats | null>(null);
+  const [desktopMemoryMib, setDesktopMemoryMib] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [capturing, setCapturing] = useState(false);
   const [mode, setMode] = useState<'connecting' | 'screencast' | 'snapshot' | 'paused'>('connecting');
   useEffect(() => {
     setFrame(null);
     setError('');
+    setFps(0);
+    setStats(null);
+    setDesktopMemoryMib(null);
     if (!active) return;
     let cancelled = false;
     let busy = false;
@@ -50,7 +70,10 @@ export default function ManagedBrowserLivePreview({
     let lastFrameAt = 0;
     let polling: number | undefined;
     let watchdog: number | undefined;
+    let memoryTimer: number | undefined;
     let unlisten: (() => void) | undefined;
+    let earlyFrame: BrowserStreamEvent | null = null;
+    const recentFrames: number[] = [];
     const host = (window as any).__TAURI__;
     const invoke = host?.core?.invoke;
     const listen = host?.event?.listen;
@@ -62,6 +85,10 @@ export default function ManagedBrowserLivePreview({
     const stopStream = () => {
       const id = streamId;
       streamId = null;
+      earlyFrame = null;
+      recentFrames.length = 0;
+      setStats(null);
+      setFps(0);
       if (id && typeof invoke === 'function') {
         void invoke('managed_browser_stream_stop', { streamId: id }).catch(() => {});
       }
@@ -92,6 +119,19 @@ export default function ManagedBrowserLivePreview({
       void snapshot();
       polling = window.setInterval(() => { void snapshot(); }, 1500);
     };
+    const acceptFrame = (next: BrowserStreamEvent) => {
+      lastFrameAt = Date.now();
+      recentFrames.push(lastFrameAt);
+      while (recentFrames.length > 12) recentFrames.shift();
+      if (recentFrames.length >= 2) {
+        const elapsed = recentFrames[recentFrames.length - 1] - recentFrames[0];
+        if (elapsed > 0) setFps(Math.round((recentFrames.length - 1) * 1000 / elapsed * 10) / 10);
+      }
+      setFrame(next);
+      setError('');
+      setMode(next.transport);
+      stopPolling();
+    };
     const startStream = async () => {
       if (cancelled || document.hidden || starting || streamId) return;
       if (typeof invoke !== 'function') {
@@ -104,13 +144,21 @@ export default function ManagedBrowserLivePreview({
       try {
         if (!unlisten) {
           unlisten = await listen('managed-browser:frame', (event: { payload?: unknown }) => {
-            if (cancelled || document.hidden || !streamId ||
-                !isSafeBrowserStreamEvent(event?.payload, streamId, targetId)) return;
-            lastFrameAt = Date.now();
-            setFrame(event.payload as ManagedBrowserFrame);
-            setError('');
-            setMode((event.payload as BrowserStreamEvent).transport);
-            stopPolling();
+            if (cancelled || document.hidden) return;
+            if (!streamId && starting && event?.payload && typeof event.payload === 'object') {
+              const incoming = event.payload as Partial<BrowserStreamEvent>;
+              if (typeof incoming.streamId === 'string' &&
+                  /^[0-9]+-[0-9]+$/.test(incoming.streamId) &&
+                  isSafeBrowserStreamEvent(event.payload, incoming.streamId, targetId)) {
+                // Start may emit frame #1 before its receipt resolves. Retain
+                // exactly one bounded frame; verify its stream ID on receipt.
+                earlyFrame = event.payload as BrowserStreamEvent;
+              }
+              return;
+            }
+            if (streamId && isSafeBrowserStreamEvent(event?.payload, streamId, targetId)) {
+              acceptFrame(event.payload as BrowserStreamEvent);
+            }
           });
           if (cancelled) { unlisten?.(); unlisten = undefined; return; }
         }
@@ -124,14 +172,29 @@ export default function ManagedBrowserLivePreview({
           void invoke('managed_browser_stream_stop', { streamId: receipt.streamId }).catch(() => {});
           return;
         }
-        streamId = receipt.streamId;
+        const currentStreamId: string = receipt.streamId;
+        streamId = currentStreamId;
         lastFrameAt = Date.now();
+        if (earlyFrame && isSafeBrowserStreamEvent(earlyFrame, currentStreamId, targetId)) {
+          acceptFrame(earlyFrame);
+        }
+        earlyFrame = null;
         if (watchdog !== undefined) window.clearInterval(watchdog);
         watchdog = window.setInterval(() => {
-          if (!cancelled && !document.hidden && Date.now() - lastFrameAt > 4500) {
-            startFallback();
+          if (cancelled || document.hidden) return;
+          if (Date.now() - lastFrameAt > 4500) { startFallback(); return; }
+          if (streamId && typeof invoke === 'function') {
+            const current = streamId;
+            void invoke('managed_browser_stream_stats', { streamId: current })
+              .then((value: BrowserStreamStats) => {
+                if (!cancelled && !document.hidden && streamId === current &&
+                    value?.streamId === current && Number.isSafeInteger(value?.sent) &&
+                    Number.isSafeInteger(value?.acknowledged) && Number.isSafeInteger(value?.dropped)) {
+                  setStats(value);
+                }
+              }).catch(() => {});
           }
-        }, 1000);
+        }, 2000);
       } catch {
         if (!cancelled && !document.hidden) startFallback();
       } finally {
@@ -148,17 +211,46 @@ export default function ManagedBrowserLivePreview({
         void startStream();
       }
     };
+    const sampleMemory = async () => {
+      if (cancelled || document.hidden || typeof invoke !== 'function') return;
+      try {
+        const metrics = await invoke('get_memory_usage') as { desktopTotal?: number };
+        if (!cancelled && !document.hidden && typeof metrics?.desktopTotal === 'number' &&
+            Number.isFinite(metrics.desktopTotal) && metrics.desktopTotal >= 0) {
+          setDesktopMemoryMib(Math.round(metrics.desktopTotal / (1024 * 1024)));
+        }
+      } catch { /* Desktop telemetry is optional; preview must still work. */ }
+    };
     document.addEventListener('visibilitychange', visibility);
     void startStream();
+    void sampleMemory();
+    memoryTimer = window.setInterval(() => { void sampleMemory(); }, 15_000);
     return () => {
       cancelled = true;
       document.removeEventListener('visibilitychange', visibility);
       if (watchdog !== undefined) window.clearInterval(watchdog);
+      if (memoryTimer !== undefined) window.clearInterval(memoryTimer);
       stopPolling();
       stopStream();
       unlisten?.();
     };
   }, [active, profileId, generation, targetId]);
+
+  // Acknowledge only after React commits this frame and the next paint is
+  // scheduled. One native frame may be unacknowledged at any given time.
+  useEffect(() => {
+    if (!active || !frame || !('sequence' in frame) || !frame.sequence ||
+        !('streamId' in frame) || document.hidden) return;
+    const { streamId, sequence } = frame;
+    const paint = window.requestAnimationFrame(() => {
+      if (document.hidden) return;
+      const invoke = (window as any).__TAURI__?.core?.invoke;
+      if (typeof invoke === 'function') {
+        void invoke('managed_browser_stream_ack', { streamId, sequence }).catch(() => {});
+      }
+    });
+    return () => window.cancelAnimationFrame(paint);
+  }, [active, frame]);
 
   if (!active) return null;
   return (
@@ -180,6 +272,15 @@ export default function ManagedBrowserLivePreview({
             {error || 'Connecting to the owned browser tab…'}
           </div>}
       {error && frame && <p role="alert" className="px-2 py-1 text-amber-500">{error}</p>}
+      {stats && <p role="status" className="px-2 py-1 font-mono text-[10px] text-[var(--text-muted)]">
+        {fps.toFixed(1)} FPS · {stats.sent} sent · {stats.acknowledged} ACK · {stats.dropped} dropped
+        {stats.lastAckMs !== null ? ` · ${stats.lastAckMs} ms ACK` : ''}
+        {typeof stats.hostCpuPercent === 'number' && Number.isFinite(stats.hostCpuPercent)
+          ? ` · Host CPU ${stats.hostCpuPercent.toFixed(1)}%` : ''}
+        {typeof stats.hostRssBytes === 'number' && Number.isFinite(stats.hostRssBytes)
+          ? ` · Host RAM ${Math.round(stats.hostRssBytes / (1024 * 1024))} MiB` : ''}
+        {desktopMemoryMib !== null ? ` · Desktop+WebView ${desktopMemoryMib} MiB` : ''}
+      </p>}
       <p className="px-2 py-1 text-[10px] text-[var(--text-muted)]">
         Native CDP streams are capped at 5 FPS; offscreen Chrome uses a persistent
         snapshot fallback. Hidden windows pause capture. No page controls or frame storage.

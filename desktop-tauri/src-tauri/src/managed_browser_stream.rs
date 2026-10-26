@@ -1,6 +1,7 @@
 //! Experimental read-only CDP screencast for exactly one T-Line-managed tab.
 //! Pushes bounded JPEG pixels only to the primary UI; never exposes CDP URLs.
 use crate::managed_browser::{self, ManagedBrowserState};
+use crate::managed_browser_flow::{FrameFlow, FrameStats};
 use serde::Serialize;
 use std::collections::HashMap;
 
@@ -9,6 +10,7 @@ use std::sync::{
     Arc, Mutex,
 };
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use sysinfo::{Pid, ProcessRefreshKind};
 use tauri::Emitter;
 use tungstenite::{protocol::WebSocketConfig, Message};
 
@@ -18,14 +20,28 @@ const MAX_JPEG_BASE64: usize = 2_000_000;
 const MIN_SEND_INTERVAL: Duration = Duration::from_millis(200); // maximum 5fps
 
 #[derive(Default)]
+struct StreamControl {
+    cancel: AtomicBool,
+    flow: Mutex<FrameFlow>,
+}
+#[derive(Default)]
 pub struct BrowserStreamState {
-    streams: Mutex<HashMap<String, Arc<AtomicBool>>>,
+    streams: Mutex<HashMap<String, Arc<StreamControl>>>,
+    host_probe: Mutex<sysinfo::System>,
+}
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BrowserStreamTelemetry {
+    #[serde(flatten)]
+    flow: FrameStats,
+    host_cpu_percent: f32,
+    host_rss_bytes: u64,
 }
 impl BrowserStreamState {
     pub fn stop_all(&self) {
         if let Ok(mut streams) = self.streams.lock() {
             for cancel in streams.values() {
-                cancel.store(true, Ordering::SeqCst);
+                cancel.cancel.store(true, Ordering::SeqCst);
             }
             streams.clear();
         }
@@ -44,14 +60,26 @@ struct FrameEvent<'a> {
     data_url: String,
     captured_at: u64,
     transport: &'a str,
+    sequence: u64,
 }
 fn emit_frame(
     app: &tauri::AppHandle,
+    control: &StreamControl,
     stream_id: &str,
     target_id: &str,
     data_url: String,
     transport: &str,
 ) -> Result<(), String> {
+    if control.cancel.load(Ordering::SeqCst) {
+        return Ok(());
+    }
+    let sequence = {
+        let mut flow = control.flow.lock().map_err(|_| "Frame flow unavailable.")?;
+        match flow.reserve(Instant::now())? {
+            Some(sequence) => sequence,
+            None => return Ok(()),
+        }
+    };
     let captured_at = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
@@ -62,13 +90,27 @@ fn emit_frame(
         data_url,
         captured_at,
         transport,
+        sequence,
     };
-    app.emit_to(
-        tauri::EventTarget::webview("main"),
-        "managed-browser:frame",
-        payload,
-    )
-    .map_err(|_| "Primary viewer unavailable.".to_owned())
+    if control.cancel.load(Ordering::SeqCst) {
+        if let Ok(mut flow) = control.flow.lock() {
+            flow.failed_emit(sequence);
+        }
+        return Ok(());
+    }
+    let result = app
+        .emit_to(
+            tauri::EventTarget::webview("main"),
+            "managed-browser:frame",
+            payload,
+        )
+        .map_err(|_| "Primary viewer unavailable.".to_owned());
+    if result.is_err() {
+        if let Ok(mut flow) = control.flow.lock() {
+            flow.failed_emit(sequence);
+        }
+    }
+    result
 }
 fn safe_frame_data(value: &serde_json::Value) -> Option<String> {
     let encoded = value["params"]["data"].as_str()?;
@@ -104,7 +146,7 @@ fn send_cdp(
 fn execute_stream(
     app: tauri::AppHandle,
     state: Arc<ManagedBrowserState>,
-    cancel: Arc<AtomicBool>,
+    control: Arc<StreamControl>,
     stream_id: String,
     profile_id: String,
     generation: String,
@@ -140,7 +182,15 @@ fn execute_stream(
     let mut last_snapshot_request = Instant::now() - Duration::from_secs(2);
     let mut snapshot_pending = false;
     let mut has_screencast_frames = false;
-    while !cancel.load(Ordering::SeqCst) {
+    while !control.cancel.load(Ordering::SeqCst) {
+        if control
+            .flow
+            .lock()
+            .map_err(|_| "Preview flow unavailable.")?
+            .is_timed_out(Instant::now())
+        {
+            return Err("Renderer did not acknowledge browser frame; ending stream.".into());
+        }
         if last_check.elapsed() >= Duration::from_secs(1) {
             let (live_port, live_fingerprint) =
                 managed_browser::verified_stream_identity(&state, &profile_id, &generation)?;
@@ -178,10 +228,12 @@ fn execute_stream(
                         && last_emit.elapsed() >= MIN_SEND_INTERVAL
                     {
                         if let Ok(data_url) = crate::managed_browser_capture::extract_frame(&text) {
-                            if cancel.load(Ordering::SeqCst) {
+                            if control.cancel.load(Ordering::SeqCst) {
                                 break;
                             }
-                            emit_frame(&app, &stream_id, &target_id, data_url, "snapshot")?;
+                            emit_frame(
+                                &app, &control, &stream_id, &target_id, data_url, "snapshot",
+                            )?;
                             last_emit = Instant::now();
                         }
                     }
@@ -202,10 +254,17 @@ fn execute_stream(
                         last_screencast = Instant::now();
                         has_screencast_frames = true;
                         if last_emit.elapsed() >= MIN_SEND_INTERVAL {
-                            if cancel.load(Ordering::SeqCst) {
+                            if control.cancel.load(Ordering::SeqCst) {
                                 break;
                             }
-                            emit_frame(&app, &stream_id, &target_id, data_url, "screencast")?;
+                            emit_frame(
+                                &app,
+                                &control,
+                                &stream_id,
+                                &target_id,
+                                data_url,
+                                "screencast",
+                            )?;
                             last_emit = Instant::now();
                         }
                     }
@@ -219,7 +278,7 @@ fn execute_stream(
             { /* cancellation + liveness */ }
             Err(_) => return Err("Managed Chrome screencast disconnected.".into()),
         }
-        if has_screencast_frames && cancel.load(Ordering::SeqCst) {
+        if has_screencast_frames && control.cancel.load(Ordering::SeqCst) {
             break;
         }
     }
@@ -255,28 +314,28 @@ pub fn managed_browser_stream_start(
         std::process::id(),
         NEXT_STREAM.fetch_add(1, Ordering::Relaxed)
     );
-    let cancelled = Arc::new(AtomicBool::new(false));
+    let control = Arc::new(StreamControl::default());
     let mut active = streams
         .streams
         .lock()
         .map_err(|_| "Screencast registry unavailable.")?;
     for old in active.values() {
-        old.store(true, Ordering::SeqCst);
+        old.cancel.store(true, Ordering::SeqCst);
     }
     active.clear();
-    active.insert(stream_id.clone(), cancelled.clone());
+    active.insert(stream_id.clone(), control.clone());
     drop(active);
     // Cloning the supervisor shares its same Arc<Mutex<owned Child handles>>.
     // The stream cannot independently create or adopt a Chrome process.
     let browser_state = Arc::new(browsers.inner().clone());
     let worker_stream = stream_id.clone();
     let worker_app = app.clone();
-    let worker_cancel = cancelled;
+    let worker_control = control;
     tauri::async_runtime::spawn_blocking(move || {
         let _ = execute_stream(
             worker_app,
             browser_state,
-            worker_cancel,
+            worker_control.clone(),
             worker_stream,
             profile_id,
             generation,
@@ -284,6 +343,7 @@ pub fn managed_browser_stream_start(
             port,
             fingerprint,
         );
+        worker_control.cancel.store(true, Ordering::SeqCst);
     });
     Ok(StartedBrowserStream { stream_id })
 }
@@ -298,10 +358,78 @@ pub fn managed_browser_stream_stop(
         .streams
         .lock()
         .map_err(|_| "Screencast registry unavailable.")?;
-    if let Some(cancelled) = active.remove(&stream_id) {
-        cancelled.store(true, Ordering::SeqCst);
+    if let Some(control) = active.remove(&stream_id) {
+        control.cancel.store(true, Ordering::SeqCst);
     }
     Ok(())
+}
+/// Renderer acknowledges *only* the currently active stream and its exact
+/// in-flight sequence; forged, duplicate or stale acknowledgements fail closed.
+#[tauri::command]
+pub fn managed_browser_stream_ack(
+    webview: tauri::Webview,
+    streams: tauri::State<'_, BrowserStreamState>,
+    stream_id: String,
+    sequence: u64,
+) -> Result<(), String> {
+    managed_browser::primary_ui(&webview)?;
+    let active = streams
+        .streams
+        .lock()
+        .map_err(|_| "Stream registry unavailable.")?;
+    let control = active
+        .get(&stream_id)
+        .ok_or("Stream ID is no longer active.")?;
+    if control.cancel.load(Ordering::SeqCst) {
+        return Err("Stream was cancelled.".into());
+    }
+    if !control
+        .flow
+        .lock()
+        .map_err(|_| "Flow metrics unavailable.")?
+        .acknowledge(sequence, Instant::now())
+    {
+        return Err("Invalid, duplicate or stale browser frame ACK.".into());
+    }
+    Ok(())
+}
+#[tauri::command]
+pub fn managed_browser_stream_stats(
+    webview: tauri::Webview,
+    streams: tauri::State<'_, BrowserStreamState>,
+    stream_id: String,
+) -> Result<BrowserStreamTelemetry, String> {
+    managed_browser::primary_ui(&webview)?;
+    let active = streams
+        .streams
+        .lock()
+        .map_err(|_| "Stream registry unavailable.")?;
+    let control = active.get(&stream_id).ok_or("Stream no longer active.")?;
+    if control.cancel.load(Ordering::SeqCst) {
+        return Err("Stream was cancelled.".into());
+    }
+    let snapshot = control
+        .flow
+        .lock()
+        .map_err(|_| "Flow metrics unavailable.")?
+        .stats(&stream_id, Instant::now());
+    drop(active);
+    // Host process metrics only: Chrome's multi-process CPU/RAM usage is NOT
+    // attributed to this stream or represented as a whole-browser total.
+    let mut probe = streams
+        .host_probe
+        .lock()
+        .map_err(|_| "Host telemetry unavailable.")?;
+    let pid = Pid::from(std::process::id() as usize);
+    probe.refresh_process_specifics(pid, ProcessRefreshKind::new().with_cpu().with_memory());
+    let (host_cpu_percent, host_rss_bytes) = probe
+        .process(pid)
+        .map_or((0.0, 0), |process| (process.cpu_usage(), process.memory()));
+    Ok(BrowserStreamTelemetry {
+        flow: snapshot,
+        host_cpu_percent,
+        host_rss_bytes,
+    })
 }
 #[cfg(test)]
 pub(crate) fn smoke_probe_screencast(port: u16, target_id: &str) -> Result<&'static str, String> {

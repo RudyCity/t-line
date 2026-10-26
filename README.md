@@ -48,6 +48,8 @@
 
 **M4-B adaptive native live preview:** The managed Browser Preview now prefers a bounded, read-only CDP screencast through a persistent Rust WebSocket, sending at most 5 JPEG frames per second only to T-Line's primary UI. An idle/headless tab automatically uses the **same socket** for lower-rate screenshots, with a final legacy capture fallback. The stream is explicitly selected, session-bound and stopped on preview close/hidden window/app exit; no page interactions or owner-token issuance are added. Real installed Windows Chrome **headless** validated the persistent snapshot fallback, not screencast FPS. See [M4-B test report](docs/plans/2026-10-26-tline-browser-m4b-adaptive-preview.md).
 
+**M4-C ACK and resource diagnostics:** Browser Preview now delivers at most **one unacknowledged frame** to the primary WebView, requiring a validated renderer ACK to send the next frame. Stale/duplicate ACKs fail closed and a 4-second ACK timeout ends the stream. UI displays FPS, sent/ACK/dropped counts, ACK latency, T-Line host CPU/RAM, and Desktop+WebView memory (not whole Chrome load). Native logical-time 30-minute frame simulation passed, but a genuine 30-minute real Chrome soak and packaged GUI validation are still required. See [M4-C verification](docs/plans/2026-10-26-tline-browser-m4c-ack-telemetry.md).
+
 ### 🔐 Security & Remote Workspace Sharing
 * **Cloudflare Tunnel Integration**: Share your local dev server, terminal sessions, and workspace remotely with zero-trust access tokens and password protection.
 * **Tauri v2 Desktop Native**: Native C++/Rust desktop wrapper keeping RAM footprint under 100MB with system tray support.

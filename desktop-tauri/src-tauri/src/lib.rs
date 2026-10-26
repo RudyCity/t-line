@@ -22,6 +22,7 @@ mod managed_browser;
 mod managed_browser_core;
 mod managed_browser_capture;
 mod managed_browser_stream;
+mod managed_browser_flow;
 
 use backend_identity::{decide_port, verify_local_backend, PortDecision};
 
@@ -1724,6 +1725,8 @@ pub fn run() {
             managed_browser_capture::managed_browser_capture,
             managed_browser_stream::managed_browser_stream_start,
             managed_browser_stream::managed_browser_stream_stop,
+            managed_browser_stream::managed_browser_stream_ack,
+            managed_browser_stream::managed_browser_stream_stats,
             get_memory_usage,
             open_webview_devtools,
             eval_webview_js,

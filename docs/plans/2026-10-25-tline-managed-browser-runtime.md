@@ -137,6 +137,8 @@ UI: show browser engine, executable origin/version, managed profile, connection/
 
 **M4-B checkpoint (2026-10-26):** Rust now attempts CDP `Page.startScreencast` and acknowledges frames, with max 5 FPS delivery to the primary WebView, a persistent-CDP snapshot fallback and final M4-A snapshot fallback. Headless Windows Chrome verified **persistent snapshot fallback**, not screencast FPS. Packaged GUI acceptance, renderer-consumer backpressure and authorized interactive input are still outstanding. See [M4-B adaptive preview](2026-10-26-tline-browser-m4b-adaptive-preview.md).
 
+**M4-C checkpoint (2026-10-26):** renderer ACK now gates delivery of each native frame; invalid/stale ACKs and 4-second UI stalls stop the stream. FPS, drops/ACK counts, latency and host process metrics are observable in Preview. Deterministic 9,000-frame logical-time stress passed; actual packaged GUI, real 30-minute soak and full Chrome process-tree profiling remain outstanding. See [M4-C ACK and telemetry](2026-10-26-tline-browser-m4c-ack-telemetry.md).
+
 ### P1-B — Optional in-app live Chrome viewer (experimental)
 
 - [ ] Prototype official CDP `Page.startScreencast` / `screencastFrame` + frame acknowledgement and bounded WebSocket transport. CDP screencast methods are experimental; keep a screenshot-on-demand fallback.

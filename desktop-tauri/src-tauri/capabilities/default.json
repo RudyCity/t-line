@@ -57,6 +57,8 @@
     "allow-managed-browser-gateway-register",
     "allow-managed-browser-capture",
     "allow-managed-browser-stream-start",
-    "allow-managed-browser-stream-stop"
+    "allow-managed-browser-stream-stop",
+    "allow-managed-browser-stream-ack",
+    "allow-managed-browser-stream-stats"
   ]
 }

@@ -1,3 +1,13 @@
+## [1.3.728] - 2026-10-26
+
+### Managed Browser — Renderer ACK, Bounded Queue and Performance Telemetry (M4-C)
+
+- Added native one-frame-in-flight flow control with per-stream sequence ACKs and a four-second timeout; duplicate, stale, or forged ACKs are rejected.
+- React acknowledges frames after a scheduled render and handles the first native frame arriving before `stream_start` confirmation. Hidden/closed views cancel the stream and clear frame pixels.
+- Added preview diagnostics: received FPS, sent/ACK/dropped frame counts, ACK latency, T-Line host CPU/RAM, and existing Desktop+WebView memory. These do not measure total Chrome process-tree load.
+- Passed focused Rust and frontend tests, including a deterministic 9,000-frame / 30-minute logical-time flow simulation, plus a real isolated Windows Chrome screenshot fallback smoke. **No packaged GUI E2E or real 30-minute resource soak yet.**
+- Full frontend TypeScript may remain blocked by unrelated concurrent assistant component errors; browser-specific tests pass.
+
 ## [1.3.727] - 2026-10-26
 
 ### Managed Browser — Adaptive Native Preview Stream (M4-B)

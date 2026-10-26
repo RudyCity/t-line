@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-managed-browser-stream-ack"
+description = "Enables the managed_browser_stream_ack command without any pre-configured scope."
+commands.allow = ["managed_browser_stream_ack"]
+
+[[permission]]
+identifier = "deny-managed-browser-stream-ack"
+description = "Denies the managed_browser_stream_ack command without any pre-configured scope."
+commands.deny = ["managed_browser_stream_ack"]
