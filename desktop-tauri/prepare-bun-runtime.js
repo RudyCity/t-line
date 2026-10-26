@@ -3,6 +3,24 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 const { execFileSync } = require("node:child_process");
+const { createHash } = require("node:crypto");
+
+// Windows keeps executables locked while running. Verify a previously staged
+// runtime by its complete SHA-256 before attempting to overwrite it.
+function sha256File(filePath) {
+  const hash = createHash("sha256");
+  const fd = fs.openSync(filePath, "r");
+  const chunk = Buffer.allocUnsafe(1024 * 1024);
+  try {
+    let count;
+    while ((count = fs.readSync(fd, chunk, 0, chunk.length, null)) > 0) {
+      hash.update(chunk.subarray(0, count));
+    }
+  } finally {
+    fs.closeSync(fd);
+  }
+  return hash.digest("hex");
+}
 
 function resolveBuildBun() {
   const executable = process.execPath;
@@ -38,7 +56,12 @@ function prepareBunRuntime(tauriDir) {
   fs.mkdirSync(target, { recursive: true });
   const binary = path.join(target, "bun.exe");
   if (path.resolve(executable).toLowerCase() !== path.resolve(binary).toLowerCase()) {
-    fs.copyFileSync(executable, binary);
+    const identical = fs.existsSync(binary) &&
+      fs.statSync(executable).size === fs.statSync(binary).size &&
+      sha256File(executable) === sha256File(binary);
+    if (!identical) {
+      fs.copyFileSync(executable, binary);
+    }
   }
   fs.copyFileSync(license, path.join(target, "LICENSE.md"));
   const stagedVersion = execFileSync(binary, ["--version"], { encoding: "utf8", timeout: 10000 }).trim();
