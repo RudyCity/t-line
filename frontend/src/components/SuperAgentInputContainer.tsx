@@ -330,7 +330,10 @@ export function SuperAgentInputContainer({
 
             {/* Model Badge */}
             {modelName && (
-              <span className="flex items-center gap-1 text-[10px] text-[var(--text-muted)] font-mono border border-[var(--border-color)] px-2 py-1 rounded-md bg-[var(--bg-card)]">
+              <span
+                className="flex items-center gap-1 text-[10px] text-[var(--text-muted)] font-mono border border-[var(--border-color)] px-2 py-1 rounded-md bg-[var(--bg-card)]"
+                title={mainModel}
+              >
                 <Cpu className="w-2.5 h-2.5 text-[var(--text-muted)]" />
                 <span>{modelName}</span>
               </span>

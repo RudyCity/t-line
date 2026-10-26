@@ -1,3 +1,11 @@
+## [1.3.743] - 2026-10-26
+
+### Assistant Model Preset Synchronization & Dynamic Tier Resolution
+- Fixed model preset switching where selecting a preset did not update the active model badge or runtime configuration due to unpersisted preset state and flat-key model parsing drift.
+- Synchronized custom preset definitions between `model-presets.json` and `model-config.json`, preventing stale configurations from overriding updated model tiers.
+- Enhanced frontend model label extraction to strip provider prefixes (`provider@model`), resolve flat single and multi-agent keys, and provide full hover tooltips.
+- Added fallback flat-key parsing in the preset management dialog to prevent model erasure when editing custom presets.
+
 ## [1.3.742] - 2026-10-26
 
 ### Video Timeline Production Workstation & Conversational AI Chat Director

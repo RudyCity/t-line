@@ -366,7 +366,12 @@ export function SuperAgentConsole({
       });
       if (response.ok) {
         const data = await response.json();
-        setActivePresetId(data.activePresetId);
+        if (data.activePresetId) {
+          setActivePresetId(data.activePresetId);
+        } else {
+          setActivePresetId(prev => ({ ...prev, [mode]: presetId }));
+        }
+        await fetchConfig();
         const match = (presets[mode] || []).find(p => p.id?.toLowerCase() === presetId.toLowerCase() || p.name?.toLowerCase() === presetId.toLowerCase());
         const name = match ? match.name : presetId;
         setMessages(prev => [...prev, { role: 'system', text: `Model preset changed to "${name}" (${mode.toUpperCase()} mode). Restarting bridge...` }]);

@@ -180,14 +180,38 @@ export const SuperAgentPresetManager: React.FC<SuperAgentPresetManagerProps> = (
     const subDefaultConfig = m.subagentDefault;
     const details = m.subagentDetails || {};
 
-    const mProvider = typeof mainConfig === 'object' ? (mainConfig?.providerProfileId || '') : '';
-    const mModelStr = typeof mainConfig === 'object' ? (mainConfig?.model || '') : (typeof mainConfig === 'string' ? mainConfig : '');
+    let mProvider = typeof mainConfig === 'object' ? (mainConfig?.providerProfileId || '') : '';
+    let mModelStr = typeof mainConfig === 'object' ? (mainConfig?.model || '') : (typeof mainConfig === 'string' ? mainConfig : '');
+    if (!mModelStr) {
+      const flat = selectedMode === 'multi' ? (m.MODEL_MULTI_MASTER || m.MODEL_MULTI_SUPERAGENT || m.MODEL) : (m.MODEL_SINGLE_SUPERAGENT || m.MODEL_SINGLE || m.MODEL);
+      if (typeof flat === 'string' && flat) {
+        if (flat.includes('@')) {
+          const at = flat.indexOf('@');
+          mProvider = flat.substring(0, at);
+          mModelStr = flat.substring(at + 1);
+        } else {
+          mModelStr = flat;
+        }
+      }
+    }
     setMainProviderId(mProvider);
     setMainModel(mModelStr);
     setIsMainModelCustom(!!mModelStr && !['gemini-2.5-flash', 'gpt-4o', 'claude-3-5-sonnet-20241022'].includes(mModelStr));
 
-    const sProvider = typeof subDefaultConfig === 'object' ? (subDefaultConfig?.providerProfileId || '') : '';
-    const sModelStr = typeof subDefaultConfig === 'object' ? (subDefaultConfig?.model || '') : (typeof subDefaultConfig === 'string' ? subDefaultConfig : '');
+    let sProvider = typeof subDefaultConfig === 'object' ? (subDefaultConfig?.providerProfileId || '') : '';
+    let sModelStr = typeof subDefaultConfig === 'object' ? (subDefaultConfig?.model || '') : (typeof subDefaultConfig === 'string' ? subDefaultConfig : '');
+    if (!sModelStr) {
+      const flat = selectedMode === 'multi' ? m.MODEL_MULTI_SUBAGENT : (m.MODEL_SINGLE_SUBAGENT || m.MODEL_MULTI_SUBAGENT);
+      if (typeof flat === 'string' && flat) {
+        if (flat.includes('@')) {
+          const at = flat.indexOf('@');
+          sProvider = flat.substring(0, at);
+          sModelStr = flat.substring(at + 1);
+        } else {
+          sModelStr = flat;
+        }
+      }
+    }
     setSubDefaultProviderId(sProvider);
     setSubDefaultModel(sModelStr);
     setIsSubDefaultModelCustom(!!sModelStr && !['gemini-2.5-flash', 'gpt-4o-mini', 'claude-3-5-haiku-20241022'].includes(sModelStr));

@@ -36,13 +36,68 @@ export const readFileAsDataURL = (file: File): Promise<string> =>
     r.readAsDataURL(file);
   });
 
-export const getMainModelLabel = (preset: ModelPreset | undefined, agentMode: 'single' | 'multi') => {
+export const getMainModelLabel = (preset: ModelPreset | undefined, agentMode: 'single' | 'multi'): string => {
   if (!preset?.models) return 'Unknown';
-  const m = preset.models;
-  if (agentMode === 'multi' && m.master) return typeof m.master === 'object' ? m.master.model : m.master;
-  if (m.superagent) return typeof m.superagent === 'object' ? m.superagent.model : m.superagent;
-  if (m.MODEL) return typeof m.MODEL === 'object' ? (m.MODEL as any).model : m.MODEL;
-  if (m.MODEL_SINGLE) return typeof m.MODEL_SINGLE === 'object' ? (m.MODEL_SINGLE as any).model : m.MODEL_SINGLE;
+  const m: any = preset.models;
+
+  const extractModel = (val: any): string => {
+    if (!val) return '';
+    const str = typeof val === 'object' ? (val.model || '') : String(val);
+    if (!str) return '';
+    if (str.includes('@')) {
+      return str.substring(str.indexOf('@') + 1);
+    }
+    if (str.includes(':') && !str.includes('/') && !str.startsWith('http')) {
+      return str.substring(str.indexOf(':') + 1);
+    }
+    return str;
+  };
+
+  if (agentMode === 'multi') {
+    if (m.master) {
+      const res = extractModel(m.master);
+      if (res) return res;
+    }
+    if (m.MODEL_MULTI_MASTER) {
+      const res = extractModel(m.MODEL_MULTI_MASTER);
+      if (res) return res;
+    }
+    if (m.superagent) {
+      const res = extractModel(m.superagent);
+      if (res) return res;
+    }
+    if (m.MODEL_MULTI_SUPERAGENT) {
+      const res = extractModel(m.MODEL_MULTI_SUPERAGENT);
+      if (res) return res;
+    }
+  } else {
+    if (m.superagent) {
+      const res = extractModel(m.superagent);
+      if (res) return res;
+    }
+    if (m.MODEL_SINGLE_SUPERAGENT) {
+      const res = extractModel(m.MODEL_SINGLE_SUPERAGENT);
+      if (res) return res;
+    }
+    if (m.MODEL_SINGLE) {
+      const res = extractModel(m.MODEL_SINGLE);
+      if (res) return res;
+    }
+  }
+
+  if (m.MODEL) {
+    const res = extractModel(m.MODEL);
+    if (res) return res;
+  }
+  if (m.MODEL_SINGLE) {
+    const res = extractModel(m.MODEL_SINGLE);
+    if (res) return res;
+  }
+  if (m.MODEL_SINGLE_SUPERAGENT) {
+    const res = extractModel(m.MODEL_SINGLE_SUPERAGENT);
+    if (res) return res;
+  }
+
   return 'Default';
 };
 
