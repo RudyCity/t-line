@@ -46,6 +46,8 @@
 
 **M3-E desktop exit and Core transport:** The managed browser supervisor stops its own Chrome process trees only on an actual Tauri `Exit` (not when the UI is minimized to tray) and conservatively removes only verified stale endpoint markers. The native registration HTTP transport now has independent success/denial tests against an isolated local service and rejects invalid expiry. This does **not** establish a live production Core registration. See [M3-E test report](docs/plans/2026-10-26-tline-browser-m3e-core-transport-and-exit.md).
 
+**M4-B adaptive native live preview:** The managed Browser Preview now prefers a bounded, read-only CDP screencast through a persistent Rust WebSocket, sending at most 5 JPEG frames per second only to T-Line's primary UI. An idle/headless tab automatically uses the **same socket** for lower-rate screenshots, with a final legacy capture fallback. The stream is explicitly selected, session-bound and stopped on preview close/hidden window/app exit; no page interactions or owner-token issuance are added. Real installed Windows Chrome **headless** validated the persistent snapshot fallback, not screencast FPS. See [M4-B test report](docs/plans/2026-10-26-tline-browser-m4b-adaptive-preview.md).
+
 ### 🔐 Security & Remote Workspace Sharing
 * **Cloudflare Tunnel Integration**: Share your local dev server, terminal sessions, and workspace remotely with zero-trust access tokens and password protection.
 * **Tauri v2 Desktop Native**: Native C++/Rust desktop wrapper keeping RAM footprint under 100MB with system tray support.

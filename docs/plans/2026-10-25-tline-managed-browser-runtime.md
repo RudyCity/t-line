@@ -135,6 +135,8 @@ UI: show browser engine, executable origin/version, managed profile, connection/
 
 **M4-A checkpoint (2026-10-26):** native read-only JPEG snapshot preview implemented behind explicit user selection. Frame access requires verified T-Line-owned browser generation and exact local CDP page target; React receives bounded JPEG pixels, not debugger addresses. Real Windows Chrome headless capture and focused frontend tests passed. Higher-FPS `Page.startScreencast`, interactive mouse/keyboard through agent capabilities, packaged Tauri GUI acceptance and soak testing remain pending. See [M4-A live preview](2026-10-26-tline-browser-m4a-live-preview.md).
 
+**M4-B checkpoint (2026-10-26):** Rust now attempts CDP `Page.startScreencast` and acknowledges frames, with max 5 FPS delivery to the primary WebView, a persistent-CDP snapshot fallback and final M4-A snapshot fallback. Headless Windows Chrome verified **persistent snapshot fallback**, not screencast FPS. Packaged GUI acceptance, renderer-consumer backpressure and authorized interactive input are still outstanding. See [M4-B adaptive preview](2026-10-26-tline-browser-m4b-adaptive-preview.md).
+
 ### P1-B — Optional in-app live Chrome viewer (experimental)
 
 - [ ] Prototype official CDP `Page.startScreencast` / `screencastFrame` + frame acknowledgement and bounded WebSocket transport. CDP screencast methods are experimental; keep a screenshot-on-demand fallback.

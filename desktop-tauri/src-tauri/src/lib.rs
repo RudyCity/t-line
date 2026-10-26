@@ -21,6 +21,7 @@ mod state;
 mod managed_browser;
 mod managed_browser_core;
 mod managed_browser_capture;
+mod managed_browser_stream;
 
 use backend_identity::{decide_port, verify_local_backend, PortDecision};
 
@@ -1711,6 +1712,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(state)
         .manage(managed_browser::ManagedBrowserState::default())
+        .manage(managed_browser_stream::BrowserStreamState::default())
         .invoke_handler(tauri::generate_handler![
             managed_browser::managed_browser_discover,
             managed_browser::managed_browser_status,
@@ -1719,7 +1721,9 @@ pub fn run() {
             managed_browser::managed_browser_targets,
             managed_browser::managed_browser_gateway_pairing,
             managed_browser::managed_browser_gateway_register,
-            managed_browser::managed_browser_capture,
+            managed_browser_capture::managed_browser_capture,
+            managed_browser_stream::managed_browser_stream_start,
+            managed_browser_stream::managed_browser_stream_stop,
             get_memory_usage,
             open_webview_devtools,
             eval_webview_js,
@@ -1883,6 +1887,8 @@ pub fn run() {
         if let tauri::RunEvent::Exit = event {
             // Managed browser processes belong to this desktop instance only.
             // Closing to tray is not Exit and must not terminate them.
+            let streams = app_handle.state::<managed_browser_stream::BrowserStreamState>();
+            streams.stop_all();
             let browsers = app_handle.state::<managed_browser::ManagedBrowserState>();
             managed_browser::shutdown_owned(&browsers);
             let state = app_handle.state::<DesktopState>();

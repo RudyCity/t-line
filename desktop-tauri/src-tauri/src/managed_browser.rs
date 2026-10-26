@@ -19,7 +19,7 @@ pub struct BrowserAvailability {
     executable: Option<String>,
 }
 
-fn primary_ui(webview: &tauri::Webview) -> Result<(), String> {
+pub(crate) fn primary_ui(webview: &tauri::Webview) -> Result<(), String> {
     if webview.label() != "main" {
         return Err("Browser management is restricted to the primary application UI.".into());
     }
@@ -93,7 +93,7 @@ pub fn managed_browser_discover(webview: tauri::Webview) -> Result<BrowserAvaila
         executable: executable.map(|p| p.to_string_lossy().into_owned()),
     })
 }
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct ManagedBrowserState {
     children: Arc<Mutex<HashMap<String, OwnedBrowser>>>,
 }
@@ -542,57 +542,29 @@ pub fn managed_browser_targets(
         })
         .collect())
 }
-/// Only the desktop's primary UI can view a bounded screenshot of a live
-/// browser tab owned by this Tauri process. No generic CDP commands are exposed.
-#[tauri::command]
-pub async fn managed_browser_capture(
-    webview: tauri::Webview,
-    state: tauri::State<'_, ManagedBrowserState>,
-    profile_id: String,
-    generation: String,
-    target_id: String,
-) -> Result<crate::managed_browser_capture::BrowserFrame, String> {
-    primary_ui(&webview)?;
-    if target_id.is_empty()
-        || target_id.len() > 128
-        || !target_id
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
-    {
-        return Err("Invalid capture target.".into());
-    }
-    let port = {
-        let mut guard = state
-            .children
-            .lock()
-            .map_err(|_| "Browser state unavailable.")?;
-        let owned = guard
-            .get_mut(&profile_id)
-            .ok_or("No owned browser for this profile.")?;
-        if owned.generation != generation {
-            return Err("Stale managed browser generation.".into());
-        }
-        verified_owned_port(owned)?
-    };
-    let requested_target = target_id.clone();
-    let result = tauri::async_runtime::spawn_blocking(move || {
-        crate::managed_browser_capture::capture_page_frame(port, &requested_target)
-    })
-    .await
-    .map_err(|_| "Screenshot worker exited.".to_string())??;
-    // Prevent a screenshot captured during restart/stop from ever entering React.
+/// Verifies an existing Chrome Child generation and the browser fingerprint;
+/// the stream worker rechecks this so restarting/reusing the CDP port fails closed.
+pub(crate) fn verified_stream_identity(
+    state: &ManagedBrowserState,
+    profile_id: &str,
+    generation: &str,
+) -> Result<(u16, String), String> {
     let mut guard = state
         .children
         .lock()
         .map_err(|_| "Browser state unavailable.")?;
     let owned = guard
-        .get_mut(&profile_id)
-        .ok_or("Owned browser disappeared during capture.")?;
-    if owned.generation != generation || verified_owned_port(owned)? != port {
-        return Err("Managed browser changed during screenshot capture.".into());
+        .get_mut(profile_id)
+        .ok_or("Owned browser no longer exists.")?;
+    if owned.generation != generation {
+        return Err("Managed browser generation changed.".into());
     }
-    primary_ui(&webview)?;
-    Ok(result)
+    let port = verified_owned_port(owned)?;
+    let fingerprint = owned
+        .fingerprint
+        .clone()
+        .ok_or("Missing owned browser identity.")?;
+    Ok((port, fingerprint))
 }
 /// Strict browser + generation + *real page target* pairing. A tab title or a
 /// caller-selected port is never used as proof that the desktop owns Chrome.
@@ -910,6 +882,9 @@ mod tests {
             .expect("capture owned browser screenshot");
         assert!(frame.data_url.starts_with("data:image/jpeg;base64,/9j/"));
         assert!(frame.data_url.len() < 2_000_100);
+        let transport = crate::managed_browser_stream::smoke_probe_screencast(port, target)
+            .expect("real Chrome screencast or persistent JPEG fallback");
+        println!("native viewer smoke transport: {transport}");
         assert!(
             !retire_owned_port_file(&profile, port, &fingerprint).unwrap(),
             "must never remove an active profile endpoint"

@@ -55,6 +55,8 @@
     "allow-managed-browser-targets",
     "allow-managed-browser-gateway-pairing",
     "allow-managed-browser-gateway-register",
-    "allow-managed-browser-capture"
+    "allow-managed-browser-capture",
+    "allow-managed-browser-stream-start",
+    "allow-managed-browser-stream-stop"
   ]
 }

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-managed-browser-stream-start"
+description = "Enables the managed_browser_stream_start command without any pre-configured scope."
+commands.allow = ["managed_browser_stream_start"]
+
+[[permission]]
+identifier = "deny-managed-browser-stream-start"
+description = "Denies the managed_browser_stream_start command without any pre-configured scope."
+commands.deny = ["managed_browser_stream_start"]

@@ -6,6 +6,34 @@ use std::time::Duration;
 use tungstenite::protocol::WebSocketConfig;
 use tungstenite::Message;
 
+/// Only primary T-Line may request pixels from a supervised Chrome target.
+/// The runtime ID and fingerprint are revalidated after the blocking capture.
+#[tauri::command]
+pub async fn managed_browser_capture(
+    webview: tauri::Webview,
+    state: tauri::State<'_, crate::managed_browser::ManagedBrowserState>,
+    profile_id: String,
+    generation: String,
+    target_id: String,
+) -> Result<BrowserFrame, String> {
+    crate::managed_browser::primary_ui(&webview)?;
+    let original =
+        crate::managed_browser::verified_stream_identity(&state, &profile_id, &generation)?;
+    let (port, original_fingerprint) = original;
+    let requested_target = target_id.clone();
+    let result =
+        tauri::async_runtime::spawn_blocking(move || capture_page_frame(port, &requested_target))
+            .await
+            .map_err(|_| "Screenshot worker exited.".to_string())??;
+    let current =
+        crate::managed_browser::verified_stream_identity(&state, &profile_id, &generation)?;
+    if current.0 != port || current.1 != original_fingerprint {
+        return Err("Managed browser changed during screenshot capture.".into());
+    }
+    crate::managed_browser::primary_ui(&webview)?;
+    Ok(result)
+}
+
 const MAX_DISCOVERY: u64 = 128 * 1024;
 const MAX_FRAME: usize = 2_500_000;
 const MAX_BASE64: usize = 2_000_000;
@@ -41,7 +69,7 @@ fn checked_debugger_url(port: u16, target: &str, raw: &str) -> Result<String, St
     }
     Ok(raw.to_owned())
 }
-fn extract_frame(raw: &str) -> Result<String, String> {
+pub(crate) fn extract_frame(raw: &str) -> Result<String, String> {
     if raw.len() > MAX_FRAME {
         return Err("Browser screenshot exceeds the frame limit.".into());
     }
@@ -64,7 +92,7 @@ fn extract_frame(raw: &str) -> Result<String, String> {
     }
     Ok(format!("data:image/jpeg;base64,{encoded}"))
 }
-pub fn capture_page_frame(port: u16, target_id: &str) -> Result<BrowserFrame, String> {
+pub(crate) fn discover_page_debugger(port: u16, target_id: &str) -> Result<String, String> {
     if port < 1024 {
         return Err("Invalid owned browser port.".into());
     }
@@ -99,8 +127,10 @@ pub fn capture_page_frame(port: u16, target_id: &str) -> Result<BrowserFrame, St
     let raw_ws = tab["webSocketDebuggerUrl"]
         .as_str()
         .ok_or("Page debugging endpoint unavailable.")?;
-    let debugger = checked_debugger_url(port, target_id, raw_ws)?;
-
+    checked_debugger_url(port, target_id, raw_ws)
+}
+pub fn capture_page_frame(port: u16, target_id: &str) -> Result<BrowserFrame, String> {
+    let debugger = discover_page_debugger(port, target_id)?;
     let (mut socket, _) = tungstenite::connect(debugger.as_str())
         .map_err(|_| "Managed page CDP socket unavailable.")?;
     socket.set_config(|config: &mut WebSocketConfig| {

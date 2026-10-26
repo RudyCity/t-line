@@ -1,3 +1,12 @@
+## [1.3.727] - 2026-10-26
+
+### Managed Browser — Adaptive Native Preview Stream (M4-B)
+
+- Added an experimental read-only CDP screencast stream that emits bounded JPEG frames only to T-Line's primary WebView, with per-target event validation and a maximum native delivery rate of 5 FPS.
+- A persistent CDP WebSocket now falls back to bounded viewport JPEG screenshots if Chrome accepts screencast but does not deliver frames. The legacy per-request screenshot remains a final fallback if streaming cannot be established.
+- Only one owned stream can run at a time; switching tabs, closing preview, hiding the UI or exiting T-Line cancels streaming without terminating user browsers. No click/keyboard/scroll or extra CDP endpoint is exposed.
+- Real isolated Windows headless Chrome validated persistent-snapshot fallback (not live screencast FPS). Browser UI and Rust tests pass; packaged GUI event delivery, renderer consumer ACK/backpressure and long-running soak remain pending.
+
 ## [1.3.726] - 2026-10-26
 
 ### Managed Browser — Native Read-only Live Preview (M4-A)
