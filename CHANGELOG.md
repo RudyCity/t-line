@@ -1,3 +1,11 @@
+## [1.3.731] - 2026-10-26
+
+### Desktop Bridge Connectivity Recovery
+- Fixed the assistant WebSocket transport's eight-attempt retry cutoff and rapid reconnect loops by applying bounded exponential backoff with jitter, resetting the retry budget only after sustained connectivity, and cancelling stale sockets and handshake timers.
+- Re-read the current authentication token for each connection attempt, including session storage, so a refreshed login does not leave the desktop bridge retrying with stale credentials.
+- Kept SuperAgent Core SSE reattachment active after extended outages, with a 30-second retry ceiling and no automatic replay of chat, tool, or approval side effects.
+- Added regression coverage for reconnect throttling, outdated socket cleanup, and extended SSE recovery. Backend build and frontend Vite bundle pass; full frontend TypeScript build remains blocked by unrelated Studio module errors.
+
 ## [1.3.730] - 2026-10-26
 
 ### UI & Theme Calibration (Anti-Slop Color System)
