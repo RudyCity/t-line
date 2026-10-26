@@ -349,7 +349,8 @@ export function AgentExecutionTimeline({ messages, subagents, drafts, pendingPer
                   Review task actions
                 </button>
                 <p className="w-full text-[10px] text-[var(--text-muted)]">
-                  Pause/resume/retry are unavailable without a verified resumable checkpoint.
+                  Running workers cannot be paused or resumed without a verified execution checkpoint.
+                  Unstarted draft Pause/Resume and manual Retry-as-Draft are available in Task Actions.
                   Cancellation is a request, not proof the worker has exited.
                 </p>
               </div>

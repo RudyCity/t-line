@@ -1,6 +1,7 @@
 import type { AssistantDraftTask, AssistantTaskDomain, AssistantTaskDomainDescriptor } from './AssistantTaskDraftApi';
 import { BookOpen, BrainCircuit, Code2, Compass, FileText, Globe2,
-  Play, ScrollText, ShieldCheck, XCircle, AlertTriangle, Eye, GitPullRequest } from 'lucide-react';
+  Play, ScrollText, ShieldCheck, XCircle, AlertTriangle, Eye, GitPullRequest,
+  Pause, RotateCcw } from 'lucide-react';
 
 const domainIcon = {
   general: BrainCircuit, research: Globe2, analysis: BookOpen,
@@ -42,24 +43,28 @@ export function AssistantDomainPicker({ domains, value, disabled, onChange }: {
 }
 
 const statusLabel = (state: string, orphan: boolean) => orphan ? 'Needs reconciliation' : ({
-  queued: 'Ready', planning: 'Preparing', running: 'Running',
+  queued: 'Ready', paused: 'Paused (draft only)', planning: 'Preparing', running: 'Running',
   completed: 'Completed', cancelled: 'Cancelled', failed: 'Failed',
   awaiting_approval: 'Awaiting approval', interrupted: 'Interrupted',
   reconcile_required: 'Review required',
 } as Record<string,string>)[state] || state;
 
 export function AssistantTaskCard({ task, busy, active, unverified, enabled, patchEnabled,
-  onRun, onPatch, onCancel, onResult, onReview, onReconcile }: {
+  onRun, onPatch, onCancel, onResult, onReview, onReconcile,
+  onPause, onResume, onRetry, onCheckpoint }: {
   task: AssistantDraftTask; busy: boolean; active: boolean; unverified: boolean;
   enabled: boolean; patchEnabled: boolean;
   onRun: (task: AssistantDraftTask) => void; onPatch: (task: AssistantDraftTask) => void;
   onCancel: (task: AssistantDraftTask) => void; onResult: (task: AssistantDraftTask) => void;
   onReview: (task: AssistantDraftTask) => void; onReconcile: (task: AssistantDraftTask) => void;
+  onPause?: (task: AssistantDraftTask) => void; onResume?: (task: AssistantDraftTask) => void;
+  onRetry?: (task: AssistantDraftTask) => void;
+  onCheckpoint?: (task: AssistantDraftTask) => void;
 }) {
   const Icon = domainIcon[task.domain ?? 'analysis'] || BookOpen;
   const queued = task.status === 'queued';
   const completed = task.status === 'completed';
-  const cancellable = ['queued', 'planning', 'running'].includes(task.status) && !unverified;
+  const cancellable = ['queued', 'paused', 'planning', 'running'].includes(task.status) && !unverified;
   const patchReady = task.evidenceIds?.includes('patch_review_ready');
   return (
     <article className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-main)] px-3 py-2.5"
@@ -85,6 +90,38 @@ export function AssistantTaskCard({ task, busy, active, unverified, enabled, pat
         </span>
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5 pl-0 sm:pl-[34px]">
+        {queued && !unverified && onPause && (
+          <button type="button" disabled={busy || active} onClick={() => onPause(task)}
+            aria-label={'Pause draft ' + task.title}
+            className="inline-flex items-center gap-1 rounded-md border border-[var(--border-color)] px-2.5 py-1 text-[11px] text-[var(--text-muted)] disabled:opacity-40">
+            <Pause size={12}/> Pause draft
+          </button>
+        )}
+        {task.status === 'paused' && onResume && (
+          <button type="button" disabled={busy || active} onClick={() => onResume(task)}
+            aria-label={'Resume draft ' + task.title}
+            className="inline-flex items-center gap-1 rounded-md border border-[var(--color-primary)]/40 px-2.5 py-1 text-[11px] text-[var(--color-primary)] disabled:opacity-40">
+            <Play size={12}/> Resume to draft
+          </button>
+        )}
+        {['failed','cancelled','reconcile_required'].includes(task.status) &&
+          !unverified && onRetry && (
+          <button type="button" disabled={busy || active} onClick={() => onRetry(task)}
+            aria-label={'Retry as new draft ' + task.title}
+            className="inline-flex items-center gap-1 rounded-md border border-[var(--border-color)] px-2.5 py-1 text-[11px] disabled:opacity-40">
+            <RotateCcw size={12}/> Retry as draft
+          </button>
+        )}
+        {onCheckpoint && (
+          <button type="button" disabled={busy} onClick={() => onCheckpoint(task)}
+            aria-label={'Inspect checkpoint ' + task.title}
+            className="inline-flex items-center gap-1 rounded-md border border-[var(--border-color)] px-2.5 py-1 text-[11px] text-[var(--text-muted)] disabled:opacity-40">
+            <Eye size={12}/> Checkpoint
+          </button>
+        )}
+        {task.retryOfTaskId && (
+          <span className="text-[10px] text-[var(--text-muted)]">New attempt · not yet executed</span>
+        )}
         {queued && enabled && (
           <button type="button" disabled={busy} onClick={() => onRun(task)}
             aria-label={'Run read-only ' + task.title}

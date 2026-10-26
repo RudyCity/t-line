@@ -4,13 +4,16 @@ import { AssistantTaskDraftPanel } from '../AssistantTaskDraftPanel';
 import {
   addAssistantDraft, cancelAssistantDraft, getAssistantDrafts,
   getAssistantTaskResult, runAssistantReadOnlyTask, prepareAssistantPatch,
-  getAssistantPatch, reconcileAssistantTask, type AssistantTaskDomainDescriptor,
+  getAssistantPatch, reconcileAssistantTask, pauseAssistantDraft, resumeAssistantDraft,
+  retryAssistantAsDraft, getAssistantCheckpoint, type AssistantTaskDomainDescriptor,
 } from '../AssistantTaskDraftApi';
 
 vi.mock('../AssistantTaskDraftApi', () => ({
   addAssistantDraft: vi.fn(), cancelAssistantDraft: vi.fn(), getAssistantDrafts: vi.fn(),
   getAssistantTaskResult: vi.fn(), runAssistantReadOnlyTask: vi.fn(),
   prepareAssistantPatch: vi.fn(), getAssistantPatch: vi.fn(), reconcileAssistantTask: vi.fn(),
+  pauseAssistantDraft: vi.fn(), resumeAssistantDraft: vi.fn(), retryAssistantAsDraft: vi.fn(),
+  getAssistantCheckpoint: vi.fn(),
 }));
 vi.mock('../SuperAgentConsoleUtils', () => ({
   getAuthHeader: () => ({ Authorization: 'Bearer test' }),
@@ -22,7 +25,7 @@ const draft = {
 };
 const snapshot = {
   success: true, tasks: [draft], executionEnabled: true,
-  executionPolicy: 'read-only-explicit-run', supportedModes: ['analysis', 'patch-preview'],
+  executionPolicy: 'read-only-explicit-run', supportedModes: ['analysis', 'patch-preview', 'draft-checkpoint'],
   liveTaskIds: [], unverifiedTaskIds: [],
   domains: [
     { id: 'general', label: 'General Assistant', description: 'General conversation', patchPreview: false },
@@ -44,6 +47,16 @@ beforeEach(() => {
     success: true, scheduled: true, taskId: draft.taskId,
   });
   vi.mocked(prepareAssistantPatch).mockResolvedValue({ success: true, scheduled: true, taskId: draft.taskId });
+  vi.mocked(pauseAssistantDraft).mockResolvedValue({success:true,
+    task:{...draft,status:'paused',revision:2}});
+  vi.mocked(resumeAssistantDraft).mockResolvedValue({success:true,
+    task:{...draft,status:'queued',revision:3}});
+  vi.mocked(getAssistantCheckpoint).mockResolvedValue({ success:true,taskId:draft.taskId,
+    revision:1,status:'queued',checkpoint:'draft-boundary',
+    canResumeWithoutExecution:false,executionResumptionSupported:false });
+  vi.mocked(retryAssistantAsDraft).mockResolvedValue({success:true,executed:false,
+    task:{...draft,taskId:'ca7ad858-16c5-4705-9c7c-ec6721f0f191',
+      status:'queued',retryOfTaskId:draft.taskId}});
   vi.mocked(reconcileAssistantTask).mockResolvedValue({ success: true, replayed: false,
     task: { ...draft, status: 'interrupted', revision: 4 } });
   vi.mocked(getAssistantPatch).mockResolvedValue({ success: true, taskId: draft.taskId,
@@ -80,6 +93,51 @@ describe('session-scoped background analysis panel', () => {
       .toEqual(['D:/project', 'sess_1', 'Review changes']);
     expect(vi.mocked(addAssistantDraft).mock.calls[0][4]).toBe('draft_request_123');
     expect(runAssistantReadOnlyTask).not.toHaveBeenCalled();
+  });
+  it('shows checkpoint metadata without attempting execution or replay', async () => {
+    await open();
+    fireEvent.click(screen.getByRole('button',{name:'Inspect checkpoint Investigate app'}));
+    await waitFor(()=>expect(getAssistantCheckpoint).toHaveBeenCalledOnce());
+    expect(vi.mocked(getAssistantCheckpoint).mock.calls[0].slice(0,3))
+      .toEqual(['D:/project','sess_1',draft.taskId]);
+    expect(screen.getByText(/Checkpoint verified: unstarted draft/)).toBeTruthy();
+    expect(runAssistantReadOnlyTask).not.toHaveBeenCalled();
+  });
+  it('pauses and resumes only unstarted drafts; neither action launches a worker', async () => {
+    vi.spyOn(window,'confirm').mockReturnValue(true);
+    await open();
+    fireEvent.click(screen.getByRole('button',{name:'Pause draft Investigate app'}));
+    await waitFor(()=>expect(pauseAssistantDraft).toHaveBeenCalledOnce());
+    expect(vi.mocked(pauseAssistantDraft).mock.calls[0].slice(0,4))
+      .toEqual(['D:/project','sess_1',draft.taskId,1]);
+    expect(runAssistantReadOnlyTask).not.toHaveBeenCalled();
+    cleanup();
+    vi.clearAllMocks();
+    vi.mocked(getAssistantDrafts).mockResolvedValue({
+      ...snapshot,tasks:[{...draft,status:'paused',revision:2}],
+    });
+    await open();
+    expect(screen.queryByRole('button',{name:'Run read-only Investigate app'})).toBeNull();
+    fireEvent.click(screen.getByRole('button',{name:'Resume draft Investigate app'}));
+    await waitFor(()=>expect(resumeAssistantDraft).toHaveBeenCalledOnce());
+    expect(vi.mocked(resumeAssistantDraft).mock.calls[0].slice(0,4))
+      .toEqual(['D:/project','sess_1',draft.taskId,2]);
+    expect(runAssistantReadOnlyTask).not.toHaveBeenCalled();
+    expect(prepareAssistantPatch).not.toHaveBeenCalled();
+  });
+  it('creates a new retry draft from failed work but never auto-runs old or new workers', async () => {
+    vi.mocked(getAssistantDrafts).mockResolvedValue({
+      ...snapshot,tasks:[{...draft,status:'failed',revision:4}],
+    });
+    vi.spyOn(window,'confirm').mockReturnValue(true);
+    await open();
+    fireEvent.click(screen.getByRole('button',{name:'Retry as new draft Investigate app'}));
+    await waitFor(()=>expect(retryAssistantAsDraft).toHaveBeenCalledOnce());
+    const params=vi.mocked(retryAssistantAsDraft).mock.calls[0];
+    expect(params.slice(0,4)).toEqual(['D:/project','sess_1',draft.taskId,4]);
+    expect(params[5]).toBe('draft_request_123');
+    expect(runAssistantReadOnlyTask).not.toHaveBeenCalled();
+    expect(prepareAssistantPatch).not.toHaveBeenCalled();
   });
   it('requires approval to launch a task and forwards only task id/revision', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);

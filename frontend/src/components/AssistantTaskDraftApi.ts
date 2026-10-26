@@ -5,7 +5,7 @@ export type AssistantTaskDomainDescriptor = {
 export type AssistantDraftTask = {
   taskId: string; goalId: string; title: string; domain?: AssistantTaskDomain;
   status: string; revision: number;
-  createdAt: number; updatedAt: number; evidenceIds: string[];
+  createdAt: number; updatedAt: number; evidenceIds: string[]; retryOfTaskId?: string;
 };
 export type AssistantTaskTransitionEvent = {
   seq: number; taskId: string; status: string; at: number; revision: number;
@@ -84,6 +84,29 @@ export const prepareAssistantPatch = (workspace: string, sessionId: string,
 export const reconcileAssistantTask = (workspace: string, sessionId: string,
   taskId: string, expectedRevision: number, auth: () => Record<string, string>) =>
   postRevision(workspace, sessionId, taskId, 'reconcile', expectedRevision, auth);
+
+export const pauseAssistantDraft = (workspace: string, sessionId: string,
+  taskId: string, expectedRevision: number, auth: () => Record<string, string>) =>
+  postRevision(workspace, sessionId, taskId, 'pause', expectedRevision, auth);
+
+export const resumeAssistantDraft = (workspace: string, sessionId: string,
+  taskId: string, expectedRevision: number, auth: () => Record<string, string>) =>
+  postRevision(workspace, sessionId, taskId, 'resume', expectedRevision, auth);
+
+export const retryAssistantAsDraft = (workspace: string, sessionId: string,
+  taskId: string, expectedRevision: number, auth: () => Record<string, string>,
+  idempotencyKey: string) =>
+  request<{ success: boolean; task: AssistantDraftTask; executed: false }>(
+    taskPath(workspace, sessionId, taskId, 'retry'), auth, {
+      method: 'POST', body: JSON.stringify({ expectedRevision, idempotencyKey }),
+    });
+
+export const getAssistantCheckpoint = (workspace: string, sessionId: string,
+  taskId: string, auth: () => Record<string, string>) =>
+  request<{ success: boolean; taskId: string; revision: number; status: string;
+    checkpoint: 'draft-boundary'|'manual-review-only';
+    canResumeWithoutExecution: boolean; executionResumptionSupported: false }>(
+      taskPath(workspace, sessionId, taskId, 'checkpoint'), auth);
 
 export const getAssistantTaskResult = (workspace: string, sessionId: string,
   taskId: string, auth: () => Record<string, string>) =>

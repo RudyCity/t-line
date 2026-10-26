@@ -149,7 +149,7 @@ describe('Per-agent timeline evidence and approval', () => {
     expect(controls).toHaveBeenCalledWith(task, 'cancel');
     fireEvent.click(screen.getByRole('button', { name: 'Review task actions' }));
     expect(openTasks).toHaveBeenCalledOnce();
-    expect(screen.getByText(/Pause\/resume\/retry are unavailable/)).toBeTruthy();
+    expect(screen.getByText(/Running workers cannot be paused or resumed/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Pause' })).toBeNull();
   });
 

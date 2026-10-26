@@ -4,7 +4,9 @@ import { ChevronDown, ChevronUp, RefreshCw, Copy, Check,
 import {
   addAssistantDraft, cancelAssistantDraft, getAssistantDrafts,
   runAssistantReadOnlyTask, getAssistantTaskResult, prepareAssistantPatch,
-  getAssistantPatch, reconcileAssistantTask, type AssistantDraftTask,
+  getAssistantPatch, reconcileAssistantTask, pauseAssistantDraft,
+  resumeAssistantDraft, retryAssistantAsDraft, getAssistantCheckpoint,
+  type AssistantDraftTask,
   type AssistantTaskDomain, type AssistantTaskDomainDescriptor,
 } from './AssistantTaskDraftApi';
 import { AssistantDomainPicker, AssistantTaskCard } from './AssistantTaskCards';
@@ -30,6 +32,7 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
   const [drafts, setDrafts] = useState<AssistantDraftTask[]>([]);
   const [enabled, setEnabled] = useState(false);
   const [patchEnabled, setPatchEnabled] = useState(false);
+  const [checkpointEnabled, setCheckpointEnabled] = useState(false);
   const [liveIds, setLiveIds] = useState<string[]>([]);
   const [unverifiedIds, setUnverifiedIds] = useState<string[]>([]);
   const [filter, setFilter] = useState<Filter>('all');
@@ -47,7 +50,8 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
   useEffect(() => {
     setTitle(''); setDrafts([]); setDomains([]); setDomain('general');
     setError(''); setNotice(''); setResult(null); setFilter('all');
-    setLiveIds([]); setUnverifiedIds([]); setEnabled(false); setPatchEnabled(false);
+    setLiveIds([]); setUnverifiedIds([]);
+    setEnabled(false); setPatchEnabled(false); setCheckpointEnabled(false);
     processedHandoff.current = null;
   }, [workspace, sessionId]);
 
@@ -81,6 +85,7 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
           snapshot.executionPolicy === 'read-only-explicit-run');
         setPatchEnabled(snapshot.executionEnabled === true &&
           snapshot.supportedModes?.includes('patch-preview') === true);
+        setCheckpointEnabled(snapshot.supportedModes?.includes('draft-checkpoint') === true);
         setLiveIds(snapshot.liveTaskIds || []);
         setUnverifiedIds(snapshot.unverifiedTaskIds || []);
         setError('');
@@ -145,7 +150,7 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
     } finally { setSaving(false); }
   };
   const cancel = async (task: AssistantDraftTask) => {
-    if (saving || !['queued', 'planning', 'running'].includes(task.status)) return;
+    if (saving || !['queued', 'paused', 'planning', 'running'].includes(task.status)) return;
     if (!window.confirm(task.status === 'queued'
       ? 'Cancel this queued draft? No agent execution was started.'
       : 'Request cancellation of this running task? The worker may require time to stop.')) return;
@@ -156,6 +161,54 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
       setRefresh(n => n + 1);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Cancellation failed');
+    } finally { setSaving(false); }
+  };
+  const changeDraftState = async (task: AssistantDraftTask, action: 'pause' | 'resume') => {
+    if (saving || task.status !== (action === 'pause' ? 'queued' : 'paused') ||
+        liveIds.includes(task.taskId)) return;
+    if (!window.confirm(action === 'pause'
+      ? 'Pause this unstarted draft? No tool or worker will run.'
+      : 'Return this paused draft to Ready? It will NOT run until you separately select Run.')) return;
+    setSaving(true); setError(''); setNotice('');
+    try {
+      await (action === 'pause'
+        ? pauseAssistantDraft(workspace, sessionId, task.taskId, task.revision, getAuthHeader)
+        : resumeAssistantDraft(workspace, sessionId, task.taskId, task.revision, getAuthHeader));
+      setNotice(action === 'pause'
+        ? 'Unstarted draft paused and saved. No execution occurred.'
+        : 'Draft ready for manual Run. Nothing was executed.');
+      setRefresh(n => n + 1);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Draft transition failed');
+    } finally { setSaving(false); }
+  };
+  const retry = async (task: AssistantDraftTask) => {
+    if (saving || !['failed','cancelled','reconcile_required'].includes(task.status) ||
+        liveIds.includes(task.taskId) || unverifiedIds.includes(task.taskId)) return;
+    if (!window.confirm('Create a new unstarted draft for this task? The old worker will NOT be resumed or replayed. Review before Run.')) return;
+    setSaving(true); setError(''); setNotice('');
+    try {
+      await retryAssistantAsDraft(workspace, sessionId, task.taskId, task.revision,
+        getAuthHeader, crypto.randomUUID());
+      setFilter('all');
+      setNotice('New retry draft saved. Review it and choose Run separately.');
+      setRefresh(n => n + 1);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to save retry draft');
+    } finally { setSaving(false); }
+  };
+  const inspectCheckpoint = async (task: AssistantDraftTask) => {
+    if (saving) return;
+    setSaving(true); setError('');
+    try {
+      const checkpoint = await getAssistantCheckpoint(workspace, sessionId, task.taskId, getAuthHeader);
+      setNotice(checkpoint.checkpoint === 'draft-boundary'
+        ? checkpoint.canResumeWithoutExecution
+          ? 'Checkpoint verified: paused draft. Resume only prepares a draft; you must Run separately.'
+          : 'Checkpoint verified: unstarted draft. No worker has been resumed.'
+        : 'Only task metadata is stored. Running work cannot resume from this checkpoint; review and use a new draft.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Checkpoint unavailable');
     } finally { setSaving(false); }
   };
   const view = async (task: AssistantDraftTask) => {
@@ -331,7 +384,11 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
                       onCancel={task => { void cancel(task); }}
                       onResult={task => { void view(task); }}
                       onReview={task => { void previewPatch(task); }}
-                      onReconcile={task => { void reconcile(task); }}/>
+                      onReconcile={task => { void reconcile(task); }}
+                      onPause={checkpointEnabled ? task => { void changeDraftState(task, 'pause'); } : undefined}
+                      onResume={checkpointEnabled ? task => { void changeDraftState(task, 'resume'); } : undefined}
+                      onRetry={checkpointEnabled ? task => { void retry(task); } : undefined}
+                      onCheckpoint={checkpointEnabled ? task => { void inspectCheckpoint(task); } : undefined}/>
                   ))}
                 </div>
               )}

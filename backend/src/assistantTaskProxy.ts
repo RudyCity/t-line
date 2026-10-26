@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { Router, type Request, type Response } from 'express';
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
+import { resolveSuperAgentCorePort } from './superAgentCorePort';
 
 /** Fixed authenticated operator proxy for session-scoped Core tasks.
  * The parent router applies authMiddleware. No arbitrary URL/tool invocation.
@@ -9,7 +10,7 @@ export function createAssistantTaskProxy(
   options: { port?: number; getServiceHeaders?: () => Record<string, string> } = {},
 ) {
   const router = Router();
-  const port = options.port ?? 7888;
+  const port = options.port ?? resolveSuperAgentCorePort();
   const getHeaders = options.getServiceHeaders ?? getSuperAgentServiceHeaders;
   router.use((req: Request, res: Response, next) => {
     res.setHeader('Cache-Control', 'no-store');
@@ -22,7 +23,8 @@ export function createAssistantTaskProxy(
   });
 
   type Action = 'list' | 'events' | 'inspect' | 'create' | 'cancel' |
-    'run' | 'result' | 'prepare' | 'patch' | 'reconcile';
+    'run' | 'result' | 'prepare' | 'patch' | 'reconcile' |
+    'pause' | 'resume' | 'retry' | 'checkpoint';
   const forward = (action: Action) => async (req: Request, res: Response) => {
     const workspace = req.query.workspace;
     const sessionId = req.query.sessionId;
@@ -33,7 +35,9 @@ export function createAssistantTaskProxy(
       return;
     }
     const hasId = action === 'inspect' || action === 'cancel' || action === 'run' ||
-      action === 'result' || action === 'prepare' || action === 'patch' || action === 'reconcile';
+      action === 'result' || action === 'prepare' || action === 'patch' ||
+      action === 'reconcile' || action === 'pause' || action === 'resume' ||
+      action === 'retry' || action === 'checkpoint';
     if (hasId && (typeof taskId !== 'string' || !/^[0-9a-f-]{36}$/i.test(taskId))) {
       res.status(400).json({ error: 'Invalid task ID' });
       return;
@@ -43,8 +47,11 @@ export function createAssistantTaskProxy(
       ? { goalId: supplied?.goalId, title: supplied?.title,
           idempotencyKey: supplied?.idempotencyKey, ...(supplied?.domain !== undefined
             ? { domain: supplied.domain } : {}) }
-      : (action === 'cancel' || action === 'run' || action === 'prepare' || action === 'reconcile')
-        ? { expectedRevision: supplied?.expectedRevision } : undefined;
+      : (action === 'cancel' || action === 'run' || action === 'prepare' ||
+          action === 'reconcile' || action === 'pause' || action === 'resume')
+        ? { expectedRevision: supplied?.expectedRevision } :
+        action === 'retry' ? { expectedRevision: supplied?.expectedRevision,
+          idempotencyKey: supplied?.idempotencyKey } : undefined;
     if (action === 'create' &&
         (typeof body?.goalId !== 'string' || typeof body?.title !== 'string' ||
          typeof body?.idempotencyKey !== 'string')) {
@@ -57,10 +64,15 @@ export function createAssistantTaskProxy(
       return;
     }
     if ((action === 'run' || action === 'cancel' ||
-         action === 'prepare' || action === 'reconcile') &&
+         action === 'prepare' || action === 'reconcile' || action === 'pause' ||
+         action === 'resume' || action === 'retry') &&
         (!Number.isSafeInteger(body?.expectedRevision) || (body!.expectedRevision as number) < 1)) {
       res.status(400).json({ error: 'Expected task revision required' });
       return;
+    }
+    if (action === 'retry' && (typeof body?.idempotencyKey !== 'string' ||
+        !/^[a-zA-Z0-9_-]{1,128}$/.test(body.idempotencyKey))) {
+      res.status(400).json({ error: 'Retry idempotency key required' }); return;
     }
     const payload = body ? JSON.stringify(body) : '';
     if (Buffer.byteLength(payload) > 4096) {
@@ -76,7 +88,9 @@ export function createAssistantTaskProxy(
     if (action === 'events') route += '/events';
     if (hasId) route += '/' + taskId;
     if (action === 'cancel' || action === 'run' || action === 'result' ||
-        action === 'prepare' || action === 'patch' || action === 'reconcile') route += '/' + action;
+        action === 'prepare' || action === 'patch' || action === 'reconcile' ||
+        action === 'pause' || action === 'resume' || action === 'retry' ||
+        action === 'checkpoint') route += '/' + action;
     const cursor = req.query.cursor;
     if (action === 'events' && cursor !== undefined &&
         (typeof cursor !== 'string' || !/^\d{1,15}$/.test(cursor))) {
@@ -86,7 +100,8 @@ export function createAssistantTaskProxy(
     const query = new URLSearchParams({ sessionId, workspace });
     if (action === 'events' && typeof cursor === 'string') query.set('cursor', cursor);
     const method = action === 'create' || action === 'cancel' || action === 'run' ||
-      action === 'prepare' || action === 'reconcile' ? 'POST' : 'GET';
+      action === 'prepare' || action === 'reconcile' || action === 'pause' ||
+      action === 'resume' || action === 'retry' ? 'POST' : 'GET';
     const upstream = http.request({
       hostname: '127.0.0.1', port, path: route + '?' + query.toString(),
       method, timeout: 8000,
@@ -119,10 +134,14 @@ export function createAssistantTaskProxy(
   router.get('/:taskId', forward('inspect'));
   router.get('/:taskId/result', forward('result'));
   router.get('/:taskId/patch', forward('patch'));
+  router.get('/:taskId/checkpoint', forward('checkpoint'));
   router.post('/', forward('create'));
   router.post('/:taskId/run', forward('run'));
   router.post('/:taskId/prepare', forward('prepare'));
   router.post('/:taskId/reconcile', forward('reconcile'));
   router.post('/:taskId/cancel', forward('cancel'));
+  router.post('/:taskId/pause', forward('pause'));
+  router.post('/:taskId/resume', forward('resume'));
+  router.post('/:taskId/retry', forward('retry'));
   return router;
 }
