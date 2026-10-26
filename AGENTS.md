@@ -16,6 +16,45 @@ This document defines style guidelines, behavioral constraints, and coding stand
 
 ---
 
+## Mandatory T-Line Backend Crash Log Triage (Windows)
+
+**Always inspect crash logs BEFORE changing code, restarting a service, or claiming a Desktop Bridge disconnect is a backend crash.** Full guide: `docs/guides/backend-crash-diagnostics.md`.
+
+### Files to read
+
+| Evidence | Path | Interpretation |
+|---|---|---|
+| Backend crash JSONL | `%USERPROFILE%\.tline-logs\backend-crashes.jsonl` | Synchronous start/exit, `uncaught_exception`, `unhandled_rejection`, stack, PID, uptime and memory; rotated backup ends in `.1` |
+| Backend text log | `%USERPROFILE%\.tline-backend.log` | Previous requests, WebSocket events, bridge activity |
+| Desktop child lifecycle | `backend_exit.log` in the **Tauri app-data directory** | Start, attach/refusal, spawn, startup timeout and exit code **only for a backend child owned by Tauri** |
+| Desktop child stdout/stderr | `backend_run.log` in the **same Tauri app-data directory** | Recent backend output, preserved across launches |
+| SuperAgent bridge log (if present) | `%USERPROFILE%\.tline-superagent.log` | SuperAgent Core/proxy failures; not proof of a T-Line backend crash |
+
+Locate the Tauri app-data directory from the actual app installation (not the repo root); for a Windows diagnostic search, find `backend_exit.log` under `%APPDATA%`. Do not assume the installed binary contains current source changes.
+
+### PowerShell: read recent evidence without changing processes
+
+```powershell
+Get-Content "$HOME\.tline-logs\backend-crashes.jsonl" -Tail 20 -ErrorAction SilentlyContinue
+Get-Content "$HOME\.tline-backend.log" -Tail 100 -ErrorAction SilentlyContinue
+Get-ChildItem "$env:APPDATA" -Recurse -Filter backend_exit.log -ErrorAction SilentlyContinue | ForEach-Object {
+  Write-Host "Tauri logs: $($_.DirectoryName)"
+  Get-Content $_.FullName -Tail 30
+  Get-Content (Join-Path $_.DirectoryName "backend_run.log") -Tail 100 -ErrorAction SilentlyContinue
+}
+```
+
+### Required crash / disconnect investigation
+
+1. First distinguish **backend T-Line port 5779**, **SuperAgent Core port 7888**, and **frontend WebSocket-only disconnect**. Disconnect does not necessarily mean any process crashed.
+2. Inspect crash JSONL, backend log and (if desktop-owned) Tauri lifecycle/output logs. Correlate **PID, UTC timestamps, exit code, and surrounding messages**; `backend_exit.log` uses Unix millisecond timestamps.
+3. `uncaught_exception` provides stack evidence, while `unhandled_rejection` alone does not prove an exit. `unexpected_exit` without a JS exit event suggests an external kill, native runtime issue or OS termination. `startup_timeout` is a readiness/auth failure, not proof of a crash.
+4. Reporter sources: `backend/src/crashDiagnostics.ts`, `backend/src/server.ts`, `desktop-tauri/src-tauri/src/backend_diagnostics.rs`, `desktop-tauri/src-tauri/src/lib.rs`. For bridge reconnects inspect `frontend/src/components/SuperAgentConsole.tsx` and `backend/src/superAgentBridge.ts`.
+5. Reproduce fatal errors **only in an isolated test child**; never force-kill the live backend, Core, or unrelated processes. Run `bun --bun x vitest run --environment node backend/tests/crashDiagnostics.test.ts backend/tests/coreReconnectSafety.test.ts` and `cargo test --manifest-path desktop-tauri/src-tauri/Cargo.toml --lib backend_diagnostics` for relevant changes.
+6. Logs contain **best-effort redaction**, not guaranteed secret removal. Never forward unreviewed log content or tokens to external destinations. If Tauri itself is forcibly terminated, it cannot record a subsequent child exit. Do not mistake missing Tauri logs for evidence of no crash when backend was attached externally.
+
+---
+
 ## SuperAgent Integration Development
 
 This section governs all development related to the t-line ↔ SuperAgent integration. When working on any feature that touches SuperAgent connectivity, always read **both** codebases before making changes.

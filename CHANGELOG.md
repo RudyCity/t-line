@@ -1,3 +1,9 @@
+## [1.3.734] - 2026-10-26
+
+### Agent Crash Log Triage Instructions
+- Updated the repository agent rules with exact backend crash and Tauri supervisor log locations, read-only PowerShell commands, process/PID correlation, and safe diagnostics order for disconnected desktop bridges.
+- Required agents to inspect crash evidence before modifying code or restarting owned processes, and linked the extended crash diagnostics guide.
+
 ## [1.3.733] - 2026-10-26
 
 ### Durable Backend Crash Diagnostics
