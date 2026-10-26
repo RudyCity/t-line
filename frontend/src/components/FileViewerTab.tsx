@@ -2,10 +2,6 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { FileCode, RotateCcw, Check, ZoomIn, ZoomOut, Maximize, Image as ImageIcon, FileText, File } from 'lucide-react';
 import Editor, { loader } from '@monaco-editor/react';
 import DOMPurify from 'dompurify';
-
-// Configure Monaco to load from local public/vs path
-loader.config({ paths: { vs: '/vs' } });
-
 interface FileViewerTabProps {
   filePath: string;
   token: string;
@@ -82,6 +78,27 @@ function getLanguageFromPath(filePath: string): string {
 export function FileViewerTab({ filePath, token, onSave, theme, themeBackground, isActive }: FileViewerTabProps) {
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [readError, setReadError] = useState<string | null>(null);
+  const [readRetryKey, setReadRetryKey] = useState(0);
+  const [monacoReady, setMonacoReady] = useState(false);
+  const [monacoError, setMonacoError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    // Monaco 0.55+ has no AMD /vs/loader.js; use local ESM workers instead.
+    // Let the file's text render without waiting for the Monaco bundle.
+    import('./monacoSetup')
+      .then(({ monaco }) => {
+        loader.config({ monaco });
+        return loader.init();
+      })
+      .then(() => { if (active) setMonacoReady(true); })
+      .catch((error) => {
+        console.error('[file-viewer] Monaco unavailable, falling back to text', error);
+        if (active) setMonacoError(true);
+      });
+    return () => { active = false; };
+  }, []);
   
   // Editor States
   const [editedContent, setEditedContent] = useState('');
@@ -178,6 +195,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
 
   useEffect(() => {
     if (!shouldLoadAsText) {
+      setReadError(null);
       setLoading(false);
       return;
     }
@@ -186,13 +204,14 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
     async function loadFile() {
       setLoading(true);
       setContent(null);
+      setReadError(null);
       setSaveError(null);
       setSaveSuccess(false);
       try {
         const res = await fetch(`/api/fs/read?path=${encodeURIComponent(filePath)}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (!res.ok) throw new Error('Failed to read file');
+        if (!res.ok) throw new Error('Failed to read file (HTTP ' + res.status + ')');
         const data = await res.json();
         if (active) {
           setContent(data.content);
@@ -200,7 +219,11 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
         }
       } catch (e) {
         if (active) {
-          setContent('(Unable to read file content)');
+          // Never insert an error placeholder into file content: the auto-save
+          // effect would otherwise interpret it as an edit and overwrite data.
+          setContent(null);
+          setEditedContent('');
+          setReadError(e instanceof Error ? e.message : 'Unable to read file');
         }
       } finally {
         if (active) {
@@ -211,16 +234,9 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
     loadFile();
     return () => {
       active = false;
-      // Dispose of the Monaco model for this file when switching/unmounting to prevent memory leaks
-      loader.init().then((monaco) => {
-        const models = monaco.editor.getModels();
-        const targetModel = models.find((m: any) => m.uri.path.endsWith(filePath.replace(/\\/g, '/')));
-        if (targetModel) {
-          targetModel.dispose();
-        }
-      }).catch(() => {});
+      // The React Monaco wrapper disposes its models on unmount.
     };
-  }, [filePath, token, shouldLoadAsText]);
+  }, [filePath, token, shouldLoadAsText, readRetryKey]);
 
   // Monaco Editor theme effect
   useEffect(() => {
@@ -350,6 +366,18 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
   }, [filePath]);
 
   const isDirty = content !== null && content !== editedContent;
+
+  if (readError && !loading) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-sm" role="alert">
+        <FileText size={24} className="text-amber-500" />
+        <span>Unable to open file: {readError}</span>
+        <button type="button" onClick={() => setReadRetryKey(key => key + 1)} className="rounded border border-[var(--border-color)] px-3 py-1.5">
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -681,6 +709,23 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
 
       {/* Editor Area */}
       <div className="flex-1 w-full h-full overflow-hidden relative">
+        {!monacoReady ? (
+          <div className="w-full h-full flex flex-col">
+            {monacoError && (
+              <div className="px-3 py-2 text-xs text-amber-500" role="alert">
+                Advanced editor unavailable; basic text editing remains available.
+              </div>
+            )}
+            <textarea
+              aria-label="File content editor"
+              spellCheck={false}
+              className="flex-1 w-full h-full resize-none outline-none px-4 py-3 text-[13px] font-mono leading-5"
+              style={{ background: themeBackground || 'var(--bg-main)', color: 'var(--text-primary)' }}
+              value={editedContent}
+              onChange={e => setEditedContent(e.target.value)}
+            />
+          </div>
+        ) : (
         <Editor
           height="100%"
           width="100%"
@@ -718,6 +763,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
             fontFamily: "var(--font-mono), Consolas, 'Courier New', monospace"
           }}
         />
+        )}
       </div>
     </div>
   );
