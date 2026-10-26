@@ -429,8 +429,10 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
                 <p className="text-[var(--text-muted)]">
                   {executionEvidence.steps.length} observations ·{' '}
                   {executionEvidence.preparedCount ?? 0} pre-execution checkpoints ·{' '}
+                  {executionEvidence.receiptCount ?? 0} executor receipts ·{' '}
                   {executionEvidence.incomplete} unfinished ·{' '}
                   {executionEvidence.unpreparedCount ?? 0} missing preflight ·{' '}
+                  {executionEvidence.missingReceipts ?? 0} missing receipts ·{' '}
                   {executionEvidence.externalUnverified} external unverified
                 </p>
                 {executionEvidence.missingHistory && (
@@ -444,13 +446,19 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
                   </p>
                 )}
                 <p className="text-[var(--text-muted)]">
-                  This journal contains observations, not restorable model state. Running-worker resume is unavailable.
+                  Executor receipts are local observations, not provider-certified transactions or restorable model state. Running-worker resume is unavailable.
                 </p>
                 <ol className="max-h-40 overflow-y-auto space-y-1" aria-label="Recorded step timeline">
                   {executionEvidence.steps.slice(-16).map(step => (
                     <li key={step.seq} className="flex items-center justify-between gap-2 rounded border border-[var(--border-color)] px-2 py-1.5">
                       <span className="min-w-0 truncate">{step.seq}. {step.tool} · {step.phase}</span>
-                      <span className="shrink-0 text-[var(--text-muted)]">{step.outcome ?? step.effect}</span>
+                      <span className="shrink-0 text-[var(--text-muted)]">
+                        {step.phase === 'receipted'
+                          ? step.receiptProof === 'external_adapter'
+                            ? 'External adapter · not provider verified'
+                            : 'Local adapter receipt'
+                          : (step.outcome ?? step.effect)}
+                      </span>
                     </li>
                   ))}
                 </ol>

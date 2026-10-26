@@ -129,6 +129,31 @@ describe('session-scoped background analysis panel', () => {
     fireEvent.click(screen.getByRole('button',{name:'Close execution evidence'}));
     expect(screen.queryByRole('region',{name:'Execution step evidence'})).toBeNull();
   });
+  it('distinguishes local executor receipts from unverified external adapter receipts', async () => {
+    vi.mocked(getAssistantCheckpoint).mockResolvedValue({
+      success:true,taskId:draft.taskId,revision:3,status:'failed',
+      checkpoint:'manual-review-only',canResumeWithoutExecution:false,
+      executionResumptionSupported:false,
+      execution:{schemaVersion:1,taskId:draft.taskId,
+        incomplete:0,externalUnverified:1,preparedCount:2,unpreparedCount:0,
+        receiptCount:2,missingReceipts:0,missingHistory:false,manualReviewRequired:true,
+        executionResumptionSupported:false,
+        steps:[
+          {seq:1,at:100,callRef:'a'.repeat(24),tool:'read',phase:'receipted',
+            effect:'local_read',receiptRef:'c'.repeat(24),receiptProof:'local_adapter'},
+          {seq:2,at:200,callRef:'b'.repeat(24),tool:'web_search',phase:'receipted',
+            effect:'external_unverified',receiptRef:'d'.repeat(24),receiptProof:'external_adapter'},
+        ],
+      },
+    });
+    await open();
+    fireEvent.click(screen.getByRole('button',{name:'Inspect checkpoint Investigate app'}));
+    expect(await screen.findByText(/2 executor receipts/)).toBeTruthy();
+    expect(screen.getByText('Local adapter receipt')).toBeTruthy();
+    expect(screen.getByText('External adapter · not provider verified')).toBeTruthy();
+    expect(screen.getByText(/not provider-certified transactions/)).toBeTruthy();
+    expect(runAssistantReadOnlyTask).not.toHaveBeenCalled();
+  });
   it('warns when a running task has no durable history, without trying to resume', async () => {
     vi.mocked(getAssistantCheckpoint).mockResolvedValue({
       success:true,taskId:draft.taskId,revision:3,status:'failed',
