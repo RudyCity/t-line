@@ -1,3 +1,11 @@
+## [1.3.733] - 2026-10-26
+
+### Durable Backend Crash Diagnostics
+- Added synchronous backend crash/event reporting with PID, runtime version, uptime, memory snapshot, redacted stack trace, and bounded recent console context, including a verified isolated fatal-child test.
+- Added Tauri-owned backend lifecycle logs for spawn, startup timeout, refusal to attach to an unverified service, and unexpected kernel process exit. These records survive abrupt Bun termination.
+- Preserved stdout/stderr across desktop backend launches using a shared bounded append-only writer, preventing concurrent output streams from truncating one another; sensitive strings receive best-effort redaction.
+- Documented log locations and Windows debugging commands in `docs/guides/backend-crash-diagnostics.md` and added automated crash/exit evidence tests.
+
 ## [1.3.732] - 2026-10-26
 
 ### SuperAgent Studio Modular NLE Redesign & Architecture Refactor

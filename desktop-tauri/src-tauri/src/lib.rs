@@ -1,5 +1,4 @@
-use std::fs::File;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
@@ -15,6 +14,7 @@ use std::os::windows::process::CommandExt;
 
 mod updater;
 mod backend_identity;
+mod backend_diagnostics;
 mod tray_logic;
 
 mod state;
@@ -1022,12 +1022,16 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
     
     thread::spawn(move || {
         let mut bypass_token = get_bypass_token();
+        let log_dir = app_handle_clone.path().app_data_dir()
+            .unwrap_or_else(|_| std::env::temp_dir().join("tline"));
+        backend_diagnostics::record_backend_event(&log_dir, "start_attempt", None, "desktop_backend");
 
         // Authenticate with a nonce HMAC; do not send bearer credentials
         // to an arbitrary process merely because it listens on this port.
         let occupied = is_port_active(port);
         let backend_verified = occupied && verify_local_backend(port, bypass_token.as_deref());
         if decide_port(occupied, backend_verified) == PortDecision::RefuseOccupied {
+            backend_diagnostics::record_backend_event(&log_dir, "start_refused", None, "unverified_port_owner");
             eprintln!("[tauri] Port {} is occupied by an unverified process; refusing to terminate it.", port);
             let state = app_handle_clone.state::<DesktopState>();
             *state.status.lock().unwrap() = "error".to_string();
@@ -1040,17 +1044,14 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
             return;
         }
         if backend_verified {
+            backend_diagnostics::record_backend_event(&log_dir, "attach", None, "verified_external_backend");
             println!("[tauri] Verified existing T-Line backend on port {}; attaching without ownership.", port);
         } else {
             println!("[tauri] Spawning Bun backend process...");
-            
-            let log_file_path = if let Ok(app_data) = app_handle_clone.path().app_data_dir() {
-                std::fs::create_dir_all(&app_data).ok();
-                app_data.join("backend_run.log")
-            } else {
-                PathBuf::from("backend_run.log")
-            };
 
+            // Append across launches instead of recreating/truncating the
+            // previous run's last stderr just when the user needs it.
+            let log_file_path = log_dir.join("backend_run.log");
             let mut child = None;
 
             if is_dev {
@@ -1066,7 +1067,11 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
                         {
                             command.creation_flags(0x08000000);
                         }
-                        child = command.spawn().ok();
+                        match command.spawn() {
+                            Ok(process) => child = Some(process),
+                            Err(err) => backend_diagnostics::record_backend_event(
+                                &log_dir, "dev_spawn_error", None, &format!("error_kind={:?}", err.kind())),
+                        }
                     }
                 }
             }
@@ -1097,6 +1102,7 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
                         let clean_path = path_str.strip_prefix(r"\\?\").unwrap_or(&path_str);
                         println!("[tauri] Spawning Bun backend with script: {}", clean_path);
                         let Some(bun_runtime) = available_bun_runtime(&app_handle_clone) else {
+                            backend_diagnostics::record_backend_event(&log_dir, "spawn_failed", None, "bun_runtime_missing");
                             eprintln!("[tauri] Neither bundled nor system Bun is available.");
                             return;
                         };
@@ -1119,9 +1125,14 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
                         {
                             cmd.creation_flags(0x08000000);
                         }
-                        child = cmd.spawn().ok();
+                        match cmd.spawn() {
+                            Ok(process) => child = Some(process),
+                            Err(err) => backend_diagnostics::record_backend_event(
+                                &log_dir, "spawn_error", None, &format!("error_kind={:?}", err.kind())),
+                        }
                     }
                     None => {
+                        backend_diagnostics::record_backend_event(&log_dir, "spawn_failed", None, "backend_script_missing");
                         eprintln!("[tauri] Backend script not found in resource paths.");
                     }
                 }
@@ -1129,40 +1140,40 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
 
             match child {
                 Some(mut spawned_child) => {
+                    let pid = spawned_child.id();
                     let stdout = spawned_child.stdout.take().expect("failed to get stdout");
                     let stderr = spawned_child.stderr.take().expect("failed to get stderr");
-                    
+                    backend_diagnostics::record_backend_event(&log_dir, "spawned", Some(pid), "owned_backend");
+                    let writer = backend_diagnostics::BackendRunLog::open(&log_file_path)
+                        .ok().map(Arc::new);
+                    if let Some(ref log) = writer {
+                        log.line("lifecycle", &format!("Backend launched pid={pid}"));
+                    }
                     {
                         let mut guard = backend_child_thread.lock().unwrap();
                         *guard = Some(spawned_child);
                     }
 
-                    let log_file_clone = log_file_path.clone();
+                    let stdout_writer = writer.clone();
                     thread::spawn(move || {
-                        if let Ok(mut log_file) = File::create(&log_file_clone) {
-                            let reader = BufReader::new(stdout);
-                            for line in reader.lines() {
-                                if let Ok(l) = line {
-                                    writeln!(log_file, "[stdout] {}", l).ok();
-                                    log_file.flush().ok();
-                                }
+                        // Always drain the pipe, even if log storage is unavailable.
+                        for line in BufReader::new(stdout).lines() {
+                            if let (Ok(text), Some(ref log)) = (line, &stdout_writer) {
+                                log.line("stdout", &text);
                             }
                         }
                     });
 
                     thread::spawn(move || {
-                        if let Ok(mut log_file) = File::options().append(true).open(&log_file_path) {
-                            let reader = BufReader::new(stderr);
-                            for line in reader.lines() {
-                                if let Ok(l) = line {
-                                    writeln!(log_file, "[stderr] {}", l).ok();
-                                    log_file.flush().ok();
-                                }
+                        for line in BufReader::new(stderr).lines() {
+                            if let (Ok(text), Some(ref log)) = (line, &writer) {
+                                log.line("stderr", &text);
                             }
                         }
                     });
                 }
                 None => {
+                    backend_diagnostics::record_backend_event(&log_dir, "spawn_failed", None, "backend_process_not_created");
                     eprintln!("[tauri] Failed to spawn backend process.");
                 }
             }
@@ -1254,6 +1265,7 @@ fn spawn_backend(app_handle: tauri::AppHandle) {
                 main_window.set_focus().ok();
             }
         } else {
+            backend_diagnostics::record_backend_event(&log_dir, "startup_timeout", None, "backend_not_authenticated_within_15s");
             eprintln!("[tauri] Timeout waiting for backend server to start.");
             {
                 let state = app_handle_clone.state::<DesktopState>();
@@ -1367,7 +1379,33 @@ fn poll_backend(app_handle: tauri::AppHandle) {
         
         loop {
             thread::sleep(Duration::from_secs(3));
-            
+
+            // The child may disappear without executing JS signal/exit hooks
+            // (OOM, native crash, OS termination). Record the kernel exit code
+            // before dropping the owned process handle. Never inspect or stop
+            // an attached external backend here.
+            let exited_child = {
+                let mut guard = state.backend_child.lock().unwrap();
+                if let Some(child) = guard.as_mut() {
+                    match child.try_wait() {
+                        Ok(Some(exit)) => {
+                            let pid = child.id();
+                            guard.take();
+                            Some((pid, exit.to_string()))
+                        }
+                        _ => None,
+                    }
+                } else {
+                    None
+                }
+            };
+            if let Some((pid, exit)) = exited_child {
+                let log_dir = app_handle.path().app_data_dir()
+                    .unwrap_or_else(|_| std::env::temp_dir().join("tline"));
+                backend_diagnostics::record_backend_event(&log_dir, "unexpected_exit", Some(pid), &exit);
+                eprintln!("[tauri] Owned backend pid={pid} exited unexpectedly: {exit}. Diagnostics saved.");
+            }
+
             let token = get_bypass_token();
             let running = verify_local_backend(port, token.as_deref());
             let owned = state.backend_child.lock().unwrap().is_some();

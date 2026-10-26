@@ -59,6 +59,9 @@ export function writeCrashEvent(event: CrashEvent, home = os.homedir()): boolean
     fs.mkdirSync(path.dirname(target), { recursive: true, mode: 0o700 });
     if (fs.existsSync(target) && fs.statSync(target).size > MAX_CRASH_LOG_BYTES) {
       const backup = target + '.1';
+      try { fs.unlinkSync(backup); } catch (error: any) {
+        if (error?.code !== 'ENOENT') throw error;
+      }
       fs.renameSync(target, backup);
     }
     const sanitized = {
@@ -103,7 +106,7 @@ export function installBackendCrashDiagnostics(home = os.homedir()): void {
     emit('uncaught_exception', { origin, error: formatError(error) }, true);
   });
   process.on('unhandledRejection', reason => {
-    lastFatal = 'unhandled_rejection';
+    // Record the rejected operation, but do not claim it caused a later exit.
     emit('unhandled_rejection', { error: formatError(reason) }, true);
   });
   process.on('exit', code => {
