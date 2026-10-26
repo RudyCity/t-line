@@ -53,6 +53,13 @@ const control = 'rounded border border-[var(--border-color)] bg-[var(--bg-main)]
 const action = 'inline-flex items-center gap-1.5 rounded border border-[var(--border-color)] bg-[var(--bg-card)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-main)] transition-colors hover:bg-[var(--bg-card-hover)] hover:border-[var(--color-primary)]/40 focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] disabled:opacity-40 disabled:pointer-events-none';
 const primary = 'inline-flex items-center justify-center gap-1.5 rounded bg-[var(--color-primary)] px-3 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 disabled:pointer-events-none';
 
+const PROMPT_SUGGESTIONS = [
+  { label: '🚀 SaaS Promo', prompt: 'Create a 15-second modern SaaS promo with dark background, glowing cyan accents, floating UI cards, and bold headline' },
+  { label: '💻 Code Tour', prompt: 'Animate a sleek terminal code card showing an async TypeScript function with syntax highlighting and subtle pulse glow' },
+  { label: '📊 Metric KPI', prompt: 'Display an animated KPI card featuring +240% MRR growth with a glowing benchmark chart and animated counter' },
+  { label: '🎬 Release Reel', prompt: 'High-energy feature release announcement with kinetic typography entrance, smooth zoom transitions, and particle sparks' },
+];
+
 export function StudioDirectorSection({
   selectedId,
   busy,
@@ -101,12 +108,17 @@ export function StudioDirectorSection({
     <div className="space-y-3.5 p-3.5 text-[var(--text-main)]" aria-label="AI Studio Director">
       <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-2.5">
         <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded bg-[var(--color-primary)]/15 text-[var(--color-primary)]">
+          <span className="flex h-6 w-6 items-center justify-center rounded bg-[var(--color-primary)]/15 text-[var(--color-primary)] shadow-sm">
             <Sparkles size={14} />
           </span>
-          <h3 className="text-xs font-bold uppercase tracking-wide">AI Studio Director</h3>
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-main)]">AI Studio Director</h3>
+            <p className="text-[10px] text-[var(--text-muted)] font-mono">Prompt Console & Revisions</p>
+          </div>
         </div>
-        <span className="text-[10px] text-[var(--text-muted)]">Prompt → Storyboard → MP4</span>
+        <span className="rounded bg-[var(--bg-card)] px-1.5 py-0.5 font-mono text-[9px] text-[var(--text-muted)] border border-[var(--border-color)]">
+          Prompt → Storyboard → MP4
+        </span>
       </div>
 
       {promptHistory.length > 0 && (
@@ -128,9 +140,32 @@ export function StudioDirectorSection({
         }}
       >
         <div>
-          <label className="block text-[11px] font-medium text-[var(--text-muted)] mb-1" htmlFor="motion-director-prompt">
-            {selectedId ? 'Describe a revision to this motion' : 'Describe the motion you want to create'}
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-[11px] font-medium text-[var(--text-muted)]" htmlFor="motion-director-prompt">
+              {selectedId ? 'Describe a revision to this motion' : 'Describe the motion you want to create'}
+            </label>
+            {!selectedId && (
+              <span className="text-[10px] text-[var(--text-muted)]">Quick presets:</span>
+            )}
+          </div>
+
+          {!selectedId && (
+            <div className="flex flex-wrap gap-1 mb-1.5">
+              {PROMPT_SUGGESTIONS.map(sug => (
+                <button
+                  key={sug.label}
+                  type="button"
+                  className="rounded-full border border-[var(--border-color)] bg-[var(--bg-card)] px-2 py-0.5 text-[10px] text-[var(--text-muted)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--text-main)] active:scale-95"
+                  onClick={() => onChangePrompt(sug.prompt)}
+                  disabled={busy}
+                  title={sug.prompt}
+                >
+                  {sug.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           <textarea
             id="motion-director-prompt"
             aria-label="Studio prompt"
@@ -139,7 +174,7 @@ export function StudioDirectorSection({
             maxLength={2000}
             value={motionPrompt}
             onChange={event => onChangePrompt(event.target.value)}
-            placeholder="Buat video promosi produk 15 detik, modern, background gelap dan teks animasi..."
+            placeholder="Describe your motion scene (e.g. 15s modern product teaser, dark background, bold animated headline, glowing accents)..."
             disabled={busy}
           />
         </div>
@@ -318,7 +353,7 @@ export function StudioDirectorSection({
               disabled={busy}
               value={promptVoiceover}
               onChange={event => onChangeVoiceover(event.target.value)}
-              placeholder="Tuliskan kalimat narasi pengisi suara (maksimal 220 karakter)"
+              placeholder="Enter voiceover narration script (up to 220 characters)..."
             />
           </div>
         )}

@@ -1,4 +1,4 @@
-## [1.3.736] - 2026-10-26
+## [1.3.737] - 2026-10-26
 
 ### Dual-Pillar Studio Architecture & Prompt Console
 - Redesigned the SuperAgent Studio interface (`StudioTab.tsx`) into two explicit, dedicated pillars: a prominent **Prompt & AI Director Console** on the left and an interactive **Visual & Timeline Editor** on the right.
