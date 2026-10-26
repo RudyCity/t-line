@@ -1,3 +1,10 @@
+## [1.3.745] - 2026-10-26
+
+### Session Identity Preservation & Real-Time Event Stream Delivery
+- Resolved an issue where assistant chat turns and execution stream events were not received by the chat console due to session ID mutation during history path resolution.
+- Preserved explicit session identifiers across history resolution and persistence (`PathResolver` and `HistoryManager`), preventing Server-Sent Events (SSE) filter drops.
+- Bound incoming sessions directly to history file paths upon initialization, maintaining uninterrupted communication between the console and core runtime.
+
 ## [1.3.744] - 2026-10-26
 
 ### Assistant Model Preset Synchronization & Subagent Inheritance Control
