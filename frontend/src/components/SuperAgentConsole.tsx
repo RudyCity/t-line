@@ -10,6 +10,7 @@ import { ActiveTasksBar, ChecklistTaskItem } from './ActiveTasksBar';
 import { SuperAgentTaskMonitor } from './SuperAgentTaskMonitor';
 import { type AssistantTaskHandoff } from './AssistantTaskDraftPanel';
 import { AssistantActivityCenter } from './AssistantActivityCenter';
+import { listCoreApprovals } from './CoreApprovalStatusApi';
 import { resolveAgentChatModeSwitch } from './agentModeSession';
 import { SuperAgentBrainExplorer } from './SuperAgentBrainExplorer';
 import { SuperAgentInputContainer } from './SuperAgentInputContainer';
@@ -28,7 +29,7 @@ import { History, Folder, Activity, Sparkles, RefreshCw, ArrowDown, MoreVertical
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { parseCoreReconnectNotice, type CoreReconnectNotice } from '../services/coreReconnectNotice';
 import { CoreReconnectBanner } from './CoreReconnectBanner';
-import { addRule, loadRules, matchesRule, patternFromPermission, toolNameFromPermission } from '../utils/permissionRules';
+import { addRule, loadRules, matchesRule, patternFromPermission } from '../utils/permissionRules';
 
 interface SuperAgentConsoleProps {
   activeWorkspacePath?: string;
@@ -378,6 +379,10 @@ export function SuperAgentConsole({
 
   // Interactive agent states
   const [pendingPermission, setPendingPermission] = useState<PendingPermission | null>(null);
+  const [approvalDispatch, setApprovalDispatch] = useState<'idle' | 'submitting' | 'unknown' | 'rejected'>('idle');
+  const [approvalFeedback, setApprovalFeedback] = useState('');
+  const approvalInFlight = useRef<string | null>(null);
+  const alwaysRuleForAck = useRef<{ permissionId: string; rule: ReturnType<typeof patternFromPermission> } | null>(null);
   const [pendingQuestion, setPendingQuestion] = useState<PendingQuestion | null>(null);
   const [selectedQuestionAnswers, setSelectedQuestionAnswers] = useState<string[]>([]);
   const [customQuestionInput, setCustomQuestionInput] = useState('');
@@ -545,6 +550,30 @@ export function SuperAgentConsole({
       if (activeWsUrlRef.current !== wsUrl) return; // Ignore stale socket events after session/workspace switch.
       try {
         const payload = JSON.parse(event.data);
+        if (payload?.type === 'permission_decision_ack') {
+          if (payload.sessionId !== activeSessionIdRef.current ||
+              payload.permissionId !== approvalInFlight.current) return;
+          approvalInFlight.current = null;
+          if (payload.accepted === true) {
+            setApprovalDispatch('idle'); setApprovalFeedback('Approval accepted by Core.');
+            const approvedRule = alwaysRuleForAck.current;
+            if (approvedRule !== null && approvedRule.permissionId === payload.permissionId) {
+              addRule(workspace || '', {
+                pattern: approvedRule.rule,
+                description: 'Confirmed tool approval', createdAt: Date.now(),
+              });
+            }
+            alwaysRuleForAck.current = null;
+            setPendingPermission(prev => prev?.permissionId === payload.permissionId ? null : prev);
+          } else {
+            alwaysRuleForAck.current = null;
+            setApprovalDispatch(payload.code === 'OUTCOME_UNKNOWN' ? 'unknown' : 'rejected');
+            setApprovalFeedback(payload.code === 'OUTCOME_UNKNOWN'
+              ? 'Core response uncertain. Check status before deciding again.'
+              : 'Core rejected decision (' + String(payload.code || 'unknown') + ').');
+          }
+          return;
+        }
         if (payload?.type === 'core_reconnect_state') {
           const notice = parseCoreReconnectNotice(payload, activeSessionIdRef.current);
           if (notice) setCoreReconnectNotice(notice.phase === 'connected' ? null : notice);
@@ -570,6 +599,11 @@ export function SuperAgentConsole({
             return merged.slice(-40);
           });
         }
+        if (payload?.type === 'permission_required') {
+          approvalInFlight.current = null;
+          alwaysRuleForAck.current = null;
+          setApprovalDispatch('idle'); setApprovalFeedback('');
+        }
         // Existing explicit workspace rules. Scope auto-approval to this active socket/session.
         if (payload?.type === 'permission_required' && socket.readyState === WebSocket.OPEN &&
             activeWsUrlRef.current === wsUrl && !isAbortedRef.current) {
@@ -585,7 +619,10 @@ export function SuperAgentConsole({
               permissionId: payload.permissionId,
               approval: true,
             }));
-            setMessages(prev => [...prev, { role: 'system', text: `Auto-approved: ${toolNameFromPermission(candidate)}` }]);
+            approvalInFlight.current = payload.permissionId;
+            setPendingPermission(candidate);
+            setApprovalDispatch('submitting');
+            setApprovalFeedback('Saved rule matched. Awaiting Core acknowledgement.');
             return;
           }
         }
@@ -606,6 +643,11 @@ export function SuperAgentConsole({
       console.log('[SuperAgent WS] Connection closed.');
       if (activeWsUrlRef.current !== wsUrl) return; // intentional unmount
       setBrowserBridgeReady(false);
+      if (approvalInFlight.current) {
+        approvalInFlight.current = null;
+        setApprovalDispatch('unknown');
+        setApprovalFeedback('Connection interrupted after approval dispatch. Verifying Core status before another action.');
+      }
       setLoading(false);
       setCoreReconnectNotice({
         type: 'core_reconnect_state', sessionId: activeSessionIdRef.current,
@@ -1065,38 +1107,63 @@ export function SuperAgentConsole({
     handleNewChat();
   };
 
+  useEffect(() => {
+    if (!pendingPermission || !workspace || !activeSessionId) return;
+    const controller = new AbortController();
+    const reconcile = async () => {
+      try {
+        const states = await listCoreApprovals(workspace, activeSessionId, getAuthHeader, controller.signal);
+        if (controller.signal.aborted) return;
+        const matching = states.find(item => item.permissionId === pendingPermission.permissionId);
+        if (matching && matching.state !== 'pending') {
+          const approvedRule = alwaysRuleForAck.current;
+          if (approvedRule && approvedRule.permissionId === matching.permissionId &&
+              (matching.state === 'approved' || matching.state === 'approved_session')) {
+            addRule(workspace, { pattern: approvedRule.rule,
+              description: 'Confirmed tool approval', createdAt: Date.now() });
+          }
+          approvalInFlight.current = null;
+          alwaysRuleForAck.current = null;
+          setPendingPermission(current => current?.permissionId === matching.permissionId ? null : current);
+          setApprovalDispatch('idle');
+          setApprovalFeedback('Core approval state: ' + matching.state.replace(/_/g, ' '));
+        } else if (matching?.state === 'pending' && approvalInFlight.current === null) {
+          setApprovalDispatch(current => current === 'unknown' || current === 'rejected' ? 'idle' : current);
+          setApprovalFeedback('Core confirms the request is still pending. You may decide explicitly.');
+        }
+      } catch { /* Offline/older Core: retain unresolved decision; never replay. */ }
+    };
+    void reconcile();
+    const timer = window.setInterval(() => { if (!document.hidden) void reconcile(); }, 5000);
+    return () => { controller.abort(); window.clearInterval(timer); };
+  }, [pendingPermission?.permissionId, workspace, activeSessionId]);
+
   const handlePermissionDecision = (approval: boolean | 'session' | 'always') => {
-    if (!pendingPermission || !ws || ws.readyState !== WebSocket.OPEN ||
+    if (!pendingPermission || approvalDispatch !== 'idle' || approvalInFlight.current ||
+        !ws || ws.readyState !== WebSocket.OPEN ||
         wsRef.current !== ws || !activeSessionId) return;
+    if (approval !== 'always') alwaysRuleForAck.current = null;
     if (approval === 'always') {
       if (!window.confirm('Allow this tool automatically for future actions in this workspace? Review tool scope carefully.')) return;
-      const perm = { ...pendingPermission };
-      const rule = {
-        pattern: patternFromPermission(perm),
-        description: toolNameFromPermission(perm),
-        createdAt: Date.now(),
+      alwaysRuleForAck.current = {
+        permissionId: pendingPermission.permissionId,
+        rule: patternFromPermission(pendingPermission),
       };
-      try {
-        ws.send(JSON.stringify({
-          type: 'approve_permission',
-          permissionId: pendingPermission.permissionId,
-          approval: true
-        }));
-        addRule(workspace || '', rule);
-      } catch {
-        setMessages(prev => [...prev, { role: 'system', text: 'Approval dispatch failed; no persistent rule was saved.' }]);
-        return;
-      }
-      setPendingPermission(null);
-      setMessages(prev => [...prev, { role: 'system', text: `Auto-approve rule saved: ${rule.pattern}` }]);
-      return;
     }
-    ws.send(JSON.stringify({
-      type: 'approve_permission',
-      permissionId: pendingPermission.permissionId,
-      approval
-    }));
-    setPendingPermission(null);
+    approvalInFlight.current = pendingPermission.permissionId;
+    setApprovalDispatch('submitting');
+    setApprovalFeedback('Decision sent · waiting for Core acknowledgement.');
+    try {
+      ws.send(JSON.stringify({
+        type: 'approve_permission', permissionId: pendingPermission.permissionId,
+        approval: approval === 'always' ? true : approval,
+      }));
+    } catch {
+      approvalInFlight.current = null;
+      alwaysRuleForAck.current = null;
+      setApprovalDispatch('unknown');
+      setApprovalFeedback('Dispatch uncertain. Reconcile with Core before another decision.');
+    }
   };
 
   const handleQuestionSubmit = () => {
@@ -1408,6 +1475,7 @@ export function SuperAgentConsole({
             workspace={workspace} sessionId={activeSessionId}
             messages={messages} subagents={timelineSubagents}
             pendingPermission={pendingPermission} onPermissionDecision={handlePermissionDecision}
+            approvalSubmitting={approvalDispatch !== 'idle'} approvalFeedback={approvalFeedback}
             connected={Boolean(ws && ws.readyState === WebSocket.OPEN)} approvalJump={approvalJump}
             handoff={delegateHandoff?.workspace === workspace && delegateHandoff?.sessionId === activeSessionId
               ? delegateHandoff : null}

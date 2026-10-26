@@ -1077,8 +1077,29 @@ let suppressBufferWrite = false;
         }
       } else if (actionType === 'approve_permission') {
         const { permissionId, approval } = parsed;
-        logSuperAgentEvent('permission_response', { permissionId, approval });
-        await sendSuperAgentRequest('/api/approve', { permissionId, approval, sessionId: initialSessionId }, workspacePath);
+        if (typeof permissionId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(permissionId) ||
+            (approval !== true && approval !== false && approval !== 'session')) {
+          ws.send(JSON.stringify({ type: 'permission_decision_ack', sessionId: initialSessionId,
+            permissionId: typeof permissionId === 'string' ? permissionId : '',
+            accepted: false, code: 'INVALID_DECISION' }));
+          return;
+        }
+        logSuperAgentEvent('permission_response', { action: 'decision_sent', approved: approval !== false });
+        try {
+          const decision = await sendSuperAgentRequest('/api/approve',
+            { permissionId, approval, sessionId: initialSessionId }, workspacePath, 10000);
+          if (!isClosed && ws.readyState === WebSocket.OPEN)
+            ws.send(JSON.stringify({ type: 'permission_decision_ack', sessionId: initialSessionId,
+              permissionId, accepted: decision?.success === true,
+              code: decision?.success === true ? 'ACCEPTED' :
+                decision?.statusCode === 404 ? 'NOT_FOUND' :
+                decision?.statusCode === 409 ? 'ALREADY_DECIDED' : 'CORE_REJECTED' }));
+        } catch {
+          // Unknown outcome: never send the same approval again automatically.
+          if (!isClosed && ws.readyState === WebSocket.OPEN)
+            ws.send(JSON.stringify({ type: 'permission_decision_ack', sessionId: initialSessionId,
+              permissionId, accepted: false, code: 'OUTCOME_UNKNOWN' }));
+        }
       } else if (actionType === 'answer_question') {
         const { questionId, answer } = parsed;
         logSuperAgentEvent('question_response', { questionId, answer });

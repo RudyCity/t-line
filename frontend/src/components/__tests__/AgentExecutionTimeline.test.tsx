@@ -132,6 +132,27 @@ describe('Per-agent timeline evidence and approval', () => {
     expect(decide).not.toHaveBeenCalled();
   });
 
+  it('filters agents and actions, shows dashboard and keeps tool controls non-automatic', () => {
+    const controls = vi.fn();
+    const openTasks = vi.fn();
+    render(<AgentExecutionTimeline messages={mainMessages} subagents={[agent]} drafts={[task]}
+      onTaskControl={controls} onOpenTaskPanel={openTasks}/>);
+    expect(screen.getByLabelText('Agent dashboard')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Search agents and actions'),
+      { target: { value: 'Researcher' } });
+    expect(screen.getByRole('button', { name: /Researcher/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Summarize policy/ })).toBeNull();
+    fireEvent.change(screen.getByLabelText('Search agents and actions'), { target: {value:''} });
+    fireEvent.change(screen.getByLabelText('Agent type filter'), { target: {value:'task'} });
+    fireEvent.click(screen.getByRole('button', { name: /Summarize policy/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Request cancel' }));
+    expect(controls).toHaveBeenCalledWith(task, 'cancel');
+    fireEvent.click(screen.getByRole('button', { name: 'Review task actions' }));
+    expect(openTasks).toHaveBeenCalledOnce();
+    expect(screen.getByText(/Pause\/resume\/retry are unavailable/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Pause' })).toBeNull();
+  });
+
   it('does not show fabricated approval controls for ordinary process actions', () => {
     render(<AgentExecutionTimeline messages={mainMessages} subagents={[]} drafts={[]}/>);
     expect(screen.queryByRole('button', { name: /Allow Once/ })).toBeNull();

@@ -17,9 +17,10 @@ export interface PendingQuestion {
 interface PermissionCardProps {
   pendingPermission: PendingPermission;
   handlePermissionDecision: (approval: boolean | 'session' | 'always') => void;
+  submitting?: boolean; feedback?: string;
 }
 
-export function PermissionCard({ pendingPermission, handlePermissionDecision }: PermissionCardProps) {
+export function PermissionCard({ pendingPermission, handlePermissionDecision, submitting = false, feedback = '' }: PermissionCardProps) {
   const [showDiff, setShowDiff] = useState(false);
 
   const toolCall = pendingPermission.toolCall || {};
@@ -81,9 +82,11 @@ export function PermissionCard({ pendingPermission, handlePermissionDecision }: 
         </div>
       )}
 
+      {feedback && <p role="status" className="text-xs text-amber-400">{feedback}</p>}
       {/* Action Footer */}
       <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[var(--border-color)]">
         <button
+          disabled={submitting}
           onClick={() => handlePermissionDecision(true)}
           className="bg-amber-600 hover:bg-amber-500 active:scale-[0.98] text-white font-medium text-xs px-3.5 py-1.5 rounded-lg  transition-all duration-150 flex items-center gap-1.5 cursor-pointer"
         >
@@ -91,12 +94,14 @@ export function PermissionCard({ pendingPermission, handlePermissionDecision }: 
           <span>Allow Once</span>
         </button>
         <button
+          disabled={submitting}
           onClick={() => handlePermissionDecision('session')}
           className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] active:scale-[0.98] text-white font-medium text-xs px-3.5 py-1.5 rounded-lg  transition-all duration-150 cursor-pointer"
         >
           <span>Allow for Session</span>
         </button>
         <button
+          disabled={submitting}
           onClick={() => handlePermissionDecision('always')}
           title="Auto-approve this tool every time in this workspace"
           className="bg-amber-800 hover:bg-amber-700 active:scale-[0.98] text-white font-medium text-xs px-3.5 py-1.5 rounded-lg transition-all duration-150 flex items-center gap-1.5 cursor-pointer"
@@ -105,6 +110,7 @@ export function PermissionCard({ pendingPermission, handlePermissionDecision }: 
           <span>Allow Always</span>
         </button>
         <button
+          disabled={submitting}
           onClick={() => handlePermissionDecision(false)}
           className="bg-[var(--bg-card)] hover:bg-[var(--surface-overlay-hover)] active:scale-[0.98] border border-[var(--border-color)] text-[var(--text-main)] font-medium text-xs px-3.5 py-1.5 rounded-lg transition-all duration-150 flex items-center gap-1.5 cursor-pointer"
         >

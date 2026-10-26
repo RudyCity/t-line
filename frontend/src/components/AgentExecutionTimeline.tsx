@@ -8,8 +8,9 @@ import type { AssistantDraftTask, AssistantTaskTransitionEvent } from './Assista
 import type { CoreAgentTimelineEvent } from './CoreAgentTimelineApi';
 
 type AgentEntry = { id: string; title: string; subtitle: string; state: string;
-  events: TimelineStep[]; kind: 'main' | 'subagent' | 'task' };
+  events: TimelineStep[]; kind: 'main' | 'subagent' | 'task'; parent?: string };
 export type TimelineStep = { id: string; label: string; detail?: string; timestamp?: number;
+  callId?: string; durationMs?: number;
   state: 'waiting' | 'running' | 'completed' | 'failed' | 'review' | 'info' };
 
 const stateLabel: Record<string, string> = {
@@ -47,6 +48,15 @@ export function buildAgentTimeline(
   // Core journal is authoritative when available. Never merge/replay live tool
   // calls on top of persisted records; that would double-count execution.
   const mainJournal = coreEvents.filter(e => e.actor === 'main').sort((a, b) => a.seq - b.seq);
+  const starts = new Map<string, number>();
+  for (const event of [...coreEvents].sort((a, b) => a.seq - b.seq)) {
+    if (event.kind === 'tool_start' && event.callId) starts.set(event.actor + ':' + event.callId, event.at);
+  }
+  const elapsed = (event: CoreAgentTimelineEvent) => {
+    if (event.kind !== 'tool_end' || !event.callId) return undefined;
+    const began = starts.get(event.actor + ':' + event.callId);
+    return began === undefined ? undefined : Math.max(0, event.at - began);
+  };
   const main: TimelineStep[] = mainJournal.length ? mainJournal.map(ev => ({
     id: 'core-' + ev.seq,
     label: ev.kind === 'tool_start' ? 'Tool started · ' + (ev.tool || 'tool') :
@@ -54,7 +64,9 @@ export function buildAgentTimeline(
       ev.kind === 'permission_requested' ? 'Approval requested · ' + (ev.tool || 'tool') :
       ev.kind === 'permission_decided' ? 'Approval decision · ' + (stateLabel[ev.status || ''] || ev.status || 'unknown') :
       'Agent turn completed',
-    detail: 'Core event #' + ev.seq + ' · metadata only',
+    detail: 'Core event #' + ev.seq + ' · metadata only' +
+      (elapsed(ev) !== undefined ? ' · ' + elapsed(ev) + 'ms' : ''),
+    callId: ev.callId, durationMs: elapsed(ev),
     timestamp: validTime(ev.at),
     state: ev.kind === 'permission_requested' ? 'review' :
       ev.kind === 'tool_start' ? 'running' :
@@ -118,12 +130,15 @@ export function buildAgentTimeline(
     agents.push({
       id: 'history:' + actor, kind: 'subagent', title: 'Subagent history · ' + actor.slice(4, 12),
       subtitle: 'Durable Core metadata · private ID hashed', state: status,
+      parent: ordered.find(ev => ev.parent)?.parent,
       events: ordered.map(ev => ({
         id: 'core-' + ev.seq,
         label: ev.kind === 'tool_start' ? 'Tool started · ' + (ev.tool || 'tool') :
           ev.kind === 'tool_end' ? 'Tool finished · ' + (ev.tool || 'tool') :
           'Subagent: ' + (stateLabel[ev.status || ''] || ev.status || 'unknown'),
-        detail: 'Core event #' + ev.seq + ' · metadata only',
+        detail: 'Core event #' + ev.seq + ' · metadata only' +
+          (elapsed(ev) !== undefined ? ' · ' + elapsed(ev) + 'ms' : ''),
+        callId: ev.callId, durationMs: elapsed(ev),
         timestamp: validTime(ev.at), state: statusState(ev.status || 'unknown'),
       })),
     });
@@ -156,16 +171,22 @@ export function buildAgentTimeline(
 }
 
 export function AgentExecutionTimeline({ messages, subagents, drafts, pendingPermission,
-  unverifiedTaskIds, taskEvents, coreEvents, onPermissionDecision, connected = true }: {
+  unverifiedTaskIds, taskEvents, coreEvents, onPermissionDecision, connected = true,
+  approvalSubmitting = false, approvalFeedback = '', onTaskControl, onOpenTaskPanel, taskControlBusy = false }: {
   messages: readonly ConsoleMessage[]; subagents: readonly SubAgentItem[];
   drafts: readonly AssistantDraftTask[]; pendingPermission?: PendingPermission | null;
   unverifiedTaskIds?: readonly string[]; taskEvents?: readonly AssistantTaskTransitionEvent[];
   coreEvents?: readonly CoreAgentTimelineEvent[];
   onPermissionDecision?: (decision: boolean | 'session' | 'always') => void;
-  connected?: boolean;
+  connected?: boolean; approvalSubmitting?: boolean; approvalFeedback?: string;
+  onTaskControl?: (task: AssistantDraftTask, action: 'cancel' | 'reconcile') => void;
+  onOpenTaskPanel?: () => void; taskControlBusy?: boolean;
 }) {
   const [selected, setSelected] = useState('main');
   const [showAll, setShowAll] = useState(false);
+  const [search, setSearch] = useState('');
+  const [kindFilter, setKindFilter] = useState<'all'|'main'|'subagent'|'task'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all'|'active'|'review'|'completed'|'failed'>('all');
   const agents = useMemo(() => buildAgentTimeline(messages, subagents, drafts,
     pendingPermission || null, unverifiedTaskIds || [], taskEvents || [], coreEvents || []),
   [messages, subagents, drafts, pendingPermission, unverifiedTaskIds, taskEvents, coreEvents]);
@@ -174,7 +195,29 @@ export function AgentExecutionTimeline({ messages, subagents, drafts, pendingPer
   useEffect(() => { if (pendingPermission) setSelected('main'); },
     [pendingPermission?.permissionId]);
   const focus = agents.find(a => a.id === selected) || agents[0];
+  const matching = agents.filter(a => {
+    const term = search.trim().toLowerCase();
+    const searchable = !term || [a.title, a.subtitle, ...a.events.map(step => step.label)]
+      .some(part => part.toLowerCase().includes(term));
+    const status = statusState(a.state);
+    const accepted = statusFilter === 'all' ||
+      (statusFilter === 'active' && (status === 'running' || status === 'waiting')) ||
+      (statusFilter === 'review' && status === 'review') ||
+      (statusFilter === 'completed' && status === 'completed') ||
+      (statusFilter === 'failed' && status === 'failed');
+    return searchable && accepted && (kindFilter === 'all' || a.kind === kindFilter);
+  });
   const displayed = showAll ? focus.events : focus.events.slice(-30);
+  const selectedTask = drafts.find(task => focus.id === 'task:' + task.taskId);
+  const canCancel = selectedTask && ['queued','running','planning'].includes(selectedTask.status);
+  const canReconcile = selectedTask && (selectedTask.status === 'interrupted' ||
+    (unverifiedTaskIds || []).includes(selectedTask.taskId));
+  const recordedTools = (coreEvents || []).filter(event => event.kind === 'tool_end').length;
+  const starts = new Map((coreEvents || []).filter(e => e.kind === 'tool_start' && e.callId)
+    .map(e => [e.actor + ':' + e.callId, e.at]));
+  const durations = (coreEvents || []).filter(e => e.kind === 'tool_end' && e.callId &&
+    starts.has(e.actor + ':' + e.callId)).map(e =>
+      e.at - (starts.get(e.actor + ':' + e.callId) ?? e.at));
   return (
     <section aria-label="Per-agent execution timeline" className="max-h-[55vh] overflow-y-auto px-3 sm:px-4 py-3">
       <div className="mx-auto max-w-4xl space-y-3">
@@ -187,6 +230,42 @@ export function AgentExecutionTimeline({ messages, subagents, drafts, pendingPer
           </div>
           <span className="text-[10px] text-[var(--text-muted)]">{agents.length} agents/tasks</span>
         </div>
+        <div aria-label="Agent dashboard" className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {[
+            { title: 'Agents / tasks', count: agents.length },
+            { title: 'Active', count: agents.filter(a => ['running','waiting'].includes(statusState(a.state))).length },
+            { title: 'Needs review', count: agents.filter(a => statusState(a.state) === 'review').length },
+            { title: 'Recorded tools', count: recordedTools },
+          ].map(item => (
+            <div key={item.title} className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-main)] p-2.5">
+              <p className="text-[10px] text-[var(--text-muted)]">{item.title}</p>
+              <p className="text-lg font-semibold tabular-nums">{item.count}</p>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] text-[var(--text-muted)]">
+          {durations.length ? 'Mean observed tool duration: ' +
+            Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length) + 'ms' :
+            'Tool duration unavailable until matching start/end events exist'}
+          {' · '}Token usage is not included in this metadata journal.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <input aria-label="Search agents and actions" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search agents or tools" className="min-w-0 flex-1 rounded-lg border border-[var(--border-color)] bg-[var(--bg-main)] px-3 py-2 text-xs"/>
+          <select aria-label="Agent type filter" value={kindFilter}
+            onChange={e => setKindFilter(e.target.value as typeof kindFilter)}
+            className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-main)] px-2 py-2 text-xs">
+            <option value="all">All sources</option><option value="main">Main</option>
+            <option value="subagent">Subagents</option><option value="task">Tasks</option>
+          </select>
+          <select aria-label="Agent status filter" value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
+            className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-main)] px-2 py-2 text-xs">
+            <option value="all">All status</option><option value="active">Active</option>
+            <option value="review">Needs review</option><option value="completed">Completed</option>
+            <option value="failed">Failed</option>
+          </select>
+        </div>
         {pendingPermission && (
           <div role="status" className="flex items-center gap-2 rounded-lg border border-amber-500/35 bg-amber-500/5 px-3 py-2 text-xs text-amber-400">
             <ShieldAlert size={16} aria-hidden="true"/> Action pending approval · Main Agent
@@ -194,13 +273,14 @@ export function AgentExecutionTimeline({ messages, subagents, drafts, pendingPer
         )}
         <div className="grid grid-cols-1 sm:grid-cols-[minmax(150px,0.85fr)_minmax(0,2fr)] gap-3">
           <nav aria-label="Agents" className="flex gap-1.5 overflow-x-auto sm:flex-col sm:overflow-y-auto sm:max-h-[40vh] pb-1">
-            {agents.map(agent => (
+            {matching.map(agent => (
               <button type="button" key={agent.id} aria-pressed={focus.id === agent.id}
                 onClick={() => { setSelected(agent.id); setShowAll(false); }}
                 className={'min-w-[130px] sm:min-w-0 w-full shrink-0 sm:shrink rounded-lg border p-2.5 text-left focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] ' +
                   (focus.id === agent.id ? 'border-[var(--color-primary)] bg-[var(--color-primary-glow)]' :
                     'border-[var(--border-color)] bg-[var(--bg-main)] hover:bg-[var(--bg-card-hover)]')}>
-                <div className="flex items-center gap-1.5">
+                <div className={'flex items-center gap-1.5 ' + (agent.parent ? 'pl-3' : '')}>
+                  {agent.parent && <span aria-hidden="true" className="text-[var(--text-muted)]">↳</span>}
                   {agent.kind === 'task' ? <Layers3 size={14}/> : <Bot size={14}/>}
                   <span className="min-w-0 flex-1 truncate text-[11px] font-medium" title={agent.title}>{agent.title}</span>
                 </div>
@@ -209,6 +289,9 @@ export function AgentExecutionTimeline({ messages, subagents, drafts, pendingPer
                 </div>
               </button>
             ))}
+            {matching.length === 0 && <p className="text-xs text-[var(--text-muted)]">
+              No agents match the current filters.
+            </p>}
           </nav>
           <div className="min-w-0 rounded-xl border border-[var(--border-color)] bg-[var(--bg-main)] p-3">
             <div className="flex items-start justify-between gap-2 border-b border-[var(--border-color)] pb-2">
@@ -248,10 +331,34 @@ export function AgentExecutionTimeline({ messages, subagents, drafts, pendingPer
               {showAll ? <ChevronDown size={13}/> : <ChevronRight size={13}/>}
               {showAll ? 'Show recent steps' : 'Show all recorded steps'}
             </button>}
+            {selectedTask && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--border-color)] pt-3">
+                {canCancel && <button type="button" disabled={taskControlBusy || !onTaskControl}
+                  onClick={() => onTaskControl?.(selectedTask, 'cancel')}
+                  className="rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-400 disabled:opacity-40">
+                  Request cancel
+                </button>}
+                {canReconcile && <button type="button" disabled={taskControlBusy || !onTaskControl}
+                  onClick={() => onTaskControl?.(selectedTask, 'reconcile')}
+                  className="rounded-lg border border-[var(--border-color)] px-3 py-1.5 text-xs disabled:opacity-40">
+                  Reconcile orphan
+                </button>}
+                <button type="button" onClick={onOpenTaskPanel}
+                  disabled={!onOpenTaskPanel}
+                  className="rounded-lg border border-[var(--border-color)] px-3 py-1.5 text-xs disabled:opacity-40">
+                  Review task actions
+                </button>
+                <p className="w-full text-[10px] text-[var(--text-muted)]">
+                  Pause/resume/retry are unavailable without a verified resumable checkpoint.
+                  Cancellation is a request, not proof the worker has exited.
+                </p>
+              </div>
+            )}
             {focus.id === 'main' && pendingPermission && (
               <div className="mt-3 border-t border-[var(--border-color)] pt-3">
                 {connected && onPermissionDecision ? (
                   <PermissionCard pendingPermission={pendingPermission}
+                    submitting={approvalSubmitting} feedback={approvalFeedback}
                     handlePermissionDecision={onPermissionDecision}/>
                 ) : (
                   <p role="alert" className="flex gap-2 text-xs text-amber-400">

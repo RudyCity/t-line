@@ -9,9 +9,11 @@ import { AssistantTurnQueue } from './AssistantTurnQueue';
 import { AssistantTaskDraftPanel, type AssistantTaskHandoff } from './AssistantTaskDraftPanel';
 import { assistantTurnTotals, loadAssistantTurns } from './AssistantTurnApi';
 import { getAssistantDrafts, getAssistantTaskEvents,
+  cancelAssistantDraft, reconcileAssistantTask,
   type AssistantDraftTask, type AssistantTaskTransitionEvent } from './AssistantTaskDraftApi';
 import { getAuthHeader } from './SuperAgentConsoleUtils';
 import { getCoreAgentTimeline, type CoreAgentTimelineEvent } from './CoreAgentTimelineApi';
+import { streamCoreAgentTimeline } from './CoreAgentTimelineStream';
 
 type ActivityView = 'chat' | 'tasks' | 'timeline';
 type ActivitySummary = {
@@ -37,13 +39,14 @@ export function summarizeBackgroundTasks(tasks: readonly AssistantDraftTask[], u
  * session-scoped APIs and permission/recovery policies. Never merge execution. */
 export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraftCreated,
   messages = [], subagents = [], pendingPermission = null, onPermissionDecision,
-  connected = true, approvalJump = 0 }: {
+  connected = true, approvalJump = 0, approvalSubmitting = false, approvalFeedback = '' }: {
   workspace: string; sessionId: string; handoff?: AssistantTaskHandoff | null;
   onDraftCreated?: (submitted: string) => void;
   messages?: readonly ConsoleMessage[]; subagents?: readonly SubAgentItem[];
   pendingPermission?: PendingPermission | null;
   onPermissionDecision?: (decision: boolean | 'session' | 'always') => void;
   connected?: boolean; approvalJump?: number;
+  approvalSubmitting?: boolean; approvalFeedback?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<ActivityView>('chat');
@@ -57,8 +60,11 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
   const coreCursor = useRef(0);
   const [coreError, setCoreError] = useState('');
   const [coreGap, setCoreGap] = useState(false);
+  const [timelineTransport, setTimelineTransport] = useState<'connecting'|'streaming'|'fallback'>('connecting');
   const [errors, setErrors] = useState({ chat: '', tasks: '' });
   const [revision, setRevision] = useState(0);
+  const [taskControlBusy, setTaskControlBusy] = useState(false);
+  const [taskControlMessage, setTaskControlMessage] = useState('');
 
   useEffect(() => {
     setOpen(false); setView('chat'); setSummary(empty); setDrafts([]); setUnverifiedIds([]);
@@ -160,11 +166,22 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
     const controller = new AbortController();
     let active = true;
     let busy = false;
+    let streaming = false;
+    let connecting = false;
+    let retryMs = 1000;
+    let retry: number | undefined;
+    const append = (events: CoreAgentTimelineEvent[]) => {
+      if (!active || !events.length) return;
+      setCoreEvents(previous => {
+        const seen = new Set(previous.map(event => event.seq));
+        return [...previous, ...events.filter(event => !seen.has(event.seq))]
+          .sort((a, b) => a.seq - b.seq).slice(-400);
+      });
+    };
     const fetchEvents = async () => {
-      if (!active || busy || document.hidden) return;
+      if (!active || busy || streaming || document.hidden) return;
       busy = true;
       try {
-        // 400-entry Core cap; read four authorized pages at most per refresh.
         for (let i = 0; i < 4; i++) {
           const page = await getCoreAgentTimeline(workspace, sessionId, coreCursor.current,
             getAuthHeader, controller.signal);
@@ -172,7 +189,7 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
           if (page.gap) setCoreGap(true);
           if (!page.events.length) break;
           coreCursor.current = page.nextCursor;
-          setCoreEvents(old => [...old, ...page.events].slice(-400));
+          append(page.events);
           if (page.events.length < 100) break;
         }
         setCoreError('');
@@ -181,16 +198,79 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
           setCoreError(e instanceof Error ? e.message : 'Core execution history unavailable');
       } finally { busy = false; }
     };
-    void fetchEvents();
-    const timer = window.setInterval(() => { void fetchEvents(); }, 5000);
-    const visible = () => { if (!document.hidden) void fetchEvents(); };
+    const connect = async () => {
+      if (!active || connecting || streaming || document.hidden) return;
+      connecting = true;
+      await fetchEvents(); // Replay gap before attempting live delivery.
+      if (!active || controller.signal.aborted) return;
+      try {
+        setTimelineTransport('connecting');
+        streaming = true;
+        await streamCoreAgentTimeline(workspace, sessionId, coreCursor.current,
+          getAuthHeader, controller.signal, event => {
+            if (!active || event.seq <= coreCursor.current) return;
+            if (event.seq > coreCursor.current + 1) setCoreGap(true);
+            coreCursor.current = event.seq;
+            append([event]);
+            setCoreError('');
+            setTimelineTransport('streaming');
+            retryMs = 1000;
+          }, () => { if (active) setCoreGap(true); },
+          () => { if (active) setTimelineTransport('streaming'); });
+      } catch (cause) {
+        if (active && !controller.signal.aborted)
+          setCoreError(cause instanceof Error ? cause.message : 'Core stream disconnected');
+      } finally {
+        streaming = false;
+        connecting = false;
+        if (active && !controller.signal.aborted) {
+          setTimelineTransport('fallback');
+          retry = window.setTimeout(() => { void connect(); }, retryMs);
+          retryMs = Math.min(15000, retryMs * 2);
+        }
+      }
+    };
+    void connect();
+    // Poll only when streaming is not available, and never re-execute tool actions.
+    const interval = window.setInterval(() => {
+      if (!streaming && !connecting && !document.hidden) void fetchEvents();
+    }, 5000);
+    const visible = () => {
+      if (!document.hidden && !streaming && !connecting) {
+        if (retry !== undefined) window.clearTimeout(retry);
+        void connect();
+      }
+    };
     document.addEventListener('visibilitychange', visible);
     return () => {
-      active = false; controller.abort(); window.clearInterval(timer);
+      active = false; controller.abort(); window.clearInterval(interval);
+      if (retry !== undefined) window.clearTimeout(retry);
       document.removeEventListener('visibilitychange', visible);
     };
   }, [open, view, workspace, sessionId]);
 
+  const requestTaskControl = async (task: AssistantDraftTask, action: 'cancel'|'reconcile') => {
+    if (taskControlBusy || !workspace || !sessionId) return;
+    if (action === 'cancel' && !['queued','running','planning'].includes(task.status)) return;
+    if (action === 'reconcile' && !(task.status === 'interrupted' ||
+        unverifiedIds.includes(task.taskId))) return;
+    if (!window.confirm(action === 'cancel'
+        ? 'Request cancellation? A running worker may still be finishing; this does not roll back side effects.'
+        : 'Mark this orphaned/interrupted worker for reconciliation? No operations will be replayed.')) return;
+    setTaskControlBusy(true);
+    try {
+      const result = await (action === 'cancel'
+        ? cancelAssistantDraft(workspace, sessionId, task.taskId, task.revision, getAuthHeader)
+        : reconcileAssistantTask(workspace, sessionId, task.taskId, task.revision, getAuthHeader));
+      if (result.success !== true) throw Error('Core did not confirm request');
+      setTaskControlMessage(action === 'cancel'
+        ? 'Cancellation requested; await verified exit state.' : 'Reconciliation recorded without replay.');
+      setRevision(previous => previous + 1);
+    } catch (e) {
+      setTaskControlMessage(e instanceof Error ? e.message : 'Task control failed');
+      setRevision(previous => previous + 1);
+    } finally { setTaskControlBusy(false); }
+  };
   const currentCount = summary.chatRunning + summary.taskActive;
   const reviewCount = summary.chatRecoverable + summary.taskAttention + (pendingPermission ? 1 : 0);
   const available = Boolean(workspace && sessionId);
@@ -292,8 +372,18 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
                 {coreGap && <p role="status" className="px-4 pt-2 text-xs text-amber-400">
                   Older Core execution events were pruned. Recorded sequence may have gaps.
                 </p>}
+                <p role="status" className="px-4 pt-2 text-[10px] text-[var(--text-muted)]">
+                  Timeline delivery: {timelineTransport === 'streaming' ? 'Live stream' :
+                    timelineTransport === 'fallback' ? 'Polling fallback' : 'Connecting'}
+                </p>
+                {taskControlMessage && <p role="status" className="px-4 pt-2 text-xs text-[var(--text-muted)]">
+                  {taskControlMessage}
+                </p>}
                 <AgentExecutionTimeline messages={messages} subagents={subagents} drafts={drafts}
+                  onTaskControl={(task, action) => { void requestTaskControl(task, action); }}
+                  taskControlBusy={taskControlBusy} onOpenTaskPanel={() => setView('tasks')}
                   coreEvents={coreEvents} taskEvents={taskEvents} unverifiedTaskIds={unverifiedIds} pendingPermission={pendingPermission}
+                  approvalSubmitting={approvalSubmitting} approvalFeedback={approvalFeedback}
                   onPermissionDecision={onPermissionDecision} connected={connected}/>
               </div>
             </>
