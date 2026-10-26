@@ -1,4 +1,3 @@
-import React from 'react';
 import { Film, X, Download, ExternalLink } from 'lucide-react';
 import type { StudioJob } from '../../services/studioApi';
 import { StudioExtraExportPanel } from '../StudioExtraExportPanel';

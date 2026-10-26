@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import { Layers3, Type, Square, Image as ImageIcon, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import type { StudioLayer } from '../../services/studioApi';
 

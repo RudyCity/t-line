@@ -37,8 +37,11 @@ import { TLINE_HELPER_CODE } from './tline-helper-code';
 import { handleSuperAgentConnection, startSuperAgentEager } from './superAgentBridge';
 import superAgentRouter from './superAgentRoutes';
 import { closeSessionDb } from './sessionManager';
+import { installBackendCrashDiagnostics } from './crashDiagnostics';
+import { capLogFile } from './logRotation';
 
 dotenv.config();
+installBackendCrashDiagnostics();
 
 
 
@@ -62,7 +65,7 @@ function logToFile(level: 'INFO' | 'ERROR', args: any[]) {
   const logLine = `[${timestamp}] [${level}] ${message}\n`;
   try {
     if (fs.existsSync(BACKEND_LOG_FILE) && fs.statSync(BACKEND_LOG_FILE).size > 5 * 1024 * 1024) {
-      fs.writeFileSync(BACKEND_LOG_FILE, `[${timestamp}] [INFO] Log file rotated (exceeded 5MB limit)\n`);
+      capLogFile(BACKEND_LOG_FILE);
     }
     fs.appendFile(BACKEND_LOG_FILE, logLine, () => {});
   } catch (err) {}

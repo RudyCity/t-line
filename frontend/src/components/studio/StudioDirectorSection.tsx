@@ -1,4 +1,3 @@
-import React from 'react';
 import { Film, Image as ImageIcon, Sparkles, AlertCircle, CheckCircle2 } from 'lucide-react';
 import type {
   StudioQualityReport,

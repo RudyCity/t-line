@@ -1,4 +1,3 @@
-import React from 'react';
 import { ChevronDown, Save, Plus, Sliders } from 'lucide-react';
 import type { StudioLayer, StudioProperty } from '../../services/studioApi';
 import { evaluateLayer } from '../../services/studioScene';

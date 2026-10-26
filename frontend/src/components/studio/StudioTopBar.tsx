@@ -1,4 +1,3 @@
-import React from 'react';
 import { Clapperboard, Film, Plus, RefreshCw, Undo2, Redo2, X } from 'lucide-react';
 import { STUDIO_DISPLAY_NAME } from '../../services/studioBranding';
 import type {
