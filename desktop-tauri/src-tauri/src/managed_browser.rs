@@ -105,6 +105,7 @@ struct OwnedBrowser {
     profile_path: PathBuf,
     ever_ready: bool,
     fingerprint: Option<String>,
+    embedded: bool,
 }
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -114,6 +115,7 @@ pub struct BrowserStatus {
     lifecycle: &'static str,
     debugging_available: bool,
     engine: &'static str,
+    embedded: bool,
 }
 fn status_of(owned: &OwnedBrowser, alive: bool) -> BrowserStatus {
     BrowserStatus {
@@ -130,6 +132,7 @@ fn status_of(owned: &OwnedBrowser, alive: bool) -> BrowserStatus {
         },
         debugging_available: alive && owned.port.is_some(),
         engine: "system-chrome",
+        embedded: owned.embedded,
     }
 }
 fn is_alive(owned: &mut OwnedBrowser) -> bool {
@@ -234,7 +237,7 @@ fn spawn_owned_chrome(
     profile: &std::path::Path,
     id: String,
     url: String,
-    headless_test: bool,
+    headless_mode: bool,
 ) -> Result<OwnedBrowser, String> {
     // This executable is selected by installed-browser discovery, never by the
     // renderer or a browser page. Tests use an isolated temporary directory.
@@ -245,8 +248,9 @@ fn spawn_owned_chrome(
         .arg("--remote-debugging-address=127.0.0.1")
         .arg("--no-first-run")
         .arg("--no-default-browser-check");
-    if headless_test {
-        command.arg("--headless=new").arg("--disable-extensions");
+    if headless_mode {
+        command.arg("--headless=new").arg("--disable-extensions")
+            .arg("--window-size=1280,800");
     } else {
         command.arg("--new-window");
     }
@@ -272,6 +276,7 @@ fn spawn_owned_chrome(
         profile_path: profile.to_path_buf(),
         ever_ready: false,
         fingerprint: None,
+        embedded: headless_mode,
     })
 }
 fn launch_owned(
@@ -279,6 +284,7 @@ fn launch_owned(
     registry: Arc<Mutex<HashMap<String, OwnedBrowser>>>,
     id: String,
     url: String,
+    embedded: bool,
 ) -> Result<BrowserStatus, String> {
     let executable = discover_executable().ok_or("Installed Chrome is not available.")?;
     let profile = profile_path(&app, &id)?;
@@ -300,7 +306,7 @@ fn launch_owned(
             "Profile may already be in use. Existing browser ownership cannot be verified.".into(),
         );
     }
-    let mut entry = spawn_owned_chrome(&executable, &profile, id.clone(), url, false)?;
+    let mut entry = spawn_owned_chrome(&executable, &profile, id.clone(), url, embedded)?;
     let deadline = Instant::now() + Duration::from_secs(8);
     while Instant::now() < deadline {
         if !is_alive(&mut entry) {
@@ -331,6 +337,7 @@ pub async fn managed_browser_launch(
     state: tauri::State<'_, ManagedBrowserState>,
     profile_id: String,
     initial_url: Option<String>,
+    embedded: Option<bool>,
 ) -> Result<BrowserStatus, String> {
     primary_ui(&webview)?;
     if !valid_profile_id(&profile_id) {
@@ -338,7 +345,7 @@ pub async fn managed_browser_launch(
     }
     let url = checked_url(initial_url)?;
     let registry = state.children.clone();
-    tauri::async_runtime::spawn_blocking(move || launch_owned(app, registry, profile_id, url))
+    tauri::async_runtime::spawn_blocking(move || launch_owned(app, registry, profile_id, url, embedded.unwrap_or(false)))
         .await
         .map_err(|_| "Browser supervisor did not return.".to_string())?
 }
@@ -564,6 +571,21 @@ pub(crate) fn verified_stream_identity(
         .fingerprint
         .clone()
         .ok_or("Missing owned browser identity.")?;
+    Ok((port, fingerprint))
+}
+/// Only an explicitly launched headless Chrome may accept input from the
+/// in-app viewer. Previewing a separate Chrome window stays read-only.
+pub(crate) fn verified_embedded_identity(
+    state: &ManagedBrowserState,
+    profile_id: &str,
+    generation: &str,
+) -> Result<(u16, String), String> {
+    let (port, fingerprint) = verified_stream_identity(state, profile_id, generation)?;
+    let guard = state.children.lock().map_err(|_| "Browser state unavailable.")?;
+    let owned = guard.get(profile_id).ok_or("Owned Chrome no longer exists.")?;
+    if owned.generation != generation || !owned.embedded {
+        return Err("Input is restricted to T-Line's embedded Chrome session.".into());
+    }
     Ok((port, fingerprint))
 }
 /// Strict browser + generation + *real page target* pairing. A tab title or a
@@ -882,6 +904,19 @@ mod tests {
             .expect("capture owned browser screenshot");
         assert!(frame.data_url.starts_with("data:image/jpeg;base64,/9j/"));
         assert!(frame.data_url.len() < 2_000_100);
+        // Confirm headless Chrome accepts bounded native input without
+        // sending commands to any existing user Chrome profile.
+        use crate::managed_browser_input::{run_input, BrowserInteraction};
+        run_input(port, target, BrowserInteraction::Click { x: 80.0, y: 60.0 })
+            .expect("owned headless Chrome receives click");
+        run_input(port, target, BrowserInteraction::Scroll { x: 80.0, y: 60.0, delta_y: 160.0 })
+            .expect("owned headless Chrome receives scroll");
+        run_input(port, target, BrowserInteraction::Text { text: "test".into() })
+            .expect("owned headless Chrome receives text");
+        run_input(port, target, BrowserInteraction::Key { key: "Enter".into() })
+            .expect("owned headless Chrome receives keyboard input");
+        run_input(port, target, BrowserInteraction::Reload)
+            .expect("owned headless Chrome can reload");
         let transport = crate::managed_browser_stream::smoke_probe_screencast(port, target)
             .expect("real Chrome screencast or persistent JPEG fallback");
         println!("native viewer smoke transport: {transport}");

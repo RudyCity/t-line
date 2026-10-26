@@ -137,6 +137,39 @@ describe('T-Line native managed browser read-only preview', () => {
     ui.rerender(<ManagedBrowserLivePreview {...props} active={false}/>);
     expect(screen.queryByAltText('Live screenshot of the selected T-Line-managed browser tab')).toBeNull();
   });
+  it('forwards pointer, scroll and keyboard only when interactive and focused', async () => {
+    const invoke = vi.fn(async () => frame);
+    vi.stubGlobal('__TAURI__', { core: { invoke } });
+    const onInteraction = vi.fn();
+    const view = render(<ManagedBrowserLivePreview
+      profileId="testing" generation="2-3" targetId="TAB1" active
+      onClose={() => {}} interactive fill onInteraction={onInteraction}/>);
+    const image = await screen.findByAltText('Live screenshot of the selected T-Line-managed browser tab') as HTMLImageElement;
+    Object.defineProperty(image, 'naturalWidth', { configurable: true, value: 800 });
+    Object.defineProperty(image, 'naturalHeight', { configurable: true, value: 400 });
+    vi.spyOn(image, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: 0, left: 0, top: 0, width: 400, height: 200,
+      right: 400, bottom: 200, toJSON: () => ({}),
+    });
+    fireEvent.click(image, { clientX: 50, clientY: 60 });
+    expect(onInteraction).toHaveBeenCalledWith({ type: 'click', x: 100, y: 120 });
+    fireEvent.wheel(image, { clientX: 50, clientY: 60, deltaY: 300 });
+    expect(onInteraction).toHaveBeenCalledWith({ type: 'scroll', x: 100, y: 120, delta_y: 300 });
+    const viewport = screen.getByRole('application', { name: 'Interactive Chrome viewport' });
+    fireEvent.keyDown(viewport, { key: 'Enter' });
+    fireEvent.keyDown(viewport, { key: 'a' });
+    expect(onInteraction).toHaveBeenCalledWith({ type: 'key', key: 'Enter' });
+    expect(onInteraction).toHaveBeenCalledWith({ type: 'text', text: 'a' });
+    view.rerender(<ManagedBrowserLivePreview
+      profileId="testing" generation="2-3" targetId="TAB1" active
+      onClose={() => {}} interactive={false} onInteraction={onInteraction}/>);
+    onInteraction.mockClear();
+    fireEvent.click(screen.getByAltText('Live screenshot of the selected T-Line-managed browser tab'), {
+      clientX: 50, clientY: 60,
+    });
+    expect(onInteraction).not.toHaveBeenCalled();
+    view.unmount();
+  });
   it('fails closed for forged or invalid native screenshots', async () => {
     const invoke = vi.fn(async () => ({ ...frame, targetId: 'OTHER' }));
     vi.stubGlobal('__TAURI__', { core: { invoke } });

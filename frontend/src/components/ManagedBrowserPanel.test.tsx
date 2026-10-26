@@ -142,6 +142,41 @@ describe('managed browser safety contract', () => {
     expect(screen.queryByAltText('Live screenshot of the selected T-Line-managed browser tab')).toBeNull();
     expect(invoke).not.toHaveBeenCalledWith('managed_browser_gateway_pairing', expect.anything());
   });
+  it('launches a separate owned headless Chrome inside T-Line and routes navigation to that target', async () => {
+    const runtime = { profileId: 'default-managed', generation: 'chrome-embedded-1',
+      lifecycle: 'ready', debuggingAvailable: true, embedded: true, engine: 'system-chrome' };
+    let running = false;
+    const invoke = vi.fn(async (name: string) => {
+      if (name === 'managed_browser_discover') return { available: true, engine: 'system-chrome' };
+      if (name === 'managed_browser_status') return running ? [runtime] : [];
+      if (name === 'managed_browser_launch') { running = true; return runtime; }
+      if (name === 'managed_browser_targets') return [{ id: 'PAGE1', title: 'Example', url: 'https://example.org/' }];
+      if (name === 'managed_browser_capture') return {
+        targetId: 'PAGE1', dataUrl: 'data:image/jpeg;base64,/9j/ABCD==', capturedAt: Date.now(),
+      };
+      if (name === 'managed_browser_interact') return null;
+      if (name === 'managed_browser_stream_start') return { streamId: '400-1' };
+      if (name === 'get_memory_usage') return { desktopTotal: 10485760 };
+      return null;
+    });
+    vi.stubGlobal('__TAURI__', { core: { invoke } });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const onEmbeddedChange = vi.fn();
+    const view = render(<ManagedBrowserPanel active initialUrl="https://example.org"
+      onEmbeddedChange={onEmbeddedChange}/>);
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle managed browser' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Enable managed browser' }));
+    await screen.findByText(/Installed Chrome detected/);
+    fireEvent.click(screen.getByRole('button', { name: 'Open Chrome inside T-Line' }));
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('managed_browser_launch',
+      { profileId: 'default-managed', initialUrl: 'https://example.org/', embedded: true }));
+    await waitFor(() => expect(onEmbeddedChange).toHaveBeenCalledWith(true));
+    expect(screen.getByRole('application', { name: 'Interactive Chrome viewport' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Chrome Back' }));
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('managed_browser_interact',
+      { profileId: runtime.profileId, generation: runtime.generation, targetId: 'PAGE1', interaction: { type: 'back' } }));
+    view.unmount();
+  });
   it('never sends a browser agent request if native Core registration is rejected', async () => {
     const runtime = { profileId: 'default-managed', generation: '789-17929200000000',
       lifecycle: 'ready', debuggingAvailable: true };

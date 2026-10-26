@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Monitor, RefreshCw, Square, Link2, Copy, Eye } from 'lucide-react';
-import ManagedBrowserLivePreview from './ManagedBrowserLivePreview';
+import { Monitor, RefreshCw, Square, Link2, Copy, Eye, ArrowLeft, ArrowRight, Star } from 'lucide-react';
+import ManagedBrowserLivePreview, { type BrowserInputAction } from './ManagedBrowserLivePreview';
 import { gatewayPairingInstructions, type ManagedBrowserGatewayPairing } from './managedBrowserGateway';
 import { matchingGatewayClaim, type GatewayClaimProjection } from './managedGatewaySessions';
 import { DEFAULT_MANAGED_PROFILE, safeManagedLaunchUrl,
@@ -10,10 +10,19 @@ const getInvoke = (): ((name: string, args?: Record<string, unknown>) => Promise
   (window as any).__TAURI__?.core?.invoke ?? null;
 
 /** Experimental real-window manager. No password, cookies or CDP endpoint is persisted in React. */
-export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent }: {
+export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent, onEmbeddedChange }: {
   active: boolean; initialUrl: string; onSendToAgent?: (instruction: string) => boolean;
+  onEmbeddedChange?: (embedded: boolean) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [embedded, setEmbedded] = useState(false);
+  const [address, setAddress] = useState('');
+  const [savedUrls, setSavedUrls] = useState<string[]>(() => {
+    try {
+      const data = JSON.parse(localStorage.getItem('tline-chrome-bookmarks') || '[]');
+      return Array.isArray(data) ? data.filter((item): item is string => typeof item === 'string').slice(0, 100) : [];
+    } catch { return []; }
+  });
   const [enabled, setEnabled] = useState(false);
   const [available, setAvailable] = useState<ManagedBrowserAvailability | null>(null);
   const [runtimes, setRuntimes] = useState<ManagedBrowserRuntime[]>([]);
@@ -30,6 +39,38 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
     profileId: string; generation: string; targetId: string;
   } | null>(null);
   const selected = runtimes.find(r => r.profileId === profileId);
+  const currentTarget = targets.find(target => target.id === previewTarget?.targetId);
+  const embeddedReady = !!(active && expanded && enabled && embedded && selected?.embedded &&
+    selected.lifecycle === 'ready' && selected.debuggingAvailable && currentTarget);
+  useEffect(() => {
+    onEmbeddedChange?.(embeddedReady);
+  }, [embeddedReady, onEmbeddedChange]);
+  useEffect(() => {
+    if (currentTarget?.url && document.activeElement?.getAttribute('aria-label') !== 'Chrome address') {
+      setAddress(currentTarget.url);
+    }
+  }, [currentTarget?.url]);
+  useEffect(() => {
+    try { localStorage.setItem('tline-chrome-bookmarks', JSON.stringify(savedUrls)); }
+    catch { /* saving bookmarks is optional */ }
+  }, [savedUrls]);
+  const sendEmbeddedInput = async (interaction: BrowserInputAction) => {
+    if (!embeddedReady || !selected || !currentTarget) return;
+    const invoke = getInvoke();
+    if (!invoke) return;
+    try {
+      await invoke('managed_browser_interact', {
+        profileId: selected.profileId, generation: selected.generation,
+        targetId: currentTarget.id, interaction,
+      });
+      setError('');
+      if (['navigate', 'back', 'forward', 'reload'].includes(interaction.type)) {
+        window.setTimeout(() => { void refreshTargets(selected); }, 500);
+      }
+    } catch (err) {
+      setError('Chrome interaction failed: ' + String(err));
+    }
+  };
 
   const refresh = useCallback(async () => {
     const invoke = getInvoke();
@@ -124,19 +165,38 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
     if (selected) void refreshTargets(selected);
     else setTargets([]);
   }, [active, expanded, enabled, selected?.generation, selected?.debuggingAvailable, profileId, refreshTargets]);
+  useEffect(() => {
+    if (!embedded || !active || !selected?.embedded || selected.lifecycle !== 'ready') return;
+    const timer = window.setInterval(() => { void refreshTargets(selected); }, 2500);
+    return () => window.clearInterval(timer);
+  }, [active, embedded, selected?.generation, selected?.embedded, selected?.lifecycle, refreshTargets]);
+  useEffect(() => {
+    if (!embedded || !selected?.embedded || selected.lifecycle !== 'ready' ||
+        previewTarget || targets.length === 0) return;
+    setPreviewTarget({
+      profileId: selected.profileId, generation: selected.generation, targetId: targets[0].id,
+    });
+  }, [embedded, selected?.embedded, selected?.generation, selected?.lifecycle, targets, previewTarget]);
 
-  async function launch() {
+  async function launch(inside = false) {
     const invoke = getInvoke();
     if (!invoke || !enabled || busy || selected) return;
-    if (!window.confirm('Start a separate Chrome process with a T-Line-managed profile and a local CDP debugging endpoint? Only enable this on a trusted computer.')) return;
+    if (!window.confirm(inside
+      ? 'Start an isolated, headless Chrome controlled inside T-Line? This opens a local CDP endpoint. Only enable on a trusted computer.'
+      : 'Start a separate Chrome process with a T-Line-managed profile and a local CDP debugging endpoint? Only enable this on a trusted computer.')) return;
     setBusy(true); setError(''); setMessage('');
     try {
       let initial = 'about:blank';
       try { initial = safeManagedLaunchUrl(initialUrl); }
       catch { setMessage('The active URL was not passed to Chrome because it contains sensitive parameters.'); }
-      await invoke('managed_browser_launch', { profileId, initialUrl: initial });
+      await invoke('managed_browser_launch', inside
+        ? { profileId, initialUrl: initial, embedded: true }
+        : { profileId, initialUrl: initial });
       await refresh();
-      setMessage('Managed browser opened in a separate real Chrome window.');
+      if (inside) setEmbedded(true);
+      setMessage(inside
+        ? 'Chrome is running inside the T-Line browser surface.'
+        : 'Managed browser opened in a separate real Chrome window.');
     } catch (err) { setError(String(err)); await refresh(); }
     finally { setBusy(false); }
   }
@@ -184,6 +244,7 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
       await invoke('managed_browser_stop', { profileId, generation: selected.generation });
       setTargets([]);
       setPreviewTarget(null);
+      setEmbedded(false);
       setPairing('');
       setPairedRuntime(null);
       setGatewayClaim(null);
@@ -195,19 +256,23 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
   }
   if (!active) return null;
   return (
-    <section aria-label="Managed browser" className="shrink-0 border-b border-[var(--border-color)] bg-[var(--bg-card)] p-2 text-xs">
+    <section aria-label="Managed browser"
+      className={`border-b border-[var(--border-color)] bg-[var(--bg-card)] p-2 text-xs ${embeddedReady ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : 'shrink-0'}`}>
       <button type="button" aria-label="Toggle managed browser" aria-expanded={expanded}
-        className="flex w-full items-center gap-2 text-left" onClick={() => setExpanded(v => !v)}>
+        className="flex w-full items-center gap-2 text-left" onClick={() => {
+          if (embedded) setEmbedded(false);
+          setExpanded(v => !v);
+        }}>
         <Monitor size={14} className="text-purple-400" />
         <strong>Managed Browser</strong>
-        <span className="text-[var(--text-muted)]">Real Chrome window · experimental</span>
+        <span className="text-[var(--text-muted)]">{embeddedReady ? 'Embedded Chrome · interactive' : 'Real Chrome · experimental'}</span>
       </button>
       {expanded && (
-        <div className="mt-2 space-y-2 border-t border-[var(--border-color)] pt-2">
+        <div className={`mt-2 space-y-2 border-t border-[var(--border-color)] pt-2 ${embeddedReady ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : ''}`}>
           {!getInvoke() ? <p>Native T-Line desktop is required for managed browser controls.</p> : (
             <>
-              <p className="text-[var(--text-muted)]">Opens Chrome separately with an isolated profile. Select Preview to show opt-in, read-only live snapshots within T-Line. Agent control still requires an authorized gateway claim; Chrome is not embedded natively.</p>
-              <label className="inline-flex items-center gap-2">
+              {!embeddedReady && <p className="text-[var(--text-muted)]">Start Chrome inside T-Line for interactive browsing, or open a separate Chrome window. Both use isolated profiles; agent control still requires an authorized gateway claim.</p>}
+              <label className={embeddedReady ? 'hidden' : 'inline-flex items-center gap-2'}>
                 <input type="checkbox" checked={enabled} onChange={e => {
                   setEnabled(e.target.checked);
                   if (!e.target.checked) {
@@ -219,7 +284,7 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
               </label>
               {enabled && (
                 <>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className={embeddedReady ? 'hidden' : 'flex flex-wrap items-center gap-2'}>
                     <label htmlFor="managed-profile">Profile</label>
                     <select id="managed-profile" value={profileId} onChange={e => { setProfileId(e.target.value); setTargets([]); setPairing(''); setPairedRuntime(null); setGatewayClaim(null); setRegisteredUntil(null); setPreviewTarget(null); }}
                       className="rounded border border-[var(--border-color)] bg-[var(--bg-main)] p-1">
@@ -231,13 +296,20 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
                     <button type="button" aria-label="Refresh managed browser" onClick={() => void refresh()}
                       className="rounded border border-[var(--border-color)] p-1"><RefreshCw size={14} /></button>
                   </div>
-                  <div role="status">
+                  <div role="status" className={embeddedReady ? 'hidden' : ''}>
                     {available?.available ? 'Installed Chrome detected' : 'Installed Chrome unavailable'}
                     {selected ? ' · ' + selected.lifecycle + (selected.debuggingAvailable ? ' · CDP ready' : ' · CDP unavailable') : ' · stopped'}
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className={embeddedReady ? 'hidden' : 'flex flex-wrap gap-2'}>
                     <button type="button" disabled={busy || !!selected || !available?.available} onClick={() => void launch()}
                       className="rounded bg-purple-600 px-2 py-1.5 text-white disabled:opacity-40">Launch Chrome</button>
+                    <button type="button" disabled={busy || !!selected || !available?.available}
+                      onClick={() => void launch(true)} className="rounded bg-purple-600 px-2 py-1.5 text-white disabled:opacity-40">
+                      Open Chrome inside T-Line
+                    </button>
+                    {selected?.embedded && !embedded && selected.lifecycle === 'ready' &&
+                      <button type="button" onClick={() => { setExpanded(true); setEmbedded(true); }}
+                        className="rounded border border-purple-500 px-2 py-1.5 text-purple-400">Resume embedded Chrome</button>}
                     <button type="button" disabled={busy || !selected} onClick={() => void stop()}
                       className="inline-flex items-center gap-1 rounded border border-[var(--border-color)] px-2 py-1.5 disabled:opacity-40">
                       <Square size={12} /> Stop owned browser
@@ -254,10 +326,10 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
                   {profileId === 'recovery' && !selected && (
                     <p className="text-[var(--text-muted)]">The recovery profile starts empty. Previous browser profile data remains untouched.</p>
                   )}
-                  {selected && <p className="font-mono text-[10px] text-[var(--text-muted)]">
+                  {selected && !embeddedReady && <p className="font-mono text-[10px] text-[var(--text-muted)]">
                     {selected.profileId + ' · generation ' + selected.generation.slice(0, 24)}</p>}
                   {targets.length > 0 && (
-                    <div aria-label="Managed browser targets" className="max-h-32 space-y-1 overflow-auto">
+                    <div aria-label="Managed browser targets" className={embeddedReady ? 'hidden' : 'max-h-32 space-y-1 overflow-auto'}>
                       {targets.map(target => (
                         <div key={target.id} className="flex items-center gap-2 rounded border border-[var(--border-color)] p-1">
                           <span className="min-w-0 flex-1 truncate">{target.title || 'Untitled'} · {target.url}</span>
@@ -281,12 +353,58 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
                       ))}
                     </div>
                   )}
+                  {embeddedReady && currentTarget && (
+                    <form aria-label="Embedded Chrome navigation" className="flex items-center gap-1"
+                      onSubmit={event => {
+                        event.preventDefault();
+                        const candidate = /^(https?:\/\/)/i.test(address) ? address : 'https://' + address;
+                        try {
+                          const url = new URL(candidate);
+                          if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
+                            throw new Error('Invalid Chrome URL');
+                          }
+                          void sendEmbeddedInput({ type: 'navigate', url: url.href });
+                        } catch { setError('Enter a valid HTTP(S) address.'); }
+                      }}>
+                      <button type="button" aria-label="Chrome Back" onClick={() => void sendEmbeddedInput({ type: 'back' })}><ArrowLeft size={16}/></button>
+                      <button type="button" aria-label="Chrome Forward" onClick={() => void sendEmbeddedInput({ type: 'forward' })}><ArrowRight size={16}/></button>
+                      <button type="button" aria-label="Chrome Reload" onClick={() => void sendEmbeddedInput({ type: 'reload' })}><RefreshCw size={15}/></button>
+                      <input aria-label="Chrome address" value={address}
+                        onChange={event => setAddress(event.target.value)}
+                        className="min-w-0 flex-1 rounded border border-[var(--border-color)] bg-[var(--bg-main)] p-1.5"/>
+                      <button type="submit" className="rounded border border-[var(--border-color)] px-2 py-1">Go</button>
+                      {targets.length > 1 && <select aria-label="Chrome tabs"
+                        value={currentTarget.id} className="max-w-28 bg-[var(--bg-main)] p-1"
+                        onChange={event => {
+                          if (selected && targets.some(tab => tab.id === event.target.value)) {
+                            setPreviewTarget({ profileId: selected.profileId, generation: selected.generation, targetId: event.target.value });
+                          }
+                        }}>
+                        {targets.map(tab => <option key={tab.id} value={tab.id}>{tab.title || tab.url || 'Tab'}</option>)}
+                      </select>}
+                      <button type="button" aria-label="Bookmark Chrome page" onClick={() => {
+                        const url = currentTarget.url;
+                        setSavedUrls(previous => previous.includes(url)
+                          ? previous.filter(item => item !== url) : [...previous, url].slice(-100));
+                      }}><Star size={15} fill={savedUrls.includes(currentTarget.url) ? 'currentColor' : 'none'}/></button>
+                      <select aria-label="Chrome bookmarks" className="max-w-28 bg-[var(--bg-main)] p-1"
+                        value="" onChange={event => { if (event.target.value) void sendEmbeddedInput({ type: 'navigate', url: event.target.value }); }}>
+                        <option value="">Bookmarks</option>
+                        {savedUrls.map(url => <option key={url} value={url}>{url}</option>)}
+                      </select>
+                    </form>
+                  )}
                   {previewTarget && selected?.generation === previewTarget.generation &&
                     selected?.profileId === previewTarget.profileId && selected.lifecycle === 'ready' &&
                     <ManagedBrowserLivePreview key={previewTarget.generation + previewTarget.targetId}
                       profileId={previewTarget.profileId} generation={previewTarget.generation}
                       targetId={previewTarget.targetId} active={active && enabled && expanded}
-                      onClose={() => setPreviewTarget(null)}/>}
+                      interactive={embeddedReady} fill={embeddedReady}
+                      onInteraction={action => { void sendEmbeddedInput(action); }}
+                      onClose={() => {
+                        setPreviewTarget(null);
+                        if (embedded) setEmbedded(false);
+                      }}/>}
                   {pairing && (
                     <div className="space-y-1">
                       <p role="status" aria-label="Native Core registration">
@@ -312,7 +430,7 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent 
                     </div>
                   )}
                   {error && <p role="alert" className="text-red-400">{error}</p>}
-                  {message && <p role="status" className="text-[var(--text-muted)]">{message}</p>}
+                  {message && !embeddedReady && <p role="status" className="text-[var(--text-muted)]">{message}</p>}
                 </>
               )}
             </>

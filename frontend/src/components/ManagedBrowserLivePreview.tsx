@@ -43,11 +43,21 @@ export function isSafeBrowserStreamEvent(
 
 /** Bounded CDP screencast preferred; snapshot fallback if unavailable.
  * Only a primary native Tauri WebView receives frames. Never stores pixels. */
+export type BrowserInputAction =
+  | { type: 'click' | 'move'; x: number; y: number }
+  | { type: 'scroll'; x: number; y: number; delta_y: number }
+  | { type: 'text'; text: string }
+  | { type: 'key'; key: string }
+  | { type: 'navigate'; url: string }
+  | { type: 'back' | 'forward' | 'reload' };
+
 export default function ManagedBrowserLivePreview({
-  profileId, generation, targetId, active, onClose,
+  profileId, generation, targetId, active, onClose, interactive = false, fill = false, onInteraction,
 }: {
   profileId: string; generation: string; targetId: string;
   active: boolean; onClose: () => void;
+  interactive?: boolean; fill?: boolean;
+  onInteraction?: (action: BrowserInputAction) => void;
 }) {
   const [frame, setFrame] = useState<(ManagedBrowserFrame | BrowserStreamEvent) | null>(null);
   const [fps, setFps] = useState(0);
@@ -55,6 +65,7 @@ export default function ManagedBrowserLivePreview({
   const [desktopMemoryMib, setDesktopMemoryMib] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [capturing, setCapturing] = useState(false);
+  const [inputError, setInputError] = useState('');
   const [mode, setMode] = useState<'connecting' | 'screencast' | 'snapshot' | 'paused'>('connecting');
   useEffect(() => {
     setFrame(null);
@@ -252,25 +263,79 @@ export default function ManagedBrowserLivePreview({
     return () => window.cancelAnimationFrame(paint);
   }, [active, frame]);
 
+  const coords = (image: HTMLImageElement, clientX: number, clientY: number) => {
+    const bounds = image.getBoundingClientRect();
+    if (!image.naturalWidth || !image.naturalHeight || !bounds.width || !bounds.height) return null;
+    const scale = Math.min(bounds.width / image.naturalWidth, bounds.height / image.naturalHeight);
+    const padX = (bounds.width - image.naturalWidth * scale) / 2;
+    const padY = (bounds.height - image.naturalHeight * scale) / 2;
+    const x = (clientX - bounds.left - padX) / scale;
+    const y = (clientY - bounds.top - padY) / scale;
+    if (x < 0 || y < 0 || x >= image.naturalWidth || y >= image.naturalHeight) return null;
+    return { x: Math.round(x), y: Math.round(y) };
+  };
+  const sendInput = (action: BrowserInputAction) => {
+    if (!interactive || !active || !onInteraction) return;
+    try { onInteraction(action); setInputError(''); }
+    catch { setInputError('Cannot send input to Chrome.'); }
+  };
+  const specialKeys = new Set(['Enter', 'Backspace', 'Tab', 'Escape', 'Delete', 'ArrowLeft',
+    'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown']);
   if (!active) return null;
   return (
     <section aria-label="Managed browser live preview"
-      className="overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--bg-main)]">
+      className={`overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--bg-main)] ${fill ? 'flex min-h-0 flex-1 flex-col' : ''}`}>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-color)] px-2 py-1.5">
         <span className="inline-flex items-center gap-1 font-semibold">
           <RefreshCw size={12} className={capturing ? 'animate-spin' : ''} />
-          Live preview · read-only · {mode}
+          {interactive ? 'Chrome inside T-Line · interactive' : 'Live preview · read-only'} · {mode}
         </span>
         <button type="button" onClick={onClose}
           className="inline-flex items-center gap-1 rounded border border-[var(--border-color)] px-2 py-1"
           aria-label="Close live preview"><EyeOff size={12}/> Close preview</button>
       </div>
-      {frame
-        ? <img alt="Live screenshot of the selected T-Line-managed browser tab"
-            className="mx-auto block max-h-[420px] w-full object-contain" src={frame.dataUrl}/>
-        : <div className="flex min-h-36 items-center justify-center text-[var(--text-muted)]">
-            {error || 'Connecting to the owned browser tab…'}
-          </div>}
+      <div role={interactive ? 'application' : undefined}
+        aria-label={interactive ? 'Interactive Chrome viewport' : undefined}
+        tabIndex={interactive ? 0 : undefined}
+        className={fill ? 'flex min-h-0 flex-1 items-center justify-center outline-none focus:ring-2 focus:ring-purple-500/30' : 'outline-none'}
+        onKeyDown={event => {
+          if (!interactive || !onInteraction || event.altKey || event.ctrlKey || event.metaKey || event.nativeEvent.isComposing) return;
+          if (specialKeys.has(event.key)) {
+            event.preventDefault();
+            sendInput({ type: 'key', key: event.key });
+          } else if (event.key.length === 1 && event.key !== ' ') {
+            event.preventDefault();
+            sendInput({ type: 'text', text: event.key });
+          } else if (event.key === ' ') {
+            event.preventDefault();
+            sendInput({ type: 'key', key: ' ' });
+          }
+        }}>
+        {frame
+          ? <img alt="Live screenshot of the selected T-Line-managed browser tab"
+              draggable={false} src={frame.dataUrl}
+              className={fill ? 'block h-full max-h-full w-full select-none object-contain' :
+                'mx-auto block max-h-[420px] w-full select-none object-contain'}
+              style={{ cursor: interactive ? 'pointer' : undefined }}
+              onClick={event => {
+                if (!interactive) return;
+                event.currentTarget.parentElement?.focus();
+                const at = coords(event.currentTarget, event.clientX, event.clientY);
+                if (at) sendInput({ type: 'click', ...at });
+              }}
+              onWheel={event => {
+                if (!interactive) return;
+                const at = coords(event.currentTarget, event.clientX, event.clientY);
+                if (at) {
+                  event.preventDefault();
+                  sendInput({ type: 'scroll', ...at, delta_y: Math.max(-2000, Math.min(2000, event.deltaY)) });
+                }
+              }}/>
+          : <div className="flex min-h-36 items-center justify-center text-[var(--text-muted)]">
+              {error || 'Connecting to the owned browser tab…'}
+            </div>}
+      </div>
+      {inputError && <p role="alert" className="px-2 py-1 text-amber-400">{inputError}</p>}
       {error && frame && <p role="alert" className="px-2 py-1 text-amber-500">{error}</p>}
       {stats && <p role="status" className="px-2 py-1 font-mono text-[10px] text-[var(--text-muted)]">
         {fps.toFixed(1)} FPS · {stats.sent} sent · {stats.acknowledged} ACK · {stats.dropped} dropped
@@ -282,8 +347,9 @@ export default function ManagedBrowserLivePreview({
         {desktopMemoryMib !== null ? ` · Desktop+WebView ${desktopMemoryMib} MiB` : ''}
       </p>}
       <p className="px-2 py-1 text-[10px] text-[var(--text-muted)]">
-        Native CDP streams are capped at 5 FPS; offscreen Chrome uses a persistent
-        snapshot fallback. Hidden windows pause capture. No page controls or frame storage.
+        {interactive
+          ? 'Click the page to focus it. Keyboard and scroll are forwarded only to this verified embedded Chrome tab. The stream pauses when hidden.'
+          : 'Native CDP streams are capped at 5 FPS; offscreen Chrome uses a persistent snapshot fallback. Hidden windows pause capture. No page controls or frame storage.'}
       </p>
     </section>
   );

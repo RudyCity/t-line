@@ -176,6 +176,7 @@ fn execute_stream(
         r#"{"id":1,"method":"Page.startScreencast","params":{"format":"jpeg","quality":50,"maxWidth":1280,"maxHeight":720,"everyNthFrame":4}}"#,
     )?;
 
+    let embedded = managed_browser::verified_embedded_identity(&state, &profile_id, &generation).is_ok();
     let mut last_emit = Instant::now() - MIN_SEND_INTERVAL;
     let mut last_check = Instant::now() - Duration::from_secs(1);
     let mut last_screencast = Instant::now();
@@ -202,9 +203,11 @@ fn execute_stream(
         // Headless/offscreen Chrome may accept startScreencast yet emit no
         // frames. Retain the SAME verified WebSocket and capture a bounded
         // JPEG every second rather than reopening a CDP socket each poll.
-        if last_screencast.elapsed() >= Duration::from_secs(2)
+        // The headless embedded viewer needs interactive fallback cadence;
+        // external read-only previews retain the low-rate idle budget.
+        if last_screencast.elapsed() >= if embedded { Duration::from_millis(800) } else { Duration::from_secs(2) }
             && !snapshot_pending
-            && last_snapshot_request.elapsed() >= Duration::from_secs(1)
+            && last_snapshot_request.elapsed() >= if embedded { MIN_SEND_INTERVAL } else { Duration::from_secs(1) }
         {
             send_cdp(
                 &mut socket,
@@ -224,7 +227,7 @@ fn execute_stream(
                 };
                 if value["id"] == 7 {
                     snapshot_pending = false;
-                    if last_screencast.elapsed() >= Duration::from_secs(1)
+                    if last_screencast.elapsed() >= if embedded { Duration::from_millis(700) } else { Duration::from_secs(1) }
                         && last_emit.elapsed() >= MIN_SEND_INTERVAL
                     {
                         if let Ok(data_url) = crate::managed_browser_capture::extract_frame(&text) {

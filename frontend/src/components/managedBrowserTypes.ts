@@ -6,6 +6,7 @@ export type ManagedBrowserRuntime = {
   lifecycle: ManagedBrowserLifecycle;
   debuggingAvailable: boolean;
   engine: ManagedBrowserEngine;
+  embedded?: boolean;
 };
 export type ManagedBrowserAvailability = {
   available: boolean;

@@ -21,6 +21,7 @@ mod state;
 mod managed_browser;
 mod managed_browser_core;
 mod managed_browser_capture;
+mod managed_browser_input;
 mod managed_browser_stream;
 mod managed_browser_flow;
 
@@ -1752,6 +1753,7 @@ pub fn run() {
         .manage(state)
         .manage(managed_browser::ManagedBrowserState::default())
         .manage(managed_browser_stream::BrowserStreamState::default())
+        .manage(managed_browser_input::BrowserInputState::default())
         .invoke_handler(tauri::generate_handler![
             managed_browser::managed_browser_discover,
             managed_browser::managed_browser_status,
@@ -1761,6 +1763,7 @@ pub fn run() {
             managed_browser::managed_browser_gateway_pairing,
             managed_browser::managed_browser_gateway_register,
             managed_browser_capture::managed_browser_capture,
+            managed_browser_input::managed_browser_interact,
             managed_browser_stream::managed_browser_stream_start,
             managed_browser_stream::managed_browser_stream_stop,
             managed_browser_stream::managed_browser_stream_ack,

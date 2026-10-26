@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-managed-browser-interact"
+description = "Enables the managed_browser_interact command without any pre-configured scope."
+commands.allow = ["managed_browser_interact"]
+
+[[permission]]
+identifier = "deny-managed-browser-interact"
+description = "Denies the managed_browser_interact command without any pre-configured scope."
+commands.deny = ["managed_browser_interact"]

@@ -24,6 +24,7 @@ fn main() {
              "managed_browser_gateway_pairing",
              "managed_browser_gateway_register",
              "managed_browser_capture",
+             "managed_browser_interact",
              "managed_browser_stream_start",
              "managed_browser_stream_stop",
              "managed_browser_stream_ack",

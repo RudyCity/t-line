@@ -78,6 +78,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   const [webviewActive, setWebviewActive] = useState(isActive);
   const [nativeError, setNativeError] = useState<string | null>(null);
   const [navigationError, setNavigationError] = useState<string | null>(null);
+  const [managedEmbedded, setManagedEmbedded] = useState(false);
   const [nativeGeneration, setNativeGeneration] = useState(0);
 
   const isActiveRef = useRef(isActive);
@@ -97,13 +98,13 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   useEffect(() => {
     const webview = tauriWebviewRef.current;
     if (useTauriWebview && webview && renderMode === 'tauri-native') {
-      if (isActive && !nativeError && !forceHideWebview && !showBookmarksDropdown && !showHistoryDropdown && !showAddBookmarkPopover) {
+      if (isActive && !managedEmbedded && !nativeError && !forceHideWebview && !showBookmarksDropdown && !showHistoryDropdown && !showAddBookmarkPopover) {
         webview.show().catch(() => {});
       } else {
         webview.hide().catch(() => {});
       }
     }
-  }, [isActive, nativeError, forceHideWebview, showBookmarksDropdown, showHistoryDropdown, showAddBookmarkPopover, useTauriWebview, renderMode]);
+  }, [isActive, managedEmbedded, nativeError, forceHideWebview, showBookmarksDropdown, showHistoryDropdown, showAddBookmarkPopover, useTauriWebview, renderMode]);
 
   const destroyWebview = (webview: any) => {
     if (!webview) return;
@@ -283,7 +284,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
 
         if (!active || !containerRef.current || !webviewInstance || tauriWebviewRef.current !== webviewInstance) return;
 
-        if (isActiveRef.current && !nativeError) {
+        if (isActiveRef.current && !managedEmbedded && !nativeError) {
           await webviewInstance.show().catch(() => {});
         } else {
           await webviewInstance.hide().catch(() => {});
@@ -801,7 +802,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       style={{ display: isActive ? 'flex' : 'none' }}
     >
       {/* Top Navbar Component */}
-      <BrowserNavigationBar
+      {!managedEmbedded && <BrowserNavigationBar
         urlInput={urlInput}
         setUrlInput={setUrlInput}
         activeUrl={activeUrl}
@@ -846,7 +847,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
         handleCaptureScreenshot={handleCaptureScreenshot}
         openInSystemBrowser={openInSystemBrowser}
         isTauri={isTauri}
-      />
+      />}
       {navigationError && (
         <div role="alert" className="flex shrink-0 items-center justify-between gap-2 border-b border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-300">
           <span>{navigationError}</span>
@@ -856,10 +857,12 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       )}
 
       <BrowserAgentSessions active={isActive} />
-      <ManagedBrowserPanel active={isActive} initialUrl={activeUrl} onSendToAgent={onManagedBrowserHandoff} />
+      <ManagedBrowserPanel active={isActive} initialUrl={activeUrl}
+        onSendToAgent={onManagedBrowserHandoff} onEmbeddedChange={setManagedEmbedded} />
 
       {/* Main Browser Viewport Area — min-h-0 so DevTools can claim space */}
-      <div className="flex-1 bg-[var(--bg-main)] relative min-h-0 overflow-hidden flex flex-col">
+      <div className="flex-1 bg-[var(--bg-main)] relative min-h-0 overflow-hidden flex flex-col"
+        style={{ display: managedEmbedded ? 'none' : undefined }}>
         {/* Device Mode Resolution Label overlay */}
         {deviceMode !== 'desktop' && (
           <div className="flex items-center justify-between px-4 py-1.5 bg-[var(--bg-card)] border-b border-[var(--border-color)] text-xs text-[var(--text-muted)] select-none shrink-0">
