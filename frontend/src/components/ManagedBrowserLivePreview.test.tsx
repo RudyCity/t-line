@@ -154,7 +154,11 @@ describe('T-Line native managed browser read-only preview', () => {
     fireEvent.click(image, { clientX: 50, clientY: 60 });
     expect(onInteraction).toHaveBeenCalledWith({ type: 'click', x: 100, y: 120 });
     fireEvent.wheel(image, { clientX: 50, clientY: 60, deltaY: 300 });
-    expect(onInteraction).toHaveBeenCalledWith({ type: 'scroll', x: 100, y: 120, delta_y: 300 });
+    fireEvent.wheel(image, { clientX: 50, clientY: 60, deltaY: 250 });
+    await waitFor(() => expect(onInteraction).toHaveBeenCalledWith({
+      type: 'scroll', x: 100, y: 120, delta_y: 550,
+    }));
+    expect(onInteraction.mock.calls.filter(([action]) => action.type === 'scroll')).toHaveLength(1);
     const viewport = screen.getByRole('application', { name: 'Interactive Chrome viewport' });
     fireEvent.keyDown(viewport, { key: 'Enter' });
     fireEvent.keyDown(viewport, { key: 'a' });

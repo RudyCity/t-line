@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Monitor, RefreshCw, Square, Link2, Copy, Eye, ArrowLeft, ArrowRight, Star } from 'lucide-react';
 import ManagedBrowserLivePreview, { type BrowserInputAction } from './ManagedBrowserLivePreview';
 import { gatewayPairingInstructions, type ManagedBrowserGatewayPairing } from './managedBrowserGateway';
@@ -38,10 +38,17 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent,
   const [previewTarget, setPreviewTarget] = useState<{
     profileId: string; generation: string; targetId: string;
   } | null>(null);
+  // Preserve event order across async IPC calls. Native execution remains
+  // serialized as a second layer of protection for click-then-type flows.
+  const inputQueue = useRef<Promise<void>>(Promise.resolve());
+  const inputEpoch = useRef(0);
   const selected = runtimes.find(r => r.profileId === profileId);
   const currentTarget = targets.find(target => target.id === previewTarget?.targetId);
   const embeddedReady = !!(active && expanded && enabled && embedded && selected?.embedded &&
     selected.lifecycle === 'ready' && selected.debuggingAvailable && currentTarget);
+  useEffect(() => {
+    inputEpoch.current += 1;
+  }, [selected?.generation, previewTarget?.targetId, embeddedReady]);
   useEffect(() => {
     onEmbeddedChange?.(embeddedReady);
   }, [embeddedReady, onEmbeddedChange]);
@@ -54,22 +61,36 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent,
     try { localStorage.setItem('tline-chrome-bookmarks', JSON.stringify(savedUrls)); }
     catch { /* saving bookmarks is optional */ }
   }, [savedUrls]);
-  const sendEmbeddedInput = async (interaction: BrowserInputAction) => {
-    if (!embeddedReady || !selected || !currentTarget) return;
+  const sendEmbeddedInput = (interaction: BrowserInputAction) => {
+    if (!embeddedReady || !selected || !currentTarget) return Promise.resolve();
     const invoke = getInvoke();
-    if (!invoke) return;
-    try {
-      await invoke('managed_browser_interact', {
-        profileId: selected.profileId, generation: selected.generation,
-        targetId: currentTarget.id, interaction,
-      });
-      setError('');
-      if (['navigate', 'back', 'forward', 'reload'].includes(interaction.type)) {
-        window.setTimeout(() => { void refreshTargets(selected); }, 500);
+    if (!invoke) return Promise.resolve();
+    const request = {
+      profileId: selected.profileId, generation: selected.generation,
+      targetId: currentTarget.id, interaction,
+    };
+    const epoch = inputEpoch.current;
+    const runtime = selected;
+    const execute = async () => {
+      // Queued input from an old tab must never reach a newly selected tab.
+      if (epoch !== inputEpoch.current) return;
+      try {
+        await invoke('managed_browser_interact', request);
+        if (epoch !== inputEpoch.current) return;
+        setError('');
+        if (['navigate', 'back', 'forward', 'reload'].includes(interaction.type)) {
+          window.setTimeout(() => {
+            if (epoch === inputEpoch.current) void refreshTargets(runtime);
+          }, 500);
+        }
+      } catch (err) {
+        if (epoch === inputEpoch.current) {
+          setError('Chrome interaction failed: ' + String(err));
+        }
       }
-    } catch (err) {
-      setError('Chrome interaction failed: ' + String(err));
-    }
+    };
+    inputQueue.current = inputQueue.current.then(execute, execute);
+    return inputQueue.current;
   };
 
   const refresh = useCallback(async () => {

@@ -917,6 +917,8 @@ mod tests {
             .expect("owned headless Chrome receives keyboard input");
         run_input(port, target, BrowserInteraction::Reload)
             .expect("owned headless Chrome can reload");
+        crate::managed_browser_input::smoke_reused_input(port, target)
+            .expect("embedded Chrome reuses CDP input session and rotates on generation change");
         let transport = crate::managed_browser_stream::smoke_probe_screencast(port, target)
             .expect("real Chrome screencast or persistent JPEG fallback");
         println!("native viewer smoke transport: {transport}");

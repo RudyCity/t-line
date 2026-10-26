@@ -19,10 +19,24 @@ const MAX_CDP_FRAME: usize = 2_500_000;
 const MAX_JPEG_BASE64: usize = 2_000_000;
 const MIN_SEND_INTERVAL: Duration = Duration::from_millis(200); // maximum 5fps
 
-#[derive(Default)]
 struct StreamControl {
     cancel: AtomicBool,
     flow: Mutex<FrameFlow>,
+    target_id: String,
+    last_input: Mutex<Instant>,
+}
+impl StreamControl {
+    fn new(target_id: String) -> Self {
+        Self {
+            cancel: AtomicBool::new(false),
+            flow: Mutex::new(FrameFlow::default()),
+            target_id,
+            last_input: Mutex::new(Instant::now()),
+        }
+    }
+    fn recently_active(&self) -> bool {
+        self.last_input.lock().is_ok_and(|at| at.elapsed() < Duration::from_secs(3))
+    }
 }
 #[derive(Default)]
 pub struct BrowserStreamState {
@@ -38,6 +52,19 @@ pub struct BrowserStreamTelemetry {
     host_rss_bytes: u64,
 }
 impl BrowserStreamState {
+    /// Input is accepted only for the currently displayed browser target,
+    /// so inactive tabs cannot force high-FPS capture.
+    pub fn mark_interaction(&self, target_id: &str) {
+        if let Ok(streams) = self.streams.lock() {
+            for control in streams.values() {
+                if control.target_id == target_id && !control.cancel.load(Ordering::SeqCst) {
+                    if let Ok(mut last) = control.last_input.lock() {
+                        *last = Instant::now();
+                    }
+                }
+            }
+        }
+    }
     pub fn stop_all(&self) {
         if let Ok(mut streams) = self.streams.lock() {
             for cancel in streams.values() {
@@ -162,9 +189,16 @@ fn execute_stream(
         config.max_message_size = Some(MAX_CDP_FRAME);
         config.max_frame_size = Some(MAX_CDP_FRAME);
     });
+    let embedded = managed_browser::verified_embedded_identity(&state, &profile_id, &generation).is_ok();
     if let tungstenite::stream::MaybeTlsStream::Plain(stream) = socket.get_mut() {
         stream
-            .set_read_timeout(Some(Duration::from_millis(750)))
+            // A shorter bounded receive period lets headless fallback reach
+            // the 5 FPS interaction budget instead of waiting 750ms idle.
+            .set_read_timeout(Some(if embedded {
+                Duration::from_millis(120)
+            } else {
+                Duration::from_millis(750)
+            }))
             .map_err(|_| "Cannot configure screencast read timeout.")?;
         stream
             .set_write_timeout(Some(Duration::from_secs(2)))
@@ -176,7 +210,6 @@ fn execute_stream(
         r#"{"id":1,"method":"Page.startScreencast","params":{"format":"jpeg","quality":50,"maxWidth":1280,"maxHeight":720,"everyNthFrame":4}}"#,
     )?;
 
-    let embedded = managed_browser::verified_embedded_identity(&state, &profile_id, &generation).is_ok();
     let mut last_emit = Instant::now() - MIN_SEND_INTERVAL;
     let mut last_check = Instant::now() - Duration::from_secs(1);
     let mut last_screencast = Instant::now();
@@ -200,14 +233,24 @@ fn execute_stream(
             }
             last_check = Instant::now();
         }
-        // Headless/offscreen Chrome may accept startScreencast yet emit no
-        // frames. Retain the SAME verified WebSocket and capture a bounded
-        // JPEG every second rather than reopening a CDP socket each poll.
-        // The headless embedded viewer needs interactive fallback cadence;
-        // external read-only previews retain the low-rate idle budget.
+        // Headless Chrome can stay silent after startScreencast. Keep its
+        // verified connection and adapt screenshot frequency to user activity:
+        // 5 fps while interacting, <1 fps while idle. External read-only
+        // preview stays at its prior low capture rate.
+        if snapshot_pending && last_snapshot_request.elapsed() > Duration::from_secs(3) {
+            return Err("Chrome screenshot response timed out.".into());
+        }
+        let active_input = embedded && control.recently_active();
+        let fallback_delay = if active_input {
+            MIN_SEND_INTERVAL
+        } else if embedded {
+            Duration::from_millis(1500)
+        } else {
+            Duration::from_secs(1)
+        };
         if last_screencast.elapsed() >= if embedded { Duration::from_millis(800) } else { Duration::from_secs(2) }
             && !snapshot_pending
-            && last_snapshot_request.elapsed() >= if embedded { MIN_SEND_INTERVAL } else { Duration::from_secs(1) }
+            && last_snapshot_request.elapsed() >= fallback_delay
         {
             send_cdp(
                 &mut socket,
@@ -317,7 +360,7 @@ pub fn managed_browser_stream_start(
         std::process::id(),
         NEXT_STREAM.fetch_add(1, Ordering::Relaxed)
     );
-    let control = Arc::new(StreamControl::default());
+    let control = Arc::new(StreamControl::new(target_id.clone()));
     let mut active = streams
         .streams
         .lock()
@@ -500,6 +543,22 @@ pub(crate) fn smoke_probe_screencast(port: u16, target_id: &str) -> Result<&'sta
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn capture_rate_switches_only_for_the_active_target() {
+        let state = BrowserStreamState::default();
+        let active = Arc::new(StreamControl::new("OWNED_TAB".into()));
+        *active.last_input.lock().unwrap() = Instant::now() - Duration::from_secs(5);
+        state.streams.lock().unwrap().insert("stream1".into(), active.clone());
+        assert!(!active.recently_active(), "idle tab should not run at high frame rate");
+        state.mark_interaction("OTHER_TAB");
+        assert!(!active.recently_active(), "unrelated browser tabs must not wake this viewer");
+        state.mark_interaction("OWNED_TAB");
+        assert!(active.recently_active(), "clicking active tab restores interactive frame rate");
+        active.cancel.store(true, Ordering::SeqCst);
+        *active.last_input.lock().unwrap() = Instant::now() - Duration::from_secs(5);
+        state.mark_interaction("OWNED_TAB");
+        assert!(!active.recently_active(), "stopped viewers remain idle");
+    }
     #[test]
     fn screencast_filters_non_jpeg_and_invalid_session_frames() {
         let valid = serde_json::json!({

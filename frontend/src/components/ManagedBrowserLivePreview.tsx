@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { EyeOff, RefreshCw } from 'lucide-react';
 
 export type ManagedBrowserFrame = {
@@ -66,6 +66,13 @@ export default function ManagedBrowserLivePreview({
   const [error, setError] = useState('');
   const [capturing, setCapturing] = useState(false);
   const [inputError, setInputError] = useState('');
+  const wheelFrame = useRef<number | null>(null);
+  const pendingWheel = useRef<{ x: number; y: number; delta_y: number } | null>(null);
+  useEffect(() => () => {
+    if (wheelFrame.current !== null) window.cancelAnimationFrame(wheelFrame.current);
+    wheelFrame.current = null;
+    pendingWheel.current = null;
+  }, [targetId, active, interactive]);
   const [mode, setMode] = useState<'connecting' | 'screencast' | 'snapshot' | 'paused'>('connecting');
   useEffect(() => {
     setFrame(null);
@@ -328,7 +335,22 @@ export default function ManagedBrowserLivePreview({
                 const at = coords(event.currentTarget, event.clientX, event.clientY);
                 if (at) {
                   event.preventDefault();
-                  sendInput({ type: 'scroll', ...at, delta_y: Math.max(-2000, Math.min(2000, event.deltaY)) });
+                  // Coalesce high-frequency wheel events into one native IPC
+                  // request per paint, keeping the serialized CDP input queue
+                  // free for clicks and keyboard events.
+                  const previous = pendingWheel.current;
+                  pendingWheel.current = {
+                    ...at,
+                    delta_y: Math.max(-2000, Math.min(2000, (previous?.delta_y ?? 0) + event.deltaY)),
+                  };
+                  if (wheelFrame.current === null) {
+                    wheelFrame.current = window.requestAnimationFrame(() => {
+                      wheelFrame.current = null;
+                      const wheel = pendingWheel.current;
+                      pendingWheel.current = null;
+                      if (wheel) sendInput({ type: 'scroll', ...wheel });
+                    });
+                  }
                 }
               }}/>
           : <div className="flex min-h-36 items-center justify-center text-[var(--text-muted)]">

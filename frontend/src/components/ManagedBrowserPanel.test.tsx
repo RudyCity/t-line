@@ -146,7 +146,10 @@ describe('managed browser safety contract', () => {
     const runtime = { profileId: 'default-managed', generation: 'chrome-embedded-1',
       lifecycle: 'ready', debuggingAvailable: true, embedded: true, engine: 'system-chrome' };
     let running = false;
-    const invoke = vi.fn(async (name: string) => {
+    const interactionOrder: string[] = [];
+    let releaseFirst!: () => void;
+    const firstAction = new Promise<void>(resolve => { releaseFirst = resolve; });
+    const invoke = vi.fn(async (name: string, args?: { interaction?: { type: string } }) => {
       if (name === 'managed_browser_discover') return { available: true, engine: 'system-chrome' };
       if (name === 'managed_browser_status') return running ? [runtime] : [];
       if (name === 'managed_browser_launch') { running = true; return runtime; }
@@ -154,7 +157,11 @@ describe('managed browser safety contract', () => {
       if (name === 'managed_browser_capture') return {
         targetId: 'PAGE1', dataUrl: 'data:image/jpeg;base64,/9j/ABCD==', capturedAt: Date.now(),
       };
-      if (name === 'managed_browser_interact') return null;
+      if (name === 'managed_browser_interact') {
+        interactionOrder.push(args?.interaction?.type || 'unknown');
+        if (interactionOrder.length === 1) await firstAction;
+        return null;
+      }
       if (name === 'managed_browser_stream_start') return { streamId: '400-1' };
       if (name === 'get_memory_usage') return { desktopTotal: 10485760 };
       return null;
@@ -173,8 +180,12 @@ describe('managed browser safety contract', () => {
     await waitFor(() => expect(onEmbeddedChange).toHaveBeenCalledWith(true));
     expect(screen.getByRole('application', { name: 'Interactive Chrome viewport' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Chrome Back' }));
-    await waitFor(() => expect(invoke).toHaveBeenCalledWith('managed_browser_interact',
-      { profileId: runtime.profileId, generation: runtime.generation, targetId: 'PAGE1', interaction: { type: 'back' } }));
+    fireEvent.click(screen.getByRole('button', { name: 'Chrome Forward' }));
+    await waitFor(() => expect(interactionOrder).toEqual(['back']));
+    releaseFirst();
+    await waitFor(() => expect(interactionOrder).toEqual(['back', 'forward']));
+    expect(invoke).toHaveBeenCalledWith('managed_browser_interact',
+      { profileId: runtime.profileId, generation: runtime.generation, targetId: 'PAGE1', interaction: { type: 'back' } });
     view.unmount();
   });
   it('never sends a browser agent request if native Core registration is rejected', async () => {
