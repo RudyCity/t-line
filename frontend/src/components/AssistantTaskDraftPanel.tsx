@@ -427,9 +427,17 @@ export function AssistantTaskDraftPanel({ workspace, sessionId, handoff, onDraft
                   </button>
                 </div>
                 <p className="text-[var(--text-muted)]">
-                  {executionEvidence.steps.length} observations · {executionEvidence.incomplete} unfinished ·{' '}
+                  {executionEvidence.steps.length} observations ·{' '}
+                  {executionEvidence.preparedCount ?? 0} pre-execution checkpoints ·{' '}
+                  {executionEvidence.incomplete} unfinished ·{' '}
+                  {executionEvidence.unpreparedCount ?? 0} missing preflight ·{' '}
                   {executionEvidence.externalUnverified} external unverified
                 </p>
+                {executionEvidence.missingHistory && (
+                  <p role="note" className="text-amber-400">
+                    Running task history is missing. Absence of steps is not proof that no tool ran.
+                  </p>
+                )}
                 {executionEvidence.manualReviewRequired && (
                   <p role="note" className="text-amber-400">
                     Manual review required: execution or external effects cannot be reconstructed safely.

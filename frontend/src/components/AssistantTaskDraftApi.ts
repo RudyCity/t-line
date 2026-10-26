@@ -104,13 +104,15 @@ export const retryAssistantAsDraft = (workspace: string, sessionId: string,
 
 export type AssistantExecutionStep = {
   seq: number; at: number; callRef: string; tool: string;
-  phase: 'started' | 'finished';
+  phase: 'started' | 'prepared' | 'finished';
   effect: 'local_read' | 'external_unverified' | 'unknown';
   outcome?: 'completed' | 'failed' | 'unverified';
 };
 export type AssistantExecutionEvidence = {
   schemaVersion: 1; taskId: string; steps: AssistantExecutionStep[];
-  incomplete: number; externalUnverified: number; manualReviewRequired: boolean;
+  incomplete: number; externalUnverified: number; preparedCount?: number;
+  unpreparedCount?: number; missingHistory?: boolean;
+  manualReviewRequired: boolean;
   executionResumptionSupported: false;
 };
 export const getAssistantCheckpoint = (workspace: string, sessionId: string,

@@ -129,6 +129,23 @@ describe('session-scoped background analysis panel', () => {
     fireEvent.click(screen.getByRole('button',{name:'Close execution evidence'}));
     expect(screen.queryByRole('region',{name:'Execution step evidence'})).toBeNull();
   });
+  it('warns when a running task has no durable history, without trying to resume', async () => {
+    vi.mocked(getAssistantCheckpoint).mockResolvedValue({
+      success:true,taskId:draft.taskId,revision:3,status:'failed',
+      checkpoint:'manual-review-only',canResumeWithoutExecution:false,
+      executionResumptionSupported:false,
+      execution:{schemaVersion:1,taskId:draft.taskId,incomplete:0,
+        externalUnverified:0,preparedCount:0,unpreparedCount:0,
+        missingHistory:true,manualReviewRequired:true,
+        executionResumptionSupported:false,steps:[]},
+    });
+    await open();
+    fireEvent.click(screen.getByRole('button',{name:'Inspect checkpoint Investigate app'}));
+    expect(await screen.findByText(/Running task history is missing/)).toBeTruthy();
+    expect(screen.getByText(/0 pre-execution checkpoints/)).toBeTruthy();
+    expect(runAssistantReadOnlyTask).not.toHaveBeenCalled();
+    expect(resumeAssistantDraft).not.toHaveBeenCalled();
+  });
   it('pauses and resumes only unstarted drafts; neither action launches a worker', async () => {
     vi.spyOn(window,'confirm').mockReturnValue(true);
     await open();
