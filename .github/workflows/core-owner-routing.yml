@@ -1,0 +1,39 @@
+name: T-Line Core Owner Contract
+on:
+  push:
+    paths:
+      - "backend/src/superAgentCoreOwnership.ts"
+      - "backend/src/superAgentCorePort.ts"
+      - "backend/src/superAgentPortProbe.ts"
+      - "backend/src/superAgentAuth.ts"
+      - "backend/tests/superAgentCoreOwnershipR4.test.ts"
+      - "backend/tests/superAgentCorePort.test.ts"
+      - "backend/tests/coreReconnectSafety.test.ts"
+      - "backend/tests/superAgentAuthConfig.test.ts"
+      - ".github/workflows/core-owner-routing.yml"
+  pull_request:
+    paths:
+      - "backend/src/superAgentCoreOwnership.ts"
+      - "backend/src/superAgentCorePort.ts"
+      - "backend/src/superAgentPortProbe.ts"
+      - "backend/src/superAgentAuth.ts"
+      - "backend/tests/superAgentCoreOwnershipR4.test.ts"
+      - ".github/workflows/core-owner-routing.yml"
+  workflow_dispatch:
+jobs:
+  routing:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - name: Type-check local backend
+        run: bun --bun x tsc --noEmit --project backend/tsconfig.json
+      - name: Core routing, owner identity and no-replay tests
+        run: bun --bun x vitest run backend/tests/superAgentCoreOwnershipR4.test.ts backend/tests/superAgentCorePort.test.ts backend/tests/coreReconnectSafety.test.ts backend/tests/superAgentAuthConfig.test.ts

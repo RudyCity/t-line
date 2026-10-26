@@ -1,4 +1,5 @@
 import { resolveSuperAgentCorePort } from './superAgentCorePort';
+import {resolveCoreOwnershipMode,verifyExternalCoreOwner} from './superAgentCoreOwnership';
 import http from 'node:http';
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
 
@@ -11,6 +12,9 @@ export type SuperAgentPortState = 'compatible' | 'occupied' | 'free';
 export async function probeSuperAgentPort(
   port = resolveSuperAgentCorePort(), headers: Record<string, string> = getSuperAgentServiceHeaders(),
 ): Promise<SuperAgentPortState> {
+  // An external-manager opt-in must NEVER fall back to spawning legacy 7888.
+  if (process.env.TLINE_SUPERAGENT_OWNER_MODE==='supervised-external' && port===7888)
+    return 'occupied';
   return new Promise((resolve) => {
     let settled = false;
     const done = (value: SuperAgentPortState) => {
@@ -30,7 +34,13 @@ export async function probeSuperAgentPort(
           const parsed = JSON.parse(data);
           if (res.statusCode === 200 && parsed?.status === 'ok' &&
             typeof parsed.version === 'string' && /^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(parsed.version)) {
-            done('compatible');
+            try {
+              const mode=resolveCoreOwnershipMode(undefined,port);
+              // An authenticated Core ping is insufficient if the external
+              // supervisor metadata does not match its actual kernel PID.
+              done(mode==='supervised-external'&&!verifyExternalCoreOwner(port)
+                ? 'occupied':'compatible');
+            }catch{done('occupied');}
           } else done('occupied');
         } catch { done('occupied'); }
       });
