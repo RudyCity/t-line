@@ -57,4 +57,12 @@ describe('authenticated agent SSE delivery', () => {
       new AbortController().signal,vi.fn(),gap);
     expect(gap).toHaveBeenCalledOnce();
   });
+  it('normalizes CRLF even when CR and LF arrive in separate network chunks', async () => {
+    const line = 'id: 1\r\ndata: ' + JSON.stringify(good(1)) + '\r\n\r\n';
+    vi.stubGlobal('fetch', vi.fn(async () => response(stream([...line]))));
+    const received:number[]=[];
+    await streamCoreAgentTimeline('D:/project','session_1',0,()=>({}),
+      new AbortController().signal,ev=>received.push(ev.seq),vi.fn());
+    expect(received).toEqual([1]);
+  });
 });

@@ -38,8 +38,14 @@ export function createAgentTimelineStreamProxy(options: {
       res.writeHead(200, { 'Content-Type':'text/event-stream; charset=utf-8',
         'Cache-Control':'no-store, no-transform',Connection:'keep-alive',
         'X-Accel-Buffering':'no' });
+      // Honor downstream backpressure; never buffer unlimited SSE frames when
+      // the desktop tab stops consuming the stream.
       response.on('data', chunk => {
-        if (!res.destroyed && !res.writableEnded) res.write(chunk);
+        if (res.destroyed || res.writableEnded) return;
+        if (!res.write(chunk)) {
+          response.pause();
+          res.once('drain', () => { if (!res.destroyed) response.resume(); });
+        }
       });
       response.on('end', () => { if (!res.writableEnded) res.end(); });
       response.on('error', () => { if (!res.writableEnded) res.end(); });

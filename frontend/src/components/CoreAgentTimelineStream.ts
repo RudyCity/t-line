@@ -42,7 +42,9 @@ export async function streamCoreAgentTimeline(
     while (!signal.aborted) {
       const {done,value} = await reader.read();
       if (done) break;
-      buffer += decoder.decode(value, {stream:true}).replace(/\r\n/g, '\n');
+      // Normalize after concatenation: CR and LF may arrive in separate chunks.
+      buffer += decoder.decode(value, {stream:true});
+      buffer = buffer.replace(/\r\n/g, '\n');
       if (buffer.length > 65536) throw Error('Oversized event frame');
       let end = buffer.indexOf('\n\n');
       while (end !== -1) {

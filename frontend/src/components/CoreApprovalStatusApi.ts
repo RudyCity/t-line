@@ -1,9 +1,9 @@
-export type CoreApprovalState = 'pending' | 'approved' | 'approved_session' | 'denied' | 'expired';
+export type CoreApprovalState = 'pending' | 'approved' | 'approved_session' | 'denied' | 'expired' | 'cancelled';
 export type CoreApprovalSummary = {
   permissionId: string; state: CoreApprovalState;
   requestedAt: number; updatedAt: number; expiresAt: number;
 };
-const states = new Set(['pending','approved','approved_session','denied','expired']);
+const states = new Set(['pending','approved','approved_session','denied','expired','cancelled']);
 export async function listCoreApprovals(workspace: string, sessionId: string,
   auth: () => Record<string,string>, signal?: AbortSignal): Promise<CoreApprovalSummary[]> {
   const params = new URLSearchParams({ workspace, sessionId });

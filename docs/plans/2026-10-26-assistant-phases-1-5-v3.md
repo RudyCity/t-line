@@ -54,5 +54,12 @@ bun --bun x vitest run backend/tests/agentTimelineV3Proxy.test.ts \
   backend/tests/agentTimelineProxy.test.ts backend/tests/assistantTaskProxy.test.ts
 ```
 
+## Follow-up: stream and approval hardening
+- The Core SSE endpoint now emits valid newline-delimited protocol frames. The desktop parser accepts CRLF split across transport chunks.
+- The local proxy honors downstream backpressure by pausing the Core response when the browser cannot drain.
+- Read-only streams are session-revalidated during delivery, with concurrency and buffer caps.
+- Approval status distinguishes `cancelled`, `expired` and `denied`. The owning Core session remains the only execution authority, with UUID prompt identifiers.
+- Test live reconnect, tab closure, owner revocation, expiry and Core restart in a packaged desktop before claiming full native E2E readiness.
+
 ## Still needs a live operator test
 A packaged Tauri window and real model provider are required to exercise: tool permission → Allow/Deny → confirmed acknowledgement → Core decision/journal → UI restart/reconnect → archived timeline. Current automated tests validate the individual boundaries, not an actual native GUI end-to-end roundtrip. Approvals cannot survive a crashed Core as actionable pending prompts; only their metadata history can.
