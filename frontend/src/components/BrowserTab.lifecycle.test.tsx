@@ -31,7 +31,23 @@ vi.mock('@tauri-apps/api/dpi', () => ({
   LogicalPosition: class { constructor(public x: number, public y: number) {} },
   LogicalSize: class { constructor(public width: number, public height: number) {} }
 }));
-vi.mock('./BrowserNavigationBar', () => ({ default: () => <div>Navigation</div> }));
+vi.mock('./BrowserNavigationBar', () => ({
+  default: ({ urlInput, setUrlInput, handleNavigate, handleBack, handleForward }: {
+    urlInput: string;
+    setUrlInput: (url: string) => void;
+    handleNavigate: (event: React.FormEvent) => void;
+    handleBack: () => void;
+    handleForward: () => void;
+  }) => (
+    <form onSubmit={handleNavigate}>
+      <input aria-label="Browser URL" value={urlInput}
+        onChange={event => setUrlInput(event.target.value)} />
+      <button type="submit">Navigate</button>
+      <button type="button" onClick={handleBack}>Back</button>
+      <button type="button" onClick={handleForward}>Forward</button>
+    </form>
+  ),
+}));
 vi.mock('./BrowserDevTools', () => ({ default: () => <div>DevTools</div> }));
 vi.mock('./Modals', () => ({ ConfirmModal: () => null }));
 vi.mock('../hooks/useBrowserListeners', () => ({ useBrowserListeners: () => undefined }));
@@ -83,6 +99,38 @@ describe('native BrowserTab lifecycle', () => {
 
     rendered.unmount();
     await waitFor(() => expect(closed).toHaveBeenCalledTimes(1));
+  });
+  it('does not advertise a new URL when the native navigation request fails', async () => {
+    const onUpdateTabUrl = vi.fn();
+    const invoke = (window as any).__TAURI__.core.invoke as ReturnType<typeof vi.fn>;
+    invoke.mockImplementation(async (command: string, args?: { js?: string }) => {
+      if (command === 'eval_webview_js' && args?.js?.includes('window.location.assign')) {
+        throw new Error('Native navigation rejected');
+      }
+      return 'http://localhost:3000/';
+    });
+    const rendered = render(<BrowserTab tab={tab} isActive={true} onUpdateTabUrl={onUpdateTabUrl} />);
+    await waitFor(() => expect(created).toHaveBeenCalledTimes(1));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Browser URL' }), { target: { value: 'example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate' }));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Navigation failed'));
+    expect((screen.getByRole('textbox', { name: 'Browser URL' }) as HTMLInputElement).value).toBe(tab.url);
+    expect(onUpdateTabUrl).not.toHaveBeenCalled();
+    rendered.unmount();
+  });
+  it('navigates to HTTPS and routes Back/Forward to the actual native webview', async () => {
+    const onUpdateTabUrl = vi.fn();
+    const rendered = render(<BrowserTab tab={tab} isActive={true} onUpdateTabUrl={onUpdateTabUrl} />);
+    await waitFor(() => expect(created).toHaveBeenCalledTimes(1));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Browser URL' }), { target: { value: 'example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate' }));
+    await waitFor(() => expect(onUpdateTabUrl).toHaveBeenCalledWith('https://example.com/'));
+    const invoke = (window as any).__TAURI__.core.invoke as ReturnType<typeof vi.fn>;
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Forward' }));
+    expect(invoke).toHaveBeenCalledWith('eval_webview_js', expect.objectContaining({ js: 'window.history.back()' }));
+    expect(invoke).toHaveBeenCalledWith('eval_webview_js', expect.objectContaining({ js: 'window.history.forward()' }));
+    rendered.unmount();
   });
   it('offers an isolated retry if WebView2 fails to initialize', async () => {
     const rendered = render(<BrowserTab tab={tab} isActive={true} />);

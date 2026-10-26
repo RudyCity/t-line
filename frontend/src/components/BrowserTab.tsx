@@ -77,6 +77,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   // Closing it on every switch resets login, SPA, scroll and browser state.
   const [webviewActive, setWebviewActive] = useState(isActive);
   const [nativeError, setNativeError] = useState<string | null>(null);
+  const [navigationError, setNavigationError] = useState<string | null>(null);
   const [nativeGeneration, setNativeGeneration] = useState(0);
 
   const isActiveRef = useRef(isActive);
@@ -313,7 +314,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
 
   // Stable ref so the hook can call handleReload even though it's defined below
   const handleReloadRef = useRef<(forceBypassCache?: boolean) => void>(() => {});
-  const navigateNativeRef = useRef<(url: string) => void>(() => {});
+  const navigateNativeRef = useRef<(url: string) => Promise<boolean>>(async () => false);
 
   // Call useBrowserStorageAndHistory custom hook — must be called BEFORE any effects that use zoomFactor
   const {
@@ -483,7 +484,12 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
       const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
       if (activeLabel) {
-        (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js: 'window.history.back()' }).catch(() => {});
+        nativeNavigationGraceUntilRef.current = 0;
+        setNavigationError(null);
+        (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js: 'window.history.back()' })
+          .catch(() => setNavigationError('Back navigation failed. The embedded browser may be disconnected.'));
+      } else {
+        setNavigationError('Embedded browser is not ready for Back navigation.');
       }
     } else if (useElectronWebview && webviewEl && renderMode === 'electron-webview') {
       try {
@@ -500,7 +506,12 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
     if (useTauriWebview && tauriWebviewRef.current && renderMode === 'tauri-native') {
       const activeLabel = tauriWebviewRef.current.label || sessionStorage.getItem('tline-active-webview-label-' + tab.id);
       if (activeLabel) {
-        (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js: 'window.history.forward()' }).catch(() => {});
+        nativeNavigationGraceUntilRef.current = 0;
+        setNavigationError(null);
+        (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label: activeLabel, js: 'window.history.forward()' })
+          .catch(() => setNavigationError('Forward navigation failed. The embedded browser may be disconnected.'));
+      } else {
+        setNavigationError('Embedded browser is not ready for Forward navigation.');
       }
     } else if (useElectronWebview && webviewEl && renderMode === 'electron-webview') {
       try {
@@ -617,35 +628,42 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
   // Keep the stable ref in sync so the hook's handleReload callback always calls the latest version
   handleReloadRef.current = handleReload;
 
-  const navigateWebview = (targetUrl: string) => {
-    if (!useTauriWebview || renderMode !== 'tauri-native') return;
+  const navigateWebview = async (targetUrl: string): Promise<boolean> => {
+    if (!useTauriWebview || renderMode !== 'tauri-native') return true;
     const webview = tauriWebviewRef.current;
-    if (!webview) return;
+    if (!webview) {
+      setNavigationError('Embedded browser is not ready. Retry after the page loads.');
+      return false;
+    }
     try {
       const js = getNativeNavigationJs(targetUrl);
       const label = webview.label;
-      if (!label) return;
+      const invoke = (window as any).__TAURI__?.core?.invoke;
+      if (!label || typeof invoke !== 'function') {
+        setNavigationError('Embedded browser connection is unavailable.');
+        return false;
+      }
       nativeNavigationGraceUntilRef.current = Date.now() + 4000;
-      (window as any).__TAURI__?.core?.invoke('eval_webview_js', { label, js })
-        .catch((error: unknown) => {
-          nativeNavigationGraceUntilRef.current = 0;
-          console.warn('[BrowserTab] Navigation failed:', error);
-          setNativeError('Navigation failed. Retry or reload the browser tab.');
-        });
+      await invoke('eval_webview_js', { label, js });
+      setNavigationError(null);
+      return true;
     } catch (error) {
-      console.warn('[BrowserTab] Invalid browser URL:', error);
-      setNativeError('This URL scheme is not supported in the embedded browser.');
+      nativeNavigationGraceUntilRef.current = 0;
+      console.warn('[BrowserTab] Navigation failed:', error);
+      setNavigationError('Navigation failed. The page was not changed; retry or reload.');
+      return false;
     }
   };
 
   navigateNativeRef.current = navigateWebview;
 
-  const handleNavigate = (e: React.FormEvent) => {
+  const handleNavigate = async (e: React.FormEvent) => {
     e.preventDefault();
     let target = urlInput.trim();
     if (!target) return;
     if (!/^https?:\/\//i.test(target) && !/^file:\/\//i.test(target)) {
-      target = 'http://' + target;
+      const isLocalHost = /^(?:localhost|127\.0\.0\.1|192\.168\.[0-9.]+|[^/]+\.local)(?::[0-9]+)?(?:\/|$)/i.test(target);
+      target = (isLocalHost ? 'http://' : 'https://') + target;
     }
     try {
       const parsed = new URL(target);
@@ -657,17 +675,21 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
       setNativeError('Please enter a valid HTTP, HTTPS, or local file URL.');
       return;
     }
-    setNativeError(null);
-    setUrlInput(target);
-
     const isSameUrl = target === activeUrl;
     if (isSameUrl) {
       handleReload();
     } else {
+      // Do not advertise a new URL until the native host accepted navigation.
+      if (!(await navigateWebview(target))) {
+        setUrlInput(activeUrlRef.current);
+        return;
+      }
+      setNativeError(null);
+      setNavigationError(null);
       activeUrlRef.current = target;
       setActiveUrl(target);
+      setUrlInput(target);
       onUpdateTabUrl?.(target);
-      navigateWebview(target);
       startLoadingBar();
       if (renderMode === 'tauri-native') {
         setTimeout(finishLoadingBar, 1800);
@@ -825,6 +847,13 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
         openInSystemBrowser={openInSystemBrowser}
         isTauri={isTauri}
       />
+      {navigationError && (
+        <div role="alert" className="flex shrink-0 items-center justify-between gap-2 border-b border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-300">
+          <span>{navigationError}</span>
+          <button type="button" aria-label="Dismiss browser navigation error"
+            className="underline" onClick={() => setNavigationError(null)}>Dismiss</button>
+        </div>
+      )}
 
       <BrowserAgentSessions active={isActive} />
       <ManagedBrowserPanel active={isActive} initialUrl={activeUrl} onSendToAgent={onManagedBrowserHandoff} />

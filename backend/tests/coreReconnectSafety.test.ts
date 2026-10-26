@@ -32,6 +32,11 @@ describe('T-Line Core recovery is user-driven and never replays side effects', (
     expect(result.phase).toBe('offline');
     expect(result.automaticChatReplayAllowed).toBe(false);
   });
+  it('keeps the read-only SSE recovery active after long outages', () => {
+    const source = fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/superAgentBridge.ts'), 'utf8');
+    expect(source).not.toContain('sseReconnectAttempts >= 8');
+    expect(source).toContain('sseReconnectAttempts = Math.min(sseReconnectAttempts + 1, 32)');
+  });
   it('refuses cross-session or implicit resume', () => {
     expect(isExplicitResumeRequest({
       channelSessionId: 'sess_123456', requestedSessionId: 'sess_123456', approval: true,

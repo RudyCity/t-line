@@ -27,6 +27,8 @@ import { useSidebarResize } from './useSidebarResize';
 import { getAuthHeader, readFileAsText, readFileAsDataURL, getMainModelLabel as getModelLabelUtil, handleAgentEventPayload, fetchCliPromptHistory } from './SuperAgentConsoleUtils';
 import { History, Folder, Activity, Sparkles, RefreshCw, ArrowDown, MoreVertical, Brain } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
+import { getAuthToken } from '../utils/tokenStorage';
+import { bridgeReconnectDelay, shouldResetBridgeRetryBudget } from '../services/bridgeReconnectPolicy';
 import { parseCoreReconnectNotice, type CoreReconnectNotice } from '../services/coreReconnectNotice';
 import { CoreReconnectBanner } from './CoreReconnectBanner';
 import { addRule, loadRules, matchesRule, patternFromPermission } from '../utils/permissionRules';
@@ -524,30 +526,36 @@ export function SuperAgentConsole({
       host = `${window.location.hostname}:${isWinPort}`;
     }
 
-    const token = localStorage.getItem('token') || '';
+    // Re-read current credentials on every attempt, including sessionStorage.
+    const token = getAuthToken() || '';
     const wsUrl = `${protocol}//${host}/api/superagent?workspace=${encodeURIComponent(workspace)}&agentMode=${encodeURIComponent(agentMode)}&customArgs=${encodeURIComponent(customArgs)}&sessionId=${encodeURIComponent(activeSessionId)}`;
-
-    if (wsRef.current && activeWsUrlRef.current === wsUrl && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
-      return;
-    }
 
     activeWsUrlRef.current = wsUrl;
     console.log('[SuperAgent] Connecting to bridge:', `${protocol}//${host}/api/superagent`, { workspace: workspace || 'Default', agentMode });
     const socket = token
       ? new WebSocket(wsUrl, ['tline-bearer', token])
       : new WebSocket(wsUrl);
+    let connectedAt = 0;
+    // A stalled handshake should not leave the UI permanently CONNECTING.
+    const connectTimeout = window.setTimeout(() => {
+      if (wsRef.current === socket && socket.readyState === WebSocket.CONNECTING) {
+        console.warn('[SuperAgent WS] Handshake timed out; reconnecting.');
+        try { socket.close(); } catch {}
+      }
+    }, 12000);
 
     socket.onopen = () => {
-      if (activeWsUrlRef.current !== wsUrl) return;
+      if (wsRef.current !== socket) return;
+      window.clearTimeout(connectTimeout);
+      connectedAt = Date.now();
       console.log(`[SuperAgent WS] Connection established. Workspace: ${workspace || 'Default'}`);
-      reconnectAttemptsRef.current = 0;
       setBrowserBridgeReady(true);
       // Read-only status check after WS reconnect: never resubmit chat or tools.
       socket.send(JSON.stringify({ type: 'core_health_probe', sessionId: activeSessionIdRef.current }));
     };
 
     socket.onmessage = (event) => {
-      if (activeWsUrlRef.current !== wsUrl) return; // Ignore stale socket events after session/workspace switch.
+      if (wsRef.current !== socket) return; // Old socket events must not affect its replacement.
       try {
         const payload = JSON.parse(event.data);
         if (payload?.type === 'permission_decision_ack') {
@@ -639,9 +647,10 @@ export function SuperAgentConsole({
       }
     };
 
-    socket.onclose = () => {
-      console.log('[SuperAgent WS] Connection closed.');
-      if (activeWsUrlRef.current !== wsUrl) return; // intentional unmount
+    socket.onclose = (event) => {
+      window.clearTimeout(connectTimeout);
+      if (wsRef.current !== socket) return; // Prevent stale close events from reconnecting a replacement.
+      console.log('[SuperAgent WS] Connection closed.', { code: event.code, clean: event.wasClean });
       setBrowserBridgeReady(false);
       if (approvalInFlight.current) {
         approvalInFlight.current = null;
@@ -655,12 +664,14 @@ export function SuperAgentConsole({
         message: 'Desktop bridge disconnected. Connection checks will retry; pending prompts and tools are not resent.',
         automaticChatReplayAllowed: false,
       });
+      // Reset only after a sustained connection; rapid open/close loops
+      // retain their increasing backoff.
+      if (shouldResetBridgeRetryBudget(connectedAt, Date.now())) reconnectAttemptsRef.current = 0;
       const attempts = reconnectAttemptsRef.current + 1;
       reconnectAttemptsRef.current = attempts;
-      // Bounded retry. After eight bridge failures the user can explicitly
-      // choose Check connection; no background chat/tool re-dispatch occurs.
-      if (attempts > 8) return;
-      const delay = Math.min(30000, 500 * Math.pow(2, attempts - 1));
+      // Retry indefinitely at a capped cadence; only read-only probes run.
+      // No chat, tool or approval request is replayed.
+      const delay = bridgeReconnectDelay(attempts);
       console.log(`[SuperAgent WS] Reconnect attempt ${attempts} in ${delay}ms`);
       reconnectTimerRef.current = window.setTimeout(() => {
         reconnectTimerRef.current = null;
@@ -674,6 +685,11 @@ export function SuperAgentConsole({
     return () => {
       activeWsUrlRef.current = '';
       wsRef.current = null;
+      window.clearTimeout(connectTimeout);
+      // React may create a new socket with the same URL before this one
+      // closes. Suppress teardown events so they cannot close the new one.
+      socket.onclose = null;
+      socket.onmessage = null;
       if (reconnectTimerRef.current !== null) {
         clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = null;

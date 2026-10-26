@@ -16,7 +16,7 @@ interface UseBrowserStorageAndHistoryProps {
   webviewActive: boolean;
   onUpdateTabUrl?: (url: string) => void;
   handleReload: (forceBypassCache?: boolean) => void;
-  navigateNative?: (url: string) => void;
+  navigateNative?: (url: string) => Promise<boolean>;
 }
 
 export function useBrowserStorageAndHistory({
@@ -278,28 +278,26 @@ export function useBrowserStorageAndHistory({
     }
   };
 
-  const handleNavigateToBookmark = (url: string) => {
-    setUrlInput(url);
-    const isSameUrl = url === activeUrl;
-    if (isSameUrl) {
+  const navigateToSavedUrl = async (url: string) => {
+    if (url === activeUrl) {
       handleReload();
-    } else {
-      setActiveUrl(url);
-      onUpdateTabUrl?.(url);
-      navigateNative?.(url);
+      return;
     }
+    // Keep saved URLs usable in iframe/Electron; native WebView2 must first
+    // accept navigation before React advertises the new destination.
+    if (renderMode === 'tauri-native' && navigateNative &&
+        !(await navigateNative(url))) return;
+    setUrlInput(url);
+    setActiveUrl(url);
+    onUpdateTabUrl?.(url);
+  };
+
+  const handleNavigateToBookmark = (url: string) => {
+    void navigateToSavedUrl(url);
   };
 
   const handleNavigateToHistory = (url: string) => {
-    setUrlInput(url);
-    const isSameUrl = url === activeUrl;
-    if (isSameUrl) {
-      handleReload();
-    } else {
-      setActiveUrl(url);
-      onUpdateTabUrl?.(url);
-      navigateNative?.(url);
-    }
+    void navigateToSavedUrl(url);
   };
 
   const removeBookmark = (id: string) => {

@@ -710,16 +710,10 @@ let suppressBufferWrite = false;
 
   function scheduleSseRetry() {
     if (isClosed || ws.readyState !== WebSocket.OPEN) return;
-    // Connection probing is read-only, but bound it to avoid infinite traffic
-    // when no Core owner survives machine reboot.
-    if (sseReconnectAttempts >= 8) {
-      if (initialSessionId) ws.send(JSON.stringify(classifyCoreReconnect({
-        sessionId: initialSessionId, statusCode: 503,
-      })));
-      return;
-    }
-    sseReconnectAttempts++;
-    const delay = Math.min(30000, 500 * (2 ** (sseReconnectAttempts - 1)));
+    // A long outage must not permanently disable the read-only SSE channel.
+    // Exponential backoff is capped to prevent request storms.
+    sseReconnectAttempts = Math.min(sseReconnectAttempts + 1, 32);
+    const delay = Math.min(30000, 500 * (2 ** Math.min(sseReconnectAttempts - 1, 6)));
     if (sseReconnectTimeout) clearTimeout(sseReconnectTimeout);
     sseReconnectTimeout = setTimeout(connectToSuperAgentSSE, delay);
   }
