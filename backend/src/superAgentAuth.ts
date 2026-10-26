@@ -1,3 +1,4 @@
+import { resolveSuperAgentCorePort } from './superAgentCorePort';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -11,14 +12,14 @@ export function readSuperAgentServiceToken(
     process.env.SUPERAGENT_CONFIG_DIR?.trim()
       ? path.resolve(process.env.SUPERAGENT_CONFIG_DIR.trim())
       : path.join(os.homedir(), '.superagent-r'),
-    'server-info-7888.json'
+    `server-info-${resolveSuperAgentCorePort()}.json`
   ),
 ): string | null {
   try {
     const stat = fs.lstatSync(infoFile);
     if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 16_384) return null;
     const info = JSON.parse(fs.readFileSync(infoFile, 'utf8')) as { port?: number; authToken?: string };
-    if (info.port !== 7888 || typeof info.authToken !== 'string' || !/^[a-f\d]{48}$/i.test(info.authToken)) return null;
+    if (info.port !== resolveSuperAgentCorePort() || typeof info.authToken !== 'string' || !/^[a-f\d]{48}$/i.test(info.authToken)) return null;
     return info.authToken;
   } catch {
     return null;

@@ -1,3 +1,4 @@
+import { resolveSuperAgentCorePort } from './superAgentCorePort';
 /**
  * presetUtils.ts
  * ──────────────
@@ -8,7 +9,7 @@
 
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
 
-const SUPERAGENT_BASE = 'http://127.0.0.1:7888';
+const SUPERAGENT_BASE = `http://127.0.0.1:${resolveSuperAgentCorePort()}`;
 const DEFAULT_TIMEOUT_MS = 5000;
 
 // ─── Internal helper ───────────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+import { resolveSuperAgentCorePort } from './superAgentCorePort';
 /** Fixed read-only T-Line proxy for the Core per-agent event journal.
  * Authenticated local operator only; no arbitrary destination, raw tools or mutations.
  */
@@ -9,7 +10,7 @@ export function createAgentTimelineProxy(options: {
   port?: number; getServiceHeaders?: () => Record<string, string>;
 } = {}) {
   const router = Router();
-  const port = options.port ?? 7888;
+  const port = options.port ?? resolveSuperAgentCorePort();
   const getHeaders = options.getServiceHeaders ?? getSuperAgentServiceHeaders;
   router.get('/', (req: Request, res) => {
     res.setHeader('Cache-Control', 'no-store');

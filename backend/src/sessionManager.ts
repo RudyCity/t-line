@@ -1,3 +1,4 @@
+import { resolveSuperAgentCorePort } from './superAgentCorePort';
 import { logE2E } from "./unifiedLogger";
 import http from 'http';
 
@@ -165,7 +166,7 @@ function requestSuperAgentServer(
 
     const req = http.request({
       hostname: '127.0.0.1',
-      port: 7888,
+      port: resolveSuperAgentCorePort(),
       path: urlPath,
       method,
       headers,

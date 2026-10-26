@@ -1,3 +1,4 @@
+import { resolveSuperAgentCorePort } from './superAgentCorePort';
 import http from 'node:http';
 import { Router, type Request } from 'express';
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
@@ -24,7 +25,7 @@ export function createApprovalStatusProxy(options: {
     if (!headers.Authorization) { res.status(503).json({ error: 'Core authorization unavailable' }); return; }
     const query = new URLSearchParams({ workspace, sessionId });
     const upstream = http.request({
-      hostname: '127.0.0.1', port: options.port ?? 7888,
+      hostname: '127.0.0.1', port: options.port ?? resolveSuperAgentCorePort(),
       path: '/api/tline/approvals?' + query.toString(), method: 'GET', timeout: 8000,
       headers: { ...headers, 'x-workspace-path': workspace, 'x-client-mode': 'tline' },
     }, response => {

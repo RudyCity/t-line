@@ -1,3 +1,4 @@
+import { resolveSuperAgentCorePort } from './superAgentCorePort';
 import { logE2E } from "./unifiedLogger";
 import { Router } from 'express';
 import http from 'http';
@@ -131,8 +132,8 @@ function proxyToSuperAgent(pathName: string, fallback: any, workspace?: string, 
   return new Promise((resolve) => {
     const separator = pathName.includes('?') ? '&' : '?';
     const url = workspace
-      ? `http://127.0.0.1:7888${pathName}${separator}workspace=${encodeURIComponent(workspace)}`
-      : `http://127.0.0.1:7888${pathName}`;
+      ? `http://127.0.0.1:${resolveSuperAgentCorePort()}${pathName}${separator}workspace=${encodeURIComponent(workspace)}`
+      : `http://127.0.0.1:${resolveSuperAgentCorePort()}${pathName}`;
     const headers: Record<string, string> = getSuperAgentServiceHeaders();
     if (workspace) headers['x-workspace-path'] = workspace;
     if (body) headers['Content-Type'] = 'application/json';

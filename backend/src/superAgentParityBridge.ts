@@ -1,3 +1,4 @@
+import { resolveSuperAgentCorePort } from './superAgentCorePort';
 import http from 'node:http';
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
 
@@ -37,7 +38,7 @@ export async function fetchParityReadAction(
   if (!headers.Authorization) {
     return { status: 503, payload: { error: 'SuperAgent service token unavailable. Authenticated desktop capabilities cannot be queried.' } };
   }
-  const port = options.port ?? 7888;
+  const port = options.port ?? resolveSuperAgentCorePort();
   if (options.cursor && (action !== 'tasks.snapshot' || !/^[0-9a-f]{64}$/.test(options.cursor))) {
     return { status: 400, payload: { error: 'Invalid task cursor.' } };
   }

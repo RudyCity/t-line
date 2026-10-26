@@ -1,3 +1,4 @@
+import { resolveSuperAgentCorePort } from './superAgentCorePort';
 /** Strictly scoped fixed-path proxy for explicit new-instruction task retry. */
 import http from "node:http";
 import { getSuperAgentServiceHeaders } from "./superAgentAuth";
@@ -38,7 +39,7 @@ export function forwardTlineRetry(
       resolve({ status, payload });
     };
     const req = http.request({
-      hostname: "127.0.0.1", port: opts.port ?? 7888,
+      hostname: "127.0.0.1", port: opts.port ?? resolveSuperAgentCorePort(),
       path: "/api/tline/tasks/retry/" + stage, method: "POST", timeout: 8000,
       headers: { ...headers, "Content-Type": "application/json",
         "Content-Length": Buffer.byteLength(body), "x-workspace-path": data.workspace,

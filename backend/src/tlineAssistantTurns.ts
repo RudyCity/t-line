@@ -1,3 +1,4 @@
+import { resolveSuperAgentCorePort } from './superAgentCorePort';
 import { Router, type Request, type Response } from 'express';
 import http from 'node:http';
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
@@ -8,7 +9,7 @@ export function createTlineAssistantTurnsRouter(
   options: { port?: number; serviceHeaders?: () => Record<string, string> } = {},
 ) {
   const router = Router();
-  const port = options.port ?? 7888;
+  const port = options.port ?? resolveSuperAgentCorePort();
   const serviceHeaders = options.serviceHeaders ?? getSuperAgentServiceHeaders;
 
   const forward = (action: 'list' | 'recover') => (req: Request, res: Response) => {

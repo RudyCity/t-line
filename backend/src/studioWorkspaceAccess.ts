@@ -1,3 +1,4 @@
+import { resolveSuperAgentCorePort } from './superAgentCorePort';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
@@ -27,7 +28,7 @@ const trustedInProcess = new Set<string>();
  * trusted-directory/root allowlist for every /api/motion operation.
  */
 export async function ensureStudioWorkspaceTrusted(
-  workspace: string, serviceToken: string, upstreamPort = 7888,
+  workspace: string, serviceToken: string, upstreamPort = resolveSuperAgentCorePort(),
 ): Promise<void> {
   if (!isRegisteredStudioWorkspace(workspace)) throw new Error('Workspace is not registered in T-Line');
   const resolved = fs.realpathSync.native(path.resolve(workspace));

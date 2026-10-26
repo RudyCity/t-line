@@ -1,3 +1,4 @@
+import { resolveSuperAgentCorePort } from './superAgentCorePort';
 /** Authenticated, strictly scoped SSE relay; no generic upstream proxy. */
 import http from 'node:http';
 import type { Request, Response } from 'express';
@@ -27,7 +28,7 @@ export function streamTlineTaskEvents(req: Request, res: Response): void {
   const path = '/api/tline/tasks/events?workspace=' + encodeURIComponent(workspace as string) +
     '&sessionId=' + encodeURIComponent(sessionId as string);
   const upstream = http.request({
-    hostname: '127.0.0.1', port: 7888, path, method: 'GET',
+    hostname: '127.0.0.1', port: resolveSuperAgentCorePort(), path, method: 'GET',
     headers: { ...headers, 'x-workspace-path': workspace as string, 'x-client-mode': 'tline',
       'Accept': 'text/event-stream', ...(lastId ? { 'Last-Event-ID': lastId as string } : {}) },
     timeout: 7000,

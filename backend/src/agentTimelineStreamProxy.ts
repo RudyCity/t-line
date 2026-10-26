@@ -1,3 +1,4 @@
+import { resolveSuperAgentCorePort } from './superAgentCorePort';
 import http from 'node:http';
 import { Router, type Request } from 'express';
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
@@ -25,7 +26,7 @@ export function createAgentTimelineStreamProxy(options: {
     if (!headers.Authorization) { res.status(503).json({error:'Core authorization unavailable'}); return; }
     const q = new URLSearchParams({workspace,sessionId,cursor});
     const upstream = http.request({
-      hostname:'127.0.0.1',port:options.port ?? 7888,
+      hostname:'127.0.0.1',port:options.port ?? resolveSuperAgentCorePort(),
       path:'/api/tline/agent-timeline/stream?' + q.toString(),
       method:'GET', headers:{...headers,'x-client-mode':'tline','x-workspace-path':workspace,
         Accept:'text/event-stream'}, timeout: 45000,

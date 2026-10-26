@@ -1,3 +1,4 @@
+import { resolveSuperAgentCorePort } from './superAgentCorePort';
 import http from 'node:http';
 import { Router, type Request, type Response } from 'express';
 import { readSuperAgentServiceToken } from './superAgentAuth';
@@ -141,7 +142,7 @@ export function createStudioProxyRouter(options: StudioProxyOptions = {}): Route
       return;
     }
     try {
-      await (options.ensureTrust ?? ensureStudioWorkspaceTrusted)(workspace, token, options.upstreamPort ?? 7888);
+      await (options.ensureTrust ?? ensureStudioWorkspaceTrusted)(workspace, token, options.upstreamPort ?? resolveSuperAgentCorePort());
     } catch {
       res.status(503).json({ error: 'Could not authorize the selected workspace in SuperAgent' });
       return;
@@ -175,7 +176,7 @@ export function createStudioProxyRouter(options: StudioProxyOptions = {}): Route
       headers.Range = req.headers.range;
     }
     const upstream = http.request({
-      hostname: '127.0.0.1', port: options.upstreamPort ?? 7888,
+      hostname: '127.0.0.1', port: options.upstreamPort ?? resolveSuperAgentCorePort(),
       path: targetPath, method: req.method, headers,
       timeout: route === '/generate' || route === '/saas-promo' || route === '/trace-image' || route.endsWith('/bundle') ||
         route.includes('/upscale') ||

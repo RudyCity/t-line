@@ -1,3 +1,4 @@
+import { resolveSuperAgentCorePort } from './superAgentCorePort';
 import http from 'http';
 import path from 'path';
 import fs from 'fs';
@@ -65,29 +66,13 @@ let currentAgentMode = 'single';
 let currentCustomArgs = '';
 let cachedBunEnv: { cmd: string; spawnEnv: NodeJS.ProcessEnv } | null = null;
 
-export function forceKillPort7888() {
-  try {
-    if (os.platform() === 'win32') {
-      const out = execSync('netstat -ano | findstr :7888', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
-      const lines = out.split('\n');
-      for (const line of lines) {
-        const parts = line.trim().split(/\s+/);
-        if (parts.length >= 5) {
-          const pidStr = parts[parts.length - 1];
-          const pid = parseInt(pidStr, 10);
-          if (pid && pid > 0 && pid !== process.pid) {
-            execSync(`taskkill /pid ${pid} /T /F`, { stdio: 'ignore' });
-          }
-        }
-      }
-    } else {
-      execSync('lsof -t -i:7888 | xargs kill -9', { stdio: 'ignore' });
-    }
-  } catch (e) {}
+/** Legacy force-kill is permanently disabled. No PID is trusted by its port. */
+export function forceKillPort7888(): never {
+  throw new Error('Unsafe port-owner termination is disabled. Use a verified Core supervisor drain or explicit maintenance.');
 }
 
 function pingPort7888(): Promise<boolean> {
-  return probeSuperAgentPort().then(state => state === 'compatible');
+  return probeSuperAgentPort(resolveSuperAgentCorePort()).then(state => state === 'compatible');
 }
 
 /** Callbacks queued while a spawn is in progress. Fired once server is ready or failed. */
@@ -310,7 +295,7 @@ function spawnSuperAgentProcess(opts: {
         if (!resolved && READY_MARKER.test(chunk)) {
           // A child can print a ready banner without serving an authenticated
           // SuperAgent protocol. Trust only the verified loopback probe.
-          probeSuperAgentPort().then(portState => {
+          probeSuperAgentPort(resolveSuperAgentCorePort()).then(portState => {
             if (portState === 'compatible') resolveReady();
             else logToSuperAgentFile(
               `[${label}] Ignored stdout ready marker: authenticated probe = ${portState}`
@@ -441,7 +426,14 @@ function ensureSuperAgentServer(
   console.log('[WS-Agent][debug] ensureSuperAgentServer: acquired startup lock');
 
   // Before spawning, ping port 7888 — it may already be running externally.
-  probeSuperAgentPort().then((portState) => {
+  probeSuperAgentPort(resolveSuperAgentCorePort()).then((portState) => {
+    if (portState === 'free' && resolveSuperAgentCorePort() !== 7888) {
+      const message = 'Configured external Core is offline. Refusing to auto-start or take over a different port.';
+      isStartingSuperAgent = false;
+      ws.send(JSON.stringify({ type: 'status', text: message }));
+      drainPendingCallbacks(new Error(message));
+      return;
+    }
     if (portState === 'occupied') {
       const message = 'Port 7888 is occupied by an unverified or unauthorized HTTP service. Refusing to launch or terminate a process.';
       logToSuperAgentFile('[WS-Agent] ' + message);
@@ -507,7 +499,12 @@ export function startSuperAgentEager(agentMode: string = 'single', customArgs: s
   isStartingSuperAgent = true;
   console.log('[WS-Agent][debug] startSuperAgentEager: acquired startup lock');
 
-  probeSuperAgentPort().then((portState) => {
+  probeSuperAgentPort(resolveSuperAgentCorePort()).then((portState) => {
+    if (portState === 'free' && resolveSuperAgentCorePort() !== 7888) {
+      isStartingSuperAgent = false;
+      drainPendingCallbacks(new Error('Configured external Core is offline. No automatic takeover on a non-default port.'));
+      return;
+    }
     if (portState === 'occupied') {
       const message = 'Port 7888 is occupied by an unverified/unauthorized service. Eager startup refused; no process terminated.';
       logToSuperAgentFile('[WS-Agent-Eager] ' + message);
@@ -558,7 +555,7 @@ async function initializeSuperAgentSession(workspacePath: string, mode: string, 
 
     const req = http.request({
       hostname: '127.0.0.1',
-      port: 7888,
+      port: resolveSuperAgentCorePort(),
       path: '/api/init',
       method: 'POST',
       headers: {
@@ -592,7 +589,7 @@ export function sendSuperAgentRequest(pathName: string, payload: any, workspaceP
     const postData = JSON.stringify(payload);
     const req = http.request({
       hostname: '127.0.0.1',
-      port: 7888,
+      port: resolveSuperAgentCorePort(),
       path: `${pathName}?workspace=${encodeURIComponent(workspacePath)}`,
       method: 'POST',
       headers: {
@@ -658,7 +655,7 @@ async function readCoreSessionForReconnect(sessionId: string, workspacePath: str
     const pathName = '/api/status?sessionId=' + encodeURIComponent(sessionId) +
       '&workspace=' + encodeURIComponent(workspacePath);
     const request = http.request({
-      host: '127.0.0.1', port: 7888, method: 'GET', path: pathName,
+      host: '127.0.0.1', port: resolveSuperAgentCorePort(), method: 'GET', path: pathName,
       timeout: 2200, headers: {
         'x-client-mode': 'tline', 'x-workspace-path': workspacePath,
         ...getSuperAgentServiceHeaders(),
@@ -746,7 +743,7 @@ let suppressBufferWrite = false;
 
     sseReq = http.request({
       hostname: '127.0.0.1',
-      port: 7888,
+      port: resolveSuperAgentCorePort(),
       path: ssePath,
 
       method: 'GET',

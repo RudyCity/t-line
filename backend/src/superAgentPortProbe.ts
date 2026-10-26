@@ -1,3 +1,4 @@
+import { resolveSuperAgentCorePort } from './superAgentCorePort';
 import http from 'node:http';
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
 
@@ -8,7 +9,7 @@ export type SuperAgentPortState = 'compatible' | 'occupied' | 'free';
  * second process or kill an unowned PID just because an endpoint answered.
  */
 export async function probeSuperAgentPort(
-  port = 7888, headers: Record<string, string> = getSuperAgentServiceHeaders(),
+  port = resolveSuperAgentCorePort(), headers: Record<string, string> = getSuperAgentServiceHeaders(),
 ): Promise<SuperAgentPortState> {
   return new Promise((resolve) => {
     let settled = false;
@@ -34,7 +35,7 @@ export async function probeSuperAgentPort(
         } catch { done('occupied'); }
       });
     });
-    req.on('timeout', () => req.destroy(new Error('Port 7888 probe timeout')));
+    req.on('timeout', () => req.destroy(new Error('SuperAgent port probe timeout')));
     req.on('error', (error: NodeJS.ErrnoException) =>
       done(error.code === 'ECONNREFUSED' ? 'free' : 'occupied'));
     req.end();

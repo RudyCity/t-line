@@ -1,3 +1,4 @@
+import { resolveSuperAgentCorePort } from './superAgentCorePort';
 /** Narrow POST bridge for opt-in SuperAgent workspace-operator cancellation. */
 import http from 'node:http';
 import { getSuperAgentServiceHeaders } from './superAgentAuth';
@@ -34,7 +35,7 @@ export function forwardTaskCancel(
       resolve(result);
     };
     const req = http.request({
-      hostname: '127.0.0.1', port: opts.port ?? 7888, method: 'POST',
+      hostname: '127.0.0.1', port: opts.port ?? resolveSuperAgentCorePort(), method: 'POST',
       path: '/api/tline/tasks/cancel/' + action, timeout: 5000,
       headers: { ...headers, 'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body), 'x-workspace-path': input.workspace,
