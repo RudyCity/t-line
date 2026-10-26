@@ -48,7 +48,10 @@ export async function probeSuperAgentPort(
     });
     req.on('timeout', () => req.destroy(new Error('SuperAgent port probe timeout')));
     req.on('error', (error: NodeJS.ErrnoException) =>
-      done(error.code === 'ECONNREFUSED' ? 'free' : 'occupied'));
+      // A supervised-external endpoint is never available for local spawn,
+      // even when the OS says the port is currently free.
+      done(process.env.TLINE_SUPERAGENT_OWNER_MODE === 'supervised-external'
+        ? 'occupied' : error.code === 'ECONNREFUSED' ? 'free' : 'occupied'));
     req.end();
   });
 }

@@ -17,3 +17,11 @@ Test:
 
     bun --bun x tsc --noEmit --project backend/tsconfig.json
     bun --bun x vitest run backend/tests/superAgentCoreOwnershipR4.test.ts backend/tests/superAgentAuthenticatedOwnerR4.test.ts backend/tests/superAgentCorePort.test.ts backend/tests/coreReconnectSafety.test.ts backend/tests/superAgentAuthConfig.test.ts
+
+### External port unavailable (R4 follow-up)
+
+When supervised-external mode is explicitly selected, even an ECONNREFUSED
+result is classified as unverified/occupied, never as a spawnable free port.
+The runtime must not start a replacement Core if the external supervisor is
+missing or late after reboot. This is source-level failure safety; the native
+installed package remains an independent R6 certification gate.
