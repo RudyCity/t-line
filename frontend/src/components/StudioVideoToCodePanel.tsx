@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { studioApi, type StudioOcclusionEvidence, type StudioProject, type StudioVideoCodeResult } from "../services/studioApi";
+import { studioApi, type StudioOcclusionEvidence, type StudioRecoveryCandidate, type StudioProject, type StudioVideoCodeResult } from "../services/studioApi";
 import { StudioReconstructionCorrectionPanel } from "./StudioReconstructionCorrectionPanel";
 
 interface Props {
@@ -33,12 +33,19 @@ export function StudioVideoToCodePanel({
   const [evidence, setEvidence] = useState<StudioOcclusionEvidence|null>(null);
   const [evidenceBusy, setEvidenceBusy] = useState(false);
   const [evidenceError, setEvidenceError] = useState("");
+  const [mapping,setMapping]=useState<number[]>([]);
+  const [candidate,setCandidate]=useState<StudioRecoveryCandidate|null>(null);
+  const [approved,setApproved]=useState(false);
+  const [recoveryBusy,setRecoveryBusy]=useState(false);
+  const [recoveryError,setRecoveryError]=useState("");
   const runSeq = useRef(0);
 
   useEffect(() => () => { if (imageUrl) URL.revokeObjectURL(imageUrl); }, [imageUrl]);
   useEffect(() => () => { if (diffUrl) URL.revokeObjectURL(diffUrl); }, [diffUrl]);
   useEffect(() => () => { if (evidence?.previewUrl) URL.revokeObjectURL(evidence.previewUrl); },
     [evidence]);
+  useEffect(() => () => { if(candidate?.previewUrl) URL.revokeObjectURL(candidate.previewUrl); },
+    [candidate]);
   useEffect(() => {
     runSeq.current++;
     setFile(null);
@@ -48,6 +55,8 @@ export function StudioVideoToCodePanel({
     setPreviewWarning("");
     setImageUrl(""); setDiffUrl(""); setDiffWarning("");
     setEvidenceSource(null); setEvidence(null); setEvidenceError(""); setEvidenceBusy(false);
+    setMapping([]);setCandidate(null);setApproved(false);setRecoveryError("");
+    setRecoveryBusy(false);
   }, [workspacePath]);
 
   const reconstruct = async () => {
@@ -59,6 +68,7 @@ export function StudioVideoToCodePanel({
     setWorking(true); setError(""); setPreviewWarning(""); setDiffWarning("");
     setReport(null); setImageUrl(""); setDiffUrl("");
     setEvidenceSource(null); setEvidence(null); setEvidenceError("");
+    setMapping([]);setCandidate(null);setApproved(false);setRecoveryError("");
     let uploadedVideoId="";
     try {
       setPhase("Uploading the local reference clip...");
@@ -126,15 +136,53 @@ export function StudioVideoToCodePanel({
     }
     const seq=runSeq.current;
     setEvidenceBusy(true); setEvidenceError(""); setEvidence(null);
+    setMapping([]);setCandidate(null);setApproved(false);setRecoveryError("");
     try {
       const result=await studioApi.inspectOcclusionEvidence(
         workspacePath,evidenceSource.videoId,evidenceFrame);
       if(seq!==runSeq.current) URL.revokeObjectURL(result.previewUrl);
-      else setEvidence(result);
+      else {
+        setEvidence(result);
+        const before=result.observations[0],after=result.observations[2];
+        setMapping(before.objectCount>=2 && before.objectCount<=4 &&
+          after.objectCount===before.objectCount
+          ? Array(before.objectCount).fill(-1):[]);
+      }
     } catch(cause) {
       if(seq===runSeq.current) setEvidenceError(
         cause instanceof Error?cause.message:String(cause));
     } finally {if(seq===runSeq.current) setEvidenceBusy(false);}
+  };
+  const previewRecovery=async()=>{
+    if(!evidenceSource || !evidence || recoveryBusy) return;
+    const seq=runSeq.current;
+    setRecoveryBusy(true);setRecoveryError("");setCandidate(null);setApproved(false);
+    try {
+      const plan=await studioApi.previewOcclusionRecovery(
+        workspacePath,evidenceSource.videoId,evidence.frame,[...mapping]);
+      if(seq!==runSeq.current) URL.revokeObjectURL(plan.previewUrl);
+      else setCandidate(plan);
+    }catch(err) {
+      if(seq===runSeq.current) setRecoveryError(err instanceof Error?err.message:String(err));
+    }finally {if(seq===runSeq.current) setRecoveryBusy(false);}
+  };
+  const commitRecovery=async()=>{
+    if(!evidenceSource||!candidate||!approved||recoveryBusy) return;
+    const seq=runSeq.current;
+    setRecoveryBusy(true);setRecoveryError("");
+    try {
+      const result=await studioApi.approveOcclusionRecovery(
+        workspacePath,evidenceSource.videoId,candidate.frame,
+        candidate.beforeToAfter,candidate.token);
+      if(seq!==runSeq.current) return;
+      if(result.status!=='experimental-multi'||!result.recovery?.manuallyConfirmed)
+        throw new Error("Backend did not confirm an approved Studio recovery");
+      setReport(result);setEvidenceSource(null);setEvidence(null);setCandidate(null);
+      setMapping([]);setApproved(false);setError("");
+      onCreated(result);
+    }catch(err){
+      if(seq===runSeq.current) setRecoveryError(err instanceof Error?err.message:String(err));
+    }finally{if(seq===runSeq.current) setRecoveryBusy(false);}
   };
   return <section className="border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] px-3 py-2"
     aria-label="Studio Video to Code prototype">
@@ -159,6 +207,8 @@ export function StudioVideoToCodePanel({
             onChange={event => {
               setMode(event.target.value as 'shapes' | 'text' | 'timeline');
               runSeq.current++; setEvidenceSource(null); setEvidence(null); setEvidenceError("");
+              setCandidate(null);setMapping([]);setApproved(false);setRecoveryError("");
+              setRecoveryBusy(false);
             }}>
             <option value="shapes">Editable SVG shapes</option>
             {ocrAvailable && <option value="text">Editable Text (stable OCR)</option>}
@@ -172,6 +222,8 @@ export function StudioVideoToCodePanel({
               runSeq.current++;
               setFile(e.target.files?.[0] ?? null); setError("");
               setEvidenceSource(null); setEvidence(null); setEvidenceError("");
+              setCandidate(null);setMapping([]);setApproved(false);setRecoveryError("");
+              setRecoveryBusy(false);
             }} />
         </label>
         <button type="button" className={buttonClass} disabled={!file || working}
@@ -193,7 +245,10 @@ export function StudioVideoToCodePanel({
         <label className="text-[11px]">Inspect frame
           <input aria-label="Occlusion inspection frame" type="number" min={0} max={359} step={1}
             value={evidenceFrame} disabled={evidenceBusy}
-            onChange={event=>setEvidenceFrame(Number(event.target.value))}
+            onChange={event=>{
+              setEvidenceFrame(Number(event.target.value));setCandidate(null);
+              setApproved(false);setRecoveryError("");
+            }}
             className={inputClass+" ml-1 w-20"} />
         </label>
         <button type="button" className={buttonClass}
@@ -218,6 +273,58 @@ export function StudioVideoToCodePanel({
           </tr>)}</tbody>
         </table>
         <p className="text-[10px] text-[var(--text-muted)]">{evidence.note}</p>
+        {mapping.length>0 && evidence.observations[1].objectCount===mapping.length-1 &&
+          <div className="rounded border border-[var(--border-color)] p-2 space-y-2"
+            aria-label="Manual identity recovery">
+            <p className="text-xs font-medium">Assign object identities before → after</p>
+            <p className="text-[10px] text-[var(--text-muted)]">
+              Identify which visible object after the overlap matches each original object.
+              The backend independently checks colors, positions, sizes, timeline masks and
+              a stable correspondence; unmatched or unsafe pairs are rejected.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {mapping.map((selected,index)=><label key={index} className="text-[11px]">
+                Before object {index+1}
+                <select className={inputClass+" ml-1"}
+                  aria-label={"Match before object "+(index+1)}
+                  value={selected} disabled={recoveryBusy}
+                  onChange={event=>{
+                    const next=[...mapping];next[index]=Number(event.target.value);
+                    setMapping(next);setCandidate(null);setApproved(false);setRecoveryError("");
+                  }}>
+                  <option value={-1}>Select after-object</option>
+                  {evidence.observations[2].objects.map((object,j)=>
+                    <option value={j} key={j}>After {j+1} · {object.color}</option>)}
+                </select>
+              </label>)}
+            </div>
+            <button type="button" className={buttonClass} disabled={recoveryBusy ||
+              mapping.some((value)=>value<0) || new Set(mapping).size!==mapping.length}
+              onClick={()=>void previewRecovery()}>
+              {recoveryBusy?"Validating...":"Preview recovery candidate"}
+            </button>
+            {candidate && <div className="space-y-2">
+              <p role="status" className="text-[11px]">
+                Candidate sampled merged-mask IoU: {(candidate.flaggedForegroundIoU*100).toFixed(1)}% ·
+                {" "}{candidate.mergedProbeFrames.length} merged-frame checks
+              </p>
+              <img className="max-w-full object-contain" src={candidate.previewUrl}
+                alt="Source video frame next to manually mapped SVG recovery candidate" />
+              <p className="text-[10px] text-[var(--text-muted)]">{candidate.note}</p>
+              <label className="flex gap-2 text-[11px]">
+                <input type="checkbox" aria-label="Confirm inferred recovery" checked={approved}
+                  disabled={recoveryBusy} onChange={e=>setApproved(e.target.checked)}/>
+                I reviewed the candidate and accept interpolated hidden motion, not exact source recovery.
+              </label>
+              <button type="button" className={buttonClass}
+                disabled={recoveryBusy||!approved}
+                onClick={()=>void commitRecovery()}>
+                Approve and create editable Studio project
+              </button>
+            </div>}
+            {recoveryError && <p role="alert" className="text-xs text-red-400">
+              {recoveryError}</p>}
+          </div>}
       </div>}
     </section>}
     {report?.status === 'experimental-ocr' && <div className="mt-2 space-y-1 text-xs text-[var(--text-main)]">

@@ -184,6 +184,11 @@ export interface StudioCaptionTimelineReconstruction {
 }
 export type StudioVideoCodeResult =
   StudioMultiVideoReconstruction | StudioTextOcrReconstruction | StudioCaptionTimelineReconstruction;
+export interface StudioRecoveryCandidate {
+  status:'recovery-candidate'; frame:number; beforeToAfter:number[];
+  token:string; mergedProbeFrames:number[]; flaggedForegroundIoU:number;
+  previewUrl:string; note:string;
+}
 export interface StudioOcclusionEvidence {
   status: 'review-only'; frame: number;
   dimensions: {width:number;height:number};
@@ -208,7 +213,7 @@ export interface StudioMultiVideoReconstruction {
   interpolationCheckIoU?: number[];
   /** P6: bounded additional temporal probes; never full-frame or occlusion recovery. */
   timelineValidation?: {
-    status: 'passed-sampled';
+    status: 'passed-sampled' | 'manual-recovery-reviewed';
     checks: Array<{ frame: number; identityGap: number; foregroundIoU: number;
       foregroundPrecision: number; foregroundRecall: number; foregroundF1: number;
       rgbMeanAbsoluteError: number; foregroundRgbMeanAbsoluteError: number }>;
@@ -216,6 +221,8 @@ export interface StudioMultiVideoReconstruction {
     minIdentityGap: number; note: string;
   };
   /** P5 optional bounded keyframe/holdout comparison metrics. */
+  recovery?: {frame:number;manuallyConfirmed:boolean;
+    mergedProbeFrames:number[];flaggedForegroundIoU:number};
   parityReport?: Array<{
     frame: number; sampleType: 'keyframe' | 'holdout';
     foregroundIoU: number; foregroundPrecision: number;
@@ -440,6 +447,56 @@ export const studioApi = {
     const previewUrl=URL.createObjectURL(new Blob([data],{type:'image/png'}));
     const {previewPngBase64:_,...metadata}=result;
     return {...metadata,previewUrl};
+  },
+  /** Candidate is validated and rendered but never saved. */
+  async previewOcclusionRecovery(workspace:string, videoId:string, frame:number,
+    beforeToAfter:number[]):Promise<StudioRecoveryCandidate> {
+    if(!/^video-[a-f0-9]{64}$/.test(videoId)||!Number.isSafeInteger(frame)||
+      frame<0||frame>=360||beforeToAfter.length<2||beforeToAfter.length>4||
+      beforeToAfter.some(n=>!Number.isSafeInteger(n)||n<0||n>=beforeToAfter.length)||
+      new Set(beforeToAfter).size!==beforeToAfter.length)
+      throw new Error('Choose distinct before-to-after object identities');
+    const result=await json<Omit<StudioRecoveryCandidate,'previewUrl'> &
+      {previewPngBase64:string}>(workspace,'/reconstruct/multi/recovery',{
+        method:'POST',body:JSON.stringify({videoId,frame,beforeToAfter,previewOnly:true}),
+      });
+    if(result.status!=='recovery-candidate'||!/^[a-f0-9]{64}$/.test(result.token)||
+       result.frame!==frame||!Array.isArray(result.mergedProbeFrames) ||
+       result.mergedProbeFrames.length<1||result.mergedProbeFrames.length>5||
+       result.mergedProbeFrames.some(n=>!Number.isSafeInteger(n)||n<0||n>=360) ||
+       !Number.isFinite(result.flaggedForegroundIoU) ||
+       result.flaggedForegroundIoU<.38||result.flaggedForegroundIoU>1 ||
+       !Array.isArray(result.beforeToAfter) ||
+       result.beforeToAfter.length!==beforeToAfter.length ||
+       result.beforeToAfter.some((n,i)=>n!==beforeToAfter[i]))
+      throw new Error('Invalid recovery candidate response');
+    const encoded=result.previewPngBase64;
+    if(typeof encoded!=='string'||encoded.length>2*1024*1024*4/3+8||
+       !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded))
+      throw new Error('Invalid recovery candidate PNG');
+    const binary=atob(encoded);
+    const bytes=Uint8Array.from(binary,char=>char.charCodeAt(0));
+    if(bytes.length<24||bytes.length>2*1024*1024||
+       ![137,80,78,71,13,10,26,10].every((n,i)=>bytes[i]===n))
+      throw new Error('Invalid recovery candidate PNG');
+    const {previewPngBase64:_,...safe}=result;
+    return {...safe,previewUrl:URL.createObjectURL(new Blob([bytes],{type:'image/png'}))};
+  },
+  /** Explicit approval; the backend always recomputes all checks before saving. */
+  approveOcclusionRecovery(workspace:string,videoId:string,frame:number,
+    beforeToAfter:number[],candidateToken:string):Promise<StudioMultiVideoReconstruction> {
+    if(!/^video-[a-f0-9]{64}$/.test(videoId)||!Number.isSafeInteger(frame)||
+      frame<0||frame>=360||!/^[a-f0-9]{64}$/.test(candidateToken)||
+      beforeToAfter.length<2||beforeToAfter.length>4||
+      new Set(beforeToAfter).size!==beforeToAfter.length||
+      beforeToAfter.some(n=>!Number.isSafeInteger(n)||n<0||n>=beforeToAfter.length))
+      throw new Error('Invalid approved occlusion candidate');
+    return json(workspace,'/reconstruct/multi/recovery',{
+      method:'POST',body:JSON.stringify({
+        videoId,frame,beforeToAfter,previewOnly:false,
+        candidateToken,acknowledgement:'APPROVE_MANUAL_RECOVERY',
+      }),
+    });
   },
   reconstructMultiVideo: (workspace: string, videoId: string): Promise<StudioMultiVideoReconstruction> => {
     if (!/^video-[a-f0-9]{64}$/.test(videoId)) throw new Error('Invalid Studio video ID');

@@ -193,6 +193,68 @@ describe("Studio Video-to-Code experimental panel", () => {
     unmount();
     expect(revoke).toHaveBeenCalledWith("blob:p8-evidence");
   });
+  it("keeps occlusion recovery preview separate from explicit checkbox-approved project creation",async()=>{
+    const videoId="video-"+"b".repeat(64);
+    vi.spyOn(studioApi,"uploadVideo").mockResolvedValue({id:videoId,bytes:80,format:"mp4"});
+    vi.spyOn(studioApi,"reconstructMultiVideo").mockRejectedValue(
+      new Error("Video-to-Code possible transient occlusion at frame 54: manual review required"));
+    const objects=[
+      {x:35,y:18,width:20,height:20,color:"#ffcc66"},
+      {x:70,y:18,width:20,height:20,color:"#22ddff"},
+    ];
+    vi.spyOn(studioApi,"inspectOcclusionEvidence").mockResolvedValue({
+      status:"review-only",frame:54,previewUrl:"blob:evidence",dimensions:{width:160,height:90},
+      observations:[
+        {frame:42,timeSeconds:1.4,objectCount:2,objects},
+        {frame:54,timeSeconds:1.8,objectCount:1,objects:[{...objects[0],width:40}]},
+        {frame:66,timeSeconds:2.2,objectCount:2,objects},
+      ],note:"Review only",
+    });
+    const token="a".repeat(64);
+    const candidate={status:"recovery-candidate" as const,frame:54,token,
+      beforeToAfter:[0,1],mergedProbeFrames:[54],flaggedForegroundIoU:.56,
+      previewUrl:"blob:candidate",note:"Only inferred motion"};
+    const preview=vi.spyOn(studioApi,"previewOcclusionRecovery").mockResolvedValue(candidate);
+    const approvedProject={...result,recovery:{
+      frame:54,manuallyConfirmed:true,mergedProbeFrames:[54],flaggedForegroundIoU:.56,
+    },timelineValidation:{...result.timelineValidation!,status:"manual-recovery-reviewed" as const}};
+    const commit=vi.spyOn(studioApi,"approveOcclusionRecovery").mockResolvedValue(approvedProject);
+    const created=vi.fn();
+    const revoke=vi.fn();
+    Object.defineProperty(URL,"revokeObjectURL",{value:revoke,configurable:true});
+    render(<StudioVideoToCodePanel workspacePath="D:/studio" onCreated={created}/>);
+    fireEvent.change(screen.getByLabelText("Video reference file"),{target:{
+      files:[new File([new Uint8Array(80)],"overlap.mp4",{type:"video/mp4"})],
+    }});
+    fireEvent.click(screen.getByRole("button",{name:"Create editable layers"}));
+    await screen.findByText(/frame 54/);
+    fireEvent.click(screen.getByRole("button",{name:"Inspect before / flagged / after"}));
+    await screen.findByLabelText("Match before object 1");
+    const previewButton=screen.getByRole("button",{name:"Preview recovery candidate"});
+    expect(previewButton).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Match before object 1"),{target:{value:"0"}});
+    fireEvent.change(screen.getByLabelText("Match before object 2"),{target:{value:"1"}});
+    expect(previewButton).toBeEnabled();
+    expect(created).not.toHaveBeenCalled();
+    fireEvent.click(previewButton);
+    await waitFor(()=>expect(preview).toHaveBeenCalledWith("D:/studio",videoId,54,[0,1]));
+    const approve=await screen.findByRole("button",{name:"Approve and create editable Studio project"});
+    expect(approve).toBeDisabled();
+    expect(created).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("Match before object 2"),{target:{value:"0"}});
+    expect(screen.queryByRole("button",{name:"Approve and create editable Studio project"}))
+      .not.toBeInTheDocument();
+    expect(previewButton).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Match before object 2"),{target:{value:"1"}});
+    fireEvent.click(previewButton);
+    await waitFor(()=>expect(preview).toHaveBeenCalledTimes(2));
+    await screen.findByRole("button",{name:"Approve and create editable Studio project"});
+    fireEvent.click(screen.getByLabelText("Confirm inferred recovery"));
+    fireEvent.click(screen.getByRole("button",{name:"Approve and create editable Studio project"}));
+    await waitFor(()=>expect(commit).toHaveBeenCalledWith("D:/studio",videoId,54,[0,1],token));
+    await waitFor(()=>expect(created).toHaveBeenCalledWith(approvedProject));
+    expect(revoke).toHaveBeenCalledWith("blob:candidate");
+  });
   it("shows a recoverable reconstruction error without reporting a project", async () => {
     vi.spyOn(studioApi, "uploadVideo").mockResolvedValue({
       id: "video-" + "b".repeat(64), bytes: 80, format: "mp4",

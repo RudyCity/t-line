@@ -81,6 +81,43 @@ describe('Studio Studio authenticated client', () => {
       .rejects.toThrow(/Invalid Studio evidence request/);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+  it("previews a token-bound recovery with authenticated PNG and requires explicit approval body",async()=>{
+    const videoId="video-"+"a".repeat(64),token="b".repeat(64);
+    const png=new Uint8Array([137,80,78,71,13,10,26,10,...Array(24).fill(0)]);
+    const base64=btoa(String.fromCharCode(...png));
+    const preview={status:"recovery-candidate",frame:54,beforeToAfter:[0,1],
+      mergedProbeFrames:[54],flaggedForegroundIoU:.51,token,
+      previewPngBase64:base64,note:"Inferred interpolation"};
+    const saved={status:"experimental-multi",projectId:"studio-"+"a".repeat(20),
+      revision:2,recovery:{frame:54,manuallyConfirmed:true,mergedProbeFrames:[54],
+        flaggedForegroundIoU:.51}};
+    const mock=vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(preview),{status:200}))
+      .mockResolvedValueOnce(new Response(JSON.stringify(saved),{status:201}));
+    vi.stubGlobal("fetch",mock);
+    vi.spyOn(URL,"createObjectURL").mockReturnValue("blob:preview");
+    const candidate=await studioApi.previewOcclusionRecovery("D:/studio",videoId,54,[0,1]);
+    expect(candidate).toMatchObject({token,previewUrl:"blob:preview"});
+    expect(JSON.stringify(candidate)).not.toContain("previewPngBase64");
+    const project=await studioApi.approveOcclusionRecovery("D:/studio",videoId,54,[0,1],token);
+    expect(project).toMatchObject(saved);
+    expect(mock).toHaveBeenCalledTimes(2);
+    const routes=mock.mock.calls.map(call=>call[0]) as string[];
+    expect(routes.every(path=>path.includes("/reconstruct/multi/recovery?workspace="))).toBe(true);
+    expect(routes.every(path=>!path.includes("tline-only-token"))).toBe(true);
+    const postBodies=mock.mock.calls.map(call=>JSON.parse(call[1].body));
+    expect(postBodies).toEqual([
+      {videoId,frame:54,beforeToAfter:[0,1],previewOnly:true},
+      {videoId,frame:54,beforeToAfter:[0,1],previewOnly:false,
+        candidateToken:token,acknowledgement:"APPROVE_MANUAL_RECOVERY"},
+    ]);
+    expect(mock.mock.calls[1][1].headers).toMatchObject({Authorization:"Bearer tline-only-token"});
+    await expect(studioApi.previewOcclusionRecovery("D:/studio",videoId,54,[0,0]))
+      .rejects.toThrow(/distinct/);
+    expect(()=>studioApi.approveOcclusionRecovery("D:/studio",videoId,54,[0,1],"bad"))
+      .toThrow(/Invalid approved/);
+    expect(mock).toHaveBeenCalledTimes(2);
+  });
   it('reconstructs text only through authorized video ID and workspace scope', async () => {
     const id = 'video-' + 'e'.repeat(64);
     const report = { status:'experimental-ocr', projectId:'studio-'+'a'.repeat(20),
