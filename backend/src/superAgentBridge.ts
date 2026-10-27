@@ -1014,44 +1014,77 @@ let suppressBufferWrite = false;
             result: { error: 'Session changed. Reconnect the assistant before sending.' } }));
           return;
         }
+
+        // Gate prompt send: Must be READY
+        if (!lifecycleManager.canSendPrompt()) {
+          ws.send(JSON.stringify({ type: 'chat_response', success: false,
+            sessionId: initialSessionId,
+            result: { error: 'Assistant session is not ready yet. Please wait for initialization and stream subscription.' } }));
+          return;
+        }
+
         if (parsed.clientMessageId !== undefined && !validAssistantTurnId(parsed.clientMessageId)) {
           ws.send(JSON.stringify({ type: 'chat_response', success: false,
             sessionId: initialSessionId,
             result: { error: 'Invalid message identity.' } }));
           return;
         }
-        const text = parsed.text || '';
-        console.log(`[WS-Agent] Prompt received (${workspacePath}, ${text.length} chars)`);
-        logToSuperAgentFile(`[WS-Agent] Prompt received (${workspacePath}, ${text.length} chars)`);
-        logSuperAgentEvent('prompt', { length: text.length, workspace: workspacePath });
-        await saveCliPromptHistory(text, workspacePath);
+
+        const turnId = parsed.clientMessageId || '';
+        if (turnId && !lifecycleManager.recordWriteAttempt(turnId)) {
+          ws.send(JSON.stringify({ type: 'chat_response', success: false,
+            sessionId: initialSessionId,
+            result: { error: 'Duplicate write attempt. Prompt write already accepted or in-flight.' } }));
+          return;
+        }
+
+        // Validate active preset is configured before sending prompt
+        let activeModelName: string | undefined;
+        try {
+          const configSnapshot = await loadMergedPresets();
+          const modeKey: 'single' | 'multi' = agentMode === 'multi' ? 'multi' : 'single';
+          const activePresetId = configSnapshot.activePresetId?.[modeKey];
+          const activePresetsList = configSnapshot.presets?.[modeKey] || [];
+          const activePreset = activePresetsList.find((p: any) =>
+            p.id?.toLowerCase() === activePresetId?.toLowerCase() ||
+            p.name?.toLowerCase() === activePresetId?.toLowerCase()
+          );
+          if (!activePresetId || !activePreset) {
+            const errMsg = `No active model preset selected for ${agentMode} mode. Please select an active preset.`;
+            ws.send(JSON.stringify({ type: 'chat_response', success: false, result: { error: errMsg } }));
+            logSuperAgentEvent('chat_response_error', { error: errMsg });
+            return;
+          }
+          activeModelName = activePreset.model || activePreset.modelName;
+        } catch (presetCheckErr: any) {
+          console.warn('[WS-Agent] Active preset check warning:', presetCheckErr?.message);
+        }
+
+        // Multimodal validation
+        const validation = validateAndSanitizeMultimodalInput(parsed.text || '', parsed.parts, activeModelName);
+        if (!validation.valid) {
+          ws.send(JSON.stringify({ type: 'chat_response', success: false,
+            sessionId: initialSessionId,
+            result: { error: validation.error } }));
+          return;
+        }
+
+        const cleanHistoryText = validation.cleanHistoryText || parsed.text || '';
+        console.log(`[WS-Agent] Prompt received (${workspacePath}, ${cleanHistoryText.length} chars)`);
+        logToSuperAgentFile(`[WS-Agent] Prompt received (${workspacePath}, ${cleanHistoryText.length} chars)`);
+        logSuperAgentEvent('prompt', { length: cleanHistoryText.length, workspace: workspacePath });
+        await saveCliPromptHistory(cleanHistoryText, workspacePath);
 
         // Ensure SuperAgent server process is running
         await new Promise<void>((resolve) => {
           ensureSuperAgentServer(workspacePath, agentMode, customArgs, ws, resolve);
         });
 
-        // Validate active preset is configured before sending prompt
         try {
-          const configSnapshot = await loadMergedPresets();
-          const modeKey: 'single' | 'multi' = agentMode === 'multi' ? 'multi' : 'single';
-          const activePresetId = configSnapshot.activePresetId?.[modeKey];
-          const activePresetsList = configSnapshot.presets?.[modeKey] || [];
-          const hasActivePreset = Boolean(
-            activePresetId &&
-            activePresetsList.some((p: any) => p.id?.toLowerCase() === activePresetId.toLowerCase() || p.name?.toLowerCase() === activePresetId.toLowerCase())
-          );
-          if (!hasActivePreset) {
-            const errMsg = `No active model preset selected for ${agentMode} mode. Please select an active preset.`;
-            ws.send(JSON.stringify({ type: 'chat_response', success: false, result: { error: errMsg } }));
-            logSuperAgentEvent('chat_response_error', { error: errMsg });
-            return;
-          }
-        } catch (presetCheckErr: any) {
-          console.warn('[WS-Agent] Active preset check warning:', presetCheckErr?.message);
-        }
-        try {
-          const chatPayload: any = { message: text, sessionId: initialSessionId };
+          const messageContent = validation.sanitizedParts && validation.sanitizedParts.length > 0
+            ? validation.sanitizedParts
+            : cleanHistoryText;
+          const chatPayload: any = { message: messageContent, sessionId: initialSessionId };
           if (parsed.clientMessageId) chatPayload.clientMessageId = parsed.clientMessageId;
           // A transport failure after a POST is an unknown outcome. Never
           // call /api/chat again, regardless of whether the connection refused,
