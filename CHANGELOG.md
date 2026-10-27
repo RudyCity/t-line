@@ -1,3 +1,10 @@
+## [1.3.746] - 2026-10-27
+
+### Desktop Studio Editor & Unified Assistant Direction (Planning Only)
+- Defined a timeline-first desktop Studio UI and made the existing T-Line SuperAgent Assistant the single conversational Director for the editor.
+- Documented the canonical Core tool/API boundary, desktop-only focus/selection channel, shared project revisions, edit approvals and live timeline sync acceptance tests.
+- Recorded the architecture in AGENTS.md and a staged implementation master plan; this change does not yet implement UI, tool orchestration or native E2E workflows.
+
 ## [1.3.745] - 2026-10-26
 
 ### Session Identity Preservation & Real-Time Event Stream Delivery

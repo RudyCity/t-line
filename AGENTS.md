@@ -16,6 +16,17 @@ This document defines style guidelines, behavioral constraints, and coding stand
 
 ---
 
+## Studio Desktop Editor & Unified Assistant Control — Mandatory (2026-10-27)
+
+- **T-Line is a desktop client, not a public MCP tool server**. SuperAgent Core/CLI remains the independently accessible agent runtime and tool provider; do not create another T-Line tool gateway.
+- **One Director only**. The existing T-Line SuperAgent Assistant is the conversational Studio AI Director. Studio UI is a timeline-first editor; remove the independent Studio Director chat modes without removing canonical Core editing capabilities.
+- **One Studio project state**. All assistant-driven and manual edits use the canonical SuperAgent project revision and typed Studio operations. Never mutate React state or project files behind Core's back.
+- **Agent handoff is typed and scoped**. Desktop-only focus/open/select/seek operations must target a trusted workspace/project; no generic DOM/shell execution. Mutations must honor project revisions, permissions, operation deduplication and approval for destructive/expensive changes.
+- **Design target**. Media/asset browser left, large video preview center, property inspector right, resizable full-width multitrack timeline bottom, compact export toolbar. Reuse existing Studio panels, effects and engine services first.
+- **Plan**: docs/plans/2026-10-27-studio-desktop-editor-agent-control-master-plan.md. Each future phase must provide real agent-to-edit-to-preview/undo E2E evidence, not simulation.
+
+---
+
 ## One SuperAgent Runtime Target — Mandatory (2026-10-26)
 
 - **Exactly ONE T-Line backend per installed desktop instance**. Keep one normal **primary** SuperAgent runtime stack; Core, MCP and OAuth can be independently owned processes within that one stack. A bounded, private **temporary SuperAgent testing profile** is permitted for migration/QA, but **do not create a second T-Line backend**, duplicate provider state or permanent test daemon.
