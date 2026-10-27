@@ -25,6 +25,8 @@ import {
   splitClipAtFrame,
   rippleDeleteClip,
   deleteClip,
+  trimClip,
+  moveClip,
   syncClipsToComposition,
 } from '../../services/studioClipEdits';
 
@@ -72,6 +74,59 @@ export function StudioMultiTrackTimeline({
   const pixelsPerFrame = useMemo(() => Math.max(0.5, Math.min(8, 2 * zoom)), [zoom]);
   const totalDuration = composition.durationFrames || 180;
   const timelineWidth = Math.max(600, totalDuration * pixelsPerFrame);
+
+  // Active clip gesture state (drag move or edge trim)
+  const [activeGesture, setActiveGesture] = useState<{
+    type: 'move' | 'trim-in' | 'trim-out';
+    trackId: string;
+    clipId: string;
+    startX: number;
+    initialStartFrame: number;
+    initialDuration: number;
+  } | null>(null);
+
+  // Handle pointer move and release for clip movement and trimming
+  useEffect(() => {
+    if (!activeGesture) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - activeGesture.startX;
+      const deltaFrames = Math.round(deltaX / pixelsPerFrame);
+
+      if (activeGesture.type === 'move') {
+        const newStart = Math.max(0, activeGesture.initialStartFrame + deltaFrames);
+        setTracks(prev =>
+          moveClip(prev, activeGesture.trackId, activeGesture.trackId, activeGesture.clipId, newStart, currentFrame, snapEnabled)
+        );
+      } else if (activeGesture.type === 'trim-in') {
+        setTracks(prev =>
+          trimClip(prev, activeGesture.trackId, activeGesture.clipId, deltaFrames, 0)
+        );
+      } else if (activeGesture.type === 'trim-out') {
+        setTracks(prev =>
+          trimClip(prev, activeGesture.trackId, activeGesture.clipId, 0, deltaFrames)
+        );
+      }
+    };
+
+    const handleMouseUp = () => {
+      setActiveGesture(null);
+      if (onCompositionChange) {
+        setTracks(currentTracks => {
+          const updatedComp = syncClipsToComposition(currentTracks, composition);
+          onCompositionChange(updatedComp);
+          return currentTracks;
+        });
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [activeGesture, pixelsPerFrame, currentFrame, snapEnabled, onCompositionChange, composition]);
 
   // Format frame to HH:MM:SS:FF or SS.ff
   const formatTimecode = (frame: number) => {
@@ -458,17 +513,35 @@ export function StudioMultiTrackTimeline({
                     return (
                       <div
                         key={clip.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Clip ${clip.name}`}
                         onClick={() => {
                           setSelectedClipId(clip.id);
                           if (clip.layerId && onSelectLayer) {
                             onSelectLayer(clip.layerId);
                           }
                         }}
+                        onMouseDown={(e) => {
+                          if (e.button !== 0 || track.locked) return;
+                          setSelectedClipId(clip.id);
+                          if (clip.layerId && onSelectLayer) {
+                            onSelectLayer(clip.layerId);
+                          }
+                          setActiveGesture({
+                            type: 'move',
+                            trackId: track.id,
+                            clipId: clip.id,
+                            startX: e.clientX,
+                            initialStartFrame: clip.startFrame,
+                            initialDuration: clip.durationFrames,
+                          });
+                        }}
                         style={{
                           left: `${left}px`,
                           width: `${width}px`,
                         }}
-                        className={`absolute top-1.5 bottom-1.5 rounded border px-2 py-1 flex items-center justify-between text-xs cursor-pointer transition-colors shadow-xs ${
+                        className={`group absolute top-1.5 bottom-1.5 rounded border px-2 py-1 flex items-center justify-between text-xs cursor-move transition-colors shadow-xs select-none ${
                           isSelected
                             ? 'border-cyan-400 bg-cyan-950/60 ring-1 ring-cyan-400/50 text-white'
                             : clip.kind === 'audio'
@@ -476,7 +549,30 @@ export function StudioMultiTrackTimeline({
                             : 'border-slate-700 bg-slate-900/80 hover:border-slate-600 text-slate-100'
                         }`}
                       >
-                        <div className="flex items-center gap-1.5 min-w-0">
+                        {/* Trim In Handle (Left) */}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          aria-label="Trim in handle"
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            if (e.button !== 0 || track.locked) return;
+                            setSelectedClipId(clip.id);
+                            setActiveGesture({
+                              type: 'trim-in',
+                              trackId: track.id,
+                              clipId: clip.id,
+                              startX: e.clientX,
+                              initialStartFrame: clip.startFrame,
+                              initialDuration: clip.durationFrames,
+                            });
+                          }}
+                          className="absolute left-0 top-0 bottom-0 w-2.5 cursor-ew-resize hover:bg-cyan-400/40 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <div className="w-0.5 h-3 bg-cyan-300 rounded-full" />
+                        </div>
+
+                        <div className="flex items-center gap-1.5 min-w-0 pointer-events-none">
                           {getClipIcon(clip.kind)}
                           <span className="font-mono text-[10px] font-medium truncate">
                             {clip.name}
@@ -484,10 +580,33 @@ export function StudioMultiTrackTimeline({
                         </div>
 
                         {width > 60 && (
-                          <span className="font-mono text-[9px] text-[var(--text-muted)] shrink-0">
+                          <span className="font-mono text-[9px] text-[var(--text-muted)] shrink-0 pointer-events-none">
                             {Math.round(clip.durationFrames / (fps || 30))}s
                           </span>
                         )}
+
+                        {/* Trim Out Handle (Right) */}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          aria-label="Trim out handle"
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            if (e.button !== 0 || track.locked) return;
+                            setSelectedClipId(clip.id);
+                            setActiveGesture({
+                              type: 'trim-out',
+                              trackId: track.id,
+                              clipId: clip.id,
+                              startX: e.clientX,
+                              initialStartFrame: clip.startFrame,
+                              initialDuration: clip.durationFrames,
+                            });
+                          }}
+                          className="absolute right-0 top-0 bottom-0 w-2.5 cursor-ew-resize hover:bg-cyan-400/40 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <div className="w-0.5 h-3 bg-cyan-300 rounded-full" />
+                        </div>
                       </div>
                     );
                   })}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronDown, FileCode, Search, Terminal, Wrench, Cpu, Check, Copy, Code2, Maximize2, Minimize2, Clapperboard, Film, Sliders } from 'lucide-react';
+import { ChevronRight, ChevronDown, FileCode, Search, Terminal, Wrench, Cpu, Check, Copy, Code2, Maximize2, Minimize2, Clapperboard, Film, Sliders, Scissors } from 'lucide-react';
 import { studioControlChannel } from '../services/studioControlChannel';
 
 interface SuperAgentToolItemProps {
@@ -71,6 +71,15 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
           action: 'Studio Edit',
           target: `${proj} (${op})`,
           icon: <Clapperboard className="w-3 h-3 text-cyan-400 shrink-0" />
+        };
+      }
+      if (subAction === 'clip_edit') {
+        const op = args.operation?.type || 'clip';
+        const proj = args.projectId || args.studioId || 'project';
+        return {
+          action: 'Studio Clip Edit',
+          target: `${proj} (${op})`,
+          icon: <Scissors className="w-3 h-3 text-cyan-400 shrink-0" />
         };
       }
       if (subAction === 'desktop_focus') {
@@ -298,6 +307,11 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
                   <Clapperboard className="w-3.5 h-3.5 text-cyan-400" />
                   Studio Workstation Action
                 </span>
+                {result?.delivery === 'dispatched' && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-900/40 text-emerald-200 border border-emerald-700/50 font-mono">
+                    dispatched
+                  </span>
+                )}
                 {result?.receipt && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-900/40 text-cyan-200 border border-cyan-700/50 font-mono">
                     rev {result.receipt.revisionBefore} → {result.receipt.revisionAfter}
@@ -317,42 +331,55 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
                 </div>
               )}
 
-              <div className="pt-1 flex flex-wrap gap-2">
-                {(args.projectId || result?.projectId || result?.receipt?.projectId) && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const projId = args.projectId || result?.projectId || result?.receipt?.projectId;
-                      studioControlChannel.emitAction({
-                        type: 'open_project',
-                        workspacePath: args.workspacePath || '',
-                        projectId: projId,
-                      });
-                    }}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-cyan-800/40 hover:bg-cyan-700/50 text-cyan-200 border border-cyan-600/50 text-[11px] font-sans font-medium transition-colors"
-                  >
-                    <Clapperboard className="w-3 h-3 text-cyan-400" />
-                    <span>Focus in Studio</span>
-                  </button>
-                )}
+              {result?.receipt?.affectedEntities?.clips && result.receipt.affectedEntities.clips.length > 0 && (
+                <div className="text-[10px] text-[var(--text-muted)] font-mono">
+                  Affected clips: <span className="text-cyan-300">{result.receipt.affectedEntities.clips.join(', ')}</span>
+                </div>
+              )}
 
-                {(args.action || result?.action) && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const act = args.action || result?.action;
-                      if (act) {
-                        studioControlChannel.emitAction(act);
-                      }
-                    }}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-fuchsia-800/40 hover:bg-fuchsia-700/50 text-fuchsia-200 border border-fuchsia-600/50 text-[11px] font-sans font-medium transition-colors"
-                  >
-                    <Film className="w-3 h-3 text-fuchsia-400" />
-                    <span>Apply View Navigation</span>
-                  </button>
-                )}
+              <div className="pt-1 flex flex-wrap gap-2">
+                {(() => {
+                  const projId = args.projectId || args.studioId || result?.projectId || result?.studioId || result?.receipt?.projectId || result?.receipt?.studioId;
+                  const wsPath = args.workspacePath || result?.workspacePath || '';
+                  if (!projId) return null;
+                  return (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        studioControlChannel.emitAction({
+                          type: 'open_project',
+                          workspacePath: wsPath,
+                          projectId: projId,
+                        });
+                      }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-cyan-800/40 hover:bg-cyan-700/50 text-cyan-200 border border-cyan-600/50 text-[11px] font-sans font-medium transition-colors"
+                    >
+                      <Clapperboard className="w-3 h-3 text-cyan-400" />
+                      <span>Focus in Studio</span>
+                    </button>
+                  );
+                })()}
+
+                {(() => {
+                  const rawAct = args.action || result?.action;
+                  if (!rawAct) return null;
+                  const actObj = typeof rawAct === 'object' && rawAct !== null ? rawAct : null;
+                  if (!actObj || !actObj.type) return null;
+                  return (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        studioControlChannel.emitAction(actObj);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-fuchsia-800/40 hover:bg-fuchsia-700/50 text-fuchsia-200 border border-fuchsia-600/50 text-[11px] font-sans font-medium transition-colors"
+                    >
+                      <Film className="w-3 h-3 text-fuchsia-400" />
+                      <span>Apply View Navigation</span>
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           )}

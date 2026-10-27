@@ -1,4 +1,5 @@
 import { STUDIO_DISPLAY_NAME } from "./studioBranding";
+import type { StudioMultiTrack } from "./studioControlTypes";
 /** Typed Studio Studio v1 contract. The SuperAgent server remains authoritative. */
 export type StudioProperty = 'x' | 'y' | 'opacity' | 'rotation' | 'scale' | 'scaleX' | 'scaleY' | 'strokeDashoffset';
 export type StudioEasing =
@@ -70,6 +71,8 @@ export interface StudioComposition {
   durationFrames: number; background: string;
   audio?: StudioAudioTrack; audioTracks?: StudioAudioTrack[];
   layers: StudioLayer[];
+  /** Canonical NLE multi-track layout v2 */
+  tracks?: StudioMultiTrack[];
   interactionGraph?: StudioInteractionGraph;
   effectStack?: StudioStackEntry[];
   stackBase?: Omit<StudioComposition, 'effectStack' | 'stackBase'>;
@@ -156,7 +159,12 @@ export type StudioEdit =
   | { type: 'replace-composition'; composition: StudioProject['composition'] }
   | { type: 'set-interaction-graph'; graph: StudioInteractionGraph | null }
   | { type: 'set-audio'; audio: StudioAudioTrack | null }
-  | { type: 'set-audio-tracks'; audioTracks: StudioAudioTrack[] };
+  | { type: 'set-audio-tracks'; audioTracks: StudioAudioTrack[] }
+  | { type: 'set-tracks'; tracks: StudioMultiTrack[] }
+  | { type: 'split-clip'; trackId: string; clipId: string; splitFrame: number }
+  | { type: 'trim-clip'; trackId: string; clipId: string; deltaIn: number; deltaOut: number }
+  | { type: 'move-clip'; fromTrackId: string; toTrackId: string; clipId: string; newStartFrame: number }
+  | { type: 'delete-clip'; trackId: string; clipId: string; ripple?: boolean };
 export interface StudioTextOcrReconstruction {
   status: 'experimental-ocr';
   projectId: string;

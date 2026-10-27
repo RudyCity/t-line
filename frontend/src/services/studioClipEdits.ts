@@ -302,6 +302,7 @@ export function syncClipsToComposition(
   }
 
   comp.durationFrames = Math.max(1, maxEndFrame);
+  comp.tracks = structuredClone(tracks);
 
   // Reconcile audio tracks
   const audioTrack = tracks.find(t => t.kind === 'audio');

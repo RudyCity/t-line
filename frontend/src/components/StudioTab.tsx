@@ -20,13 +20,14 @@ import { StudioParticlesPanel } from './StudioParticlesPanel';
 import { StudioTypographyPanel } from './StudioTypographyPanel';
 import { StudioTimeline } from './StudioTimeline';
 import { StudioMultiTrackTimeline } from './studio/StudioMultiTrackTimeline';
+import { StudioMediaBin } from './studio/StudioMediaBin';
 import { StudioAudioPanel } from './StudioAudioPanel';
 import { StudioInteractionPanel } from './StudioInteractionPanel';
 import { StudioVideoToCodePanel } from './StudioVideoToCodePanel';
 import { StudioCodeToVideoPanel } from './StudioCodeToVideoPanel';
 import { studioApi } from '../services/studioApi';
 import { studioControlChannel } from '../services/studioControlChannel';
-import { AlertCircle, CheckCircle2, Film, Loader2, Plus, Sparkles, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Film, Loader2, Plus, Sparkles, X, ChevronRight } from 'lucide-react';
 
 interface Props {
   workspacePath: string;
@@ -229,53 +230,51 @@ export function StudioTab({ workspacePath, isActive }: Props) {
       )}
 
       {!s.project ? (
-        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[360px_minmax(0,1fr)]">
-          {/* Left Column: Quick Director Service Form (Compact, no chat history) */}
-          <div className="flex min-h-0 flex-col border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] lg:border-b-0 lg:border-r overflow-y-auto">
-            <StudioQuickDirectPanel
-              selectedId={s.selectedId}
-              busy={s.busy}
-              directorAvailable={s.directorAvailable}
-              directorMediaAvailable={s.directorMediaAvailable}
-              directorSceneImagesAvailable={s.directorSceneImagesAvailable}
-              directorAudioLoopAvailable={s.directorAudioLoopAvailable}
-              directorVoiceoverAvailable={s.directorVoiceoverAvailable}
-              directorAspectAvailable={s.directorAspectAvailable}
-              directorSnapshotAvailable={s.directorSnapshotAvailable}
-              directorAutoNarration={s.directorAutoNarration}
-              onToggleAutoNarration={s.setDirectorAutoNarration}
-              motionPrompt={s.motionPrompt}
-              onChangePrompt={s.setStudioPrompt}
-              onSubmitPrompt={s.submitStudioPrompt}
-              promptHistory={s.promptHistory}
-              promptAspectRatio={s.promptAspectRatio}
-              onChangeAspectRatio={s.setPromptAspectRatio}
-              promptImages={s.promptImages}
-              onAttachImages={s.attachDirectorImages}
-              onRemoveImage={i => s.setPromptImages(prev => prev.filter((_, index) => index !== i))}
-              promptAudio={s.promptAudio}
-              onAttachAudio={s.attachDirectorFile}
-              onRemoveAudio={() => s.setPromptAudio(null)}
-              promptAudioGain={s.promptAudioGain}
-              onChangeAudioGain={s.setPromptAudioGain}
-              promptAudioLoop={s.promptAudioLoop}
-              onToggleAudioLoop={s.setPromptAudioLoop}
-              promptVoiceover={s.promptVoiceover}
-              onChangeVoiceover={s.setPromptVoiceover}
-              promptVoiceoverGain={s.promptVoiceoverGain}
-              onChangeVoiceoverGain={s.setPromptVoiceoverGain}
-              quality={s.quality}
-              captionsAvailable={s.captionsAvailable}
-              onExportCaptions={s.exportCaptions}
-              visionRepairAvailable={s.visionRepairAvailable}
-              onRepairVision={s.repairVision}
-              visionAvailable={s.visionAvailable}
-              onReviewVision={s.reviewVision}
-              visionReview={s.visionReview}
-              onPrepareSuggestedRevision={s.setStudioPrompt}
-              motionSnapshots={s.motionSnapshots}
-              onLoadDirectorSnapshots={s.loadDirectorSnapshots}
-            />
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[320px_minmax(0,1fr)]">
+          {/* Left Column: Project Browser & Creator */}
+          <div className="flex min-h-0 flex-col border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] lg:border-b-0 lg:border-r overflow-y-auto p-3 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-[var(--border-color)]">
+              <span className="text-xs font-semibold text-[var(--text-main)] uppercase tracking-wider font-mono">
+                Studio Projects
+              </span>
+              <button
+                type="button"
+                onClick={s.createNewProject}
+                disabled={s.busy}
+                className="inline-flex items-center gap-1 rounded bg-[var(--color-primary)] px-2 py-1 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+              >
+                <Plus size={12} />
+                <span>New Project</span>
+              </button>
+            </div>
+
+            {s.projects.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-[var(--border-color)] p-4 text-center text-xs text-[var(--text-muted)] space-y-2">
+                <p>No Studio projects found in this workspace.</p>
+                <p className="text-[11px]">Click "New Project" above or ask the Assistant in chat to create one.</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {s.projects.map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => s.setSelectedId(p.id)}
+                    className="w-full text-left rounded border border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--surface-overlay-hover)] p-2.5 transition-colors group flex items-center justify-between"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <div className="text-xs font-semibold text-[var(--text-main)] truncate group-hover:text-cyan-400">
+                        {p.name}
+                      </div>
+                      <div className="text-[10px] text-[var(--text-muted)] font-mono">
+                        {p.id} • rev {p.revision}
+                      </div>
+                    </div>
+                    <ChevronRight size={14} className="text-[var(--text-muted)] group-hover:text-cyan-400 shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Center & Bottom: Video Monitor Stage + Timeline Standby */}
@@ -324,72 +323,29 @@ export function StudioTab({ workspacePath, isActive }: Props) {
         <>
           {/* Main Studio 3-Column Workstation */}
           <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[300px_minmax(0,1fr)_270px]">
-            {/* Left Column: Layers & Creative Tool Modules */}
+            {/* Left Column: Media Bin & Layers (Desktop NLE layout) */}
             <div className="flex min-h-0 flex-col border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] lg:border-b-0 lg:border-r overflow-y-auto">
-              <StudioLayersSection
-                layers={s.project.composition.layers}
+              <StudioMediaBin
+                workspacePath={workspacePath}
+                project={s.project}
+                busy={s.busy}
                 selectedLayer={s.selectedLayer}
                 onSelectLayer={s.setSelectedLayer}
                 onInsertLayer={s.insertLayer}
                 onImportImage={s.importImage}
                 onReorderLayer={s.reorderLayer}
                 onRemoveSelectedLayer={s.removeSelectedLayer}
-                busy={s.busy}
+                onImportAudio={s.importAudio}
+                captionsAvailable={s.captionsAvailable}
+                onExportCaptions={s.exportCaptions}
+                visionAvailable={s.visionAvailable}
+                onReviewVision={s.reviewVision}
+                visionRepairAvailable={s.visionRepairAvailable}
+                onRepairVision={s.repairVision}
               />
 
               {/* Creative Suites Collapsible Shelf */}
               <div className="border-t border-[var(--border-color)]">
-                <details className="border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] text-xs" aria-label="AI Studio Director Panel">
-                  <summary className="flex cursor-pointer items-center gap-2 px-3 py-2.5 font-semibold text-xs text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]">
-                    <Sparkles size={13} className="text-[var(--color-primary)]" />
-                    <span>AI Studio Director</span>
-                  </summary>
-                  <StudioQuickDirectPanel
-                    selectedId={s.selectedId}
-                    busy={s.busy}
-                    directorAvailable={s.directorAvailable}
-                    directorMediaAvailable={s.directorMediaAvailable}
-                    directorSceneImagesAvailable={s.directorSceneImagesAvailable}
-                    directorAudioLoopAvailable={s.directorAudioLoopAvailable}
-                    directorVoiceoverAvailable={s.directorVoiceoverAvailable}
-                    directorAspectAvailable={s.directorAspectAvailable}
-                    directorSnapshotAvailable={s.directorSnapshotAvailable}
-                    directorAutoNarration={s.directorAutoNarration}
-                    onToggleAutoNarration={s.setDirectorAutoNarration}
-                    motionPrompt={s.motionPrompt}
-                    onChangePrompt={s.setStudioPrompt}
-                    onSubmitPrompt={s.submitStudioPrompt}
-                    promptHistory={s.promptHistory}
-                    promptAspectRatio={s.promptAspectRatio}
-                    onChangeAspectRatio={s.setPromptAspectRatio}
-                    promptImages={s.promptImages}
-                    onAttachImages={s.attachDirectorImages}
-                    onRemoveImage={i => s.setPromptImages(prev => prev.filter((_, index) => index !== i))}
-                    promptAudio={s.promptAudio}
-                    onAttachAudio={s.attachDirectorFile}
-                    onRemoveAudio={() => s.setPromptAudio(null)}
-                    promptAudioGain={s.promptAudioGain}
-                    onChangeAudioGain={s.setPromptAudioGain}
-                    promptAudioLoop={s.promptAudioLoop}
-                    onToggleAudioLoop={s.setPromptAudioLoop}
-                    promptVoiceover={s.promptVoiceover}
-                    onChangeVoiceover={s.setPromptVoiceover}
-                    promptVoiceoverGain={s.promptVoiceoverGain}
-                    onChangeVoiceoverGain={s.setPromptVoiceoverGain}
-                    quality={s.quality}
-                    captionsAvailable={s.captionsAvailable}
-                    onExportCaptions={s.exportCaptions}
-                    visionRepairAvailable={s.visionRepairAvailable}
-                    onRepairVision={s.repairVision}
-                    visionAvailable={s.visionAvailable}
-                    onReviewVision={s.reviewVision}
-                    visionReview={s.visionReview}
-                    onPrepareSuggestedRevision={s.setStudioPrompt}
-                    motionSnapshots={s.motionSnapshots}
-                    onLoadDirectorSnapshots={s.loadDirectorSnapshots}
-                  />
-                </details>
-
                 {s.brandAvailable && <StudioBrandKitPanel workspacePath={workspacePath} />}
 
                 {s.templatesAvailable && (

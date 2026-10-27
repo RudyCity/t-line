@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import {
   Layers3,
   Sparkles,
@@ -11,6 +11,8 @@ import {
   Upload,
   Film,
   Volume2,
+  Image as ImageIcon,
+  Plus,
 } from 'lucide-react';
 import type { StudioLayer, StudioProject } from '../../services/studioApi';
 import { StudioLayersSection } from './StudioLayersSection';
@@ -27,7 +29,7 @@ interface Props {
   onImportImage?: (file?: File) => void;
   onReorderLayer?: (delta: number) => void;
   onRemoveSelectedLayer?: () => void;
-  onImportAudio?: () => void;
+  onImportAudio?: (file?: File) => void;
   captionsAvailable?: boolean;
   onExportCaptions?: () => void;
   visionAvailable?: boolean;
@@ -55,6 +57,9 @@ export function StudioMediaBin({
   onRepairVision,
 }: Props) {
   const [activeTab, setActiveTab] = useState<MediaBinTab>('layers');
+  const [assetFilter, setAssetFilter] = useState<'all' | 'image' | 'video' | 'audio'>('all');
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   const tabs: { id: MediaBinTab; label: string; icon: typeof Layers3 }[] = [
     { id: 'layers', label: 'Layers', icon: Layers3 },
@@ -64,6 +69,58 @@ export function StudioMediaBin({
     { id: 'templates', label: 'Templates', icon: LayoutTemplate },
     { id: 'ai', label: 'AI Suite', icon: Wand2 },
   ];
+
+  const projectAssets = useMemo(() => {
+    if (!project) return [];
+    const items: Array<{
+      id: string;
+      name: string;
+      kind: 'image' | 'video' | 'audio';
+      assetId: string;
+      layerId?: string;
+      meta?: string;
+    }> = [];
+
+    project.composition.layers.forEach(layer => {
+      if (layer.kind === 'image') {
+        items.push({
+          id: layer.id,
+          name: (layer as any).name || `Image (${layer.assetId.slice(0, 8)})`,
+          kind: 'image',
+          assetId: layer.assetId,
+          layerId: layer.id,
+          meta: `${layer.width}×${layer.height}`,
+        });
+      } else if (layer.kind === 'video') {
+        items.push({
+          id: layer.id,
+          name: (layer as any).name || `Video (${layer.assetId.slice(0, 8)})`,
+          kind: 'video',
+          assetId: layer.assetId,
+          layerId: layer.id,
+          meta: `${layer.width}×${layer.height}`,
+        });
+      }
+    });
+
+    const audioTracks = project.composition.audioTracks ?? (project.composition.audio ? [project.composition.audio] : []);
+    audioTracks.forEach((track, idx) => {
+      items.push({
+        id: `audio-${idx}-${track.assetId}`,
+        name: `Audio ${idx + 1} (${track.assetId.slice(0, 8)})`,
+        kind: 'audio',
+        assetId: track.assetId,
+        meta: `Vol ${Math.round(track.volume * 100)}%`,
+      });
+    });
+
+    return items;
+  }, [project]);
+
+  const filteredAssets = useMemo(() => {
+    if (assetFilter === 'all') return projectAssets;
+    return projectAssets.filter(item => item.kind === assetFilter);
+  }, [projectAssets, assetFilter]);
 
   const effectPresets = [
     { name: 'Fade In / Out', category: 'Transition', desc: 'Standard opacity ease-in and ease-out' },
@@ -133,20 +190,144 @@ export function StudioMediaBin({
 
         {activeTab === 'assets' && (
           <div className="p-3 space-y-3">
+            {/* Hidden file inputs */}
+            <input
+              type="file"
+              ref={imageInputRef}
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (file && onImportImage) {
+                  onImportImage(file);
+                }
+                e.target.value = '';
+              }}
+            />
+            <input
+              type="file"
+              ref={audioInputRef}
+              accept="audio/wav,audio/wave,audio/x-wav"
+              className="hidden"
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (file && onImportAudio) {
+                  onImportAudio(file);
+                }
+                e.target.value = '';
+              }}
+            />
+
             <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-2">
-              <span className="text-xs font-semibold text-[var(--text-main)]">Project Media</span>
-              <button
-                type="button"
-                onClick={() => onImportImage?.()}
-                className="inline-flex items-center gap-1 rounded border border-[var(--border-color)] bg-[var(--bg-card)] px-2 py-1 text-xs text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]"
-              >
-                <Upload size={12} />
-                <span>Import</span>
-              </button>
+              <span className="text-xs font-semibold text-[var(--text-main)]">Project Media ({projectAssets.length})</span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={busy}
+                  className="inline-flex items-center gap-1 rounded border border-[var(--border-color)] bg-[var(--bg-card)] px-2 py-1 text-xs text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] disabled:opacity-50 transition-colors"
+                >
+                  <Upload size={11} />
+                  <span>Image</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => audioInputRef.current?.click()}
+                  disabled={busy}
+                  className="inline-flex items-center gap-1 rounded border border-[var(--border-color)] bg-[var(--bg-card)] px-2 py-1 text-xs text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] disabled:opacity-50 transition-colors"
+                >
+                  <Music size={11} />
+                  <span>Audio</span>
+                </button>
+              </div>
             </div>
-            <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
-              Import PNG/JPEG images or PCM WAV audio tracks into your local workspace. Media items can be placed directly onto video and audio tracks in the timeline.
-            </p>
+
+            {/* Filter pills */}
+            <div className="flex items-center gap-1 text-[10px]">
+              {(['all', 'video', 'image', 'audio'] as const).map(filter => (
+                <button
+                  key={filter}
+                  type="button"
+                  onClick={() => setAssetFilter(filter)}
+                  className={`rounded px-2 py-0.5 capitalize transition-colors ${
+                    assetFilter === filter
+                      ? 'bg-[var(--color-primary)] text-white font-medium'
+                      : 'bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-color)]'
+                  }`}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+
+            {/* Assets List */}
+            {filteredAssets.length > 0 ? (
+              <div className="space-y-1.5">
+                {filteredAssets.map(item => (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      if (item.layerId) {
+                        onSelectLayer(item.layerId);
+                      }
+                    }}
+                    className={`group flex items-center justify-between rounded border border-[var(--border-color)] bg-[var(--bg-card)] p-2 text-xs transition-colors cursor-pointer hover:border-cyan-500/60 ${
+                      item.layerId && selectedLayer === item.layerId
+                        ? 'border-cyan-400 bg-cyan-950/30'
+                        : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-[var(--bg-main)] border border-[var(--border-color)] text-[var(--text-muted)]">
+                        {item.kind === 'video' && <Film size={14} className="text-cyan-400" />}
+                        {item.kind === 'image' && <ImageIcon size={14} className="text-amber-400" />}
+                        {item.kind === 'audio' && <Volume2 size={14} className="text-emerald-400" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-mono text-[11px] font-medium text-[var(--text-main)] truncate">
+                          {item.name}
+                        </p>
+                        {item.meta && (
+                          <p className="font-mono text-[9px] text-[var(--text-muted)]">
+                            {item.meta}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {item.layerId ? (
+                        <span className="text-[9px] text-cyan-400 font-mono px-1 py-0.5 rounded bg-cyan-950/50 border border-cyan-800">
+                          Active
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={e => {
+                            e.stopPropagation();
+                            if (item.kind === 'image' && onInsertLayer) {
+                              onInsertLayer('image');
+                            }
+                          }}
+                          className="flex items-center gap-1 rounded bg-cyan-600 px-1.5 py-0.5 text-[9px] text-white hover:bg-cyan-500"
+                        >
+                          <Plus size={10} />
+                          <span>Insert</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded border border-dashed border-[var(--border-color)] p-4 text-center">
+                <FolderOpen className="mx-auto h-6 w-6 text-[var(--text-muted)] opacity-50 mb-1" />
+                <p className="text-xs font-medium text-[var(--text-main)]">No media assets found</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                  Click Import above to add images or audio files to this project.
+                </p>
+              </div>
+            )}
           </div>
         )}
 

@@ -132,4 +132,58 @@ describe('StudioMultiTrackTimeline', () => {
     // onCompositionChange should be called with synced composition
     expect(onCompositionChange).toHaveBeenCalled();
   });
+
+  it('supports drag moving a clip along the track', () => {
+    const onCompositionChange = vi.fn();
+
+    render(
+      <StudioMultiTrackTimeline
+        workspacePath="C:/workspace"
+        projectId="proj-1"
+        composition={mockComp}
+        currentFrame={0}
+        fps={30}
+        isPlaying={false}
+        onSeek={vi.fn()}
+        onTogglePlay={vi.fn()}
+        onCompositionChange={onCompositionChange}
+      />
+    );
+
+    const clipElement = screen.getByRole('button', { name: 'Clip Special Announcement' });
+    
+    // Start drag
+    fireEvent.mouseDown(clipElement, { clientX: 100, button: 0 });
+    // Move 40 pixels right (at zoom 1, pixelsPerFrame is 2, so delta is ~20 frames)
+    fireEvent.mouseMove(window, { clientX: 140 });
+    // Mouse up
+    fireEvent.mouseUp(window);
+
+    expect(onCompositionChange).toHaveBeenCalled();
+  });
+
+  it('supports interactive edge trimming of a clip', () => {
+    const onCompositionChange = vi.fn();
+
+    render(
+      <StudioMultiTrackTimeline
+        workspacePath="C:/workspace"
+        projectId="proj-1"
+        composition={mockComp}
+        currentFrame={0}
+        fps={30}
+        isPlaying={false}
+        onSeek={vi.fn()}
+        onTogglePlay={vi.fn()}
+        onCompositionChange={onCompositionChange}
+      />
+    );
+
+    const trimInHandle = screen.getAllByRole('button', { name: 'Trim in handle' })[0];
+    fireEvent.mouseDown(trimInHandle, { clientX: 50, button: 0 });
+    fireEvent.mouseMove(window, { clientX: 70 });
+    fireEvent.mouseUp(window);
+
+    expect(onCompositionChange).toHaveBeenCalled();
+  });
 });

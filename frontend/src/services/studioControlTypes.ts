@@ -93,6 +93,10 @@ export interface StudioClipNleComposition {
 
 /** Helper to derive clip tracks from a standard StudioComposition */
 export function deriveClipsFromComposition(comp: StudioComposition): StudioMultiTrack[] {
+  if (comp.tracks && Array.isArray(comp.tracks) && comp.tracks.length > 0) {
+    return structuredClone(comp.tracks);
+  }
+
   const videoTrack: StudioMultiTrack = {
     id: 'track-v1',
     name: 'Video 1',

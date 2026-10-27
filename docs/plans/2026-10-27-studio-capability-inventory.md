@@ -11,29 +11,19 @@ Authority: Single State Owner (SuperAgent Core) & T-Line Desktop Client
 
 ## 2. Capability Matrix
 
-| Domain | Capability / Operation | SuperAgent Core Route | Assistant Tool / Action | T-Line Proxy Status | Risk / Approval Level |
-|---|---|---|---|---|---|
-| **Project** | List projects | `GET /api/studio/projects` | `studio_list` / `motion_status` | Permitted (`studioProxy.ts`) | Safe (Read-only) |
-| **Project** | Inspect project | `GET /api/studio/projects/:id` | `studio_inspect` | Permitted (`studioProxy.ts`) | Safe (Read-only) |
-| **Project** | Create project | `POST /api/studio/projects` | `studio_create` | Permitted (`studioProxy.ts`) | Reversible |
-| **Project** | Revisioned edits | `POST /api/studio/projects/:id/edits` | `studio_edit` | Permitted (`studioProxy.ts`) | Revision-guarded |
-| **Project** | Natural language generate | `POST /api/studio/generate` | `studio_generate` | Permitted (`studioProxy.ts`) | User initiated / staged |
-| **Project** | Natural language revise | `POST /api/studio/projects/:id/revise` | `studio_revise` | Permitted (`studioProxy.ts`) | Revision-guarded |
-| **Media** | Upload asset (image/video) | `POST /api/studio/assets` | `studio_asset_upload` | Permitted (`studioProxy.ts`) | Bounded (1.6 MB / 64 MB) |
-| **Media** | Upload audio (WAV) | `POST /api/studio/audio` | `studio_audio_upload` | Permitted (`studioProxy.ts`) | Bounded (3 MB) |
-| **Media** | Audio waveform | `GET /api/studio/audio/:id/waveform` | `studio_audio_waveform` | Permitted (`studioProxy.ts`) | Safe (Read-only) |
-| **Timeline** | Scene layers & keyframes | `POST /api/studio/projects/:id/edits` | `studio_edit` | Permitted (`studioProxy.ts`) | Reversible with Undo |
-| **Timeline (NLE)**| Clip tracks (split/trim/move) | `POST /api/studio/projects/:id/edits` | `studio_clip_edit` | Permitted via typed edits | Reversible with Undo |
-| **Effects** | Effects catalogue & preview | `GET /api/studio/effects` | `studio_effects_list` | Permitted (`studioProxy.ts`) | Safe (Read-only) |
-| **Effects** | Apply effect / effect stack | `POST /api/studio/projects/:id/effects` | `studio_effect_apply` | Permitted (`studioProxy.ts`) | Reversible with Undo |
-| **Audio** | Multi-track audio & beat-sync | `POST /api/studio/projects/:id/beat-sync` | `studio_audio_sync` | Permitted (`studioProxy.ts`) | Reversible with Undo |
-| **Captions** | Export captions (.srt) | `GET /api/studio/projects/:id/captions.srt` | `studio_captions` | Permitted (`studioProxy.ts`) | Safe (Read-only) |
-| **Render** | Start MP4 render | `POST /api/studio/projects/:id/render` | `studio_render` | Permitted (`studioProxy.ts`) | Approval required (Expensive) |
-| **Render** | Query job status / cancel | `GET/POST /api/studio/jobs/:id` | `studio_status` | Permitted (`studioProxy.ts`) | Safe / Reversible |
-| **Desktop** | Focus Studio tab | Local client event | `focus_studio` | Client-only (`studioControlChannel`) | Safe (UI navigation) |
-| **Desktop** | Open project in editor | Local client event | `open_project` | Client-only (`studioControlChannel`) | Safe (UI navigation) |
-| **Desktop** | Select clip / layer | Local client event | `select_clip` | Client-only (`studioControlChannel`) | Safe (UI highlight) |
-| **Desktop** | Seek timecode / frame | Local client event | `seek_timecode` | Client-only (`studioControlChannel`) | Safe (UI scrub) |
+| Domain | Capability / Operation | Core Route | Tool / Action | Core Impl | Frontend Helper | Wired to Chat | Persists | E2E Verified |
+|---|---|---|---|---|---|---|---|---|
+| **Project** | List projects | `GET /api/motion/projects` | `studio_list_projects` | Yes | `studioApi.list` | Yes | Yes (disk) | Yes (`motionRoutes.test.ts`) |
+| **Project** | Inspect project | `GET /api/motion/projects/:id` | `studio_inspect_project` | Yes | `studioApi.inspect` | Yes | Yes (disk) | Yes (`motionRoutes.test.ts`) |
+| **Project** | Create project | `POST /api/motion/projects` | `createMotionProject` | Yes | `studioApi.create` | Yes | Yes (disk) | Yes (`studioRealMediaE2E.test.ts`) |
+| **Project** | Revisioned edits | `POST /api/motion/projects/:id` | `studio_edit_project` | Yes | `studioApi.edit` | Yes | Yes (disk) | Yes (`studioRealMediaE2E.test.ts`) |
+| **Timeline (NLE)** | Multi-track schema & evaluation | In-memory evaluation | `evaluateFrame` | Yes | `StudioMultiTrackTimeline` | Yes | Yes (`tracks`) | Yes (`motionMultiTrackClipEdits.test.ts`) |
+| **Timeline (NLE)** | Clip edits (split/trim/move/delete)| `POST /api/motion/projects/:id` | `studio_clip_edit` | Yes | `studioClipEdits.ts` | Yes | Yes (disk) | Yes (`studioRealMediaE2E.test.ts`) |
+| **Media Bin** | Asset list & import | `POST /api/motion/assets` | `studioApi.uploadImage` | Yes | `StudioMediaBin` | Yes | Yes (disk) | Yes (`StudioMediaBin.test.tsx`) |
+| **Media Bin** | Audio tracks & import | `POST /api/motion/audio` | `studioApi.uploadAudio` | Yes | `StudioMediaBin` | Yes | Yes (disk) | Yes (`StudioMediaBin.test.tsx`) |
+| **Desktop** | Focus Studio tab | Local client event | `focus_studio` | Yes | `useStudioHandoff` | Yes | N/A (UI) | Yes (`useStudioHandoff.test.ts`) |
+| **Desktop** | Select clip / seek frame | Local client event | `select_clip` / `seek_timecode` | Yes | `studioControlChannel` | Yes | N/A (UI) | Yes (`SuperAgentToolItem.studio.test.tsx`) |
+| **Render** | Export MP4 (H.264 / AAC) | `POST /api/motion/projects/:id/render` | `renderMotionJob` | Yes | `studioApi.render` | Yes | Yes (MP4) | Yes (`studioRealMediaE2E.test.ts`) |
 
 ## 3. Data Contracts & Event Schema
 

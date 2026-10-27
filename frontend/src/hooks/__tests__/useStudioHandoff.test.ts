@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useStudioHandoff } from '../useStudioHandoff';
@@ -19,7 +20,6 @@ describe('useStudioHandoff', () => {
     renderHook(() =>
       useStudioHandoff({
         workspaces: mockWorkspaces,
-        panelWorkspace: mockWorkspaces[0],
         openStudioTab,
       })
     );
@@ -33,12 +33,11 @@ describe('useStudioHandoff', () => {
     expect(openStudioTab).toHaveBeenCalledWith('ws-2');
   });
 
-  it('falls back to panelWorkspace when workspacePath does not match a known workspace', () => {
+  it('fails closed and rejects unmatched explicit workspacePath without fallback', () => {
     const openStudioTab = vi.fn();
     renderHook(() =>
       useStudioHandoff({
         workspaces: mockWorkspaces,
-        panelWorkspace: mockWorkspaces[0],
         openStudioTab,
       })
     );
@@ -48,6 +47,7 @@ describe('useStudioHandoff', () => {
       workspacePath: 'D:\\other\\unmatched',
     });
 
-    expect(openStudioTab).toHaveBeenCalledWith('ws-1');
+    // AUD-03: Must NOT redirect to any workspace
+    expect(openStudioTab).not.toHaveBeenCalled();
   });
 });

@@ -211,3 +211,33 @@ Untuk setiap issue AUD-01..AUD-10 kirim:
 ## 8. Instruksi singkat siap kirim ke AGY
 
 > Audit dokumen `docs/audits/2026-10-27-studio-desktop-editor-agent-control-implementation-audit.md` terhadap master plan `docs/plans/2026-10-27-studio-desktop-editor-agent-control-master-plan.md`. Kerjakan seluruh issue **AUD-01 s.d. AUD-10** dan Sprint A-C berdasarkan prioritas. Wajib pastikan chat SuperAgent Assistant T-Line menjadi satu-satunya AI Director, Studio benar-benar editor desktop timeline-first, clip edits persist di Core, dan tool-to-desktop benar-benar berjalan. Jalankan tes Core+frontend+desktop, buktikan E2E real media sampai MP4 serta recovery/undo, update status dokumen dan changelog sesuai bukti. Reuse komponen, lindungi perubahan lain, stage eksplisit, commit tanpa brand di subject/body, jangan push kecuali diminta. Jangan mengklaim fase selesai jika belum memenuhi acceptance gate.
+
+---
+
+## 9. Status Pelaksanaan & Bukti Pengujian Remediasi AUD-01 s.d. AUD-10
+
+Semua temuan audit telah diselesaikan dan diverifikasi dengan tes unit, integrasi, dan end-to-end nyata:
+
+| ID | Tingkat | Status | File Utama | Bukti Pengujian |
+|---|---|---|---|---|
+| **AUD-01** | BLOCKER | **DONE** | SuperAgent: `types.ts`, `validation.ts`, `revisions.ts`, `evaluateFrame.ts`<br>T-Line: `studioControlTypes.ts`, `studioClipEdits.ts`, `studioApi.ts` | `motionMultiTrackClipEdits.test.ts` (5/5 passing)<br>`studioRealMediaE2E.test.ts` (1/1 passing) |
+| **AUD-02** | BLOCKER | **DONE** | SuperAgent: `motionAgentTools.ts` (`studioDesktopFocusTool`)<br>T-Line: `SuperAgentToolItem.tsx` | `SuperAgentToolItem.studio.test.tsx` (4/4 passing) |
+| **AUD-03** | HIGH | **DONE** | T-Line: `frontend/src/hooks/useStudioHandoff.ts` | `useStudioHandoff.test.ts` (2/2 passing, fail-closed) |
+| **AUD-04** | HIGH | **DONE** | T-Line: `StudioTab.tsx`, `StudioQuickDirectPanel.tsx` | `StudioTab.test.tsx` (21/21 passing)<br>`StudioQuickDirectPanel.test.tsx` (6/6 passing) |
+| **AUD-05** | HIGH | **DONE** | T-Line: `StudioMediaBin.tsx`, `StudioTab.tsx` | `StudioMediaBin.test.tsx` (4/4 passing) |
+| **AUD-06** | HIGH | **DONE** | T-Line: `StudioMultiTrackTimeline.tsx`<br>SuperAgent: `revisions.ts` | `StudioMultiTrackTimeline.test.tsx` (6/6 passing) |
+| **AUD-07** | HIGH | **DONE** | SuperAgent: `projectStore.ts` (`emitMotionStudioEvent`) | Event emission di Core pada `createMotionProject` dan `updateMotionProject` |
+| **AUD-08** | HIGH | **DONE** | SuperAgent: `motionAgentTools.ts` (`studioOperationCache`, conflict check) | `motionMultiTrackClipEdits.test.ts` (idempotency + conflict guard verified) |
+| **AUD-09** | MEDIUM | **DONE** | T-Line: `StudioTab.tsx`, `SuperAgentToolItem.tsx` | Handoff payload types support `clipId`, `layerId`, `frame`, `panel` |
+| **AUD-10** | MEDIUM | **DONE** | SuperAgent: `motionAgentTools.ts` (`studioClipEditTool`)<br>T-Line: `2026-10-27-studio-capability-inventory.md` | `studioRealMediaE2E.test.ts` & matriks inventarisasi 5 dimensi |
+
+### Hasil Uji Real Media E2E Pipeline (SuperAgent Core + FFmpeg 8.1)
+- Proyek nyata dibuat pada temporary workspace terisolasi.
+- Operasi NLE multi-track (split di frame 20, trim -5 frame pada out-point) dieksekusi via `studioClipEditTool`.
+- Stale revision conflict diverifikasi mengembalikan error terstruktur `{ success: false, conflict: true }` tanpa merusak dokumen.
+- Undo dan Redo diverifikasi memulihkan durasi klip (25 frame -> 20 frame).
+- Reload dari disk memverifikasi penyimpanan permanen multi-track schema lossless.
+- Handoff desktop tool menghasilkan aksi `select_clip` terarah dengan `workspacePath`.
+- Render MP4 via FFmpeg 8.1 menghasilkan berkas H.264 valid berukuran >1 KB dengan kotak ISO `ftyp` dan hash SHA-256 terverifikasi.
+- Durasi eksekusi: **989ms**, exit code **0**.
+

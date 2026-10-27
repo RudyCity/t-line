@@ -1,3 +1,17 @@
+## [1.3.749] - 2026-10-27
+
+### Studio Desktop Editor & Multi-Track Agent Control Remediation
+- Resolved all findings AUD-01 through AUD-10 from the Studio desktop editor audit with comprehensive unit, integration, and real-media E2E pipeline verification.
+- **AUD-01 (Multi-Track Persistence)**: Integrated canonical NLE multi-track schema (`tracks?: MotionMultiTrack[]`) into composition validation, evaluation, and storage, ensuring lossless round-trip persistence of clip layers.
+- **AUD-02 & AUD-09 (Typed Desktop Handoff)**: Unified desktop focus envelopes with normalized workspace path, project ID, clip ID, frame timecode, and panel target; rejected malformed string action payloads.
+- **AUD-03 (Cross-Workspace Safety)**: Enforced fail-closed behavior in handoff hook when explicit target workspace path does not match registered workspaces, eliminating silent cross-workspace fallbacks.
+- **AUD-04 (Unified Assistant Director)**: Removed duplicate standalone AI Director panels and prompt accordions from the editor screen, consolidating conversational control into the primary assistant console while preserving underlying creative tools.
+- **AUD-05 (Media Bin Integration)**: Connected project media bin with multi-category tabs, image/audio file picker triggers, asset kind filtering, and direct timeline placement actions.
+- **AUD-06 (Timeline Gesture Controls)**: Implemented interactive pointer drag-to-move and edge-trimming gestures in the multi-track timeline, mapped to atomic clip operations (`set-tracks`, `split-clip`, `trim-clip`, `move-clip`, `delete-clip`).
+- **AUD-07 & AUD-08 (Idempotency & Concurrency)**: Added in-memory operation caching with 10-minute TTL to prevent duplicate execution, returning structured revision conflict responses on concurrent stale updates.
+- **AUD-10 (Capability Inventory)**: Registered `studio_clip_edit` tool in core toolsets and updated capability matrix to reflect verified runtime statuses across five operational dimensions.
+- **Real Media E2E Verification**: Executed end-to-end integration test validating project creation, multi-track editing, undo/redo round-trip, reload persistence, conflict rejection, and real H.264 MP4 export via media encoder.
+
 ## [1.3.748] - 2026-10-27
 
 ### Desktop Studio Implementation Gap Audit (Documentation)
