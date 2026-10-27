@@ -16,6 +16,8 @@ export const PARITY_READ_ACTIONS = {
   'selfdev.status': '/api/tline/inspect/selfdev.status',
   'muse.status': '/api/tline/inspect/muse.status',
   'tasks.snapshot': '/api/tline/inspect/tasks.snapshot',
+  'studio.status': '/api/motion',
+  'studio.projects': '/api/motion/projects',
 } as const;
 export type ParityReadAction = keyof typeof PARITY_READ_ACTIONS;
 

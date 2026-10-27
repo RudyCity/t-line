@@ -12,6 +12,15 @@ import { getSuperAgentServiceHeaders } from './superAgentAuth';
 import { selectSuperAgentLaunch } from './superAgentRuntime';
 import { probeSuperAgentPort } from './superAgentPortProbe';
 import { classifyCoreReconnect, isExplicitResumeRequest } from './coreReconnectSafety';
+import { SseStreamParser } from './superAgentSseParser';
+import {
+  SessionLifecycleManager,
+  buildCoreSsePath,
+  type CoreInitResponse
+} from './superAgentSessionLifecycle';
+import {
+  validateAndSanitizeMultimodalInput,
+} from './superAgentMultimodal';
 
 const SUPERAGENT_LOG_FILE = path.join(os.homedir(), '.tline-superagent.log');
 
@@ -541,7 +550,7 @@ export function startSuperAgentEager(agentMode: string = 'single', customArgs: s
   });
 }
 
-async function initializeSuperAgentSession(workspacePath: string, mode: string, sessionId?: string): Promise<boolean> {
+async function initializeSuperAgentSession(workspacePath: string, mode: string, sessionId?: string): Promise<CoreInitResponse> {
   return new Promise((resolve) => {
     const initPayload: any = {
       workspace: workspacePath,
@@ -571,14 +580,14 @@ async function initializeSuperAgentSession(workspacePath: string, mode: string, 
       res.on('end', () => {
         try {
           const parsed = JSON.parse(data);
-          resolve(!!parsed.success);
+          resolve({ ...parsed, statusCode: res.statusCode });
         } catch {
-          resolve(false);
+          resolve({ success: false, statusCode: res.statusCode, error: 'Malformed init response' });
         }
       });
     });
 
-    req.on('error', () => resolve(false));
+    req.on('error', (err) => resolve({ success: false, error: err?.message || String(err) }));
     req.write(postData);
     req.end();
   });
@@ -658,7 +667,7 @@ async function readCoreSessionForReconnect(sessionId: string, workspacePath: str
       host: '127.0.0.1', port: resolveSuperAgentCorePort(), method: 'GET', path: pathName,
       timeout: 2200, headers: {
         'x-client-mode': 'tline', 'x-workspace-path': workspacePath,
-        ...getSuperAgentServiceHeaders(),
+        ...getSuperAgentServiceHeaders()
       },
     }, response => {
       let body = '';
@@ -688,6 +697,16 @@ export function handleSuperAgentConnection(ws: WebSocket, req: http.IncomingMess
   const agentMode = parsedUrl.searchParams.get('agentMode') || 'single';
   const customArgs = parsedUrl.searchParams.get('customArgs') || '';
   const initialSessionId = parsedUrl.searchParams.get('sessionId') || undefined;
+
+  const lifecycleManager = new SessionLifecycleManager(
+    initialSessionId || 'default',
+    workspacePath,
+    (msg: string) => {
+      if (!isClosed && ws.readyState === WebSocket.OPEN) {
+        ws.send(msg);
+      }
+    }
+  );
 
   let sseReq: http.ClientRequest | null = null;
   // Track all SSE handles opened for this WS client so a single disconnect
@@ -733,7 +752,7 @@ let suppressBufferWrite = false;
     const lastBufferedEventId = lastSseEventIdRef;
     const replayEventId = replayCursor;
 
-    const ssePath = `/api/events?workspace=${encodeURIComponent(workspacePath)}${initialSessionId ? `&sessionId=${encodeURIComponent(initialSessionId)}` : ''}`;
+    const ssePath = buildCoreSsePath(workspacePath, initialSessionId);
 
     sseReq = http.request({
       hostname: '127.0.0.1',
@@ -744,8 +763,8 @@ let suppressBufferWrite = false;
       headers: {
         'Accept': 'text/event-stream',
         'x-workspace-path': workspacePath,
-        ...getSuperAgentServiceHeaders(),
-        ...(lastBufferedEventId > 0 ? { 'Last-Event-ID': String(lastBufferedEventId) } : {})
+        ...getSuperAgentServiceHeaders()
+
       }
     }, (res) => {
       if (res.statusCode !== 200) {
@@ -763,8 +782,8 @@ let suppressBufferWrite = false;
             const parsed = JSON.parse(errorBody);
             if (typeof parsed.code === 'string') upstreamCode = parsed.code;
           } catch {}
-          const initializing = res.statusCode === 400 &&
-            /session not initialized/i.test(errorBody);
+          const initializing = (res.statusCode === 400 || res.statusCode === 404) &&
+            (/session not initialized/i.test(errorBody) || /session does not exist/i.test(errorBody));
           if (initialSessionId && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify(classifyCoreReconnect({
               sessionId: initialSessionId,
@@ -774,7 +793,7 @@ let suppressBufferWrite = false;
           }
           // Initial SSE may race with the one eager init performed for a new
           // session. Retrying GET is safe; sending the prompt again is not.
-          if ((res.statusCode === 503 || initializing) &&
+          if ((res.statusCode === 503 || res.statusCode === 404 || initializing) &&
               upstreamCode !== 'SESSION_WORKER_DEAD' &&
               upstreamCode !== 'SESSION_OWNER_UNAVAILABLE') scheduleSseRetry();
         });
@@ -785,12 +804,62 @@ let suppressBufferWrite = false;
       connectionAttempts = 0;
       sseReconnectAttempts = 0;
       ws.send(JSON.stringify({ type: 'status', text: `Connected to SuperAgent server (${path.basename(workspacePath)})` }));
+      lifecycleManager.markSseSubscribed(200);
 
       // Disable Nagle algorithm on the SSE loopback socket.
       try { (res.socket as any)?.setNoDelay(true); } catch {}
 
       res.setEncoding('utf8');
-      let buffer = '';
+      // SSE frame parser conforms to WHATWG SSE specification
+      const parser = new SseStreamParser((msg) => {
+        if (msg.id) {
+          lifecycleManager.recordCoreEventId(msg.id);
+        }
+        const dataStr = msg.data.trim();
+        if (!dataStr || dataStr === '[DONE]') return;
+
+        ws.send(dataStr);
+
+        if (!suppressBufferWrite) {
+          sseEventCounter += 1;
+          lastSseEventIdRef = sseEventCounter;
+          sseEventBuffer.push({ id: sseEventCounter, payload: dataStr });
+          sseEventBufferBytes += Buffer.byteLength(dataStr, 'utf8');
+          if (
+            sseEventBuffer.length > SSE_EVENT_BUFFER_LIMIT ||
+            sseEventBufferBytes > SSE_EVENT_BUFFER_MAX_BYTES
+          ) {
+            const dropN = Math.max(1, Math.floor(sseEventBuffer.length * 0.1));
+            const dropped = sseEventBuffer.splice(0, dropN);
+            for (const evt of dropped) {
+              sseEventBufferBytes -= Buffer.byteLength(evt.payload, 'utf8');
+            }
+          }
+        }
+
+        if (process.env.LOG_STREAM_RESPONSE === 'true') {
+          try {
+            const event = JSON.parse(dataStr);
+            if (event.type === 'agent_event' && event.event) {
+              const sub = event.event;
+              if (sub.type === 'text_delta') {
+                process.stdout.write(sub.text || sub.delta || sub.content || '');
+              } else if (sub.type === 'message') {
+                const contentStr = typeof sub.content === 'string' ? sub.content : JSON.stringify(sub.content);
+                console.log(`\n[WS-Agent][Stream Message] [${sub.role || 'assistant'}]: ${contentStr}`);
+              } else if (sub.type === 'tool_call') {
+                console.log(`\n[WS-Agent][Stream ToolCall] ${sub.name || sub.tool}: ${JSON.stringify(sub.input || sub.args || {})}`);
+              } else if (sub.type === 'tool_result') {
+                console.log(`\n[WS-Agent][Stream ToolResult] ${sub.name || sub.tool}: ${JSON.stringify(sub.result || sub.output || '')}`);
+              } else {
+                console.log(`\n[WS-Agent][Stream Event] [${sub.type}]`, JSON.stringify(sub));
+              }
+            } else {
+              console.log(`\n[WS-Agent][Stream Event]`, JSON.stringify(event));
+            }
+          } catch {}
+        }
+      });
       // After successful reconnect, replay any events buffered while disconnected.
       // Only replay once per reconnect cycle.
       suppressBufferWrite = false;
@@ -805,62 +874,7 @@ let suppressBufferWrite = false;
       }
 
       res.on('data', (chunk) => {
-        buffer += chunk;
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const dataStr = line.slice(6).trim();
-          if (!dataStr || dataStr === '[DONE]') continue;
-
-          ws.send(dataStr);
-
-          if (!suppressBufferWrite) {
-            sseEventCounter += 1;
-            lastSseEventIdRef = sseEventCounter;
-            sseEventBuffer.push({ id: sseEventCounter, payload: dataStr });
-            sseEventBufferBytes += Buffer.byteLength(dataStr, 'utf8');
-            // Trim when either the event count or the byte budget is exceeded.
-            // Use splice() of the oldest 10% in a single O(n) call instead of
-            // O(n) per shift(), which scales poorly when a single huge event
-            // arrives (e.g. 100KB+ payloads). The replay cursor on the consumer
-            // side filters by `e.id > replayEventId`, so dropping old events is
-            // safe — late-joining clients simply resume from the next available id.
-            if (
-              sseEventBuffer.length > SSE_EVENT_BUFFER_LIMIT ||
-              sseEventBufferBytes > SSE_EVENT_BUFFER_MAX_BYTES
-            ) {
-              const dropN = Math.max(1, Math.floor(sseEventBuffer.length * 0.1));
-              const dropped = sseEventBuffer.splice(0, dropN);
-              for (const evt of dropped) {
-                sseEventBufferBytes -= Buffer.byteLength(evt.payload, 'utf8');
-              }
-            }
-          }
-
-          if (process.env.LOG_STREAM_RESPONSE === 'true') {
-            try {
-              const event = JSON.parse(dataStr);
-              if (event.type === 'agent_event' && event.event) {
-                const sub = event.event;
-                if (sub.type === 'text_delta') {
-                  process.stdout.write(sub.text || sub.delta || sub.content || '');
-                } else if (sub.type === 'message') {
-                  const contentStr = typeof sub.content === 'string' ? sub.content : JSON.stringify(sub.content);
-                  console.log(`\n[WS-Agent][Stream Message] [${sub.role || 'assistant'}]: ${contentStr}`);
-                } else if (sub.type === 'tool_call') {
-                  console.log(`\n[WS-Agent][Stream ToolCall] ${sub.name || sub.tool}: ${JSON.stringify(sub.input || sub.args || {})}`);
-                } else if (sub.type === 'tool_result') {
-                  console.log(`\n[WS-Agent][Stream ToolResult] ${sub.name || sub.tool}: ${JSON.stringify(sub.result || sub.output || '')}`);
-                } else {
-                  console.log(`\n[WS-Agent][Stream Event] [${sub.type}]`, JSON.stringify(sub));
-                }
-              } else {
-                console.log(`\n[WS-Agent][Stream Event]`, JSON.stringify(event));
-              }
-            } catch {}
-          }
-        }
+        parser.feed(String(chunk));
       });
 
       res.on('end', () => {
@@ -905,12 +919,37 @@ let suppressBufferWrite = false;
     sseReq.end();
   }
 
-  connectToSuperAgentSSE();
+  lifecycleManager.markWsConnected();
+  lifecycleManager.markInitInProgress();
 
-  // Eagerly initialize SuperAgent session on WS connection so first prompt won't fail
-  initializeSuperAgentSession(workspacePath, agentMode, initialSessionId).catch((err) => {
-    console.warn('[WS-Agent] Eager session init warning:', err?.message || err);
-  });
+  async function performSessionInitAndSubscribe() {
+    try {
+      const initRes = await initializeSuperAgentSession(workspacePath, agentMode, initialSessionId);
+      if (initRes.success) {
+        lifecycleManager.markInitAck(initRes);
+        connectToSuperAgentSSE();
+      } else {
+        console.warn('[WS-Agent] Initial session init not successful:', initRes.error || initRes.statusCode);
+        if (initRes.statusCode === 503 || initRes.statusCode === 400 || initRes.statusCode === 404) {
+          scheduleInitRetry();
+        } else {
+          lifecycleManager.markError(initRes.error || 'Session initialization rejected by Core', initRes.statusCode);
+        }
+      }
+    } catch (err: any) {
+      console.warn('[WS-Agent] Session init exception:', err?.message || err);
+      scheduleInitRetry();
+    }
+  }
+
+  function scheduleInitRetry() {
+    if (isClosed || ws.readyState !== WebSocket.OPEN) return;
+    sseReconnectAttempts = Math.min(sseReconnectAttempts + 1, 32);
+    const delay = Math.min(30000, 500 * (2 ** Math.min(sseReconnectAttempts - 1, 6)));
+    setTimeout(performSessionInitAndSubscribe, delay);
+  }
+
+  void performSessionInitAndSubscribe();
 
   ws.on('message', async (message: string) => {
     try {

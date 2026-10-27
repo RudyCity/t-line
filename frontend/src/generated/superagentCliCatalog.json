@@ -33,6 +33,12 @@
       "tlineHandler": "cli-only"
     },
     {
+      "command": "/core",
+      "description": "Inspect or roll supervised API worker without touching MCP, Muse, Telegram or background processes",
+      "sourceFile": "src/core/commands/coreRuntimeCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
       "command": "/daemon",
       "description": "Manage the autonomous background daemon & cron scheduler",
       "sourceFile": "src/core/commands/daemonCommand.ts",
@@ -192,6 +198,12 @@
       "command": "/selfdev",
       "description": "Inspect, distill, review, and manage self-development behavioral lessons",
       "sourceFile": "src/core/commands/selfdevCommand.ts",
+      "tlineHandler": "cli-only"
+    },
+    {
+      "command": "/senopati",
+      "description": "Inspect/configure shared Senopati lifecycle without touching other services",
+      "sourceFile": "src/core/commands/senopatiRuntimeCommand.ts",
       "tlineHandler": "cli-only"
     },
     {
