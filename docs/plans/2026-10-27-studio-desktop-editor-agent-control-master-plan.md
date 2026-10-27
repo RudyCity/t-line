@@ -1,6 +1,6 @@
 # T-Line Studio Desktop Editor & Unified Agent Control — Master Plan
 Date: 2026-10-27
-Status: Architecture approved in conversation; implementation pending
+Status: Implementation in progress; P0–P7 not certified. See `docs/audits/2026-10-27-studio-desktop-editor-agent-control-implementation-audit.md` for AUD-01..AUD-10 and current blocking gaps.
 Workspace: T-Line desktop and the canonical SuperAgent runtime
 
 ## Decision

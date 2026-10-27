@@ -1,3 +1,10 @@
+## [1.3.748] - 2026-10-27
+
+### Desktop Studio Implementation Gap Audit (Documentation)
+- Audited the Studio editor and assistant control implementation against master plan gates P0-P7, documenting evidence-backed functional blockers and safe follow-up tasks.
+- Added a detailed 10-issue implementation audit with file/line evidence, acceptance checks and phased remediation backlog.
+- Updated the master plan status to reflect incomplete integration and outstanding production readiness certification; no runtime UI or Core behavior changed in this release.
+
 ## [1.3.747] - 2026-10-27
 
 ### Timeline-First Studio Editor & Unified Assistant Director Control
