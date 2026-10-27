@@ -33,9 +33,14 @@ export function StudioReconstructionCorrectionPanel({
   const [error,setError]=useState("");
   const [notice,setNotice]=useState("");
   const generation=useRef(0);
+  // Prevent a delayed synchronization effect from overwriting a value the
+  // operator has already typed. Field/frame/object changes intentionally
+  // clear this guard so the newly selected keyframe can populate the input.
+  const valueDirty=useRef(false);
   const load=async()=>{
     const token=++generation.current;
     setPending(true);setError("");setNotice("");
+    valueDirty.current=false;
     try {
       const latest=await studioApi.inspect(workspacePath,projectId);
       if (generation.current!==token) return;
@@ -55,7 +60,7 @@ export function StudioReconstructionCorrectionPanel({
   },[workspacePath,projectId]);
   const layer=project?.composition.layers.find(item=>item.id===layerId);
   useEffect(()=>{
-    if(!layer) return;
+    if(!layer || valueDirty.current) return;
     setValue(String(Number(evaluateLayer(layer,frame)[property].toFixed(3))));
   },[layer,frame,property]);
   const save=async()=>{
@@ -100,7 +105,7 @@ export function StudioReconstructionCorrectionPanel({
     <div className="mt-2 flex flex-wrap items-end gap-2">
       <label className="text-[11px]">Object
         <select className={control+" ml-1"} aria-label="Correction object"
-          value={layerId} onChange={event=>setLayerId(event.target.value)} disabled={pending}>
+          value={layerId} onChange={event=>{valueDirty.current=false;setLayerId(event.target.value);}} disabled={pending}>
           {eligible.map(item=><option key={item.id} value={item.id}>{item.id}</option>)}
         </select>
       </label>
@@ -108,11 +113,11 @@ export function StudioReconstructionCorrectionPanel({
         <input className={control+" ml-1 w-20"} aria-label="Correction frame"
           type="number" min={0} max={Math.max(0,(project?.composition.durationFrames??1)-1)}
           step={1} value={frame}
-          onChange={event=>setFrame(Number(event.target.value))} disabled={pending}/>
+          onChange={event=>{valueDirty.current=false;setFrame(Number(event.target.value));}} disabled={pending}/>
       </label>
       <label className="text-[11px]">Property
         <select className={control+" ml-1"} aria-label="Correction property"
-          value={property} onChange={event=>setProperty(event.target.value as StudioReconstructionCorrectionProperty)}
+          value={property} onChange={event=>{valueDirty.current=false;setProperty(event.target.value as StudioReconstructionCorrectionProperty);}}
           disabled={pending}>
           {fields.map(item=><option key={item} value={item}>{item}</option>)}
         </select>
@@ -120,7 +125,7 @@ export function StudioReconstructionCorrectionPanel({
       <label className="text-[11px]">Value
         <input className={control+" ml-1 w-24"} aria-label="Correction value"
           type="number" step="any" value={value}
-          onChange={event=>setValue(event.target.value)} disabled={pending}/>
+          onChange={event=>{valueDirty.current=true;setValue(event.target.value);}} disabled={pending}/>
       </label>
       <button type="button" className={button} disabled={pending||!layer||!Number.isSafeInteger(frame)}
         onClick={()=>void save()}>Save keyframe</button>
