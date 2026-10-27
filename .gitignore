@@ -47,9 +47,6 @@ desktop-tauri/src-tauri/keys/*.pub.b64
 # Local Monaco Editor assets
 frontend/public/vs/
 
-# Graphify outputs
-graphify-out/
-.graphifyignore
 *.untracked: src/core/
 
 # Unrelated superagent CLI files accidentally created

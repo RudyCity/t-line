@@ -1,3 +1,10 @@
+## [1.3.750] - 2026-10-27
+
+### Knowledge Graph Tooling & Artifact Deprecation
+- Completely removed knowledge graph tool workflows and generated output directories (`graphify-out/`).
+- Removed local project agent configuration artifacts (`.agents/rules/graphify.md`, `.agents/workflows/graphify.md`, and `.graphifyignore`).
+- Cleaned up `.gitignore` entries and synchronized project manifest versions across workspace targets.
+
 ## [1.3.749] - 2026-10-27
 
 ### Studio Desktop Editor & Multi-Track Agent Control Remediation
