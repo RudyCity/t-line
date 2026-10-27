@@ -25,6 +25,7 @@ export type SessionLifecycleState =
 export interface SessionLifecycleMetadata {
   historyWarnings?: string[];
   warnings?: string[];
+  historyRestoreWarning?: string;
   mode?: string;
   workspace?: string;
   lastCoreEventId?: string;
@@ -95,6 +96,7 @@ export class SessionLifecycleManager {
   private state: SessionLifecycleState = 'DISCONNECTED';
   private metadata: SessionLifecycleMetadata = {};
   private attemptedTurnWrites = new Set<string>();
+  private initAckReceived = false;
 
   constructor(
     public readonly sessionId: string,
@@ -135,17 +137,21 @@ export class SessionLifecycleManager {
   }
 
   public markInitAck(response: CoreInitResponse): void {
-    const warnings: string[] = [];
-    if (response.resumeWarning) warnings.push(response.resumeWarning);
-    if (Array.isArray(response.historyWarnings)) warnings.push(...response.historyWarnings);
-    if (Array.isArray(response.warnings)) warnings.push(...response.warnings);
+    this.initAckReceived = true;
+    const historyWarnings: string[] = [];
+    if (response.resumeWarning) historyWarnings.push(response.resumeWarning);
+    if (Array.isArray(response.historyWarnings)) historyWarnings.push(...response.historyWarnings);
+
+    const allWarnings: string[] = [...historyWarnings];
+    if (Array.isArray(response.warnings)) allWarnings.push(...response.warnings);
 
     this.metadata = {
       ...this.metadata,
       workspace: response.workspace || this.workspace,
       mode: response.mode,
-      warnings: warnings.length > 0 ? warnings : undefined,
-      historyWarnings: warnings.length > 0 ? warnings : undefined,
+      warnings: allWarnings.length > 0 ? allWarnings : undefined,
+      historyWarnings: historyWarnings.length > 0 ? historyWarnings : (allWarnings.length > 0 ? allWarnings : undefined),
+      historyRestoreWarning: historyWarnings.length > 0 ? historyWarnings.join('; ') : (allWarnings.length > 0 ? allWarnings.join('; ') : undefined),
     };
 
     this.state = 'INIT_ACK';
@@ -158,21 +164,24 @@ export class SessionLifecycleManager {
   }
 
   public markSseConnecting(): void {
-    if (this.state !== 'READY') {
+    if (this.state !== 'DISCONNECTED' && this.state !== 'ERROR') {
       this.state = 'SSE_CONNECTING';
+      this.broadcastLifecycleEvent('SSE_CONNECTING');
     }
   }
 
   public markSseSubscribed(statusCode = 200): void {
     this.metadata.upstreamStatusCode = statusCode;
-    // When both INIT_ACK and SSE_SUBSCRIBED are satisfied, advance to READY
-    if (this.state === 'INIT_ACK' || this.state === 'SSE_CONNECTING') {
-      this.state = 'SSE_SUBSCRIBED';
-      this.broadcastLifecycleEvent('SSE_SUBSCRIBED');
+    if (this.state === 'READY') {
+      // Already in READY state: preserve READY and avoid regressing to SSE_SUBSCRIBED
+      this.broadcastLifecycleEvent('READY');
+      return;
+    }
+    const shouldAdvance = this.initAckReceived || this.state === 'INIT_ACK';
+    this.state = 'SSE_SUBSCRIBED';
+    this.broadcastLifecycleEvent('SSE_SUBSCRIBED');
+    if (shouldAdvance) {
       this.markReady();
-    } else {
-      this.state = 'SSE_SUBSCRIBED';
-      this.broadcastLifecycleEvent('SSE_SUBSCRIBED');
     }
   }
 

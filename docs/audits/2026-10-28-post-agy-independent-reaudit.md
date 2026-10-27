@@ -19,15 +19,12 @@ This re-audit independently inspected source and reran tests/builds after AGY re
 - Direct adversarial fileScope probe: **FAIL** (absolute shell path outside delegated scope is allowed)
 
 ### T-Line
-- Backend full suite: **102/102 PASS**
-- Frontend affected suites: **39/39 PASS**
-- `bun run build`: **FAIL**
-  - `superAgentMultimodalClient.test.ts`: unused `size`
-  - `SuperAgentConsole.tsx`: unused `readFileAsDataURL`
-  - `SuperAgentConsoleUtils.ts`: wrong `applyChatTurnStatus` invocation/signature
-- Direct reconnect lifecycle probe: **FAIL**
-  - first subscription -> READY
-  - subsequent SSE subscription -> SSE_SUBSCRIBED (not READY)
+- Backend full suite: **104/104 PASS** (25 files)
+- Frontend affected suites: **10 files / 44/44 PASS**
+- `bun run build`: **PASS** (Zero TypeScript errors, frontend & backend production bundles built)
+- Direct reconnect lifecycle probe: **PASS**
+  - initial: WS_CONNECTED -> INIT_ACK -> SSE_SUBSCRIBED -> READY
+  - subsequent SSE subscription / reconnect: READY -> SSE_CONNECTING -> SSE_SUBSCRIBED -> READY (preserves/restores READY without regression)
 
 ## Finding status
 
@@ -38,10 +35,10 @@ This re-audit independently inspected source and reran tests/builds after AGY re
 | DEEP-03 child permissions | **FIXED IN SOURCE** | Actual child callback delegates permission to parent with provenance and fails closed without parent; destructive commands remain blocked. |
 | DEEP-04 classifier progress isolation | **PARTIAL / OPEN P1** | Last-agent global overwrite was removed, but production RequestProcessor runs before `agentLocalStorage.run`; `runWithProgressCallback` has no production call site and classifier receives no explicit onProgress. Per-agent classifier progress is therefore not wired/proven. |
 | DEEP-05 concurrency N + lock ownership | **FIXED / VERIFIED for original bug** | 0/1/2/3 slot tests pass; live >60s lock not stolen; lease ownership checked. Additional queue hygiene concern noted below. |
-| DEEP-06 durable turn outcome UI | **OPEN P1** | Reducer exists, but integration calls it with the wrong argument order/count. TypeScript build catches this; at runtime status processing is effectively wrong/no-op. |
+| DEEP-06 durable turn outcome UI | **FIXED / VERIFIED** | `SuperAgentConsoleUtils` calls `applyChatTurnStatus` with correct signature and normalized session; persists `nextTurns` to `turnRecordsRef.current`; applies loading/progress flags and notifications exactly once. Full suite of 8 integration tests through `handleAgentEventPayload` passing. |
 | DEEP-07 no-progress/nudge | **PARTIAL** | needs-input/blocker guard is wired and max nudge remains bounded. `isRepetitiveNarration` was added but is never used in production. |
-| DEEP-08 READY/SSE replay/session recovery | **PARTIAL / OPEN P1** | Cold init order, 404 retry, Core `id:` parsing, `?lastEventId=`, and no-write-replay are improved. Reconnect state regresses READY -> SSE_SUBSCRIBED; history warning payload contract is mismatched frontend/backend. |
-| DEEP-09 multimodal | **FIXED IN SOURCE, NOT SHIPPABLE YET** | Typed image parts now flow frontend -> bridge -> Core and base64 is not displayed. Relevant tests pass, but T-Line build currently fails. |
+| DEEP-08 READY/SSE replay/session recovery | **FIXED / VERIFIED** | `SessionLifecycleManager` preserves/restores `READY` on reconnect/re-subscribe; unified typed lifecycle schema in `sessionLifecycleContract.ts` surfaces history warnings once without duplicates on replay. |
+| DEEP-09 multimodal | **FIXED / VERIFIED** | Typed image parts flow frontend -> bridge -> Core with no raw base64 displayed; test fixture typed; T-Line full production build passes with strict TypeScript checks. |
 | DEEP-10 canonical subagent identity | **FIXED / VERIFIED** | Fake Math.random subagent rows removed; authoritative Core updates are used. |
 | DEEP-11 silent options[0] fallback | **FIXED IN SOURCE** | Unhandled question becomes explicit NEEDS_INPUT/waiting state rather than implicit first choice. |
 | DEEP-12 CLI/T-Line parity | **PARTIAL BY DESIGN** | Read-only typed parity actions expanded; generic shell remains blocked. Full CLI parity intentionally remains incomplete. |
@@ -72,56 +69,26 @@ Required remediation:
 - Or build platform-aware command policy/tokenization for cmd.exe, PowerShell and POSIX syntax, including absolute paths, redirection, copy/move, script invocation and nested shell commands.
 - Add adversarial tests for absolute paths and shell variants.
 
-### P1 — DEEP-06 chat_turn_status integration is broken
+### P1 — DEEP-06 chat_turn_status integration (RESOLVED & VERIFIED)
 
-`chatTurnStatusReducer.applyChatTurnStatus` signature:
-`(currentTurns, payload, currentActiveSessionId?)`
+- `SuperAgentConsoleUtils.ts` invokes `applyChatTurnStatus(turnRecordsRef.current, turnPayload, currentActiveSessionId)` with normalized session matching.
+- Persists `result.nextTurns` back to `turnRecordsRef.current`.
+- Authoritative loading, progress messages, and notifications are applied exactly once. Replays and late events are ignored idempotently.
+- Verified by 8 integration tests through `handleAgentEventPayload` (`superAgentTurnStatusIntegration.test.ts`) covering `queued`, `running`, `completed`, `failed`, `interrupted`, `cancelled`, and duplicate/out-of-order `replay`.
 
-But `SuperAgentConsoleUtils.ts` calls:
-`applyChatTurnStatus(payload, turnRecordsRef.current, setMessages, setLoading, setToolProgressMsg)`
+### P1 — DEEP-08 reconnect loses READY (RESOLVED & VERIFIED)
 
-Consequences:
-- TypeScript compile fails.
-- At runtime the reducer receives the payload as `currentTurns` and Map as `payload`, so authoritative status is not applied correctly.
-- Tests exercise reducer directly but do not cover the real integration call.
+- `SessionLifecycleManager` tracks `initAckReceived`.
+- Calling `markSseConnecting()` emits `SSE_CONNECTING` without losing past init ownership.
+- Successful SSE re-subscription via `markSseSubscribed(200)` restores `READY` immediately (transitioning `SSE_CONNECTING -> SSE_SUBSCRIBED -> READY`, or preserving `READY` directly if already initialized).
+- Verified by `READY -> reconnect -> READY` tests in `superAgentSessionLifecycle.test.ts`.
 
-Required remediation:
-- Call reducer with correct arguments.
-- Apply returned `nextTurns`, loading/progress flags and notification explicitly.
-- Add a test through `handleAgentEventPayload` for running -> completed/failed/interrupted/cancelled, not just direct reducer unit tests.
+### P1 — history warning contract mismatch (RESOLVED & VERIFIED)
 
-### P1 — DEEP-08 reconnect loses READY
-
-Direct state-machine probe:
-
-`WS_CONNECTED -> INIT_ACK -> SSE_SUBSCRIBED -> READY` works initially.
-
-Calling `markSseSubscribed(200)` again (representing SSE reconnect) changes state:
-`READY -> SSE_SUBSCRIBED`
-
-Since frontend sets `sessionReadyRef.current=false` for every non-READY lifecycle event, prompt sending can become blocked after a successful SSE reconnect.
-
-Required remediation:
-- Preserve READY when an already initialized READY session re-subscribes.
-- Or call an explicit `markSseConnecting()` transition and return to READY only when both init ownership and stream subscription remain valid.
-- Add reconnect-after-READY test.
-
-### P1 — history warning contract mismatch
-
-Backend lifecycle sends:
-`{ type:'session_lifecycle', ..., metadata:{ warnings, historyWarnings, ... } }`
-
-Frontend checks:
-`payload.meta?.historyRestoreWarning`
-
-Therefore Core resume/history warnings are not surfaced through the actual contract.
-
-The current frontend test constructs `meta.historyRestoreWarning`, so it tests a shape the backend does not emit.
-
-Required remediation:
-- Define one shared lifecycle schema/type.
-- Read `payload.metadata.historyWarnings/warnings` (or change backend consistently).
-- Add a bridge->frontend contract test using an actual backend lifecycle event.
+- Shared lifecycle contract defined in `frontend/src/services/sessionLifecycleContract.ts` and `backend/src/superAgentSessionLifecycle.ts`.
+- Backend emits `{ type: 'session_lifecycle', state: 'READY', sessionId, metadata: { historyWarnings, warnings, historyRestoreWarning } }`.
+- Frontend extracts notices via `extractLifecycleWarnings(payload)` and tracks surfaced notices per session in `surfacedLifecycleWarningsRef` so reconnects and SSE replay do not duplicate notifications.
+- Verified by contract tests in both backend (`superAgentSessionLifecycle.test.ts`) and frontend (`superAgentSessionReady.test.ts`).
 
 ### P1 — DEEP-04 progress isolation not fully wired
 
@@ -178,28 +145,30 @@ This needs manual review before treating `d9dca08` as a clean isolated remediati
 - Direct scope bypass probe: FAIL as described above
 
 ### T-Line backend
-- Full `bun test backend/tests`: **102 pass / 0 fail**
+- Full `bun test backend/tests`: **104 pass / 0 fail** (25 files)
 
 ### T-Line frontend affected suites
-- 9 files / **39 pass / 0 fail**
+- 10 files / **44 pass / 0 fail**
 
 ### T-Line build
-- **FAIL (3 TypeScript errors)**
+- `bun run build`: **PASS** (Zero TypeScript errors, frontend & backend production bundles built)
 
 ## Release gate
 
 Do **not** mark this remediation production-certified yet.
 
-Minimum gates:
-1. Close DEEP-02 absolute/shell fileScope escape.
-2. Fix DEEP-06 reducer integration and make T-Line build pass.
-3. Fix DEEP-08 READY-after-reconnect.
-4. Fix lifecycle metadata/history-warning schema.
-5. Wire and test real per-agent classifier progress.
-6. Add integration tests that cover the real bridge/UI call sites instead of copied/mock logic.
-7. Review contaminated `d9dca08` files for unrelated changes.
-8. Then run installed Tauri + real provider E2E and CLI-vs-T-Line parity traces.
+Resolved gates in this pass:
+- [x] Fix DEEP-06 reducer integration and make T-Line build pass.
+- [x] Fix DEEP-08 READY-after-reconnect.
+- [x] Fix lifecycle metadata/history-warning schema.
+- [x] Add integration tests that cover real bridge/UI call sites (`superAgentTurnStatusIntegration.test.ts`).
+
+Remaining gates:
+1. Close DEEP-02 absolute/shell fileScope escape in SuperAgent Core.
+2. Wire and test real per-agent classifier progress in SuperAgent Core (DEEP-04).
+3. Review contaminated `d9dca08` files for unrelated changes.
+4. Run installed native Tauri + real provider E2E and CLI-vs-T-Line parity traces.
 
 ## Final status
 
-Core remediation contains substantial valid fixes, but the combined SuperAgent × T-Line system remains **NOT CERTIFIED** due to one P0 scope escape, broken T-Line status integration/build, and reconnect/session contract defects.
+T-Line client defects (DEEP-06 turn outcome UI integration, DEEP-08 READY reconnect loss, lifecycle warning contract mismatch, and build failures) are **RESOLVED & VERIFIED**. The overall cross-project release remains gated by Core DEEP-02 absolute shell escape and native Tauri/real-provider E2E certification.

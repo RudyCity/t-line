@@ -1,6 +1,6 @@
 import { ModelPreset } from './SuperAgentPresetManager';
 import { studioControlChannel } from '../services/studioControlChannel';
-import { applyChatTurnStatus, TurnRecord } from './chatTurnStatusReducer';
+import { applyChatTurnStatus, TurnRecord, ChatTurnStatusPayload } from './chatTurnStatusReducer';
 
 export const getAuthHeader = (): Record<string, string> => {
   const token = localStorage.getItem('token');
@@ -174,11 +174,35 @@ export const handleAgentEventPayload = (
   }
   if (payload.type === 'chat_turn_status') {
     if (turnRecordsRef) {
-      applyChatTurnStatus(payload, turnRecordsRef.current, setMessages, setLoading, setToolProgressMsg);
+      const turnPayload: ChatTurnStatusPayload = {
+        type: 'chat_turn_status',
+        sessionId: payload.sessionId,
+        workspace: payload.workspace,
+        turnId: payload.turnId,
+        state: payload.state || payload.status,
+        error: payload.error,
+      };
+      const result = applyChatTurnStatus(turnRecordsRef.current, turnPayload, currentActiveSessionId);
+      turnRecordsRef.current = result.nextTurns;
+      if (result.shouldStopLoading) {
+        setLoading(false);
+      } else if (result.shouldSetLoading) {
+        setLoading(true);
+      }
+      if (result.progressMessage !== undefined) {
+        setToolProgressMsg(result.progressMessage);
+      }
+      if (result.systemNotification) {
+        setMessages((prev) => [...prev, result.systemNotification]);
+      }
     } else {
-      if (['completed', 'failed', 'interrupted', 'cancelled'].includes(payload.status)) {
+      const stateOrStatus = payload.state || payload.status;
+      if (['completed', 'failed', 'interrupted', 'cancelled'].includes(stateOrStatus)) {
         setLoading(false);
         setToolProgressMsg('');
+      } else if (['queued', 'running'].includes(stateOrStatus)) {
+        setLoading(true);
+        setToolProgressMsg(stateOrStatus === 'queued' ? 'Queued...' : 'Thinking...');
       }
     }
     return;

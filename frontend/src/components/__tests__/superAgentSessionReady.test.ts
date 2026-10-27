@@ -1,4 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
+import {
+  extractLifecycleWarnings,
+  type SessionLifecycleEvent,
+} from '../../services/sessionLifecycleContract';
 
 describe('P1 DEEP-08 & SESSION SEND BUG: Session Ready Queue & Lifecycle Binding', () => {
   it('queues prompt submission when session is not ready and dispatches exactly once upon READY', () => {
@@ -135,34 +139,61 @@ describe('P1 DEEP-08 & SESSION SEND BUG: Session Ready Queue & Lifecycle Binding
     expect(pendingSend).toBeNull();
   });
 
-  it('surfaces history restore warning when metadata reports partial or corrupted history', () => {
+  it('surfaces history restore warning from actual backend metadata and prevents duplicate notifications on replay', () => {
     const messages: any[] = [];
     const setMessages = vi.fn((updater) => {
       const next = typeof updater === 'function' ? updater(messages) : updater;
+      messages.length = 0;
       messages.push(...next);
     });
 
-    const lifecyclePayload = {
+    const surfacedWarnings = new Map<string, Set<string>>();
+
+    // Actual backend lifecycle event shape emitted by superAgentSessionLifecycle.ts
+    const backendLifecyclePayload: SessionLifecycleEvent = {
       type: 'session_lifecycle',
       sessionId: 'sess_warning',
       state: 'READY',
-      meta: {
-        hasRestoredHistory: false,
+      metadata: {
+        workspace: '/workspace/demo',
+        mode: 'single',
+        historyWarnings: ['SQLite history table was busy or truncated; continuing with empty memory.'],
+        warnings: ['SQLite history table was busy or truncated; continuing with empty memory.'],
         historyRestoreWarning: 'SQLite history table was busy or truncated; continuing with empty memory.',
       },
     };
 
-    if (lifecyclePayload.meta?.historyRestoreWarning) {
-      setMessages((prev: any[]) => [
-        ...prev,
-        {
-          role: 'system',
-          text: `⚠️ History notice: ${lifecyclePayload.meta.historyRestoreWarning}`,
-        },
-      ]);
-    }
+    const processLifecycleEvent = (payload: SessionLifecycleEvent) => {
+      if (payload.state === 'READY') {
+        const warnings = extractLifecycleWarnings(payload);
+        if (warnings.length > 0) {
+          const sessionWarnings = surfacedWarnings.get(payload.sessionId) ?? new Set<string>();
+          surfacedWarnings.set(payload.sessionId, sessionWarnings);
+          const newWarnings = warnings.filter((w) => !sessionWarnings.has(w));
+          for (const w of newWarnings) {
+            sessionWarnings.add(w);
+            setMessages((prev: any[]) => [
+              ...prev,
+              {
+                role: 'system',
+                text: `⚠️ History notice: ${w}`,
+              },
+            ]);
+          }
+        }
+      }
+    };
 
-    expect(setMessages).toHaveBeenCalled();
+    // First arrival
+    processLifecycleEvent(backendLifecyclePayload);
+    expect(setMessages).toHaveBeenCalledTimes(1);
+    expect(messages).toHaveLength(1);
     expect(messages[0].text).toContain('SQLite history table was busy or truncated');
+
+    // Replay / reconnect arrival with identical warnings
+    processLifecycleEvent(backendLifecyclePayload);
+    // Must NOT call setMessages again or append duplicate messages
+    expect(setMessages).toHaveBeenCalledTimes(1);
+    expect(messages).toHaveLength(1);
   });
 });

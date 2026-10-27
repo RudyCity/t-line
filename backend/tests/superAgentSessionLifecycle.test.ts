@@ -107,4 +107,60 @@ describe('superAgentSessionLifecycle', () => {
     const replayAllowed = manager.recordWriteAttempt(turnId);
     expect(replayAllowed).toBe(false);
   });
+
+  it('preserves and restores READY on SSE re-subscribe (READY -> reconnect -> READY)', () => {
+    const emitted: SessionLifecycleEvent[] = [];
+    const client = (msg: string) => emitted.push(JSON.parse(msg));
+    const manager = new SessionLifecycleManager('sess_recon_test', '/workspace/demo', client);
+
+    // Initial sequence to READY
+    manager.markWsConnected();
+    manager.markInitAck({ success: true, sessionId: 'sess_recon_test' });
+    manager.markSseSubscribed(200);
+
+    expect(manager.getState()).toBe('READY');
+    expect(manager.canSendPrompt()).toBe(true);
+
+    // Reconnection path A: explicit markSseConnecting() during disconnect/retry
+    manager.markSseConnecting();
+    expect(manager.getState()).toBe('SSE_CONNECTING');
+    expect(manager.canSendPrompt()).toBe(false);
+
+    // Reconnected successfully
+    manager.markSseSubscribed(200);
+    expect(manager.getState()).toBe('READY');
+    expect(manager.canSendPrompt()).toBe(true);
+
+    // Reconnection path B: direct re-subscribe when already READY
+    manager.markSseSubscribed(200);
+    expect(manager.getState()).toBe('READY');
+    expect(manager.canSendPrompt()).toBe(true);
+
+    // Verify emitted state sequence
+    const states = emitted.map((e) => e.state);
+    expect(states).toContain('READY');
+    expect(states[states.length - 1]).toBe('READY');
+  });
+
+  it('emits unified lifecycle metadata with historyWarnings and warnings contract', () => {
+    const emitted: SessionLifecycleEvent[] = [];
+    const client = (msg: string) => emitted.push(JSON.parse(msg));
+    const manager = new SessionLifecycleManager('sess_warn_test', '/workspace/demo', client);
+
+    manager.markWsConnected();
+    manager.markInitAck({
+      success: true,
+      sessionId: 'sess_warn_test',
+      historyWarnings: ['Turn 3 partial history restored from Core snapshot'],
+      warnings: ['Model preset fallback to single-agent mode'],
+    });
+    manager.markSseSubscribed(200);
+
+    const readyEvent = emitted.find((e) => e.state === 'READY');
+    expect(readyEvent).toBeDefined();
+    expect(readyEvent?.metadata?.historyWarnings).toEqual(['Turn 3 partial history restored from Core snapshot']);
+    expect(readyEvent?.metadata?.warnings).toContain('Turn 3 partial history restored from Core snapshot');
+    expect(readyEvent?.metadata?.warnings).toContain('Model preset fallback to single-agent mode');
+    expect(readyEvent?.metadata?.historyRestoreWarning).toBe('Turn 3 partial history restored from Core snapshot');
+  });
 });

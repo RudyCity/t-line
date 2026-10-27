@@ -7,7 +7,7 @@ import {
 
 describe('superAgentMultimodalClient', () => {
   const createMockFile = (name: string, type: string, size = 1024): File => {
-    const blob = new Blob(['sample-file-content'], { type });
+    const blob = new Blob([new Uint8Array(size)], { type });
     return new File([blob], name, { type });
   };
 

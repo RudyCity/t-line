@@ -24,7 +24,8 @@ import { SuperAgentGroupedMessages } from './SuperAgentGroupedMessages';
 import { SuperAgentHistorySidebar } from './SuperAgentHistorySidebar';
 import { useSuperAgentSessions, isSystemNoiseMsg } from './useSuperAgentSessions';
 import { useSidebarResize } from './useSidebarResize';
-import { getAuthHeader, readFileAsText, readFileAsDataURL, getMainModelLabel as getModelLabelUtil, handleAgentEventPayload, fetchCliPromptHistory } from './SuperAgentConsoleUtils';
+import { getAuthHeader, readFileAsText, getMainModelLabel as getModelLabelUtil, handleAgentEventPayload, fetchCliPromptHistory } from './SuperAgentConsoleUtils';
+import { extractLifecycleWarnings } from '../services/sessionLifecycleContract';
 import { prepareMultimodalPrompt } from './superAgentMultimodalClient';
 import { TurnRecord } from './chatTurnStatusReducer';
 import { History, Folder, Activity, Sparkles, RefreshCw, ArrowDown, MoreVertical, Brain } from 'lucide-react';
@@ -512,6 +513,7 @@ export function SuperAgentConsole({
   const reconnectTimerRef = useRef<number | null>(null);
   const turnRecordsRef = useRef<Map<string, TurnRecord>>(new Map());
   const sessionReadyRef = useRef<boolean>(false);
+  const surfacedLifecycleWarningsRef = useRef<Map<string, Set<string>>>(new Map());
   const pendingSendRef = useRef<{
     sessionId: string;
     payload: any;
@@ -607,11 +609,21 @@ export function SuperAgentConsole({
           if (payload.sessionId === activeSessionIdRef.current) {
             if (payload.state === 'READY') {
               sessionReadyRef.current = true;
-              if (payload.meta?.historyRestoreWarning) {
-                setMessages(prev => [...prev, {
-                  role: 'system',
-                  text: `⚠️ History notice: ${payload.meta.historyRestoreWarning}`,
-                }]);
+              const warnings = extractLifecycleWarnings(payload);
+              if (warnings.length > 0) {
+                const sessionWarnings = surfacedLifecycleWarningsRef.current.get(payload.sessionId) ?? new Set<string>();
+                surfacedLifecycleWarningsRef.current.set(payload.sessionId, sessionWarnings);
+                const newWarnings = warnings.filter((w) => !sessionWarnings.has(w));
+                for (const w of newWarnings) {
+                  sessionWarnings.add(w);
+                  setMessages((prev) => [
+                    ...prev,
+                    {
+                      role: 'system',
+                      text: `⚠️ History notice: ${w}`,
+                    },
+                  ]);
+                }
               }
               if (pendingSendRef.current && pendingSendRef.current.sessionId === payload.sessionId) {
                 const toSend = pendingSendRef.current;

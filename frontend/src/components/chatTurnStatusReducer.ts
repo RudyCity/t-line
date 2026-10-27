@@ -80,16 +80,21 @@ export function applyChatTurnStatus(
   payload: ChatTurnStatusPayload,
   currentActiveSessionId?: string
 ): TurnReducerResult {
-  const { sessionId, turnId, state, error } = payload;
+  const { sessionId, turnId, error } = payload;
+  const state: TurnState = payload.state || (payload as any).status;
 
-  // Session check
-  if (currentActiveSessionId && sessionId !== currentActiveSessionId) {
-    return {
-      nextTurns: currentTurns,
-      shouldStopLoading: false,
-      shouldSetLoading: false,
-      ignoredReplay: true,
-    };
+  // Session check with normalized matching
+  if (currentActiveSessionId && sessionId && sessionId !== currentActiveSessionId) {
+    const cleanA = sessionId.replace(/^(sess_|session_)/, '').split('::').pop() || sessionId;
+    const cleanB = currentActiveSessionId.replace(/^(sess_|session_)/, '').split('::').pop() || currentActiveSessionId;
+    if (cleanA !== cleanB) {
+      return {
+        nextTurns: currentTurns,
+        shouldStopLoading: false,
+        shouldSetLoading: false,
+        ignoredReplay: true,
+      };
+    }
   }
 
   const existing = currentTurns.get(turnId);

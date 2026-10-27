@@ -740,6 +740,7 @@ let suppressBufferWrite = false;
   function connectToSuperAgentSSE() {
     if (isClosed || ws.readyState !== WebSocket.OPEN) return;
     sseConnected = false;
+    lifecycleManager.markSseConnecting();
     if (sseReconnectTimeout) {
       clearTimeout(sseReconnectTimeout);
       sseReconnectTimeout = null;
@@ -880,6 +881,7 @@ let suppressBufferWrite = false;
       res.on('end', () => {
         if (currentSseReq !== sseReq) return; // superseded stream
         sseConnected = false;
+        lifecycleManager.markSseConnecting();
         console.log('[WS-Agent] SuperAgent SSE connection ended by server.');
         // Capture replay cursor before closing so next connect replays missed events.
         replayCursor = lastSseEventIdRef;
@@ -895,6 +897,7 @@ let suppressBufferWrite = false;
     sseReq.on('error', () => {
       if (currentSseReq !== sseReq) return; // intentional stream replacement
       sseConnected = false;
+      lifecycleManager.markSseConnecting();
       // A failed GET/SSE is safe to retry with a bounded budget; never
       // auto-launch a potentially foreign Core listener during reconnection.
       if (initialSessionId && !isClosed && ws.readyState === WebSocket.OPEN) {
