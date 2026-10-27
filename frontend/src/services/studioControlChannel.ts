@@ -12,13 +12,24 @@ class StudioControlChannel {
   private actionHandlers = new Set<ControlActionHandler>();
   private eventHandlers = new Set<ProjectEventHandler>();
   private sequenceCounter = 0;
+  private pendingAction: { action: StudioControlAction; timestamp: number } | null = null;
+  private actionReceipts: Array<{ action: StudioControlAction; deliveredAt: number; handlerCount: number }> = [];
 
   /**
    * Register a listener for local desktop control actions (e.g. open project, seek timecode).
+   * If options.replayRecent is true and an action was dispatched within the last 5 seconds
+   * (such as during a tab transition), it is immediately delivered to the new listener.
    * Returns an unsubscribe function.
    */
-  public onAction(handler: ControlActionHandler): () => void {
+  public onAction(handler: ControlActionHandler, options?: { replayRecent?: boolean }): () => void {
     this.actionHandlers.add(handler);
+    if (options?.replayRecent && this.pendingAction && Date.now() - this.pendingAction.timestamp < 5000) {
+      try {
+        handler(this.pendingAction.action);
+      } catch (err) {
+        console.error('[StudioControlChannel] Error in initial action delivery:', err);
+      }
+    }
     return () => {
       this.actionHandlers.delete(handler);
     };
@@ -29,12 +40,23 @@ class StudioControlChannel {
    */
   public dispatchAction(action: StudioControlAction): void {
     if (!action || !action.workspacePath) return;
+    this.pendingAction = { action, timestamp: Date.now() };
+    let deliveredCount = 0;
     for (const handler of this.actionHandlers) {
       try {
         handler(action);
+        deliveredCount++;
       } catch (err) {
         console.error('[StudioControlChannel] Error in action handler:', err);
       }
+    }
+    this.actionReceipts.push({
+      action,
+      deliveredAt: Date.now(),
+      handlerCount: deliveredCount,
+    });
+    if (this.actionReceipts.length > 50) {
+      this.actionReceipts.shift();
     }
   }
 
@@ -43,6 +65,13 @@ class StudioControlChannel {
    */
   public emitAction(action: StudioControlAction): void {
     this.dispatchAction(action);
+  }
+
+  /**
+   * Get recent action delivery receipts for diagnostics and audit verification.
+   */
+  public getRecentReceipts(): ReadonlyArray<{ action: StudioControlAction; deliveredAt: number; handlerCount: number }> {
+    return this.actionReceipts;
   }
 
   /**
@@ -96,6 +125,8 @@ class StudioControlChannel {
     this.actionHandlers.clear();
     this.eventHandlers.clear();
     this.sequenceCounter = 0;
+    this.pendingAction = null;
+    this.actionReceipts = [];
   }
 }
 

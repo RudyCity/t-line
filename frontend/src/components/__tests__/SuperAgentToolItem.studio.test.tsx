@@ -124,6 +124,7 @@ describe('SuperAgentToolItem - Studio Integration', () => {
 
     // Apply View Navigation button should not be rendered for string actions
     expect(screen.queryByRole('button', { name: /Apply View Navigation/i })).toBeNull();
+    expect(emitSpy).not.toHaveBeenCalled();
   });
 
   it('renders Studio Focus tool and applies view navigation', () => {
@@ -159,5 +160,28 @@ describe('SuperAgentToolItem - Studio Integration', () => {
         timeSeconds: 5.5,
       })
     );
+  });
+
+  it('renders Auto-applied to Studio badge when delivery is dispatched', () => {
+    const msg = {
+      role: 'tool' as const,
+      text: 'Studio desktop view updated',
+      toolName: 'studio_desktop_focus',
+      args: { projectId: 'proj-video-1' },
+      result: {
+        success: true,
+        delivery: 'dispatched',
+        projectId: 'proj-video-1',
+        action: {
+          type: 'open_project',
+          workspacePath: 'D:/workspaces/demo',
+          projectId: 'proj-video-1',
+        },
+      },
+    };
+
+    render(<SuperAgentToolItem msg={msg} />);
+    fireEvent.click(screen.getByRole('button', { name: /Show Studio Focus tool details/i }));
+    expect(screen.getByText('Auto-applied to Studio')).toBeInTheDocument();
   });
 });

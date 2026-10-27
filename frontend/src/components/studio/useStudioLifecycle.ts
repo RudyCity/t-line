@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { studioControlChannel } from '../../services/studioControlChannel';
 import {
   studioApi,
   type StudioJob,
@@ -184,6 +185,41 @@ export function useStudioLifecycle(
         }
       });
   }, [selectedId, workspacePath, message]);
+
+  // Real-time synchronization and reconnect catch-up: reconcile authoritative project from Core
+  useEffect(() => {
+    if (!selectedId || !workspacePath) return;
+
+    // Listen for real-time project events emitted when the assistant or background jobs mutate the project
+    const unsubscribe = studioControlChannel.onEvent(evt => {
+      if (evt.workspacePath !== workspacePath || evt.projectId !== selectedId) return;
+      if (evt.type === 'project_revision_changed') {
+        const rev = Number(evt.payload?.revision);
+        if (!project || (rev && rev > project.revision)) {
+          studioApi.inspect(workspacePath, selectedId).then(latest => {
+            if (mounted.current && (!project || latest.revision > project.revision)) {
+              setProject(latest);
+            }
+          }).catch(() => {});
+        }
+      }
+    });
+
+    // Reconcile on window focus after desktop reconnect or tab switch
+    const handleFocus = () => {
+      studioApi.inspect(workspacePath, selectedId).then(latest => {
+        if (mounted.current && (!project || latest.revision > project.revision)) {
+          setProject(latest);
+        }
+      }).catch(() => {});
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [selectedId, workspacePath, project?.revision]);
 
   useEffect(() => {
     let cancelled = false;

@@ -25,8 +25,8 @@ import {
   splitClipAtFrame,
   rippleDeleteClip,
   deleteClip,
-  trimClip,
   moveClip,
+  calculateSnap,
   syncClipsToComposition,
 } from '../../services/studioClipEdits';
 
@@ -37,6 +37,8 @@ interface Props {
   currentFrame: number;
   fps: number;
   isPlaying: boolean;
+  selectedClipId?: string | null;
+  onSelectClip?: (clipId: string | null) => void;
   onSeek: (frame: number) => void;
   onTogglePlay: () => void;
   onCompositionChange?: (updated: StudioComposition) => void;
@@ -50,6 +52,8 @@ export function StudioMultiTrackTimeline({
   currentFrame,
   fps,
   isPlaying,
+  selectedClipId: controlledSelectedClipId,
+  onSelectClip,
   onSeek,
   onTogglePlay,
   onCompositionChange,
@@ -65,7 +69,13 @@ export function StudioMultiTrackTimeline({
     setTracks(deriveClipsFromComposition(composition));
   }, [composition]);
 
-  const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
+  const [internalSelectedClipId, setInternalSelectedClipId] = useState<string | null>(null);
+  const selectedClipId = controlledSelectedClipId !== undefined ? controlledSelectedClipId : internalSelectedClipId;
+  const setSelectedClipId = (id: string | null) => {
+    setInternalSelectedClipId(id);
+    if (onSelectClip) onSelectClip(id);
+  };
+
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [zoom, setZoom] = useState(1); // pixels per frame multiplier (default 1 = ~2px/frame)
   const [draggingPlayhead, setDraggingPlayhead] = useState(false);
@@ -81,30 +91,68 @@ export function StudioMultiTrackTimeline({
     trackId: string;
     clipId: string;
     startX: number;
-    initialStartFrame: number;
-    initialDuration: number;
+    initialClip: StudioTrackClip;
   } | null>(null);
 
-  // Handle pointer move and release for clip movement and trimming
+  // Handle pointer move and release for clip movement and trimming without compounding delta
   useEffect(() => {
     if (!activeGesture) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       const deltaX = e.clientX - activeGesture.startX;
       const deltaFrames = Math.round(deltaX / pixelsPerFrame);
+      const init = activeGesture.initialClip;
 
       if (activeGesture.type === 'move') {
-        const newStart = Math.max(0, activeGesture.initialStartFrame + deltaFrames);
+        const newStart = Math.max(0, init.startFrame + deltaFrames);
         setTracks(prev =>
           moveClip(prev, activeGesture.trackId, activeGesture.trackId, activeGesture.clipId, newStart, currentFrame, snapEnabled)
         );
       } else if (activeGesture.type === 'trim-in') {
+        const maxDeltaIn = init.durationFrames - 1;
+        const clampedDelta = Math.min(maxDeltaIn, Math.max(-init.startFrame, deltaFrames));
+        const newStart = init.startFrame + clampedDelta;
+        const newDuration = init.durationFrames - clampedDelta;
+        const newTrimIn = Math.max(0, init.trimInFrames + clampedDelta);
+
         setTracks(prev =>
-          trimClip(prev, activeGesture.trackId, activeGesture.clipId, deltaFrames, 0)
+          prev.map(track => {
+            if (track.id !== activeGesture.trackId) return track;
+            return {
+              ...track,
+              clips: track.clips.map(c =>
+                c.id === activeGesture.clipId
+                  ? {
+                      ...c,
+                      startFrame: newStart,
+                      durationFrames: newDuration,
+                      trimInFrames: newTrimIn,
+                    }
+                  : c
+              ),
+            };
+          })
         );
       } else if (activeGesture.type === 'trim-out') {
+        const newDuration = Math.max(1, init.durationFrames + deltaFrames);
+        const newTrimOut = Math.max(1, init.trimOutFrames + deltaFrames);
+
         setTracks(prev =>
-          trimClip(prev, activeGesture.trackId, activeGesture.clipId, 0, deltaFrames)
+          prev.map(track => {
+            if (track.id !== activeGesture.trackId) return track;
+            return {
+              ...track,
+              clips: track.clips.map(c =>
+                c.id === activeGesture.clipId
+                  ? {
+                      ...c,
+                      durationFrames: newDuration,
+                      trimOutFrames: newTrimOut,
+                    }
+                  : c
+              ),
+            };
+          })
         );
       }
     };
@@ -249,17 +297,83 @@ export function StudioMultiTrackTimeline({
     }
   };
 
-  // Toggle track mute or lock
+  // Toggle track mute or lock with persistence
   const toggleMute = (trackId: string) => {
-    setTracks(prev =>
-      prev.map(t => (t.id === trackId ? { ...t, muted: !t.muted } : t))
-    );
+    setTracks(prev => {
+      const updated = prev.map(t => (t.id === trackId ? { ...t, muted: !t.muted } : t));
+      if (onCompositionChange) {
+        onCompositionChange(syncClipsToComposition(updated, composition));
+      }
+      return updated;
+    });
   };
 
   const toggleLock = (trackId: string) => {
-    setTracks(prev =>
-      prev.map(t => (t.id === trackId ? { ...t, locked: !t.locked } : t))
-    );
+    setTracks(prev => {
+      const updated = prev.map(t => (t.id === trackId ? { ...t, locked: !t.locked } : t));
+      if (onCompositionChange) {
+        onCompositionChange(syncClipsToComposition(updated, composition));
+      }
+      return updated;
+    });
+  };
+
+  // Drag and drop media asset from Media Bin to track lane
+  const handleDropMedia = (trackId: string, e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const rawData = e.dataTransfer.getData('application/json');
+    if (!rawData) return;
+    try {
+      const media = JSON.parse(rawData);
+      if (!media || !media.kind) return;
+
+      const track = tracks.find(t => t.id === trackId);
+      if (!track || track.locked) return;
+
+      if (track.kind === 'video' && media.kind === 'audio') return;
+      if (track.kind === 'audio' && media.kind !== 'audio') return;
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const dropX = Math.max(0, e.clientX - rect.left);
+      let dropFrame = Math.max(0, Math.round(dropX / pixelsPerFrame));
+
+      const duration = media.durationFrames || 90;
+      if (snapEnabled) {
+        const snapRes = calculateSnap(dropFrame, duration, tracks, currentFrame, 8);
+        dropFrame = snapRes.startFrame;
+      }
+
+      const newClip: StudioTrackClip = {
+        id: `clip-${media.kind}-${Date.now()}`,
+        trackId: track.id,
+        layerId: `layer-${media.kind}-${Date.now()}`,
+        assetId: media.assetId,
+        kind: media.kind,
+        name: media.name || `${media.kind} clip`,
+        startFrame: dropFrame,
+        durationFrames: duration,
+        trimInFrames: 0,
+        trimOutFrames: duration,
+        opacity: 1,
+        volume: media.kind === 'audio' ? 1 : undefined,
+      };
+
+      const updated = tracks.map(t => {
+        if (t.id !== trackId) return t;
+        return {
+          ...t,
+          clips: [...t.clips, newClip].sort((a, b) => a.startFrame - b.startFrame),
+        };
+      });
+
+      setTracks(updated);
+      setSelectedClipId(newClip.id);
+      if (onCompositionChange) {
+        onCompositionChange(syncClipsToComposition(updated, composition));
+      }
+    } catch (err) {
+      console.error('[Timeline] Failed to drop media asset:', err);
+    }
   };
 
   // Time marks for ruler
@@ -501,6 +615,11 @@ export function StudioMultiTrackTimeline({
               {tracks.map(track => (
                 <div
                   key={track.id}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                  }}
+                  onDrop={(e) => handleDropMedia(track.id, e)}
                   className={`h-14 border-b border-[var(--border-color)] relative ${
                     track.locked ? 'bg-black/20 opacity-70' : 'bg-[var(--bg-main)]'
                   }`}
@@ -533,8 +652,7 @@ export function StudioMultiTrackTimeline({
                             trackId: track.id,
                             clipId: clip.id,
                             startX: e.clientX,
-                            initialStartFrame: clip.startFrame,
-                            initialDuration: clip.durationFrames,
+                            initialClip: { ...clip },
                           });
                         }}
                         style={{
@@ -563,8 +681,7 @@ export function StudioMultiTrackTimeline({
                               trackId: track.id,
                               clipId: clip.id,
                               startX: e.clientX,
-                              initialStartFrame: clip.startFrame,
-                              initialDuration: clip.durationFrames,
+                              initialClip: { ...clip },
                             });
                           }}
                           className="absolute left-0 top-0 bottom-0 w-2.5 cursor-ew-resize hover:bg-cyan-400/40 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
@@ -599,8 +716,7 @@ export function StudioMultiTrackTimeline({
                               trackId: track.id,
                               clipId: clip.id,
                               startX: e.clientX,
-                              initialStartFrame: clip.startFrame,
-                              initialDuration: clip.durationFrames,
+                              initialClip: { ...clip },
                             });
                           }}
                           className="absolute right-0 top-0 bottom-0 w-2.5 cursor-ew-resize hover:bg-cyan-400/40 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"

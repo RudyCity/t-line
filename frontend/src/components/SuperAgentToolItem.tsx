@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronDown, FileCode, Search, Terminal, Wrench, Cpu, Check, Copy, Code2, Maximize2, Minimize2, Clapperboard, Film, Sliders, Scissors } from 'lucide-react';
+import { ChevronRight, ChevronDown, FileCode, Search, Terminal, Wrench, Cpu, Check, Copy, Code2, Maximize2, Minimize2, Clapperboard, Film, Sliders, Scissors, CheckCircle2 } from 'lucide-react';
 import { studioControlChannel } from '../services/studioControlChannel';
 
 interface SuperAgentToolItemProps {
@@ -337,7 +337,13 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
                 </div>
               )}
 
-              <div className="pt-1 flex flex-wrap gap-2">
+              <div className="pt-1 flex flex-wrap items-center gap-2">
+                {result?.delivery === 'dispatched' && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-900/40 text-emerald-300 border border-emerald-600/40 text-[10px] font-sans font-medium">
+                    <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
+                    <span>Auto-applied to Studio</span>
+                  </span>
+                )}
                 {(() => {
                   const projId = args.projectId || args.studioId || result?.projectId || result?.studioId || result?.receipt?.projectId || result?.receipt?.studioId;
                   const wsPath = args.workspacePath || result?.workspacePath || '';

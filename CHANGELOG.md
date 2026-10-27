@@ -1,3 +1,13 @@
+## [1.3.751] - 2026-10-27
+
+### Studio Desktop Editor Two-Way Agent Control & Real-Time Sync
+- **Auto-Dispatch of Assistant Desktop Focus Actions**: Automated dispatch of `studio_desktop_focus` actions to the desktop control channel immediately upon assistant tool completion with real-time UI acknowledgement badges, enabling hands-free navigation to projects, clips, and playhead timecodes.
+- **Accurate Timeline Trimming & Drag Gestures**: Re-engineered timeline pointer gestures to reference immutable clip snapshots, eliminating compounding delta drift during interactive trimming and dragging.
+- **Persistent Track Controls**: Connected track mute and lock toggles directly to canonical composition track synchronization with persistence in Core.
+- **HTML5 Drag-and-Drop Media Ingestion**: Added drag-and-drop capability from Media Bin directly onto timeline track lanes with automatic frame positioning and magnetic snapping.
+- **Real-Time Reconnect & Focus Reconciliation**: Integrated authoritative project revision catch-up on window focus and server update events, ensuring seamless multi-user and agent synchronization without silent state overwrite.
+- **Audit Findings AUD-01 Through AUD-10 Verification**: Closed all audit findings with 100% test pass rate across 81 frontend suites (367 tests), 7 backend suites (18 tests), and Core real-media E2E pipeline tests.
+
 ## [1.3.750] - 2026-10-27
 
 ### Knowledge Graph Tooling & Artifact Deprecation

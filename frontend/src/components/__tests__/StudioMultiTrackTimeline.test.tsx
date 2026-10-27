@@ -1,9 +1,14 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+// @vitest-environment jsdom
+import '@testing-library/jest-dom';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { StudioMultiTrackTimeline } from '../studio/StudioMultiTrackTimeline';
 import type { StudioComposition } from '../../services/studioApi';
 
 describe('StudioMultiTrackTimeline', () => {
+  afterEach(() => {
+    cleanup();
+  });
   const mockComp: StudioComposition = {
     background: '#000000',
     fps: { numerator: 30, denominator: 1 },

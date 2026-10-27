@@ -1,4 +1,5 @@
 import { ModelPreset } from './SuperAgentPresetManager';
+import { studioControlChannel } from '../services/studioControlChannel';
 
 export const getAuthHeader = (): Record<string, string> => {
   const token = localStorage.getItem('token');
@@ -301,6 +302,33 @@ export const handleAgentEventPayload = (
 
       if (innerEvent.type === 'tool_end' || innerEvent.type === 'tool_result' || innerEvent.type === 'tool_output' || result !== undefined) {
         setToolProgressMsg('');
+
+        // Auto-dispatch studio control actions directly to desktop UI
+        if (result !== undefined) {
+          let parsed: any = result;
+          if (typeof parsed === 'string') {
+            try { parsed = JSON.parse(parsed); } catch (e) {}
+          }
+          if (parsed && typeof parsed === 'object') {
+            const rawAct = parsed.action || (args && typeof args === 'object' && typeof args.action === 'object' ? args.action : null);
+            if (rawAct && typeof rawAct === 'object' && rawAct.type) {
+              const ws = rawAct.workspacePath || parsed.workspacePath || (args && typeof args === 'object' ? args.workspacePath : '');
+              if (ws) {
+                studioControlChannel.emitAction({ ...rawAct, workspacePath: ws });
+              }
+            } else if (toolName === 'studio_desktop_focus' && (parsed.projectId || parsed.studioId || (args && (args.projectId || args.studioId)))) {
+              const pId = parsed.projectId || parsed.studioId || (args && (args.projectId || args.studioId));
+              const ws = parsed.workspacePath || (args && args.workspacePath) || '';
+              if (ws && pId) {
+                studioControlChannel.emitAction({
+                  type: 'open_project',
+                  workspacePath: ws,
+                  projectId: pId,
+                });
+              }
+            }
+          }
+        }
       }
 
       if (toolName === 'invoke_subagent' && args) {

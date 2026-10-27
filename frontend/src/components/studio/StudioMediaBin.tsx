@@ -26,10 +26,10 @@ interface Props {
   selectedLayer: string | null;
   onSelectLayer: (id: string) => void;
   onInsertLayer?: (kind: StudioLayer['kind']) => void;
-  onImportImage?: (file?: File) => void;
+  onImportImage?: (file: File) => void;
   onReorderLayer?: (delta: number) => void;
   onRemoveSelectedLayer?: () => void;
-  onImportAudio?: (file?: File) => void;
+  onImportAudio?: (file: File) => void;
   captionsAvailable?: boolean;
   onExportCaptions?: () => void;
   visionAvailable?: boolean;
@@ -175,7 +175,7 @@ export function StudioMediaBin({
             selectedLayer={selectedLayer}
             onSelectLayer={onSelectLayer}
             onInsertLayer={onInsertLayer || (() => {})}
-            onImportImage={onImportImage || (() => {})}
+            onImportImage={onImportImage ? ((f?: File) => { if (f) onImportImage(f); }) : (() => {})}
             onReorderLayer={onReorderLayer || (() => {})}
             onRemoveSelectedLayer={onRemoveSelectedLayer || (() => {})}
             busy={busy}
@@ -266,12 +266,25 @@ export function StudioMediaBin({
                 {filteredAssets.map(item => (
                   <div
                     key={item.id}
+                    draggable={true}
+                    onDragStart={e => {
+                      e.dataTransfer.setData(
+                        'application/json',
+                        JSON.stringify({
+                          assetId: item.id,
+                          name: item.name,
+                          kind: item.kind,
+                          durationFrames: 90,
+                        })
+                      );
+                      e.dataTransfer.effectAllowed = 'copy';
+                    }}
                     onClick={() => {
                       if (item.layerId) {
                         onSelectLayer(item.layerId);
                       }
                     }}
-                    className={`group flex items-center justify-between rounded border border-[var(--border-color)] bg-[var(--bg-card)] p-2 text-xs transition-colors cursor-pointer hover:border-cyan-500/60 ${
+                    className={`group flex items-center justify-between rounded border border-[var(--border-color)] bg-[var(--bg-card)] p-2 text-xs transition-colors cursor-grab active:cursor-grabbing hover:border-cyan-500/60 ${
                       item.layerId && selectedLayer === item.layerId
                         ? 'border-cyan-400 bg-cyan-950/30'
                         : ''
@@ -362,7 +375,7 @@ export function StudioMediaBin({
               <span className="text-xs font-semibold text-[var(--text-main)]">Audio Tracks</span>
               <button
                 type="button"
-                onClick={() => onImportAudio?.()}
+                onClick={() => audioInputRef.current?.click()}
                 className="inline-flex items-center gap-1 rounded border border-[var(--border-color)] bg-[var(--bg-card)] px-2 py-1 text-xs text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]"
               >
                 <Upload size={12} />

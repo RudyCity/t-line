@@ -13,6 +13,7 @@ describe('useStudioHandoff', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    studioControlChannel.reset();
   });
 
   it('switches to target workspace studio tab when action matches workspace path', () => {

@@ -1,9 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { STUDIO_DISPLAY_NAME } from '../services/studioBranding';
 import { useStudioState } from './studio/useStudioState';
 import { StudioTopBar } from './studio/StudioTopBar';
-import { StudioQuickDirectPanel } from './studio/StudioQuickDirectPanel';
-import { StudioLayersSection } from './studio/StudioLayersSection';
 import { StudioInspectorSection } from './studio/StudioInspectorSection';
 import { StudioCanvasStage } from './studio/StudioCanvasStage';
 import { StudioRenderFooter } from './studio/StudioRenderFooter';
@@ -27,7 +25,7 @@ import { StudioVideoToCodePanel } from './StudioVideoToCodePanel';
 import { StudioCodeToVideoPanel } from './StudioCodeToVideoPanel';
 import { studioApi } from '../services/studioApi';
 import { studioControlChannel } from '../services/studioControlChannel';
-import { AlertCircle, CheckCircle2, Film, Loader2, Plus, Sparkles, X, ChevronRight } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Film, Loader2, Plus, X, ChevronRight } from 'lucide-react';
 
 interface Props {
   workspacePath: string;
@@ -39,6 +37,7 @@ const action = 'inline-flex items-center gap-1.5 rounded border border-[var(--bo
 
 export function StudioTab({ workspacePath, isActive }: Props) {
   const s = useStudioState(workspacePath, isActive);
+  const [selectedTimelineClipId, setSelectedTimelineClipId] = useState<string | null>(null);
 
   // Wire up desktop Studio control channel for assistant coordination
   useEffect(() => {
@@ -47,6 +46,9 @@ export function StudioTab({ workspacePath, isActive }: Props) {
       if (act.type === 'open_project') {
         s.setSelectedId(act.projectId);
       } else if (act.type === 'seek_timecode') {
+        if (act.projectId && act.projectId !== 'active' && act.projectId !== s.project?.id) {
+          s.setSelectedId(act.projectId);
+        }
         if (act.frame !== undefined) {
           s.setPlaying(false);
           s.setFrame(act.frame);
@@ -55,12 +57,18 @@ export function StudioTab({ workspacePath, isActive }: Props) {
           s.setFrame(Math.round(act.timeSeconds * s.fps));
         }
       } else if (act.type === 'select_clip') {
+        if (act.projectId && act.projectId !== 'active' && act.projectId !== s.project?.id) {
+          s.setSelectedId(act.projectId);
+        }
+        if (act.clipId) {
+          setSelectedTimelineClipId(act.clipId);
+        }
         if (act.layerId) {
           s.setSelectedLayer(act.layerId);
         }
       }
-    });
-  }, [workspacePath, s.fps]);
+    }, { replayRecent: true });
+  }, [workspacePath, s.fps, s.project?.id]);
 
   // Broadcast project revision updates to desktop channel
   useEffect(() => {
@@ -239,7 +247,7 @@ export function StudioTab({ workspacePath, isActive }: Props) {
               </span>
               <button
                 type="button"
-                onClick={s.createNewProject}
+                onClick={() => s.setCreating(true)}
                 disabled={s.busy}
                 className="inline-flex items-center gap-1 rounded bg-[var(--color-primary)] px-2 py-1 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
               >
@@ -627,6 +635,8 @@ export function StudioTab({ workspacePath, isActive }: Props) {
               currentFrame={s.frame}
               fps={s.fps}
               isPlaying={s.playing}
+              selectedClipId={selectedTimelineClipId}
+              onSelectClip={setSelectedTimelineClipId}
               onSeek={next => {
                 s.setPlaying(false);
                 s.setFrame(next);
