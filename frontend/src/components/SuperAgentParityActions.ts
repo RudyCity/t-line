@@ -3,7 +3,20 @@
  * Never forwards slash text to chat, shell or a generic HTTP proxy.
  */
 type AuthHeaders = () => Record<string, string>;
-export type ParityCommand = { action: 'daemon.status' | 'gateway.status' | 'mcp.status' | 'tools.catalog' | 'selfdev.status' | 'muse.status' | 'tasks.snapshot' | 'capabilities'; raw: string };
+export type ParityCommand = {
+  action:
+    | 'daemon.status'
+    | 'gateway.status'
+    | 'mcp.status'
+    | 'tools.catalog'
+    | 'selfdev.status'
+    | 'muse.status'
+    | 'tasks.snapshot'
+    | 'studio.status'
+    | 'studio.projects'
+    | 'capabilities';
+  raw: string;
+};
 
 export function parseParityCommand(text: string): ParityCommand | null {
   const trimmed = text.trim().toLowerCase();
@@ -13,6 +26,8 @@ export function parseParityCommand(text: string): ParityCommand | null {
   if (/^\/gateway(?:\s|$)/.test(trimmed)) return {
     action: 'gateway.status', raw: trimmed,
   };
+  if (/^\/studio\s+status$/.test(trimmed)) return { action: 'studio.status', raw: trimmed };
+  if (/^\/studio\s+(projects|list)$/.test(trimmed)) return { action: 'studio.projects', raw: trimmed };
   for (const [prefix, action] of [
     ['/mcp', 'mcp.status'], ['/tools', 'tools.catalog'],
     ['/selfdev', 'selfdev.status'], ['/muse', 'muse.status'],
@@ -45,6 +60,8 @@ export async function runParityCommand(
     'selfdev.status': ['/selfdev', '/selfdev status'],
     'muse.status': ['/muse status'],
     'tasks.snapshot': ['/tasks', '/tasks status'],
+    'studio.status': ['/studio status'],
+    'studio.projects': ['/studio projects', '/studio list'],
   };
   if (parsed.action in inspectionForms && !inspectionForms[parsed.action].includes(parsed.raw)) {
     return `Only read-only ${inspectionForms[parsed.action].join(' or ')} is available in T-Line. No mutation was sent.`;
@@ -120,6 +137,24 @@ export async function runParityCommand(
         'Runner enabled: ' + (body.runnerEnabled ? 'yes' : 'no'),
         'Watcher active (process): ' + (body.watcherActive ? 'yes' : 'no'),
         'Active task: ' + (active ? String(active.taskId).slice(0, 120) + ' (unverified)' : 'none for this workspace'),
+      ].join('\n');
+    }
+    if (parsed.action === 'studio.status') {
+      if (body?.success !== true) return 'Studio service offline or unavailable.';
+      return [
+        'SuperAgent Studio Motion Engine (read-only)',
+        'Running: ' + (body.running ? 'yes' : 'no'),
+        'Version: ' + String(body.version || 'unknown'),
+        'Active renders: ' + String(body.activeRenders ?? 0),
+        'Supported formats: ' + (Array.isArray(body.supportedFormats) ? body.supportedFormats.join(', ') : 'none'),
+      ].join('\n');
+    }
+    if (parsed.action === 'studio.projects') {
+      if (body?.success !== true || !Array.isArray(body.projects)) return 'Invalid Studio projects response.';
+      return [
+        `Studio Projects (${body.projects.length} found):`,
+        ...body.projects.slice(0, 20).map((p: any) => `- ${String(p.name || p.id).slice(0, 60)} (${String(p.updatedAt || 'unknown')})`),
+        ...(body.projects.length > 20 ? ['Additional projects omitted from display.'] : []),
       ].join('\n');
     }
     if (parsed.action === 'daemon.status') {

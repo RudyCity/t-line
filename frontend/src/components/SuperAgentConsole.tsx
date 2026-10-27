@@ -25,6 +25,8 @@ import { SuperAgentHistorySidebar } from './SuperAgentHistorySidebar';
 import { useSuperAgentSessions, isSystemNoiseMsg } from './useSuperAgentSessions';
 import { useSidebarResize } from './useSidebarResize';
 import { getAuthHeader, readFileAsText, readFileAsDataURL, getMainModelLabel as getModelLabelUtil, handleAgentEventPayload, fetchCliPromptHistory } from './SuperAgentConsoleUtils';
+import { prepareMultimodalPrompt } from './superAgentMultimodalClient';
+import { TurnRecord } from './chatTurnStatusReducer';
 import { History, Folder, Activity, Sparkles, RefreshCw, ArrowDown, MoreVertical, Brain } from 'lucide-react';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { getAuthToken } from '../utils/tokenStorage';
@@ -508,6 +510,14 @@ export function SuperAgentConsole({
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef<number>(0);
   const reconnectTimerRef = useRef<number | null>(null);
+  const turnRecordsRef = useRef<Map<string, TurnRecord>>(new Map());
+  const sessionReadyRef = useRef<boolean>(false);
+  const pendingSendRef = useRef<{
+    sessionId: string;
+    payload: any;
+    displayText: string;
+    skipHistory?: boolean;
+  } | null>(null);
 
   useEffect(() => {
     if (activeSessionId !== prevSessionIdRef.current) {
@@ -553,6 +563,7 @@ export function SuperAgentConsole({
       if (wsRef.current !== socket) return;
       window.clearTimeout(connectTimeout);
       connectedAt = Date.now();
+      sessionReadyRef.current = false;
       console.log(`[SuperAgent WS] Connection established. Workspace: ${workspace || 'Default'}`);
       setBrowserBridgeReady(true);
       // Read-only status check after WS reconnect: never resubmit chat or tools.
@@ -590,6 +601,28 @@ export function SuperAgentConsole({
         if (payload?.type === 'core_reconnect_state') {
           const notice = parseCoreReconnectNotice(payload, activeSessionIdRef.current);
           if (notice) setCoreReconnectNotice(notice.phase === 'connected' ? null : notice);
+          return;
+        }
+        if (payload?.type === 'session_lifecycle') {
+          if (payload.sessionId === activeSessionIdRef.current) {
+            if (payload.state === 'READY') {
+              sessionReadyRef.current = true;
+              if (payload.meta?.historyRestoreWarning) {
+                setMessages(prev => [...prev, {
+                  role: 'system',
+                  text: `⚠️ History notice: ${payload.meta.historyRestoreWarning}`,
+                }]);
+              }
+              if (pendingSendRef.current && pendingSendRef.current.sessionId === payload.sessionId) {
+                const toSend = pendingSendRef.current;
+                pendingSendRef.current = null;
+                socket.send(JSON.stringify(toSend.payload));
+                setToolProgressMsg('');
+              }
+            } else {
+              sessionReadyRef.current = false;
+            }
+          }
           return;
         }
 
@@ -644,7 +677,8 @@ export function SuperAgentConsole({
           payload, setLoading, setToolProgressMsg, setMessages, setSubagentList,
           setPendingPermission, setPendingQuestion, setSelectedQuestionAnswers,
           setCustomQuestionInput, setPendingPlanApproval, isAbortedRef, activeSessionIdRef.current,
-          setTokenUsage
+          setTokenUsage,
+          turnRecordsRef
         );
       } catch (e) {
         setMessages(prev => [...prev, { role: 'assistant', text: event.data }]);
@@ -655,6 +689,7 @@ export function SuperAgentConsole({
     socket.onclose = (event) => {
       window.clearTimeout(connectTimeout);
       if (wsRef.current !== socket) return; // Prevent stale close events from reconnecting a replacement.
+      sessionReadyRef.current = false;
       console.log('[SuperAgent WS] Connection closed.', { code: event.code, clean: event.wasClean });
       setBrowserBridgeReady(false);
       if (approvalInFlight.current) {
@@ -800,29 +835,18 @@ export function SuperAgentConsole({
     // partially written chat draft in the current composer.
     if (!options?.preserveDraft) setInput('');
     setLoading(true);
-    setToolProgressMsg('Reading attachments...');
+    setToolProgressMsg('Preparing message...');
 
-    let finalPrompt = prompt;
-
-    // Process attachments
-    if (attachments.length > 0) {
-      const documentParts: string[] = [];
-      const imageParts: string[] = [];
-      for (const att of attachments) {
-        try {
-          if (att.type === 'document') {
-            const content = await readFileAsText(att.file);
-            documentParts.push(`\n--- ATTACHED FILE: ${att.file.name} ---\n${content}\n---------------------------------\n`);
-          } else if (att.type === 'image') {
-            const base64 = await readFileAsDataURL(att.file);
-            imageParts.push(`\n--- ATTACHED IMAGE: ${att.file.name} ---\nData URL: ${base64}\n----------------------------------\n`);
-          }
-        } catch (err) {
-          console.error('Failed to read file:', att.file.name, err);
-        }
-      }
-      if (documentParts.length > 0) finalPrompt += '\n\n[Attached Files]:' + documentParts.join('');
-      if (imageParts.length > 0) finalPrompt += '\n\n[Attached Images]:' + imageParts.join('');
+    // Multimodal input preparation (P1 DEEP-09)
+    const prepResult = await prepareMultimodalPrompt(prompt, attachments, readFileAsText);
+    if (!prepResult.success) {
+      setLoading(false);
+      setToolProgressMsg('');
+      setMessages(prev => [...prev, {
+        role: 'system',
+        text: `⚠️ ${prepResult.error}`,
+      }]);
+      return;
     }
 
     // Clean up previews
@@ -832,27 +856,55 @@ export function SuperAgentConsole({
     setAttachments([]);
 
     let targetSessionId = activeSessionId;
+    let isBrandNewSession = false;
     if (!targetSessionId || !sessions.some(s => s.id === targetSessionId)) {
       targetSessionId = handleNewChat();
+      isBrandNewSession = true;
     }
 
-    setToolProgressMsg('');
-    setMessages(prev => [...prev, { role: 'user', text: prompt || `Sent ${attachments.length} attachment(s)` }]);
+    const { promptText, parts, cleanDisplayText } = prepResult.submission;
 
-    // Save to history
-    if (!options?.skipHistory && prompt && !history.includes(prompt)) {
-      const newHistory = [prompt, ...history].slice(0, 50);
+    setToolProgressMsg('');
+    setMessages(prev => [...prev, { role: 'user', text: cleanDisplayText }]);
+
+    // Save to history: clean text only, never raw base64 data URLs
+    if (!options?.skipHistory && cleanDisplayText && !history.includes(cleanDisplayText)) {
+      const newHistory = [cleanDisplayText, ...history].slice(0, 50);
       setHistory(newHistory);
       localStorage.setItem('superagent_prompt_history', JSON.stringify(newHistory));
     }
     setHistoryIndex(-1);
 
-    ws.send(JSON.stringify({
+    const promptPayload = {
       type: 'prompt',
-      text: finalPrompt,
+      text: promptText,
       sessionId: targetSessionId,
-      clientMessageId: crypto.randomUUID()
-    }));
+      clientMessageId: crypto.randomUUID(),
+      parts: parts.length > 0 ? parts : undefined,
+    };
+
+    // SESSION SEND BUG & P1 DEEP-08:
+    // If handleSend creates a new session, or if socket is not bound to targetSessionId and READY,
+    // do not send through an older or unready socket.
+    // Queue the submission; when the socket for targetSessionId reaches READY, it will dispatch exactly once.
+    const isSocketReadyForSession =
+      !isBrandNewSession &&
+      targetSessionId === activeSessionId &&
+      sessionReadyRef.current &&
+      ws &&
+      ws.readyState === WebSocket.OPEN;
+
+    if (isSocketReadyForSession) {
+      ws.send(JSON.stringify(promptPayload));
+    } else {
+      pendingSendRef.current = {
+        sessionId: targetSessionId,
+        payload: promptPayload,
+        displayText: cleanDisplayText,
+        skipHistory: options?.skipHistory,
+      };
+      setToolProgressMsg('Waiting for agent session to become ready...');
+    }
   };
 
   // A verified desktop pairing may request one ordinary chat turn in the

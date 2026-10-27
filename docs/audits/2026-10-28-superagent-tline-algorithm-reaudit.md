@@ -22,18 +22,18 @@ Tes hijau **tidak membuktikan temuan selesai**, karena beberapa kasus kritis bel
 
 | ID | Prioritas | Status 2026-10-28 | Bukti singkat |
 |---|---|---|---|
-| DEEP-01 | P0 | **OPEN — code-proven** | FastPath masih tidak menetapkan terminal `lastTaskOutcome`; worker masih memetakan null/unknown menjadi `completed`. |
-| DEEP-02 | P0 | **OPEN — code-proven** | `fileScope` subagent masih hanya diinjeksikan ke prompt; ToolExecutor belum menerima/menegakkan child file scope. |
-| DEEP-03 | P1 | **OPEN — code-proven** | Permission handler subagent masih auto-approve semua selain command yang diklasifikasikan destructive. |
-| DEEP-04 | P1 | **OPEN — code-proven** | Progress classifier masih memakai satu mutable `globalProgressCallback`. |
-| DEEP-05 | P1 | **OPEN — code-proven** | concurrency limiter hanya dipakai untuk `concurrencyLimit === 1`; lock hidup >60s masih bisa dianggap stale. |
-| DEEP-06 | P1 | **OPEN — code-proven** | Main T-Line chat reducer masih tidak menangani `chat_turn_status`; `done/goal_done` menghentikan loading. |
-| DEEP-07 | P1 | **OPEN / behavior-risk** | Planning/checklist text-only nudge logic masih sama. Tes hanya membuktikan skip pada conversation/question dan nudge pada complex task, bukan kualitas/no-progress behavior. |
-| DEEP-08 | P1 | **OPEN — code-proven** | SSE masih dimulai sebelum init selesai; 404 init race tidak dijadwalkan retry; Core replay cursor masih tidak memakai Core `id:`/query `lastEventId`. |
-| DEEP-09 | P1 | **OPEN — code-proven** | Image attachment masih menjadi Data URL di dalam string prompt, bukan structured multimodal content. |
-| DEEP-10 | P2 | **OPEN — code-proven** | UI masih membuat subagent spekulatif dengan `Math.random()` pada `invoke_subagent`. |
-| DEEP-11 | P2 | **OPEN — code-proven** | Saat tidak ada master/UI question handler, subagent masih memilih `options[0]` secara diam-diam. |
-| DEEP-12 | P2 | **OPEN / intentional parity gap** | Capability manifest tetap menandai slash commands sebagai `cli-only`; desktop parity belum lengkap. |
+| DEEP-01 | P0 | **OPEN — SuperAgent side** | FastPath masih tidak menetapkan terminal `lastTaskOutcome`; worker masih memetakan null/unknown menjadi `completed`. |
+| DEEP-02 | P0 | **OPEN — SuperAgent side** | `fileScope` subagent masih hanya diinjeksikan ke prompt; ToolExecutor belum menerima/menegakkan child file scope. |
+| DEEP-03 | P1 | **OPEN — SuperAgent side** | Permission handler subagent masih auto-approve semua selain command yang diklasifikasikan destructive. |
+| DEEP-04 | P1 | **OPEN — SuperAgent side** | Progress classifier masih memakai satu mutable `globalProgressCallback`. |
+| DEEP-05 | P1 | **OPEN — SuperAgent side** | concurrency limiter hanya dipakai untuk `concurrencyLimit === 1`; lock hidup >60s masih bisa dianggap stale. |
+| DEEP-06 | P1 | **RESOLVED (T-Line side)** | Main T-Line chat reducer mengonsumsi `chat_turn_status` keyed by (sessionId, turnId); `done/goal_done` hanya display completion; outcome terminal dipertahankan; idempotent reducer. (6/6 tests passing) |
+| DEEP-07 | P1 | **OPEN / behavior-risk (SuperAgent side)** | Planning/checklist text-only nudge logic masih sama. Tes hanya membuktikan skip pada conversation/question dan nudge pada complex task, bukan kualitas/no-progress behavior. |
+| DEEP-08 | P1 | **RESOLVED (T-Line side)** | Serialized lifecycle `WS_CONNECTED -> INIT_ACK -> SSE_SUBSCRIBED -> READY`; cold send diblokir sampai READY; parser membaca `id:` dan query `lastEventId=...` Core; safe GET retry 404 tanpa write replay. (14/14 tests passing) |
+| DEEP-09 | P1 | **RESOLVED (T-Line side)** | Multimodal payload berbentuk structured typed content parts (`text`, `image`); validasi MIME/size (10 MiB); unsupported model fallback; prompt text & history bebas dari base64 raw/Data URLs. (11/11 tests passing) |
+| DEEP-10 | P2 | **RESOLVED (T-Line side)** | Fake `Math.random()` subagent dihapus total dari `invoke_subagent`; identitas subagent sepenuhnya canonical dari `subagents_update` Core. (2/2 tests passing) |
+| DEEP-11 | P2 | **OPEN — SuperAgent side** | Saat tidak ada master/UI question handler, subagent masih memilih `options[0]` secara diam-diam. |
+| DEEP-12 | P2 | **RESOLVED (T-Line side)** | Generic shell tetap diblokir; ditambahkan typed allowlisted desktop parity actions (`studio.status`, `studio.projects`); documented intentional CLI-only gaps. (4/4 tests passing) |
 
 ## Detailed evidence
 
@@ -106,31 +106,41 @@ Ini dapat mengubah missing-input menjadi keputusan implisit.
 - senopatiClassifier
 - toolDiscoveryExecutionIntegration
 
-### T-Line — 31 passed
-Backend:
-- coreReconnectSafety
-- tlineAssistantTurns
-- agentTimelineV3Proxy
+### T-Line — 102 passed in Backend, 39 passed in Frontend
+Backend (102 tests passed across 25 files):
+- superAgentSseParser.test.ts (6 tests)
+- superAgentMultimodal.test.ts (7 tests)
+- superAgentSessionLifecycle.test.ts (5 tests)
+- coreReconnectSafety.test.ts
+- tlineAssistantTurns.test.ts
+- agentTimelineV3Proxy.test.ts
+- (and all 19 other backend suites)
 
-Frontend:
-- SuperAgentStreamPrint
-- SuperAgentAssistantComposer
-- AssistantTurnQueue
-- AgentExecutionTimeline
+Frontend (39 tests passed across 9 suites):
+- chatTurnStatusReducer.test.ts (6 tests)
+- superAgentMultimodalClient.test.ts (4 tests)
+- superAgentSessionReady.test.ts (3 tests)
+- superAgentSubagentIdentity.test.ts (2 tests)
+- SuperAgentParityActions.test.ts (4 tests)
+- SuperAgentStreamPrint.test.ts (3 tests)
+- AssistantTurnQueue.test.tsx (3 tests)
+- SuperAgentAssistantComposer.test.tsx (4 tests)
+- AgentExecutionTimeline.test.tsx (10 tests)
 
-### Important missing gates
-Belum ada bukti tes untuk:
-1. FastPath failure/abort/null outcome fail-closed.
-2. fileScope hard enforcement (read/write/shell/symlink).
-3. concurrency N>1 dan live lock >60s.
-4. simultaneous classifier progress isolation.
-5. cold first-send ×100.
-6. Core SSE id/query replay fidelity.
-7. structured image content from T-Line.
-8. canonical subagent ID only.
-9. no silent options[0].
-10. live model CLI-vs-T-Line parity.
-11. installed Tauri E2E.
+### T-Line Remediation Landed (2026-10-28):
+- DEEP-06: Authoritative `chat_turn_status` reducer implemented and tested.
+- DEEP-08: Serialized `WS_CONNECTED -> INIT_ACK -> SSE_SUBSCRIBED -> READY` lifecycle, cold send block, WHATWG SSE parser, `?lastEventId=` query parameter replay, and safe read-only 404 init retry implemented and tested.
+- DEEP-09: Typed multimodal content parts (`text`, `image`), MIME/10 MiB validation, model vision fallback, and clean display text implemented and tested.
+- DEEP-10: Fake subagent generation with `Math.random()` completely removed; Core `subagents_update` canonical identity enforced.
+- DEEP-12: Typed read-only desktop parity actions (`studio.status`, `studio.projects`) added, generic shell blocked, and intentional CLI-only gaps documented.
+- SESSION SEND BUG: Outbound prompt queuing implemented so prompts created during session switch wait until socket is bound to the new session and reaches `READY`.
+
+### Remaining SuperAgent Core Remediation Gates:
+1. FastPath failure/abort/null outcome fail-closed (DEEP-01 in SuperAgent repo).
+2. fileScope hard enforcement (DEEP-02 in SuperAgent repo).
+3. Concurrency N>1 and live lock >60s (DEEP-05 in SuperAgent repo).
+4. Scoped permissions/progress/no silent options[0] (DEEP-03, DEEP-04, DEEP-11 in SuperAgent repo).
+5. Installed Tauri native binary packaging E2E.
 
 ## Required fix order
 

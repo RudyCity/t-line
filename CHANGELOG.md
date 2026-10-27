@@ -1,3 +1,13 @@
+## [1.3.752] - 2026-10-28
+
+### Assistant Runtime Algorithm Remediation (T-Line Client)
+- **Authoritative Turn Status & Durable Outcomes (DEEP-06)**: Main chat state consumes authoritative `chat_turn_status` keyed by `(sessionId, turnId)`. Treated `done` and `goal_done` streaming markers as display-completion signals only, preserving completed, failed, interrupted, cancelled, and needs-input outcomes idempotently.
+- **Session READY Lifecycle & SSE Replay Binding (DEEP-08)**: Serialized connection lifecycle through `WS_CONNECTED -> INIT_ACK -> SSE_SUBSCRIBED -> READY`. Blocked cold prompt dispatch until lifecycle reaches READY. Implemented standards-compliant SSE stream parser tracking Core `id:` lines and reconnecting with `?lastEventId=...`. Added safe read-only GET retry on cold init without write replay.
+- **Multimodal Payload Structure (DEEP-09)**: Replaced string Data URL concatenation with typed structured content parts (`text` and `image`). Added MIME and 10 MiB limit validation, unsupported-model fallback, and pure base64 encoding without leaking base64 data into chat history or visible prompt text.
+- **Canonical Subagent Identity (DEEP-10)**: Removed speculative subagent item generation using random identifiers during tool invocation; enforced authoritative subagent identity exclusively from canonical lifecycle updates.
+- **Typed Read-Only Desktop Parity (DEEP-12)**: Kept generic shell commands blocked while adding typed read-only desktop parity actions (`studio.status`, `studio.projects`) and documenting intentional CLI-only gaps.
+- **Session Transition Send Queue**: Fixed session switch dispatch race by queuing outbound prompts until the newly created session socket is connected and reaches READY.
+
 ## [1.3.751] - 2026-10-27
 
 ### Studio Desktop Editor Two-Way Agent Control & Real-Time Sync

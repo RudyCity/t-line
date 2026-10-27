@@ -390,6 +390,8 @@ export function getSubCommands(
   if (cleanCmd === '/studio') {
     return [
       { command: '/studio open', description: 'Open SuperAgent Studio editor' },
+      { command: '/studio status', description: 'Check SuperAgent Studio motion engine status (read-only)' },
+      { command: '/studio projects', description: 'List Studio projects (read-only)' },
       { command: '/studio help', description: 'Show Studio command usage' },
     ];
   }

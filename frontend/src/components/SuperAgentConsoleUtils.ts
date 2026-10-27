@@ -1,5 +1,6 @@
 import { ModelPreset } from './SuperAgentPresetManager';
 import { studioControlChannel } from '../services/studioControlChannel';
+import { applyChatTurnStatus, TurnRecord } from './chatTurnStatusReducer';
 
 export const getAuthHeader = (): Record<string, string> => {
   const token = localStorage.getItem('token');
@@ -164,10 +165,22 @@ export const handleAgentEventPayload = (
   setPendingPlanApproval: (b: boolean) => void,
   isAbortedRef: React.MutableRefObject<boolean>,
   currentActiveSessionId?: string,
-  setTokenUsage?: React.Dispatch<React.SetStateAction<any>>
+  setTokenUsage?: React.Dispatch<React.SetStateAction<any>>,
+  turnRecordsRef?: React.MutableRefObject<Map<string, TurnRecord>>
 ) => {
   // Filter out stray background events belonging to a different session using normalized matching
   if (payload.sessionId && currentActiveSessionId && !isMatchingSessionId(payload.sessionId, currentActiveSessionId)) {
+    return;
+  }
+  if (payload.type === 'chat_turn_status') {
+    if (turnRecordsRef) {
+      applyChatTurnStatus(payload, turnRecordsRef.current, setMessages, setLoading, setToolProgressMsg);
+    } else {
+      if (['completed', 'failed', 'interrupted', 'cancelled'].includes(payload.status)) {
+        setLoading(false);
+        setToolProgressMsg('');
+      }
+    }
     return;
   }
   if (payload.type === 'chat_response') {
@@ -223,6 +236,8 @@ export const handleAgentEventPayload = (
 
     if (innerEvent.type === 'done' || innerEvent.type === 'goal_done') {
       if (!isAbortedRef.current) {
+        // Display completion only: stop spinner and clear progress text.
+        // Authoritative outcome is preserved via chat_turn_status, not done/goal_done.
         setLoading(false);
         setToolProgressMsg('');
       }
@@ -331,25 +346,8 @@ export const handleAgentEventPayload = (
         }
       }
 
-      if (toolName === 'invoke_subagent' && args) {
-        const subagentsPayload = args.Subagents || args.subagents || [];
-        if (Array.isArray(subagentsPayload)) {
-          subagentsPayload.forEach((sa: any) => {
-            const saId = Math.random().toString(36).substring(7);
-            setSubagentList(prev => [
-              {
-                id: saId,
-                role: sa.Role || sa.role || sa.TypeName || 'subagent',
-                typeName: sa.TypeName || sa.typeName,
-                status: 'RUNNING',
-                prompt: sa.Prompt || sa.prompt,
-                logs: [`[${new Date().toLocaleTimeString()}] Subagent launched: ${sa.Role || sa.TypeName}`]
-              },
-              ...prev
-            ]);
-          });
-        }
-      }
+      // P2 DEEP-10: Do not create fake RUNNING subagents with Math.random().
+      // Subagents list is managed canonically by Core's subagents_update events.
       setMessages(prev => {
         let idx = -1;
         // Priority 1: match exact callId if available
