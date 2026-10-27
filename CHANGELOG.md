@@ -1,3 +1,14 @@
+## [1.3.747] - 2026-10-27
+
+### Timeline-First Studio Editor & Unified Assistant Director Control
+- Implemented the complete desktop Studio video workstation architecture with a timeline-first 3-column layout (docked Media Bin left, aspect-ratio-aware video stage center, properties inspector right, and full-width multi-track NLE timeline bottom).
+- Consolidated conversational AI director controls into the primary Assistant chat console, removing redundant split/prompt tabs while retaining creative generation and analysis tools via `StudioQuickDirectPanel.tsx`.
+- Integrated canonical SuperAgent motion tools (`studio_list_projects`, `studio_inspect_project`, `studio_edit_project`, and `studio_desktop_focus`) with optimistic revision locks, change receipts, and conflict detection.
+- Added desktop-only studio control channel (`studioControlChannel.ts` and `useStudioHandoff.ts`) for typed view navigation and project selection without exposing generic DOM or shell commands.
+- Implemented multi-track clip NLE operations (`studioClipEdits.ts` and `StudioMultiTrackTimeline.tsx`) supporting video/audio clip lanes, split at playhead, trim in/out, move with magnetic snapping, ripple delete, track mute/solo/lock, and bi-directional synchronization with canonical project state.
+- Enhanced tool execution feedback in `SuperAgentToolItem.tsx` with formatted operation receipts and quick interactive desktop navigation triggers.
+- Verified all component, hook, and service test suites (51/51 tests passing) with zero regressions, strict file length limits (<1000 LOC), and clean production builds across backend and frontend.
+
 ## [1.3.746] - 2026-10-27
 
 ### Desktop Studio Editor & Unified Assistant Direction (Planning Only)

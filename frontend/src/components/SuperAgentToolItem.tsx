@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronDown, FileCode, Search, Terminal, Wrench, Cpu, Check, Copy, Code2, Maximize2, Minimize2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, FileCode, Search, Terminal, Wrench, Cpu, Check, Copy, Code2, Maximize2, Minimize2, Clapperboard, Film, Sliders } from 'lucide-react';
+import { studioControlChannel } from '../services/studioControlChannel';
 
 interface SuperAgentToolItemProps {
   msg: {
@@ -59,6 +60,42 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
 
   const getToolDetails = () => {
     const actionName = rawToolName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+    // 0. Studio NLE & Agent Control Tools
+    if (rawToolName.startsWith('studio_') || rawToolName === 'studio') {
+      const subAction = rawToolName.replace(/^studio_/, '');
+      if (subAction === 'edit_project') {
+        const op = args.operation || (Array.isArray(args.operations) ? `${args.operations.length} ops` : 'edit');
+        const proj = args.projectId || 'project';
+        return {
+          action: 'Studio Edit',
+          target: `${proj} (${op})`,
+          icon: <Clapperboard className="w-3 h-3 text-cyan-400 shrink-0" />
+        };
+      }
+      if (subAction === 'desktop_focus') {
+        const actionType = args.action?.type || 'focus';
+        return {
+          action: 'Studio Focus',
+          target: actionType,
+          icon: <Film className="w-3 h-3 text-fuchsia-400 shrink-0" />
+        };
+      }
+      if (subAction === 'inspect_project') {
+        return {
+          action: 'Studio Inspect',
+          target: args.projectId || 'project',
+          icon: <Sliders className="w-3 h-3 text-cyan-400 shrink-0" />
+        };
+      }
+      if (subAction === 'list_projects') {
+        return {
+          action: 'Studio Projects',
+          target: 'list',
+          icon: <Film className="w-3 h-3 text-cyan-400 shrink-0" />
+        };
+      }
+    }
 
     // 1. Read / View File
     if (rawToolName.includes('view') || rawToolName.includes('read') || rawToolName.includes('file')) {
@@ -252,6 +289,73 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
               </button>
             </div>
           </div>
+
+          {/* Studio Specific Receipt Card & Quick Navigation */}
+          {rawToolName.startsWith('studio_') && (
+            <div className="rounded border border-cyan-800/60 bg-cyan-950/20 p-2 text-xs font-sans space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-cyan-300 flex items-center gap-1.5">
+                  <Clapperboard className="w-3.5 h-3.5 text-cyan-400" />
+                  Studio Workstation Action
+                </span>
+                {result?.receipt && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-900/40 text-cyan-200 border border-cyan-700/50 font-mono">
+                    rev {result.receipt.revisionBefore} → {result.receipt.revisionAfter}
+                  </span>
+                )}
+              </div>
+
+              {result?.receipt?.summary && (
+                <p className="text-[11px] text-[var(--text-main)] font-medium leading-relaxed">
+                  {result.receipt.summary}
+                </p>
+              )}
+
+              {result?.receipt?.affectedEntities?.layers && result.receipt.affectedEntities.layers.length > 0 && (
+                <div className="text-[10px] text-[var(--text-muted)] font-mono">
+                  Affected layers: <span className="text-cyan-300">{result.receipt.affectedEntities.layers.join(', ')}</span>
+                </div>
+              )}
+
+              <div className="pt-1 flex flex-wrap gap-2">
+                {(args.projectId || result?.projectId || result?.receipt?.projectId) && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const projId = args.projectId || result?.projectId || result?.receipt?.projectId;
+                      studioControlChannel.emitAction({
+                        type: 'open_project',
+                        workspacePath: args.workspacePath || '',
+                        projectId: projId,
+                      });
+                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-cyan-800/40 hover:bg-cyan-700/50 text-cyan-200 border border-cyan-600/50 text-[11px] font-sans font-medium transition-colors"
+                  >
+                    <Clapperboard className="w-3 h-3 text-cyan-400" />
+                    <span>Focus in Studio</span>
+                  </button>
+                )}
+
+                {(args.action || result?.action) && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const act = args.action || result?.action;
+                      if (act) {
+                        studioControlChannel.emitAction(act);
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-fuchsia-800/40 hover:bg-fuchsia-700/50 text-fuchsia-200 border border-fuchsia-600/50 text-[11px] font-sans font-medium transition-colors"
+                  >
+                    <Film className="w-3 h-3 text-fuchsia-400" />
+                    <span>Apply View Navigation</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {hasArgs && (
             <div>

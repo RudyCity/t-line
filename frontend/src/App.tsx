@@ -98,6 +98,7 @@ import { TabTooltip, TabContextMenu } from './components/TabUiComponents';
 import { NewTerminalButton } from './components/NewTerminalButton';
 import { getRuntimeSearchParams } from './utils/runtimeQuery';
 import { browserHandoffWorkspace } from './components/browserHandoffRouting';
+import { useStudioHandoff } from './hooks/useStudioHandoff';
 import { reconcileTabs, reconcileTerminalInstances } from './utils/syncReconcile';
 import { shellForDigit, getShellMeta, isCustomShell } from './utils/shellUtils';
 
@@ -545,6 +546,9 @@ export default function App() {
       window.removeEventListener('tline-open-browser-tab', handleOpenBrowserTab);
     };
   }, [openBrowserTab, panelWorkspace?.id]);
+
+  // Synchronize Assistant Studio focus actions with desktop tab navigation
+  useStudioHandoff({ workspaces, panelWorkspace, openStudioTab });
 
   // Listen for terminal file path click event to open as a file tab
   useEffect(() => {

@@ -925,23 +925,15 @@ describe('Native T-Line Studio Studio editor', () => {
     await act(async () => { resolveList?.([{ id, name: 'Old scene', revision: 1 }]); });
     expect(studioApi.inspect).not.toHaveBeenCalled();
   });
-  it('switches between Prompt, Editor and Split workstation views', async () => {
+  it('renders unified timeline-first editor workstation with media bin, canvas, inspector and timeline', async () => {
     render(<StudioTab workspacePath="D:/projects/studio" isActive />);
     await screen.findByText('Choose a scene to edit');
     fireEvent.change(screen.getByLabelText('Select Studio project'), { target: { value: id } });
     await screen.findByDisplayValue('Product intro');
 
-    expect(screen.getByRole('tab', { name: /Split/i })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByTestId('motion-canvas')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('tab', { name: /Prompt/i }));
-    expect(await screen.findByText('AI Studio Director Mode')).toBeInTheDocument();
-    expect(screen.getByText('Scene Live Preview')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('tab', { name: /Editor/i }));
-    expect(await screen.findByText('Need AI assistance?')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('tab', { name: /Split/i }));
-    expect(screen.getByRole('tab', { name: /Split/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByLabelText('Studio layers')).toBeInTheDocument();
+    expect(screen.getByLabelText('Layer inspector')).toBeInTheDocument();
+    expect(screen.getByLabelText('Studio timeline')).toBeInTheDocument();
   });
 });
