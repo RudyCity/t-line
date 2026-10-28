@@ -36,6 +36,7 @@ import { previewProxy, purgeTabProxyTarget } from './previewProxy';
 import { TLINE_HELPER_CODE } from './tline-helper-code';
 import { handleSuperAgentConnection, startSuperAgentEager } from './superAgentBridge';
 import superAgentRouter from './superAgentRoutes';
+import { createOrchestrationProxy } from './orchestrationProxy';
 import { closeSessionDb } from './sessionManager';
 import { installBackendCrashDiagnostics } from './crashDiagnostics';
 import { resolveRuntimeTarget } from './superAgentRuntimeTarget';
@@ -316,6 +317,7 @@ app.get('/tline-helper.js', (req, res) => {
 });
 
 app.use('/api/superagent', superAgentRouter);
+app.use('/api/orchestration', createOrchestrationProxy());
 
 app.use('/api', gitRouter);
 app.use('/api/fs', fsRouter);

@@ -18,6 +18,7 @@ import { createAgentTimelineProxy } from './agentTimelineProxy';
 import { createApprovalStatusProxy } from './approvalStatusProxy';
 import { createAgentTimelineStreamProxy } from './agentTimelineStreamProxy';
 import { createTlineAssistantTurnsRouter } from './tlineAssistantTurns';
+import { createOrchestrationProxy } from './orchestrationProxy';
 import { getWorkspaceSessions, getSessionMessages } from './sessionManager';
 import { getBrowserAgentSessions } from './browserSessions';
 
@@ -35,6 +36,7 @@ router.use('/assistant/agent-timeline', createAgentTimelineProxy());
 router.use('/assistant/approvals', createApprovalStatusProxy());
 router.use('/assistant/agent-stream', createAgentTimelineStreamProxy());
 router.use('/assistant/turns', createTlineAssistantTurnsRouter());
+router.use('/orchestration', createOrchestrationProxy());
 
 // Read-only runtime choice: T-Line never runs a second backend for testing.
 // There is intentionally no hot-switch POST: agent effects/sessions must not

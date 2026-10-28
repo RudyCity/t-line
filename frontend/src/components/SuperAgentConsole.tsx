@@ -28,7 +28,8 @@ import { getAuthHeader, readFileAsText, getMainModelLabel as getModelLabelUtil, 
 import { extractLifecycleWarnings } from '../services/sessionLifecycleContract';
 import { prepareMultimodalPrompt } from './superAgentMultimodalClient';
 import { TurnRecord } from './chatTurnStatusReducer';
-import { History, Folder, Activity, Sparkles, RefreshCw, ArrowDown, MoreVertical, Brain } from 'lucide-react';
+import { History, Folder, Activity, Sparkles, RefreshCw, ArrowDown, MoreVertical, Brain, Network } from 'lucide-react';
+import { CliBridgeOrchestrationDashboard } from './CliBridgeOrchestrationDashboard';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { getAuthToken } from '../utils/tokenStorage';
 import { bridgeReconnectDelay, shouldResetBridgeRetryBudget } from '../services/bridgeReconnectPolicy';
@@ -65,6 +66,7 @@ export function SuperAgentConsole({
   // Session & Chat History management
   const [showHistorySidebar, setShowHistorySidebar] = useState<boolean>(true);
   const [showBrainExplorer, setShowBrainExplorer] = useState(false);
+  const [showOrchestrationModal, setShowOrchestrationModal] = useState(false);
   const {
     sessions,
     activeSessionId,
@@ -1332,6 +1334,14 @@ export function SuperAgentConsole({
             <Brain size={16} />
           </button>
           <button
+            onClick={() => setShowOrchestrationModal(true)}
+            className="p-2 rounded-lg border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 hover:text-indigo-200 transition flex items-center justify-center cursor-pointer shadow-xs"
+            title="Multi-Agent Orchestration Engine (M1–M6 Live)"
+          >
+            <Network className="w-4 h-4 text-indigo-400" />
+          </button>
+
+          <button
             onClick={() => setShowSidebar(!showSidebar)}
             className={`p-2 rounded-lg border transition flex items-center justify-center cursor-pointer ${
               showSidebar 
@@ -1701,6 +1711,18 @@ export function SuperAgentConsole({
         onDeleteCustomPreset={handleDeleteCustomPreset} getAuthHeader={getAuthHeader}
         defaultTab={settingsModalTab}
       />
+
+      {/* Multi-Agent Orchestration Engine Dashboard Modal (M6) */}
+      {showOrchestrationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 sm:p-8 animate-fade-in">
+          <div className="bg-[#0d1117] border border-slate-700/80 rounded-2xl w-full max-w-6xl h-[90vh] shadow-2xl overflow-hidden flex flex-col">
+            <CliBridgeOrchestrationDashboard
+              workspacePath={workspace}
+              onClose={() => setShowOrchestrationModal(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, Folder, Sparkles, Key, Sliders } from 'lucide-react';
+import { RefreshCw, Folder, Sparkles, Key, Sliders, Network } from 'lucide-react';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { ModelPreset } from './SuperAgentPresetManager';
 
@@ -17,6 +17,7 @@ interface SuperAgentConsoleHeaderProps {
   onPresetChange?: (presetId: string) => void;
   activeProviderName?: string;
   onOpenSettingsModal?: (tab?: 'login' | 'presets' | 'execution' | 'monitor') => void;
+  onOpenOrchestration?: () => void;
 }
 
 export function SuperAgentConsoleHeader({
@@ -32,7 +33,8 @@ export function SuperAgentConsoleHeader({
   activePresetId = { single: '', multi: '' },
   onPresetChange,
   activeProviderName = '',
-  onOpenSettingsModal
+  onOpenSettingsModal,
+  onOpenOrchestration
 }: SuperAgentConsoleHeaderProps) {
   const currentModePresets = presets[agentMode] || [];
   const currentActivePreset = activePresetId[agentMode] || '';
@@ -123,8 +125,19 @@ export function SuperAgentConsoleHeader({
         </div>
       </div>
 
-      {/* Right Controls: Provider Badge & Full Settings Trigger */}
+      {/* Right Controls: Provider Badge, Orchestration Dashboard & Full Settings Trigger */}
       <div className="flex items-center gap-2 pt-3 sm:pt-0">
+        {onOpenOrchestration && (
+          <button
+            onClick={onOpenOrchestration}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 hover:text-indigo-200 transition text-[11px]"
+            title="Open Live Multi-Agent Orchestration Engine"
+          >
+            <Network className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Orchestration</span>
+          </button>
+        )}
+
         {onOpenSettingsModal && (
           <button
             onClick={() => onOpenSettingsModal('login')}
