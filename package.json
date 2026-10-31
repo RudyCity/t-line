@@ -26,7 +26,7 @@
     "prebuild": "bun scripts/sync-version.cjs",
     "build": "bun run build:frontend && bun run build:backend",
     "start": "bun dist/cli.js",
-    "test": "cd frontend && bun --bun x vitest run --config vite.config.ts && cd .. && bun --bun x vitest run --environment node tests/auth.test.ts tests/superAgentRuntime.test.ts tests/superAgentParityBridge.test.ts tests/superAgentPortProbe.test.ts tests/superAgentTaskEvents.test.ts tests/superAgentTaskCancel.test.ts tests/superAgentTaskRetry.test.ts",
+    "test": "cd frontend && bun --bun x vitest run --config vite.config.ts && cd .. && bun --bun x vitest run --environment node tests/auth.test.ts tests/superAgentRuntime.test.ts tests/superAgentParityBridge.test.ts tests/superAgentPortProbe.test.ts tests/superAgentTaskEvents.test.ts tests/superAgentTaskCancel.test.ts tests/superAgentTaskRetry.test.ts && cd backend && bun --bun x vitest run tests/projectBrowserProxy.test.ts",
     "parity:sync": "bun scripts/audit-superagent-parity.cjs",
     "parity:check": "bun scripts/audit-superagent-parity.cjs --check",
     "verify:brain": "bun scripts/check-brain-runtime.cjs && bun scripts/check-brain-docs.cjs",

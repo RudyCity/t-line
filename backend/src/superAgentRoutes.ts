@@ -173,6 +173,238 @@ function proxyToSuperAgent(pathName: string, fallback: any, workspace?: string, 
   });
 }
 
+type SuperAgentProxyResult = { status: number; payload: any };
+
+export function proxyToSuperAgentWithStatus(
+  pathName: string,
+  method: 'GET' | 'POST' | 'DELETE' = 'GET',
+  body?: unknown,
+  timeoutMs = 3500,
+): Promise<SuperAgentProxyResult> {
+  return new Promise((resolve) => {
+    const url = `http://127.0.0.1:${resolveSuperAgentCorePort()}${pathName}`;
+    const headers: Record<string, string> = getSuperAgentServiceHeaders();
+    if (!headers.Authorization) {
+      resolve({
+        status: 503,
+        payload: { success: false, error: 'SuperAgent service authentication is unavailable.' },
+      });
+      return;
+    }
+    headers['x-client-mode'] = 'tline';
+    const postData = body === undefined ? undefined : JSON.stringify(body);
+    if (postData !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      headers['Content-Length'] = String(Buffer.byteLength(postData));
+    }
+
+    const upstream = http.request(url, { method, headers, timeout: timeoutMs }, (resp) => {
+      let responseBody = '';
+      resp.on('data', chunk => { responseBody += chunk; });
+      resp.on('end', () => {
+        let payload: any = {};
+        if (responseBody) {
+          try {
+            payload = JSON.parse(responseBody);
+          } catch {
+            payload = { success: false, error: 'Invalid response from SuperAgent Core.' };
+          }
+        }
+        resolve({ status: resp.statusCode || 502, payload });
+      });
+    });
+    upstream.on('error', () => resolve({
+      status: 503,
+      payload: { success: false, error: 'SuperAgent project browser API is unavailable.' },
+    }));
+    upstream.on('timeout', () => {
+      upstream.destroy();
+      resolve({
+        status: 503,
+        payload: { success: false, error: 'SuperAgent project browser API timed out.' },
+      });
+    });
+    if (postData !== undefined) upstream.write(postData);
+    upstream.end();
+  });
+}
+
+const PROJECT_BROWSER_FILTERS = new Set(['all', 'registered', 'discovered', 'active', 'unavailable']);
+const PROJECT_BROWSER_CAPABILITIES = new Set(['read', 'write', 'execute', 'git', 'worktree', 'planning', 'chain']);
+const PROJECT_BROWSER_ID_RE = /^[a-z0-9](?:[a-z0-9-]{0,62})$/;
+const PROJECT_BROWSER_CATALOG_ID_RE = /^cat_[a-f0-9]{16}$/;
+const PROJECT_BROWSER_IDENTITY_HANDLE_RE = /^idh_[a-f0-9]{16}$/;
+const PROJECT_BROWSER_SENSITIVE_FIELDS = new Set([
+  'root', 'target', 'token', 'bearerToken', 'credentialHash', 'principalKey',
+]);
+
+function hasSensitiveProjectBrowserField(body: Record<string, unknown>): boolean {
+  return Object.keys(body).some(key => PROJECT_BROWSER_SENSITIVE_FIELDS.has(key));
+}
+
+function sendProjectBrowserValidationError(res: any, message: string) {
+  res.status(400).json({ success: false, error: message });
+}
+
+router.get('/projects/browser', async (req, res) => {
+  const filter = typeof req.query.filter === 'string' ? req.query.filter.trim().toLowerCase() : 'all';
+  if (!PROJECT_BROWSER_FILTERS.has(filter)) {
+    sendProjectBrowserValidationError(res, 'Invalid project browser filter.');
+    return;
+  }
+  const query = typeof req.query.query === 'string' ? req.query.query : '';
+  if (query.length > 500) {
+    sendProjectBrowserValidationError(res, 'Project browser query is too long.');
+    return;
+  }
+  const identityHandle = typeof req.query.identityHandle === 'string' ? req.query.identityHandle.trim() : '';
+  if (identityHandle && !PROJECT_BROWSER_IDENTITY_HANDLE_RE.test(identityHandle)) {
+    sendProjectBrowserValidationError(res, 'Invalid identityHandle.');
+    return;
+  }
+  const rawLimit = typeof req.query.limit === 'string' ? req.query.limit : '50';
+  const rawOffset = typeof req.query.offset === 'string' ? req.query.offset : '0';
+  if (!/^\d+$/.test(rawLimit) || Number(rawLimit) < 1 || Number(rawLimit) > 200) {
+    sendProjectBrowserValidationError(res, 'Invalid limit.');
+    return;
+  }
+  if (!/^\d+$/.test(rawOffset) || Number(rawOffset) < 0) {
+    sendProjectBrowserValidationError(res, 'Invalid offset.');
+    return;
+  }
+
+  const params = new URLSearchParams({
+    filter,
+    limit: rawLimit,
+    offset: rawOffset,
+  });
+  if (query) params.set('query', query);
+  if (identityHandle) params.set('identityHandle', identityHandle);
+
+  const upstream = await proxyToSuperAgentWithStatus('/api/projects/browser?' + params.toString());
+  res.status(upstream.status).json(upstream.payload);
+});
+
+router.post('/projects/browser/import', async (req, res) => {
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body)
+    ? req.body as Record<string, unknown>
+    : {};
+  if (hasSensitiveProjectBrowserField(body)) {
+    sendProjectBrowserValidationError(res, 'Sensitive or arbitrary target fields are not accepted.');
+    return;
+  }
+  const catalogId = typeof body.catalogId === 'string' ? body.catalogId.trim() : '';
+  if (!PROJECT_BROWSER_CATALOG_ID_RE.test(catalogId)) {
+    sendProjectBrowserValidationError(res, 'A valid catalogId is required.');
+    return;
+  }
+  const projectId = typeof body.projectId === 'string' && body.projectId.trim() ? body.projectId.trim() : undefined;
+  if (projectId && !PROJECT_BROWSER_ID_RE.test(projectId)) {
+    sendProjectBrowserValidationError(res, 'Invalid projectId.');
+    return;
+  }
+  const name = typeof body.name === 'string' && body.name.trim() ? body.name.trim() : undefined;
+  if (name && name.length > 120) {
+    sendProjectBrowserValidationError(res, 'Project name is too long.');
+    return;
+  }
+  const upstream = await proxyToSuperAgentWithStatus(
+    '/api/projects/browser/import',
+    'POST',
+    { catalogId, ...(projectId ? { projectId } : {}), ...(name ? { name } : {}) },
+  );
+  res.status(upstream.status).json(upstream.payload);
+});
+
+router.post('/projects/browser/grant', async (req, res) => {
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body)
+    ? req.body as Record<string, unknown>
+    : {};
+  if (hasSensitiveProjectBrowserField(body)) {
+    sendProjectBrowserValidationError(res, 'Sensitive identity fields are not accepted.');
+    return;
+  }
+  const projectId = typeof body.projectId === 'string' ? body.projectId.trim() : '';
+  const identityHandle = typeof body.identityHandle === 'string' ? body.identityHandle.trim() : '';
+  const capabilities = Array.isArray(body.capabilities)
+    ? [...new Set(body.capabilities.filter((cap): cap is string => typeof cap === 'string'))]
+    : [];
+  if (!PROJECT_BROWSER_ID_RE.test(projectId) || !PROJECT_BROWSER_IDENTITY_HANDLE_RE.test(identityHandle)) {
+    sendProjectBrowserValidationError(res, 'Valid projectId and identityHandle are required.');
+    return;
+  }
+  if (
+    capabilities.length === 0 ||
+    capabilities.length > PROJECT_BROWSER_CAPABILITIES.size ||
+    capabilities.some(cap => !PROJECT_BROWSER_CAPABILITIES.has(cap))
+  ) {
+    sendProjectBrowserValidationError(res, 'Invalid project capabilities.');
+    return;
+  }
+  const upstream = await proxyToSuperAgentWithStatus(
+    '/api/projects/browser/grant',
+    'POST',
+    { projectId, identityHandle, capabilities },
+  );
+  res.status(upstream.status).json(upstream.payload);
+});
+
+router.post('/projects/browser/revoke', async (req, res) => {
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body)
+    ? req.body as Record<string, unknown>
+    : {};
+  if (hasSensitiveProjectBrowserField(body)) {
+    sendProjectBrowserValidationError(res, 'Sensitive identity fields are not accepted.');
+    return;
+  }
+  const projectId = typeof body.projectId === 'string' ? body.projectId.trim() : '';
+  const identityHandle = typeof body.identityHandle === 'string' ? body.identityHandle.trim() : '';
+  if (!PROJECT_BROWSER_ID_RE.test(projectId) || !PROJECT_BROWSER_IDENTITY_HANDLE_RE.test(identityHandle)) {
+    sendProjectBrowserValidationError(res, 'Valid projectId and identityHandle are required.');
+    return;
+  }
+  const upstream = await proxyToSuperAgentWithStatus(
+    '/api/projects/browser/revoke',
+    'POST',
+    { projectId, identityHandle },
+  );
+  res.status(upstream.status).json(upstream.payload);
+});
+
+router.post('/projects/browser/disable', async (req, res) => {
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body)
+    ? req.body as Record<string, unknown>
+    : {};
+  if (hasSensitiveProjectBrowserField(body)) {
+    sendProjectBrowserValidationError(res, 'Arbitrary project target fields are not accepted.');
+    return;
+  }
+  const projectId = typeof body.projectId === 'string' ? body.projectId.trim() : '';
+  if (!PROJECT_BROWSER_ID_RE.test(projectId) || typeof body.enabled !== 'boolean') {
+    sendProjectBrowserValidationError(res, 'Valid projectId and enabled boolean are required.');
+    return;
+  }
+  const upstream = await proxyToSuperAgentWithStatus(
+    '/api/projects/browser/disable',
+    'POST',
+    { projectId, enabled: body.enabled },
+  );
+  res.status(upstream.status).json(upstream.payload);
+});
+
+router.delete('/projects/browser/:projectId', async (req, res) => {
+  const projectId = req.params.projectId.trim();
+  if (!PROJECT_BROWSER_ID_RE.test(projectId)) {
+    sendProjectBrowserValidationError(res, 'Invalid projectId.');
+    return;
+  }
+  const upstream = await proxyToSuperAgentWithStatus(
+    '/api/projects/browser/' + encodeURIComponent(projectId),
+    'DELETE',
+  );
+  res.status(upstream.status).json(upstream.payload);
+});
+
 // History routes → proxy to SA
 router.get('/history', async (req, res) => {
   const workspace = (req.query.workspace as string) || '';

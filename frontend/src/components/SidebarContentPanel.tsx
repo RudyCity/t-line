@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Terminal as TerminalIcon, FileCode, FolderTree, GitCompare, GitBranch, LayoutGrid, Search } from 'lucide-react';
 import { TabData, TerminalInstanceData, WorkspaceInfo, WorktreeInfo } from '../hooks/useTerminals';
 import { WorkspaceList } from './WorkspaceList';
+import { ProjectBrowser } from './ProjectBrowser';
 import { FileExplorer, GitChanges, GitFileStatus } from './FilePanel';
 import { CheckpointsPanel } from './CheckpointsPanel';
 
@@ -209,6 +210,7 @@ export function SidebarContentPanel({
   onCheckpointChange
 }: SidebarContentPanelProps) {
   const [showSearch, setShowSearch] = useState(false);
+  const [workspacePanelMode, setWorkspacePanelMode] = useState<'workspaces' | 'mcp'>('workspaces');
   const activeTab = tabs.find(t => t.id === activeTabId);
   const activeFilePath = activeTab && activeTab.type === 'file' ? activeTab.filePath : undefined;
 
@@ -290,53 +292,92 @@ export function SidebarContentPanel({
         </div>
       )}
 
-      {/* ── Workspaces Panel ── */}
+      {/* ── Workspaces / MCP Projects Panel ── */}
       {activePanel === 'workspaces' && (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-          <div className="section-title" style={{ padding: '0 16px' }}>
-            <span>Workspaces</span>
-            <div className="flex items-center gap-1.5">
+          <div className="px-3 pb-2">
+            <div
+              className="grid grid-cols-2 gap-1 p-1 rounded-md border border-[var(--border-color)] bg-[var(--surface-overlay)]"
+              role="group"
+              aria-label="Workspace panel mode"
+            >
               <button
-                className="action-btn"
-                onClick={() => setShowSearch(prev => !prev)}
-                title="Toggle Search"
-                style={{ color: showSearch ? 'var(--color-primary)' : 'inherit' }}
+                type="button"
+                onClick={() => setWorkspacePanelMode('workspaces')}
+                className={
+                  'text-[10px] py-1 rounded transition-colors ' +
+                  (workspacePanelMode === 'workspaces'
+                    ? 'bg-[var(--color-primary-glow)] text-[var(--color-primary)]'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]')
+                }
               >
-                <Search size={14} />
+                Workspaces
               </button>
-              <button className="action-btn" onClick={() => { setShowWorkspaceModal(true); setSidebarOpen(false); }} title="Add Workspace">
-                <Plus size={16} />
+              <button
+                type="button"
+                onClick={() => setWorkspacePanelMode('mcp')}
+                className={
+                  'text-[10px] py-1 rounded transition-colors ' +
+                  (workspacePanelMode === 'mcp'
+                    ? 'bg-[var(--color-primary-glow)] text-[var(--color-primary)]'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]')
+                }
+              >
+                MCP Projects
               </button>
             </div>
           </div>
 
-          {workspaces.length > 0 ? (
-            <WorkspaceList
-              workspaces={workspaces}
-              tabs={tabs}
-              activeTabId={activeTabId}
-              terminalInstances={terminalInstances}
-              workspaceActiveTab={workspaceActiveTab}
-              onWorkspaceClick={onWorkspaceClick}
-              onWorktreeClick={onWorktreeClick}
-              onBranchCheckoutClick={onBranchCheckoutClick}
-              setPanelWorkspace={setPanelWorkspace}
-              setActivePanel={setActivePanel}
-              handleOpenWorktreeModal={handleOpenWorktreeModal}
-              openTerminal={openTerminal}
-              handleRemoveWorkspace={handleRemoveWorkspace}
-              handleRemoveWorktree={handleRemoveWorktree}
-              onEditWorkspace={onEditWorkspace || (() => {})}
-              deletingWorkspacePaths={deletingWorkspacePaths}
-              deletingWorktreePaths={deletingWorktreePaths}
-              panelWorktreePath={panelWorktreePath}
-              panelWorkspace={panelWorkspace}
-              showSearch={showSearch}
-            />
+          {workspacePanelMode === 'workspaces' ? (
+            <>
+              <div className="section-title" style={{ padding: '0 16px' }}>
+                <span>Workspaces</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    className="action-btn"
+                    onClick={() => setShowSearch(prev => !prev)}
+                    title="Toggle Search"
+                    style={{ color: showSearch ? 'var(--color-primary)' : 'inherit' }}
+                  >
+                    <Search size={14} />
+                  </button>
+                  <button className="action-btn" onClick={() => { setShowWorkspaceModal(true); setSidebarOpen(false); }} title="Add Workspace">
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {workspaces.length > 0 ? (
+                <WorkspaceList
+                  workspaces={workspaces}
+                  tabs={tabs}
+                  activeTabId={activeTabId}
+                  terminalInstances={terminalInstances}
+                  workspaceActiveTab={workspaceActiveTab}
+                  onWorkspaceClick={onWorkspaceClick}
+                  onWorktreeClick={onWorktreeClick}
+                  onBranchCheckoutClick={onBranchCheckoutClick}
+                  setPanelWorkspace={setPanelWorkspace}
+                  setActivePanel={setActivePanel}
+                  handleOpenWorktreeModal={handleOpenWorktreeModal}
+                  openTerminal={openTerminal}
+                  handleRemoveWorkspace={handleRemoveWorkspace}
+                  handleRemoveWorktree={handleRemoveWorktree}
+                  onEditWorkspace={onEditWorkspace || (() => {})}
+                  deletingWorkspacePaths={deletingWorkspacePaths}
+                  deletingWorktreePaths={deletingWorktreePaths}
+                  panelWorktreePath={panelWorktreePath}
+                  panelWorkspace={panelWorkspace}
+                  showSearch={showSearch}
+                />
+              ) : (
+                <div style={{ textAlign: 'center', color: 'var(--text-dark)', fontSize: '0.85rem', padding: '16px' }}>
+                  No workspaces registered.
+                </div>
+              )}
+            </>
           ) : (
-            <div style={{ textAlign: 'center', color: 'var(--text-dark)', fontSize: '0.85rem', padding: '16px' }}>
-              No workspaces registered.
-            </div>
+            <ProjectBrowser />
           )}
         </div>
       )}

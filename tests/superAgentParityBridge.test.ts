@@ -6,7 +6,8 @@ describe('authenticated T-Line read-only parity bridge', () => {
   it('allowlists only declared GET endpoints and rejects unknown action/workspace', async () => {
     expect(Object.keys(PARITY_READ_ACTIONS).sort()).toEqual([
       'capabilities', 'daemon.status', 'gateway.status', 'mcp.status',
-      'muse.status', 'selfdev.status', 'tasks.snapshot', 'tools.catalog',
+      'muse.status', 'selfdev.status', 'studio.projects', 'studio.status',
+      'tasks.snapshot', 'tools.catalog',
     ]);
     const unknown = await fetchParityReadAction('shell.exec' as any, 'C:/project', { headers: { Authorization: 'Bearer fake' } });
     expect(unknown.status).toBe(400);
