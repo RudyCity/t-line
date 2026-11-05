@@ -1,6 +1,22 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const crypto = require('crypto');
+
+function sha256(file) {
+  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+function assertCopied(source, staged, label) {
+  if (!fs.existsSync(source) || !fs.existsSync(staged)) {
+    throw new Error(label + ' asset missing after staging');
+  }
+  const sourceHash = sha256(source);
+  const stagedHash = sha256(staged);
+  if (sourceHash !== stagedHash) {
+    throw new Error(label + ' staging hash mismatch: refusing stale Tauri package');
+  }
+  console.log(label + ' staged SHA-256 ' + stagedHash);
+}
 
 function copyDirSync(src, dest) {
   fs.mkdirSync(dest, { recursive: true });
@@ -60,6 +76,21 @@ try {
     fs.rmSync(path.join(__dirname, 'frontend'), { recursive: true, force: true });
   }
   copyDirSync(path.join(__dirname, '..', 'frontend', 'dist'), path.join(__dirname, 'frontend', 'dist'));
+
+  // Prevent a successful desktop build from silently embedding an older
+  // backend/frontend tree. This previously allowed a new Rust binary to run
+  // with a stale packaged server.js when the surrounding Tauri build was
+  // interrupted before resource synchronization.
+  assertCopied(
+    path.join(__dirname, '..', 'backend', 'dist', 'server.js'),
+    path.join(__dirname, 'backend', 'dist', 'server.js'),
+    'Backend server'
+  );
+  assertCopied(
+    path.join(__dirname, '..', 'frontend', 'dist', 'index.html'),
+    path.join(__dirname, 'frontend', 'dist', 'index.html'),
+    'Frontend index'
+  );
   
   console.log('Tauri assets copied successfully!');
 } catch (err) {

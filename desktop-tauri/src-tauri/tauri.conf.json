@@ -7,7 +7,7 @@
     "frontendDist": "../../frontend/dist",
     "devUrl": "http://localhost:5773",
     "beforeDevCommand": "bun run copy-assets && bun --cwd ../frontend dev",
-    "beforeBuildCommand": "bun run copy-assets && bun --cwd ../frontend build"
+    "beforeBuildCommand": "bun --cwd ../backend build && bun --cwd ../frontend build && bun run copy-assets"
   },
   "app": {
     "withGlobalTauri": true,
