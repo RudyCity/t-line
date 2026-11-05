@@ -4,7 +4,14 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  // Vitest only defaults NODE_ENV to "test" when the parent process has not
+  // already set it. SuperAgent/Tauri release tooling commonly runs with
+  // NODE_ENV=production, which makes React load its production build and
+  // breaks Testing Library's act(). Keep tests hermetic without changing
+  // production build behavior.
+  if (mode === 'test') process.env.NODE_ENV = 'test';
+  return {
   plugins: [react(), tailwindcss()],
   server: {
     port: 5773,
@@ -37,4 +44,5 @@ export default defineConfig({
     setupFiles: './src/setupTests.ts',
     testTimeout: 15000
   }
+  };
 });

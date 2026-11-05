@@ -340,6 +340,9 @@ export default function App() {
   // This prevents native WebView2 instances from being created for every browser tab upfront.
   const [mountedBrowserTabIds, setMountedBrowserTabIds] = useState<Set<string>>(new Set());
   const [mountedDeferredTabIds, setMountedDeferredTabIds] = useState<Set<string>>(new Set());
+  const [pendingPdfHandoff, setPendingPdfHandoff] = useState<{
+    id: string; workspacePath: string; instruction: string; createdAt: number;
+  } | null>(null);
   const [pendingBrowserHandoff, setPendingBrowserHandoff] = useState<{
     id: string; workspacePath: string; instruction: string; createdAt: number;
   } | null>(null);
@@ -1553,6 +1556,24 @@ export default function App() {
       }));
     }
   };
+  const submitPdfEditHandoff = (filePath: string | undefined, instruction: string, workspaceId?: string): void => {
+    if (!filePath || !instruction.trim()) return;
+    const normalizedFile = filePath.replace(/\\/g, '/').toLowerCase();
+    const isInside = (root: string) => {
+      const normalizedRoot = root.replace(/\\/g, '/').replace(/\/$/, '').toLowerCase();
+      return normalizedFile.startsWith(normalizedRoot + '/');
+    };
+    const selected = workspaces.find(ws => ws.id === workspaceId && isInside(ws.path))
+      || workspaces.find(ws => isInside(ws.path));
+    if (!selected) {
+      showAlert('PDF editing unavailable', 'The PDF must be inside an open local T-Line workspace.');
+      return;
+    }
+    setPendingPdfHandoff({
+      id: crypto.randomUUID(), workspacePath: selected.path, instruction, createdAt: Date.now(),
+    });
+    openAgentTab(selected.id);
+  };
   const submitManagedBrowserHandoff = (workspaceId: string | undefined, instruction: string): boolean => {
     const workspacePath = browserHandoffWorkspace(workspaceId, instruction, workspaces);
     if (!workspacePath) return false;
@@ -1767,6 +1788,7 @@ export default function App() {
               }}
               theme={theme}
               themeBackground={THEMES[theme]?.bgMain}
+              onRequestPdfEdit={(instruction) => submitPdfEditHandoff(detachedTab.filePath, instruction, detachedTab.workspaceId)}
             />
           )}
           {detachedTab.type === 'diff' && (
@@ -2537,6 +2559,8 @@ export default function App() {
                     activeWorkspacePath={workspaces.find(w => w.id === tab.workspaceId)?.path || ''}
                      browserHandoff={pendingBrowserHandoff?.workspacePath === workspaces.find(w => w.id === tab.workspaceId)?.path ? pendingBrowserHandoff : null}
                      onBrowserHandoffConsumed={(id) => setPendingBrowserHandoff(current => current?.id === id ? null : current)}
+                     pdfHandoff={pendingPdfHandoff?.workspacePath === workspaces.find(w => w.id === tab.workspaceId)?.path ? pendingPdfHandoff : null}
+                     onPdfHandoffConsumed={(id) => setPendingPdfHandoff(current => current?.id === id ? null : current)}
                     workspaces={workspaces}
                     onOpenSettings={() => setShowSettingsModal(true)}
                     onLoadingChange={setIsAgentLoading}
@@ -2567,6 +2591,7 @@ export default function App() {
                     theme={theme}
                     themeBackground={THEMES[theme]?.bgMain}
                     isActive={tab.id === activeTabId}
+                     onRequestPdfEdit={(instruction) => submitPdfEditHandoff(tab.filePath, instruction, tab.workspaceId)}
                   />
                 </div>
               ))}

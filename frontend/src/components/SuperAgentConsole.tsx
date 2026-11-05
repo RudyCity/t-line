@@ -47,6 +47,8 @@ interface SuperAgentConsoleProps {
   onOpenStudio?: () => void;
   browserHandoff?: { id: string; workspacePath: string; instruction: string; createdAt: number } | null;
   onBrowserHandoffConsumed?: (id: string) => void;
+  pdfHandoff?: { id: string; workspacePath: string; instruction: string; createdAt: number } | null;
+  onPdfHandoffConsumed?: (id: string) => void;
 }
 
 export function SuperAgentConsole({
@@ -59,6 +61,8 @@ export function SuperAgentConsole({
   onOpenStudio,
   browserHandoff,
   onBrowserHandoffConsumed,
+  pdfHandoff,
+  onPdfHandoffConsumed,
 }: SuperAgentConsoleProps) {
   // Workspace & Config state
   const [workspace, setWorkspace] = useState(() => activeWorkspacePath || localStorage.getItem('currentWorkspace') || '');
@@ -93,6 +97,7 @@ export function SuperAgentConsole({
   const [browserBridgeReady, setBrowserBridgeReady] = useState(false);
   const [coreReconnectNotice, setCoreReconnectNotice] = useState<CoreReconnectNotice | null>(null);
   const handledBrowserHandoffRef = useRef<string>('');
+  const handledPdfHandoffRef = useRef<string>('');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -953,6 +958,33 @@ export function SuperAgentConsole({
     void handleSend(browserHandoff.instruction, { preserveDraft: true, skipHistory: true });
   }, [browserHandoff?.id, browserBridgeReady, ws, activeSessionId, workspace,
       agentMode, activePresetId, presets, attachments.length, sessions]);
+  // PDF edits use the *existing* authorized SuperAgent chat channel.
+  // This is a one-shot handoff, not a second PDF backend or direct file mutation.
+  useEffect(() => {
+    if (!pdfHandoff || handledPdfHandoffRef.current === pdfHandoff.id) return;
+    if (Date.now() - pdfHandoff.createdAt > 120_000) {
+      handledPdfHandoffRef.current = pdfHandoff.id;
+      onPdfHandoffConsumed?.(pdfHandoff.id);
+      setMessages(prev => [...prev, {
+        role: 'system',
+        text: 'PDF edit request expired before the assistant was ready. Return to the PDF tab and submit again.',
+      }]);
+      return;
+    }
+    if (pdfHandoff.workspacePath !== workspace || !ws || ws.readyState !== WebSocket.OPEN ||
+        !activeSessionId || !sessions.some(s => s.id === activeSessionId) ||
+        attachments.length !== 0 || loading) return;
+    const boundSocket = new URL(ws.url);
+    if (boundSocket.searchParams.get('sessionId') !== activeSessionId ||
+        boundSocket.searchParams.get('workspace') !== workspace) return;
+    const presetId = activePresetId[agentMode];
+    if (!(presets[agentMode] || []).some(p => p.id?.toLowerCase() === presetId?.toLowerCase()
+        || p.name?.toLowerCase() === presetId?.toLowerCase())) return;
+    handledPdfHandoffRef.current = pdfHandoff.id;
+    onPdfHandoffConsumed?.(pdfHandoff.id);
+    void handleSend(pdfHandoff.instruction, { preserveDraft: true, skipHistory: true });
+  }, [pdfHandoff?.id, workspace, ws, activeSessionId, attachments.length, loading,
+      sessions, activePresetId, agentMode, presets]);
   const slashCommands = [
     ...getSlashCommands({
       ws,

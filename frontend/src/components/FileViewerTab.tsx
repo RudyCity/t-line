@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { FileCode, RotateCcw, Check, ZoomIn, ZoomOut, Maximize, Image as ImageIcon, FileText, File } from 'lucide-react';
 import Editor, { loader } from '@monaco-editor/react';
 import DOMPurify from 'dompurify';
+import { PdfEditorPanel } from './PdfEditorPanel';
 interface FileViewerTabProps {
   filePath: string;
   token: string;
@@ -9,6 +10,7 @@ interface FileViewerTabProps {
   theme?: string;
   themeBackground?: string;
   isActive?: boolean;
+  onRequestPdfEdit?: (instruction: string) => void;
 }
 
 function getFileType(filePath: string): 'image' | 'pdf' | 'text' | 'binary' {
@@ -75,11 +77,12 @@ function getLanguageFromPath(filePath: string): string {
   }
 }
 
-export function FileViewerTab({ filePath, token, onSave, theme, themeBackground, isActive }: FileViewerTabProps) {
+export function FileViewerTab({ filePath, token, onSave, theme, themeBackground, isActive, onRequestPdfEdit }: FileViewerTabProps) {
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [readError, setReadError] = useState<string | null>(null);
   const [readRetryKey, setReadRetryKey] = useState(0);
+  const [pdfEditorOpen, setPdfEditorOpen] = useState(false);
   const [monacoReady, setMonacoReady] = useState(false);
   const [monacoError, setMonacoError] = useState(false);
 
@@ -138,6 +141,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
   }, [editedContent]);
 
   useEffect(() => {
+    setPdfEditorOpen(false);
     setZoom(1);
     setPosition({ x: 0, y: 0 });
     if (isSvg) {
@@ -566,16 +570,38 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
               {filePath}
             </span>
           </div>
-          <div className="text-[11px] text-slate-500 font-medium">PDF Document</div>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] text-[var(--text-muted)] font-medium">PDF Document</span>
+            {onRequestPdfEdit && (
+              <button
+                type="button"
+                onClick={() => setPdfEditorOpen(open => !open)}
+                aria-expanded={pdfEditorOpen}
+                aria-label="Edit PDF with SuperAgent"
+                className="rounded border border-[var(--border-color)] bg-[var(--bg-card)] px-2.5 py-1 text-xs text-[var(--text-main)] hover:bg-[var(--bg-hover)]"
+              >
+                {pdfEditorOpen ? 'Hide editor' : 'Edit PDF'}
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* PDF Frame */}
-        <div className="flex-1 w-full h-full bg-[var(--bg-main)] overflow-hidden">
-          <iframe
-            src={`/api/fs/raw?path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(token)}`}
-            className="w-full h-full border-none"
-            title="PDF Viewer"
-          />
+        {/* Existing PDF preview stays loaded while the side inspector opens. */}
+        <div className="flex-1 flex flex-col md:flex-row min-h-0 w-full overflow-hidden">
+          <div className="flex-1 min-w-0 min-h-0 overflow-hidden bg-[var(--bg-main)]">
+            <iframe
+              src={`/api/fs/raw?path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(token)}`}
+              className="w-full h-full border-none"
+              title="PDF Viewer"
+            />
+          </div>
+          {pdfEditorOpen && onRequestPdfEdit && (
+            <PdfEditorPanel
+              filePath={filePath}
+              onRequest={onRequestPdfEdit}
+              onClose={() => setPdfEditorOpen(false)}
+            />
+          )}
         </div>
       </div>
     );
