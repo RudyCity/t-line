@@ -81,6 +81,29 @@ describe('T-Line PDF editor handoff', () => {
     expect(()=>buildPdfEditorInstruction(path,draft)).toThrow(/Embedded Unicode redaction/);
   });
 
+  it('emits explicit bounded fit geometry only for embedded replacement', () => {
+    const draft=defaultPdfEditDraft(path);
+    draft.kind='replace_exact';
+    draft.pages='1';
+    draft.vectorFontPolicy='embedded_subset';
+    draft.targetText='FAKULTAS TEKNOLOGI PERTANIAN';
+    draft.text='Fakultas Teknologi Agroindustri dan Biosistem';
+    draft.vectorFitEnabled=true;
+    draft.vectorFitX0=70;
+    draft.vectorFitY0=610;
+    draft.vectorFitX1=278;
+    draft.vectorFitY1=630;
+    const instruction=buildPdfEditorInstruction(path,draft);
+    expect(instruction).toContain('"fitBounds": {');
+    expect(instruction).toContain('"x0": 70');
+    expect(instruction).toContain('"y1": 630');
+    expect(instruction).toContain('never below 65%');
+    draft.vectorFitX1=65;
+    expect(()=>buildPdfEditorInstruction(path,draft)).toThrow(/Fit bounds/);
+    draft.vectorFitEnabled=false;
+    expect(buildPdfEditorInstruction(path,draft)).not.toContain('"fitBounds"');
+  });
+
   it('requires explicit signing approval and never places P12 passwords into prompts', () => {
     const draft = defaultPdfEditDraft(path);
     draft.kind = 'sign_document';

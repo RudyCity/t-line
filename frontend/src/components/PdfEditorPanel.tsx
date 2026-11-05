@@ -41,6 +41,11 @@ export interface PdfEditDraft {
   flattenForm: boolean;
   targetText: string;
   vectorFontPolicy: 'standard14' | 'embedded_subset';
+  vectorFitEnabled: boolean;
+  vectorFitX0: number;
+  vectorFitY0: number;
+  vectorFitX1: number;
+  vectorFitY1: number;
   certificatePath: string;
   signerName: string;
   signReason: string;
@@ -71,6 +76,11 @@ export function defaultPdfEditDraft(filePath: string): PdfEditDraft {
     flattenForm: false,
     targetText: '',
     vectorFontPolicy: 'standard14',
+    vectorFitEnabled: false,
+    vectorFitX0: 0,
+    vectorFitY0: 0,
+    vectorFitX1: 200,
+    vectorFitY1: 40,
     certificatePath: '',
     signerName: '',
     signReason: '',
@@ -190,17 +200,31 @@ export function buildPdfEditorInstruction(filePath: string, draft: PdfEditDraft)
     if (draft.kind === 'redact_exact' && !draft.destructiveConfirmed) {
       throw new Error('Explicitly approve irreversible exact vector redaction.');
     }
+    let fitBounds: {x0:number;y0:number;x1:number;y1:number}|undefined;
+    if (draft.vectorFitEnabled) {
+      if (draft.kind !== 'replace_exact' || draft.vectorFontPolicy !== 'embedded_subset') {
+        throw new Error('Bounded fit is only available for embedded-subset text replacement.');
+      }
+      const {vectorFitX0:x0,vectorFitY0:y0,vectorFitX1:x1,vectorFitY1:y1}=draft;
+      if (![x0,y0,x1,y1].every(Number.isFinite) || x1<=x0 || y1<=y0 ||
+          x1-x0<10 || x1-x0>450 || y1-y0<6 || y1-y0>120) {
+        throw new Error('Fit bounds must be a finite visible PDF region with width 10–450 pt and height 6–120 pt.');
+      }
+      fitBounds={x0,y0,x1,y1};
+    }
     const request = {
       inputPath: filePath, outputPath, page: pages[0], expectedInputSha256: 'OBTAIN_FROM_PDF_INSPECT',
       mode: draft.kind, fontPolicy: draft.vectorFontPolicy, targetText: draft.targetText,
+      ...(fitBounds ? {fitBounds} : {}),
       ...(draft.kind === 'replace_exact' ? {replacementText: draft.text} : {confirmRedact: true}),
     };
     return [
       'User-selected restricted native PDF vector operation.',
       'Discover pdf_edit_vector_exact via list_tools/describe_tool, inspect source first using pdf_inspect, and replace expectedInputSha256 with the actual source SHA-256.',
       draft.vectorFontPolicy === 'embedded_subset'
-        ? 'The embedded Unicode path replaces exactly ONE uniquely mapped Type0/Identity-H Tj or bounded fragmented TJ line using ONLY glyphs already in the original embedded font subset. Missing glyph, excessive kerning, unsupported CMap, oversized replacement, redaction or reflow must fail closed. Never fake replacement by overlay.'
+        ? 'The embedded Unicode path replaces exactly ONE uniquely mapped Type0/Identity-H Tj or bounded fragmented TJ line using ONLY glyphs already in the original embedded font subset. Simple sequential ToUnicode bfrange mappings and untouched Image XObjects are permitted. Missing glyph, unsupported CMap, Form XObject or redaction must fail closed. Never fake replacement by overlay.'
         : 'The backend supports one uniquely mapped ASCII Standard-14 Tj, bounded fragmented TJ, or strictly consecutive multi-Tj sequence with no intervening layout/state operator. If it rejects a complex PDF, do NOT simulate successful editing by covering text with an overlay.',
+      ...(fitBounds ? ['fitBounds is explicit user-approved page-space geometry in bottom-left PDF points. The original line and verified replacement must remain inside it; horizontal scaling is never below 65%. Visually review the affected region after execution.'] : []),
       'Use the following request only if Core permissions and the exact operation are supported:', 'User request JSON:',
       JSON.stringify(request, null, 2),
       'Verify the created PDF and visually review affected content; redaction is not certified to remove unselected metadata or other hidden sensitive content.',
@@ -367,14 +391,39 @@ export function PdfEditorPanel({ filePath, onRequest, onClose }: PdfEditorPanelP
           </div>
         )}
         {draft.kind === 'replace_exact' && (
-          <div>
-            <label className={labelClass} htmlFor="pdf-vector-font-policy">Original font encoding policy</label>
-            <select id="pdf-vector-font-policy" value={draft.vectorFontPolicy}
-              onChange={e => change('vectorFontPolicy', e.target.value as PdfEditDraft['vectorFontPolicy'])}
-              className={fieldClass}>
-              <option value="standard14">Standard-14 ASCII Tj / TJ (default)</option>
-              <option value="embedded_subset">Embedded Type0 Identity-H Unicode Tj / bounded TJ (existing glyphs only)</option>
-            </select>
+          <div className="flex flex-col gap-3">
+            <div>
+              <label className={labelClass} htmlFor="pdf-vector-font-policy">Original font encoding policy</label>
+              <select id="pdf-vector-font-policy" value={draft.vectorFontPolicy}
+                onChange={e => change('vectorFontPolicy', e.target.value as PdfEditDraft['vectorFontPolicy'])}
+                className={fieldClass}>
+                <option value="standard14">Standard-14 ASCII Tj / TJ (default)</option>
+                <option value="embedded_subset">Embedded Type0 Identity-H Unicode Tj / bounded TJ (existing glyphs only)</option>
+              </select>
+            </div>
+            {draft.vectorFontPolicy === 'embedded_subset' && (
+              <div className="flex flex-col gap-2">
+                <label className="flex items-start gap-2 text-[11px] text-[var(--text-main)]">
+                  <input type="checkbox" checked={draft.vectorFitEnabled}
+                    onChange={e => change('vectorFitEnabled', e.target.checked)} className="mt-0.5" />
+                  Allow replacement to expand/fit inside an explicitly reviewed page region
+                </label>
+                {draft.vectorFitEnabled && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      ['vectorFitX0','x0'],['vectorFitY0','y0'],['vectorFitX1','x1'],['vectorFitY1','y1'],
+                    ] as const).map(([key,label]) => (
+                      <label key={key} className="text-[10px] text-[var(--text-muted)]">
+                        {label}
+                        <input type="number" step="0.1" className={fieldClass} value={draft[key]}
+                          onChange={e => change(key, Number(e.target.value))}/>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <p className="text-[10px] leading-5 text-[var(--text-muted)]">Coordinates are PDF points from the bottom-left. The target must already lie inside this box. Core may horizontally compress the replacement, but never below 65%, and must verify it remains inside.</p>
+              </div>
+            )}
           </div>
         )}
         {(draft.kind === 'replace_exact' || draft.kind === 'redact_exact') && (
@@ -386,7 +435,7 @@ export function PdfEditorPanel({ filePath, onRequest, onClose }: PdfEditorPanelP
             <textarea id="pdf-target-text" className={fieldClass} rows={2} maxLength={200}
               value={draft.targetText} onChange={e => change('targetText', e.target.value)} />
             <p className="text-[10px] text-[var(--text-muted)] mt-1">{draft.vectorFontPolicy === 'embedded_subset' && draft.kind === 'replace_exact'
-              ? 'Requires an embedded Type0/Identity-H Tj or bounded fragmented TJ run with existing glyphs and a unique mapped line. No text reflow or embedded-font redaction.'
+              ? 'Requires an embedded Type0/Identity-H Tj or bounded fragmented TJ run with existing glyphs and a unique mapped line. Simple bfrange CMaps and untouched Image XObjects are supported; Form XObjects and embedded-font redaction are not.'
               : 'Only unique simple Tj, bounded fragmented TJ, or consecutive multi-Tj with no intervening layout/state operator on Standard-14 fonts. Other PDF layouts will be rejected.'}</p>
           </div>
         )}

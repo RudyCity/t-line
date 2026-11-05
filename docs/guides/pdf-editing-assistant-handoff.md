@@ -10,7 +10,7 @@ Status: Source complete, frontend build and focused tests PASS. Installed deskto
 3. Choose a typed operation: rotate pages; add page numbers; add text; watermark; highlight overlay; fill existing AcroForm field (text, listed choice or checkbox, optionally flatten); or remove selected pages from a new PDF.
 4. Select page numbers (1-based) or leave blank where applicable. For ordinary added text, optionally supply a TTF/OTF font file **inside the authorized workspace** to render Unicode characters.
    For advanced operations, the same inspector now provides:
-   - Restricted **replace exact text** or **redact exact text** (Standard-14 Tj/TJ/multi-Tj, or opt-in embedded Type0/Identity-H Latin Unicode Tj/bounded TJ using existing glyphs only; no general document reflow)
+   - Restricted **replace exact text** or **redact exact text** (Standard-14 Tj/TJ/multi-Tj, or opt-in embedded Type0/Identity-H Latin Unicode Tj/bounded TJ using existing glyphs only). Embedded replacement can preserve untouched Image XObjects and simple sequential ToUnicode bfrange mappings. Optional **bounded fit** lets the user explicitly approve an x0/y0/x1/y1 page region; Core must keep the baseline and result inside it and will not horizontally scale below 65%. This is still not general document reflow.
    - **Sign with PKCS#12** using the host-only SUPERAGENT_PDF_P12_PASSWORD, explicit consent, and a certificate in the authorized project
    - **Verify CMS signature** read-only with OpenSSL, keeping certificate trust/revocation status explicitly separate
    - **Read PDF with local OCR**: read-only pretrained PP-OCRv6 Tiny/Small/Medium or Tesseract; exposes actual OCR engine/native text extraction provenance
@@ -23,7 +23,7 @@ Status: Source complete, frontend build and focused tests PASS. Installed deskto
 
 - This is not a lossless original-text editing canvas. Text and visual highlights are overlays and do not delete underlying content.
 - Form filling now uses strict, typed values; inspect field names/options first. Read-only, dynamic XFA and signature fields are unsupported. The Core reopens filled forms to verify values and checks flattened PDFs before publishing. Form widget visual appearance on all viewers is not independently certified.
-- General vector-preserving redaction, arbitrary paragraph reflow and qualified signature trust certification are not supported. Exact original-text edits are **restricted** to verified Tj/TJ patterns and fail closed on unsupported CMaps, glyphs, kerning or layout structures.
+- General vector-preserving redaction, arbitrary paragraph reflow and qualified signature trust certification are not supported. Exact original-text edits are **restricted** to verified Tj/TJ patterns and fail closed on unsupported/inherited CMaps, missing glyphs, excessive kerning, Form/unknown XObjects or unverified layout structures. Image XObjects are only preserved for replacement, not treated as safe for exact redaction.
 - The UI sends **one explicit user request** to the existing session. It does not silently auto-save PDF changes or overwrite originals.
 - If the current Core owner is old, it will not see the new PDF toolset until a coordinated operator-approved restart. The T-Line source build alone does not activate live tools.
 - Native installed Tauri E2E (PDF file tab → existing Assistant → authorized tool call → verify → reopen output) remains a release gate.
