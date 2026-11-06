@@ -1,6 +1,7 @@
 import React from 'react';
 import { Info, Shield, Eye, EyeOff, RefreshCw, Download, CheckCircle, XCircle, Loader2, ArrowUpCircle, Palette, ExternalLink } from 'lucide-react';
 import { FormField, Input, Button, Select } from './Form';
+import { openInSystemBrowser } from './browserUrlUtils';
 import { THEMES, UI_FONTS, MONO_FONTS, applyCalmPreferences, type CalmDensity, type CalmMotion } from '../hooks/useThemeAndFonts';
 
 const UI_FONT_OPTIONS = Object.keys(UI_FONTS).map(f => ({ value: f, label: f }));
@@ -518,6 +519,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-main)' }}>
                     {window.navigator.userAgent.includes('Windows') ? 'Windows' : 'Unix-like'}
                   </span>
+                </div>
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px',
+                  borderTop: '1px solid var(--border-color)', marginTop: '4px', paddingTop: '14px'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>Support development</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                      Optional donations help maintain this open-source project.
+                    </div>
+                  </div>
+                  <button
+                    id="settings-support-development-btn"
+                    type="button"
+                    onClick={() => openInSystemBrowser('https://ko-fi.com/rudycity')}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0,
+                      borderRadius: '7px', padding: '7px 10px', cursor: 'pointer',
+                      border: '1px solid rgba(251,113,133,0.35)',
+                      background: 'rgba(251,113,133,0.08)', color: '#fda4af',
+                      fontSize: '0.75rem', fontWeight: 600
+                    }}
+                    aria-label="Support T-Line and SuperAgent development on Ko-fi (opens system browser)"
+                  >
+                    <span aria-hidden="true">♥</span> Ko-fi <ExternalLink size={13} aria-hidden="true" />
+                  </button>
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>

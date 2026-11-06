@@ -1,6 +1,7 @@
 # t-line — Developer Workspace & SuperAgent AI Orchestrator
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Support on Ko-fi](https://img.shields.io/badge/Support-Ko--fi-ff5e5b)](https://ko-fi.com/rudycity)
 [![Tauri v2](https://img.shields.io/badge/Tauri-v2-blueviolet.svg)](https://tauri.app)
 [![Bun](https://img.shields.io/badge/Bun-1.1+-black.svg)](https://bun.sh)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://react.dev)
@@ -194,6 +195,12 @@ Contributions are welcome! Please make sure to test your code and follow the gui
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git checkout -b feature/amazing-feature`)
 5. Open a Pull Request
+
+---
+
+## ☕ Support development
+
+T-Line and its SuperAgent integration are maintained as open-source projects. If they make your work easier, you can [support ongoing development on Ko-fi](https://ko-fi.com/rudycity). Donations are completely optional; there is no paywall for features or security fixes.
 
 ---
 
