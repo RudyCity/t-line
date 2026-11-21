@@ -199,14 +199,28 @@ export class SuperAgentAcpClient extends EventEmitter {
    */
   public async newSession(
     workspacePath?: string,
-    clientMode: 'tline' | 'zed' | 'generic' = 'tline'
+    clientMode: 'tline' | 'zed' | 'generic' = 'tline',
+    systemPromptAppend?: string
   ): Promise<{ sessionId: string; workspacePath: string; models?: any; modes?: any }> {
     const cwd = workspacePath || this.options.workspacePath || process.cwd();
-    const res = await this.sendRequest('session/new', {
+    const params: Record<string, any> = {
       cwd,
       workspacePath: cwd,
       clientMode,
-    });
+    };
+
+    if (systemPromptAppend) {
+      params.systemPrompt = systemPromptAppend;
+      params._meta = {
+        antigravity: {
+          systemPrompt: {
+            append: systemPromptAppend,
+          },
+        },
+      };
+    }
+
+    const res = await this.sendRequest('session/new', params);
 
     if (res?.sessionId) {
       this.currentSessionId = res.sessionId;

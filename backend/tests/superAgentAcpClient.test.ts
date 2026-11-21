@@ -42,6 +42,49 @@ describe('SuperAgentAcpClient - T-Line Desktop Integration', () => {
     client.close();
   });
 
+  it('passes systemPromptAppend in session/new for dynamic tools optimization', async () => {
+    const clientToMock = new PassThrough();
+    const mockToClient = new PassThrough();
+
+    const client = new SuperAgentAcpClient({
+      inputStream: mockToClient,
+      outputStream: clientToMock,
+      spawnSubprocess: false,
+    });
+
+    let capturedParams: any = null;
+    clientToMock.on('data', (chunk) => {
+      const line = chunk.toString().trim();
+      if (!line) return;
+      const req = JSON.parse(line);
+      if (req.method === 'session/new') {
+        capturedParams = req.params;
+        const resp = {
+          jsonrpc: '2.0',
+          id: req.id,
+          result: {
+            sessionId: 'sess_custom_prompt',
+            models: { currentModelId: 'gemini-3.8-flash-high' },
+          },
+        };
+        mockToClient.write(JSON.stringify(resp) + '\n');
+      }
+    });
+
+    const sessionRes = await client.newSession(
+      'D:/test-workspace',
+      'tline',
+      '# CUSTOM SYSTEM PROMPT INSTRUCTION'
+    );
+
+    expect(sessionRes.sessionId).toBe('sess_custom_prompt');
+    expect(capturedParams).toBeDefined();
+    expect(capturedParams.systemPrompt).toBe('# CUSTOM SYSTEM PROMPT INSTRUCTION');
+    expect(capturedParams._meta.antigravity.systemPrompt.append).toBe('# CUSTOM SYSTEM PROMPT INSTRUCTION');
+
+    client.close();
+  });
+
   it('receives streaming updates (thought, text, tool_call)', async () => {
     const clientToMock = new PassThrough();
     const mockToClient = new PassThrough();

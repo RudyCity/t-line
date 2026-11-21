@@ -311,11 +311,11 @@ export async function dispatchAcpSwitchModel(ws: WebSocket, engineId: string, mo
 export async function dispatchAcpPrompt(options: DispatchAcpPromptOptions): Promise<void> {
   const { ws, workspacePath, sessionId, engineId, modelId, modeId, prompt, history } = options;
   const key = getClientKey(ws, engineId);
+  const engineProfile = getAcpEngine(engineId);
 
   let entry = activeEngineClients.get(key);
 
   if (!entry) {
-    const engineProfile = getAcpEngine(engineId);
     console.log(`[ACP-Gateway] Spawning Universal ACP Server for ${engineProfile.name} (${engineProfile.command} ${engineProfile.args.join(' ')})`);
 
     const client = new SuperAgentAcpClient({
@@ -416,7 +416,7 @@ export async function dispatchAcpPrompt(options: DispatchAcpPromptOptions): Prom
 
     await client.start();
     await client.initialize();
-    const sessionRes = await client.newSession(workspacePath);
+    const sessionRes = await client.newSession(workspacePath, 'tline', engineProfile.systemPromptAppend);
     entry = { client, acpSessionId: sessionRes.sessionId };
     activeEngineClients.set(key, entry);
   }
@@ -449,7 +449,10 @@ export async function dispatchAcpPrompt(options: DispatchAcpPromptOptions): Prom
   }
 
   try {
-    await entry.client.sendPrompt(entry.acpSessionId, finalPrompt);
+    await entry.client.sendPrompt(entry.acpSessionId, finalPrompt, undefined, {
+      engine: engineId,
+      systemPromptAppend: engineProfile.systemPromptAppend,
+    });
   } catch (err: any) {
     if (ws.readyState === 1) {
       ws.send(JSON.stringify({

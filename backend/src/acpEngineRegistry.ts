@@ -29,7 +29,23 @@ export interface AcpEngineProfile {
   env?: Record<string, string>;
   models?: AcpModelInfo[];
   defaultModel?: string;
+  systemPromptAppend?: string;
 }
+
+export const SUPERAGENT_DYNAMIC_TOOLS_ACP_PROMPT = `
+# SUPERAGENT DYNAMIC TOOLS PROTOCOL
+You are operating within T-Line with direct access to the Superagent Dynamic Tool Gateway via MCP (server: 'superagent').
+- DYNAMIC DISCOVERY & EXECUTION:
+  1. SEARCH: When the user asks for browser/web automation, UI inspection, terminal commands, or multi-agent tasks, discover tools using 'superagent_tool_search' (with keyword or task intent).
+  2. DESCRIBE: Inspect tool requirements using 'superagent_tool_describe' with the tool name.
+  3. EXECUTE: Execute the tool using 'superagent_tool_execute' with 'name' and 'arguments'.
+- AVAILABLE CAPABILITIES ON DEMAND:
+  • Chrome Browser & Web Automation: 'superagent_chrome_cdp' (commands: 'navigate', 'click', 'type', 'screenshot', 'scroll', 'eval'), 'superagent_chrome_cdp_web'
+  • Visual Perception & Layout Auditing: 'superagent_chrome_vision' (UI-DETR-1 layout defect detection & Set-of-Mark numeric coordinates)
+  • Workspace & Project Operations: 'superagent_get_workspace', 'superagent_list_projects', 'superagent_check_project_health'
+  • History & Chat Inspection: 'superagent_delegate_search_history', 'superagent_delegate_sync_history'
+- ACTION FIRST: For executable requests, use these authorized tools directly instead of merely describing manual steps.
+`.trim();
 
 /**
  * Resolves the absolute path to the official Google DeepMind Antigravity CLI (agy.exe).
@@ -89,6 +105,7 @@ export function getBuiltinAcpEngines(): Record<string, AcpEngineProfile> {
       command: agyBinary,
       args: ['acp'],
       defaultModel: 'gemini-3.8-flash-high',
+      systemPromptAppend: SUPERAGENT_DYNAMIC_TOOLS_ACP_PROMPT,
       models: [
         {
           id: 'gemini-3.8-flash-high',
