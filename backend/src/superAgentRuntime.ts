@@ -18,7 +18,9 @@ export function selectSuperAgentLaunch(
   mode: string,
   extraArgs: string[] = []
 ): SuperAgentLaunchChoice {
-  const flags = ['--server', '--client-mode', 'tline'];
+  const flags = mode === 'acp' || mode === 'acp-stdio'
+    ? ['--acp']
+    : ['--server', '--client-mode', 'tline'];
   if (mode === 'multi') flags.push('--multi');
   flags.push(...extraArgs);
   if (!sourceDirectory?.trim()) {

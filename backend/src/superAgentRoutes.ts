@@ -52,6 +52,40 @@ router.get('/runtime-target', async (_req, res) => {
   }
 });
 
+// ACP Protocol status and capability discovery
+router.get('/acp/status', async (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({
+    protocol: 'acp',
+    version: '1.0.0',
+    transport: ['stdio', 'http', 'sse'],
+    supportedMethods: [
+      'initialize',
+      'session/new',
+      'session/prompt',
+      'session/cancel',
+      'session/update',
+      'session/request_permission',
+    ],
+    features: {
+      promptStreaming: true,
+      thoughtStreaming: true,
+      toolEventInterception: true,
+      humanInTheLoopApproval: true,
+    },
+  });
+});
+
+// ACP Multi-Engine Registry discovery endpoint
+router.get('/acp/engines', async (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const { listAcpEngines } = await import('./acpEngineRegistry');
+  res.json({
+    engines: listAcpEngines(),
+    defaultEngine: 'superagent',
+  });
+});
+
 // Read-only, authenticated browser session monitoring for the T-Line browser.
 // The endpoint never returns CDP session capabilities or cookie data.
 router.get('/browser/sessions', async (_req, res) => {

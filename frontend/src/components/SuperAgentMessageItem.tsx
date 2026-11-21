@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Brain, ChevronDown, ChevronRight } from 'lucide-react';
 import { SuperAgentToolItem } from './SuperAgentToolItem';
 import { AdvisorResultCard, AdvisorResultCardProps } from './SuperAgentInteractiveCards';
 
@@ -392,25 +393,63 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
     );
   }
 
+  if (msg.role === 'thought') {
+    return (
+      <div key={index} className="w-full">
+        <ThoughtAccordionItem text={msg.text} />
+      </div>
+    );
+  }
+
   return (
     <div key={index} className="sa-assistant-message py-2 px-1 w-full transition-all select-text bg-transparent border-none">
       <div className="flex items-center gap-2 mb-1">
-        <span className={`text-[10px] uppercase tracking-wider font-bold font-mono ${
-          msg.role === 'thought'
-            ? 'text-[var(--color-primary)]'
-            : 'text-emerald-500'
-        }`}>
-          {msg.role === 'thought' ? 'Thought' : 'Assistant'}
+        <span className="text-[10px] uppercase tracking-wider font-bold font-mono text-emerald-500">
+          Assistant
         </span>
       </div>
 
-      <div className={`text-xs leading-relaxed ${
-        msg.role === 'thought'
-          ? 'text-[var(--text-muted)] italic font-mono pl-3 border-l-2 border-[var(--color-primary)]/50'
-          : 'text-[var(--text-main)] font-sans'
-      }`}>
+      <div className="text-xs leading-relaxed text-[var(--text-main)] font-sans">
         {renderMessageContent(msg.text)}
       </div>
+    </div>
+  );
+};
+
+export const ThoughtAccordionItem: React.FC<{
+  text: string;
+  defaultOpen?: boolean;
+}> = ({ text, defaultOpen = true }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const charCount = text ? text.length : 0;
+  const preview = text ? text.split('\n')[0].slice(0, 60) : 'Thinking...';
+
+  return (
+    <div className="sa-thought-accordion my-1.5 rounded-md border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 overflow-hidden transition-all text-xs font-mono">
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="w-full flex items-center justify-between px-3 py-1.5 text-left text-[11px] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-colors select-none cursor-pointer"
+        aria-expanded={isOpen}
+      >
+        <div className="flex items-center gap-1.5 font-bold tracking-wider uppercase">
+          <Brain size={12} className="opacity-80" />
+          <span>Thought Process</span>
+          <span className="text-[10px] opacity-60 font-normal lowercase tracking-normal">
+            ({charCount} chars)
+          </span>
+        </div>
+        <div className="flex items-center gap-1 text-[var(--text-muted)] text-[10px]">
+          {!isOpen && <span className="truncate max-w-[200px] italic opacity-75">{preview}...</span>}
+          {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="px-3 py-2 text-xs leading-relaxed text-[var(--text-muted)] italic pl-3 border-t border-[var(--color-primary)]/15 border-l-2 border-l-[var(--color-primary)]/50 bg-[var(--color-primary)]/5">
+          {renderMessageContent(text)}
+        </div>
+      )}
     </div>
   );
 };

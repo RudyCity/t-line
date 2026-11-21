@@ -36,6 +36,7 @@ import { bridgeReconnectDelay, shouldResetBridgeRetryBudget } from '../services/
 import { parseCoreReconnectNotice, type CoreReconnectNotice } from '../services/coreReconnectNotice';
 import { CoreReconnectBanner } from './CoreReconnectBanner';
 import { addRule, loadRules, matchesRule, patternFromPermission } from '../utils/permissionRules';
+import { AcpEngineSelector, FALLBACK_ACP_ENGINES } from './AcpEngineSelector';
 
 interface SuperAgentConsoleProps {
   activeWorkspacePath?: string;
@@ -102,6 +103,25 @@ export function SuperAgentConsole({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const [agentMode, setAgentMode] = useState<'single' | 'multi'>('single');
+
+  // ACP Execution Core Engine state (preserves unified single-thread chat session)
+  const [acpEngine, setAcpEngine] = useState<string>(() => {
+    return localStorage.getItem('tline_acp_engine') || 'superagent';
+  });
+
+  const handleAcpEngineSelect = (engineId: string) => {
+    setAcpEngine(engineId);
+    localStorage.setItem('tline_acp_engine', engineId);
+    const engineMeta = FALLBACK_ACP_ENGINES.find(e => e.id === engineId);
+    const label = engineMeta ? engineMeta.name : engineId;
+    setMessages(prev => [
+      ...prev,
+      {
+        role: 'system',
+        text: `Switched execution core to ${label}. Conversation thread and context are preserved.`,
+      },
+    ]);
+  };
 
   // Server sessions are mode-bound. Preserve the previous session and open a
   // fresh one when switching modes, instead of replacing its active agent.
@@ -900,6 +920,11 @@ export function SuperAgentConsole({
       sessionId: targetSessionId,
       clientMessageId: crypto.randomUUID(),
       parts: parts.length > 0 ? parts : undefined,
+      engine: acpEngine,
+      history: messages
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .slice(-10)
+        .map(m => ({ role: m.role, text: m.text })),
     };
 
     // SESSION SEND BUG & P1 DEEP-08:
@@ -1342,6 +1367,10 @@ export function SuperAgentConsole({
               <span className="truncate">{workspace.split(/[/\\]/).pop()}</span>
             </span>
           )}
+          <AcpEngineSelector
+            currentEngineId={acpEngine}
+            onEngineSelect={handleAcpEngineSelect}
+          />
         </div>
 
         {/* Desktop identity: chat first, task delegation second. */}
