@@ -108,20 +108,24 @@ export function SuperAgentConsole({
   const [acpEngine, setAcpEngine] = useState<string>(() => {
     return localStorage.getItem('tline_acp_engine') || 'superagent';
   });
+  const [registeredEngines, setRegisteredEngines] = useState<any[]>(FALLBACK_ACP_ENGINES);
+  const [acpModel, setAcpModel] = useState<string>(() => {
+    const curEngine = localStorage.getItem('tline_acp_engine') || 'superagent';
+    const fallbackEngine = FALLBACK_ACP_ENGINES.find(e => e.id === curEngine);
+    return localStorage.getItem(`tline_acp_model_${curEngine}`) || fallbackEngine?.defaultModel || '';
+  });
+  const lastSuperagentPresetRef = useRef<string>('');
 
-  const handleAcpEngineSelect = (engineId: string) => {
-    setAcpEngine(engineId);
-    localStorage.setItem('tline_acp_engine', engineId);
-    const engineMeta = FALLBACK_ACP_ENGINES.find(e => e.id === engineId);
-    const label = engineMeta ? engineMeta.name : engineId;
-    setMessages(prev => [
-      ...prev,
-      {
-        role: 'system',
-        text: `Switched execution core to ${label}. Conversation thread and context are preserved.`,
-      },
-    ]);
-  };
+  useEffect(() => {
+    fetch('/api/superagent/acp/engines')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (Array.isArray(data?.engines) && data.engines.length > 0) {
+          setRegisteredEngines(data.engines);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Server sessions are mode-bound. Preserve the previous session and open a
   // fresh one when switching modes, instead of replacing its active agent.
@@ -413,6 +417,75 @@ export function SuperAgentConsole({
   };
 
   const getMainModelLabel = (preset: ModelPreset | undefined) => getModelLabelUtil(preset, agentMode);
+
+  const handleAcpModelChange = (modelId: string) => {
+    setAcpModel(modelId);
+    localStorage.setItem(`tline_acp_model_${acpEngine}`, modelId);
+    const engineMeta = registeredEngines.find(e => e.id === acpEngine) || FALLBACK_ACP_ENGINES.find(e => e.id === acpEngine);
+    const modelMeta = engineMeta?.models?.find((m: any) => m.id === modelId);
+    const modelName = modelMeta?.name || modelId;
+
+    if (ws && ws.readyState === WebSocket.OPEN && acpEngine !== 'superagent') {
+      try {
+        ws.send(JSON.stringify({
+          action: 'acp_switch_model',
+          type: 'acp_switch_model',
+          engine: acpEngine,
+          modelId,
+        }));
+      } catch {}
+    }
+
+    setMessages(prev => [
+      ...prev,
+      {
+        role: 'system',
+        text: `Switched model for ${engineMeta?.name || acpEngine} to ${modelName}.`,
+      },
+    ]);
+  };
+
+  const handleAcpEngineSelect = async (engineId: string) => {
+    setAcpEngine(engineId);
+    localStorage.setItem('tline_acp_engine', engineId);
+
+    const engineMeta = registeredEngines.find(e => e.id === engineId) || FALLBACK_ACP_ENGINES.find(e => e.id === engineId);
+    const savedModel = localStorage.getItem(`tline_acp_model_${engineId}`) || engineMeta?.defaultModel || engineMeta?.models?.[0]?.id || '';
+    setAcpModel(savedModel);
+
+    const modePresets = presets[agentMode] || [];
+    let targetPresetId: string | undefined;
+
+    if (engineId === 'superagent') {
+      targetPresetId = lastSuperagentPresetRef.current || 'openrouter';
+      const exists = modePresets.some(p =>
+        p.id?.toLowerCase() === targetPresetId?.toLowerCase() ||
+        p.name?.toLowerCase() === targetPresetId?.toLowerCase()
+      );
+      if (!exists && modePresets.length > 0) {
+        targetPresetId = modePresets[0].id || modePresets[0].name;
+      }
+      if (targetPresetId && targetPresetId.toLowerCase() !== (activePresetId[agentMode] || '').toLowerCase()) {
+        await handlePresetChange(targetPresetId);
+      }
+    } else {
+      const current = activePresetId[agentMode];
+      if (current && !current.toLowerCase().includes(engineId)) {
+        lastSuperagentPresetRef.current = current;
+      }
+    }
+
+    const label = engineMeta ? engineMeta.name : engineId;
+    const modelInfo = engineMeta?.models?.find((m: any) => m.id === savedModel);
+    const modelNameStr = modelInfo ? ` (${modelInfo.name})` : '';
+    setMessages(prev => [
+      ...prev,
+      {
+        role: 'system',
+        text: `Switched execution core to ${label}${modelNameStr}. Conversation thread and context are preserved.`,
+      },
+    ]);
+  };
 
   // Interactive agent states
   const [pendingPermission, setPendingPermission] = useState<PendingPermission | null>(null);
@@ -858,16 +931,19 @@ export function SuperAgentConsole({
 
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
-    const currentActivePresetId = activePresetId[agentMode] || '';
-    const activePresetObj = (presets[agentMode] || []).find(
-      p => p.id?.toLowerCase() === currentActivePresetId.toLowerCase() || p.name?.toLowerCase() === currentActivePresetId.toLowerCase()
-    );
-    if (!currentActivePresetId || !activePresetObj) {
-      setMessages(prev => [...prev, {
-        role: 'system',
-        text: `⚠️ Cannot send prompt: No active model preset selected for ${agentMode.toUpperCase()} mode. Please select a preset first.`
-      }]);
-      return;
+    // Superagent environment requires configured active preset
+    if (acpEngine === 'superagent') {
+      const currentActivePresetId = activePresetId[agentMode] || '';
+      const activePresetObj = (presets[agentMode] || []).find(
+        p => p.id?.toLowerCase() === currentActivePresetId.toLowerCase() || p.name?.toLowerCase() === currentActivePresetId.toLowerCase()
+      );
+      if (!currentActivePresetId || !activePresetObj) {
+        setMessages(prev => [...prev, {
+          role: 'system',
+          text: `⚠️ Cannot send prompt: No active model preset selected for ${agentMode.toUpperCase()} mode. Please select a preset first.`
+        }]);
+        return;
+      }
     }
 
     // An external, explicitly approved browser handoff must not erase a
@@ -921,6 +997,7 @@ export function SuperAgentConsole({
       clientMessageId: crypto.randomUUID(),
       parts: parts.length > 0 ? parts : undefined,
       engine: acpEngine,
+      model: acpEngine !== 'superagent' ? acpModel : undefined,
       history: messages
         .filter(m => m.role === 'user' || m.role === 'assistant')
         .slice(-10)
@@ -1024,6 +1101,10 @@ export function SuperAgentConsole({
       handleSend,
       handleAbort,
       onOpenStudio,
+      onSelectModel: handleAcpModelChange,
+      acpEngine,
+      acpModel,
+      acpEngines: registeredEngines,
       notifyUnsupported: command => {
         setMessages(prev => [...prev, {
           role: 'system',
@@ -1370,6 +1451,8 @@ export function SuperAgentConsole({
           <AcpEngineSelector
             currentEngineId={acpEngine}
             onEngineSelect={handleAcpEngineSelect}
+            currentModelId={acpModel}
+            onModelSelect={handleAcpModelChange}
           />
         </div>
 
@@ -1677,6 +1760,10 @@ export function SuperAgentConsole({
               agentMode={agentMode}
               handlePresetChange={handlePresetChange}
               getMainModelLabel={getMainModelLabel}
+              acpEngine={acpEngine}
+              acpModel={acpModel}
+              onAcpModelChange={handleAcpModelChange}
+              acpEngines={registeredEngines}
               showSuggestions={showSuggestions}
               suggestions={suggestions}
               suggestionIndex={suggestionIndex}

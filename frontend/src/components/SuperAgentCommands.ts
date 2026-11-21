@@ -22,6 +22,10 @@ interface CommandContext {
   handleAbort: () => void;
   onOpenStudio?: () => void;
   notifyUnsupported: (command: string) => void;
+  onSelectModel?: (modelId: string) => void;
+  acpEngine?: string;
+  acpModel?: string;
+  acpEngines?: any[];
 }
 
 /** T-Line advertises the existing SuperAgent CLI Brain tree as discoverable
@@ -114,7 +118,11 @@ export function getSlashCommands({
   handleSend,
   handleAbort,
   onOpenStudio,
-  notifyUnsupported
+  notifyUnsupported,
+  onSelectModel,
+  acpEngine = 'superagent',
+  acpModel,
+  acpEngines = [],
 }: CommandContext): SlashCommand[] {
   return [
     {
@@ -154,9 +162,39 @@ export function getSlashCommands({
     {
       command: '/model',
       description: BUILTIN_COMMAND_DESCRIPTIONS['/model'],
-      argsHelp: '[model-id|preset]',
+      argsHelp: '[model-id|list]',
       action: (args?: string) => {
-        if (args) notifyUnsupported('/model');
+        const trimmed = args?.trim();
+        const activeEngineProfile = (acpEngines || []).find((e: any) => e.id === acpEngine);
+        const models = activeEngineProfile?.models || [];
+
+        if (!trimmed || trimmed === 'list') {
+          const modelListStr = models.length > 0
+            ? models.map((m: any) => `  • ${m.name} (${m.id})${m.contextWindow ? ` [${m.contextWindow}]` : ''}${m.id === acpModel ? '  <-- Active' : ''}`).join('\n')
+            : '  (No specific models registered for this engine)';
+
+          setMessages(prev => [
+            ...prev,
+            {
+              role: 'system',
+              text: `Active ACP Engine: ${activeEngineProfile?.name || acpEngine}\nActive Model: ${acpModel || 'Default'}\n\nAvailable Models:\n${modelListStr}\n\nTo switch model: /model <model-id> (e.g. /model gemini-3.8-flash-high or /model claude-sonnet-4-6)`,
+            },
+          ]);
+          return;
+        }
+
+        const match = models.find((m: any) =>
+          m.id.toLowerCase() === trimmed.toLowerCase() ||
+          m.name.toLowerCase().includes(trimmed.toLowerCase())
+        );
+
+        if (match) {
+          onSelectModel?.(match.id);
+        } else if (onSelectModel) {
+          onSelectModel(trimmed);
+        } else {
+          notifyUnsupported('/model');
+        }
       }
     },
     {

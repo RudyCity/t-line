@@ -1,6 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { Zap, Brain, Wrench, Check, ChevronDown, Layers } from 'lucide-react';
 
+export interface AcpModelItem {
+  id: string;
+  name: string;
+  contextWindow?: string;
+  description?: string;
+  isDefault?: boolean;
+}
+
 export interface AcpEngineInfo {
   id: string;
   name: string;
@@ -9,6 +17,8 @@ export interface AcpEngineInfo {
   icon?: string;
   status: 'ready' | 'configured' | 'available';
   capabilities?: string[];
+  models?: AcpModelItem[];
+  defaultModel?: string;
 }
 
 export const FALLBACK_ACP_ENGINES: AcpEngineInfo[] = [
@@ -20,15 +30,30 @@ export const FALLBACK_ACP_ENGINES: AcpEngineInfo[] = [
     icon: 'Zap',
     status: 'ready',
     capabilities: ['tools', 'multi-tier', 'mcp', 'terminal-execution'],
+    defaultModel: 'openrouter',
+    models: [
+      { id: 'openrouter', name: 'OpenRouter (Multi-Model)', description: 'Claude 3.7 Sonnet, DeepSeek R1, GPT-4o', isDefault: true },
+      { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet (Hybrid)', description: 'High capability coding with hybrid thinking mode' },
+      { id: 'openai-gpt4o', name: 'GPT-4o Omnimodal', description: 'OpenAI multimodal flagship coding model' },
+    ],
   },
   {
     id: 'antigravity',
     name: 'Antigravity (Gemini)',
     badge: '1M Context',
-    description: 'Deep codebase researcher, multimodal perception & architecture planner',
+    description: 'Official Google DeepMind Antigravity with Gemini 3.8 Flash High & Claude Sonnet 4.6',
     icon: 'Brain',
     status: 'ready',
     capabilities: ['massive-context', 'vision', 'literature-research', 'multimodal'],
+    defaultModel: 'gemini-3.8-flash-high',
+    models: [
+      { id: 'gemini-3.8-flash-high', name: 'Gemini 3.8 Flash (High)', contextWindow: '1M Context', description: 'Official DeepMind Gemini with deep reasoning & 1M context', isDefault: true },
+      { id: 'gemini-3.8-flash-medium', name: 'Gemini 3.8 Flash (Medium)', contextWindow: '1M Context', description: 'Balanced speed and high-precision reasoning' },
+      { id: 'gemini-3.8-flash-low', name: 'Gemini 3.8 Flash (Low)', contextWindow: '1M Context', description: 'Fast responses for rapid iteration' },
+      { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6 (Thinking)', contextWindow: '1M Context', description: 'Anthropic Claude reasoning integrated in Antigravity' },
+      { id: 'claude-opus-4-6-thinking', name: 'Claude Opus 4.6 (Thinking)', contextWindow: '1M Context', description: 'Extended thinking and complex architectural synthesis' },
+      { id: 'gpt-oss-120b-medium', name: 'GPT-OSS 120B (Medium)', contextWindow: '1M Context', description: 'Open-weights reasoning model running in Antigravity' },
+    ],
   },
   {
     id: 'codex',
@@ -38,18 +63,28 @@ export const FALLBACK_ACP_ENGINES: AcpEngineInfo[] = [
     icon: 'Wrench',
     status: 'ready',
     capabilities: ['code-review', 'fast-refactoring', 'second-opinion'],
+    defaultModel: 'gpt-4.1-code-review',
+    models: [
+      { id: 'gpt-4.1-code-review', name: 'GPT-4.1 Code Review', description: 'Specialized code review and refactoring engine', isDefault: true },
+      { id: 'gpt-4.1-mini-turbo', name: 'GPT-4.1 Mini Turbo', description: 'Fast code linting and syntax fixing' },
+      { id: 'o3-mini', name: 'o3-mini (High Reasoning)', description: 'Fast reasoning for tricky edge cases' },
+    ],
   },
 ];
 
 interface AcpEngineSelectorProps {
   currentEngineId: string;
   onEngineSelect: (engineId: string) => void;
+  currentModelId?: string;
+  onModelSelect?: (modelId: string) => void;
   disabled?: boolean;
 }
 
 export function AcpEngineSelector({
   currentEngineId,
   onEngineSelect,
+  currentModelId,
+  onModelSelect,
   disabled = false,
 }: AcpEngineSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -97,6 +132,7 @@ export function AcpEngineSelector({
   }, [isOpen]);
 
   const activeEngine = engines.find((e) => e.id === currentEngineId) || engines[0] || FALLBACK_ACP_ENGINES[0];
+  const activeModel = activeEngine.models?.find(m => m.id === currentModelId) || activeEngine.models?.find(m => m.isDefault) || activeEngine.models?.[0];
 
   const renderIcon = (iconName?: string, className: string = 'w-3.5 h-3.5') => {
     switch (iconName) {
@@ -120,7 +156,7 @@ export function AcpEngineSelector({
         aria-label={`Select ACP Engine. Currently ${activeEngine.name}`}
         aria-haspopup="true"
         aria-expanded={isOpen}
-        title={`Execution Core: ${activeEngine.name} (${activeEngine.badge}) - Click to switch`}
+        title={`Execution Core: ${activeEngine.name} (${activeModel ? activeModel.name : activeEngine.badge}) - Click to switch`}
         className={`group flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono transition-all duration-150 cursor-pointer select-none ${
           isOpen
             ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)] text-[var(--color-primary)] shadow-xs'
@@ -133,8 +169,13 @@ export function AcpEngineSelector({
         <span className="font-medium tracking-tight text-[11px] max-w-[110px] sm:max-w-[140px] truncate">
           {activeEngine.name}
         </span>
+        {activeModel && (
+          <span className="hidden sm:inline-block text-[10px] text-[var(--color-primary)] font-mono border-l border-[var(--border-color)] pl-1.5 ml-0.5 truncate max-w-[130px]">
+            {activeModel.name.split(' (')[0]}
+          </span>
+        )}
         <span className="hidden sm:inline-block text-[9px] px-1 py-0.2 rounded font-mono uppercase tracking-wider bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20">
-          {activeEngine.badge}
+          {activeModel?.contextWindow || activeEngine.badge}
         </span>
         <ChevronDown
           className={`w-3 h-3 text-[var(--text-muted)] transition-transform duration-150 group-hover:text-[var(--text-main)] ${
@@ -147,7 +188,7 @@ export function AcpEngineSelector({
       {isOpen && (
         <div
           role="menu"
-          className="absolute left-0 mt-1.5 w-76 sm:w-84 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 backdrop-blur-md"
+          className="absolute left-0 mt-1.5 w-76 sm:w-88 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 backdrop-blur-md"
         >
           {/* Header */}
           <div className="px-2.5 py-1.5 border-b border-[var(--border-color)]/60 mb-1 flex items-center justify-between">
@@ -161,60 +202,108 @@ export function AcpEngineSelector({
           </div>
 
           {/* Engine Items */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
             {engines.map((engine) => {
               const isSelected = engine.id === currentEngineId;
               return (
-                <button
+                <div
                   key={engine.id}
-                  role="menuitem"
-                  type="button"
-                  onClick={() => {
-                    onEngineSelect(engine.id);
-                    setIsOpen(false);
-                  }}
-                  className={`w-full text-left p-2 rounded-lg transition-all duration-150 flex items-start gap-2.5 cursor-pointer group ${
+                  className={`w-full rounded-lg transition-all duration-150 flex flex-col ${
                     isSelected
-                      ? 'bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/40 text-[var(--text-main)] shadow-xs'
+                      ? 'bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/40 text-[var(--text-main)] shadow-xs p-1.5'
                       : 'border border-transparent hover:bg-[var(--bg-sidebar)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
                   }`}
                 >
-                  <div
-                    className={`mt-0.5 p-1.5 rounded-md flex-shrink-0 transition-colors ${
-                      isSelected
-                        ? 'bg-[var(--color-primary)] text-black font-bold'
-                        : 'bg-[var(--bg-main)] text-[var(--text-muted)] group-hover:text-[var(--color-primary)] group-hover:bg-[var(--color-primary)]/10'
-                    }`}
+                  <button
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      onEngineSelect(engine.id);
+                      setIsOpen(false);
+                    }}
+                    className="w-full text-left p-1 rounded-md flex items-start gap-2.5 cursor-pointer bg-transparent border-0"
                   >
-                    {renderIcon(engine.icon, 'w-4 h-4')}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1 mb-0.5">
-                      <span className="text-xs font-semibold text-[var(--text-main)] font-mono flex items-center gap-1.5">
-                        {engine.name}
-                      </span>
-                      <span
-                        className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-medium ${
-                          isSelected
-                            ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)] border border-[var(--color-primary)]/30'
-                            : 'bg-[var(--bg-main)] text-[var(--text-muted)] border border-[var(--border-color)]'
-                        }`}
-                      >
-                        {engine.badge}
-                      </span>
+                    <div
+                      className={`mt-0.5 p-1.5 rounded-md flex-shrink-0 transition-colors ${
+                        isSelected
+                          ? 'bg-[var(--color-primary)] text-black font-bold'
+                          : 'bg-[var(--bg-main)] text-[var(--text-muted)] group-hover:text-[var(--color-primary)]'
+                      }`}
+                    >
+                      {renderIcon(engine.icon, 'w-4 h-4')}
                     </div>
-                    <p className="text-[11px] leading-tight text-[var(--text-muted)] line-clamp-2">
-                      {engine.description}
-                    </p>
-                  </div>
 
-                  {isSelected && (
-                    <div className="mt-1 flex-shrink-0 text-[var(--color-primary)]">
-                      <Check className="w-3.5 h-3.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1 mb-0.5">
+                        <span className="text-xs font-semibold text-[var(--text-main)] font-mono flex items-center gap-1.5">
+                          {engine.name}
+                        </span>
+                        <span
+                          className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-medium ${
+                            isSelected
+                              ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)] border border-[var(--color-primary)]/30'
+                              : 'bg-[var(--bg-main)] text-[var(--text-muted)] border border-[var(--border-color)]'
+                          }`}
+                        >
+                          {engine.badge}
+                        </span>
+                      </div>
+                      <p className="text-[11px] leading-tight text-[var(--text-muted)] line-clamp-2">
+                        {engine.description}
+                      </p>
+                    </div>
+
+                    {isSelected && (
+                      <div className="mt-1 flex-shrink-0 text-[var(--color-primary)]">
+                        <Check className="w-3.5 h-3.5" />
+                      </div>
+                    )}
+                  </button>
+
+                  {/* Available Models for selected Engine */}
+                  {isSelected && engine.models && engine.models.length > 0 && (
+                    <div className="mt-1 pt-1.5 border-t border-[var(--border-color)]/60 flex flex-col gap-1 px-1">
+                      <div className="text-[9px] font-mono uppercase tracking-wider text-[var(--color-primary)] font-bold flex items-center justify-between px-0.5">
+                        <span>Select Model</span>
+                        <span className="text-[8px] text-[var(--text-muted)] font-normal">
+                          {activeModel?.name}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 gap-1">
+                        {engine.models.map((m) => {
+                          const isModelActive = m.id === currentModelId || (!currentModelId && m.isDefault);
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onModelSelect?.(m.id);
+                                setIsOpen(false);
+                              }}
+                              className={`text-left px-2 py-1.5 rounded-md text-[10px] font-mono flex items-center justify-between gap-1.5 transition cursor-pointer ${
+                                isModelActive
+                                  ? 'bg-[var(--color-primary)] text-black font-bold shadow-xs'
+                                  : 'bg-[var(--bg-main)] hover:bg-[var(--surface-overlay-hover)] text-[var(--text-main)] border border-[var(--border-color)]/60'
+                              }`}
+                              title={m.description}
+                            >
+                              <span className="truncate">{m.name}</span>
+                              <div className="flex items-center gap-1 shrink-0">
+                                {m.contextWindow && (
+                                  <span className={`text-[8px] px-1 py-0.2 rounded font-sans ${isModelActive ? 'bg-black/20 text-black' : 'text-[var(--text-muted)] border border-[var(--border-color)]'}`}>
+                                    {m.contextWindow}
+                                  </span>
+                                )}
+                                {isModelActive && <Check className="w-3 h-3 text-black shrink-0" />}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
-                </button>
+                </div>
               );
             })}
           </div>

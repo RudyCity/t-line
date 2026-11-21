@@ -1,7 +1,8 @@
 /**
- * Agent Client Protocol (ACP) - Desktop Client for T-Line
- * Standardized JSON-RPC 2.0 client that spawns and orchestrates Superagent Core
- * as an autonomous ACP subprocess over line-delimited stdio or streams.
+ * Agent Client Protocol (ACP) - Universal Desktop Client for T-Line
+ * Standardized JSON-RPC 2.0 client that spawns and orchestrates ANY ACP-compliant server
+ * (Antigravity agy.exe, Superagent Core, Codex, or Custom third-party ACP servers)
+ * over line-delimited stdio or duplex streams.
  */
 
 import { EventEmitter } from 'events';
@@ -9,41 +10,50 @@ import { spawn, type ChildProcess } from 'child_process';
 import type { Readable, Writable } from 'stream';
 
 export interface AcpClientOptions {
+  command?: string;
+  args?: string[];
+  bunCommand?: string;
   superAgentCliPath?: string;
   workspacePath?: string;
-  bunCommand?: string;
   inputStream?: Readable;
   outputStream?: Writable;
   spawnSubprocess?: boolean;
+  env?: Record<string, string>;
 }
 
 export interface AcpInitializeResult {
-  protocolVersion: string;
+  protocolVersion: number | string;
   agentInfo: {
     name: string;
     version: string;
   };
-  capabilities: {
-    promptStreaming?: boolean;
-    toolExecution?: boolean;
-    multiTierAgents?: boolean;
-    permissionEscalation?: boolean;
-  };
-  supportedMethods: string[];
+  agentCapabilities?: Record<string, any>;
+  capabilities?: Record<string, any>;
+  models?: Record<string, any>;
+  authMethods?: any[];
+  supportedMethods?: string[];
 }
 
 export interface AcpSessionUpdate {
   sessionId: string;
-  seq: number;
-  timestamp: number;
+  seq?: number;
+  timestamp?: number;
   update: {
-    kind: string;
+    sessionUpdate?: string;
+    kind?: string;
     delta?: string;
+    content?: {
+      type: string;
+      text?: string;
+      [key: string]: any;
+    };
     tool?: string;
     actor?: string;
     callId?: string;
     status?: string;
     summary?: string;
+    used?: number;
+    size?: number;
     [key: string]: any;
   };
 }
@@ -76,6 +86,7 @@ export class SuperAgentAcpClient extends EventEmitter {
 
   private options: AcpClientOptions;
   private isConnected = false;
+  private currentSessionId = '';
 
   constructor(options: AcpClientOptions = {}) {
     super();
@@ -103,25 +114,43 @@ export class SuperAgentAcpClient extends EventEmitter {
   }
 
   /**
-   * Spawns the Superagent CLI subprocess in ACP mode (`superagent --acp`).
+   * Spawns the ACP server process (agy.exe acp, superagent --acp, codex acp, etc.).
    */
   public async start(): Promise<void> {
     if (this.isConnected) return;
 
-    if (this.options.spawnSubprocess && this.options.superAgentCliPath) {
-      const args = [this.options.superAgentCliPath, '--acp'];
-      if (this.options.workspacePath) {
-        args.push('-w', this.options.workspacePath);
+    if (this.options.spawnSubprocess) {
+      let cmd = this.options.command;
+      let args = this.options.args || [];
+
+      // Fallback for legacy superagentCliPath option
+      if (!cmd && this.options.superAgentCliPath) {
+        cmd = this.options.bunCommand || 'bun';
+        args = [this.options.superAgentCliPath, '--acp'];
+        if (this.options.workspacePath) {
+          args.push('-w', this.options.workspacePath);
+        }
       }
 
-      this.process = spawn(this.options.bunCommand || 'bun', args, {
-        cwd: this.options.workspacePath || process.cwd(),
+      if (!cmd) {
+        throw new Error('SuperAgentAcpClient: neither command nor superAgentCliPath provided');
+      }
+
+      const cwd = this.options.workspacePath || process.cwd();
+      const env = {
+        ...process.env,
+        ...(this.options.env || {}),
+      };
+
+      this.process = spawn(cmd, args, {
+        cwd,
+        env,
         shell: false,
         stdio: ['pipe', 'pipe', 'pipe'],
       });
 
       if (!this.process.stdout || !this.process.stdin) {
-        throw new Error('Failed to attach stdio pipes to Superagent ACP subprocess');
+        throw new Error(`Failed to attach stdio pipes to ACP process (${cmd})`);
       }
 
       this.bindStreams(this.process.stdout, this.process.stdin);
@@ -135,17 +164,21 @@ export class SuperAgentAcpClient extends EventEmitter {
         this.isConnected = false;
         this.emit('exit', { code, signal });
       });
+
+      this.process.on('error', (err) => {
+        this.emit('error', err);
+      });
     } else if (!this.inputStream || !this.outputStream) {
-      throw new Error('SuperAgentAcpClient requires either a cliPath or custom streams');
+      throw new Error('SuperAgentAcpClient requires either command or custom streams');
     }
   }
 
   /**
-   * Sends JSON-RPC `initialize` handshake.
+   * Sends JSON-RPC `initialize` handshake compliant with ACP v1 (integer protocolVersion).
    */
   public async initialize(): Promise<AcpInitializeResult> {
     return this.sendRequest<AcpInitializeResult>('initialize', {
-      protocolVersion: '1.0.0',
+      protocolVersion: 1, // Standard integer protocol version for universal ACP (agy, zed, superagent)
       clientInfo: {
         name: 'tline-desktop',
         version: '1.3.752',
@@ -162,32 +195,90 @@ export class SuperAgentAcpClient extends EventEmitter {
   }
 
   /**
-   * Creates an isolated conversation session in Superagent.
+   * Creates an isolated conversation session in the ACP server.
    */
   public async newSession(
     workspacePath?: string,
     clientMode: 'tline' | 'zed' | 'generic' = 'tline'
-  ): Promise<{ sessionId: string; workspacePath: string }> {
-    return this.sendRequest('session/new', {
-      workspacePath: workspacePath || this.options.workspacePath || process.cwd(),
+  ): Promise<{ sessionId: string; workspacePath: string; models?: any; modes?: any }> {
+    const cwd = workspacePath || this.options.workspacePath || process.cwd();
+    const res = await this.sendRequest('session/new', {
+      cwd,
+      workspacePath: cwd,
       clientMode,
     });
+
+    if (res?.sessionId) {
+      this.currentSessionId = res.sessionId;
+    }
+
+    return {
+      sessionId: res?.sessionId || this.currentSessionId,
+      workspacePath: cwd,
+      models: res?.models,
+      modes: res?.modes,
+    };
   }
 
   /**
    * Sends a user prompt to the active session.
+   * Supports both plain string or structured content block arrays.
    */
   public async sendPrompt(
     sessionId: string,
-    prompt: string,
+    prompt: string | any[],
     attachments?: any[],
     context?: any
-  ): Promise<{ promptId: string; accepted: boolean }> {
-    return this.sendRequest('session/prompt', {
-      sessionId,
-      prompt,
+  ): Promise<any> {
+    const targetSessionId = sessionId || this.currentSessionId;
+    
+    // Normalize prompt to ACP universal content array format: [{ type: "text", text: "..." }]
+    let promptPayload: any[];
+    if (typeof prompt === 'string') {
+      promptPayload = [{ type: 'text', text: prompt }];
+    } else if (Array.isArray(prompt)) {
+      promptPayload = prompt;
+    } else {
+      promptPayload = [{ type: 'text', text: String(prompt || '') }];
+    }
+
+    const res = await this.sendRequest('session/prompt', {
+      sessionId: targetSessionId,
+      prompt: promptPayload,
       attachments,
       context,
+    }, 180000); // 3 minutes timeout for deep reasoning / big turns
+
+    // Emit turn completed when prompt returns
+    this.emit('status', {
+      sessionId: targetSessionId,
+      status: 'done',
+      summary: 'Turn completed',
+      usage: res?.usage,
+    });
+
+    return res;
+  }
+
+  /**
+   * Updates the active model for an ACP session (e.g. gemini-3.8-flash-high, claude-sonnet-4-6).
+   */
+  public async setModel(sessionId: string, modelId: string): Promise<any> {
+    const targetSessionId = sessionId || this.currentSessionId;
+    return this.sendRequest('session/set_model', {
+      sessionId: targetSessionId,
+      modelId,
+    });
+  }
+
+  /**
+   * Updates the active mode for an ACP session (e.g. default, accept-edits, auto, plan).
+   */
+  public async setMode(sessionId: string, modeId: string): Promise<any> {
+    const targetSessionId = sessionId || this.currentSessionId;
+    return this.sendRequest('session/set_mode', {
+      sessionId: targetSessionId,
+      modeId,
     });
   }
 
@@ -196,13 +287,13 @@ export class SuperAgentAcpClient extends EventEmitter {
    */
   public async cancelSession(sessionId: string, reason?: string): Promise<{ cancelled: boolean }> {
     return this.sendRequest('session/cancel', {
-      sessionId,
+      sessionId: sessionId || this.currentSessionId,
       reason,
     });
   }
 
   /**
-   * Responds to an ACP `session/request_permission` callback from Superagent.
+   * Responds to an ACP `session/request_permission` callback.
    */
   public respondPermission(
     permissionRpcId: string | number,
@@ -224,7 +315,7 @@ export class SuperAgentAcpClient extends EventEmitter {
   /**
    * Low-level JSON-RPC request sender.
    */
-  public async sendRequest<T = any>(method: string, params: any, timeoutMs = 30000): Promise<T> {
+  public async sendRequest<T = any>(method: string, params: any, timeoutMs = 45000): Promise<T> {
     const id = this.requestId++;
     const payload = {
       jsonrpc: '2.0',
@@ -273,22 +364,85 @@ export class SuperAgentAcpClient extends EventEmitter {
       return;
     }
 
-    // 1. Inbound Notification: session/update
+    // 1. Inbound Notification: session/update (Universal ACP & Custom flavors)
     if (msg.method === 'session/update' && msg.params) {
       const updateData: AcpSessionUpdate = msg.params;
       this.emit('update', updateData);
 
-      const kind = updateData.update?.kind;
-      if (kind === 'text_chunk') {
-        this.emit('text', { sessionId: updateData.sessionId, delta: updateData.update.delta });
-      } else if (kind === 'thought_chunk') {
-        this.emit('thought', { sessionId: updateData.sessionId, delta: updateData.update.delta });
-      } else if (kind === 'tool_call_start') {
-        this.emit('tool_call_start', { sessionId: updateData.sessionId, ...updateData.update });
-      } else if (kind === 'tool_call_end') {
-        this.emit('tool_call_end', { sessionId: updateData.sessionId, ...updateData.update });
-      } else if (kind === 'status_change') {
-        this.emit('status', { sessionId: updateData.sessionId, ...updateData.update });
+      const sessId = updateData.sessionId || this.currentSessionId;
+      const updateObj: any = updateData.update || {};
+      const sessionUpdate = updateObj.sessionUpdate;
+      const kind = updateObj.kind;
+
+      // A. Text Content Stream
+      if (sessionUpdate === 'agent_message_chunk' && updateObj.content?.text) {
+        this.emit('text', { sessionId: sessId, delta: updateObj.content.text });
+      } else if (kind === 'text_chunk' && updateObj.delta) {
+        this.emit('text', { sessionId: sessId, delta: updateObj.delta });
+      }
+
+      // B. Thought Process Stream (Accordion)
+      else if (sessionUpdate === 'agent_thought_chunk' && updateObj.content?.text) {
+        this.emit('thought', { sessionId: sessId, delta: updateObj.content.text });
+      } else if (kind === 'thought_chunk' && updateObj.delta) {
+        this.emit('thought', { sessionId: sessId, delta: updateObj.delta });
+      }
+
+      // C. Tool Execution Start
+      else if (sessionUpdate === 'tool_call' || kind === 'tool_call_start') {
+        const toolName = typeof updateObj.tool === 'string'
+          ? updateObj.tool
+          : (updateObj.tool?.name || updateObj.name || updateObj.title || updateObj.tool?.tool);
+        const callId = (typeof updateObj.tool === 'object' && (updateObj.tool?.callId || updateObj.tool?.id))
+          || updateObj.callId
+          || updateObj.toolCallId
+          || updateObj.id
+          || `call_${Date.now()}`;
+        const description = (typeof updateObj.tool === 'object' && (updateObj.tool?.description || updateObj.tool?.args))
+          || updateObj.description
+          || updateObj.args;
+
+        this.emit('tool_call_start', {
+          sessionId: sessId,
+          callId,
+          tool: toolName,
+          description,
+        });
+      }
+
+      // D. Tool Execution End
+      else if (sessionUpdate === 'tool_result' || kind === 'tool_call_end') {
+        const toolName = typeof updateObj.tool === 'string'
+          ? updateObj.tool
+          : (updateObj.tool?.name || updateObj.name || updateObj.title || updateObj.tool?.tool);
+        const callId = (typeof updateObj.tool === 'object' && (updateObj.tool?.callId || updateObj.tool?.id))
+          || updateObj.callId
+          || updateObj.toolCallId
+          || updateObj.id;
+        const status = (typeof updateObj.tool === 'object' && updateObj.tool?.status)
+          || updateObj.status
+          || (updateObj.isError ? 'failed' : 'completed');
+
+        this.emit('tool_call_end', {
+          sessionId: sessId,
+          callId,
+          tool: toolName,
+          status,
+        });
+      }
+
+      // E. Usage Update
+      else if (sessionUpdate === 'usage_update') {
+        this.emit('usage', {
+          sessionId: sessId,
+          used: updateObj.used || 0,
+          size: updateObj.size || 1048576,
+        });
+      }
+
+      // F. Status Change
+      else if (kind === 'status_change') {
+        this.emit('status', { sessionId: sessId, ...updateObj });
       }
       return;
     }
@@ -322,19 +476,25 @@ export class SuperAgentAcpClient extends EventEmitter {
     }
   }
 
+  public getCurrentSessionId(): string {
+    return this.currentSessionId;
+  }
+
   /**
    * Closes the ACP Client connection and kills child subprocess if spawned.
    */
   public close(): void {
     this.isConnected = false;
-    for (const [id, pending] of this.pendingRequests) {
+    for (const [, pending] of this.pendingRequests) {
       clearTimeout(pending.timer);
       pending.reject(new Error('ACP Client closed'));
     }
     this.pendingRequests.clear();
 
     if (this.process) {
-      this.process.kill();
+      try {
+        this.process.kill();
+      } catch {}
       this.process = null;
     }
   }

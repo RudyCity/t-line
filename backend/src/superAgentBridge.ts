@@ -1007,6 +1007,11 @@ let suppressBufferWrite = false;
         }
         return;
       }
+      if (actionType === 'acp_switch_model') {
+        const { dispatchAcpSwitchModel } = await import('./superAgentAcpBridgeAdapter');
+        await dispatchAcpSwitchModel(ws, parsed.engine || 'antigravity', parsed.modelId);
+        return;
+      }
       if (actionType === 'prompt') {
         // The transport is a session-bound channel, not a general-purpose
         // agent execution proxy. Deny stale-tab and cross-session sends.
@@ -1041,6 +1046,45 @@ let suppressBufferWrite = false;
           return;
         }
 
+        // ====================================================================
+        // ENVIRONMENT 1: UNIVERSAL ACP (Antigravity, Codex, or Custom ACP Server)
+        // Completely decoupled from Superagent presets, agent tiers & Superagent Core server
+        // ====================================================================
+        const targetEngine = parsed.engine || 'superagent';
+        if (targetEngine !== 'superagent') {
+          const promptText = parsed.text || '';
+          console.log(`[ACP-Gateway] Prompt dispatched to ${targetEngine} (${workspacePath}, ${promptText.length} chars)`);
+          await saveCliPromptHistory(promptText, workspacePath);
+
+          try {
+            const { dispatchAcpPrompt } = await import('./superAgentAcpBridgeAdapter');
+            await dispatchAcpPrompt({
+              ws,
+              workspacePath,
+              sessionId: initialSessionId || parsed.sessionId || 'default',
+              engineId: targetEngine,
+              modelId: parsed.model || parsed.modelId,
+              modeId: parsed.mode || parsed.modeId,
+              prompt: promptText,
+              history: Array.isArray(parsed.history) ? parsed.history : undefined,
+              clientMessageId: parsed.clientMessageId,
+            });
+            return;
+          } catch (acpErr: any) {
+            console.error('[ACP-Gateway] ACP dispatch error:', acpErr);
+            ws.send(JSON.stringify({
+              type: 'chat_response',
+              sessionId: initialSessionId,
+              success: false,
+              result: { error: `ACP engine '${targetEngine}' error: ${acpErr?.message || String(acpErr)}` },
+            }));
+            return;
+          }
+        }
+
+        // ====================================================================
+        // ENVIRONMENT 2: SUPERAGENT (Standard multi-tier coder & local presets)
+        // ====================================================================
         // Validate active preset is configured before sending prompt
         let activeModelName: string | undefined;
         try {
@@ -1089,6 +1133,7 @@ let suppressBufferWrite = false;
             : cleanHistoryText;
           const chatPayload: any = { message: messageContent, sessionId: initialSessionId };
           if (parsed.clientMessageId) chatPayload.clientMessageId = parsed.clientMessageId;
+          if (parsed.engine) chatPayload.engine = parsed.engine;
           // A transport failure after a POST is an unknown outcome. Never
           // call /api/chat again, regardless of whether the connection refused,
           // timed out, or closed after Core accepted the request.

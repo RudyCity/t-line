@@ -28,6 +28,10 @@ interface SuperAgentInputContainerProps {
   agentMode: 'single' | 'multi';
   handlePresetChange: (presetId: string) => void;
   getMainModelLabel: (preset: any) => string;
+  acpEngine?: string;
+  acpModel?: string;
+  onAcpModelChange?: (modelId: string) => void;
+  acpEngines?: any[];
   showSuggestions?: boolean;
   suggestions?: SlashCommand[];
   suggestionIndex?: number;
@@ -56,6 +60,10 @@ export function SuperAgentInputContainer({
   agentMode,
   handlePresetChange,
   getMainModelLabel,
+  acpEngine = 'superagent',
+  acpModel,
+  onAcpModelChange,
+  acpEngines = [],
   showSuggestions,
   suggestions = [],
   suggestionIndex = 0,
@@ -78,13 +86,23 @@ export function SuperAgentInputContainer({
     };
   }, []);
 
+  const isSuperagentEngine = !acpEngine || acpEngine === 'superagent';
   const currentPresetId = activePresetId[agentMode] || '';
   const activePreset = (presets[agentMode] || []).find(
     p => p.id?.toLowerCase() === currentPresetId.toLowerCase() || p.name?.toLowerCase() === currentPresetId.toLowerCase()
   );
-  const hasActivePreset = Boolean(activePreset);
-  const mainModel = activePreset ? getMainModelLabel(activePreset) : '';
-  const modelName = mainModel.includes('/') ? mainModel.substring(mainModel.lastIndexOf('/') + 1) : mainModel;
+
+  const currentAcpEngineInfo = acpEngines.find((e: any) => e.id === acpEngine);
+  const currentAcpModelInfo = currentAcpEngineInfo?.models?.find((m: any) => m.id === acpModel)
+    || currentAcpEngineInfo?.models?.[0];
+
+  const hasActivePreset = isSuperagentEngine ? Boolean(activePreset) : true;
+  const mainModel = isSuperagentEngine
+    ? (activePreset ? getMainModelLabel(activePreset) : '')
+    : (currentAcpModelInfo ? currentAcpModelInfo.name : (acpModel || ''));
+  const modelName = isSuperagentEngine
+    ? (mainModel.includes('/') ? mainModel.substring(mainModel.lastIndexOf('/') + 1) : mainModel)
+    : mainModel;
 
   return (
     <div
@@ -227,8 +245,84 @@ export function SuperAgentInputContainer({
               <Paperclip className="w-3.5 h-3.5 text-[var(--text-muted)]" />
             </button>
 
-            {/* Preset Switcher Pill */}
-            {(presets[agentMode] || []).length > 0 && (
+            {/* ACP Model Switcher Pill for non-superagent engines (Antigravity, Codex, etc.) */}
+            {!isSuperagentEngine && (
+              <div className="relative inline-block" ref={presetMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowPresetMenu(!showPresetMenu)}
+                  disabled={loading || !ws || ws.readyState !== WebSocket.OPEN}
+                  className="flex items-center gap-1 bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] border border-[var(--border-color)] rounded-md px-2 py-1 text-[10px] font-mono transition cursor-pointer"
+                  title="Switch Model for this ACP Engine"
+                >
+                  <span className="text-[var(--text-muted)] font-normal">model:</span>
+                  <span className="font-semibold text-[var(--color-primary)] truncate max-w-[150px] sm:max-w-[200px]">
+                    {currentAcpModelInfo ? currentAcpModelInfo.name : (acpModel || 'Select Model...')}
+                  </span>
+                  <ChevronDown className="w-3 h-3 text-[var(--text-muted)] ml-0.5 shrink-0" />
+                </button>
+
+                {showPresetMenu && (
+                  <div className="sa-command-popover absolute bottom-full left-0 mb-1.5 w-72 py-1 z-[100] overflow-hidden font-mono bg-[var(--bg-sidebar)] border border-[var(--border-color)] rounded-xl backdrop-blur-md">
+                    <div className="px-2.5 py-1 text-[9px] font-bold text-[var(--color-primary)] uppercase tracking-wider border-b border-[var(--border-color)] flex items-center justify-between">
+                      <span className="truncate">{currentAcpEngineInfo?.name || acpEngine} Models</span>
+                      <span className="text-[var(--text-muted)] font-normal shrink-0">
+                        ({(currentAcpEngineInfo?.models || []).length})
+                      </span>
+                    </div>
+
+                    <div className="max-h-56 overflow-y-auto scrollbar-thin divide-y divide-[var(--border-color)]/30">
+                      {(currentAcpEngineInfo?.models || []).length === 0 ? (
+                        <div className="px-3 py-2 text-[10px] text-[var(--text-muted)] italic text-center">
+                          Default engine model active
+                        </div>
+                      ) : (
+                        (currentAcpEngineInfo?.models || []).map((m: any) => {
+                          const isActive = m.id === acpModel || (!acpModel && m.isDefault);
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => {
+                                onAcpModelChange?.(m.id);
+                                setShowPresetMenu(false);
+                              }}
+                              className={`w-full text-left px-2.5 py-1.5 text-[10px] transition flex flex-col cursor-pointer ${
+                                isActive
+                                  ? 'bg-[var(--color-primary-glow)] text-[var(--color-primary)] font-bold border-l-2 border-[var(--color-primary)]'
+                                  : 'text-[var(--text-muted)] hover:bg-[var(--surface-overlay-hover)] hover:text-[var(--text-main)]'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="font-semibold truncate">{m.name}</span>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {m.contextWindow && (
+                                    <span className="text-[8px] px-1 py-0.2 rounded border border-[var(--color-primary)]/40 text-[var(--color-primary)] bg-[var(--color-primary-glow)]">
+                                      {m.contextWindow}
+                                    </span>
+                                  )}
+                                  {isActive && (
+                                    <span className="text-[9px] text-[var(--color-primary)] font-semibold">● Active</span>
+                                  )}
+                                </div>
+                              </div>
+                              {m.description && (
+                                <span className="text-[9px] text-[var(--text-muted)] font-sans truncate mt-0.5">
+                                  {m.description}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Preset Switcher Pill (Superagent only) */}
+            {isSuperagentEngine && (presets[agentMode] || []).length > 0 && (
               <div className="relative inline-block" ref={presetMenuRef}>
                 <button
                   type="button"
@@ -329,13 +423,24 @@ export function SuperAgentInputContainer({
             )}
 
             {/* Model Badge */}
-            {modelName && (
+            {isSuperagentEngine && modelName && (
               <span
                 className="flex items-center gap-1 text-[10px] text-[var(--text-muted)] font-mono border border-[var(--border-color)] px-2 py-1 rounded-md bg-[var(--bg-card)]"
                 title={mainModel}
               >
                 <Cpu className="w-2.5 h-2.5 text-[var(--text-muted)]" />
                 <span>{modelName}</span>
+              </span>
+            )}
+
+            {/* ACP Context / Capability Badge */}
+            {!isSuperagentEngine && currentAcpModelInfo?.contextWindow && (
+              <span
+                className="flex items-center gap-1 text-[10px] text-[var(--color-primary)] font-mono border border-[var(--color-primary)]/30 px-2 py-1 rounded-md bg-[var(--color-primary-glow)]"
+                title={`${currentAcpEngineInfo?.name || acpEngine}: ${currentAcpModelInfo.name} (${currentAcpModelInfo.contextWindow})`}
+              >
+                <Cpu className="w-2.5 h-2.5 text-[var(--color-primary)]" />
+                <span>{currentAcpModelInfo.contextWindow}</span>
               </span>
             )}
           </div>
