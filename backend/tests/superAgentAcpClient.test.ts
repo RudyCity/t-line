@@ -236,4 +236,27 @@ describe('SuperAgentAcpClient - T-Line Desktop Integration', () => {
     expect(choice.args).toContain('--acp');
     expect(choice.args).not.toContain('--server');
   });
+
+  it('detects installed ADE providers and lists all 7 engines with status', async () => {
+    const { listAcpEngines, isBinaryInstalled } = await import('../src/acpEngineRegistry');
+    const engines = listAcpEngines();
+
+    expect(engines.length).toBeGreaterThanOrEqual(7);
+    const engineIds = engines.map((e) => e.id);
+    expect(engineIds).toContain('antigravity');
+    expect(engineIds).toContain('superagent');
+    expect(engineIds).toContain('claude-code');
+    expect(engineIds).toContain('cursor');
+    expect(engineIds).toContain('codex');
+    expect(engineIds).toContain('zed');
+    expect(engineIds).toContain('aider');
+
+    // Installed engines come first in the sorted array
+    const firstEngine = engines[0];
+    expect(firstEngine.isInstalled).toBe(true);
+    expect(firstEngine.status).toBe('ready');
+
+    // isBinaryInstalled returns false for nonexistent binary
+    expect(isBinaryInstalled('nonexistent_tool_12345')).toBe(false);
+  });
 });

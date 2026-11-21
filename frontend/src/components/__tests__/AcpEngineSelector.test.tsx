@@ -112,4 +112,22 @@ describe('AcpEngineSelector - Multi-Core Switcher Pill & Dropdown', () => {
     expect(onModelSelect).toHaveBeenCalledWith('claude-sonnet-4-6');
     expect(screen.queryByRole('menu')).toBeNull();
   });
+
+  it('renders installed section and uninstalled provider section with Claude Code and others', () => {
+    render(
+      <AcpEngineSelector
+        currentEngineId="superagent"
+        onEngineSelect={vi.fn()}
+      />
+    );
+
+    const trigger = screen.getByRole('button', { name: /Select ACP Engine/i });
+    fireEvent.click(trigger);
+
+    expect(screen.getByText('Terinstall & Siap Pakai')).toBeDefined();
+    expect(screen.getByText('Provider Lainnya')).toBeDefined();
+    expect(screen.getByText('Claude Code')).toBeDefined();
+    expect(screen.getByText('Cursor Agent')).toBeDefined();
+    expect(screen.getByText('Aider Pair Programmer')).toBeDefined();
+  });
 });
