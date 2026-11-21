@@ -100,13 +100,36 @@ describe('SuperAgentAcpClient - T-Line Desktop Integration', () => {
       }) + '\n'
     );
 
+    mockToClient.write(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'session/update',
+        params: {
+          sessionId: 'sess_1',
+          seq: 4,
+          timestamp: Date.now(),
+          update: {
+            kind: 'tool_call_start',
+            tool: 'superagent_tool_execute',
+            callId: 'call_2',
+            description: { name: 'superagent_chrome_cdp', arguments: { command: 'screenshot' } },
+          },
+        },
+      }) + '\n'
+    );
+
     // Wait a tick for event propagation
     await new Promise((r) => setTimeout(r, 20));
 
     expect(thoughts).toEqual(['Thinking about architecture...']);
     expect(texts).toEqual(['Here is the plan.']);
-    expect(toolStarts.length).toBe(1);
+    expect(toolStarts.length).toBe(2);
     expect(toolStarts[0].tool).toBe('write_file');
+    expect(toolStarts[1].tool).toBe('superagent_tool_execute');
+    expect(toolStarts[1].description).toEqual({
+      name: 'superagent_chrome_cdp',
+      arguments: { command: 'screenshot' },
+    });
 
     client.close();
   });

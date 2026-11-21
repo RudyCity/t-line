@@ -102,16 +102,32 @@ export class SuperAgentAcpBridgeAdapter {
 
     // 3. Tool Execution Start
     this.client.on('tool_call_start', (data) => {
+      let resolvedTool = data.tool;
+      let resolvedArgs = data.description;
+
+      // Dynamic Gateway unwrapping: show the target tool being executed (e.g. superagent_chrome_cdp)
+      if (data.tool === 'superagent_tool_execute' && data.description && typeof data.description === 'object') {
+        if (data.description.name) {
+          resolvedTool = data.description.name;
+          resolvedArgs = data.description.arguments || data.description;
+        }
+      } else if (data.tool === 'call_mcp_tool' && data.description && typeof data.description === 'object') {
+        if (data.description.ToolName) {
+          resolvedTool = data.description.ToolName;
+          resolvedArgs = data.description.Arguments || data.description;
+        }
+      }
+
       this.sendToFrontend({
         type: 'agent_event',
         event: {
           type: 'tool_start',
           toolCall: {
             id: data.callId || `call_${Date.now()}`,
-            name: data.tool,
-            args: data.description,
+            name: resolvedTool,
+            args: resolvedArgs,
           },
-          description: data.description,
+          description: resolvedArgs,
         },
         sessionId: data.sessionId || this.activeSessionId,
       });
@@ -119,13 +135,24 @@ export class SuperAgentAcpBridgeAdapter {
 
     // 4. Tool Execution End
     this.client.on('tool_call_end', (data) => {
+      let resolvedTool = data.tool;
+      if (data.tool === 'superagent_tool_execute' && data.description && typeof data.description === 'object') {
+        if (data.description.name) {
+          resolvedTool = data.description.name;
+        }
+      } else if (data.tool === 'call_mcp_tool' && data.description && typeof data.description === 'object') {
+        if (data.description.ToolName) {
+          resolvedTool = data.description.ToolName;
+        }
+      }
+
       this.sendToFrontend({
         type: 'agent_event',
         event: {
           type: 'tool_end',
           toolResult: {
             id: data.callId,
-            name: data.tool,
+            name: resolvedTool,
             isError: data.status === 'failed',
           },
         },

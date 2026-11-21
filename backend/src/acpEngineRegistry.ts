@@ -85,7 +85,7 @@ export function getBuiltinAcpEngines(): Record<string, AcpEngineProfile> {
       description: 'Official Google DeepMind Antigravity with Gemini 3.8 Flash High & Claude Sonnet 4.6',
       icon: 'Brain',
       status: 'ready',
-      capabilities: ['massive-context', 'vision', 'literature-research', 'multimodal', 'deep-reasoning'],
+      capabilities: ['massive-context', 'vision', 'literature-research', 'multimodal', 'deep-reasoning', 'superagent-dynamic-tools'],
       command: agyBinary,
       args: ['acp'],
       defaultModel: 'gemini-3.8-flash-high',
