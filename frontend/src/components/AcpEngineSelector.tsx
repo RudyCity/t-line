@@ -11,6 +11,8 @@ import {
   Terminal,
   Code2,
   Download,
+  Code,
+  Bot,
 } from 'lucide-react';
 
 export interface AcpModelItem {
@@ -73,6 +75,56 @@ export const FALLBACK_ACP_ENGINES: AcpEngineInfo[] = [
     ],
   },
   {
+    id: 'opencode',
+    name: 'OpenCode ADE',
+    badge: 'ACP Native',
+    description: 'Open-source autonomous AI software engineering agent with native ACP protocol',
+    icon: 'Code',
+    status: 'ready',
+    isInstalled: true,
+    installHint: 'npm install -g opencode-ai',
+    capabilities: ['agentic-coding', 'bash', 'file-editing', 'mcp', 'acp-native', 'superagent-dynamic-tools'],
+    defaultModel: 'claude-3-7-sonnet',
+    models: [
+      { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet (OpenCode)', description: 'Anthropic Claude 3.7 Sonnet flagship in OpenCode', isDefault: true },
+      { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet v2', description: 'Fast and reliable coding assistant in OpenCode' },
+      { id: 'gpt-4o', name: 'GPT-4o (OpenCode)', description: 'OpenAI flagship multimodal coding model in OpenCode' },
+      { id: 'deepseek-r1', name: 'DeepSeek R1 (OpenCode)', description: 'Open-source reasoning model in OpenCode' },
+    ],
+  },
+  {
+    id: 'cline',
+    name: 'Cline Agent',
+    badge: 'ACP Native',
+    description: 'Autonomous AI coding assistant in terminal with plan/act modes and ACP protocol',
+    icon: 'Bot',
+    status: 'ready',
+    isInstalled: true,
+    installHint: 'npm install -g cline',
+    capabilities: ['agentic-coding', 'bash', 'file-editing', 'plan-mode', 'act-mode', 'acp-native', 'superagent-dynamic-tools'],
+    defaultModel: 'claude-3-7-sonnet',
+    models: [
+      { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet (Cline)', description: 'Anthropic Claude 3.7 Sonnet in Cline agent', isDefault: true },
+      { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', description: 'Fast and reliable coding assistant in Cline' },
+      { id: 'gpt-4o', name: 'GPT-4o (Cline)', description: 'OpenAI GPT-4o multimodal model in Cline' },
+    ],
+  },
+  {
+    id: 'kilo',
+    name: 'Kilo Code CLI',
+    badge: 'ACP Native',
+    description: 'Autonomous coding agent CLI with plan/act workflows and ACP protocol',
+    icon: 'Terminal',
+    status: 'ready',
+    isInstalled: true,
+    installHint: 'npm install -g @kilocode/cli',
+    capabilities: ['agentic-coding', 'bash', 'file-editing', 'acp-native'],
+    defaultModel: 'claude-3-7-sonnet',
+    models: [
+      { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet (Kilo)', description: 'Anthropic Claude 3.7 Sonnet in Kilo Code', isDefault: true },
+    ],
+  },
+  {
     id: 'claude-code',
     name: 'Claude Code',
     badge: 'Agentic CLI',
@@ -107,6 +159,21 @@ export const FALLBACK_ACP_ENGINES: AcpEngineInfo[] = [
     ],
   },
   {
+    id: 'windsurf',
+    name: 'Windsurf Cascade',
+    badge: 'Flow Agent',
+    description: 'Codeium Windsurf Cascade next-generation agentic IDE engine',
+    icon: 'Layers',
+    status: 'not-installed',
+    isInstalled: false,
+    installHint: 'https://codeium.com/windsurf',
+    capabilities: ['cascade-agent', 'deep-context', 'flow-paradigm'],
+    defaultModel: 'cascade-base',
+    models: [
+      { id: 'cascade-base', name: 'Cascade Engine', description: 'Codeium native agentic reasoning engine', isDefault: true },
+    ],
+  },
+  {
     id: 'codex',
     name: 'Codex Bridge',
     badge: 'Fast Review',
@@ -137,6 +204,36 @@ export const FALLBACK_ACP_ENGINES: AcpEngineInfo[] = [
     models: [
       { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet (Zed)', description: 'Default Zed AI reasoning agent', isDefault: true },
       { id: 'gpt-4o', name: 'GPT-4o (Zed)', description: 'OpenAI integration in Zed' },
+    ],
+  },
+  {
+    id: 'continue',
+    name: 'Continue ADE',
+    badge: 'Open Source',
+    description: 'Open-source AI code assistant for terminal and IDEs with custom LLM backends',
+    icon: 'Cpu',
+    status: 'not-installed',
+    isInstalled: false,
+    installHint: 'npm install -g @continuedev/continue',
+    capabilities: ['tab-autocomplete', 'chat', 'custom-llm'],
+    defaultModel: 'claude-3-7-sonnet',
+    models: [
+      { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet (Continue)', description: 'Anthropic Claude 3.7 Sonnet in Continue', isDefault: true },
+    ],
+  },
+  {
+    id: 'goose',
+    name: 'Goose Agent',
+    badge: 'Extensible',
+    description: 'Block Goose open-source autonomous engineering agent with extensible toolkits',
+    icon: 'Bot',
+    status: 'not-installed',
+    isInstalled: false,
+    installHint: 'https://github.com/block/goose',
+    capabilities: ['autonomous-agent', 'mcp-extensions', 'toolkit-developer'],
+    defaultModel: 'claude-3-7-sonnet',
+    models: [
+      { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet (Goose)', description: 'Anthropic Claude 3.7 Sonnet in Goose', isDefault: true },
     ],
   },
   {
@@ -236,6 +333,10 @@ export function AcpEngineSelector({
         return <Terminal className={className} />;
       case 'Code2':
         return <Code2 className={className} />;
+      case 'Code':
+        return <Code className={className} />;
+      case 'Bot':
+        return <Bot className={className} />;
       default:
         return <Layers className={className} />;
     }

@@ -126,6 +126,8 @@ describe('AcpEngineSelector - Multi-Core Switcher Pill & Dropdown', () => {
 
     expect(screen.getByText('Terinstall & Siap Pakai')).toBeDefined();
     expect(screen.getByText('Provider Lainnya')).toBeDefined();
+    expect(screen.getByText('OpenCode ADE')).toBeDefined();
+    expect(screen.getByText('Cline Agent')).toBeDefined();
     expect(screen.getByText('Claude Code')).toBeDefined();
     expect(screen.getByText('Cursor Agent')).toBeDefined();
     expect(screen.getByText('Aider Pair Programmer')).toBeDefined();

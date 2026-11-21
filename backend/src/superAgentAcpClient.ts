@@ -142,10 +142,23 @@ export class SuperAgentAcpClient extends EventEmitter {
         ...(this.options.env || {}),
       };
 
-      this.process = spawn(cmd, args, {
+      let spawnCmd = cmd;
+      let spawnArgs = args;
+      let windowsVerbatimArguments = false;
+
+      // On Windows, executing batch files (.cmd or .bat) directly via spawn without cmd.exe or shell fails with EINVAL
+      if (process.platform === 'win32' && (cmd.toLowerCase().endsWith('.cmd') || cmd.toLowerCase().endsWith('.bat'))) {
+        const fullCmdLine = `"${cmd}" ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`;
+        spawnCmd = process.env.ComSpec || 'cmd.exe';
+        spawnArgs = ['/d', '/s', '/c', `"${fullCmdLine}"`];
+        windowsVerbatimArguments = true;
+      }
+
+      this.process = spawn(spawnCmd, spawnArgs, {
         cwd,
         env,
         shell: false,
+        windowsVerbatimArguments,
         stdio: ['pipe', 'pipe', 'pipe'],
       });
 

@@ -135,6 +135,84 @@ export function resolveClaudePath(): string {
 }
 
 /**
+ * Resolves the path to OpenCode ADE CLI.
+ */
+export function resolveOpencodePath(): string {
+  if (process.platform === 'win32') {
+    const pf = process.env['ProgramFiles'] || 'C:\\Program Files';
+    const pfOpencode = path.join(pf, 'nodejs', 'opencode.cmd');
+    if (fs.existsSync(pfOpencode)) return pfOpencode;
+
+    const appData = process.env.APPDATA || '';
+    const npmOpencode = path.join(appData, 'npm', 'opencode.cmd');
+    if (fs.existsSync(npmOpencode)) return npmOpencode;
+  }
+  return 'opencode';
+}
+
+/**
+ * Resolves the path to Cline CLI.
+ */
+export function resolveClinePath(): string {
+  if (process.platform === 'win32') {
+    const pf = process.env['ProgramFiles'] || 'C:\\Program Files';
+    const pfCline = path.join(pf, 'nodejs', 'cline.cmd');
+    if (fs.existsSync(pfCline)) return pfCline;
+
+    const appData = process.env.APPDATA || '';
+    const npmCline = path.join(appData, 'npm', 'cline.cmd');
+    if (fs.existsSync(npmCline)) return npmCline;
+  }
+  return 'cline';
+}
+
+/**
+ * Resolves the path to Kilo Code CLI.
+ */
+export function resolveKiloPath(): string {
+  if (process.platform === 'win32') {
+    const pf = process.env['ProgramFiles'] || 'C:\\Program Files';
+    const pfKilo = path.join(pf, 'nodejs', 'kilo.cmd');
+    if (fs.existsSync(pfKilo)) return pfKilo;
+
+    const appData = process.env.APPDATA || '';
+    const npmKilo = path.join(appData, 'npm', 'kilo.cmd');
+    if (fs.existsSync(npmKilo)) return npmKilo;
+  }
+  return 'kilo';
+}
+
+/**
+ * Resolves the path to Windsurf Cascade Agent / CLI.
+ */
+export function resolveWindsurfPath(): string {
+  const appData = process.env.LOCALAPPDATA || '';
+  const windsurfPath = path.join(appData, 'Programs', 'windsurf', 'windsurf.exe');
+  if (fs.existsSync(windsurfPath)) return windsurfPath;
+  return 'windsurf';
+}
+
+/**
+ * Resolves the path to Continue.dev CLI.
+ */
+export function resolveContinuePath(): string {
+  const userProfile = process.env.USERPROFILE || '';
+  const continuePath = path.join(userProfile, '.continue', 'bin', 'continue.exe');
+  if (fs.existsSync(continuePath)) return continuePath;
+  return 'continue';
+}
+
+/**
+ * Resolves the path to Block Goose Agent.
+ */
+export function resolveGoosePath(): string {
+  const localAppData = process.env.LOCALAPPDATA || '';
+  const goosePath = path.join(localAppData, 'Programs', 'goose', 'bin', 'goose.exe');
+  if (fs.existsSync(goosePath)) return goosePath;
+  return 'goose';
+}
+
+/**
  * Resolves the path to Codex CLI.
  */
 export function resolveCodexPath(): string {
@@ -184,17 +262,35 @@ export function getBuiltinAcpEngines(): Record<string, AcpEngineProfile> {
   const superagentSpec = resolveSuperagentPath();
   const isSuperagentInstalled = isBinaryInstalled(superagentSpec.command) || fs.existsSync(path.resolve(__dirname, '../../../superagent/dist/cli.js'));
 
+  const opencodeBinary = resolveOpencodePath();
+  const isOpencodeInstalled = isBinaryInstalled(opencodeBinary);
+
+  const clineBinary = resolveClinePath();
+  const isClineInstalled = isBinaryInstalled(clineBinary);
+
+  const kiloBinary = resolveKiloPath();
+  const isKiloInstalled = isBinaryInstalled(kiloBinary);
+
   const claudeBinary = resolveClaudePath();
   const isClaudeInstalled = isBinaryInstalled(claudeBinary);
-
-  const codexBinary = resolveCodexPath();
-  const isCodexInstalled = isBinaryInstalled(codexBinary);
 
   const cursorBinary = resolveCursorPath();
   const isCursorInstalled = isBinaryInstalled(cursorBinary);
 
+  const windsurfBinary = resolveWindsurfPath();
+  const isWindsurfInstalled = isBinaryInstalled(windsurfBinary);
+
+  const codexBinary = resolveCodexPath();
+  const isCodexInstalled = isBinaryInstalled(codexBinary);
+
   const zedBinary = resolveZedPath();
   const isZedInstalled = isBinaryInstalled(zedBinary);
+
+  const continueBinary = resolveContinuePath();
+  const isContinueInstalled = isBinaryInstalled(continueBinary);
+
+  const gooseBinary = resolveGoosePath();
+  const isGooseInstalled = isBinaryInstalled(gooseBinary);
 
   const aiderBinary = resolveAiderPath();
   const isAiderInstalled = isBinaryInstalled(aiderBinary);
@@ -285,6 +381,103 @@ export function getBuiltinAcpEngines(): Record<string, AcpEngineProfile> {
         },
       ],
     },
+    opencode: {
+      id: 'opencode',
+      name: 'OpenCode ADE',
+      badge: 'ACP Native',
+      description: 'Open-source autonomous AI software engineering agent with native ACP protocol',
+      icon: 'Code',
+      status: isOpencodeInstalled ? 'ready' : 'not-installed',
+      isInstalled: isOpencodeInstalled,
+      installHint: 'npm install -g opencode-ai',
+      installCommand: 'npm install -g opencode-ai',
+      capabilities: ['agentic-coding', 'bash', 'file-editing', 'mcp', 'acp-native', 'superagent-dynamic-tools'],
+      command: opencodeBinary,
+      args: ['acp'],
+      defaultModel: 'claude-3-7-sonnet',
+      systemPromptAppend: SUPERAGENT_DYNAMIC_TOOLS_ACP_PROMPT,
+      models: [
+        {
+          id: 'claude-3-7-sonnet',
+          name: 'Claude 3.7 Sonnet (OpenCode)',
+          description: 'Anthropic Claude 3.7 Sonnet flagship model in OpenCode',
+          isDefault: true,
+        },
+        {
+          id: 'claude-3-5-sonnet',
+          name: 'Claude 3.5 Sonnet v2',
+          description: 'Balanced speed and precision coding model in OpenCode',
+        },
+        {
+          id: 'gpt-4o',
+          name: 'GPT-4o (OpenCode)',
+          description: 'OpenAI flagship multimodal coding model in OpenCode',
+        },
+        {
+          id: 'deepseek-r1',
+          name: 'DeepSeek R1 (OpenCode)',
+          description: 'Open-source reasoning model in OpenCode',
+        },
+      ],
+    },
+    cline: {
+      id: 'cline',
+      name: 'Cline Agent',
+      badge: 'ACP Native',
+      description: 'Autonomous AI coding assistant in terminal with plan/act modes and ACP protocol',
+      icon: 'Bot',
+      status: isClineInstalled ? 'ready' : 'not-installed',
+      isInstalled: isClineInstalled,
+      installHint: 'npm install -g cline',
+      installCommand: 'npm install -g cline',
+      capabilities: ['agentic-coding', 'bash', 'file-editing', 'plan-mode', 'act-mode', 'acp-native', 'superagent-dynamic-tools'],
+      command: clineBinary,
+      args: ['--acp'],
+      defaultModel: 'claude-3-7-sonnet',
+      systemPromptAppend: SUPERAGENT_DYNAMIC_TOOLS_ACP_PROMPT,
+      models: [
+        {
+          id: 'claude-3-7-sonnet',
+          name: 'Claude 3.7 Sonnet (Cline)',
+          description: 'Anthropic Claude 3.7 Sonnet in Cline agent',
+          isDefault: true,
+        },
+        {
+          id: 'claude-3-5-sonnet',
+          name: 'Claude 3.5 Sonnet',
+          description: 'Fast and reliable coding assistant in Cline',
+        },
+        {
+          id: 'gpt-4o',
+          name: 'GPT-4o (Cline)',
+          description: 'OpenAI GPT-4o multimodal model in Cline',
+        },
+      ],
+    },
+    kilo: {
+      id: 'kilo',
+      name: 'Kilo Code CLI',
+      badge: 'ACP Native',
+      description: 'Autonomous coding agent CLI with plan/act workflows and ACP protocol',
+      icon: 'Terminal',
+      status: isKiloInstalled ? 'ready' : 'not-installed',
+      isInstalled: isKiloInstalled,
+      installHint: 'npm install -g @kilocode/cli',
+      installCommand: 'npm install -g @kilocode/cli',
+      capabilities: ['agentic-coding', 'bash', 'file-editing', 'acp-native'],
+      command: kiloBinary,
+      args: ['--acp'],
+      defaultModel: 'claude-3-7-sonnet',
+      systemPromptAppend: SUPERAGENT_DYNAMIC_TOOLS_ACP_PROMPT,
+      models: [
+        {
+          id: 'claude-3-7-sonnet',
+          name: 'Claude 3.7 Sonnet (Kilo)',
+          description: 'Anthropic Claude 3.7 Sonnet in Kilo Code',
+          isDefault: true,
+        },
+      ],
+    },
     'claude-code': {
       id: 'claude-code',
       name: 'Claude Code',
@@ -350,6 +543,28 @@ export function getBuiltinAcpEngines(): Record<string, AcpEngineProfile> {
         },
       ],
     },
+    windsurf: {
+      id: 'windsurf',
+      name: 'Windsurf Cascade',
+      badge: 'Flow Agent',
+      description: 'Codeium Windsurf Cascade next-generation agentic IDE engine',
+      icon: 'Layers',
+      status: isWindsurfInstalled ? 'ready' : 'not-installed',
+      isInstalled: isWindsurfInstalled,
+      installHint: 'https://codeium.com/windsurf',
+      capabilities: ['cascade-agent', 'deep-context', 'flow-paradigm'],
+      command: windsurfBinary,
+      args: ['agent'],
+      defaultModel: 'cascade-base',
+      models: [
+        {
+          id: 'cascade-base',
+          name: 'Cascade Engine',
+          description: 'Codeium native agentic reasoning engine',
+          isDefault: true,
+        },
+      ],
+    },
     codex: {
       id: 'codex',
       name: 'Codex Bridge',
@@ -406,6 +621,51 @@ export function getBuiltinAcpEngines(): Record<string, AcpEngineProfile> {
           id: 'gpt-4o',
           name: 'GPT-4o (Zed)',
           description: 'OpenAI integration in Zed',
+        },
+      ],
+    },
+    continue: {
+      id: 'continue',
+      name: 'Continue ADE',
+      badge: 'Open Source',
+      description: 'Open-source AI code assistant for terminal and IDEs with custom LLM backends',
+      icon: 'Cpu',
+      status: isContinueInstalled ? 'ready' : 'not-installed',
+      isInstalled: isContinueInstalled,
+      installHint: 'npm install -g @continuedev/continue',
+      installCommand: 'npm install -g @continuedev/continue',
+      capabilities: ['tab-autocomplete', 'chat', 'custom-llm'],
+      command: continueBinary,
+      args: ['--acp'],
+      defaultModel: 'claude-3-7-sonnet',
+      models: [
+        {
+          id: 'claude-3-7-sonnet',
+          name: 'Claude 3.7 Sonnet (Continue)',
+          description: 'Anthropic Claude 3.7 Sonnet in Continue',
+          isDefault: true,
+        },
+      ],
+    },
+    goose: {
+      id: 'goose',
+      name: 'Goose Agent',
+      badge: 'Extensible',
+      description: 'Block Goose open-source autonomous engineering agent with extensible toolkits',
+      icon: 'Bot',
+      status: isGooseInstalled ? 'ready' : 'not-installed',
+      isInstalled: isGooseInstalled,
+      installHint: 'https://github.com/block/goose',
+      capabilities: ['autonomous-agent', 'mcp-extensions', 'toolkit-developer'],
+      command: gooseBinary,
+      args: ['run', '--acp'],
+      defaultModel: 'claude-3-7-sonnet',
+      models: [
+        {
+          id: 'claude-3-7-sonnet',
+          name: 'Claude 3.7 Sonnet (Goose)',
+          description: 'Anthropic Claude 3.7 Sonnet in Goose',
+          isDefault: true,
         },
       ],
     },

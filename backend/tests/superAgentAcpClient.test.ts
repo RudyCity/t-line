@@ -237,18 +237,24 @@ describe('SuperAgentAcpClient - T-Line Desktop Integration', () => {
     expect(choice.args).not.toContain('--server');
   });
 
-  it('detects installed ADE providers and lists all 7 engines with status', async () => {
+  it('detects installed ADE providers and lists all Universal ADE Hub engines with status', async () => {
     const { listAcpEngines, isBinaryInstalled } = await import('../src/acpEngineRegistry');
     const engines = listAcpEngines();
 
-    expect(engines.length).toBeGreaterThanOrEqual(7);
+    expect(engines.length).toBeGreaterThanOrEqual(13);
     const engineIds = engines.map((e) => e.id);
     expect(engineIds).toContain('antigravity');
     expect(engineIds).toContain('superagent');
+    expect(engineIds).toContain('opencode');
+    expect(engineIds).toContain('cline');
+    expect(engineIds).toContain('kilo');
     expect(engineIds).toContain('claude-code');
     expect(engineIds).toContain('cursor');
+    expect(engineIds).toContain('windsurf');
     expect(engineIds).toContain('codex');
     expect(engineIds).toContain('zed');
+    expect(engineIds).toContain('continue');
+    expect(engineIds).toContain('goose');
     expect(engineIds).toContain('aider');
 
     // Installed engines come first in the sorted array
