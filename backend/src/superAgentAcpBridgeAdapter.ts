@@ -7,6 +7,7 @@
 import type WebSocket from 'ws';
 import { SuperAgentAcpClient, type AcpPermissionRequest } from './superAgentAcpClient';
 import { getAcpEngine } from './acpEngineRegistry';
+import { provisionAllAdeMcp } from './acpMcpProvisioner';
 
 export interface AcpBridgeAdapterOptions {
   client?: SuperAgentAcpClient;
@@ -30,6 +31,62 @@ export interface DispatchAcpPromptOptions {
 
 // Global active client pool per WebSocket connection and engine
 const activeEngineClients = new Map<string, { client: SuperAgentAcpClient; acpSessionId: string }>();
+
+// Global in-flight ACP reverse permission requests across all active engines
+export const pendingAcpPermissions = new Map<
+  string,
+  {
+    client: SuperAgentAcpClient;
+    rpcId: string | number;
+    sessionId?: string;
+  }
+>();
+
+/**
+ * Resolves a pending reverse permission request issued by any active ACP engine.
+ * Returns true if the permission was found and resolved, false otherwise.
+ */
+export function resolvePendingAcpPermission(
+  permissionId: string,
+  approval: boolean | 'session',
+  reason?: string
+): boolean {
+  const pending = pendingAcpPermissions.get(permissionId);
+  if (!pending) return false;
+
+  pendingAcpPermissions.delete(permissionId);
+  const decision = approval === 'session' ? 'approved_session' : approval ? 'approved' : 'denied';
+  try {
+    pending.client.respondPermission(pending.rpcId, decision, reason);
+    return true;
+  } catch (err) {
+    console.warn(`[ACP-Gateway] Failed to respond to ACP permission '${permissionId}':`, err);
+    return false;
+  }
+}
+
+/**
+ * Unwraps dynamic Superagent tool calls (superagent_tool_execute & call_mcp_tool)
+ * to present the actual tool name and arguments cleanly in UI streaming.
+ */
+export function unwrapDynamicTool(tool: any, description: any): { resolvedTool: string; resolvedArgs: any } {
+  let resolvedTool = typeof tool === 'string' ? tool : String(tool || 'unknown_tool');
+  let resolvedArgs = description;
+
+  if (tool === 'superagent_tool_execute' && description && typeof description === 'object') {
+    if (description.name) {
+      resolvedTool = description.name;
+      resolvedArgs = description.arguments || description;
+    }
+  } else if (tool === 'call_mcp_tool' && description && typeof description === 'object') {
+    if (description.ToolName) {
+      resolvedTool = description.ToolName;
+      resolvedArgs = description.Arguments || description;
+    }
+  }
+
+  return { resolvedTool, resolvedArgs };
+}
 
 function getClientKey(ws: WebSocket, engineId: string): string {
   // Use a unique symbol or property attached to ws if possible, else memory map
@@ -196,6 +253,7 @@ export class SuperAgentAcpBridgeAdapter {
     // 7. Reverse Permission Request
     this.client.on('permission_requested', (req: AcpPermissionRequest & { rpcId: string | number }) => {
       this.pendingPermissionRpcMap.set(req.permissionId, req.rpcId);
+      pendingAcpPermissions.set(req.permissionId, { client: this.client, rpcId: req.rpcId, sessionId: req.sessionId });
       this.sendToFrontend({
         type: 'permission_required',
         permissionId: req.permissionId,
@@ -272,6 +330,9 @@ export class SuperAgentAcpBridgeAdapter {
   public dispose(): void {
     if (this.isDisposed) return;
     this.isDisposed = true;
+    for (const permId of this.pendingPermissionRpcMap.keys()) {
+      pendingAcpPermissions.delete(permId);
+    }
     this.pendingPermissionRpcMap.clear();
     this.client.close();
   }
@@ -325,6 +386,13 @@ export async function dispatchAcpPrompt(options: DispatchAcpPromptOptions): Prom
       workspacePath,
     });
 
+    // Auto-provision Superagent MCP into OpenCode & Cline before session starts
+    try {
+      provisionAllAdeMcp(workspacePath);
+    } catch (provisionErr) {
+      console.warn('[ACP-Gateway] Non-blocking MCP auto-provision warning:', provisionErr);
+    }
+
     // Pipe streaming events to frontend
     client.on('text', (ev) => {
       if (ws.readyState === 1) {
@@ -348,12 +416,13 @@ export async function dispatchAcpPrompt(options: DispatchAcpPromptOptions): Prom
 
     client.on('tool_call_start', (ev) => {
       if (ws.readyState === 1) {
+        const { resolvedTool, resolvedArgs } = unwrapDynamicTool(ev.tool, ev.description);
         ws.send(JSON.stringify({
           type: 'agent_event',
           event: {
             type: 'tool_start',
-            toolCall: { id: ev.callId || `call_${Date.now()}`, name: ev.tool, args: ev.description },
-            description: ev.description,
+            toolCall: { id: ev.callId || `call_${Date.now()}`, name: resolvedTool, args: resolvedArgs },
+            description: resolvedArgs,
           },
           sessionId,
         }));
@@ -362,12 +431,29 @@ export async function dispatchAcpPrompt(options: DispatchAcpPromptOptions): Prom
 
     client.on('tool_call_end', (ev) => {
       if (ws.readyState === 1) {
+        const { resolvedTool } = unwrapDynamicTool(ev.tool, undefined);
         ws.send(JSON.stringify({
           type: 'agent_event',
           event: {
             type: 'tool_end',
-            toolResult: { id: ev.callId, name: ev.tool, isError: ev.status === 'failed' },
+            toolResult: { id: ev.callId, name: resolvedTool, isError: ev.status === 'failed' },
           },
+          sessionId,
+        }));
+      }
+    });
+
+    client.on('permission_requested', (ev) => {
+      pendingAcpPermissions.set(ev.permissionId, { client, rpcId: ev.rpcId, sessionId: ev.sessionId });
+      if (ws.readyState === 1) {
+        ws.send(JSON.stringify({
+          type: 'permission_required',
+          permissionId: ev.permissionId,
+          description: ev.description,
+          action: ev.action,
+          target: ev.target,
+          riskLevel: ev.riskLevel,
+          expiresInMs: ev.expiresInMs,
           sessionId,
         }));
       }
@@ -411,6 +497,11 @@ export async function dispatchAcpPrompt(options: DispatchAcpPromptOptions): Prom
     // Auto cleanup when websocket closes
     ws.once('close', () => {
       activeEngineClients.delete(key);
+      for (const [permId, pending] of pendingAcpPermissions.entries()) {
+        if (pending.client === client) {
+          pendingAcpPermissions.delete(permId);
+        }
+      }
       client.close();
     });
 

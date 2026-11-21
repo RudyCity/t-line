@@ -265,4 +265,76 @@ describe('SuperAgentAcpClient - T-Line Desktop Integration', () => {
     // isBinaryInstalled returns false for nonexistent binary
     expect(isBinaryInstalled('nonexistent_tool_12345')).toBe(false);
   });
+
+  it('unwraps dynamic tool calls cleanly in streaming bridge', async () => {
+    const { unwrapDynamicTool } = await import('../src/superAgentAcpBridgeAdapter');
+
+    const unwrappedExecute = unwrapDynamicTool('superagent_tool_execute', {
+      name: 'superagent_chrome_cdp',
+      arguments: { command: 'screenshot' },
+    });
+    expect(unwrappedExecute.resolvedTool).toBe('superagent_chrome_cdp');
+    expect(unwrappedExecute.resolvedArgs).toEqual({ command: 'screenshot' });
+
+    const unwrappedMcp = unwrapDynamicTool('call_mcp_tool', {
+      ToolName: 'superagent_list_projects',
+      Arguments: { filter: 'active' },
+    });
+    expect(unwrappedMcp.resolvedTool).toBe('superagent_list_projects');
+    expect(unwrappedMcp.resolvedArgs).toEqual({ filter: 'active' });
+
+    const plain = unwrapDynamicTool('read_file', { path: '/tmp/test' });
+    expect(plain.resolvedTool).toBe('read_file');
+    expect(plain.resolvedArgs).toEqual({ path: '/tmp/test' });
+  });
+
+  it('resolves in-flight ACP reverse permissions and replies to client', async () => {
+    const { pendingAcpPermissions, resolvePendingAcpPermission } = await import('../src/superAgentAcpBridgeAdapter');
+
+    let capturedDecision: string | null = null;
+    const mockClient: any = {
+      respondPermission: (_rpcId: any, decision: string) => {
+        capturedDecision = decision;
+      },
+    };
+
+    pendingAcpPermissions.set('perm_test_123', {
+      client: mockClient,
+      rpcId: 42,
+      sessionId: 'sess_test',
+    });
+
+    const resolved = resolvePendingAcpPermission('perm_test_123', true);
+    expect(resolved).toBe(true);
+    expect(capturedDecision).toBe('approved');
+    expect(pendingAcpPermissions.has('perm_test_123')).toBe(false);
+
+    // Resolving again returns false
+    expect(resolvePendingAcpPermission('perm_test_123', true)).toBe(false);
+  });
+
+  it('provisions opencode.json with Superagent MCP server configuration', async () => {
+    const { provisionOpencodeMcp } = await import('../src/acpMcpProvisioner');
+    const os = await import('os');
+    const fs = await import('fs');
+    const path = await import('path');
+
+    const testDir = path.join(os.tmpdir(), `tline_mcp_test_${Date.now()}`);
+    fs.mkdirSync(testDir, { recursive: true });
+
+    try {
+      const ok = provisionOpencodeMcp(testDir, 'D:/test/superagent/dist/cli.js');
+      expect(ok).toBe(true);
+
+      const configPath = path.join(testDir, 'opencode.json');
+      expect(fs.existsSync(configPath)).toBe(true);
+
+      const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      expect(parsed.mcp).toBeDefined();
+      expect(parsed.mcp.superagent).toBeDefined();
+      expect(parsed.mcp.superagent.command).toContain('D:/test/superagent/dist/cli.js');
+    } finally {
+      fs.rmSync(testDir, { recursive: true, force: true });
+    }
+  });
 });

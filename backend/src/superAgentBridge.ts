@@ -1187,7 +1187,7 @@ let suppressBufferWrite = false;
           logSuperAgentEvent('system_error', { message: 'Failed to send prompt to SuperAgent', error: err.message });
         }
       } else if (actionType === 'approve_permission') {
-        const { permissionId, approval } = parsed;
+        const { permissionId, approval, reason } = parsed;
         if (typeof permissionId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(permissionId) ||
             (approval !== true && approval !== false && approval !== 'session')) {
           ws.send(JSON.stringify({ type: 'permission_decision_ack', sessionId: initialSessionId,
@@ -1196,6 +1196,27 @@ let suppressBufferWrite = false;
           return;
         }
         logSuperAgentEvent('permission_response', { action: 'decision_sent', approved: approval !== false });
+
+        // Check if this permission is an in-flight ACP reverse permission request
+        try {
+          const { resolvePendingAcpPermission } = await import('./superAgentAcpBridgeAdapter');
+          if (resolvePendingAcpPermission(permissionId, approval, reason)) {
+            console.log(`[ACP-Gateway] Resolved in-flight ACP permission '${permissionId}' (decision: ${approval})`);
+            if (!isClosed && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'permission_decision_ack',
+                sessionId: initialSessionId,
+                permissionId,
+                accepted: true,
+                code: 'ACCEPTED',
+              }));
+            }
+            return;
+          }
+        } catch (acpPermErr) {
+          console.warn('[ACP-Gateway] Error resolving ACP permission:', acpPermErr);
+        }
+
         try {
           const decision = await sendSuperAgentRequest('/api/approve',
             { permissionId, approval, sessionId: initialSessionId }, workspacePath, 10000);

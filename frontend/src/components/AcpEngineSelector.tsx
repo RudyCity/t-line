@@ -11,8 +11,6 @@ import {
   Terminal,
   Code2,
   Download,
-  Code,
-  Bot,
 } from 'lucide-react';
 
 export interface AcpModelItem {
@@ -331,12 +329,11 @@ export function AcpEngineSelector({
         return <Wrench className={className} />;
       case 'Terminal':
         return <Terminal className={className} />;
+      case 'Code':
       case 'Code2':
         return <Code2 className={className} />;
-      case 'Code':
-        return <Code className={className} />;
       case 'Bot':
-        return <Bot className={className} />;
+        return <Cpu className={className} />;
       default:
         return <Layers className={className} />;
     }
