@@ -38,6 +38,7 @@ export interface SettingsModalProps {
   setFontMonoWeight?: (w: string) => void;
   terminalFontSize?: number;
   setTerminalFontSize?: (s: number) => void;
+  initialTab?: 'general' | 'appearance' | 'security' | 'connections';
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -62,9 +63,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   fontMonoWeight = '400',
   setFontMonoWeight = () => {},
   terminalFontSize = 12,
-  setTerminalFontSize = () => {}
+  setTerminalFontSize = () => {},
+  initialTab = 'general'
 }) => {
-  const [activeTab, setActiveTab] = React.useState<'general' | 'appearance' | 'security' | 'connections'>('general');
+  const [activeTab, setActiveTab] = React.useState<'general' | 'appearance' | 'security' | 'connections'>(initialTab);
+
+  React.useEffect(() => {
+    if (show && initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [show, initialTab]);
   const [calmDensity, setCalmDensity] = React.useState<CalmDensity>(() =>
     localStorage.getItem('tline-calm-density') === 'compact' ? 'compact' : 'comfortable');
   const [calmMotion, setCalmMotion] = React.useState<CalmMotion>(() =>
@@ -82,6 +90,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
+  const [masterPasswordConfigured, setMasterPasswordConfigured] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -274,6 +283,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
+  React.useEffect(() => {
+    if (show && activeTab === 'security') {
+      fetch('/api/auth/setup-status')
+        .then(res => res.json())
+        .then(data => {
+          if (data && typeof data.masterPasswordConfigured === 'boolean') {
+            setMasterPasswordConfigured(data.masterPasswordConfigured);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [show, activeTab]);
+
   if (!show) return null;
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -303,8 +325,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setSuccess('Password updated successfully.');
-        sessionStorage.setItem('token', data.token);
+        setSuccess(data.message || 'Password updated successfully.');
+        setMasterPasswordConfigured(true);
+        if (data.token) {
+          sessionStorage.setItem('token', data.token);
+        }
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
@@ -773,26 +798,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               )}
 
-              <FormField label="Current Master Password">
-                <div className="relative flex items-center">
-                  <Input
-                    type={showCurrentPassword ? "text" : "password"}
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    required
-                    placeholder="Enter current password"
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="absolute right-3 text-slate-400 hover:text-slate-200 transition-colors focus:outline-none"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                  >
-                    {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
+              {masterPasswordConfigured ? (
+                <div style={{ marginBottom: '14px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Master password is required for remote/tunnel access. You can update it below.
                 </div>
-              </FormField>
+              ) : (
+                <div style={{ marginBottom: '14px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Master password is not configured yet. Desktop access runs without requiring a password, but you can configure one below to secure external/tunnel access.
+                </div>
+              )}
+
+              {masterPasswordConfigured && (
+                <FormField label="Current Master Password">
+                  <div className="relative flex items-center">
+                    <Input
+                      type={showCurrentPassword ? "text" : "password"}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      required
+                      placeholder="Enter current password"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="absolute right-3 text-slate-400 hover:text-slate-200 transition-colors focus:outline-none"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                    >
+                      {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </FormField>
+              )}
 
               <FormField label="New Master Password">
                 <div className="relative flex items-center">
@@ -841,7 +878,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   Cancel
                 </Button>
                 <Button type="submit" loading={loading} disabled={loading}>
-                  {loading ? 'Updating...' : 'Update Password'}
+                  {loading ? (masterPasswordConfigured ? 'Updating...' : 'Setting...') : (masterPasswordConfigured ? 'Update Password' : 'Set Master Password')}
                 </Button>
               </div>
             </form>

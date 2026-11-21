@@ -10,21 +10,61 @@ export function useAuth() {
   const [authError, setAuthError] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+  const [isLocalDesktop, setIsLocalDesktop] = useState<boolean>(false);
+  const [masterPasswordConfigured, setMasterPasswordConfigured] = useState<boolean>(false);
 
   const checkAuth = useCallback(async () => {
     try {
       const urlParams = getRuntimeSearchParams();
-      const urlToken = urlParams.get('token');
+      let urlToken = urlParams.get('token');
       if (urlToken) {
         setAuthToken(urlToken);
         wsManager.setToken(urlToken);
       }
 
-      const token = getAuthToken();
+      // If running inside Tauri and no urlToken, try to acquire the local token from Tauri
+      if (!urlToken && (window as any).__TAURI__?.core?.invoke) {
+        try {
+          const appUrl: string = await (window as any).__TAURI__.core.invoke('get_app_url');
+          if (appUrl) {
+            const urlObj = appUrl.startsWith('http://') || appUrl.startsWith('https://')
+              ? new URL(appUrl)
+              : new URL(appUrl, window.location.origin);
+            const tokenParam = urlObj.searchParams.get('token');
+            if (tokenParam) {
+              urlToken = tokenParam;
+              setAuthToken(tokenParam);
+              wsManager.setToken(tokenParam);
+            }
+          }
+        } catch (e) {
+          console.warn('Could not retrieve app url from Tauri:', e);
+        }
+      }
+
+      let token = getAuthToken();
       
-      // 1. Check setup status
+      // 1. Check setup status & local desktop detection
       const setupRes = await fetch('/api/auth/setup-status');
       const setupData = await setupRes.json();
+      
+      const isLocal = !!setupData.isLocalDesktop;
+      setIsLocalDesktop(isLocal);
+      setMasterPasswordConfigured(!!setupData.masterPasswordConfigured);
+
+      // Desktop running locally: master password is NOT active/required.
+      // Auto-authenticate with local bypass token without prompting.
+      if (isLocal) {
+        setSetupRequired(false);
+        const desktopToken = setupData.token || urlToken || token || 'local';
+        setAuthToken(desktopToken);
+        wsManager.setToken(desktopToken);
+        setIsAuthenticated(true);
+        setLoading(false);
+        return;
+      }
+
+      // Outside / remote access: master password IS active and enforced.
       setSetupRequired(setupData.setupRequired);
 
       if (setupData.setupRequired) {
@@ -32,7 +72,7 @@ export function useAuth() {
         return;
       }
 
-      // 2. Verify token if exists
+      // 2. Verify token if exists (for remote clients)
       if (token) {
         const verifyRes = await fetch('/api/auth/verify', {
           headers: { Authorization: `Bearer ${token}` }
@@ -42,7 +82,10 @@ export function useAuth() {
           setIsAuthenticated(true);
         } else {
           clearAuthToken();
+          setIsAuthenticated(false);
         }
+      } else {
+        setIsAuthenticated(false);
       }
     } catch (e) {
       logFetchError('Auth check failed', e);
@@ -212,6 +255,8 @@ export function useAuth() {
     setPassword,
     loading,
     setLoading,
+    isLocalDesktop,
+    masterPasswordConfigured,
     checkAuth,
     handleSetup,
     handleLogin,

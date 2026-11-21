@@ -174,6 +174,7 @@ import authRouter, {
   ipRules,
   loginBlocks,
   getClientIp,
+  isTunnelRequest,
   parseUserAgent,
   recentAccesses
 } from './authRoutes';
@@ -588,7 +589,8 @@ server.on('upgrade', (request, socket, head) => {
     token = urlParams.searchParams.get('token');
   }
 
-  if (!token || !verifySocketToken(token)) {
+  const isTunnel = isTunnelRequest(request as any);
+  if (!verifySocketToken(token || '', isTunnel)) {
     socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
     socket.destroy();
     return;

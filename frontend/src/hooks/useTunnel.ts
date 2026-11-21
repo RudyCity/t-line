@@ -16,7 +16,9 @@ export interface MultiTunnelStatus {
 
 export function useTunnel(
   isAuthenticated: boolean,
-  showAlert: (title: string, message: string) => void
+  showAlert: (title: string, message: string) => void,
+  masterPasswordConfigured: boolean = true,
+  onOpenSecuritySettings?: () => void
 ) {
   const [tunnelStatus, setTunnelStatus] = useState<MultiTunnelStatus>({
     tline: { active: false, url: null, type: 'none', error: null },
@@ -56,6 +58,18 @@ export function useTunnel(
   }, [isAuthenticated]);
 
   const handleStartTunnel = async (target: 'tline' | 'custom', type: 'quick' | 'token', customPort?: number) => {
+    // Security alert: Warn and require master password if attempting to expose t-line tunnel
+    if (target === 'tline' && !masterPasswordConfigured) {
+      showAlert(
+        'Peringatan Keamanan Master Password',
+        'Master password belum dipasang! Menjalankan tunnel t-line tanpa master password akan membiarkan akses remote terbuka tanpa otentikasi. Silakan pasang master password di Settings > Security terlebih dahulu.'
+      );
+      if (onOpenSecuritySettings) {
+        onOpenSecuritySettings();
+      }
+      return;
+    }
+
     if (type === 'token') {
       setTunnelTarget(target);
       if (target === 'custom' && customPort) {
@@ -93,6 +107,18 @@ export function useTunnel(
     if (!tunnelToken) return;
 
     const target = tunnelTarget;
+    if (target === 'tline' && !masterPasswordConfigured) {
+      setShowTunnelModal(false);
+      showAlert(
+        'Peringatan Keamanan Master Password',
+        'Master password belum dipasang! Menjalankan named tunnel t-line tanpa master password akan membiarkan akses remote terbuka. Silakan pasang master password di Settings > Security terlebih dahulu.'
+      );
+      if (onOpenSecuritySettings) {
+        onOpenSecuritySettings();
+      }
+      return;
+    }
+
     setTunnelLoading(prev => ({ ...prev, [target]: true }));
     try {
       const res = await fetch('/api/tunnel/start', {

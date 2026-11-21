@@ -1,5 +1,5 @@
 import { STUDIO_DISPLAY_NAME } from "./services/studioBranding";
-import { useState, useEffect, useMemo, Fragment, useRef, Suspense, lazy, type ComponentProps } from 'react';
+import { useState, useEffect, useMemo, useCallback, Fragment, useRef, Suspense, lazy, type ComponentProps } from 'react';
 import { 
   Folder, 
   Plus, 
@@ -90,6 +90,7 @@ import { useLayoutHelpers } from './hooks/useLayoutHelpers';
 import { SidebarContentPanel } from './components/SidebarContentPanel';
 import { RightSidebar } from './components/RightSidebar';
 import { UpdateNotification } from './components/UpdateNotification';
+import { MasterPasswordAlertBanner } from './components/MasterPasswordAlertBanner';
 import { useGitStatus } from './hooks/useGitStatus';
 import { useConfirmDialog } from './hooks/useConfirmDialog';
 import { useWorkspaceHandlers, getTabWorktreePath } from './hooks/useWorkspaceHandlers';
@@ -214,6 +215,7 @@ export default function App() {
     password,
     setPassword,
     loading,
+    masterPasswordConfigured,
     handleSetup,
     handleLogin,
     handleLogout
@@ -241,6 +243,12 @@ export default function App() {
     return () => { window.dispatchEvent(new CustomEvent('tline-hide-native-webview', { detail: { hide: false } })); };
   }, [confirmDialog?.show]);
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
+  const [settingsInitialTab, setSettingsInitialTab] = useState<'general' | 'appearance' | 'security' | 'connections'>('general');
+
+  const handleOpenSecuritySettings = useCallback(() => {
+    setSettingsInitialTab('security');
+    setShowSettingsModal(true);
+  }, []);
   const [rightMenuOpen, setRightMenuOpen] = useState<boolean>(false);
   const [showShortcutModal, setShowShortcutModal] = useState<boolean>(false);
   const [showBranchModal, setShowBranchModal] = useState<boolean>(false);
@@ -331,7 +339,7 @@ export default function App() {
     handleStartTokenTunnel,
     handleStopTunnel,
     tunnelTarget
-  } = useTunnel(isAuthenticated, showAlert);
+  } = useTunnel(isAuthenticated, showAlert, masterPasswordConfigured, handleOpenSecuritySettings);
 
   // System statistics hook
   const systemStats = useSystemStats(isAuthenticated);
@@ -1879,6 +1887,10 @@ export default function App() {
   return (
     <div className="app-container">
       <UpdateNotification />
+      <MasterPasswordAlertBanner
+        configured={masterPasswordConfigured}
+        onOpenSecuritySettings={handleOpenSecuritySettings}
+      />
       
       <div className="app-content-wrapper">
         
@@ -2795,11 +2807,16 @@ export default function App() {
           tunnelLoading={tunnelLoading}
           handleStartTunnel={handleStartTunnel}
           handleStopTunnel={handleStopTunnel}
+          masterPasswordConfigured={masterPasswordConfigured}
+          onOpenSecuritySettings={handleOpenSecuritySettings}
         />
 
         <SettingsModal
           show={showSettingsModal}
-          onClose={() => setShowSettingsModal(false)}
+          onClose={() => {
+            setShowSettingsModal(false);
+            setSettingsInitialTab('general');
+          }}
           token={localStorage.getItem('token') || ''}
           workspacesCount={workspaces.length}
           showAlert={showAlert}
@@ -2820,6 +2837,7 @@ export default function App() {
           setFontMonoWeight={setFontMonoWeight}
           terminalFontSize={terminalFontSize}
           setTerminalFontSize={setTerminalFontSize}
+          initialTab={settingsInitialTab}
         />
 
         <ShortcutHelpModal

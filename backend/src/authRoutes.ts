@@ -10,8 +10,14 @@ import {
   generateToken,
   authMiddleware,
   verifySocketToken,
-  localBypassToken
+  localBypassToken,
+  getClientIp,
+  isTunnelRequest,
+  isLocalDesktopRequest
 } from './auth';
+
+// Re-export network classification helpers for backward compatibility
+export { getClientIp, isTunnelRequest, isLocalDesktopRequest };
 
 const router = Router();
 
@@ -71,24 +77,6 @@ export function saveLoginBlocks() {
 
 export let failedAttempts: Record<string, number> = {};
 
-export function getClientIp(req: Request): string {
-  const cfIp = req.headers['cf-connecting-ip'];
-  if (cfIp && typeof cfIp === 'string') return cfIp;
-  
-  const forwardIp = req.headers['x-forwarded-for'];
-  if (forwardIp && typeof forwardIp === 'string') {
-    return forwardIp.split(',')[0].trim();
-  }
-  
-  return req.socket.remoteAddress || 'unknown';
-}
-
-export function isTunnelRequest(req: Request): boolean {
-  if (req.headers['cf-connecting-ip']) return true;
-  const ip = getClientIp(req);
-  return !(ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip === 'localhost');
-}
-
 export function parseUserAgent(ua: string): string {
   if (!ua) return 'Unknown Device';
   const uaLower = ua.toLowerCase();
@@ -119,7 +107,24 @@ registerBackendIdentity(router, localBypassToken);
 
 // Auth API Endpoints
 router.get('/auth/setup-status', (req, res) => {
-  res.json({ setupRequired: isSetupRequired() });
+  const isTunnel = isTunnelRequest(req);
+  if (!isTunnel) {
+    // Desktop running locally: master password is NOT active/required.
+    // Provide local bypass token so client can immediately authenticate.
+    return res.json({
+      setupRequired: false,
+      isLocalDesktop: true,
+      masterPasswordConfigured: !isSetupRequired(),
+      token: localBypassToken
+    });
+  }
+
+  // Outside / remote access: master password IS active and enforced.
+  res.json({
+    setupRequired: isSetupRequired(),
+    isLocalDesktop: false,
+    masterPasswordConfigured: !isSetupRequired()
+  });
 });
 
 router.post('/auth/setup', (req, res) => {
@@ -178,30 +183,49 @@ router.post('/auth/login', (req, res) => {
 
 router.post('/auth/change-password', authMiddleware, (req, res) => {
   const { currentPassword, newPassword } = req.body;
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({ error: 'Current password and new password are required.' });
+  if (!newPassword) {
+    return res.status(400).json({ error: 'New password is required.' });
   }
   if (newPassword.length < 6) {
     return res.status(400).json({ error: 'New password must be at least 6 characters long.' });
+  }
+
+  // If master password has not been configured yet (isSetupRequired),
+  // authenticated local desktop admin can set the initial master password directly
+  if (isSetupRequired()) {
+    setupMasterPassword(newPassword);
+    return res.json({ success: true, token: generateToken({ role: 'admin' }), message: 'Master password configured successfully.' });
+  }
+
+  if (!currentPassword) {
+    return res.status(400).json({ error: 'Current password is required to change existing master password.' });
   }
   if (!verifyMasterPassword(currentPassword)) {
     return res.status(401).json({ error: 'Incorrect current password.' });
   }
   setupMasterPassword(newPassword);
-  res.json({ success: true, token: generateToken({ role: 'admin' }) });
+  res.json({ success: true, token: generateToken({ role: 'admin' }), message: 'Master password updated successfully.' });
 });
 
 router.get('/auth/verify', (req, res) => {
+  const isTunnel = isTunnelRequest(req);
+  if (!isTunnel) {
+    return res.json({ valid: true, source: 'local' });
+  }
+
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ valid: false });
   
   const token = authHeader.split(' ')[1];
   if (token === localBypassToken) {
-    return res.json({ valid: true, source: 'local' });
+    return res.status(401).json({ valid: false, error: 'Local bypass token not allowed remotely' });
   }
   
-  const decoded = verifySocketToken(token);
-  res.json({ valid: decoded });
+  const decoded = verifySocketToken(token, isTunnel);
+  if (!decoded) {
+    return res.status(401).json({ valid: false });
+  }
+  res.json({ valid: true });
 });
 
 // Security & access management endpoints (Protected)

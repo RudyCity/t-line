@@ -403,6 +403,8 @@ interface PortTunnelsManagerModalProps {
   tunnelLoading: { tline: boolean; custom: boolean };
   handleStartTunnel: (target: 'tline' | 'custom', type: 'quick' | 'token', customPort?: number) => void;
   handleStopTunnel: (target: 'tline' | 'custom', port?: number) => void;
+  masterPasswordConfigured?: boolean;
+  onOpenSecuritySettings?: () => void;
 }
 
 export const PortTunnelsManagerModal: React.FC<PortTunnelsManagerModalProps> = ({
@@ -411,7 +413,9 @@ export const PortTunnelsManagerModal: React.FC<PortTunnelsManagerModalProps> = (
   tunnelStatus,
   tunnelLoading,
   handleStartTunnel,
-  handleStopTunnel
+  handleStopTunnel,
+  masterPasswordConfigured = true,
+  onOpenSecuritySettings
 }) => {
   const [portInput, setPortInput] = React.useState<string>('8000');
   const [copiedPorts, setCopiedPorts] = React.useState<{ [port: number]: boolean }>({});
@@ -450,6 +454,26 @@ export const PortTunnelsManagerModal: React.FC<PortTunnelsManagerModalProps> = (
           <h3 className="modal-title">Port Tunnels Manager</h3>
           <button type="button" className="action-btn" onClick={onClose}>×</button>
         </div>
+
+        {!masterPasswordConfigured && (
+          <div className="flex items-center justify-between gap-2 p-2.5 mb-3 rounded border border-amber-500/30 bg-amber-500/10 text-xs text-[var(--text-main)]">
+            <span className="text-amber-300">
+              ⚠️ Master password belum dipasang. Tunnel publik dapat diakses tanpa proteksi password.
+            </span>
+            {onOpenSecuritySettings && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenSecuritySettings();
+                }}
+                className="underline text-amber-400 hover:text-amber-200 shrink-0 font-medium"
+              >
+                Pasang sekarang
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Add Port Tunnel Form */}
         <div className="flex flex-col gap-3 pb-4 mb-4 border-b border-[var(--border-color)]">

@@ -124,24 +124,59 @@ export function verifyToken(token: string): any {
   }
 }
 
+// Helper to extract client IP from Express request or HTTP IncomingMessage
+export function getClientIp(req: any): string {
+  const cfIp = req.headers?.['cf-connecting-ip'];
+  if (cfIp && typeof cfIp === 'string') return cfIp;
+  
+  const forwardIp = req.headers?.['x-forwarded-for'];
+  if (forwardIp && typeof forwardIp === 'string') {
+    return forwardIp.split(',')[0].trim();
+  }
+  
+  return req.socket?.remoteAddress || 'unknown';
+}
+
+// Determines if request is coming from outside (Cloudflare Tunnel, remote IP, LAN/WAN)
+export function isTunnelRequest(req: any): boolean {
+  if (req.headers?.['cf-connecting-ip']) return true;
+  const ip = getClientIp(req);
+  return !(ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip === 'localhost');
+}
+
+// Determines if request is originating directly from local desktop running instance
+export function isLocalDesktopRequest(req: any): boolean {
+  return !isTunnelRequest(req);
+}
+
 // Express auth middleware
 export function authMiddleware(req: any, res: any, next: any) {
   let token = '';
-  if (req.headers.authorization) {
+  if (req.headers?.authorization) {
     const authHeader = req.headers.authorization;
     token = authHeader.split(' ')[1];
-  } else if (req.query.token) {
+  } else if (req.query?.token) {
     token = req.query.token as string;
   }
 
-  if (!token) {
-    return res.status(401).json({ error: 'Token required' });
-  }
+  const isTunnel = isTunnelRequest(req);
 
-  // Allow local bypass token (used by desktop app)
-  if (token === localBypassToken) {
+  // Desktop running locally: master password is NOT active/required.
+  // Allow local desktop requests (with bypass token or direct loopback access)
+  if (!isTunnel) {
     req.user = { role: 'admin', source: 'local' };
     return next();
+  }
+
+  // Outside / remote access: master password IS active and enforced.
+  // Reject requests without token
+  if (!token) {
+    return res.status(401).json({ error: 'Token required for remote access.' });
+  }
+
+  // Local bypass token is NEVER valid for remote/tunnel connections
+  if (token === localBypassToken) {
+    return res.status(401).json({ error: 'Local bypass token is not allowed for remote access.' });
   }
 
   const decoded = verifyToken(token);
@@ -154,10 +189,17 @@ export function authMiddleware(req: any, res: any, next: any) {
 }
 
 // Verify WS Connection token
-export function verifySocketToken(token: string): boolean {
-  if (token === localBypassToken) {
+export function verifySocketToken(token: string, isTunnel: boolean = false): boolean {
+  if (!isTunnel) {
+    // Desktop running locally: connection is allowed without master password
     return true;
   }
+
+  // Outside / remote access: local bypass token is NEVER allowed
+  if (!token || token === localBypassToken) {
+    return false;
+  }
+
   const decoded = verifyToken(token);
   return decoded !== null;
 }
