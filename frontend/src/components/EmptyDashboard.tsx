@@ -49,7 +49,7 @@ export function EmptyDashboard({
             onClick={() => setShowWorkspaceModal(true)}
             style={{
               backgroundColor: 'var(--color-primary)',
-              boxShadow: '0 2px 8px var(--color-primary-glow)',
+              boxShadow: 'var(--r-ui-shadow-sm, 0 1px 3px 0 rgba(0, 0, 0, 0.08))',
               border: 'none'
             }}
             onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-primary-hover)' }}

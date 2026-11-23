@@ -15,6 +15,71 @@ export interface ThemePreset {
 }
 
 export const THEMES: Record<string, ThemePreset> = {
+  'dark-nebula': {
+    name: 'Dark Nebula (r-ui)',
+    bgMain: '#090a0f',
+    bgSidebar: '#12141c',
+    bgCard: '#12141c',
+    bgCardHover: '#1a1d28',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    textMain: '#f8fafc',
+    textMuted: '#94a3b8',
+    textDark: '#64748b',
+    defaultAccent: '#38bdf8',
+    bgRadialDot: 'transparent',
+  },
+  'slate-obsidian': {
+    name: 'Slate Obsidian (r-ui)',
+    bgMain: '#0b0f19',
+    bgSidebar: '#111827',
+    bgCard: '#111827',
+    bgCardHover: '#1f2937',
+    borderColor: 'rgba(255, 255, 255, 0.14)',
+    textMain: '#f9fafb',
+    textMuted: '#cbd5e1',
+    textDark: '#94a3b8',
+    defaultAccent: '#38bdf8',
+    bgRadialDot: 'transparent',
+  },
+  'clean-light': {
+    name: 'Clean Light (r-ui)',
+    bgMain: '#f8fafc',
+    bgSidebar: '#ffffff',
+    bgCard: '#ffffff',
+    bgCardHover: '#f1f5f9',
+    borderColor: 'rgba(0, 0, 0, 0.12)',
+    textMain: '#0f172a',
+    textMuted: '#475569',
+    textDark: '#64748b',
+    defaultAccent: '#0284c7',
+    bgRadialDot: 'transparent',
+  },
+  'warm-sepia': {
+    name: 'Warm Sepia (r-ui)',
+    bgMain: '#fbf8f2',
+    bgSidebar: '#f4efe6',
+    bgCard: '#ffffff',
+    bgCardHover: '#ede6d8',
+    borderColor: 'rgba(60, 40, 20, 0.12)',
+    textMain: '#1c1917',
+    textMuted: '#57534e',
+    textDark: '#78716c',
+    defaultAccent: '#78350f',
+    bgRadialDot: 'transparent',
+  },
+  'glass-frosted': {
+    name: 'Glass Frosted (r-ui)',
+    bgMain: '#090a0f',
+    bgSidebar: '#12141c',
+    bgCard: '#161924',
+    bgCardHover: '#202433',
+    borderColor: 'rgba(255, 255, 255, 0.14)',
+    textMain: '#f8fafc',
+    textMuted: '#94a3b8',
+    textDark: '#64748b',
+    defaultAccent: '#38bdf8',
+    bgRadialDot: 'transparent',
+  },
   'calm-light': {
     name: 'Hybrid Calm - Light',
     bgMain: '#F8F9FB', bgSidebar: '#F0F2F5', bgCard: '#FFFFFF',
@@ -31,15 +96,15 @@ export const THEMES: Record<string, ThemePreset> = {
   },
   default: {
     name: 'Default Dark',
-    bgMain: '#0e1117',
-    bgSidebar: '#0a0d12',
-    bgCard: '#151921',
-    bgCardHover: '#1c222c',
-    borderColor: '#242a36',
-    textMain: '#f1f5f9',
+    bgMain: '#090a0f',
+    bgSidebar: '#12141c',
+    bgCard: '#12141c',
+    bgCardHover: '#1a1d28',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    textMain: '#f8fafc',
     textMuted: '#94a3b8',
     textDark: '#64748b',
-    defaultAccent: '#3b82f6',
+    defaultAccent: '#38bdf8',
     bgRadialDot: 'transparent',
   },
   dracula: {
@@ -56,15 +121,15 @@ export const THEMES: Record<string, ThemePreset> = {
     bgRadialDot: 'transparent',
   },
   cyberpunk: {
-    name: 'Cyberpunk Neon',
-    bgMain: '#110e1b',
-    bgSidebar: '#0c0914',
-    bgCard: '#1a1628',
-    bgCardHover: '#251f38',
-    borderColor: '#2e2642',
+    name: 'Cyberpunk (r-ui Refined)',
+    bgMain: '#0e0b16',
+    bgSidebar: '#140f20',
+    bgCard: '#191428',
+    bgCardHover: '#231c38',
+    borderColor: 'rgba(244, 63, 94, 0.25)',
     textMain: '#f8fafc',
-    textMuted: '#a3a6b8',
-    textDark: '#6b6e82',
+    textMuted: '#cbd5e1',
+    textDark: '#94a3b8',
     defaultAccent: '#f43f5e',
     bgRadialDot: 'transparent',
   },
@@ -270,6 +335,40 @@ export function useThemeAndFonts() {
     // Reuse light-mode adaptations, while scoping calm-only presentation changes.
     root.className = `theme-${theme}${isLight ? ' theme-light' : ''}${isCalm ? ' theme-calm' : ''}`;
     applyCalmPreferences();
+
+    // r-ui Dual-Layer Theming: Canvas + Accent synchronizer
+    const rUiThemeMap: Record<string, string> = {
+      'clean-light': 'clean-light',
+      'light': 'clean-light',
+      'calm-light': 'clean-light',
+      'slate-obsidian': 'slate-obsidian',
+      'dracula': 'slate-obsidian',
+      'nord': 'slate-obsidian',
+      'warm-sepia': 'warm-sepia',
+      'glass-frosted': 'glass-frosted',
+      'forest': 'dark-nebula',
+      'cyberpunk': 'dark-nebula',
+      'calm-dark': 'slate-obsidian',
+      'default': 'dark-nebula',
+      'dark-nebula': 'dark-nebula',
+    };
+    const activeRUiTheme = rUiThemeMap[theme] || 'dark-nebula';
+    root.dataset.rUiTheme = activeRUiTheme;
+
+    const accentLower = accentColor.toLowerCase();
+    let activeRUiAccent = 'cyan';
+    if (accentLower.includes('10b981') || accentLower.includes('emerald') || theme === 'forest') activeRUiAccent = 'emerald';
+    else if (accentLower.includes('a855f7') || accentLower.includes('bd93f9') || accentLower.includes('violet') || theme === 'dracula') activeRUiAccent = 'violet';
+    else if (accentLower.includes('f43f5e') || accentLower.includes('ef4444') || accentLower.includes('crimson')) activeRUiAccent = 'crimson';
+    else if (accentLower.includes('f59e0b') || accentLower.includes('amber')) activeRUiAccent = 'amber';
+    else if (accentLower.includes('88c0d0') || accentLower.includes('frost') || theme === 'nord') activeRUiAccent = 'frost';
+    else if (accentLower.includes('fb7185') || accentLower.includes('coral')) activeRUiAccent = 'coral';
+    else if (accentLower.includes('e2e8f0') || accentLower.includes('monochrome')) activeRUiAccent = 'monochrome';
+    root.dataset.rUiAccent = activeRUiAccent;
+    root.dataset.rUiDensity = 'high-density';
+
+    root.style.setProperty('--r-ui-color-accent-primary', accentColor);
+    root.style.setProperty('--r-ui-color-focus-ring', accentColor);
 
     root.style.setProperty('--accent-color', accentColor);
     root.style.setProperty('--color-primary', accentColor);

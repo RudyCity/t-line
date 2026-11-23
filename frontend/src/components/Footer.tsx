@@ -205,11 +205,13 @@ export function Footer({
 
             {/* Hover Tooltip Dropup */}
             <div 
-              className="absolute bottom-full mb-2 left-0 hidden group-hover:flex flex-col w-56 border rounded-lg p-3  z-50 pointer-events-none font-sans"
+              className="absolute bottom-full mb-2 left-0 hidden group-hover:flex flex-col w-56 border p-3 z-50 pointer-events-none font-sans"
               style={{
                 backgroundColor: 'var(--bg-sidebar)',
                 borderColor: 'var(--border-color)',
-                color: 'var(--text-muted)'
+                color: 'var(--text-muted)',
+                boxShadow: 'var(--r-ui-shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.08))',
+                borderRadius: 'var(--r-ui-radius-md, 8px)',
               }}
             >
               <h4 

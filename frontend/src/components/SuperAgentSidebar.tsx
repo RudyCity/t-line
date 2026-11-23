@@ -306,7 +306,7 @@ export function SuperAgentSidebar({
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isRunning ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'}`} />
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isRunning ? 'bg-emerald-400 animate-pulse' : 'bg-[var(--r-ui-color-text-tertiary)]'}`} />
                           <span className="text-[11px] font-mono font-medium text-[var(--text-main)] group-hover:text-[var(--color-primary)] truncate">
                             {sa.role || sa.typeName || `SubAgent-${sa.id.slice(0, 6)}`}
                           </span>
@@ -377,7 +377,7 @@ export function SuperAgentSidebar({
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isRunning ? 'bg-sky-400 animate-pulse' : 'bg-slate-400'}`} />
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isRunning ? 'bg-sky-400 animate-pulse' : 'bg-[var(--r-ui-color-text-tertiary)]'}`} />
                           <span className="text-[11px] font-mono font-medium text-[var(--text-main)] group-hover:text-[var(--color-primary)] truncate">
                             {proc.name || proc.commandLine || `Process #${proc.pid}`}
                           </span>

@@ -1,39 +1,39 @@
 @layer base {
-  /* Design Tokens & Theme Variables */
+  /* Design Tokens & Theme Variables (r-ui v3.0.0 Architecture) */
   :root {
     --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 
-    /* Calibrated Dark Palette */
-    --bg-main: #0e1117;
-    --bg-sidebar: #0a0d12;
-    --bg-card: #151921;
-    --bg-card-hover: #1c222c;
-    --border-color: #242a36;
-    --border-glow: rgba(59, 130, 246, 0.12);
+    /* r-ui Calibrated Palette */
+    --bg-main: var(--r-ui-color-canvas, #090a0f);
+    --bg-sidebar: var(--r-ui-color-surface, #12141c);
+    --bg-card: var(--r-ui-color-surface, #12141c);
+    --bg-card-hover: var(--r-ui-color-surface-elevated, #1a1d28);
+    --border-color: var(--r-ui-color-border-standard, rgba(255, 255, 255, 0.12));
+    --border-glow: rgba(56, 189, 248, 0.12);
 
-    /* Core Accents */
-    --color-primary: #3b82f6; /* Electric Blue */
-    --color-primary-hover: #60a5fa;
-    --color-primary-glow: rgba(59, 130, 246, 0.12);
+    /* Core Accents (Calibrated Optical Shades, Zero-Neon) */
+    --color-primary: var(--r-ui-color-accent-primary, #38bdf8);
+    --color-primary-hover: var(--r-ui-color-accent-primary-hover, #0284c7);
+    --color-primary-glow: rgba(56, 189, 248, 0.12);
     
-    --color-success: #10b981; /* Emerald */
-    --color-warning: #f59e0b; /* Amber */
-    --color-danger: #ef4444;  /* Red */
-    --color-info: #0ea5e9;    /* Sky Blue */
+    --color-success: var(--r-ui-color-success, #10b981);
+    --color-warning: var(--r-ui-color-warning, #f59e0b);
+    --color-danger: var(--r-ui-color-error, #ef4444);
+    --color-info: var(--r-ui-color-info, #0ea5e9);
 
     /* Text Colors */
-    --text-main: #f1f5f9;
-    --text-muted: #94a3b8;
-    --text-dark: #64748b;
+    --text-main: var(--r-ui-color-text-primary, #f8fafc);
+    --text-muted: var(--r-ui-color-text-secondary, #94a3b8);
+    --text-dark: var(--r-ui-color-text-tertiary, #64748b);
 
-    /* Glassmorphism details */
-    --blur-amount: 16px;
-    --glass-shadow: none;
+    /* Anti-Slop Glassmorphism & Elevation Details (Max blur 8px, crisp 1px borders, zero muddy shadows) */
+    --blur-amount: 8px;
+    --glass-shadow: var(--r-ui-shadow-sm, 0 1px 3px 0 rgba(0, 0, 0, 0.08));
 
     /* Sizes */
-    --sidebar-width: 320px;
-    --topbar-height: 40px;
+    --sidebar-width: 300px;
+    --topbar-height: 42px;
 
     /* Image / SVG preview grid lines — subtle white on dark themes */
     --preview-grid-line: rgba(255, 255, 255, 0.05);

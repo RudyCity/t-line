@@ -286,6 +286,18 @@ export function getSlashCommands({
       }
     },
     {
+      command: '/loop',
+      description: 'Activate autonomous continuous execution loop for the task',
+      argsHelp: '<task description>',
+      action: (args?: string) => {
+        if (!args?.trim()) {
+          setMessages(prev => [...prev, { role: 'system', text: 'Usage: /loop <task to run in continuous autonomous loop>' }]);
+          return;
+        }
+        handleSend(`GOAL MODE: Your primary objective is to achieve the following goal completely and verifiably:\n\n"${args.trim()}"\n\nBegin immediately. Plan thoroughly, execute step by step, verify completion, and report back with GOAL_COMPLETE or GOAL_PARTIAL.`);
+      }
+    },
+    {
       command: '/procs',
       description: BUILTIN_COMMAND_DESCRIPTIONS['/procs'],
       argsHelp: '[stop|stop all]',

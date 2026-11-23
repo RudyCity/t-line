@@ -21,6 +21,8 @@ interface StudioCanvasProps {
   onSelectLayer: (id: string) => void;
   onStopPlayback: () => void;
   onEdit: (edits: StudioEdit[], message: string) => void;
+  onLayerContextMenu?: (event: React.MouseEvent, layer: StudioLayer) => void;
+  onCanvasContextMenu?: (event: React.MouseEvent) => void;
 }
 interface Gesture {
   pointerId: number; layerId: string; mode: StudioCanvasMode;
@@ -48,7 +50,7 @@ function snapPreview(
 }
 export function StudioCanvas({
   project, frame, selectedLayer, isActive, busy, snapping, assetUrls = {},
-  onSelectLayer, onStopPlayback, onEdit,
+  onSelectLayer, onStopPlayback, onEdit, onLayerContextMenu, onCanvasContextMenu,
 }: StudioCanvasProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const gesture = useRef<Gesture | null>(null);
@@ -158,6 +160,7 @@ export function StudioCanvas({
         if (gesture.current?.pointerId === event.pointerId) finish(event, false);
       }}
       className="block max-h-full select-none rounded shadow-2xl"
+      onContextMenu={event => onCanvasContextMenu?.(event)}
       style={{ aspectRatio: scene.width + '/' + scene.height, touchAction: 'none' }}>
       <rect width={scene.width} height={scene.height} fill={scene.background} />
       {scene.layers.map(layer => {
@@ -176,6 +179,11 @@ export function StudioCanvas({
         return (
           <g key={layer.id} data-motion-layer={layer.id} onPointerDown={event => start(event, layer, 'move')}
             onClick={() => onSelectLayer(layer.id)}
+            onContextMenu={event => {
+              event.preventDefault();
+              event.stopPropagation();
+              onLayerContextMenu?.(event, layer);
+            }}
             style={{ pointerEvents: isZeroOpacity ? 'none' : undefined }}
             className={busy ? 'cursor-default' : isZeroOpacity ? 'pointer-events-none' : 'cursor-move'}>
             {layer.kind === 'rect' ? (

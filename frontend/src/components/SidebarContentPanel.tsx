@@ -5,6 +5,7 @@ import { WorkspaceList } from './WorkspaceList';
 import { ProjectBrowser } from './ProjectBrowser';
 import { FileExplorer, GitChanges, GitFileStatus } from './FilePanel';
 import { CheckpointsPanel } from './CheckpointsPanel';
+import { getAuthToken } from '../utils/tokenStorage';
 
 // ─── Permanent Workspace + Worktree Switcher ────────────────────────────────
 
@@ -155,7 +156,7 @@ interface SidebarContentPanelProps {
   openTerminal: (name: string, cwd: string) => void;
   handleRemoveWorkspace: (id: string) => void;
   handleRemoveWorktree: (wsId: string, path: string) => void;
-  openFileTab: (filePath: string, name: string) => void;
+  openFileTab: (filePath: string, name: string, fallbackWsId?: string) => void;
   closeTerminal: (id: string, e: React.MouseEvent) => void;
   workspaceActiveTab: Record<string, string>;
   onWorkspaceClick: (wsId: string) => void;
@@ -254,19 +255,19 @@ export function SidebarContentPanel({
                   }}
                   className={`flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-purple-600/10 border-purple-500/30 text-purple-200 '
-                      : 'bg-slate-900/40 border-white/5 text-slate-400 hover:bg-slate-800/40'
+                      ? 'bg-[var(--r-ui-color-accent-subtle)] border-[var(--r-ui-color-accent-primary)]/40 text-[var(--r-ui-color-accent-primary)]'
+                      : 'bg-[var(--r-ui-color-surface)] border-[var(--r-ui-color-border-subtle)] text-[var(--r-ui-color-text-secondary)] hover:bg-[var(--r-ui-color-surface-elevated)] hover:text-[var(--r-ui-color-text-primary)]'
                   }`}
                 >
                   <div className="flex items-center gap-2.5 overflow-hidden">
                     {t.type === 'file' ? (
-                      <FileCode size={13} className={isActive ? 'text-purple-400' : 'text-slate-400'} />
+                      <FileCode size={13} className={isActive ? 'text-[var(--r-ui-color-accent-primary)]' : 'text-[var(--r-ui-color-text-secondary)]'} />
                     ) : t.type === 'diff' ? (
-                      <GitCompare size={13} className={isActive ? 'text-purple-400' : 'text-slate-400'} />
+                      <GitCompare size={13} className={isActive ? 'text-[var(--r-ui-color-accent-primary)]' : 'text-[var(--r-ui-color-text-secondary)]'} />
                     ) : t.type === 'grid' ? (
-                      <LayoutGrid size={13} className={isActive ? 'text-purple-400' : 'text-slate-400'} />
+                      <LayoutGrid size={13} className={isActive ? 'text-[var(--r-ui-color-accent-primary)]' : 'text-[var(--r-ui-color-text-secondary)]'} />
                     ) : (
-                      <TerminalIcon size={13} className={isActive ? 'text-purple-400' : 'text-slate-400'} />
+                      <TerminalIcon size={13} className={isActive ? 'text-[var(--r-ui-color-accent-primary)]' : 'text-[var(--r-ui-color-text-secondary)]'} />
                     )}
                     <span className="text-xs font-semibold truncate">{t.name}</span>
                     {shellType && (
@@ -278,7 +279,7 @@ export function SidebarContentPanel({
                       e.stopPropagation();
                       closeTerminal(t.id, e);
                     }}
-                    className="text-slate-500 hover:text-red-400 p-0.5 rounded transition-colors text-sm font-bold"
+                    className="text-[var(--r-ui-color-text-tertiary)] hover:text-red-400 p-0.5 rounded transition-colors text-sm font-bold"
                   >
                     ×
                   </button>
@@ -286,7 +287,7 @@ export function SidebarContentPanel({
               );
             })}
             {tabs.length === 0 && (
-              <div className="text-center py-8 text-xs text-slate-500 font-medium">No active tabs</div>
+              <div className="text-center py-8 text-xs text-[var(--r-ui-color-text-tertiary)] font-medium">No active tabs</div>
             )}
           </div>
         </div>
@@ -396,8 +397,8 @@ export function SidebarContentPanel({
           {panelWorkspace ? (
             <FileExplorer
               rootPath={panelWorktreePath || panelWorkspace.path}
-              token={localStorage.getItem('token') || ''}
-              onFileClick={openFileTab}
+              token={getAuthToken() || localStorage.getItem('token') || ''}
+              onFileClick={(path, name) => openFileTab(path, name, panelWorkspace.id)}
               changedFiles={changedFiles}
               onRefresh={refreshGitStatus}
               refreshTrigger={fsChangeTrigger}
@@ -426,13 +427,13 @@ export function SidebarContentPanel({
           {panelWorkspace && panelWorkspace.isGit ? (
             <GitChanges
               workspaceId={panelWorkspace.id}
-              token={localStorage.getItem('token') || ''}
+              token={getAuthToken() || localStorage.getItem('token') || ''}
               files={changedFiles}
               loading={gitStatusLoading}
               onRefresh={refreshGitStatus || (() => {})}
               worktreePath={panelWorktreePath}
               onOpenBranchModal={onOpenBranchModal}
-              onFileOpen={openFileTab}
+              onFileOpen={(filePath, name) => openFileTab(filePath, name, panelWorkspace.id)}
               onOpenDiffTab={openDiffTab
                 ? (commitHash, filePath, worktreePath) =>
                     openDiffTab(commitHash, filePath, panelWorkspace.id, worktreePath ?? panelWorktreePath ?? undefined)
@@ -458,7 +459,7 @@ export function SidebarContentPanel({
         <CheckpointsPanel
           panelWorkspace={panelWorkspace}
           panelWorktreePath={panelWorktreePath}
-          token={localStorage.getItem('token') || ''}
+          token={getAuthToken() || localStorage.getItem('token') || ''}
           onWorkspaceClick={onWorkspaceClick}
           onWorktreeClick={onWorktreeClick}
           onOpenDiffTab={openDiffTab

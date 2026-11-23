@@ -1,5 +1,5 @@
-import { useRef } from 'react';
-import { Layers3, Type, Square, Image as ImageIcon, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Layers3, Type, Square, Image as ImageIcon, ArrowUp, ArrowDown, Trash2, GripVertical } from 'lucide-react';
 import type { StudioLayer } from '../../services/studioApi';
 
 interface Props {
@@ -9,7 +9,10 @@ interface Props {
   onInsertLayer: (kind: StudioLayer['kind']) => void;
   onImportImage: (file?: File) => void;
   onReorderLayer: (delta: number) => void;
+  onMoveLayer?: (layerId: string, toIndex: number) => void;
   onRemoveSelectedLayer: () => void;
+  onLayerContextMenu?: (event: React.MouseEvent, layer: StudioLayer) => void;
+  onBackgroundContextMenu?: (event: React.MouseEvent) => void;
   busy: boolean;
 }
 
@@ -22,10 +25,15 @@ export function StudioLayersSection({
   onInsertLayer,
   onImportImage,
   onReorderLayer,
+  onMoveLayer,
   onRemoveSelectedLayer,
+  onLayerContextMenu,
+  onBackgroundContextMenu,
   busy,
 }: Props) {
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const selectedIndex = layers.findIndex(item => item.id === selectedLayer);
 
   return (
@@ -112,7 +120,15 @@ export function StudioLayersSection({
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 space-y-1">
+      <div
+        className="flex-1 overflow-y-auto p-2 space-y-1"
+        onContextMenu={e => {
+          if (e.target === e.currentTarget || (e.target as HTMLElement).tagName === 'DIV') {
+            e.preventDefault();
+            onBackgroundContextMenu?.(e);
+          }
+        }}
+      >
         {layers.length === 0 ? (
           <div className="py-8 text-center text-xs text-[var(--text-muted)]">
             No layers yet. Add a text, rect, or image layer.
@@ -120,18 +136,83 @@ export function StudioLayersSection({
         ) : (
           layers.map((item, index) => {
             const isSelected = item.id === selectedLayer;
+            const isDragging = draggingIndex === index;
+            const isDragOver = dragOverIndex === index;
+
             return (
-              <button
+              <div
                 key={item.id}
+                draggable={!busy}
+                onDragStart={e => {
+                  e.dataTransfer.setData(
+                    'application/json',
+                    JSON.stringify({
+                      layerId: item.id,
+                      name: item.kind === 'text' ? item.text || item.id : item.id,
+                      kind: item.kind === 'text' ? 'text' : item.kind === 'image' ? 'image' : 'video',
+                      durationFrames: 90,
+                      sourceType: 'layer',
+                      index,
+                    })
+                  );
+                  e.dataTransfer.effectAllowed = 'copyMove';
+                  setDraggingIndex(index);
+                }}
+                onDragEnd={() => {
+                  setDraggingIndex(null);
+                  setDragOverIndex(null);
+                }}
+                onDragOver={e => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  if (draggingIndex !== null && draggingIndex !== index) {
+                    setDragOverIndex(index);
+                  }
+                }}
+                onDragLeave={() => {
+                  if (dragOverIndex === index) {
+                    setDragOverIndex(null);
+                  }
+                }}
+                onDrop={e => {
+                  e.preventDefault();
+                  const rawData = e.dataTransfer.getData('application/json');
+                  if (rawData) {
+                    try {
+                      const data = JSON.parse(rawData);
+                      if (data.sourceType === 'layer' && typeof data.index === 'number') {
+                        if (data.index !== index) {
+                          if (onMoveLayer) {
+                            onMoveLayer(data.layerId, index);
+                          } else {
+                            onReorderLayer(index - data.index);
+                          }
+                        }
+                      }
+                    } catch {}
+                  }
+                  setDraggingIndex(null);
+                  setDragOverIndex(null);
+                }}
+                className={`group flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs transition-all cursor-grab active:cursor-grabbing select-none ${
+                  isDragging ? 'opacity-30 border-dashed border-[var(--r-ui-color-border-standard)]' : ''
+                } ${
+                  isDragOver ? 'ring-2 ring-cyan-400 bg-cyan-950/60 border-cyan-400' : ''
+                } ${
+                  isSelected
+                    ? 'bg-cyan-950/50 font-medium text-zinc-100 border border-cyan-500/40 shadow-xs'
+                    : 'text-zinc-400 hover:bg-[var(--r-ui-color-surface-elevated)] hover:text-zinc-200 border border-transparent'
+                }`}
                 onClick={() => onSelectLayer(item.id)}
-                className={
-                  'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] ' +
-                  (isSelected
-                    ? 'bg-[var(--color-primary)]/15 font-medium text-[var(--text-main)] border border-[var(--color-primary)]/30'
-                    : 'text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-main)] border border-transparent')
-                }
+                onContextMenu={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onSelectLayer(item.id);
+                  onLayerContextMenu?.(e, item);
+                }}
               >
-                <span className={isSelected ? 'text-[var(--color-primary)]' : 'text-[var(--text-muted)]'}>
+                <GripVertical size={11} className="text-zinc-600 group-hover:text-cyan-400 shrink-0 opacity-40 group-hover:opacity-100 transition-opacity" />
+                <span className={isSelected ? 'text-cyan-400' : 'text-zinc-400'}>
                   {item.kind === 'text' ? (
                     <Type size={13} />
                   ) : item.kind === 'image' ? (
@@ -143,10 +224,10 @@ export function StudioLayersSection({
                 <span className="min-w-0 flex-1 truncate font-mono text-[11px]">
                   {item.kind === 'text' ? item.text || item.id : item.id}
                 </span>
-                <span className="font-mono text-[9px] opacity-50 px-1 py-0.2 rounded bg-[var(--bg-card)]">
+                <span className="font-mono text-[9px] opacity-60 px-1 py-0.2 rounded bg-[#161822] border border-[#2a2d3d] text-zinc-400">
                   {index + 1}
                 </span>
-              </button>
+              </div>
             );
           })
         )}

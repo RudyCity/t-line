@@ -24,14 +24,14 @@ function StatusBadge({ status }: { status?: string }) {
   if (status === 'connected')  return <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />;
   if (status === 'error')      return <XCircle className="w-3.5 h-3.5 text-rose-400" />;
   if (status === 'connecting') return <Loader className="w-3.5 h-3.5 text-amber-400 animate-spin" />;
-  return <Server className="w-3.5 h-3.5 text-zinc-500" />;
+  return <Server className="w-3.5 h-3.5 text-[var(--r-ui-color-text-tertiary)]" />;
 }
 
 function statusCls(status?: string) {
   if (status === 'connected')  return 'text-emerald-400 bg-emerald-400/10 border-emerald-500/30';
   if (status === 'error')      return 'text-rose-400 bg-rose-400/10 border-rose-500/30';
   if (status === 'connecting') return 'text-amber-400 bg-amber-400/10 border-amber-500/30';
-  return 'text-zinc-500 bg-zinc-500/10 border-zinc-500/30';
+  return 'text-[var(--r-ui-color-text-tertiary)] bg-[var(--r-ui-color-surface-elevated)] border-[var(--r-ui-color-border-subtle)]';
 }
 
 export const SuperAgentMcpManager: React.FC<Props> = ({ getAuthHeader }) => {

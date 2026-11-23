@@ -577,8 +577,11 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     }
   }, [defaultShell, workspaces, onTerminalOpen, findWorkspaceIdForPath, tabs, activeTabId]);
 
-  const openFileTab = useCallback((filePath: string, name: string) => {
-    const existing = tabs.find(t => t.type === 'file' && t.filePath === filePath);
+  const openFileTab = useCallback((filePath: string, name: string, fallbackWsId?: string) => {
+    const normNew = filePath.toLowerCase().replace(/\\/g, '/');
+    const existing = tabs.find(
+      t => t.type === 'file' && t.filePath && t.filePath.toLowerCase().replace(/\\/g, '/') === normNew
+    );
     if (existing) {
       setActiveTabId(existing.id);
       onTerminalOpen?.();
@@ -586,7 +589,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     }
 
     const tabId = `file-${Date.now()}`;
-    const wsId = findWorkspaceIdForPath(filePath);
+    const wsId = findWorkspaceIdForPath(filePath) || fallbackWsId;
 
     const newTab: TabData = {
       id: tabId,

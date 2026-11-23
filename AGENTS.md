@@ -16,6 +16,13 @@ This document defines style guidelines, behavioral constraints, and coding stand
 
 ---
 
+## Mandatory Skills & Design Standards
+
+- **ALL TASKS — ALWAYS REQUIRED: Instruction Fidelity**: Every agent operating in this repository MUST read and apply `.agents/skills/instruction-fidelity/SKILL.md` at the start of every task (investigation, implementation, testing, audits, and refactoring). Follow its Model 1 interactive approval cycle: articulate intent & action plan → wait for user confirmation ('Lanjut') → preflight → execute → verify → report, confirming user intent and obtaining confirmation before mutating files.
+- **Design Tasks (r-ui v3.0.0)**: When building, designing, auditing, or refactoring user interfaces, Studio desktop editor panels, timeline components, modals, cards, HUD elements, or web styling, you MUST treat the `r-ui` skill (`.agents/skills/r-ui/SKILL.md`) as a mandatory skill. Strictly enforce the 10 Anti-Slop Visual Laws (zero generic purple haze, asymmetric bento spans, anti-Inter monoculture, max 6-8px blur with crisp 1px borders, purposeful micro-interactions, realistic domain data, zero heavy muddy shadows, zero neon/cyberpunk glow rings, zero unstyled native forms, zero color hijacking/rogue hex), apply dual-layer theming (5 Canvas Themes + 8 Calibrated Color Themes), calibrate the 4 Project-Adaptive Dials (Density, Radius, Motion, Contrast), and leverage the 9-Pillar Dashboard Kit Architecture. Reference the 5 Curated Design Standards: [jiro.build](https://jiro.build) (components/bento via MCP `jiro`), [designspells.com](https://designspells.com) (delight/micro-interactions), [styles.refero.design](https://styles.refero.design) (color/type pairings), [supahero.io](https://supahero.io) (hero architecture), and [mobbin.com](https://mobbin.com) (real app UX flows via MCP `mobbin`). On new layouts or UI flows, actively query MCP `jiro` for asymmetric bento blocks/sections and MCP `mobbin` for real-world interactive flows and screen transitions before writing markup. Follow the operational guide in [r-ui-mcp-workflow.md](.agents/skills/r-ui/references/r-ui-mcp-workflow.md).
+
+---
+
 ## Studio Desktop Editor & Unified Assistant Control — Mandatory (2026-10-27)
 
 - **T-Line is a desktop client, not a public MCP tool server**. SuperAgent Core/CLI remains the independently accessible agent runtime and tool provider; do not create another T-Line tool gateway.

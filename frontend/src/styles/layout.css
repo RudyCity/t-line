@@ -281,13 +281,17 @@ body.is-resizing .sidebar-resizer {
 
 .sidebar-collapsed .sidebar-panel-tab {
   border-bottom: none;
-  border-left: 2px solid transparent;
+  border: 1px solid transparent;
   height: 48px;
   flex: none;
+  border-radius: 6px;
+  margin: 2px 4px;
 }
 
 .sidebar-collapsed .sidebar-panel-tab.active {
-  border-left-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  color: var(--color-primary);
 }
 
 /* Sidebar Panel Tabs */
@@ -374,12 +378,12 @@ body.is-resizing .sidebar-resizer {
 
 .dot-active {
   background: var(--color-success);
-  box-shadow: 0 0 8px var(--color-success);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
 .dot-inactive {
   background: var(--color-danger);
-  box-shadow: 0 0 8px var(--color-danger);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
 }
 
 /* Content Area for Terminal and Dashboard */

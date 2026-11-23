@@ -72,8 +72,8 @@ describe('StudioMediaBin', () => {
 
     expect(screen.getByRole('button', { name: /Layers/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Media/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Effects/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Audio/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Effects/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Audio/i })).not.toBeInTheDocument();
   });
 
   it('switches to Media tab and displays project assets with metadata', () => {

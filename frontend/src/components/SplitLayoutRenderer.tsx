@@ -4,26 +4,6 @@ import { SplitLayoutNode, TerminalInstanceData, ActiveProcessSummary } from '../
 import { TerminalInstance } from './TerminalInstance';
 import { Trash2 } from 'lucide-react';
 
-// Helper to detect if a background color is light/bright
-function isLightColor(color: string | undefined): boolean {
-  if (!color) return false;
-  if (color.startsWith('#')) {
-    const hex = color.slice(1);
-    if (hex.length === 3) {
-      const r = parseInt(hex[0] + hex[0], 16);
-      const g = parseInt(hex[1] + hex[1], 16);
-      const b = parseInt(hex[2] + hex[2], 16);
-      return (r * 299 + g * 587 + b * 114) / 1000 >= 128;
-    } else if (hex.length === 6) {
-      const r = parseInt(hex.slice(0, 2), 16);
-      const g = parseInt(hex.slice(2, 4), 16);
-      const b = parseInt(hex.slice(4, 6), 16);
-      return (r * 299 + g * 587 + b * 114) / 1000 >= 128;
-    }
-  }
-  return false;
-}
-
 export interface SplitLayoutRendererProps {
   node: SplitLayoutNode;
   activeTabId: string;
@@ -111,7 +91,6 @@ function LeafPane({
   onRefreshTerminal,
 }: LeafPaneProps): React.JSX.Element {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isLight = isLightColor(themeBackground);
 
   return (
     <div
@@ -160,22 +139,14 @@ function LeafPane({
 
       {/* ── Desktop: hover action bar (top-right, hidden until hover) ── */}
       <div
-        className={`absolute top-2 right-2 hidden lg:flex items-center gap-1 opacity-0 group-hover/pane:opacity-100 transition-opacity duration-200 z-50 backdrop-blur-md border rounded-md p-1  ${
-          isLight
-            ? 'bg-white/85 border-purple-300/40 '
-            : 'bg-[#0f111a]/85 border-purple-500/25'
-        }`}
+        className="absolute top-2 right-2 hidden lg:flex items-center gap-1 opacity-0 group-hover/pane:opacity-100 transition-opacity duration-200 z-50 backdrop-blur-md border border-[var(--r-ui-color-border-standard)] rounded-md p-1 bg-[var(--r-ui-color-surface)]/90 shadow-[var(--r-ui-shadow-sm)]"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
           title="Split Horizontal (Alt+D)"
           onClick={() => splitFocusedTerminal('horizontal')}
-          className={`w-5 h-5 rounded p-1 transition-colors flex items-center justify-center cursor-pointer ${
-            isLight
-              ? 'text-slate-600 hover:text-purple-600 hover:bg-black/5'
-              : 'text-slate-400 hover:text-purple-400 hover:bg-white/5'
-          }`}
+          className="w-5 h-5 rounded p-1 transition-colors flex items-center justify-center cursor-pointer text-[var(--r-ui-color-text-secondary)] hover:text-[var(--r-ui-color-accent-primary)] hover:bg-[var(--r-ui-color-surface-elevated)]"
         >
           <svg viewBox="0 0 16 16" className="w-3 h-3" fill="currentColor">
             <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm6.5 1v8h1V4z" />
@@ -185,11 +156,7 @@ function LeafPane({
           type="button"
           title="Split Vertical (Alt+E)"
           onClick={() => splitFocusedTerminal('vertical')}
-          className={`w-5 h-5 rounded p-1 transition-colors flex items-center justify-center cursor-pointer ${
-            isLight
-              ? 'text-slate-600 hover:text-purple-600 hover:bg-black/5'
-              : 'text-slate-400 hover:text-purple-400 hover:bg-white/5'
-          }`}
+          className="w-5 h-5 rounded p-1 transition-colors flex items-center justify-center cursor-pointer text-[var(--r-ui-color-text-secondary)] hover:text-[var(--r-ui-color-accent-primary)] hover:bg-[var(--r-ui-color-surface-elevated)]"
         >
           <svg viewBox="0 0 16 16" className="w-3 h-3" fill="currentColor">
             <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm1 5.5h12v-1H2z" />
@@ -200,11 +167,7 @@ function LeafPane({
             type="button"
             title="Close Pane (Alt+W)"
             onClick={() => closePane(terminalId)}
-            className={`w-5 h-5 rounded p-1 transition-colors flex items-center justify-center cursor-pointer ${
-              isLight
-                ? 'text-slate-600 hover:text-red-600 hover:bg-red-500/10'
-                : 'text-slate-400 hover:text-red-400 hover:bg-white/5'
-            }`}
+            className="w-5 h-5 rounded p-1 transition-colors flex items-center justify-center cursor-pointer text-[var(--r-ui-color-text-secondary)] hover:text-rose-400 hover:bg-rose-500/10"
           >
             <Trash2 size={12} strokeWidth={2.2} />
           </button>
@@ -219,22 +182,12 @@ function LeafPane({
       >
         {/* Expanded actions – slide in when toggled */}
         {mobileMenuOpen && (
-          <div
-            className={`flex items-center gap-1 mr-1.5 backdrop-blur-md border rounded-md px-1.5 py-1  ${
-              isLight
-                ? 'bg-white/90 border-purple-300/40'
-                : 'bg-[#0f111a]/90 border-purple-500/25'
-            }`}
-          >
+          <div className="flex items-center gap-1 mr-1.5 backdrop-blur-md border border-[var(--r-ui-color-border-standard)] rounded-md px-1.5 py-1 bg-[var(--r-ui-color-surface)]/90 shadow-[var(--r-ui-shadow-sm)]">
             <button
               type="button"
               title="Split Horizontal"
               onClick={() => { splitFocusedTerminal('horizontal'); setMobileMenuOpen(false); }}
-              className={`w-7 h-7 rounded p-1.5 transition-colors flex items-center justify-center cursor-pointer ${
-                isLight
-                  ? 'text-slate-600 hover:text-purple-600 hover:bg-black/5'
-                  : 'text-slate-400 hover:text-purple-400 hover:bg-white/5'
-              }`}
+              className="w-7 h-7 rounded p-1.5 transition-colors flex items-center justify-center cursor-pointer text-[var(--r-ui-color-text-secondary)] hover:text-[var(--r-ui-color-accent-primary)] hover:bg-[var(--r-ui-color-surface-elevated)]"
             >
               <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="currentColor">
                 <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm6.5 1v8h1V4z" />
@@ -244,11 +197,7 @@ function LeafPane({
               type="button"
               title="Split Vertical"
               onClick={() => { splitFocusedTerminal('vertical'); setMobileMenuOpen(false); }}
-              className={`w-7 h-7 rounded p-1.5 transition-colors flex items-center justify-center cursor-pointer ${
-                isLight
-                  ? 'text-slate-600 hover:text-purple-600 hover:bg-black/5'
-                  : 'text-slate-400 hover:text-purple-400 hover:bg-white/5'
-              }`}
+              className="w-7 h-7 rounded p-1.5 transition-colors flex items-center justify-center cursor-pointer text-[var(--r-ui-color-text-secondary)] hover:text-[var(--r-ui-color-accent-primary)] hover:bg-[var(--r-ui-color-surface-elevated)]"
             >
               <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="currentColor">
                 <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm1 5.5h12v-1H2z" />
@@ -259,11 +208,7 @@ function LeafPane({
                 type="button"
                 title="Close Pane"
                 onClick={() => { closePane(terminalId); setMobileMenuOpen(false); }}
-                className={`w-7 h-7 rounded p-1.5 transition-colors flex items-center justify-center cursor-pointer ${
-                  isLight
-                    ? 'text-slate-600 hover:text-red-600 hover:bg-red-500/10'
-                    : 'text-slate-400 hover:text-red-400 hover:bg-white/5'
-                }`}
+                className="w-7 h-7 rounded p-1.5 transition-colors flex items-center justify-center cursor-pointer text-[var(--r-ui-color-text-secondary)] hover:text-rose-400 hover:bg-rose-500/10"
               >
                 <Trash2 size={14} strokeWidth={2.2} />
               </button>
@@ -276,14 +221,10 @@ function LeafPane({
           type="button"
           title={mobileMenuOpen ? 'Close menu' : 'Terminal actions'}
           onClick={() => setMobileMenuOpen((v) => !v)}
-          className={`w-7 h-7 rounded-md flex items-center justify-center  transition-all duration-150 cursor-pointer ${
+          className={`w-7 h-7 rounded-md flex items-center justify-center transition-all duration-150 cursor-pointer border ${
             mobileMenuOpen
-              ? isLight
-                ? 'bg-purple-500/20 text-purple-700 border border-purple-400/40'
-                : 'bg-purple-500/30 text-purple-300 border border-purple-500/40'
-              : isLight
-                ? 'bg-white/70 text-slate-500 border border-slate-300/50'
-                : 'bg-[#0f111a]/70 text-slate-400 border border-purple-500/20'
+              ? 'bg-[var(--r-ui-color-accent-subtle)] text-[var(--r-ui-color-accent-primary)] border-[var(--r-ui-color-accent-primary)]/40'
+              : 'bg-[var(--r-ui-color-surface)]/80 text-[var(--r-ui-color-text-secondary)] border-[var(--r-ui-color-border-subtle)] hover:text-[var(--r-ui-color-text-primary)]'
           }`}
         >
           {mobileMenuOpen ? (
@@ -418,11 +359,7 @@ export function SplitLayoutRenderer({
         />
       </Panel>
       <PanelResizeHandle
-        className={`transition-colors flex-shrink-0 ${
-          isLightColor(themeBackground)
-            ? 'bg-purple-500/10 hover:bg-purple-500/35'
-            : 'bg-purple-500/15 hover:bg-purple-500/40'
-        }`}
+        className="transition-colors flex-shrink-0 bg-[var(--r-ui-color-border-subtle)] hover:bg-[var(--r-ui-color-accent-primary)]/60"
         style={{
           width: node.direction === 'horizontal' ? '4px' : '100%',
           height: node.direction === 'vertical' ? '4px' : '100%',

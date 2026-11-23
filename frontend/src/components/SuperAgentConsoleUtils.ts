@@ -467,7 +467,19 @@ export const handleAgentEventPayload = (
     }
   } else if (payload.type === 'permission_required') {
     if (isAbortedRef.current) return;
-    setPendingPermission({ permissionId: payload.permissionId, toolCall: payload.toolCall, description: payload.description });
+    const toolName = payload.toolCall?.name || payload.toolCall?.tool || payload.target || payload.action;
+    const toolCall = payload.toolCall || (toolName ? {
+      name: toolName,
+      tool: toolName,
+      args: payload.args || payload.details || {},
+    } : undefined);
+    const description = payload.description || (toolName ? `Execute tool: ${toolName}` : 'Tool execution authorization requested');
+    setPendingPermission({
+      permissionId: String(payload.permissionId || payload.id || `perm_${Date.now()}`),
+      toolCall,
+      description,
+      ...(payload.target ? { target: payload.target } : {}),
+    });
   } else if (payload.type === 'question_required') {
     if (isAbortedRef.current) return;
     setPendingQuestion({ questionId: payload.questionId, question: payload.question, options: payload.options, isMultiSelect: payload.isMultiSelect });

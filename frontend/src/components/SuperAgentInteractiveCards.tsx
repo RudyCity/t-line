@@ -32,6 +32,14 @@ export function PermissionCard({ pendingPermission, handlePermissionDecision, su
     (args?.files && JSON.stringify(args.files, null, 2));
 
   const hasDiffPreview = Boolean(filePath || diffContent);
+  const toolName = toolCall?.name || toolCall?.tool || (pendingPermission as any)?.target;
+  const descriptionText = pendingPermission.description && pendingPermission.description.trim()
+    ? pendingPermission.description
+    : (toolName && toolName !== 'unknown'
+      ? `SuperAgent wants to execute: ${toolName}`
+      : pendingPermission.toolCall && typeof pendingPermission.toolCall === 'object' && Object.keys(pendingPermission.toolCall).length > 0
+        ? `SuperAgent wants to execute: ${JSON.stringify(pendingPermission.toolCall)}`
+        : 'Tool execution authorization required');
 
   return (
     <div className="group relative p-4 rounded-xl bg-[var(--bg-card)] border border-amber-500/50 hover:border-amber-500 text-[var(--text-main)] space-y-3.5 backdrop-blur-md transition-all duration-200">
@@ -49,7 +57,7 @@ export function PermissionCard({ pendingPermission, handlePermissionDecision, su
 
       {/* Description / Tool Call Details */}
       <p className="text-xs text-[var(--text-main)] font-mono bg-[var(--bg-sidebar)] p-3 rounded-lg border border-amber-500/30 leading-relaxed break-all select-all">
-        {pendingPermission.description || `SuperAgent wants to execute: ${JSON.stringify(pendingPermission.toolCall)}`}
+        {descriptionText}
       </p>
 
       {/* B6: Pre-apply Diff Preview Toggle */}

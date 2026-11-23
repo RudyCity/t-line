@@ -274,16 +274,11 @@ export class SuperAgentAcpClient extends EventEmitter {
       prompt: promptPayload,
       attachments,
       context,
-    }, 180000); // 3 minutes timeout for deep reasoning / big turns
+    }, 180000); // 3 minutes timeout for prompt dispatch acceptance
 
-    // Emit turn completed when prompt returns
-    this.emit('status', {
-      sessionId: targetSessionId,
-      status: 'done',
-      summary: 'Turn completed',
-      usage: res?.usage,
-    });
-
+    // Do NOT emit status: 'done' here!
+    // Real turn completion is delivered asynchronously from the ACP agent
+    // via 'session/update' notification (kind: 'status_change', status: 'done').
     return res;
   }
 
@@ -476,9 +471,11 @@ export class SuperAgentAcpClient extends EventEmitter {
 
     // 2. Inbound Request: session/request_permission (Reverse callback from Agent)
     if (msg.method === 'session/request_permission' && msg.id !== undefined) {
-      const request: AcpPermissionRequest = msg.params;
+      const request: any = msg.params || {};
+      const permissionId = String(request.permissionId || request.id || request.callId || `perm_${msg.id}`);
       this.emit('permission_requested', {
         rpcId: msg.id,
+        permissionId,
         ...request,
         reply: (decision: 'approved' | 'approved_session' | 'denied' | 'cancelled') => {
           this.respondPermission(msg.id, decision);

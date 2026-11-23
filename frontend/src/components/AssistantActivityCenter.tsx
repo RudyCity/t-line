@@ -39,7 +39,8 @@ export function summarizeBackgroundTasks(tasks: readonly AssistantDraftTask[], u
  * session-scoped APIs and permission/recovery policies. Never merge execution. */
 export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraftCreated,
   messages = [], subagents = [], pendingPermission = null, onPermissionDecision,
-  connected = true, approvalJump = 0, approvalSubmitting = false, approvalFeedback = '' }: {
+  connected = true, approvalJump = 0, approvalSubmitting = false, approvalFeedback = '',
+  defaultOpen = false, sidebarMode = false }: {
   workspace: string; sessionId: string; handoff?: AssistantTaskHandoff | null;
   onDraftCreated?: (submitted: string) => void;
   messages?: readonly ConsoleMessage[]; subagents?: readonly SubAgentItem[];
@@ -47,8 +48,9 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
   onPermissionDecision?: (decision: boolean | 'session' | 'always') => void;
   connected?: boolean; approvalJump?: number;
   approvalSubmitting?: boolean; approvalFeedback?: string;
+  defaultOpen?: boolean; sidebarMode?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [view, setView] = useState<ActivityView>('chat');
   const [summary, setSummary] = useState<ActivitySummary>(empty);
   const [drafts, setDrafts] = useState<AssistantDraftTask[]>([]);
@@ -67,11 +69,11 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
   const [taskControlMessage, setTaskControlMessage] = useState('');
 
   useEffect(() => {
-    setOpen(false); setView('chat'); setSummary(empty); setDrafts([]); setUnverifiedIds([]);
+    setOpen(defaultOpen); setView('chat'); setSummary(empty); setDrafts([]); setUnverifiedIds([]);
     eventCursor.current = 0; setTaskEvents([]); setJournalError('');
     coreCursor.current = 0; setCoreEvents([]); setCoreError(''); setCoreGap(false);
     setErrors({ chat: '', tasks: '' });
-  }, [workspace, sessionId]);
+  }, [workspace, sessionId, defaultOpen]);
 
   useEffect(() => {
     if (!handoff || handoff.workspace !== workspace || handoff.sessionId !== sessionId) return;
@@ -277,40 +279,106 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
   const delayed = Boolean(errors.chat || errors.tasks);
   return (
     <section aria-label="Assistant Activity Center"
-      className="shrink-0 border-t border-[var(--border-color)] bg-[var(--bg-card)] font-sans text-[var(--text-main)]">
-      <div className="flex items-center gap-2 px-3 sm:px-4 py-2">
-        <button type="button" aria-expanded={open} aria-controls="assistant-activity-content"
-          aria-label="Toggle Activity Center" onClick={() => setOpen(value => !value)}
-          className="flex min-w-0 flex-1 items-center gap-2.5 text-left hover:opacity-85 focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--color-primary-glow)] text-[var(--color-primary)]">
-            <Activity size={15} aria-hidden="true"/>
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-xs font-semibold">Activity Center</span>
-            <span className="block truncate text-[10px] text-[var(--text-muted)]">
-              Chat · tasks · agent timeline · {pendingPermission ? 'Approval waiting' :
-              summary.chatPending + ' queued chat · ' + summary.taskCompleted + ' tasks completed'}
+      className={sidebarMode
+        ? "flex flex-col h-full bg-[#090a0f] font-sans text-[#f8fafc] overflow-hidden"
+        : "shrink-0 border-t border-[var(--border-color)] bg-[var(--bg-card)] font-sans text-[var(--text-main)]"
+      }>
+      {sidebarMode ? (
+        <div className="flex items-center justify-between px-3 py-2 border-b border-[rgba(255,255,255,0.08)] bg-[#0c0e14] shrink-0 gap-2">
+          <div role="tablist" aria-label="Activity sources" className="flex items-center gap-1 bg-[#090a0f] p-0.5 rounded-md border border-[rgba(255,255,255,0.08)] text-xs">
+            <button type="button" id="activity-tab-timeline" role="tab" aria-selected={view === 'timeline'}
+              aria-controls="activity-panel-timeline" onClick={() => setView('timeline')}
+              aria-label="Agent timeline"
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition text-xs font-medium cursor-pointer ${
+                view === 'timeline'
+                  ? 'bg-[#1a1d28] text-[#f8fafc] shadow-xs'
+                  : 'text-[#94a3b8] hover:text-[#f8fafc]'
+              }`}>
+              <GitBranch size={13} aria-hidden="true"/>
+              <span>Timeline</span>
+              {pendingPermission && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" title="1 approval" />}
+            </button>
+            <button type="button" id="activity-tab-tasks" role="tab" aria-selected={view === 'tasks'}
+              aria-controls="activity-panel-tasks" onClick={() => setView('tasks')}
+              aria-label="Background tasks"
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition text-xs font-medium cursor-pointer ${
+                view === 'tasks'
+                  ? 'bg-[#1a1d28] text-[#f8fafc] shadow-xs'
+                  : 'text-[#94a3b8] hover:text-[#f8fafc]'
+              }`}>
+              <Layers3 size={13} aria-hidden="true"/>
+              <span>Tasks</span>
+              {(summary.taskActive + summary.taskAttention) > 0 && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-sky-500/10 text-sky-400 font-mono">
+                  {summary.taskActive + summary.taskAttention}
+                </span>
+              )}
+            </button>
+            <button type="button" id="activity-tab-chat" role="tab" aria-selected={view === 'chat'}
+              aria-controls="activity-panel-chat" onClick={() => setView('chat')}
+              aria-label="Chat queue"
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition text-xs font-medium cursor-pointer ${
+                view === 'chat'
+                  ? 'bg-[#1a1d28] text-[#f8fafc] shadow-xs'
+                  : 'text-[#94a3b8] hover:text-[#f8fafc]'
+              }`}>
+              <MessageSquareText size={13} aria-hidden="true"/>
+              <span>Queue</span>
+              {(summary.chatRunning + summary.chatPending) > 0 && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-sky-500/10 text-sky-400 font-mono">
+                  {summary.chatRunning + summary.chatPending}
+                </span>
+              )}
+            </button>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {delayed && <AlertTriangle size={13} className="text-amber-400 shrink-0" aria-label="Activity status delayed"/>}
+            <button type="button" onClick={() => setRevision(value => value + 1)}
+              aria-label="Refresh Activity Center" title="Refresh activity data"
+              className="p-1 rounded text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#1a1d28] transition cursor-pointer">
+              <RefreshCw size={13}/>
+            </button>
+          </div>
+          <button type="button" aria-expanded={open} aria-controls="assistant-activity-content"
+            aria-label="Toggle Activity Center" onClick={() => setOpen(value => !value)}
+            className="sr-only">Toggle Activity Center</button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 border-b border-[var(--border-color)]/60 shrink-0">
+          <button type="button" aria-expanded={open} aria-controls="assistant-activity-content"
+            aria-label="Toggle Activity Center" onClick={() => setOpen(value => !value)}
+            className="flex min-w-0 flex-1 items-center gap-2.5 text-left hover:opacity-85 focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--color-primary-glow)] text-[var(--color-primary)]">
+              <Activity size={15} aria-hidden="true"/>
             </span>
-          </span>
-          {currentCount > 0 && <span className="rounded-full bg-[var(--color-primary-glow)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-primary)]">
-            {currentCount} active
-          </span>}
-          {reviewCount > 0 && <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400">
-            {reviewCount} review
-          </span>}
-          {delayed && <AlertTriangle size={14} className="text-amber-400" aria-label="Activity status delayed"/>}
-          {open ? <ChevronDown size={15} className="text-[var(--text-muted)]"/> :
-            <ChevronUp size={15} className="text-[var(--text-muted)]"/>}
-        </button>
-        <button type="button" onClick={() => setRevision(value => value + 1)}
-          aria-label="Refresh Activity Center" title="Refresh activity counts"
-          className="shrink-0 rounded-lg border border-[var(--border-color)] p-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]">
-          <RefreshCw size={13}/>
-        </button>
-      </div>
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-semibold">Activity Center</span>
+              <span className="block truncate text-[10px] text-[var(--text-muted)]">
+                Chat · tasks · agent timeline · {pendingPermission ? 'Approval waiting' :
+                summary.chatPending + ' queued chat · ' + summary.taskCompleted + ' tasks completed'}
+              </span>
+            </span>
+            {currentCount > 0 && <span className="rounded-full bg-[var(--color-primary-glow)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-primary)]">
+              {currentCount} active
+            </span>}
+            {reviewCount > 0 && <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400">
+              {reviewCount} review
+            </span>}
+            {delayed && <AlertTriangle size={14} className="text-amber-400" aria-label="Activity status delayed"/>}
+            {open ? <ChevronDown size={15} className="text-[var(--text-muted)]"/> :
+              <ChevronUp size={15} className="text-[var(--text-muted)]"/>}
+          </button>
+          <button type="button" onClick={() => setRevision(value => value + 1)}
+            aria-label="Refresh Activity Center" title="Refresh activity counts"
+            className="shrink-0 rounded-lg border border-[var(--border-color)] p-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]">
+            <RefreshCw size={13}/>
+          </button>
+        </div>
+      )}
       <div id="assistant-activity-content" hidden={!open}
-        className="border-t border-[var(--border-color)]">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-color)] px-3 sm:px-4 py-2">
+        className={sidebarMode ? "flex-1 flex flex-col min-h-0 overflow-y-auto" : "border-t border-[var(--border-color)]"}>
+        {!sidebarMode && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-color)] px-3 sm:px-4 py-2 shrink-0 bg-[var(--bg-card)] sticky top-0 z-10">
             <div role="tablist" aria-label="Activity sources" className="flex min-w-0 flex-wrap gap-1.5">
               <button type="button" id="activity-tab-chat" role="tab" aria-selected={view === 'chat'}
                 aria-controls="activity-panel-chat" onClick={() => setView('chat')}
@@ -339,6 +407,7 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
             </div>
             <span className="text-[10px] text-[var(--text-muted)]">This chat session only</span>
           </div>
+        )}
           {delayed && <p role="status" className="px-3 sm:px-4 py-1.5 text-[11px] text-amber-400">
             {[errors.chat, errors.tasks].filter(Boolean).join(' · ')}. Last known counts shown.
           </p>}
@@ -348,12 +417,12 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
             <>
               {/* Retain both views while open: switching tabs cannot discard an unsaved draft. */}
               <div role="tabpanel" id="activity-panel-chat" aria-labelledby="activity-tab-chat"
-                hidden={view !== 'chat'}>
+                hidden={view !== 'chat'} className={sidebarMode ? "flex-1 min-h-0 overflow-y-auto" : undefined}>
                 <AssistantTurnQueue workspace={workspace} sessionId={sessionId}
                   visible={open && view === 'chat'} embedded/>
               </div>
               <div role="tabpanel" id="activity-panel-tasks" aria-labelledby="activity-tab-tasks"
-                hidden={view !== 'tasks'}>
+                hidden={view !== 'tasks'} className={sidebarMode ? "flex-1 min-h-0 overflow-y-auto" : undefined}>
                 <AssistantTaskDraftPanel workspace={workspace} sessionId={sessionId}
                   visible={open && view === 'tasks'}
                   handoff={handoff} onDraftCreated={submitted => {
@@ -362,7 +431,7 @@ export function AssistantActivityCenter({ workspace, sessionId, handoff, onDraft
                   }} embedded/>
               </div>
               <div role="tabpanel" id="activity-panel-timeline" aria-labelledby="activity-tab-timeline"
-                hidden={view !== 'timeline'}>
+                hidden={view !== 'timeline'} className={sidebarMode ? "flex-1 min-h-0 overflow-y-auto" : undefined}>
                 {journalError && <p role="status" className="px-4 pt-2 text-xs text-amber-400">
                   Core task history unavailable · {journalError}. Showing available snapshots.
                 </p>}

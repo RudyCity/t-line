@@ -91,7 +91,7 @@ export const SAFE_READ_ONLY_TOOLS: ReadonlySet<string> = new Set([
  * `tool:<name>`.
  */
 export function patternFromPermission(permission: PendingPermission): string {
-  const toolName: string = permission?.toolCall?.tool || permission?.toolCall?.name || 'unknown';
+  const toolName: string = permission?.toolCall?.tool || permission?.toolCall?.name || (permission as any)?.target || 'unknown';
   if (SAFE_READ_ONLY_TOOLS.has(toolName)) {
     return `tool:${toolName}:safe`;
   }
@@ -99,7 +99,7 @@ export function patternFromPermission(permission: PendingPermission): string {
 }
 
 export function toolNameFromPermission(permission: PendingPermission): string {
-  return permission?.toolCall?.tool || permission?.toolCall?.name || 'unknown';
+  return permission?.toolCall?.tool || permission?.toolCall?.name || (permission as any)?.target || 'unknown';
 }
 
 /**

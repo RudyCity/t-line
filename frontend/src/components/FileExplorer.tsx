@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { GitFileStatus } from './GitChanges';
 import { ConfirmModal, InputModal } from './Modals';
+import { getAuthToken } from '../utils/tokenStorage';
 
 interface FsItem {
   name: string;
@@ -53,8 +54,9 @@ async function fetchExplore(dirPath: string, token: string, force = false): Prom
   if (!force && cached && Date.now() - cached.timestamp < CACHE_TTL) {
     return cached.data;
   }
+  const authToken = token || getAuthToken() || '';
   const res = await fetch(`/api/fs/explore?path=${encodeURIComponent(dirPath)}`, {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${authToken}` }
   });
   if (!res.ok) throw new Error('Failed to fetch directory');
   const data = await res.json();
@@ -63,8 +65,9 @@ async function fetchExplore(dirPath: string, token: string, force = false): Prom
 }
 
 async function fetchFileContent(filePath: string, token: string): Promise<string> {
+  const authToken = token || getAuthToken() || '';
   const res = await fetch(`/api/fs/read?path=${encodeURIComponent(filePath)}`, {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${authToken}` }
   });
   if (!res.ok) throw new Error('Failed to read file');
   const data = await res.json();
@@ -160,6 +163,7 @@ function TreeNodeItem({
   onItemClick: (node: TreeNode, e: React.MouseEvent) => void;
   activeFilePath?: string;
 }) {
+  const authToken = token || getAuthToken() || '';
   const [expanded, setExpanded] = useState(false);
   const [children, setChildren] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(false);
@@ -177,7 +181,7 @@ function TreeNodeItem({
           setExpanded(true);
           if (children.length === 0 && !loading) {
             setLoading(true);
-            fetchExplore(node.path, token)
+            fetchExplore(node.path, authToken)
               .then(items => {
                 setChildren(items.map(i => ({ ...i })));
               })
@@ -188,7 +192,7 @@ function TreeNodeItem({
       }
       lastProcessedActivePathRef.current = activeFilePath;
     }
-  }, [activeFilePath, node.path, node.isDirectory, token, expanded, children.length, loading]);
+  }, [activeFilePath, node.path, node.isDirectory, authToken, expanded, children.length, loading]);
 
   useEffect(() => {
     if (activeFilePath && node.path === activeFilePath && elementRef.current) {
@@ -201,7 +205,7 @@ function TreeNodeItem({
       lastTriggerRef.current = refreshTrigger;
       const reloadChildren = async () => {
         try {
-          const items = await fetchExplore(node.path, token, true);
+          const items = await fetchExplore(node.path, authToken, true);
           setChildren(items.map(i => ({ ...i })));
         } catch {
           // ignore
@@ -209,7 +213,7 @@ function TreeNodeItem({
       };
       reloadChildren();
     }
-  }, [refreshTrigger, expanded, node.path, token]);
+  }, [refreshTrigger, expanded, node.path, authToken]);
 
   const handleItemClick = async (e: React.MouseEvent) => {
     onItemClick(node, e);
@@ -222,7 +226,7 @@ function TreeNodeItem({
         if (!expanded && children.length === 0) {
           setLoading(true);
           try {
-            const items = await fetchExplore(node.path, token);
+            const items = await fetchExplore(node.path, authToken);
             setChildren(items.map(i => ({ ...i })));
           } catch {
             // ignore
@@ -342,7 +346,7 @@ function TreeNodeItem({
               key={child.path}
               node={child}
               depth={depth + 1}
-              token={token}
+              token={authToken}
               onFileClick={onFileClick}
               rootPath={rootPath}
               changedFiles={changedFiles}
@@ -500,6 +504,7 @@ export function FileExplorer({
   refreshTrigger = 0,
   activeFilePath
 }: ExplorerProps) {
+  const authToken = token || getAuthToken() || '';
   const [roots, setRoots] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<{ path: string; name: string; content: string } | null>(null);
@@ -598,7 +603,7 @@ export function FileExplorer({
     setLoading(true);
     clearExplorerCache();
     try {
-      const items = await fetchExplore(rootPath, token, true);
+      const items = await fetchExplore(rootPath, authToken, true);
       setRoots(items.map(i => ({ ...i })));
       setLocalTrigger(prev => prev + 1);
       if (onRefreshRef.current) onRefreshRef.current();
@@ -607,7 +612,7 @@ export function FileExplorer({
     } finally {
       setLoading(false);
     }
-  }, [rootPath, token]);
+  }, [rootPath, authToken]);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -624,7 +629,7 @@ export function FileExplorer({
           try {
             const res = await fetch(`/api/fs/delete?path=${encodeURIComponent(node.path)}`, {
               method: 'DELETE',
-              headers: { Authorization: `Bearer ${token}` }
+              headers: { Authorization: `Bearer ${authToken}` }
             });
             if (res.ok) {
               successCount++;
@@ -651,7 +656,7 @@ export function FileExplorer({
     } catch (e: any) {
       alert(`Error deleting items: ${e.message}`);
     }
-  }, [selectedNodes, token, load]);
+  }, [selectedNodes, authToken, load]);
 
   const handleOpenExplorer = useCallback(async () => {
     if (selectedNodes.length === 0) return;
@@ -662,7 +667,7 @@ export function FileExplorer({
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
+              Authorization: `Bearer ${authToken}`
             },
             body: JSON.stringify({ path: node.path })
           });
@@ -728,7 +733,7 @@ export function FileExplorer({
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
+              Authorization: `Bearer ${authToken}`
             },
             body: JSON.stringify({ path: fullPath, isDirectory: false })
           });
@@ -748,7 +753,7 @@ export function FileExplorer({
         }
       }
     });
-  }, [rootPath, selectedNodes, token, load, getParentPath, joinPath]);
+  }, [rootPath, selectedNodes, authToken, load, getParentPath, joinPath]);
 
   const triggerNewFolder = useCallback((targetNode?: TreeNode) => {
     let parentDir = rootPath;
@@ -771,7 +776,7 @@ export function FileExplorer({
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
+              Authorization: `Bearer ${authToken}`
             },
             body: JSON.stringify({ path: fullPath, isDirectory: true })
           });
@@ -791,7 +796,7 @@ export function FileExplorer({
         }
       }
     });
-  }, [rootPath, selectedNodes, token, load, getParentPath, joinPath]);
+  }, [rootPath, selectedNodes, authToken, load, getParentPath, joinPath]);
 
   const triggerRename = useCallback((targetNode?: TreeNode) => {
     const nodeToRename = targetNode || (selectedNodes.length === 1 ? selectedNodes[0] : null);
@@ -814,7 +819,7 @@ export function FileExplorer({
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
+              Authorization: `Bearer ${authToken}`
             },
             body: JSON.stringify({ oldPath: nodeToRename.path, newPath })
           });
@@ -834,7 +839,7 @@ export function FileExplorer({
         }
       }
     });
-  }, [selectedNodes, token, load, getParentPath, joinPath]);
+  }, [selectedNodes, authToken, load, getParentPath, joinPath]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -856,7 +861,7 @@ export function FileExplorer({
     setPreviewLoading(true);
     setPreview(null);
     try {
-      const content = await fetchFileContent(path, token);
+      const content = await fetchFileContent(path, authToken);
       setPreview({ path, name, content });
     } catch {
       setPreview({ path, name, content: '(Unable to read file)' });
@@ -918,7 +923,7 @@ export function FileExplorer({
                    key={node.path}
                    node={node}
                    depth={0}
-                   token={token}
+                   token={authToken}
                    onFileClick={handleFileClick}
                    rootPath={rootPath}
                    changedFiles={changedFiles}

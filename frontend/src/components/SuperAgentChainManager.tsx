@@ -352,7 +352,7 @@ export const SuperAgentChainManager: React.FC<Props> = ({ workspace, setWorkspac
 
           <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
             {chains.length === 0 ? (
-              <div className="text-center py-6 text-zinc-500 italic">No workspace chains defined.</div>
+              <div className="text-center py-6 text-[var(--r-ui-color-text-tertiary)] italic">No workspace chains defined.</div>
             ) : (
               chains.map(c => {
                 const isActive = activeChainId === c.id;
@@ -364,7 +364,7 @@ export const SuperAgentChainManager: React.FC<Props> = ({ workspace, setWorkspac
                     className={`p-2.5 rounded-lg border transition cursor-pointer flex flex-col gap-1 ${
                       isSelected
                         ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--text-main)]'
-                        : 'border-[var(--border-color)] bg-[var(--bg-card)] hover:border-zinc-500 text-[var(--text-muted)]'
+                        : 'border-[var(--border-color)] bg-[var(--bg-card)] hover:border-[var(--r-ui-color-border-standard)] text-[var(--text-muted)]'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -375,8 +375,8 @@ export const SuperAgentChainManager: React.FC<Props> = ({ workspace, setWorkspac
                         </span>
                       )}
                     </div>
-                    {c.description && <span className="text-[10px] text-zinc-500 truncate">{c.description}</span>}
-                    <span className="text-[9px] font-mono text-zinc-600">{c.nodes.length} nodes</span>
+                    {c.description && <span className="text-[10px] text-[var(--r-ui-color-text-secondary)] truncate">{c.description}</span>}
+                    <span className="text-[9px] font-mono text-[var(--r-ui-color-text-tertiary)]">{c.nodes.length} nodes</span>
                   </div>
                 );
               })
@@ -431,14 +431,14 @@ export const SuperAgentChainManager: React.FC<Props> = ({ workspace, setWorkspac
 
                 <div className="space-y-1.5 max-h-[160px] overflow-y-auto bg-[var(--bg-card)] p-2 rounded-lg border border-[var(--border-color)]">
                   {chainNodes.length === 0 ? (
-                    <div className="text-center py-4 text-zinc-500 italic text-[10px]">Add at least one node to start. The first node will be primary.</div>
+                    <div className="text-center py-4 text-[var(--r-ui-color-text-tertiary)] italic text-[10px]">Add at least one node to start. The first node will be primary.</div>
                   ) : (
                     chainNodes.map((n, idx) => (
                       <div key={idx} className="flex items-center justify-between p-2 bg-[var(--bg-sidebar)] rounded border border-[var(--border-color)] font-mono text-[10px]">
                         <div className="flex items-center gap-2">
                           {n.type === 'ssh' ? <Globe className="w-3 h-3 text-sky-400" /> : <Folder className="w-3 h-3 text-amber-400" />}
                           <span className="font-semibold">{n.label} ({n.id})</span>
-                          <span className="text-zinc-500">[{n.role}]</span>
+                          <span className="text-[var(--r-ui-color-text-secondary)]">[{n.role}]</span>
                         </div>
                         <button
                           type="button"
@@ -457,7 +457,7 @@ export const SuperAgentChainManager: React.FC<Props> = ({ workspace, setWorkspac
                 <button
                   type="button"
                   onClick={() => setShowCreateForm(false)}
-                  className="px-3.5 py-1.5 bg-transparent border border-[var(--border-color)] hover:border-zinc-500 rounded-lg text-[var(--text-main)] cursor-pointer"
+                  className="px-3.5 py-1.5 bg-transparent border border-[var(--border-color)] hover:border-[var(--r-ui-color-border-standard)] rounded-lg text-[var(--text-main)] cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -475,7 +475,7 @@ export const SuperAgentChainManager: React.FC<Props> = ({ workspace, setWorkspac
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="font-semibold text-[var(--text-main)] text-sm">{selectedChain.name}</h3>
-                  {selectedChain.description && <p className="text-[10px] text-zinc-500 mt-0.5">{selectedChain.description}</p>}
+                  {selectedChain.description && <p className="text-[10px] text-[var(--r-ui-color-text-secondary)] mt-0.5">{selectedChain.description}</p>}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button
@@ -538,7 +538,7 @@ export const SuperAgentChainManager: React.FC<Props> = ({ workspace, setWorkspac
                         <div className="space-y-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-[var(--text-main)] font-mono text-xs">{node.label} ({node.id})</span>
-                            <span className="text-[9px] uppercase px-1 rounded bg-zinc-700/50 font-mono text-zinc-400">
+                            <span className="text-[9px] uppercase px-1 rounded bg-[var(--r-ui-color-surface-elevated)] font-mono text-[var(--r-ui-color-text-secondary)]">
                               {node.role}
                             </span>
                             {node.id === selectedChain.primaryNodeId && (
@@ -548,7 +548,7 @@ export const SuperAgentChainManager: React.FC<Props> = ({ workspace, setWorkspac
                             )}
                           </div>
                           
-                          <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 font-mono">
+                          <div className="flex items-center gap-1.5 text-[10px] text-[var(--r-ui-color-text-secondary)] font-mono">
                             {node.type === 'ssh' ? (
                               <>
                                 <Globe className="w-3 h-3 text-sky-400 shrink-0" />
@@ -561,7 +561,7 @@ export const SuperAgentChainManager: React.FC<Props> = ({ workspace, setWorkspac
                               </>
                             )}
                           </div>
-                          {node.description && <p className="text-[10px] text-zinc-500 italic mt-0.5">{node.description}</p>}
+                          {node.description && <p className="text-[10px] text-[var(--r-ui-color-text-secondary)] italic mt-0.5">{node.description}</p>}
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
@@ -571,7 +571,7 @@ export const SuperAgentChainManager: React.FC<Props> = ({ workspace, setWorkspac
                               className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono border ${
                                 isConnected
                                   ? 'text-emerald-400 bg-emerald-400/10 border-emerald-500/20'
-                                  : 'text-zinc-500 bg-zinc-500/10 border-zinc-500/20'
+                                  : 'text-[var(--r-ui-color-text-tertiary)] bg-[var(--r-ui-color-surface-elevated)] border-[var(--r-ui-color-border-subtle)]'
                               }`}
                               title={isConnected ? 'SSH Connected' : 'SSH Disconnected'}
                             >
@@ -589,7 +589,7 @@ export const SuperAgentChainManager: React.FC<Props> = ({ workspace, setWorkspac
                             activeChainId === selectedChain.id && (
                               <button
                                 onClick={() => handleSwitchActiveNode(node)}
-                                className="px-2.5 py-1 rounded hover:bg-zinc-700 border border-[var(--border-color)] hover:border-zinc-500 text-[var(--text-main)] cursor-pointer"
+                                className="px-2.5 py-1 rounded hover:bg-[var(--r-ui-color-surface-elevated)] border border-[var(--border-color)] hover:border-[var(--r-ui-color-border-standard)] text-[var(--text-main)] cursor-pointer"
                               >
                                 Focus Node
                               </button>
@@ -621,13 +621,13 @@ export const SuperAgentChainManager: React.FC<Props> = ({ workspace, setWorkspac
                       <Activity className="w-4 h-4 text-[var(--color-primary)]" />
                       <span>Node Health & Performance Monitor</span>
                     </div>
-                    {showHealth ? <ChevronDown className="w-4 h-4 text-zinc-500" /> : <ChevronRight className="w-4 h-4 text-zinc-500" />}
+                    {showHealth ? <ChevronDown className="w-4 h-4 text-[var(--r-ui-color-text-secondary)]" /> : <ChevronRight className="w-4 h-4 text-[var(--r-ui-color-text-secondary)]" />}
                   </button>
 
                   {showHealth && (
                     <div className="p-3 space-y-3 font-sans">
                       <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-zinc-500">Live latency and resource metrics dashboard</span>
+                        <span className="text-[10px] text-[var(--r-ui-color-text-secondary)]">Live latency and resource metrics dashboard</span>
                         <button
                           onClick={loadHealth}
                           disabled={healthLoading}
@@ -638,7 +638,7 @@ export const SuperAgentChainManager: React.FC<Props> = ({ workspace, setWorkspac
                       </div>
 
                       {healthLoading && healthData.length === 0 ? (
-                        <div className="text-center py-6 text-zinc-500 italic">Pinging nodes...</div>
+                        <div className="text-center py-6 text-[var(--r-ui-color-text-tertiary)] italic">Pinging nodes...</div>
                       ) : (
                         <div className="overflow-x-auto border border-[var(--border-color)] rounded-lg">
                           <table className="w-full text-[10px] font-mono text-left border-collapse">
@@ -679,7 +679,7 @@ export const SuperAgentChainManager: React.FC<Props> = ({ workspace, setWorkspac
               )}
             </div>
           ) : (
-            <div className="text-center py-16 text-zinc-500 italic">Select or create a workspace chain from the left sidebar.</div>
+            <div className="text-center py-16 text-[var(--r-ui-color-text-tertiary)] italic">Select or create a workspace chain from the left sidebar.</div>
           )}
         </div>
       </div>
@@ -880,7 +880,7 @@ export const SuperAgentChainManager: React.FC<Props> = ({ workspace, setWorkspac
                     setSshForm(DEFAULT_SSH);
                     setShowAddNodeForm(false);
                   }}
-                  className="px-3.5 py-1.5 bg-transparent border border-[var(--border-color)] hover:border-zinc-500 rounded-lg text-[var(--text-main)] cursor-pointer"
+                  className="px-3.5 py-1.5 bg-transparent border border-[var(--border-color)] hover:border-[var(--r-ui-color-border-standard)] rounded-lg text-[var(--text-main)] cursor-pointer"
                 >
                   Cancel
                 </button>

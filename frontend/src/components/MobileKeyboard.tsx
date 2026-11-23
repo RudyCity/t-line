@@ -87,40 +87,40 @@ export function MobileKeyboard({ onKeyInput, onClose }: MobileKeyboardProps): Re
       className="mobile-keyboard border-t p-2 select-none z-45 flex flex-col gap-1.5 w-full shrink-0"
       style={{
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',
-        backgroundColor: 'color-mix(in srgb, var(--bg-sidebar) 95%, transparent)',
-        borderTopColor: 'color-mix(in srgb, var(--color-primary) 10%, transparent)'
+        backgroundColor: 'color-mix(in srgb, var(--r-ui-color-surface, var(--bg-sidebar)) 95%, transparent)',
+        borderTopColor: 'var(--r-ui-color-border-subtle)'
       }}
     >
       {/* Modifier Toolbar Row */}
       <div className="flex gap-1 justify-between w-full">
         <button
           onClick={() => handleSpecialPress('Esc')}
-          className="flex-1 py-1.5 bg-slate-900/60 border border-white/5 rounded text-[11px] text-slate-300 font-semibold cursor-pointer active:bg-slate-800"
+          className="flex-1 py-1.5 bg-[var(--r-ui-color-canvas)] border border-[var(--r-ui-color-border-subtle)] rounded-[var(--r-ui-radius-sm)] text-[11px] text-[var(--r-ui-color-text-secondary)] font-semibold cursor-pointer active:bg-[var(--r-ui-color-surface-elevated)]"
         >
           Esc
         </button>
         <button
           onClick={() => handleSpecialPress('Tab')}
-          className="flex-1 py-1.5 bg-slate-900/60 border border-white/5 rounded text-[11px] text-slate-300 font-semibold cursor-pointer active:bg-slate-800"
+          className="flex-1 py-1.5 bg-[var(--r-ui-color-canvas)] border border-[var(--r-ui-color-border-subtle)] rounded-[var(--r-ui-radius-sm)] text-[11px] text-[var(--r-ui-color-text-secondary)] font-semibold cursor-pointer active:bg-[var(--r-ui-color-surface-elevated)]"
         >
           Tab
         </button>
         <button
           onClick={() => setIsCtrlActive(v => !v)}
-          className={`flex-1 py-1.5 border rounded text-[11px] font-semibold cursor-pointer transition-all ${
+          className={`flex-1 py-1.5 border rounded-[var(--r-ui-radius-sm)] text-[11px] font-semibold cursor-pointer transition-all ${
             isCtrlActive
-              ? 'bg-purple-600 border-purple-500 text-white  '
-              : 'bg-slate-900/60 border-white/5 text-slate-300 active:bg-slate-800'
+              ? 'bg-[var(--r-ui-color-accent-primary)] border-[var(--r-ui-color-accent-primary)] text-[var(--r-ui-color-text-inverse)]'
+              : 'bg-[var(--r-ui-color-canvas)] border-[var(--r-ui-color-border-subtle)] text-[var(--r-ui-color-text-secondary)] active:bg-[var(--r-ui-color-surface-elevated)]'
           }`}
         >
           Ctrl
         </button>
         <button
           onClick={() => setIsAltActive(v => !v)}
-          className={`flex-1 py-1.5 border rounded text-[11px] font-semibold cursor-pointer transition-all ${
+          className={`flex-1 py-1.5 border rounded-[var(--r-ui-radius-sm)] text-[11px] font-semibold cursor-pointer transition-all ${
             isAltActive
-              ? 'bg-purple-600 border-purple-500 text-white  '
-              : 'bg-slate-900/60 border-white/5 text-slate-300 active:bg-slate-800'
+              ? 'bg-[var(--r-ui-color-accent-primary)] border-[var(--r-ui-color-accent-primary)] text-[var(--r-ui-color-text-inverse)]'
+              : 'bg-[var(--r-ui-color-canvas)] border-[var(--r-ui-color-border-subtle)] text-[var(--r-ui-color-text-secondary)] active:bg-[var(--r-ui-color-surface-elevated)]'
           }`}
         >
           Alt
@@ -130,21 +130,21 @@ export function MobileKeyboard({ onKeyInput, onClose }: MobileKeyboardProps): Re
         <div className="flex gap-1 items-center shrink-0 ml-2">
           <button
             onClick={() => handleSpecialPress('Left')}
-            className="w-8 py-1.5 bg-slate-900/60 border border-white/5 rounded text-[11px] text-slate-300 font-semibold cursor-pointer active:bg-slate-800 flex items-center justify-center"
+            className="w-8 py-1.5 bg-[var(--r-ui-color-canvas)] border border-[var(--r-ui-color-border-subtle)] rounded-[var(--r-ui-radius-sm)] text-[11px] text-[var(--r-ui-color-text-secondary)] font-semibold cursor-pointer active:bg-[var(--r-ui-color-surface-elevated)] flex items-center justify-center"
           >
             ←
           </button>
           <div className="flex flex-col gap-1 shrink-0">
             <button
               onClick={() => handleSpecialPress('Up')}
-              className="w-8 py-0.5 bg-slate-900/60 border border-white/5 rounded text-[10px] text-slate-300 font-semibold cursor-pointer active:bg-slate-800 flex items-center justify-center"
+              className="w-8 py-0.5 bg-[var(--r-ui-color-canvas)] border border-[var(--r-ui-color-border-subtle)] rounded-[var(--r-ui-radius-sm)] text-[10px] text-[var(--r-ui-color-text-secondary)] font-semibold cursor-pointer active:bg-[var(--r-ui-color-surface-elevated)] flex items-center justify-center"
               style={{ padding: '2px 0' }}
             >
               ↑
             </button>
             <button
               onClick={() => handleSpecialPress('Down')}
-              className="w-8 py-0.5 bg-slate-900/60 border border-white/5 rounded text-[10px] text-slate-300 font-semibold cursor-pointer active:bg-slate-800 flex items-center justify-center"
+              className="w-8 py-0.5 bg-[var(--r-ui-color-canvas)] border border-[var(--r-ui-color-border-subtle)] rounded-[var(--r-ui-radius-sm)] text-[10px] text-[var(--r-ui-color-text-secondary)] font-semibold cursor-pointer active:bg-[var(--r-ui-color-surface-elevated)] flex items-center justify-center"
               style={{ padding: '2px 0' }}
             >
               ↓
@@ -152,7 +152,7 @@ export function MobileKeyboard({ onKeyInput, onClose }: MobileKeyboardProps): Re
           </div>
           <button
             onClick={() => handleSpecialPress('Right')}
-            className="w-8 py-1.5 bg-slate-900/60 border border-white/5 rounded text-[11px] text-slate-300 font-semibold cursor-pointer active:bg-slate-800 flex items-center justify-center"
+            className="w-8 py-1.5 bg-[var(--r-ui-color-canvas)] border border-[var(--r-ui-color-border-subtle)] rounded-[var(--r-ui-radius-sm)] text-[11px] text-[var(--r-ui-color-text-secondary)] font-semibold cursor-pointer active:bg-[var(--r-ui-color-surface-elevated)] flex items-center justify-center"
           >
             →
           </button>
@@ -161,7 +161,7 @@ export function MobileKeyboard({ onKeyInput, onClose }: MobileKeyboardProps): Re
         {onClose && (
           <button
             onClick={onClose}
-            className="w-8 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded text-[11px] text-red-400 font-bold cursor-pointer active:bg-red-600 active:text-white flex items-center justify-center ml-1 shrink-0"
+            className="w-8 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-[var(--r-ui-radius-sm)] text-[11px] text-rose-400 font-bold cursor-pointer active:bg-rose-600 active:text-white flex items-center justify-center ml-1 shrink-0"
             title="Hide Keyboard"
           >
             ✕
@@ -177,7 +177,7 @@ export function MobileKeyboard({ onKeyInput, onClose }: MobileKeyboardProps): Re
             <button
               key={k}
               onClick={() => handleCharPress(k)}
-              className="flex-1 py-2.5 bg-slate-800/40 hover:bg-slate-800 border border-white/5 rounded text-[12px] text-slate-100 font-semibold cursor-pointer active:bg-purple-600/30 active:border-purple-500/50 flex items-center justify-center"
+              className="flex-1 py-2.5 bg-[var(--r-ui-color-surface)] hover:bg-[var(--r-ui-color-surface-elevated)] border border-[var(--r-ui-color-border-subtle)] rounded-[var(--r-ui-radius-sm)] text-[12px] text-[var(--r-ui-color-text-primary)] font-semibold cursor-pointer active:bg-[var(--r-ui-color-accent-subtle)] active:border-[var(--r-ui-color-accent-primary)]/50 flex items-center justify-center"
             >
               {isShiftActive ? k.toUpperCase() : k}
             </button>
@@ -190,7 +190,7 @@ export function MobileKeyboard({ onKeyInput, onClose }: MobileKeyboardProps): Re
             <button
               key={k}
               onClick={() => handleCharPress(k)}
-              className="flex-1 py-2.5 bg-slate-800/40 hover:bg-slate-800 border border-white/5 rounded text-[12px] text-slate-100 font-semibold cursor-pointer active:bg-purple-600/30 active:border-purple-500/50 flex items-center justify-center"
+              className="flex-1 py-2.5 bg-[var(--r-ui-color-surface)] hover:bg-[var(--r-ui-color-surface-elevated)] border border-[var(--r-ui-color-border-subtle)] rounded-[var(--r-ui-radius-sm)] text-[12px] text-[var(--r-ui-color-text-primary)] font-semibold cursor-pointer active:bg-[var(--r-ui-color-accent-subtle)] active:border-[var(--r-ui-color-accent-primary)]/50 flex items-center justify-center"
             >
               {isShiftActive ? k.toUpperCase() : k}
             </button>
@@ -202,10 +202,10 @@ export function MobileKeyboard({ onKeyInput, onClose }: MobileKeyboardProps): Re
           {/* Shift Toggle */}
           <button
             onClick={() => setIsShiftActive(v => !v)}
-            className={`w-[12%] py-2.5 border rounded text-[11px] font-semibold cursor-pointer transition-all flex items-center justify-center ${
+            className={`w-[12%] py-2.5 border rounded-[var(--r-ui-radius-sm)] text-[11px] font-semibold cursor-pointer transition-all flex items-center justify-center ${
               isShiftActive
-                ? 'bg-purple-600 border-purple-500 text-white  '
-                : 'bg-slate-900/60 border-white/5 text-slate-400 active:bg-slate-800'
+                ? 'bg-[var(--r-ui-color-accent-primary)] border-[var(--r-ui-color-accent-primary)] text-[var(--r-ui-color-text-inverse)]'
+                : 'bg-[var(--r-ui-color-canvas)] border-[var(--r-ui-color-border-subtle)] text-[var(--r-ui-color-text-secondary)] active:bg-[var(--r-ui-color-surface-elevated)]'
             }`}
           >
             {isShiftActive ? '⬆' : '⇧'}
@@ -215,7 +215,7 @@ export function MobileKeyboard({ onKeyInput, onClose }: MobileKeyboardProps): Re
             <button
               key={k}
               onClick={() => handleCharPress(k)}
-              className="flex-1 py-2.5 bg-slate-800/40 hover:bg-slate-800 border border-white/5 rounded text-[12px] text-slate-100 font-semibold cursor-pointer active:bg-purple-600/30 active:border-purple-500/50 flex items-center justify-center"
+              className="flex-1 py-2.5 bg-[var(--r-ui-color-surface)] hover:bg-[var(--r-ui-color-surface-elevated)] border border-[var(--r-ui-color-border-subtle)] rounded-[var(--r-ui-radius-sm)] text-[12px] text-[var(--r-ui-color-text-primary)] font-semibold cursor-pointer active:bg-[var(--r-ui-color-accent-subtle)] active:border-[var(--r-ui-color-accent-primary)]/50 flex items-center justify-center"
             >
               {isShiftActive ? k.toUpperCase() : k}
             </button>
@@ -224,7 +224,7 @@ export function MobileKeyboard({ onKeyInput, onClose }: MobileKeyboardProps): Re
           {/* Backspace */}
           <button
             onClick={() => handleSpecialPress('Backspace')}
-            className="w-[15%] py-2.5 bg-slate-900/60 border border-white/5 rounded text-[11px] text-slate-400 font-semibold cursor-pointer active:bg-slate-800 flex items-center justify-center"
+            className="w-[15%] py-2.5 bg-[var(--r-ui-color-canvas)] border border-[var(--r-ui-color-border-subtle)] rounded-[var(--r-ui-radius-sm)] text-[11px] text-[var(--r-ui-color-text-secondary)] font-semibold cursor-pointer active:bg-[var(--r-ui-color-surface-elevated)] flex items-center justify-center"
           >
             ⌫
           </button>
@@ -234,21 +234,21 @@ export function MobileKeyboard({ onKeyInput, onClose }: MobileKeyboardProps): Re
         <div className="flex gap-1 justify-center w-full">
           <button
             onClick={() => setIsSymbolMode(v => !v)}
-            className="w-[18%] py-2.5 bg-slate-900/60 border border-white/5 rounded text-[11px] font-semibold cursor-pointer active:bg-slate-800 flex items-center justify-center"
+            className="w-[18%] py-2.5 bg-[var(--r-ui-color-canvas)] border border-[var(--r-ui-color-border-subtle)] rounded-[var(--r-ui-radius-sm)] text-[11px] font-semibold cursor-pointer active:bg-[var(--r-ui-color-surface-elevated)] text-[var(--r-ui-color-text-secondary)] flex items-center justify-center"
           >
             {isSymbolMode ? 'abc' : '?123'}
           </button>
           
           <button
             onClick={() => handleSpecialPress('Space')}
-            className="flex-1 py-2.5 bg-slate-800/40 hover:bg-slate-800 border border-white/5 rounded text-[12px] text-slate-100 font-medium cursor-pointer active:bg-purple-600/30 active:border-purple-500/50 flex items-center justify-center"
+            className="flex-1 py-2.5 bg-[var(--r-ui-color-surface)] hover:bg-[var(--r-ui-color-surface-elevated)] border border-[var(--r-ui-color-border-subtle)] rounded-[var(--r-ui-radius-sm)] text-[12px] text-[var(--r-ui-color-text-primary)] font-medium cursor-pointer active:bg-[var(--r-ui-color-accent-subtle)] active:border-[var(--r-ui-color-accent-primary)]/50 flex items-center justify-center"
           >
             Space
           </button>
 
           <button
             onClick={() => handleSpecialPress('Enter')}
-            className="w-[20%] py-2.5 bg-purple-600 hover:bg-purple-500 border border-purple-500 rounded text-[11px] text-white font-bold cursor-pointer active:bg-purple-700 flex items-center justify-center"
+            className="w-[20%] py-2.5 bg-[var(--r-ui-color-accent-primary)] hover:opacity-90 border border-[var(--r-ui-color-accent-primary)] rounded-[var(--r-ui-radius-sm)] text-[11px] text-[var(--r-ui-color-text-inverse)] font-bold cursor-pointer active:opacity-100 flex items-center justify-center"
           >
             ↵ Enter
           </button>

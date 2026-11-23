@@ -80,4 +80,29 @@ describe('T-Line / SuperAgent CLI command parity guard', () => {
     expect(handleSend).not.toHaveBeenCalled();
     expect(notifyUnsupported).toHaveBeenCalledTimes(5);
   });
+
+  it('triggers autonomous loop via native /loop command', () => {
+    const handleSend = vi.fn();
+    const notifyUnsupported = vi.fn();
+    const setMessages = vi.fn();
+    const ctx: Parameters<typeof getSlashCommands>[0] = {
+      ws: null, workspace: '', agentMode: 'single', customArgs: '',
+      setMessages, setAgentMode: vi.fn(), setCustomArgs: vi.fn(),
+      setWorkspace: vi.fn(), setConnectTrigger: vi.fn(),
+      handleSend, handleAbort: vi.fn(), notifyUnsupported,
+    };
+    const commands = getSlashCommands(ctx);
+    const loopCmd = commands.find(c => c.command === '/loop');
+    expect(loopCmd).toBeDefined();
+
+    // Without args, shows usage
+    loopCmd?.action?.('');
+    expect(setMessages).toHaveBeenCalledWith(expect.any(Function));
+    expect(handleSend).not.toHaveBeenCalled();
+
+    // With args, sends GOAL MODE prompt
+    loopCmd?.action?.('Build full feature with tests');
+    expect(handleSend).toHaveBeenCalledWith(expect.stringContaining('GOAL MODE: Your primary objective'));
+    expect(notifyUnsupported).not.toHaveBeenCalled();
+  });
 });

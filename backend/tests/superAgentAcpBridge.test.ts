@@ -148,6 +148,8 @@ describe('SuperAgentAcpBridgeAdapter - Frontend WebSocket Relay', () => {
     expect(mockWs.sentMessages).toHaveLength(1);
     expect(mockWs.sentMessages[0].type).toBe('permission_required');
     expect(mockWs.sentMessages[0].permissionId).toBe('perm_security_01');
+    expect(mockWs.sentMessages[0].toolCall?.name).toBe('rm -rf node_modules');
+    expect(mockWs.sentMessages[0].description).toBe('Delete node_modules');
 
     // 2. Frontend responds with approval
     await adapter.handleFrontendMessage({
@@ -161,6 +163,34 @@ describe('SuperAgentAcpBridgeAdapter - Frontend WebSocket Relay', () => {
     expect(clientOutputRpc).toBeDefined();
     expect(clientOutputRpc.id).toBe(555);
     expect(clientOutputRpc.result.decision).toBe('approved');
+
+    // 3. Test approve_permission message with target-only permission
+    acpClient.emit('permission_requested', {
+      rpcId: 556,
+      action: 'command_execute',
+      target: 'superagent_list_projects',
+    });
+
+    expect(mockWs.sentMessages).toHaveLength(3); // +1 permission_required, +1 ack from previous
+    const secondReq = mockWs.sentMessages.find((m: any) => m.type === 'permission_required' && m.target === 'superagent_list_projects');
+    expect(secondReq).toBeDefined();
+    expect(secondReq.permissionId).toBe('perm_556');
+    expect(secondReq.toolCall?.name).toBe('superagent_list_projects');
+    expect(secondReq.description).toBe('Execute tool: superagent_list_projects');
+
+    await adapter.handleFrontendMessage({
+      type: 'approve_permission',
+      permissionId: 'perm_556',
+      approval: true,
+    });
+
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(clientOutputRpc.id).toBe(556);
+    expect(clientOutputRpc.result.decision).toBe('approved');
+    const ackMsg = mockWs.sentMessages.find((m: any) => m.type === 'permission_decision_ack' && m.permissionId === 'perm_556');
+    expect(ackMsg).toBeDefined();
+    expect(ackMsg.accepted).toBe(true);
 
     adapter.dispose();
     acpClient.close();

@@ -611,7 +611,7 @@ export default function App() {
       }
 
       const name = absolutePath.split(/[/\\]/).pop() || absolutePath;
-      openFileTab(absolutePath, name);
+      openFileTab(absolutePath, name, panelWorkspace?.id);
     };
     window.addEventListener('tline-open-file-path', handleOpenFileLink);
     return () => {
@@ -859,6 +859,8 @@ export default function App() {
     }
     const wsTabs = tabs.filter(t => 
       t.workspaceId === panelWorkspace.id || 
+      t.id === activeTabId ||
+      (t.type === 'file' && (!t.workspaceId || t.workspaceId === panelWorkspace.id)) ||
       (t.type === 'grid' && isGridMatching(t, panelWorkspace.id))
     );
 
@@ -868,6 +870,7 @@ export default function App() {
       // they may have been opened from the Git Changes panel and their path may span the workspace.
       return wsTabs.filter(t => {
         if (t.type === 'file') return true;
+        if (t.id === activeTabId) return true;
 
         const matchedWtPath = getTabWorktreePath(t, panelWorkspace, terminalInstances);
         const wtObj = panelWorkspace.worktrees?.find(wt => wt.path === matchedWtPath);
@@ -1788,7 +1791,7 @@ export default function App() {
           {detachedTab.type === 'file' && (
             <FileViewerTab
               filePath={detachedTab.filePath || ''}
-              token={localStorage.getItem('token') || ''}
+              token={getAuthToken() || localStorage.getItem('token') || ''}
               onSave={() => {
                 fetchGitStatus(false);
                 fetchWorkspaces();
@@ -2576,7 +2579,7 @@ export default function App() {
                     workspaces={workspaces}
                     onOpenSettings={() => setShowSettingsModal(true)}
                     onLoadingChange={setIsAgentLoading}
-                    onOpenFile={(filePath, fileName) => openFileTab(filePath, fileName || filePath.split(/[/\\]/).pop() || filePath)}
+                    onOpenFile={(filePath, fileName) => openFileTab(filePath, fileName || filePath.split(/[/\\]/).pop() || filePath, tab.workspaceId || panelWorkspace?.id)}
                     onOpenDiffTab={(commitHash, filePath, worktreePath) => {
                       const wsId = panelWorkspace?.id || workspaces[0]?.id || '';
                       openDiffTab(commitHash, filePath, wsId, worktreePath || panelWorkspace?.path);
@@ -2586,7 +2589,7 @@ export default function App() {
               ))}
 
               {/* File viewer tabs stay mounted continuously so that edits are preserved and switching is instant */}
-              {tabs.filter(t => t.type === 'file' && mountedDeferredTabIds.has(t.id)).map(tab => (
+              {tabs.filter(t => t.type === 'file' && !t.isDetached && (mountedDeferredTabIds.has(t.id) || t.id === activeTabId)).map(tab => (
                 <div
                   key={tab.id}
                   className="w-full h-full"
@@ -2594,7 +2597,7 @@ export default function App() {
                 >
                   <FileViewerTab
                     filePath={tab.filePath || ''}
-                    token={localStorage.getItem('token') || ''}
+                    token={getAuthToken() || localStorage.getItem('token') || ''}
                     onSave={() => {
                       fetchGitStatus(false);
                       fetchWorkspaces();

@@ -1188,20 +1188,21 @@ let suppressBufferWrite = false;
         }
       } else if (actionType === 'approve_permission') {
         const { permissionId, approval, reason } = parsed;
-        if (typeof permissionId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(permissionId) ||
-            (approval !== true && approval !== false && approval !== 'session')) {
+        const normalizedApproval = approval === 'always' ? true : approval;
+        if (typeof permissionId !== 'string' || !/^[a-zA-Z0-9_.:-]{1,128}$/.test(permissionId) ||
+            (normalizedApproval !== true && normalizedApproval !== false && normalizedApproval !== 'session')) {
           ws.send(JSON.stringify({ type: 'permission_decision_ack', sessionId: initialSessionId,
             permissionId: typeof permissionId === 'string' ? permissionId : '',
             accepted: false, code: 'INVALID_DECISION' }));
           return;
         }
-        logSuperAgentEvent('permission_response', { action: 'decision_sent', approved: approval !== false });
+        logSuperAgentEvent('permission_response', { action: 'decision_sent', approved: normalizedApproval !== false });
 
         // Check if this permission is an in-flight ACP reverse permission request
         try {
           const { resolvePendingAcpPermission } = await import('./superAgentAcpBridgeAdapter');
-          if (resolvePendingAcpPermission(permissionId, approval, reason)) {
-            console.log(`[ACP-Gateway] Resolved in-flight ACP permission '${permissionId}' (decision: ${approval})`);
+          if (resolvePendingAcpPermission(permissionId, normalizedApproval, reason)) {
+            console.log(`[ACP-Gateway] Resolved in-flight ACP permission '${permissionId}' (decision: ${normalizedApproval})`);
             if (!isClosed && ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({
                 type: 'permission_decision_ack',
@@ -1219,7 +1220,7 @@ let suppressBufferWrite = false;
 
         try {
           const decision = await sendSuperAgentRequest('/api/approve',
-            { permissionId, approval, sessionId: initialSessionId }, workspacePath, 10000);
+            { permissionId, approval: normalizedApproval, sessionId: initialSessionId }, workspacePath, 10000);
           if (!isClosed && ws.readyState === WebSocket.OPEN)
             ws.send(JSON.stringify({ type: 'permission_decision_ack', sessionId: initialSessionId,
               permissionId, accepted: decision?.success === true,

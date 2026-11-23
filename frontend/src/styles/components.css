@@ -1,17 +1,17 @@
 /* Hallmark · macrostructure: Workbench · tone: technical · genre: modern-minimal · theme: Cobalt */
-/* Glassmorphism Containers */
+/* r-ui Glassmorphism & Surface Containers */
 .glass-panel {
   background: var(--bg-card);
-  backdrop-filter: blur(var(--blur-amount));
-  -webkit-backdrop-filter: blur(var(--blur-amount));
+  backdrop-filter: blur(var(--blur-amount, 8px));
+  -webkit-backdrop-filter: blur(var(--blur-amount, 8px));
   border: 1px solid var(--border-color);
-  box-shadow: none;
-  border-radius: 12px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--r-ui-shadow-xs, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+  border-radius: var(--r-ui-radius-md, 8px);
+  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-panel:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--r-ui-color-border-strong, rgba(255, 255, 255, 0.18));
 }
 
 .logo-text {
@@ -120,9 +120,9 @@
 }
 
 .ws-card-active {
-  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-  border-color: transparent;
-  box-shadow: none;
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--bg-card, transparent));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 15%, transparent), var(--r-ui-shadow-xs, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
 }
 
 .ws-card-dimmed {
@@ -777,7 +777,8 @@
 /* Tab Tooltip */
 .tab-tooltip {
   background: var(--tooltip-bg);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border: 1px solid var(--tooltip-border);
   color: var(--tooltip-text);
   padding: 8px 12px;
@@ -954,7 +955,7 @@
 
 .btn-primary:hover {
   background: var(--color-primary-hover);
-  box-shadow: 0 0 12px var(--color-primary-glow);
+  box-shadow: var(--r-ui-shadow-sm, 0 1px 3px 0 rgba(0, 0, 0, 0.08));
 }
 
 .btn-secondary {
@@ -1542,8 +1543,8 @@
   border-top: none;
   border-radius: 0 0 8px 8px;
   padding: 6px 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border-glow);
-  backdrop-filter: blur(12px);
+  box-shadow: var(--r-ui-shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.08));
+  backdrop-filter: blur(8px);
   animation: searchBarSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -1699,7 +1700,7 @@
 
 .terminal-status-dot.connected {
   background: #10b981;
-  box-shadow: 0 0 5px rgba(16, 185, 129, 0.6);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
 .terminal-status-shell {
@@ -1789,7 +1790,7 @@
   padding: 16px;
   max-width: 340px;
   width: 90%;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(245, 158, 11, 0.08);
+  box-shadow: var(--r-ui-shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
   animation: smartPasteSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -1891,10 +1892,10 @@
   max-width: 360px;
   border-radius: 10px;
   background: rgba(10, 13, 22, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--border-color);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.03);
+  box-shadow: var(--r-ui-shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
   color: #e2e8f0;
   font-size: 12px;
   font-family: inherit;
@@ -2128,12 +2129,12 @@
   z-index: 1000;
   min-width: 260px;
   max-width: 320px;
-  background: var(--ws-dropdown-bg, rgba(15, 23, 42, 0.95));
-  border: 1px solid var(--ws-dropdown-border, var(--border-color));
-  border-radius: 12px;
-  box-shadow: var(--ws-dropdown-shadow, 0 10px 25px rgba(0, 0, 0, 0.15));
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--r-ui-color-surface, var(--ws-dropdown-bg, rgba(15, 23, 42, 0.95)));
+  border: 1px solid var(--r-ui-color-border-standard, var(--border-color));
+  border-radius: var(--r-ui-radius-lg, 12px);
+  box-shadow: var(--r-ui-shadow-md);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -2251,7 +2252,7 @@
   cursor: pointer;
   user-select: none;
   transition: all 0.12s ease;
-  border-left: 2px solid transparent;
+  border: 1px solid transparent;
 }
 
 .tabs-dropdown-item:hover {
@@ -2261,14 +2262,14 @@
 
 .tabs-dropdown-item.keyboard-highlight {
   background: var(--surface-overlay-hover, rgba(255, 255, 255, 0.05));
-  border-left-color: var(--text-muted);
+  border-color: var(--border-color, rgba(255, 255, 255, 0.1));
 }
 
 .tabs-dropdown-item.active {
   background: var(--tab-active-bg, var(--color-primary-glow));
   color: var(--tab-active-color, var(--accent-color));
   font-weight: 500;
-  border-left-color: var(--accent-color);
+  border: 1px solid color-mix(in srgb, var(--accent-color) 40%, transparent);
 }
 
 .tabs-dropdown-item-content {
@@ -2421,8 +2422,8 @@
   max-width: 450px;
   background: var(--bm-bg, rgba(20, 24, 33, 0.97));
   border: 1px solid var(--bm-border, rgba(255, 255, 255, 0.08));
-  border-radius: 12px;
-  box-shadow: var(--bm-shadow, 0 20px 25px -5px rgba(0,0,0,0.5), 0 8px 10px -6px rgba(0,0,0,0.4));
+  border-radius: var(--r-ui-radius-lg, 12px);
+  box-shadow: var(--r-ui-shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05));
   padding: 24px;
   color: var(--text-main);
   display: flex;
@@ -2544,7 +2545,7 @@
 
 .bm-sync-btn--primary:hover:not(:disabled) {
   background: var(--color-primary-hover);
-  box-shadow: 0 0 12px var(--color-primary-glow);
+  box-shadow: var(--r-ui-shadow-sm, 0 1px 3px 0 rgba(0, 0, 0, 0.08));
 }
 
 /* Search */
@@ -2628,7 +2629,7 @@
 
 .bm-list-item--active {
   background: var(--bm-list-active-bg, rgba(139, 92, 246, 0.09));
-  border-left: 3px solid var(--color-primary);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
   color: var(--text-main);
   font-weight: 600;
 }
@@ -2991,8 +2992,8 @@
 .sa-command-popover {
   background: var(--bg-sidebar, #090c15);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: var(--glass-shadow, 0 12px 32px rgba(0, 0, 0, 0.6));
+  border-radius: var(--r-ui-radius-md, 8px);
+  box-shadow: var(--r-ui-shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.08));
 }
 
 .sa-badge-status {

@@ -147,7 +147,7 @@ function CollapsibleProcessBlock({
 
       {/* Expandable Process Body */}
       {expanded && (
-        <div className="mt-1 ml-3 pl-3 border-l-2 border-[var(--color-primary)]/30 space-y-1 my-1">
+        <div className="mt-1 ml-3 pl-3 border-l border-[var(--color-primary)]/25 space-y-1 my-1">
           {msgs.map((msg, idx) => (
             <SuperAgentMessageItem key={idx} msg={msg} index={idx} />
           ))}

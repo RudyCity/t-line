@@ -7,7 +7,7 @@ export function useSidebarResize(containerRef: React.RefObject<HTMLDivElement>) 
   });
   const [monitorWidth, setMonitorWidth] = useState<number>(() => {
     const saved = localStorage.getItem('superagent_monitor_width');
-    return saved ? Math.max(180, Math.min(600, parseInt(saved, 10))) : 280;
+    return saved ? Math.max(260, Math.min(750, parseInt(saved, 10))) : 360;
   });
   const [isResizingLeft, setIsResizingLeft] = useState(false);
   const [isResizingRight, setIsResizingRight] = useState(false);
@@ -50,7 +50,7 @@ export function useSidebarResize(containerRef: React.RefObject<HTMLDivElement>) 
             }
           } else if (isResizingRight) {
             const calculatedWidth = rect.right - e.clientX;
-            const newW = Math.max(180, Math.min(600, calculatedWidth));
+            const newW = Math.max(260, Math.min(750, calculatedWidth));
             monitorWidthRef.current = newW;
             if (rightPanelEl) {
               rightPanelEl.style.width = `${newW}px`;

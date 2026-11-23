@@ -106,7 +106,7 @@ export function StudioDirectorSection({
 }: Props) {
   return (
     <div className="flex h-full flex-col bg-[var(--bg-sidebar)] text-[var(--text-main)] font-sans" aria-label="AI Studio Director">
-      {/* CapCut Co-Pilot Header */}
+      {/* AI Director Co-Pilot Header */}
       <div className="flex items-center justify-between border-b border-[var(--border-color)] px-3.5 py-2.5 bg-[var(--bg-card)]">
         <div className="flex items-center gap-2">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--color-primary)]/15 text-[var(--color-primary)] shadow-xs">
@@ -117,7 +117,7 @@ export function StudioDirectorSection({
             <div className="flex items-center gap-1.5">
               <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <p className="text-[10px] text-[var(--text-muted)] font-mono">
-                {selectedId ? 'Interactive Revision Mode' : 'CapCut AI Video Agent'}
+                {selectedId ? 'Interactive Revision Mode' : 'AI Video Director'}
               </p>
             </div>
           </div>
@@ -127,7 +127,7 @@ export function StudioDirectorSection({
         </span>
       </div>
 
-      {/* CapCut Chat Stream */}
+      {/* Director Chat Stream */}
       <div className="flex-1 min-h-0 overflow-y-auto p-3.5 space-y-3" aria-label="Studio prompt history">
         {/* Welcome Message from AI Agent */}
         <div className="flex items-start gap-2.5">
@@ -307,7 +307,7 @@ export function StudioDirectorSection({
         )}
       </div>
 
-      {/* Docked CapCut Chat Input Console */}
+      {/* Docked Director Chat Input Console */}
       <div className="border-t border-[var(--border-color)] bg-[var(--bg-card)] p-3 space-y-2 shadow-lg">
         {/* Attachment chips if uploaded */}
         {(promptImages.length > 0 || promptAudio) && (

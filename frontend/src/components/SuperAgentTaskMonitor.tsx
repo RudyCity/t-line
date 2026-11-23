@@ -169,42 +169,42 @@ export function SuperAgentTaskMonitor({ workspace, sessionId }: Props) {
   }, [workspace, sessionId, open, refreshKey]);
 
   return (
-    <div className="border-t border-[var(--border-color)] bg-[var(--bg-card)] text-[11px] font-sans">
+    <div className="border-t border-[rgba(255,255,255,0.08)] bg-[#0c0e14] text-[11px] font-sans">
       <button type="button" aria-expanded={open} onClick={() => setOpen(value => !value)}
-        className="w-full flex items-center gap-2 px-3 py-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)]">
-        <Activity className="w-3.5 h-3.5" />
-        <span>Cross-channel tasks</span>
-        <span className="opacity-70">{open ? total + ' in workspace' : '(open monitor)'}</span>
-        <span className="ml-auto">{open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}</span>
+        className="w-full flex items-center gap-2 px-3 py-1.5 text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#12141c] transition cursor-pointer">
+        <Activity className="w-3.5 h-3.5 text-sky-400" />
+        <span className="font-medium text-xs text-[#f8fafc]">Cross-channel tasks</span>
+        <span className="text-[10px] text-[#64748b]">{open ? total + ' in workspace' : '(open monitor)'}</span>
+        <span className="ml-auto text-[#64748b]">{open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}</span>
       </button>
       {open && (
-        <div className="px-3 pb-2 max-h-40 overflow-y-auto" role="region" aria-label="Workspace task monitor">
-          <div className="flex items-center justify-between text-[var(--text-muted)] mb-1">
+        <div className="px-3 pb-2 max-h-40 overflow-y-auto bg-[#090a0f] border-t border-[rgba(255,255,255,0.06)]" role="region" aria-label="Workspace task monitor">
+          <div className="flex items-center justify-between text-[#64748b] my-1 text-[10px]">
             <span>{updated ? 'Last synced ' + new Date(updated).toLocaleTimeString() : 'Connecting…'} · {transport === 'sse' ? 'SSE live, bounded replay' : 'polling fallback 3.5s'}</span>
             <button type="button" onClick={() => setRefreshKey(value => value + 1)}
               aria-label="Refresh task monitor" title="Re-negotiate with active SuperAgent"
-              className="px-1 py-0.5 hover:text-[var(--text-main)]"><RefreshCw className="w-3 h-3" /></button>
+              className="px-1 py-0.5 hover:text-[#f8fafc] cursor-pointer"><RefreshCw className="w-3 h-3" /></button>
           </div>
           {error && <div className="text-amber-400 py-1" role="status">{error}</div>}
           {replayNotice && <div className="text-amber-400 py-1" role="status">{replayNotice}</div>}
-          {cancelAllowed && <div className="text-[var(--text-muted)] py-1">
+          {cancelAllowed && <div className="text-[#64748b] py-0.5 text-[10px]">
             Workspace-operator CLI cancellation enabled. Only runtime-owned jobs can be stopped.
           </div>}
           {cancelNotice && <div className="text-amber-400 py-1" role="status">{cancelNotice}</div>}
           {retryNotice && <div className="text-amber-400 py-1" role="status">{retryNotice}</div>}
           {incomplete.length > 0 && <div className="text-amber-400 py-1">Partial snapshot: {incomplete.join(', ')} unavailable</div>}
-          {!error && tasks.length === 0 && <div className="text-[var(--text-muted)] py-1">No retained CLI, daemon, or Muse tasks in this workspace.</div>}
+          {!error && tasks.length === 0 && <div className="text-[#64748b] py-1 text-[11px]">No retained CLI, daemon, or Muse tasks in this workspace.</div>}
           {tasks.map(task => (
             <div key={task.channel + ':' + task.taskId}
-              className="py-1 border-t border-[var(--border-color)]/40 flex gap-2 items-center">
-              <span className="font-medium w-12 shrink-0">{task.channel}</span>
-              <span className="truncate flex-1" title={task.taskId}>{task.taskId}</span>
-              <span className="text-[var(--text-muted)] shrink-0">{task.status}</span>
-              <span className="text-[var(--text-muted)] shrink-0" title="Status proof">{task.evidence}</span>
+              className="py-1 border-t border-[rgba(255,255,255,0.05)] flex gap-2 items-center text-[11px]">
+              <span className="font-medium w-12 shrink-0 font-mono text-[#f8fafc]">{task.channel}</span>
+              <span className="truncate flex-1 text-[#94a3b8]" title={task.taskId}>{task.taskId}</span>
+              <span className="text-[#64748b] shrink-0 font-mono text-[10px]">{task.status}</span>
+              <span className="text-[#64748b] shrink-0 font-mono text-[10px]" title="Status proof">{task.evidence}</span>
               {retryAllowed && task.channel === 'cli' && task.status === 'failed' &&
                 task.retryEligible === true && (
                 <button type="button" disabled={Boolean(retryBusy || cancelBusy)}
-                  className="text-amber-400 hover:underline disabled:opacity-50"
+                  className="text-amber-400 hover:underline disabled:opacity-50 text-[10px]"
                   aria-label={'Retry task ' + task.taskId}
                   onClick={() => { void retryTask(task.taskId); }}>
                   {retryBusy === task.taskId ? 'Preparing…' : 'New attempt…'}
@@ -212,7 +212,7 @@ export function SuperAgentTaskMonitor({ workspace, sessionId }: Props) {
               )}
               {cancelAllowed && task.channel === 'cli' && task.status === 'running' && task.cancelEligible === true && (
                 <button type="button" disabled={Boolean(cancelBusy)}
-                  className="text-amber-400 hover:underline disabled:opacity-50"
+                  className="text-amber-400 hover:underline disabled:opacity-50 text-[10px]"
                   aria-label={'Cancel task ' + task.taskId}
                   onClick={() => { void cancelTask(task.taskId); }}>
                   {cancelBusy === task.taskId ? 'Requesting…' : 'Cancel…'}

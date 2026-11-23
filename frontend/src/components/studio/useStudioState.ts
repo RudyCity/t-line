@@ -518,10 +518,58 @@ export function useStudioState(workspacePath: string, isActive: boolean) {
     applyEditorEdits([{ type: 'move-layer', layerId: life.selectedLayer, toIndex }], 'Layer reordered');
   };
 
-  const removeSelectedLayer = () => {
-    if (!life.project || !life.selectedLayer) return;
-    const nextSelected = life.project.composition.layers.find(item => item.id !== life.selectedLayer)?.id ?? null;
-    applyEditorEdits([{ type: 'remove-layer', layerId: life.selectedLayer }], 'Layer removed', nextSelected);
+  const removeSelectedLayer = (layerId?: string) => {
+    const targetId = layerId || life.selectedLayer;
+    if (!life.project || !targetId) return;
+    const nextSelected = life.project.composition.layers.find(item => item.id !== targetId)?.id ?? null;
+    applyEditorEdits([{ type: 'remove-layer', layerId: targetId }], 'Layer removed', nextSelected);
+  };
+
+  const duplicateLayer = (layerId?: string) => {
+    const targetId = layerId || life.selectedLayer;
+    if (!life.project || !targetId) return;
+    const target = life.project.composition.layers.find(item => item.id === targetId);
+    if (!target) return;
+    const newId = 'layer-' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+    const copy: StudioLayer = {
+      ...structuredClone(target),
+      id: newId,
+      x: target.x + 20,
+      y: target.y + 20,
+    };
+    applyEditorEdits([{ type: 'add-layer', layer: copy }], `Duplicate layer ${target.id}`, newId);
+  };
+
+  const centerLayer = (layerId?: string) => {
+    const targetId = layerId || life.selectedLayer;
+    if (!life.project || !targetId) return;
+    const target = life.project.composition.layers.find(item => item.id === targetId);
+    if (!target) return;
+    const centerX = Math.round((life.project.composition.width - target.width) / 2);
+    const centerY = Math.round((life.project.composition.height - target.height) / 2);
+    applyEditorEdits([
+      { type: 'set-property', layerId: target.id, property: 'x', value: centerX },
+      { type: 'set-property', layerId: target.id, property: 'y', value: centerY },
+    ], `Center layer ${target.id}`);
+  };
+
+  const resetLayerTransform = (layerId?: string) => {
+    const targetId = layerId || life.selectedLayer;
+    if (!life.project || !targetId) return;
+    applyEditorEdits([
+      { type: 'set-property', layerId: targetId, property: 'rotation', value: 0 },
+      { type: 'set-property', layerId: targetId, property: 'opacity', value: 1 },
+    ], `Reset layer ${targetId} transform`);
+  };
+
+  const moveLayerToExtreme = (delta: 'front' | 'back', layerId?: string) => {
+    const targetId = layerId || life.selectedLayer;
+    if (!life.project || !targetId) return;
+    const index = life.project.composition.layers.findIndex(item => item.id === targetId);
+    if (index < 0) return;
+    const toIndex = delta === 'front' ? life.project.composition.layers.length - 1 : 0;
+    if (index === toIndex) return;
+    applyEditorEdits([{ type: 'move-layer', layerId: targetId, toIndex }], `Move layer to ${delta}`);
   };
 
   const saveText = () => {
@@ -953,6 +1001,10 @@ export function useStudioState(workspacePath: string, isActive: boolean) {
     importAudio,
     importImage,
     insertLayer,
+    duplicateLayer,
+    centerLayer,
+    resetLayerTransform,
+    moveLayerToExtreme,
     reorderLayer,
     removeSelectedLayer,
     saveText,

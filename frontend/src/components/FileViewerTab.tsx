@@ -3,6 +3,7 @@ import { FileCode, RotateCcw, Check, ZoomIn, ZoomOut, Maximize, Image as ImageIc
 import Editor, { loader } from '@monaco-editor/react';
 import DOMPurify from 'dompurify';
 import { PdfEditorPanel } from './PdfEditorPanel';
+import { getAuthToken } from '../utils/tokenStorage';
 interface FileViewerTabProps {
   filePath: string;
   token: string;
@@ -78,6 +79,7 @@ function getLanguageFromPath(filePath: string): string {
 }
 
 export function FileViewerTab({ filePath, token, onSave, theme, themeBackground, isActive, onRequestPdfEdit }: FileViewerTabProps) {
+  const effectiveToken = token || getAuthToken() || '';
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [readError, setReadError] = useState<string | null>(null);
@@ -213,7 +215,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
       setSaveSuccess(false);
       try {
         const res = await fetch(`/api/fs/read?path=${encodeURIComponent(filePath)}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${effectiveToken}` }
         });
         if (!res.ok) throw new Error('Failed to read file (HTTP ' + res.status + ')');
         const data = await res.json();
@@ -240,7 +242,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
       active = false;
       // The React Monaco wrapper disposes its models on unmount.
     };
-  }, [filePath, token, shouldLoadAsText, readRetryKey]);
+  }, [filePath, effectiveToken, shouldLoadAsText, readRetryKey]);
 
   // Monaco Editor theme effect
   useEffect(() => {
@@ -272,7 +274,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
+              Authorization: `Bearer ${effectiveToken}`
             },
             body: JSON.stringify({ path: filePath, content: editedContent })
           });
@@ -294,7 +296,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [editedContent, content, filePath, token]);
+  }, [editedContent, content, filePath, effectiveToken]);
 
   const handleRevert = () => {
     setEditedContent(content || '');
@@ -534,7 +536,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
               />
             ) : (
               <img
-                src={`/api/fs/raw?path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(token)}`}
+                src={`/api/fs/raw?path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(effectiveToken)}`}
                 alt={filePath.split(/[/\\]/).pop()}
                 style={{
                   transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
@@ -565,7 +567,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
         {/* File Header */}
         <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0">
           <div className="flex items-center gap-2 truncate">
-            <FileText size={14} className="text-purple-400 shrink-0" />
+            <FileText size={14} className="text-[var(--accent-primary)] shrink-0" />
             <span className="text-xs font-mono text-[var(--text-muted)] truncate" title={filePath}>
               {filePath}
             </span>
@@ -590,7 +592,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
         <div className="flex-1 flex flex-col md:flex-row min-h-0 w-full overflow-hidden">
           <div className="flex-1 min-w-0 min-h-0 overflow-hidden bg-[var(--bg-main)]">
             <iframe
-              src={`/api/fs/raw?path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(token)}`}
+              src={`/api/fs/raw?path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(effectiveToken)}`}
               className="w-full h-full border-none"
               title="PDF Viewer"
             />
@@ -614,7 +616,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${effectiveToken}`
           },
           body: JSON.stringify({ path: filePath })
         });

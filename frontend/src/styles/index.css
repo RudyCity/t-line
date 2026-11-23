@@ -3,6 +3,11 @@
 /* Xterm.js Styles */
 @import "@xterm/xterm/css/xterm.css";
 
+/* r-ui Design System Tokens & Theming */
+@import "./r-ui-tokens.css";
+@import "./r-ui-color-themes.css";
+@import "./r-ui-themes.css";
+
 /* Modular Stylesheets */
 @import "./base.css";
 @import "./layout.css";

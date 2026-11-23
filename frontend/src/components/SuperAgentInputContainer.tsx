@@ -139,10 +139,10 @@ export function SuperAgentInputContainer({
                 key={s.command}
                 onClick={() => handleSelectSuggestion(s)}
                 onMouseEnter={() => setSuggestionIndex?.(idx)}
-                className={`px-3 py-2 cursor-pointer transition flex items-center justify-between gap-3 ${
+                className={`px-3 py-2 cursor-pointer transition flex items-center justify-between gap-3 rounded-md ${
                   isSelected
-                    ? 'bg-[var(--color-primary-glow)] text-[var(--text-main)] border-l-2 border-[var(--color-primary)] pl-2.5'
-                    : 'text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
+                    ? 'bg-[var(--color-primary-glow)] text-[var(--text-main)] border border-[var(--color-primary)]/40'
+                    : 'text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-transparent'
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -287,10 +287,10 @@ export function SuperAgentInputContainer({
                                 onAcpModelChange?.(m.id);
                                 setShowPresetMenu(false);
                               }}
-                              className={`w-full text-left px-2.5 py-1.5 text-[10px] transition flex flex-col cursor-pointer ${
+                              className={`w-full text-left px-2.5 py-1.5 text-[10px] transition flex flex-col cursor-pointer rounded-md border ${
                                 isActive
-                                  ? 'bg-[var(--color-primary-glow)] text-[var(--color-primary)] font-bold border-l-2 border-[var(--color-primary)]'
-                                  : 'text-[var(--text-muted)] hover:bg-[var(--surface-overlay-hover)] hover:text-[var(--text-main)]'
+                                  ? 'bg-[var(--color-primary-glow)] text-[var(--color-primary)] font-bold border-[var(--color-primary)]/40'
+                                  : 'border-transparent text-[var(--text-muted)] hover:bg-[var(--surface-overlay-hover)] hover:text-[var(--text-main)]'
                               }`}
                             >
                               <div className="flex items-center justify-between gap-1">
@@ -397,10 +397,10 @@ export function SuperAgentInputContainer({
                                 setShowPresetMenu(false);
                                 setPresetFilterQuery('');
                               }}
-                              className={`w-full text-left px-2.5 py-1.5 text-[10px] transition flex flex-col cursor-pointer ${
+                              className={`w-full text-left px-2.5 py-1.5 text-[10px] transition flex flex-col cursor-pointer rounded-md border ${
                                 isActive
-                                  ? 'bg-[var(--color-primary-glow)] text-[var(--color-primary)] font-bold border-l-2 border-[var(--color-primary)]'
-                                  : 'text-[var(--text-muted)] hover:bg-[var(--surface-overlay-hover)] hover:text-[var(--text-main)]'
+                                  ? 'bg-[var(--color-primary-glow)] text-[var(--color-primary)] font-bold border-[var(--color-primary)]/40'
+                                  : 'border-transparent text-[var(--text-muted)] hover:bg-[var(--surface-overlay-hover)] hover:text-[var(--text-main)]'
                               }`}
                             >
                               <span className="flex items-center justify-between">

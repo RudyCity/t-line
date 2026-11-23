@@ -48,14 +48,14 @@ export const pendingAcpPermissions = new Map<
  */
 export function resolvePendingAcpPermission(
   permissionId: string,
-  approval: boolean | 'session',
+  approval: boolean | 'session' | 'always',
   reason?: string
 ): boolean {
   const pending = pendingAcpPermissions.get(permissionId);
   if (!pending) return false;
 
   pendingAcpPermissions.delete(permissionId);
-  const decision = approval === 'session' ? 'approved_session' : approval ? 'approved' : 'denied';
+  const decision = approval === 'session' ? 'approved_session' : (approval === true || approval === 'always') ? 'approved' : 'denied';
   try {
     pending.client.respondPermission(pending.rpcId, decision, reason);
     return true;
@@ -231,17 +231,19 @@ export class SuperAgentAcpBridgeAdapter {
 
     // 6. Status change
     this.client.on('status', (data) => {
+      const statusLower = String(data.status || '').toLowerCase();
+      const isTerminal = statusLower === 'done' || statusLower === 'completed' || statusLower === 'idle' || statusLower === 'success' || statusLower === 'finished';
       this.sendToFrontend({
         type: 'agent_event',
         event: {
-          type: data.status === 'done' ? 'done' : 'status',
+          type: isTerminal ? 'done' : 'status',
           status: data.status,
           summary: data.summary,
         },
         sessionId: data.sessionId || this.activeSessionId,
       });
 
-      if (data.status === 'done') {
+      if (isTerminal) {
         this.sendToFrontend({
           type: 'chat_response',
           success: true,
@@ -250,16 +252,63 @@ export class SuperAgentAcpBridgeAdapter {
       }
     });
 
+    // 6b. Process exit / termination lifecycle (prevents UI loading lock when ACP child exits)
+    this.client.on('exit', ({ code, signal }: { code: number | null; signal: string | null }) => {
+      this.sendToFrontend({
+        type: 'agent_event',
+        event: {
+          type: 'done',
+          status: 'done',
+          summary: `ACP process completed${code !== null ? ` (exit code: ${code})` : ''}`,
+        },
+        sessionId: this.activeSessionId,
+      });
+      this.sendToFrontend({
+        type: 'chat_response',
+        success: code === 0 || code === null,
+        sessionId: this.activeSessionId,
+      });
+    });
+
+    // 6c. Error lifecycle
+    this.client.on('error', (err: any) => {
+      this.sendToFrontend({
+        type: 'agent_event',
+        event: {
+          type: 'done',
+          status: 'error',
+          summary: err?.message || String(err),
+        },
+        sessionId: this.activeSessionId,
+      });
+      this.sendToFrontend({
+        type: 'chat_response',
+        success: false,
+        sessionId: this.activeSessionId,
+        result: { error: err?.message || String(err) },
+      });
+    });
+
     // 7. Reverse Permission Request
-    this.client.on('permission_requested', (req: AcpPermissionRequest & { rpcId: string | number }) => {
-      this.pendingPermissionRpcMap.set(req.permissionId, req.rpcId);
-      pendingAcpPermissions.set(req.permissionId, { client: this.client, rpcId: req.rpcId, sessionId: req.sessionId });
+    this.client.on('permission_requested', (req: AcpPermissionRequest & { rpcId: string | number; [key: string]: any }) => {
+      const permId = String(req.permissionId || req.id || req.callId || `perm_${req.rpcId}`);
+      const toolName = (req as any).tool || (req as any).name || req.target || (req as any).toolCall?.name || (req as any).toolCall?.tool;
+      const toolCall = (req as any).toolCall || {
+        name: toolName || req.action || 'system_tool',
+        tool: toolName || req.action || 'system_tool',
+        args: (req as any).args || (req as any).input || (req as any).parameters || (req as any).details || {},
+      };
+      const description = req.description || (toolName ? `Execute tool: ${toolName}` : `Authorize action: ${req.action}`);
+
+      this.pendingPermissionRpcMap.set(permId, req.rpcId);
+      pendingAcpPermissions.set(permId, { client: this.client, rpcId: req.rpcId, sessionId: req.sessionId });
       this.sendToFrontend({
         type: 'permission_required',
-        permissionId: req.permissionId,
-        description: req.description,
+        permissionId: permId,
+        description,
+        toolCall,
         action: req.action,
-        target: req.target,
+        target: req.target || toolName,
         riskLevel: req.riskLevel,
         expiresInMs: req.expiresInMs,
         sessionId: req.sessionId || this.activeSessionId,
@@ -295,20 +344,36 @@ export class SuperAgentAcpBridgeAdapter {
       await this.client.sendPrompt(sessionId, promptText, msg.parts, {
         engine: this.activeEngine,
         history: msg.history,
+        mode: msg.mode,
+        loop: msg.loop || msg.isLoop,
+        goalMode: msg.goalMode || msg.goal,
+        maxIterations: msg.maxIterations,
       });
       return;
     }
 
     // Handle permission response
-    if (msg.type === 'permission_response' && msg.permissionId) {
-      const rpcId = this.pendingPermissionRpcMap.get(msg.permissionId);
+    if ((msg.type === 'permission_response' || msg.type === 'approve_permission') && (msg.permissionId || msg.id)) {
+      const permId = String(msg.permissionId || msg.id);
+      const rpcId = this.pendingPermissionRpcMap.get(permId);
       if (rpcId !== undefined) {
-        this.pendingPermissionRpcMap.delete(msg.permissionId);
+        this.pendingPermissionRpcMap.delete(permId);
+        pendingAcpPermissions.delete(permId);
         const decision =
-          msg.decision === 'approved' || msg.decision === 'approved_session'
-            ? msg.decision
-            : 'denied';
+          msg.approval === 'session' || msg.decision === 'approved_session'
+            ? 'approved_session'
+            : (msg.approval === true || msg.decision === 'approved' || msg.approval === 'always')
+              ? 'approved'
+              : 'denied';
         this.client.respondPermission(rpcId, decision, msg.reason);
+        // Dispatch ACK so frontend approvalInFlight clears immediately
+        this.sendToFrontend({
+          type: 'permission_decision_ack',
+          sessionId: msg.sessionId || this.activeSessionId,
+          permissionId: permId,
+          accepted: true,
+          code: 'ACCEPTED',
+        });
       }
       return;
     }
@@ -443,15 +508,25 @@ export async function dispatchAcpPrompt(options: DispatchAcpPromptOptions): Prom
       }
     });
 
-    client.on('permission_requested', (ev) => {
-      pendingAcpPermissions.set(ev.permissionId, { client, rpcId: ev.rpcId, sessionId: ev.sessionId });
+    client.on('permission_requested', (ev: any) => {
+      const permId = String(ev.permissionId || ev.id || ev.callId || `perm_${ev.rpcId}`);
+      const toolName = ev.tool || ev.name || ev.target || ev.toolCall?.name || ev.toolCall?.tool;
+      const toolCall = ev.toolCall || {
+        name: toolName || ev.action || 'system_tool',
+        tool: toolName || ev.action || 'system_tool',
+        args: ev.args || ev.input || ev.parameters || ev.details || {},
+      };
+      const description = ev.description || (toolName ? `Execute tool: ${toolName}` : `Authorize action: ${ev.action}`);
+
+      pendingAcpPermissions.set(permId, { client, rpcId: ev.rpcId, sessionId: ev.sessionId });
       if (ws.readyState === 1) {
         ws.send(JSON.stringify({
           type: 'permission_required',
-          permissionId: ev.permissionId,
-          description: ev.description,
+          permissionId: permId,
+          description,
+          toolCall,
           action: ev.action,
-          target: ev.target,
+          target: ev.target || toolName,
           riskLevel: ev.riskLevel,
           expiresInMs: ev.expiresInMs,
           sessionId,
@@ -474,23 +549,64 @@ export async function dispatchAcpPrompt(options: DispatchAcpPromptOptions): Prom
 
     client.on('status', (ev) => {
       if (ws.readyState === 1) {
+        const statusLower = String(ev.status || '').toLowerCase();
+        const isTerminal = statusLower === 'done' || statusLower === 'completed' || statusLower === 'idle' || statusLower === 'success' || statusLower === 'finished';
         ws.send(JSON.stringify({
           type: 'agent_event',
           event: {
-            type: ev.status === 'done' ? 'done' : 'status',
+            type: isTerminal ? 'done' : 'status',
             status: ev.status,
             summary: ev.summary,
           },
           sessionId,
         }));
 
-        if (ev.status === 'done') {
+        if (isTerminal) {
           ws.send(JSON.stringify({
             type: 'chat_response',
             success: true,
             sessionId,
           }));
         }
+      }
+    });
+
+    client.on('exit', ({ code, signal }: { code: number | null; signal: string | null }) => {
+      if (ws.readyState === 1) {
+        ws.send(JSON.stringify({
+          type: 'agent_event',
+          event: {
+            type: 'done',
+            status: 'done',
+            summary: `ACP process completed${code !== null ? ` (exit code: ${code})` : ''}`,
+          },
+          sessionId,
+        }));
+        ws.send(JSON.stringify({
+          type: 'chat_response',
+          success: code === 0 || code === null,
+          sessionId,
+        }));
+      }
+    });
+
+    client.on('error', (err: any) => {
+      if (ws.readyState === 1) {
+        ws.send(JSON.stringify({
+          type: 'agent_event',
+          event: {
+            type: 'done',
+            status: 'error',
+            summary: err?.message || String(err),
+          },
+          sessionId,
+        }));
+        ws.send(JSON.stringify({
+          type: 'chat_response',
+          success: false,
+          sessionId,
+          result: { error: err?.message || String(err) },
+        }));
       }
     });
 
@@ -543,6 +659,9 @@ export async function dispatchAcpPrompt(options: DispatchAcpPromptOptions): Prom
     await entry.client.sendPrompt(entry.acpSessionId, finalPrompt, undefined, {
       engine: engineId,
       systemPromptAppend: engineProfile.systemPromptAppend,
+      mode: modeId,
+      loop: (options as any).loop || (options as any).isLoop,
+      goalMode: (options as any).goalMode || (options as any).goal,
     });
   } catch (err: any) {
     if (ws.readyState === 1) {

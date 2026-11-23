@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
-import { Play, Pause } from 'lucide-react';
-import type { StudioProject, StudioEdit } from '../../services/studioApi';
+import { Play, Pause, SkipBack, SkipForward, Hand, Magnet } from 'lucide-react';
+import type { StudioProject, StudioEdit, StudioLayer } from '../../services/studioApi';
 import { StudioCanvas } from '../StudioCanvas';
 import { frameLabel } from '../../services/studioScene';
 import {
@@ -32,10 +32,12 @@ interface Props {
   busy: boolean;
   hasPreview: boolean;
   onApplyEdits: (edits: StudioEdit[], note: string) => void;
+  onLayerContextMenu?: (event: React.MouseEvent, layer: StudioLayer) => void;
+  onCanvasContextMenu?: (event: React.MouseEvent) => void;
 }
 
-const action = 'inline-flex items-center gap-1 rounded border border-[var(--border-color)] bg-[var(--bg-card)] px-2 py-1 text-xs font-medium text-[var(--text-main)] transition-colors hover:bg-[var(--bg-card-hover)] hover:border-[var(--color-primary)]/40 focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] disabled:opacity-40 disabled:pointer-events-none';
-const primaryAction = 'inline-flex items-center gap-1 rounded border border-[var(--color-primary)] bg-[var(--color-primary)]/20 px-2 py-1 text-xs font-medium text-[var(--color-primary)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]';
+const action = 'inline-flex items-center gap-1 rounded-md border border-[#2a2d3d] bg-[#161822] px-2 py-1 text-xs font-medium text-zinc-300 transition-colors hover:bg-[#202330] hover:border-cyan-500/40 hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-400 disabled:opacity-40 disabled:pointer-events-none';
+const primaryAction = 'inline-flex items-center gap-1 rounded-md border border-cyan-500/50 bg-cyan-950/40 px-2 py-1 text-xs font-medium text-cyan-300 transition-colors focus-visible:outline-2 focus-visible:outline-cyan-400';
 
 export function StudioCanvasStage({
   project,
@@ -59,32 +61,39 @@ export function StudioCanvasStage({
   busy,
   hasPreview,
   onApplyEdits,
+  onLayerContextMenu,
+  onCanvasContextMenu,
 }: Props) {
   const panGesture = useRef<{ pointerId: number; x: number; y: number } | null>(null);
 
   return (
-    <div className="flex min-h-[320px] min-w-0 flex-1 flex-col bg-[var(--bg-main)]">
-      <div className="flex items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-sidebar)] px-4 py-2 text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
-        <span
-          className="font-medium"
-          title="Drag to move · corner handle resizes rotated rectangles · upper handle rotates · arrows nudge · Alt+arrows rotate · Ctrl+arrows resize rectangles"
-        >
-          Composition · {project.composition.width} × {project.composition.height}{hasPreview ? ' · PREVIEW (not saved)' : ''}
-        </span>
+    <div className="flex min-h-[320px] min-w-0 flex-1 flex-col bg-[#0b0c10] select-none">
+      {/* Monitor Viewport Header */}
+      <div className="flex items-center justify-between border-b border-[#222533] bg-[#0e1017] px-4 py-2 text-[10px] uppercase tracking-[0.12em] text-zinc-400">
+        <div className="flex items-center gap-2">
+          <span className="flex h-2 w-2 rounded-full bg-cyan-400 ring-2 ring-cyan-400/20" />
+          <span
+            className="font-mono font-medium text-zinc-200"
+            title="Drag to move · corner handle resizes rotated rectangles · upper handle rotates · arrows nudge · Alt+arrows rotate · Ctrl+arrows resize rectangles"
+          >
+            Monitor · {project.composition.width} × {project.composition.height}{hasPreview ? ' · PREVIEW (not saved)' : ''}
+          </span>
+        </div>
 
-        <div className="flex items-center gap-2.5">
-          <label className="inline-flex cursor-pointer items-center gap-1.5 normal-case tracking-normal text-xs text-[var(--text-muted)] hover:text-[var(--text-main)]">
+        <div className="flex items-center gap-2">
+          <label className="inline-flex cursor-pointer items-center gap-1.5 normal-case tracking-normal text-xs text-zinc-400 hover:text-zinc-200">
             <input
               type="checkbox"
               aria-label="Snap canvas position to grid and center"
               checked={canvasSnapping}
               onChange={event => setCanvasSnapping(event.target.checked)}
-              className="accent-[var(--color-primary)]"
+              className="accent-cyan-400"
             />
-            Snap 10px
+            <Magnet size={11} className={canvasSnapping ? 'text-cyan-400' : 'text-zinc-500'} />
+            <span>Snap 10px</span>
           </label>
 
-          <div className="h-3 w-px bg-[var(--border-color)]" />
+          <div className="h-3 w-px bg-[#2a2d3d]" />
 
           <button
             type="button"
@@ -95,7 +104,7 @@ export function StudioCanvasStage({
           >
             −
           </button>
-          <span aria-label="Studio canvas zoom" className="font-mono text-xs text-[var(--text-main)] min-w-[36px] text-center">
+          <span aria-label="Studio canvas zoom" className="font-mono text-xs text-zinc-200 min-w-[36px] text-center">
             {Math.round(viewport.zoom * 100)}%
           </span>
           <button
@@ -124,17 +133,19 @@ export function StudioCanvasStage({
             onClick={() => setPanMode(v => !v)}
             title="Pan mode"
           >
-            Pan
+            <Hand size={11} className={panMode ? 'text-cyan-400' : ''} />
+            <span>Pan</span>
           </button>
 
-          <div className="h-3 w-px bg-[var(--border-color)]" />
+          <div className="h-3 w-px bg-[#2a2d3d]" />
 
-          <span className="font-mono text-[10px] text-[var(--text-muted)]">{fps.toFixed(2)} fps</span>
+          <span className="font-mono text-[10px] text-zinc-400">{fps.toFixed(2)} fps</span>
         </div>
       </div>
 
+      {/* Viewport Canvas Stage */}
       <div
-        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[#0a0d14] p-4 md:p-8"
+        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[#07080c] p-4 md:p-8"
         data-testid="motion-viewport"
         onWheel={event => {
           if (!isActive) return;
@@ -170,9 +181,13 @@ export function StudioCanvasStage({
         }}
         onPointerCancel={() => { panGesture.current = null; }}
         onLostPointerCapture={() => { panGesture.current = null; }}
+        onContextMenu={event => {
+          event.preventDefault();
+          onCanvasContextMenu?.(event);
+        }}
       >
         <div
-          className="w-full max-w-[1000px] shadow-2xl transition-transform duration-75"
+          className="w-full max-w-[1000px] shadow-2xl shadow-black/80 rounded border border-[#1f2230] transition-transform duration-75 overflow-hidden"
           data-testid="motion-canvas"
           style={{
             transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
@@ -191,24 +206,55 @@ export function StudioCanvasStage({
             onSelectLayer={onSelectLayer}
             onStopPlayback={() => setPlaying(false)}
             onEdit={onApplyEdits}
+            onLayerContextMenu={onLayerContextMenu}
+            onCanvasContextMenu={onCanvasContextMenu}
           />
         </div>
       </div>
 
-      <div className="flex items-center gap-3 border-t border-[var(--border-color)] bg-[var(--bg-sidebar)] px-4 py-2.5 shadow-sm">
+      {/* Integrated Transport Bar */}
+      <div className="flex items-center gap-3 border-t border-[#222533] bg-[#0e1017] px-4 py-2.5 shadow-sm">
+        {/* Step Prev Frame */}
         <button
-          className={action + ' px-3 py-1.5'}
+          type="button"
+          onClick={() => {
+            setPlaying(false);
+            setFrame(Math.max(0, frame - 1));
+          }}
+          title="Step back 1 frame"
+          className="flex h-7 w-7 items-center justify-center rounded-md border border-[#2a2d3d] bg-[#161822] text-zinc-300 hover:bg-[#202330] hover:text-white transition-colors"
+        >
+          <SkipBack size={12} />
+        </button>
+
+        {/* Circular Play/Pause Button */}
+        <button
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-400 text-zinc-950 shadow-md shadow-cyan-400/25 hover:bg-cyan-300 active:scale-95 transition-all"
           aria-label={playing ? 'Pause playback' : 'Play scene'}
           onClick={() => setPlaying(!playing)}
           title={playing ? 'Pause' : 'Play'}
         >
-          {playing ? <Pause size={14} className="text-amber-400" /> : <Play size={14} className="text-[var(--color-primary)]" />}
+          {playing ? <Pause size={14} className="fill-zinc-950" /> : <Play size={14} className="fill-zinc-950 ml-0.5" />}
         </button>
 
+        {/* Step Next Frame */}
+        <button
+          type="button"
+          onClick={() => {
+            setPlaying(false);
+            setFrame(Math.min(totalFrames - 1, frame + 1));
+          }}
+          title="Step forward 1 frame"
+          className="flex h-7 w-7 items-center justify-center rounded-md border border-[#2a2d3d] bg-[#161822] text-zinc-300 hover:bg-[#202330] hover:text-white transition-colors"
+        >
+          <SkipForward size={12} />
+        </button>
+
+        {/* Scrubbing Slider */}
         <input
           aria-label="Current frame"
           type="range"
-          className="min-w-0 flex-1 accent-[var(--color-primary)] cursor-pointer"
+          className="min-w-0 flex-1 accent-cyan-400 cursor-pointer h-1.5 bg-[#202330] rounded-lg"
           min={0}
           max={totalFrames - 1}
           step={1}
@@ -219,9 +265,11 @@ export function StudioCanvasStage({
           }}
         />
 
-        <span className="whitespace-nowrap font-mono text-xs font-semibold text-[var(--text-main)] bg-[var(--bg-card)] px-2.5 py-1 rounded border border-[var(--border-color)]">
-          {frameLabel(project, frame)}
-        </span>
+        {/* Timecode & Frame Indicator */}
+        <div className="flex items-center gap-1.5 whitespace-nowrap font-mono text-xs font-semibold text-zinc-200 bg-[#161822] px-2.5 py-1 rounded-md border border-[#2a2d3d]">
+          <span className="text-cyan-400">{frameLabel(project, frame)}</span>
+          <span className="text-zinc-500 text-[10px]">({frame}/{totalFrames})</span>
+        </div>
       </div>
     </div>
   );

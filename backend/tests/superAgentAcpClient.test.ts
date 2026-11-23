@@ -177,6 +177,60 @@ describe('SuperAgentAcpClient - T-Line Desktop Integration', () => {
     client.close();
   });
 
+  it('sendPrompt dispatches prompt without premature done status', async () => {
+    const clientToMock = new PassThrough();
+    const mockToClient = new PassThrough();
+
+    const client = new SuperAgentAcpClient({
+      inputStream: mockToClient,
+      outputStream: clientToMock,
+      spawnSubprocess: false,
+    });
+
+    let doneEmitted = false;
+    client.on('status', (data) => {
+      if (data.status === 'done') doneEmitted = true;
+    });
+
+    // Mock server handles session/prompt request
+    clientToMock.on('data', (chunk) => {
+      const msg = JSON.parse(chunk.toString().trim());
+      if (msg.method === 'session/prompt') {
+        mockToClient.write(
+          JSON.stringify({
+            jsonrpc: '2.0',
+            id: msg.id,
+            result: { promptId: 'p_1', accepted: true, startedAt: Date.now() },
+          }) + '\n'
+        );
+      }
+    });
+
+    const res = await client.sendPrompt('sess_1', 'Execute continuous loop task');
+    expect(res.accepted).toBe(true);
+    // Verification: status done MUST NOT be emitted right after prompt acceptance
+    expect(doneEmitted).toBe(false);
+
+    // Now simulate real server done notification
+    mockToClient.write(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'session/update',
+        params: {
+          sessionId: 'sess_1',
+          seq: 10,
+          timestamp: Date.now(),
+          update: { kind: 'status_change', status: 'done', summary: 'Turn completed' },
+        },
+      }) + '\n'
+    );
+
+    await new Promise((r) => setTimeout(r, 20));
+    expect(doneEmitted).toBe(true);
+
+    client.close();
+  });
+
   it('handles reverse permission requests from agent and replies with decision', async () => {
     const clientToMock = new PassThrough();
     const mockToClient = new PassThrough();

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Bot, ChevronDown, ChevronRight,
-  Clock3, ShieldAlert, Layers3 } from 'lucide-react';
+  ShieldAlert, Layers3 } from 'lucide-react';
 import { PermissionCard, type PendingPermission } from './SuperAgentInteractiveCards';
 import type { SubAgentItem } from './SubAgentTerminalModal';
 import type { ConsoleMessage } from './SuperAgentMessageItem';
@@ -80,7 +80,7 @@ export function buildAgentTimeline(
   }));
   if (pendingPermission) main.push({
     id: 'approval-' + pendingPermission.permissionId,
-    label: 'Approval required · ' + String(pendingPermission.toolCall?.name || pendingPermission.toolCall?.toolName || 'Tool action').slice(0, 90),
+    label: 'Approval required · ' + String(pendingPermission.toolCall?.name || pendingPermission.toolCall?.tool || pendingPermission.toolCall?.toolName || (pendingPermission as any)?.target || 'Tool action').slice(0, 90),
     detail: 'Execution paused until you explicitly approve or deny this request',
     state: 'review',
   });
@@ -219,150 +219,154 @@ export function AgentExecutionTimeline({ messages, subagents, drafts, pendingPer
     starts.has(e.actor + ':' + e.callId)).map(e =>
       e.at - (starts.get(e.actor + ':' + e.callId) ?? e.at));
   return (
-    <section aria-label="Per-agent execution timeline" className="max-h-[55vh] overflow-y-auto px-3 sm:px-4 py-3">
-      <div className="mx-auto max-w-4xl space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-semibold text-[var(--text-main)]">Agent timeline</h3>
-            <p className="text-[11px] text-[var(--text-muted)]">
-              Per-agent evidence and actions · tool approval uses the live Core request
-            </p>
-          </div>
-          <span className="text-[10px] text-[var(--text-muted)]">{agents.length} agents/tasks</span>
-        </div>
-        <div aria-label="Agent dashboard" className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {[
-            { title: 'Agents / tasks', count: agents.length },
-            { title: 'Active', count: agents.filter(a => ['running','waiting'].includes(statusState(a.state))).length },
-            { title: 'Needs review', count: agents.filter(a => statusState(a.state) === 'review').length },
-            { title: 'Recorded tools', count: recordedTools },
-          ].map(item => (
-            <div key={item.title} className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-main)] p-2.5">
-              <p className="text-[10px] text-[var(--text-muted)]">{item.title}</p>
-              <p className="text-lg font-semibold tabular-nums">{item.count}</p>
+    <section aria-label="Per-agent execution timeline" className="h-full overflow-y-auto px-3 py-2.5 font-sans">
+      <div className="space-y-2.5">
+        {/* Compact Telemetry Dashboard */}
+        <div aria-label="Agent dashboard" className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-[var(--r-ui-color-surface)] border border-[var(--r-ui-color-border-subtle)] text-xs">
+          <div className="flex items-center gap-2.5 text-[11px]">
+            <div className="flex items-center gap-1">
+              <span className="text-[var(--r-ui-color-text-tertiary)]">Total:</span>
+              <span className="font-semibold text-[var(--r-ui-color-text-primary)] tabular-nums">{agents.length}</span>
             </div>
-          ))}
+            <div className="flex items-center gap-1 pl-2.5 border-l border-[var(--r-ui-color-border-subtle)]">
+              <span className="text-[var(--r-ui-color-text-tertiary)]">Active:</span>
+              <span className="font-semibold text-sky-400 tabular-nums">{agents.filter(a => ['running','waiting'].includes(statusState(a.state))).length}</span>
+            </div>
+            <div className="flex items-center gap-1 pl-2.5 border-l border-[var(--r-ui-color-border-subtle)]">
+              <span className="text-[var(--r-ui-color-text-tertiary)]">Review:</span>
+              <span className="font-semibold text-amber-400 tabular-nums">{agents.filter(a => statusState(a.state) === 'review').length}</span>
+            </div>
+            <div className="flex items-center gap-1 pl-2.5 border-l border-[var(--r-ui-color-border-subtle)]">
+              <span className="text-[var(--r-ui-color-text-tertiary)]">Tools:</span>
+              <span className="font-semibold text-[var(--r-ui-color-text-secondary)] tabular-nums">{recordedTools}</span>
+            </div>
+          </div>
+          {durations.length > 0 && (
+            <span className="text-[10px] text-[var(--r-ui-color-text-tertiary)] font-mono">
+              ~{Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length)}ms avg
+            </span>
+          )}
         </div>
-        <p className="text-[10px] text-[var(--text-muted)]">
-          {durations.length ? 'Mean observed tool duration: ' +
-            Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length) + 'ms' :
-            'Tool duration unavailable until matching start/end events exist'}
-          {' · '}Token usage is not included in this metadata journal.
-        </p>
-        <div className="flex flex-wrap gap-2">
+
+        {/* Compact Search & Filter Bar */}
+        <div className="flex items-center gap-1.5">
           <input aria-label="Search agents and actions" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search agents or tools" className="min-w-0 flex-1 rounded-lg border border-[var(--border-color)] bg-[var(--bg-main)] px-3 py-2 text-xs"/>
+            placeholder="Search agents or tools..." className="min-w-0 flex-1 rounded-md border border-[var(--r-ui-color-border-subtle)] bg-[var(--r-ui-color-canvas)] px-2.5 py-1 text-xs text-[var(--r-ui-color-text-primary)] placeholder-[var(--r-ui-color-text-tertiary)] focus:outline-none focus:border-sky-500/50"/>
           <select aria-label="Agent type filter" value={kindFilter}
             onChange={e => setKindFilter(e.target.value as typeof kindFilter)}
-            className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-main)] px-2 py-2 text-xs">
+            className="rounded-md border border-[var(--r-ui-color-border-subtle)] bg-[var(--r-ui-color-canvas)] px-2 py-1 text-xs text-[var(--r-ui-color-text-secondary)] focus:outline-none focus:border-sky-500/50">
             <option value="all">All sources</option><option value="main">Main</option>
             <option value="subagent">Subagents</option><option value="task">Tasks</option>
           </select>
           <select aria-label="Agent status filter" value={statusFilter}
             onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
-            className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-main)] px-2 py-2 text-xs">
+            className="rounded-md border border-[var(--r-ui-color-border-subtle)] bg-[var(--r-ui-color-canvas)] px-2 py-1 text-xs text-[var(--r-ui-color-text-secondary)] focus:outline-none focus:border-sky-500/50">
             <option value="all">All status</option><option value="active">Active</option>
             <option value="review">Needs review</option><option value="completed">Completed</option>
             <option value="failed">Failed</option>
           </select>
         </div>
+
         {pendingPermission && (
-          <div role="status" className="flex items-center gap-2 rounded-lg border border-amber-500/35 bg-amber-500/5 px-3 py-2 text-xs text-amber-400">
-            <ShieldAlert size={16} aria-hidden="true"/> Action pending approval · Main Agent
+          <div role="status" className="flex items-center gap-2 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+            <ShieldAlert size={15} aria-hidden="true" className="shrink-0 text-amber-400"/>
+            <span className="font-medium">Action pending approval · Main Agent</span>
           </div>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-[minmax(150px,0.85fr)_minmax(0,2fr)] gap-3">
-          <nav aria-label="Agents" className="flex gap-1.5 overflow-x-auto sm:flex-col sm:overflow-y-auto sm:max-h-[40vh] pb-1">
+
+        {/* Master-Detail Agent & Timeline Views */}
+        <div className="grid grid-cols-1 sm:grid-cols-[minmax(120px,0.7fr)_minmax(0,2fr)] gap-2">
+          <nav aria-label="Agents" className="flex gap-1 overflow-x-auto sm:flex-col sm:overflow-y-auto sm:max-h-[48vh] pb-1">
             {matching.map(agent => (
               <button type="button" key={agent.id} aria-pressed={focus.id === agent.id}
                 onClick={() => { setSelected(agent.id); setShowAll(false); }}
-                className={'min-w-[130px] sm:min-w-0 w-full shrink-0 sm:shrink rounded-lg border p-2.5 text-left focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] ' +
-                  (focus.id === agent.id ? 'border-[var(--color-primary)] bg-[var(--color-primary-glow)]' :
-                    'border-[var(--border-color)] bg-[var(--bg-main)] hover:bg-[var(--bg-card-hover)]')}>
+                className={'min-w-[120px] sm:min-w-0 w-full shrink-0 sm:shrink rounded-md border p-2 text-left transition-all cursor-pointer ' +
+                  (focus.id === agent.id
+                    ? 'border-sky-500/40 bg-sky-500/10 text-sky-200 shadow-xs'
+                    : 'border-[var(--r-ui-color-border-subtle)] bg-[var(--r-ui-color-surface)] text-[var(--r-ui-color-text-secondary)] hover:bg-[var(--r-ui-color-surface-elevated)] hover:text-[var(--r-ui-color-text-primary)]')}>
                 <div className={'flex items-center gap-1.5 ' + (agent.parent ? 'pl-3' : '')}>
-                  {agent.parent && <span aria-hidden="true" className="text-[var(--text-muted)]">↳</span>}
-                  {agent.kind === 'task' ? <Layers3 size={14}/> : <Bot size={14}/>}
+                  {agent.parent && <span aria-hidden="true" className="text-[var(--r-ui-color-text-tertiary)]">↳</span>}
+                  {agent.kind === 'task' ? <Layers3 size={13} className="shrink-0 text-amber-400"/> : <Bot size={13} className="shrink-0 text-sky-400"/>}
                   <span className="min-w-0 flex-1 truncate text-[11px] font-medium" title={agent.title}>{agent.title}</span>
                 </div>
-                <div className="mt-1 text-[10px] text-[var(--text-muted)] capitalize truncate">
+                <div className="mt-0.5 text-[10px] text-[var(--r-ui-color-text-tertiary)] capitalize truncate">
                   {stateLabel[agent.state] || agent.state.replace(/_/g, ' ')}
                 </div>
               </button>
             ))}
-            {matching.length === 0 && <p className="text-xs text-[var(--text-muted)]">
-              No agents match the current filters.
+            {matching.length === 0 && <p className="text-xs text-[var(--r-ui-color-text-tertiary)] py-2">
+              No matching agents.
             </p>}
           </nav>
-          <div className="min-w-0 rounded-xl border border-[var(--border-color)] bg-[var(--bg-main)] p-3">
-            <div className="flex items-start justify-between gap-2 border-b border-[var(--border-color)] pb-2">
+
+          <div className="min-w-0 rounded-lg border border-[var(--r-ui-color-border-subtle)] bg-[var(--r-ui-color-surface)] p-2.5">
+            <div className="flex items-start justify-between gap-2 border-b border-[var(--r-ui-color-border-subtle)] pb-1.5">
               <div className="min-w-0">
-                <h4 className="text-xs font-semibold break-words">{focus.title}</h4>
-                <p className="text-[10px] text-[var(--text-muted)] break-all">{focus.subtitle}</p>
+                <h4 className="text-xs font-semibold text-[var(--r-ui-color-text-primary)] break-words">{focus.title}</h4>
+                <p className="text-[10px] text-[var(--r-ui-color-text-tertiary)] break-all">{focus.subtitle}</p>
               </div>
-              <span className="shrink-0 rounded-md bg-[var(--bg-card)] px-2 py-1 text-[10px] text-[var(--text-muted)] capitalize">
+              <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-mono capitalize bg-[var(--r-ui-color-canvas)] text-[var(--r-ui-color-text-secondary)] border border-[var(--r-ui-color-border-subtle)]">
                 {stateLabel[focus.state] || focus.state.replace(/_/g, ' ')}
               </span>
             </div>
-            <ol aria-label={'Timeline for ' + focus.title} className="mt-3 space-y-1 border-l border-[var(--border-color)] ml-2">
+            <ol aria-label={'Timeline for ' + focus.title} className="mt-2.5 space-y-1.5 border-l border-[var(--r-ui-color-border-subtle)] ml-2">
               {displayed.map(step => (
-                <li key={step.id} className="relative pl-4 pb-3 text-xs">
-                  <span className={'absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full border-2 border-[var(--bg-main)] ' +
-                    (step.state === 'review' || step.state === 'failed' ? 'bg-amber-400' :
-                      step.state === 'running' ? 'bg-[var(--color-primary)]' :
-                      step.state === 'completed' ? 'bg-emerald-500' : 'bg-[var(--text-muted)]')}/>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-[var(--text-main)] break-words">{step.label}</span>
-                    {step.timestamp && <time className="text-[10px] text-[var(--text-muted)]"
+                <li key={step.id} className="relative pl-3.5 pb-2 text-xs">
+                  <span className={'absolute -left-[4.5px] top-1 h-2 w-2 rounded-full ' +
+                    (step.state === 'review' || step.state === 'failed' ? 'bg-amber-400 ring-2 ring-amber-400/20' :
+                      step.state === 'running' ? 'bg-sky-400 ring-2 ring-sky-400/20 animate-pulse' :
+                      step.state === 'completed' ? 'bg-emerald-400' : 'bg-[var(--r-ui-color-text-tertiary)]')}/>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="font-medium text-[var(--r-ui-color-text-primary)] text-[11px] break-words">{step.label}</span>
+                    {step.timestamp && <time className="text-[9px] font-mono text-[var(--r-ui-color-text-tertiary)]"
                       dateTime={new Date(step.timestamp).toISOString()}>
-                      {new Date(step.timestamp).toLocaleString()}
+                      {new Date(step.timestamp).toLocaleTimeString()}
                     </time>}
                   </div>
-                  {step.detail && <p className="mt-1 whitespace-pre-wrap break-words text-[11px] text-[var(--text-muted)]">
+                  {step.detail && <p className="mt-0.5 whitespace-pre-wrap break-words text-[10px] text-[var(--r-ui-color-text-tertiary)] font-mono leading-tight">
                     {step.detail}
                   </p>}
                 </li>
               ))}
             </ol>
-            {focus.events.length === 0 && <p className="text-xs text-[var(--text-muted)] py-4">
-              No recorded tool actions in this chat yet.
+            {focus.events.length === 0 && <p className="text-xs text-[var(--r-ui-color-text-tertiary)] py-3">
+              No recorded tool actions yet.
             </p>}
             {focus.events.length > 30 && <button type="button" onClick={() => setShowAll(value => !value)}
-              className="inline-flex items-center gap-1 text-xs text-[var(--color-primary)]">
-              {showAll ? <ChevronDown size={13}/> : <ChevronRight size={13}/>}
+              className="inline-flex items-center gap-1 text-[11px] text-sky-400 hover:text-sky-300 font-medium pt-1">
+              {showAll ? <ChevronDown size={12}/> : <ChevronRight size={12}/>}
               {showAll ? 'Show recent steps' : 'Show all recorded steps'}
             </button>}
             {selectedTask && (
-              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--border-color)] pt-3">
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-[var(--r-ui-color-border-subtle)] pt-2">
                 {canCancel && <button type="button" disabled={taskControlBusy || !onTaskControl}
                   onClick={() => onTaskControl?.(selectedTask, 'cancel')}
-                  className="rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-400 disabled:opacity-40">
+                  className="rounded border border-amber-500/40 px-2 py-1 text-xs text-amber-400 hover:bg-amber-500/10 disabled:opacity-40 transition cursor-pointer">
                   Request cancel
                 </button>}
                 {canReconcile && <button type="button" disabled={taskControlBusy || !onTaskControl}
                   onClick={() => onTaskControl?.(selectedTask, 'reconcile')}
-                  className="rounded-lg border border-[var(--border-color)] px-3 py-1.5 text-xs disabled:opacity-40">
+                  className="rounded border border-[var(--r-ui-color-border-standard)] px-2 py-1 text-xs text-[var(--r-ui-color-text-secondary)] hover:text-[var(--r-ui-color-text-primary)] disabled:opacity-40 transition cursor-pointer">
                   Reconcile orphan
                 </button>}
                 <button type="button" onClick={onOpenTaskPanel}
                   disabled={!onOpenTaskPanel}
-                  className="rounded-lg border border-[var(--border-color)] px-3 py-1.5 text-xs disabled:opacity-40">
+                  className="rounded border border-[var(--r-ui-color-border-standard)] px-2 py-1 text-xs text-[var(--r-ui-color-text-secondary)] hover:text-[var(--r-ui-color-text-primary)] disabled:opacity-40 transition cursor-pointer">
                   Review task actions
                 </button>
-                <p className="w-full text-[10px] text-[var(--text-muted)]">
+                <p className="w-full text-[9px] text-[var(--r-ui-color-text-tertiary)] mt-1 leading-normal">
                   Running workers cannot be paused or resumed without a verified execution checkpoint.
-                  Unstarted draft Pause/Resume and manual Retry-as-Draft are available in Task Actions.
-                  Cancellation is a request, not proof the worker has exited.
                 </p>
               </div>
             )}
             {focus.id === 'main' && pendingPermission && (
-              <div className="mt-3 border-t border-[var(--border-color)] pt-3">
+              <div className="mt-2.5 border-t border-[var(--r-ui-color-border-subtle)] pt-2">
                 {connected && onPermissionDecision ? (
                   <PermissionCard pendingPermission={pendingPermission}
                     submitting={approvalSubmitting} feedback={approvalFeedback}
                     handlePermissionDecision={onPermissionDecision}/>
                 ) : (
-                  <p role="alert" className="flex gap-2 text-xs text-amber-400">
+                  <p role="alert" className="flex gap-1.5 text-xs text-amber-400">
                     <AlertTriangle size={14}/> Connection unavailable. Approval disabled until Core reconnects.
                   </p>
                 )}
@@ -370,11 +374,6 @@ export function AgentExecutionTimeline({ messages, subagents, drafts, pendingPer
             )}
           </div>
         </div>
-        <p className="flex items-start gap-1.5 text-[10px] text-[var(--text-muted)]">
-          <Clock3 size={12} className="shrink-0"/>
-          Timestamps appear only when provided by the source. Older subagent logs and tool steps may be partial.
-          Approval is never inferred from a timeline item.
-        </p>
       </div>
     </section>
   );

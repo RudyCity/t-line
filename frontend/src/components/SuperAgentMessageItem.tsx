@@ -446,7 +446,7 @@ export const ThoughtAccordionItem: React.FC<{
       </button>
 
       {isOpen && (
-        <div className="px-3 py-2 text-xs leading-relaxed text-[var(--text-muted)] italic pl-3 border-t border-[var(--color-primary)]/15 border-l-2 border-l-[var(--color-primary)]/50 bg-[var(--color-primary)]/5">
+        <div className="px-3 py-2 text-xs leading-relaxed text-[var(--text-muted)] italic border-t border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5">
           {renderMessageContent(text)}
         </div>
       )}

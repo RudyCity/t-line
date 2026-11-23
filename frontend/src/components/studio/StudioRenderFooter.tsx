@@ -25,9 +25,9 @@ interface Props {
 }
 
 const idle = new Set<StudioJob['status']>(['completed', 'failed', 'cancelled', 'interrupted']);
-const control = 'rounded border border-[var(--border-color)] bg-[var(--bg-main)] px-2.5 py-1.5 text-xs text-[var(--text-main)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]';
-const action = 'inline-flex items-center gap-1.5 rounded border border-[var(--border-color)] bg-[var(--bg-card)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-main)] transition-colors hover:bg-[var(--bg-card-hover)] hover:border-[var(--color-primary)]/40 focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] disabled:opacity-40 disabled:pointer-events-none';
-const primary = 'inline-flex items-center gap-1.5 rounded bg-[var(--color-primary)] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 disabled:pointer-events-none';
+const control = 'rounded-md border border-[#2a2d3d] bg-[#161822] px-2.5 py-1.5 text-xs text-zinc-200 transition-colors focus-visible:outline-2 focus-visible:outline-cyan-400';
+const action = 'inline-flex items-center gap-1.5 rounded-md border border-[#2a2d3d] bg-[#181b26] px-2.5 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:bg-[#202330] hover:border-cyan-500/40 hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-400 disabled:opacity-40 disabled:pointer-events-none';
+const primary = 'inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-teal-400 to-cyan-400 px-3 py-1.5 text-xs font-bold text-zinc-950 shadow-md shadow-cyan-500/20 transition-all hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 disabled:pointer-events-none';
 
 export function StudioRenderFooter({
   workspacePath,
@@ -53,10 +53,10 @@ export function StudioRenderFooter({
   const projectJobs = jobs.filter(item => item.projectId === projectId);
 
   return (
-    <footer className="border-t border-[var(--border-color)] bg-[var(--bg-sidebar)]">
+    <footer className="border-t border-[#222533] bg-[#0e1017] select-none">
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2" aria-label="Render jobs">
         <div className="flex min-w-0 items-center gap-2.5 text-xs">
-          <Film size={14} className="text-[var(--color-primary)] shrink-0" />
+          <Film size={14} className="text-cyan-400 shrink-0" />
           <select
             className={control + ' max-w-[210px] font-mono text-[11px]'}
             aria-label="Select render job"
@@ -72,7 +72,7 @@ export function StudioRenderFooter({
           </select>
 
           {job && (
-            <span className="font-mono text-[11px] text-[var(--text-muted)] bg-[var(--bg-card)] px-2 py-0.5 rounded border border-[var(--border-color)]">
+            <span className="font-mono text-[11px] text-cyan-300 bg-cyan-950/40 px-2.5 py-0.5 rounded-md border border-cyan-800/50">
               {job.status} {job.framesCompleted}/{job.profile.frameCount}
             </span>
           )}
@@ -113,7 +113,7 @@ export function StudioRenderFooter({
                 onClick={onExportWebCode}
                 title="Offline HTML + SVG + native animation. Vector/text/path scenes only."
               >
-                <Film size={12} /> Export Web Code
+                <Film size={12} className="text-cyan-400" /> <span>Export Web Code</span>
               </button>
             </div>
           )}
@@ -147,7 +147,7 @@ export function StudioRenderFooter({
       {job?.status === 'completed' && previewUrl && (
         <video
           aria-label="Rendered Studio MP4"
-          className="max-h-24 w-full border-t border-[var(--border-color)] bg-black"
+          className="max-h-24 w-full border-t border-[#222533] bg-black"
           controls
           src={previewUrl}
         />

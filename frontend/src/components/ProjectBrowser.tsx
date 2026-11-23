@@ -182,7 +182,7 @@ export function ProjectBrowser() {
                         </span>
                       )}
                       {project.registered && project.enabled === false && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded border text-zinc-400 border-zinc-500/30">Disabled</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded border text-[var(--r-ui-color-text-tertiary)] border-[var(--r-ui-color-border-subtle)]">Disabled</span>
                       )}
                     </div>
                     <div className="mt-1 text-[9px] text-[var(--text-muted)]">

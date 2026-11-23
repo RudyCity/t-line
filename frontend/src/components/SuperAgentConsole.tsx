@@ -28,7 +28,7 @@ import { getAuthHeader, readFileAsText, getMainModelLabel as getModelLabelUtil, 
 import { extractLifecycleWarnings } from '../services/sessionLifecycleContract';
 import { prepareMultimodalPrompt } from './superAgentMultimodalClient';
 import { TurnRecord } from './chatTurnStatusReducer';
-import { History, Folder, Activity, Sparkles, RefreshCw, ArrowDown, MoreVertical, Brain, Network } from 'lucide-react';
+import { History, Folder, Activity, Sparkles, RefreshCw, ArrowDown, MoreVertical, Brain, Network, X, Cpu } from 'lucide-react';
 import { CliBridgeOrchestrationDashboard } from './CliBridgeOrchestrationDashboard';
 import { getRuntimeSearchParams } from '../utils/runtimeQuery';
 import { getAuthToken } from '../utils/tokenStorage';
@@ -211,6 +211,16 @@ export function SuperAgentConsole({
     window.addEventListener('tline-theme-change', onThemeChanged);
     return () => window.removeEventListener('tline-theme-change', onThemeChanged);
   }, []);
+  const [rightSidebarTab, setRightSidebarTab] = useState<'activity' | 'monitor'>(() => {
+    const saved = localStorage.getItem('tline-right-sidebar-tab');
+    return saved === 'monitor' ? 'monitor' : 'activity';
+  });
+
+  const handleSelectRightSidebarTab = (tab: 'activity' | 'monitor') => {
+    setRightSidebarTab(tab);
+    localStorage.setItem('tline-right-sidebar-tab', tab);
+  };
+
   const [showSettingsMenu, setShowSettingsMenu] = useState<boolean>(false);
   const [isLoadingMonitor, setIsLoadingMonitor] = useState<boolean>(false);
 
@@ -500,6 +510,20 @@ export function SuperAgentConsole({
   const [toolProgressMsg, setToolProgressMsg] = useState<string>('');
   const [tokenUsage, setTokenUsage] = useState<TokenUsageData>({ promptTokens: 0, completionTokens: 0, totalCostUsd: 0 });
 
+  useEffect(() => {
+    if (pendingPermission) {
+      setShowSidebar(true);
+      handleSelectRightSidebarTab('activity');
+    }
+  }, [pendingPermission?.permissionId, approvalJump]);
+
+  useEffect(() => {
+    if (delegateHandoff && delegateHandoff.workspace === workspace && delegateHandoff.sessionId === activeSessionId) {
+      setShowSidebar(true);
+      handleSelectRightSidebarTab('activity');
+    }
+  }, [delegateHandoff, workspace, activeSessionId]);
+
   // Enhanced Input States
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<SlashCommand[]>([]);
@@ -765,19 +789,21 @@ export function SuperAgentConsole({
         // Existing explicit workspace rules. Scope auto-approval to this active socket/session.
         if (payload?.type === 'permission_required' && socket.readyState === WebSocket.OPEN &&
             activeWsUrlRef.current === wsUrl && !isAbortedRef.current) {
+          const toolName = payload.toolCall?.name || payload.toolCall?.tool || payload.target || payload.action;
           const candidate = {
-            permissionId: payload.permissionId,
-            toolCall: payload.toolCall,
-            description: payload.description,
+            permissionId: String(payload.permissionId || payload.id || `perm_${Date.now()}`),
+            toolCall: payload.toolCall || (toolName ? { name: toolName, tool: toolName, args: payload.args || payload.details || {} } : undefined),
+            description: payload.description || (toolName ? `Execute tool: ${toolName}` : 'Tool execution authorization requested'),
+            ...(payload.target ? { target: payload.target } : {}),
           };
           const rules = loadRules(workspace || '');
           if (matchesRule(candidate, rules)) {
             socket.send(JSON.stringify({
               type: 'approve_permission',
-              permissionId: payload.permissionId,
+              permissionId: candidate.permissionId,
               approval: true,
             }));
-            approvalInFlight.current = payload.permissionId;
+            approvalInFlight.current = candidate.permissionId;
             setPendingPermission(candidate);
             setApprovalDispatch('submitting');
             setApprovalFeedback('Saved rule matched. Awaiting Core acknowledgement.');
@@ -1369,18 +1395,29 @@ export function SuperAgentConsole({
         wsRef.current !== ws || !activeSessionId) return;
     if (approval !== 'always') alwaysRuleForAck.current = null;
     if (approval === 'always') {
-      if (!window.confirm('Allow this tool automatically for future actions in this workspace? Review tool scope carefully.')) return;
       alwaysRuleForAck.current = {
         permissionId: pendingPermission.permissionId,
         rule: patternFromPermission(pendingPermission),
       };
     }
-    approvalInFlight.current = pendingPermission.permissionId;
+    const currentPermissionId = pendingPermission.permissionId;
+    approvalInFlight.current = currentPermissionId;
     setApprovalDispatch('submitting');
     setApprovalFeedback('Decision sent · waiting for Core acknowledgement.');
+
+    // Safety watchdog: recover UI if Core/ACP never returns an acknowledgement
+    window.setTimeout(() => {
+      if (approvalInFlight.current === currentPermissionId) {
+        approvalInFlight.current = null;
+        alwaysRuleForAck.current = null;
+        setApprovalDispatch('idle');
+        setApprovalFeedback('No Core acknowledgement received within timeout. Status reset.');
+      }
+    }, 12000);
+
     try {
       ws.send(JSON.stringify({
-        type: 'approve_permission', permissionId: pendingPermission.permissionId,
+        type: 'approve_permission', permissionId: currentPermissionId,
         approval: approval === 'always' ? true : approval,
       }));
     } catch {
@@ -1486,15 +1523,25 @@ export function SuperAgentConsole({
           </button>
 
           <button
-            onClick={() => setShowSidebar(!showSidebar)}
-            className={`p-2 rounded-lg border transition flex items-center justify-center cursor-pointer ${
-              showSidebar 
-                ? 'bg-emerald-950/70 border-emerald-700/80 text-emerald-300 ' 
+            onClick={() => {
+              if (showSidebar && rightSidebarTab === 'activity') {
+                setShowSidebar(false);
+              } else {
+                setShowSidebar(true);
+                handleSelectRightSidebarTab('activity');
+              }
+            }}
+            className={`p-2 rounded-lg border transition flex items-center justify-center cursor-pointer relative ${
+              showSidebar && rightSidebarTab === 'activity'
+                ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)] text-[var(--color-primary)]' 
                 : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-color)]'
             }`}
-            title="Toggle Live Monitor Sidebar"
+            title="Toggle Activity Center (Right Sidebar)"
           >
-            <Activity className={`w-4 h-4 ${showSidebar ? 'text-emerald-400' : ''}`} />
+            <Activity className={`w-4 h-4 ${showSidebar && rightSidebarTab === 'activity' ? 'text-[var(--color-primary)]' : ''}`} />
+            {pendingPermission && (
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-[var(--bg-main)] animate-pulse" />
+            )}
           </button>
 
           <button
@@ -1638,10 +1685,15 @@ export function SuperAgentConsole({
 
             {/* Approval action belongs to the session-scoped Agent Timeline, not an unrelated tool log. */}
             {pendingPermission && (
-              <button type="button" onClick={() => setApprovalJump(value => value + 1)}
-                className="w-full rounded-xl border border-amber-500/45 bg-amber-500/10 px-4 py-3 text-left text-xs text-amber-400 hover:bg-amber-500/15">
+              <button type="button" onClick={() => {
+                setShowSidebar(true);
+                handleSelectRightSidebarTab('activity');
+                setApprovalJump(value => value + 1);
+              }}
+                className="w-full rounded-xl border border-amber-500/45 bg-amber-500/10 px-4 py-3 text-left text-xs text-amber-400 hover:bg-amber-500/15 cursor-pointer"
+                title="Open Activity Center on Right Sidebar">
                 <span className="font-semibold">Action needs approval</span>
-                <span className="ml-2">Review the tool, changes and options in Activity Center → Agent timeline.</span>
+                <span className="ml-2">Review the tool, changes and options in Activity Center → Agent timeline (Right Sidebar).</span>
               </button>
             )}
 
@@ -1707,20 +1759,6 @@ export function SuperAgentConsole({
             </button>
           )}
 
-          {/* Workspace-scoped retained CLI / daemon / Muse task monitor. */}
-          <SuperAgentTaskMonitor key={workspace + '::' + activeSessionId}
-            workspace={workspace} sessionId={activeSessionId} />
-          <AssistantActivityCenter key={'activity::' + workspace + '::' + activeSessionId}
-            workspace={workspace} sessionId={activeSessionId}
-            messages={messages} subagents={timelineSubagents}
-            pendingPermission={pendingPermission} onPermissionDecision={handlePermissionDecision}
-            approvalSubmitting={approvalDispatch !== 'idle'} approvalFeedback={approvalFeedback}
-            connected={Boolean(ws && ws.readyState === WebSocket.OPEN)} approvalJump={approvalJump}
-            handoff={delegateHandoff?.workspace === workspace && delegateHandoff?.sessionId === activeSessionId
-              ? delegateHandoff : null}
-            onDraftCreated={submitted => setInput(previous =>
-              previous.trim() === submitted ? '' : previous)} />
-
           {/* Active Tasks Widget — pinned above input, outside scroll area */}
           <ActiveTasksBar
             subagents={subagentList}
@@ -1746,6 +1784,8 @@ export function SuperAgentConsole({
                   id: (previous?.id ?? 0) + 1,
                   text: input, workspace, sessionId: activeSessionId,
                 }));
+                setShowSidebar(true);
+                handleSelectRightSidebarTab('activity');
               }}
               loading={loading}
               ws={ws}
@@ -1777,37 +1817,116 @@ export function SuperAgentConsole({
             <div
               onMouseDown={startResizingRight}
               className="w-[2px] hover:w-[4px] bg-[var(--border-color)] hover:bg-[var(--color-primary)] cursor-col-resize select-none transition-all duration-150 h-full shrink-0 z-20 active:bg-[var(--color-primary)]"
-              title="Drag to resize Monitor panel"
+              title="Drag to resize Right Panel"
             />
           )}
 
-          {/* Right Resizable Live Monitor Sidebar */}
+          {/* Right Resizable Live Activity & Monitor Sidebar */}
           {showSidebar && (
-            <div style={{ width: `${monitorWidth}px` }} className="superagent-monitor-panel h-full shrink-0 relative min-w-[180px] max-w-[600px]">
-              <SuperAgentSidebar
-                workspacePath={workspace}
-                getAuthHeader={getAuthHeader}
-                subagents={subagentList}
-                procs={procList}
-                recentChanges={recentChangeList}
-                bgTasks={bgTaskList}
-                browserInstances={browserInstanceList}
-                onSelectSubAgent={(sa) => setSelectedSubagent(sa)}
-                onSelectProc={handleSelectProc}
-                onKillBgTask={async (taskId) => {
-                  try {
-                    await fetch(`/api/superagent/background-tasks/${encodeURIComponent(taskId)}`, {
-                      method: 'DELETE',
-                      headers: getAuthHeader()
-                    });
-                    fetchMonitorData();
-                  } catch (e) {}
-                }}
-                onRefreshData={fetchMonitorData}
-                isLoadingData={isLoadingMonitor}
-                onOpenFile={onOpenFile}
-                onOpenDiffTab={onOpenDiffTab}
-              />
+            <div style={{ width: `${monitorWidth}px` }} className="superagent-monitor-panel h-full shrink-0 relative min-w-[280px] max-w-[750px] flex flex-col bg-[#090a0f] border-l border-[rgba(255,255,255,0.08)] overflow-hidden font-sans">
+              {/* Tab Selector Header */}
+              <div className="flex items-center justify-between px-3 py-2 border-b border-[rgba(255,255,255,0.08)] bg-[#0c0e14] shrink-0 gap-2">
+                <div className="flex items-center gap-1 bg-[#090a0f] p-0.5 rounded-md border border-[rgba(255,255,255,0.08)] text-xs">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectRightSidebarTab('activity')}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition text-xs font-medium cursor-pointer ${
+                      rightSidebarTab === 'activity'
+                        ? 'bg-[#1a1d28] text-[#f8fafc] shadow-xs'
+                        : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                    }`}
+                  >
+                    <Activity size={13} />
+                    <span>Activity</span>
+                    {pendingPermission && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" title="Approval Waiting" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectRightSidebarTab('monitor')}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition text-xs font-medium cursor-pointer ${
+                      rightSidebarTab === 'monitor'
+                        ? 'bg-[#1a1d28] text-[#f8fafc] shadow-xs'
+                        : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                    }`}
+                  >
+                    <Cpu size={13} />
+                    <span>Monitor</span>
+                    {(subagentList.length > 0 || procList.length > 0) && (
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-sky-500/10 text-sky-400 font-mono">
+                        {subagentList.length + procList.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSidebar(false)}
+                  className="p-1 rounded text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#1a1d28] transition cursor-pointer"
+                  title="Close Sidebar"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+
+              {/* Panel Content */}
+              <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+                {rightSidebarTab === 'activity' ? (
+                  <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                    <div className="flex-1 min-h-0 overflow-hidden">
+                      <AssistantActivityCenter
+                        key={'activity::' + workspace + '::' + activeSessionId}
+                        workspace={workspace} sessionId={activeSessionId}
+                        messages={messages} subagents={timelineSubagents}
+                        pendingPermission={pendingPermission} onPermissionDecision={handlePermissionDecision}
+                        approvalSubmitting={approvalDispatch !== 'idle'} approvalFeedback={approvalFeedback}
+                        connected={Boolean(ws && ws.readyState === WebSocket.OPEN)} approvalJump={approvalJump}
+                        handoff={delegateHandoff?.workspace === workspace && delegateHandoff?.sessionId === activeSessionId
+                          ? delegateHandoff : null}
+                        onDraftCreated={submitted => setInput(previous =>
+                          previous.trim() === submitted ? '' : previous)}
+                        defaultOpen={true}
+                        sidebarMode={true}
+                      />
+                    </div>
+                    {/* Retained CLI / daemon / Muse task monitor placed cleanly under activity */}
+                    <div className="shrink-0 border-t border-[var(--border-color)]">
+                      <SuperAgentTaskMonitor
+                        key={workspace + '::' + activeSessionId}
+                        workspace={workspace} sessionId={activeSessionId}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 min-h-0 overflow-y-auto">
+                    <SuperAgentSidebar
+                      workspacePath={workspace}
+                      getAuthHeader={getAuthHeader}
+                      subagents={subagentList}
+                      procs={procList}
+                      recentChanges={recentChangeList}
+                      bgTasks={bgTaskList}
+                      browserInstances={browserInstanceList}
+                      onSelectSubAgent={(sa) => setSelectedSubagent(sa)}
+                      onSelectProc={handleSelectProc}
+                      onKillBgTask={async (taskId) => {
+                        try {
+                          await fetch(`/api/superagent/background-tasks/${encodeURIComponent(taskId)}`, {
+                            method: 'DELETE',
+                            headers: getAuthHeader()
+                          });
+                          fetchMonitorData();
+                        } catch (e) {}
+                      }}
+                      onRefreshData={fetchMonitorData}
+                      isLoadingData={isLoadingMonitor}
+                      onOpenFile={onOpenFile}
+                      onOpenDiffTab={onOpenDiffTab}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1862,8 +1981,8 @@ export function SuperAgentConsole({
 
       {/* Multi-Agent Orchestration Engine Dashboard Modal (M6) */}
       {showOrchestrationModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 sm:p-8 animate-fade-in">
-          <div className="bg-[#0d1117] border border-slate-700/80 rounded-2xl w-full max-w-6xl h-[90vh] shadow-2xl overflow-hidden flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 sm:p-8 animate-fade-in">
+          <div className="bg-[var(--r-ui-color-surface)] border border-[var(--r-ui-color-border-standard)] rounded-2xl w-full max-w-6xl h-[90vh] shadow-[var(--r-ui-shadow-lg)] overflow-hidden flex flex-col">
             <CliBridgeOrchestrationDashboard
               workspacePath={workspace}
               onClose={() => setShowOrchestrationModal(false)}
