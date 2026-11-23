@@ -157,7 +157,7 @@ export function SuperAgentToolItem({ msg }: SuperAgentToolItemProps) {
       return {
         action: 'Ran',
         target: cmd || 'command',
-        icon: <Terminal className="w-3 h-3 text-purple-400 shrink-0" />
+        icon: <Terminal className="w-3 h-3 text-[var(--color-primary)] shrink-0" />
       };
     }
 

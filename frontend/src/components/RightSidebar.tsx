@@ -157,7 +157,7 @@ export function RightSidebar({
       {/* Header */}
       <div className="sidebar-header flex items-center justify-between" style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color)' }}>
         <div className="flex items-center gap-2">
-          <TerminalIcon size={16} className="text-purple-400 shrink-0" />
+          <TerminalIcon size={16} style={{ color: 'var(--color-primary)' }} className="shrink-0" />
           <span className="logo-text" style={{ fontSize: '1.05rem', fontWeight: 600 }}>Menu</span>
         </div>
         <button className="action-btn" onClick={onClose} title="Close Menu">
@@ -173,7 +173,7 @@ export function RightSidebar({
           <div className="flex justify-between items-center mb-1">
             <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Active Tabs</span>
             <button
-              className="px-2.5 py-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+              className="px-2.5 py-1.5 rounded bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
               onClick={() => {
                 openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '');
                 onClose();
@@ -243,11 +243,11 @@ export function RightSidebar({
         {chainInfo && chainInfo.nodes && chainInfo.nodes.length > 0 && (
           <div className="flex flex-col gap-3 pt-4 border-t border-[var(--border-color)]">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] uppercase tracking-wider text-purple-400 font-bold flex items-center gap-1.5">
-                <LinkIcon size={12} className="text-purple-400" />
+              <span className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1.5" style={{ color: 'var(--color-primary)' }}>
+                <LinkIcon size={12} style={{ color: 'var(--color-primary)' }} />
                 Workspace Chain
               </span>
-              <span className="text-[9px] font-mono px-2 py-0.5 rounded border bg-purple-500/10 border-purple-500/30 text-purple-300">
+              <span className="text-[9px] font-mono px-2 py-0.5 rounded border bg-[var(--color-primary-glow)] border-[var(--color-primary)]/30 text-[var(--color-primary)]">
                 {chainInfo.name}
               </span>
             </div>
@@ -262,7 +262,7 @@ export function RightSidebar({
                     key={node.id}
                     className={`flex items-center justify-between p-2 rounded border font-mono text-[11px] transition-all ${
                       isCurrentNode
-                        ? 'bg-purple-950/30 border-purple-500/40 text-purple-200'
+                        ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)]/40 text-[var(--color-primary)] font-semibold'
                         : 'bg-black/20 border-white/5 text-[var(--text-muted)]'
                     }`}
                   >

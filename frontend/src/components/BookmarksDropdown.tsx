@@ -101,7 +101,7 @@ export default function BookmarksDropdown({
         onClick={() => setShowBookmarksDropdown(!showBookmarksDropdown)}
         className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
           showBookmarksDropdown
-            ? 'bg-purple-600/20 border-purple-500 text-purple-400 '
+            ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)]/50 text-[var(--color-primary)]'
             : 'bg-[var(--bg-main)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
         }`}
         title="Saved URLs / Bookmarks"
@@ -198,7 +198,7 @@ export default function BookmarksDropdown({
                       <button
                         type="button"
                         onClick={() => toggleFolder(folderName)}
-                        className="flex items-center gap-1.5 px-2 py-1 hover:bg-[var(--bg-card-hover)]/40 rounded text-left text-xs font-semibold text-purple-400 cursor-pointer"
+                        className="flex items-center gap-1.5 px-2 py-1 hover:bg-[var(--bg-card-hover)]/40 rounded text-left text-xs font-semibold text-[var(--color-primary)] cursor-pointer"
                       >
                         {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                         {isExpanded ? <FolderOpen size={12} /> : <Folder size={12} />}
@@ -318,7 +318,7 @@ function BookmarkRow({
           <button
             type="button"
             onClick={() => saveEdit(bookmark.id)}
-            className="flex items-center gap-0.5 px-2 py-0.5 text-[9px] bg-purple-600 hover:bg-purple-500 text-white rounded cursor-pointer"
+            className="flex items-center gap-0.5 px-2 py-0.5 text-[9px] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white rounded cursor-pointer"
           >
             <Save size={10} />
             Simpan
@@ -335,7 +335,7 @@ function BookmarkRow({
         onClick={() => handleNavigateToBookmark(bookmark.url)}
         className="flex-1 text-left min-w-0 cursor-pointer"
       >
-        <div className="text-[11px] font-medium text-[var(--text-main)] truncate group-hover:text-purple-400 transition-colors">
+        <div className="text-[11px] font-medium text-[var(--text-main)] truncate group-hover:text-[var(--color-primary)] transition-colors">
           {bookmark.name}
         </div>
         <div className="text-[9px] text-[var(--text-muted)] truncate">
@@ -346,7 +346,7 @@ function BookmarkRow({
         <button
           type="button"
           onClick={() => startEdit(bookmark)}
-          className="p-1 rounded hover:bg-purple-500/10 text-[var(--text-muted)] hover:text-purple-400 cursor-pointer"
+          className="p-1 rounded hover:bg-[var(--color-primary-glow)] text-[var(--text-muted)] hover:text-[var(--color-primary)] cursor-pointer"
           title="Edit bookmark"
         >
           <Edit2 size={11} />

@@ -58,7 +58,7 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-color)] bg-[var(--bg-main)]/40">
         <div className="flex items-center gap-2">
-          <History size={14} className="text-purple-400" />
+          <History size={14} style={{ color: 'var(--color-primary)' }} />
           <span className="text-xs font-semibold text-[var(--text-main)]">Riwayat Browser</span>
         </div>
         <button

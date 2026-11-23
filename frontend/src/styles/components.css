@@ -935,36 +935,73 @@
   gap: 12px;
 }
 
+/* Standard Button Precision & Optical Harmony (r-ui v3.5.0 Law 12) */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 16px;
-  border-radius: 6px;
+  line-height: 1;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: var(--r-ui-radius-sm, 6px);
   border: 1px solid transparent;
+  transition: all 0.18s var(--r-ui-ease-spring, cubic-bezier(0.16, 1, 0.3, 1));
+  user-select: none;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.975);
+}
+
+.btn-xs {
+  height: 24px;
+  font-size: 11px;
+  padding: 0 8px;
+  gap: 4px;
+}
+
+.btn-sm {
+  height: 30px;
+  font-size: 12px;
+  padding: 0 10px;
+  gap: 6px;
+}
+
+.btn-md,
+.btn:not(.btn-xs):not(.btn-sm):not(.btn-lg) {
+  height: 34px;
+  font-size: 13px;
+  padding: 0 14px;
+  gap: 8px;
+}
+
+.btn-lg {
+  height: 40px;
+  font-size: 14px;
+  padding: 0 18px;
+  gap: 8px;
 }
 
 .btn-primary {
   background: var(--color-primary);
-  color: white;
+  color: #ffffff;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: var(--color-primary-hover);
   box-shadow: var(--r-ui-shadow-sm, 0 1px 3px 0 rgba(0, 0, 0, 0.08));
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--r-ui-color-surface-elevated, rgba(255, 255, 255, 0.05));
   border-color: var(--border-color);
+  color: var(--text-main);
 }
 
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
+.btn-secondary:hover:not(:disabled) {
+  background: var(--r-ui-color-surface-overlay, rgba(255, 255, 255, 0.1));
+  border-color: var(--r-ui-color-border-strong, rgba(255, 255, 255, 0.2));
 }
 
 .btn-danger {
@@ -972,8 +1009,9 @@
   color: white;
 }
 
-.btn-danger:hover {
+.btn-danger:hover:not(:disabled) {
   background: #f87171;
+  box-shadow: var(--r-ui-shadow-sm, 0 1px 3px 0 rgba(0, 0, 0, 0.08));
 }
 
 /* Authentication Screen Layout */
@@ -984,7 +1022,7 @@
   height: 100vh;
   width: 100vw;
   background-image: 
-    radial-gradient(at 50% 50%, rgba(124, 58, 237, 0.12) 0px, transparent 50%);
+    radial-gradient(at 50% 50%, var(--color-primary-glow, rgba(56, 189, 248, 0.12)) 0px, transparent 60%);
 }
 
 .auth-card {
@@ -2312,9 +2350,9 @@
   opacity: 0.35;
   cursor: grabbing !important;
   transform: scale(0.96);
-  border: 1px dashed var(--color-primary, #a855f7) !important;
+  border: 1px dashed var(--color-primary) !important;
   background: var(--surface-overlay) !important;
-  box-shadow: 0 2px 12px rgba(168, 85, 247, 0.2);
+  box-shadow: var(--r-ui-shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.08));
 }
 
 /* Dropdown actions style */

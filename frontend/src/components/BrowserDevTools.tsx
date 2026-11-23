@@ -97,7 +97,7 @@ export default function BrowserDevTools({
       {/* Resize Handle */}
       {!isDevtoolsCollapsed && (
         <div 
-          className="absolute top-0 left-0 right-0 h-1.5 -mt-0.5 cursor-row-resize bg-transparent hover:bg-purple-500/40 active:bg-purple-600 transition-colors z-20"
+          className="absolute top-0 left-0 right-0 h-1.5 -mt-0.5 cursor-row-resize bg-transparent hover:bg-[var(--color-primary)]/40 active:bg-[var(--color-primary)] transition-colors z-20"
           onMouseDown={handleMouseDown}
           title="Drag to resize DevTools"
         />
@@ -118,7 +118,7 @@ export default function BrowserDevTools({
             }}
             className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded transition-all ${
               activeSubTab === 'console' && !isDevtoolsCollapsed
-                ? 'text-purple-400 bg-[var(--bg-card)] border border-[var(--border-color)]'
+                ? 'text-[var(--color-primary)] bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/30'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
           >
@@ -139,14 +139,14 @@ export default function BrowserDevTools({
             }}
             className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded transition-all ${
               activeSubTab === 'inspector' && !isDevtoolsCollapsed
-                ? 'text-purple-400 bg-[var(--bg-card)] border border-[var(--border-color)]'
+                ? 'text-[var(--color-primary)] bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/30'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
           >
             <Code2 size={13} />
             <span>Element Inspector</span>
             {inspectedElement && (
-              <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-pulse" />
             )}
           </button>
 
@@ -159,7 +159,7 @@ export default function BrowserDevTools({
             }}
             className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded transition-all ${
               activeSubTab === 'storage' && !isDevtoolsCollapsed
-                ? 'text-purple-400 bg-[var(--bg-card)] border border-[var(--border-color)]'
+                ? 'text-[var(--color-primary)] bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/30'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
           >
@@ -167,7 +167,7 @@ export default function BrowserDevTools({
             <span>Storage &amp; Cookies</span>
           </button>
           <button type="button" onClick={(e) => { e.stopPropagation(); setIsDevtoolsCollapsed(false); setActiveSubTab('network'); }}
-            className={activeSubTab === 'network' && !isDevtoolsCollapsed ? 'px-3 py-1 text-xs font-semibold text-purple-400 border border-[var(--border-color)] rounded' : 'px-3 py-1 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-main)]'}>
+            className={activeSubTab === 'network' && !isDevtoolsCollapsed ? 'px-3 py-1 text-xs font-semibold text-[var(--color-primary)] bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/30 rounded' : 'px-3 py-1 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-main)]'}>
             Network ({networkEntries.length})
           </button>
         </div>
@@ -232,7 +232,7 @@ export default function BrowserDevTools({
                         )}
                         <button
                           onClick={() => copyToClipboard(generateErrorPrompt(log), log.id)}
-                          className="flex items-center gap-1 px-2 py-1 rounded bg-purple-600/80 hover:bg-purple-600 text-white text-[10px] font-bold transition-all  cursor-pointer"
+                          className="flex items-center gap-1 px-2.5 py-1 rounded bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-[10px] font-bold transition-all cursor-pointer"
                           title="Copy prompt for AI"
                         >
                           {copiedId === log.id ? <Check size={10} /> : <Sparkles size={10} />}
@@ -269,7 +269,7 @@ export default function BrowserDevTools({
                   <div className="flex items-start justify-between gap-4 border-b border-[var(--border-color)] pb-2.5">
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 rounded bg-purple-600/20 border border-purple-500/30 text-purple-400 font-mono font-bold text-[11px]">
+                        <span className="px-1.5 py-0.5 rounded bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/30 text-[var(--color-primary)] font-mono font-bold text-[11px]">
                           &lt;{inspectedElement.tagName}&gt;
                         </span>
                         {inspectedElement.id && (
@@ -285,7 +285,7 @@ export default function BrowserDevTools({
 
                     <button
                       onClick={() => copyToClipboard(generateElementPrompt(inspectedElement), 'element')}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all  cursor-pointer shrink-0"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold transition-all cursor-pointer shrink-0"
                       title="Copy prompt for AI"
                     >
                       {copiedId === 'element' ? <Check size={11} /> : <Sparkles size={11} />}
@@ -302,7 +302,7 @@ export default function BrowserDevTools({
                         {Object.entries(inspectedElement.computedStyles).map(([key, val]) => (
                           <div key={key} className="flex justify-between border-b border-[var(--border-color)]/30 py-0.5">
                             <span className="text-[var(--text-muted)]">{key}:</span>
-                            <span className="text-purple-300 font-semibold">{val}</span>
+                            <span className="text-[var(--color-primary)] font-semibold">{val}</span>
                           </div>
                         ))}
                       </div>
@@ -334,7 +334,7 @@ export default function BrowserDevTools({
                 <div className="flex flex-col items-center justify-center py-10 text-[var(--text-muted)] gap-2">
                   <Layout size={20} className="opacity-40" />
                   <span className="text-xs text-center max-w-sm leading-relaxed">
-                    Click the <strong className="text-purple-400">Inspect Element</strong> button in the header, then click any UI component on the page to extract its code and style properties.
+                    Click the <strong className="text-[var(--color-primary)]">Inspect Element</strong> button in the header, then click any UI component on the page to extract its code and style properties.
                   </span>
                 </div>
               )}
@@ -371,7 +371,7 @@ export default function BrowserDevTools({
                 <button
                   type="button"
                   onClick={() => onRefreshStorage?.()}
-                  className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded transition-colors cursor-pointer"
+                  className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white rounded transition-colors cursor-pointer"
                   title="Refresh Storage"
                 >
                   <RefreshCw size={11} />
@@ -385,7 +385,7 @@ export default function BrowserDevTools({
               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0 overflow-y-auto pr-1">
                 {/* Local Storage */}
                 <div className="flex flex-col gap-2 min-h-0">
-                  <h4 className="font-semibold text-purple-400 flex items-center gap-1">
+                  <h4 className="font-semibold text-[var(--color-primary)] flex items-center gap-1">
                     <span>Local Storage</span>
                     <span className="text-[10px] text-[var(--text-muted)] font-mono">
                       ({storageData.localStorage.length})
@@ -434,7 +434,7 @@ export default function BrowserDevTools({
 
                 {/* Cookies */}
                 <div className="flex flex-col gap-2 min-h-0">
-                  <h4 className="font-semibold text-purple-400 flex items-center gap-1">
+                  <h4 className="font-semibold text-[var(--color-primary)] flex items-center gap-1">
                     <span>Cookies</span>
                     <span className="text-[10px] text-[var(--text-muted)] font-mono">
                       ({storageData.cookies.length})

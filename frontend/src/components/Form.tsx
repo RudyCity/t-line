@@ -53,34 +53,32 @@ export const FormField: React.FC<FormFieldProps> = ({ label, error, children, cl
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   loading?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
+  size = 'md',
   loading = false,
   children,
   className = '',
   disabled,
   ...props
 }) => {
-  let baseClass = 'btn transition-all duration-200 font-medium text-sm flex items-center justify-center gap-2';
-  let variantClass = '';
-
-  if (variant === 'primary') {
-    variantClass = 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white  ';
-  } else if (variant === 'secondary') {
-    variantClass = 'bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-main)] border border-[var(--border-color)]';
-  } else if (variant === 'danger') {
-    variantClass = 'bg-red-600 hover:bg-red-500 text-white   hover:';
-  }
+  const baseClass = 'btn';
+  const sizeClass = `btn-${size}`;
+  const variantClass = `btn-${variant}`;
 
   return (
     <button
-      className={`${baseClass} ${variantClass} ${disabled || loading ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
+      className={`${baseClass} ${sizeClass} ${variantClass} ${disabled || loading ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
       disabled={disabled || loading}
       {...props}
     >
+      {loading && (
+        <span className="inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />
+      )}
       {children}
     </button>
   );

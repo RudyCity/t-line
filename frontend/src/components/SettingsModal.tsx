@@ -886,8 +886,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {activeTab === 'connections' && (
             <div>
-              <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.1)', padding: '10px', borderRadius: '8px' }}>
-                <Shield size={16} className="text-purple-400 shrink-0" />
+              <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--color-primary-glow)', border: '1px solid color-mix(in srgb, var(--color-primary) 20%, transparent)', padding: '10px', borderRadius: '8px' }}>
+                <Shield size={16} style={{ color: 'var(--color-primary)' }} className="shrink-0" />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
                   Manage client devices accessing your server. You can block individual IPs to prevent unauthorized web or terminal connection requests.
                 </span>

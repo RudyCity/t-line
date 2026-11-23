@@ -1642,7 +1642,7 @@ export default function App() {
     return renderPreAuthWithControls(
       <div className="auth-wrapper">
         <div className="welcome-panel">
-          <Loader2 className="animate-spin text-purple-500" size={40} />
+          <Loader2 className="animate-spin" style={{ color: 'var(--color-primary)' }} size={40} />
           <p className="welcome-desc">Initializing t-line workspace system...</p>
         </div>
       </div>
@@ -1682,7 +1682,7 @@ export default function App() {
         <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-900 text-slate-300">
           <p className="text-lg font-semibold">Tab not found or closed.</p>
           <button 
-            className="mt-4 px-4 py-2 bg-purple-600 rounded text-sm text-white hover:bg-purple-500"
+            className="mt-4 px-4 py-2 bg-[var(--color-primary)] rounded text-sm text-white hover:bg-[var(--color-primary-hover)] transition-colors"
             onClick={() => {
               if ((window as any).__TAURI__) {
                 const getCurrentWindow = (window as any).__TAURI__?.window?.getCurrentWindow;
@@ -1719,7 +1719,7 @@ export default function App() {
         >
           <div className="flex items-center gap-2">
             {detachedTab.type === 'file' ? (
-              <FileCode size={14} className="text-purple-400" />
+              <FileCode size={14} style={{ color: 'var(--color-primary)' }} />
             ) : detachedTab.type === 'diff' ? (
               <GitCompare size={14} className="text-indigo-400" />
             ) : detachedTab.type === 'grid' ? (
@@ -1727,18 +1727,18 @@ export default function App() {
             ) : detachedTab.type === 'browser' ? (
               <Globe size={14} className="text-blue-400" />
             ) : (
-              <TerminalIcon size={14} className="text-purple-400" />
+              <TerminalIcon size={14} style={{ color: 'var(--color-primary)' }} />
             )}
             <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-main)' }}>
               {detachedTab.type === 'terminal' && detachedTab.focusedTerminalId ? (terminalInstances[detachedTab.focusedTerminalId]?.name || detachedTab.name) : detachedTab.name}
             </span>
-            <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400">Detached</span>
+            <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-[var(--color-primary-glow)] text-[var(--color-primary)]">Detached</span>
           </div>
           
           <div className="flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag' } as any}>
             <button 
               type="button" 
-              className="action-btn text-slate-400 hover:text-purple-400"
+              className="action-btn text-slate-400 hover:text-[var(--color-primary)]"
               title="Re-attach tab to main window"
               onClick={() => {
                 const updated = tabs.map(t => t.id === detachedTabId ? { ...t, isDetached: false } : t);
@@ -2186,7 +2186,7 @@ export default function App() {
 
           <div className="top-bar-actions flex items-center gap-2 shrink-0">
             <button 
-              className={`action-btn mobile-only ${showMobileKeyboard ? 'text-purple-400 bg-purple-500/10' : ''}`}
+              className={`action-btn mobile-only ${showMobileKeyboard ? 'text-[var(--color-primary)] bg-[var(--color-primary-glow)]' : ''}`}
               onClick={() => setShowMobileKeyboard(v => !v)}
               title="Toggle virtual touch keyboard"
             >
@@ -2205,7 +2205,7 @@ export default function App() {
               {panelWorkspace?.isGit && (
                 <button
                   type="button"
-                  className="action-btn text-purple-400 hover:text-purple-300"
+                  className="action-btn text-[var(--color-primary)] hover:opacity-80"
                   onClick={() => handleQuickSnapshot()}
                   disabled={quickCreating}
                   title="Quick Snapshot (Alt+S)"
@@ -2359,7 +2359,7 @@ export default function App() {
                                 );
                               })()}
                               {t.isDetached && (
-                                <ExternalLink size={10} className="tab-detached-icon ml-1 inline text-purple-400 opacity-80" />
+                                <ExternalLink size={10} className="tab-detached-icon ml-1 inline opacity-80" style={{ color: 'var(--color-primary)' }} />
                               )}
                             </span>
                             <span className="tab-close" onClick={(e) => closeTerminal(t.id, e)}>×</span>
@@ -2716,11 +2716,11 @@ export default function App() {
                       </div>
 
                       {/* Frosted Glass Locked Overlay */}
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 p-8 text-center bg-black/40 backdrop-blur-[3px] pointer-events-auto z-[90]">
-                        <div className="p-4 rounded-full bg-purple-500/10 border border-purple-500/25 mb-4 animate-pulse ">
-                          <Lock size={28} className="text-purple-400" />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 p-8 text-center bg-black/40 backdrop-blur-[4px] pointer-events-auto z-[90]">
+                        <div className="p-4 rounded-full bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/25 mb-4 animate-pulse">
+                          <Lock size={28} style={{ color: 'var(--color-primary)' }} />
                         </div>
-                        <p className="font-bold text-base text-purple-200 tracking-wide uppercase">Workspace Locked</p>
+                        <p className="font-bold text-base tracking-wide uppercase" style={{ color: 'var(--color-primary)' }}>Workspace Locked</p>
                         <p className="text-xs text-slate-400 mt-2 max-w-[280px]">
                           This workspace is currently open in a detached window.
                         </p>
@@ -2735,7 +2735,7 @@ export default function App() {
                               }).catch((e: any) => console.error(e));
                             }
                           }}
-                          className="mt-5 px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 hover:text-purple-200 text-xs font-semibold rounded-full border border-purple-500/30 hover:border-purple-500/50  transition-all duration-200 cursor-pointer flex items-center gap-2 hover:-translate-y-0.5 active:translate-y-0"
+                          className="mt-5 px-4 py-2 bg-[var(--color-primary-glow)] hover:bg-[var(--color-primary)]/25 text-[var(--color-primary)] hover:text-white text-xs font-semibold rounded-full border border-[var(--color-primary)]/30 hover:border-[var(--color-primary)]/60 transition-all duration-200 cursor-pointer flex items-center gap-2 hover:-translate-y-0.5 active:translate-y-0"
                         >
                           <Zap size={12} className="animate-bounce" />
                           <span>Re-attach Workspace</span>

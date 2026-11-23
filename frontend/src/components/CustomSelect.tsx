@@ -206,11 +206,13 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 
       {isOpen && (
         <div
-          className={`absolute left-0 rounded-lg border border-[var(--border-color)] overflow-hidden  z-50 flex flex-col max-h-60 ${variant === 'minimal' ? 'min-w-[110px]' : 'right-0'} ${align === 'top' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'}`}
+          className={`absolute left-0 rounded-lg border border-[var(--border-color)] overflow-hidden z-50 flex flex-col max-h-60 ${variant === 'minimal' ? 'min-w-[120px]' : 'right-0'} ${align === 'top' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'}`}
           style={{
-            background: 'color-mix(in srgb, var(--bg-sidebar) 95%, transparent)',
-            backdropFilter: 'blur(var(--blur-amount))',
-            boxShadow: 'var(--glass-shadow)',
+            background: 'color-mix(in srgb, var(--bg-card) 96%, transparent)',
+            backdropFilter: 'blur(var(--blur-amount, 8px))',
+            WebkitBackdropFilter: 'blur(var(--blur-amount, 8px))',
+            boxShadow: 'var(--r-ui-shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.08))',
+            borderRadius: 'var(--r-ui-radius-md, 8px)',
           }}
         >
           {searchable && (

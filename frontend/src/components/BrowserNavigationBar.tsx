@@ -132,9 +132,9 @@ export default function BrowserNavigationBar({
       {/* Center Section: URL Bar */}
       <div className="flex-1 max-w-2xl">
         <form onSubmit={handleNavigate} className="w-full flex items-center">
-          <div className="flex-1 relative flex items-center bg-[var(--bg-main)]/60 hover:bg-[var(--bg-main)]/90 focus-within:bg-[var(--bg-main)] focus-within:ring-2 focus-within:ring-purple-500/20 transition-all border border-[var(--border-color)] focus-within:border-purple-500/50 rounded-full px-3 py-1">
+          <div className="flex-1 relative flex items-center bg-[var(--bg-main)]/60 hover:bg-[var(--bg-main)]/90 focus-within:bg-[var(--bg-main)] focus-within:ring-2 focus-within:ring-[var(--color-primary)]/20 transition-all border border-[var(--border-color)] focus-within:border-[var(--color-primary)]/50 rounded-full px-3 py-1">
             
-            <Globe size={14} className="text-purple-400/80 shrink-0" />
+            <Globe size={14} className="shrink-0" style={{ color: 'var(--color-primary)' }} />
             
             <input 
               type="text"
@@ -161,10 +161,10 @@ export default function BrowserNavigationBar({
                   {showAddBookmarkPopover && (
                     <div
                       ref={newBookmarkPopoverRef}
-                      className="absolute right-0 top-full mt-2 w-64 bg-gray-900 border border-[var(--border-color)] rounded-xl  p-3 z-[9999] flex flex-col gap-2"
-                      style={{ backgroundColor: 'rgb(17, 24, 39)' }}
+                      className="absolute right-0 top-full mt-2 w-64 bg-gray-900 border border-[var(--border-color)] rounded-xl p-3 z-[9999] flex flex-col gap-2"
+                      style={{ backgroundColor: 'var(--bg-card)' }}
                     >
-                      <div className="text-[10px] font-semibold text-purple-400">
+                      <div className="text-[10px] font-semibold text-[var(--color-primary)]">
                         {isCurrentBookmarked ? 'Edit Bookmark' : 'Tambah Bookmark'}
                       </div>
                       <input
@@ -192,7 +192,7 @@ export default function BrowserNavigationBar({
                         <button
                           type="button"
                           onClick={handleSaveNewBookmark}
-                          className="px-2.5 py-1 text-[9px] bg-purple-600 hover:bg-purple-500 text-white rounded cursor-pointer font-semibold"
+                          className="px-2.5 py-1 text-[9px] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white rounded cursor-pointer font-semibold"
                         >
                           Simpan
                         </button>
@@ -219,7 +219,7 @@ export default function BrowserNavigationBar({
                   onClick={() => setShowHistoryDropdown(!showHistoryDropdown)}
                   className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
                     showHistoryDropdown
-                      ? 'bg-purple-600/20 border-purple-500 text-purple-400 '
+                      ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)]/50 text-[var(--color-primary)]'
                       : 'bg-[var(--bg-main)] border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
                   }`}
                   title="Riwayat Browser / History"
@@ -252,7 +252,7 @@ export default function BrowserNavigationBar({
             onClick={() => setDeviceMode('desktop')}
             className={`p-1.5 rounded-md transition-all cursor-pointer ${
               deviceMode === 'desktop'
-                ? 'bg-purple-500/20 text-purple-400 font-semibold animate-none'
+                ? 'bg-[var(--color-primary-glow)] text-[var(--color-primary)] font-semibold animate-none'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
             }`}
             title="Desktop View"
@@ -264,7 +264,7 @@ export default function BrowserNavigationBar({
             onClick={() => setDeviceMode('tablet')}
             className={`p-1.5 rounded-md transition-all cursor-pointer ${
               deviceMode === 'tablet'
-                ? 'bg-purple-500/20 text-purple-400 font-semibold animate-none'
+                ? 'bg-[var(--color-primary-glow)] text-[var(--color-primary)] font-semibold animate-none'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
             }`}
             title="Tablet View"
@@ -276,7 +276,7 @@ export default function BrowserNavigationBar({
             onClick={() => setDeviceMode('mobile')}
             className={`p-1.5 rounded-md transition-all cursor-pointer ${
               deviceMode === 'mobile'
-                ? 'bg-purple-500/20 text-purple-400 font-semibold animate-none'
+                ? 'bg-[var(--color-primary-glow)] text-[var(--color-primary)] font-semibold animate-none'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
             }`}
             title="Mobile View"
@@ -324,7 +324,7 @@ export default function BrowserNavigationBar({
             onClick={toggleInspect}
             className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
               isInspecting 
-                ? 'bg-purple-500/20 border-purple-500 text-purple-400 '
+                ? 'bg-[var(--color-primary-glow)] border-[var(--color-primary)]/50 text-[var(--color-primary)]'
                 : 'bg-[var(--bg-main)]/50 border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card-hover)]'
             }`}
             title="Inspect Element (Click and select items to inspect)"

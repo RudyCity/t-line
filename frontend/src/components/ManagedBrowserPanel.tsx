@@ -320,7 +320,7 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent,
           if (embedded) setEmbedded(false);
           setExpanded(v => !v);
         }}>
-        <Monitor size={14} className="text-purple-400" />
+        <Monitor size={14} style={{ color: 'var(--color-primary)' }} />
         <strong>Managed Browser</strong>
         <span className="text-[var(--text-muted)]">{embeddedReady ? 'Embedded Chrome · interactive' : 'Real Chrome · experimental'}</span>
       </button>
@@ -359,14 +359,14 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent,
                   </div>
                   <div className={embeddedReady ? 'hidden' : 'flex flex-wrap gap-2'}>
                     <button type="button" disabled={busy || !!selected || !available?.available} onClick={() => void launch()}
-                      className="rounded bg-purple-600 px-2 py-1.5 text-white disabled:opacity-40">Launch Chrome</button>
+                      className="rounded bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] px-2 py-1.5 text-white disabled:opacity-40 transition-colors">Launch Chrome</button>
                     <button type="button" disabled={busy || !!selected || !available?.available}
-                      onClick={() => void launch(true)} className="rounded bg-purple-600 px-2 py-1.5 text-white disabled:opacity-40">
+                      onClick={() => void launch(true)} className="rounded bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] px-2 py-1.5 text-white disabled:opacity-40 transition-colors">
                       Open Chrome inside T-Line
                     </button>
                     {selected?.embedded && !embedded && selected.lifecycle === 'ready' &&
                       <button type="button" onClick={() => { setExpanded(true); setEmbedded(true); }}
-                        className="rounded border border-purple-500 px-2 py-1.5 text-purple-400">Resume embedded Chrome</button>}
+                        className="rounded border border-[var(--color-primary)] px-2 py-1.5 text-[var(--color-primary)]">Resume embedded Chrome</button>}
                     <button type="button" disabled={busy || !selected} onClick={() => void stop()}
                       className="inline-flex items-center gap-1 rounded border border-[var(--border-color)] px-2 py-1.5 disabled:opacity-40">
                       <Square size={12} /> Stop owned browser
@@ -466,9 +466,9 @@ export default function ManagedBrowserPanel({ active, initialUrl, onSendToAgent,
                        </button>
                        {controlledMode === 'human'
                          ? <button type="button" disabled={busy} onClick={() => void changeControl('agent')}
-                             className="rounded border border-purple-500 px-2 py-1 disabled:opacity-40">Return to Agent</button>
+                             className="rounded border border-[var(--color-primary)] px-2 py-1 text-[var(--color-primary)] disabled:opacity-40">Return to Agent</button>
                          : <button type="button" disabled={busy} onClick={() => void changeControl('human')}
-                             className="rounded bg-purple-600 px-2 py-1 text-white disabled:opacity-40">Take Control</button>}
+                             className="rounded bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] px-2 py-1 text-white disabled:opacity-40 transition-colors">Take Control</button>}
                      </div>
                    )}
                    {embeddedReady && error && <p role="alert" className="text-red-400">{error}</p>}

@@ -353,12 +353,13 @@ export function renderMessageContent(
       continue;
     }
 
-    // 6. Blockquote: > quote
+    // 6. Blockquote: > quote (r-ui v3.5.0 Law 11: Crisp uniform border with soft tint)
     if (trimmed.startsWith('>')) {
       const quoteText = trimmed.replace(/^>\s*/, '');
       blocks.push(
-        <blockquote key={`quote-${i}`} className="my-2 border-l-2 border-[var(--color-primary)] bg-[var(--color-primary-glow)] px-3 py-1.5 rounded-r text-[var(--text-main)] italic text-[11px]">
-          {renderInlineMarkdown(quoteText, onOpenFile)}
+        <blockquote key={`quote-${i}`} className="my-2 flex items-start gap-2.5 border border-[var(--color-primary)]/25 bg-[var(--color-primary-glow)] px-3 py-2 rounded-lg text-[var(--text-main)] italic text-[11px]">
+          <div className="w-0.5 self-stretch rounded-full bg-[var(--color-primary)] shrink-0 opacity-80" />
+          <div className="flex-1">{renderInlineMarkdown(quoteText, onOpenFile)}</div>
         </blockquote>
       );
       i++;

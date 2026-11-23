@@ -514,7 +514,7 @@ export const PortTunnelsManagerModal: React.FC<PortTunnelsManagerModalProps> = (
         {/* Active Tunnels list */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-1.5 mb-1">
-            <Globe size={11} className="text-purple-400" />
+            <Globe size={11} style={{ color: 'var(--color-primary)' }} />
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Active Custom Tunnels</h4>
           </div>
           {tunnelStatus.customs.length === 0 ? (
@@ -529,11 +529,11 @@ export const PortTunnelsManagerModal: React.FC<PortTunnelsManagerModalProps> = (
                   className="flex items-center justify-between p-2.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] transition-all font-mono text-xs"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-purple-300">Port {cust.port}</span>
+                    <span className="font-bold text-[var(--color-primary)]">Port {cust.port}</span>
                     <span className="text-[9px] uppercase px-1.5 py-0.5 rounded font-sans border" style={{
-                      backgroundColor: cust.type === 'quick' ? 'rgba(168,85,247,0.08)' : 'rgba(236,72,153,0.08)',
-                      borderColor: cust.type === 'quick' ? 'rgba(168,85,247,0.25)' : 'rgba(236,72,153,0.25)',
-                      color: cust.type === 'quick' ? '#c084fc' : '#f472b6'
+                      backgroundColor: cust.type === 'quick' ? 'var(--color-primary-glow)' : 'rgba(236,72,153,0.08)',
+                      borderColor: cust.type === 'quick' ? 'color-mix(in srgb, var(--color-primary) 30%, transparent)' : 'rgba(236,72,153,0.25)',
+                      color: cust.type === 'quick' ? 'var(--color-primary)' : '#f472b6'
                     }}>
                       {cust.type}
                     </span>

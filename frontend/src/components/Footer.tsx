@@ -174,7 +174,7 @@ export function Footer({
               className="h-1.5 w-1.5 rounded-full"
               style={{
                 backgroundColor: 'var(--color-primary)',
-                boxShadow: '0 0 6px var(--color-primary)'
+                boxShadow: '0 0 0 1px var(--color-primary)'
               }}
             />
             <span>t-line v{appVersion || '1.3.73'}</span>
@@ -184,7 +184,7 @@ export function Footer({
         {/* System Resource Stats — visible on small screens and up */}
         {systemStats && (
           <div 
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all duration-200  cursor-default relative group"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all duration-200 cursor-default relative group"
             style={{
               backgroundColor: 'color-mix(in srgb, var(--bg-main) 60%, transparent)',
               borderColor: 'var(--border-color)',
@@ -228,7 +228,7 @@ export function Footer({
               
               <div className="space-y-2 text-[10px]">
                 <div>
-                  <p className="font-semibold text-purple-300">Backend Process</p>
+                  <p className="font-semibold" style={{ color: 'var(--color-primary)' }}>Backend Process</p>
                   <div className="flex justify-between pl-1">
                     <span className="text-slate-500">RSS (Total):</span>
                     <span className="font-mono text-slate-300">{formatBytes(systemStats.backend.rss)}</span>
@@ -316,7 +316,7 @@ export function Footer({
               <>
                 <span style={{ color: 'var(--border-color)' }}>|</span>
                 <span 
-                  className="flex items-center gap-1.5 px-1.5 py-0.5 rounded font-sans text-[11px] transition-all duration-150 border cursor-pointer hover:bg-purple-500/10 hover:border-purple-500/30"
+                  className="flex items-center gap-1.5 px-1.5 py-0.5 rounded font-sans text-[11px] transition-all duration-150 border cursor-pointer hover:bg-[var(--color-primary-glow)] hover:border-[var(--color-primary)]/30"
                   style={{
                     backgroundColor: activeBranch.isDirty 
                       ? 'rgba(245, 158, 11, 0.08)' 
@@ -375,7 +375,7 @@ export function Footer({
                   className="h-1 w-1 rounded-full" 
                   style={{
                     backgroundColor: tunnelStatus.tline.active ? '#10b981' : 'var(--text-muted)',
-                    boxShadow: tunnelStatus.tline.active ? '0 0 6px #10b981' : 'none'
+                    boxShadow: tunnelStatus.tline.active ? '0 0 0 1px #10b981' : 'none'
                   }}
                 />
               )}
@@ -463,7 +463,7 @@ export function Footer({
                 <button 
                   onClick={() => handleStartTunnel('tline', 'quick')}
                   disabled={tunnelLoading.tline}
-                  className={`px-1.5 py-0.5 rounded border border-purple-500/25 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 hover:text-purple-200 text-[9px] font-medium transition-all duration-150 ${
+                  className={`px-1.5 py-0.5 rounded border border-[var(--color-primary)]/25 bg-[var(--color-primary-glow)] hover:bg-[var(--color-primary)]/20 text-[var(--color-primary)] hover:text-white text-[9px] font-medium transition-all duration-150 ${
                     tunnelLoading.tline ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                   }`}
                 >
@@ -497,22 +497,22 @@ export function Footer({
           className="flex items-center gap-1.5 px-2 py-0.5 rounded border text-[10px] font-medium transition-all duration-150 hover:-translate-y-[0.5px] active:translate-y-0 cursor-pointer"
           style={{
             backgroundColor: tunnelStatus.customs && tunnelStatus.customs.length > 0 
-              ? 'rgba(168, 85, 247, 0.08)' 
+              ? 'var(--color-primary-glow)' 
               : 'color-mix(in srgb, var(--bg-main) 30%, transparent)',
             borderColor: tunnelStatus.customs && tunnelStatus.customs.length > 0 
-              ? 'rgba(168, 85, 247, 0.25)' 
+              ? 'color-mix(in srgb, var(--color-primary) 30%, transparent)' 
               : 'var(--border-color)',
             color: tunnelStatus.customs && tunnelStatus.customs.length > 0 
-              ? '#c084fc' 
+              ? 'var(--color-primary)' 
               : 'var(--text-main)'
           }}
         >
-          <Globe size={10} style={{ color: tunnelStatus.customs && tunnelStatus.customs.length > 0 ? '#c084fc' : 'var(--text-muted)' }} />
+          <Globe size={10} style={{ color: tunnelStatus.customs && tunnelStatus.customs.length > 0 ? 'var(--color-primary)' : 'var(--text-muted)' }} />
           <span>Port Tunnels</span>
           {tunnelStatus.customs && tunnelStatus.customs.length > 0 && (
             <span 
-              className="ml-0.5 px-1 py-0.1 text-[8px] font-bold rounded-full bg-purple-500 text-white font-mono leading-none flex items-center justify-center"
-              style={{ fontSize: '8px', minWidth: '12px', height: '12px' }}
+              className="ml-0.5 px-1 py-0.1 text-[8px] font-bold rounded-full text-white font-mono leading-none flex items-center justify-center"
+              style={{ backgroundColor: 'var(--color-primary)', fontSize: '8px', minWidth: '12px', height: '12px' }}
             >
               {tunnelStatus.customs.length}
             </span>

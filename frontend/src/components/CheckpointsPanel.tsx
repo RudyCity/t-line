@@ -429,12 +429,12 @@ export function CheckpointsPanel({
       {/* Header controls */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)] bg-[var(--bg-sidebar)]">
         <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] font-bold flex items-center gap-1.5">
-          <Clock size={11} className="text-purple-400" />
+          <Clock size={11} style={{ color: 'var(--color-primary)' }} />
           Checkpoints & Snapshots
         </span>
         {panelWorkspace?.isGit && (
           <button
-            className="flex items-center gap-1 px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-semibold cursor-pointer transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1 rounded bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-[11px] font-semibold cursor-pointer transition-colors"
             onClick={() => setShowCreateModal(true)}
             title="Take a snapshot of current changes"
           >
@@ -448,7 +448,7 @@ export function CheckpointsPanel({
       <div className="cp-list">
         {loading && checkpoints.length === 0 ? (
           <div className="flex items-center justify-center py-12 gap-2 text-xs text-[var(--text-muted)]">
-            <Loader2 size={14} className="animate-spin text-purple-400" />
+            <Loader2 size={14} className="animate-spin" style={{ color: 'var(--color-primary)' }} />
             <span>Loading snapshots...</span>
           </div>
         ) : error ? (
@@ -519,7 +519,7 @@ export function CheckpointsPanel({
                   <div className="mt-1 border-t border-[var(--border-color)]/30 pt-1">
                     <button
                       onClick={() => handleToggleExpand(cp)}
-                      className="flex items-center gap-1 text-[9px] text-purple-400 hover:text-purple-300 font-semibold"
+                      className="flex items-center gap-1 text-[9px] text-[var(--color-primary)] hover:opacity-80 font-semibold"
                     >
                       {isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
                       <span>{isExpanded ? 'Hide changes' : 'View changes'}</span>
@@ -529,7 +529,7 @@ export function CheckpointsPanel({
                       <div className="mt-1.5 flex flex-col gap-1 pl-1">
                         {isLoadingDetails ? (
                           <div className="flex items-center gap-1.5 py-2 pl-2 text-[9px] text-[var(--text-muted)]">
-                            <Loader2 size={10} className="animate-spin text-purple-400" />
+                            <Loader2 size={10} className="animate-spin" style={{ color: 'var(--color-primary)' }} />
                             <span>Reading snapshot files...</span>
                           </div>
                         ) : details?.files && details.files.length > 0 ? (
@@ -546,7 +546,7 @@ export function CheckpointsPanel({
                                 <div className="flex items-center gap-1.5 shrink-0">
                                   <button
                                     onClick={() => onOpenDiffTab?.(cp.commitHash, file.path, panelWorktreePath ?? undefined, true)}
-                                    className="p-0.5 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded cursor-pointer transition-colors"
+                                    className="p-0.5 text-[var(--color-primary)] hover:opacity-80 hover:bg-[var(--color-primary-glow)] rounded cursor-pointer transition-colors"
                                     title="Compare snapshot file vs current working directory"
                                     style={{ border: 'none', background: 'transparent' }}
                                   >
@@ -572,7 +572,7 @@ export function CheckpointsPanel({
                   <button
                     onClick={() => handleRestoreCheckpoint(cp)}
                     disabled={restoringCpId !== null}
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-[var(--bg-main)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] text-[10px] font-semibold text-purple-400 hover:text-purple-300 cursor-pointer disabled:opacity-50 transition-colors"
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-[var(--bg-main)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] text-[10px] font-semibold text-[var(--color-primary)] hover:opacity-80 cursor-pointer disabled:opacity-50 transition-colors"
                   >
                     {restoringCpId === cp.id ? (
                       <Loader2 size={10} className="animate-spin" />
@@ -606,7 +606,7 @@ export function CheckpointsPanel({
           <div className="modal-content glass-panel" style={{ maxWidth: '400px' }}>
             <div className="modal-header">
               <div className="flex items-center gap-2">
-                <Camera size={15} className="text-purple-400" />
+                <Camera size={15} style={{ color: 'var(--color-primary)' }} />
                 <h3 className="modal-title">Create State Snapshot</h3>
               </div>
               <button type="button" className="action-btn" onClick={() => setShowCreateModal(false)}>

@@ -218,10 +218,10 @@ export function SuperAgentSidebar({
               className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-[var(--surface-overlay-hover)]/60 transition cursor-pointer text-left"
             >
               <div className="flex items-center gap-2">
-                <LinkIcon className="w-3.5 h-3.5 text-purple-400 opacity-90" />
+                <LinkIcon className="w-3.5 h-3.5 opacity-90" style={{ color: 'var(--color-primary)' }} />
                 <span className="text-[11px] font-medium text-[var(--text-main)]">Workspace Chain</span>
                 {chainNodes.length > 0 && (
-                  <span className="text-[9px] font-mono text-purple-400 bg-purple-500/10 px-1.5 py-0.2 rounded-full">
+                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-[var(--color-primary-glow)] text-[var(--color-primary)]">
                     {chainNodes.length}
                   </span>
                 )}
@@ -231,9 +231,9 @@ export function SuperAgentSidebar({
 
             {openSections.chain && (
               <div className="p-1.5 pt-0.5 space-y-1">
-                <div className="flex items-center justify-between px-2 py-1 bg-purple-500/5 rounded border border-purple-500/15 text-[10px] font-mono text-purple-300">
+                <div className="flex items-center justify-between px-2 py-1 bg-[var(--color-primary-glow)] rounded border border-[var(--color-primary)]/20 text-[10px] font-mono text-[var(--color-primary)]">
                   <span className="truncate font-medium">{chainInfo.name}</span>
-                  <span className="text-[8px] bg-purple-500/20 text-purple-200 px-1 py-0.2 rounded font-semibold tracking-wide">ACTIVE</span>
+                  <span className="text-[8px] bg-[var(--color-primary)]/20 text-[var(--color-primary)] px-1 py-0.2 rounded font-semibold tracking-wide">ACTIVE</span>
                 </div>
 
                 <div className="space-y-1 pt-0.5">
@@ -247,7 +247,7 @@ export function SuperAgentSidebar({
                         onClick={() => onSwitchChainNode?.(node.id)}
                         className={`p-1.5 rounded-md text-[10px] transition-all cursor-pointer flex items-center justify-between font-mono ${
                           isCurrent
-                            ? 'bg-purple-500/10 border border-purple-500/30 text-purple-200 shadow-sm'
+                            ? 'bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/30 text-[var(--color-primary)] font-semibold shadow-sm'
                             : 'hover:bg-[var(--surface-overlay-hover)]/80 text-[var(--text-muted)] border border-transparent'
                         }`}
                       >

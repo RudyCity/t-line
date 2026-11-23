@@ -587,7 +587,7 @@ export function GitHistory({ workspaceId, token, worktreePath, onOpenDiffTab }: 
                             <RefBadges refNames={commit.refNames} />
                           </div>
                           <div className="git-history-meta">
-                            <span className="font-mono text-purple-400 font-semibold">{commit.shortHash}</span>
+                            <span className="font-mono text-[var(--color-primary)] font-semibold">{commit.shortHash}</span>
                             <span>•</span>
                             <span>{commit.authorName}</span>
                             <span>•</span>

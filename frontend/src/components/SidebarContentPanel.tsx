@@ -90,9 +90,9 @@ export function WorkspaceSwitcher({
           border-color: rgba(0, 0, 0, 0.2);
         }
         .ws-pill-active {
-          background: var(--tab-active-bg, rgba(168,85,247,0.13)) !important;
-          border-color: var(--tab-active-border, rgba(168,85,247,0.35)) !important;
-          color: var(--color-primary, #6366f1) !important;
+          background: var(--tab-active-bg, var(--color-primary-glow)) !important;
+          border-color: var(--tab-active-border, var(--color-primary)) !important;
+          color: var(--color-primary) !important;
           box-shadow: none !important;
         }
       `}</style>
@@ -230,7 +230,7 @@ export function SidebarContentPanel({
           <div className="flex justify-between items-center mb-1">
             <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Active Tabs</span>
             <button
-              className="px-2 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+              className="px-2.5 py-1 rounded bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
               onClick={() => {
                 openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '');
                 setSidebarOpen(false);

@@ -280,7 +280,7 @@ export function CliBridgeOrchestrationDashboard({
       case 'starting':
         return <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1"><Zap size={11} className="animate-spin" /> {status}</span>;
       case 'queued':
-        return <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center gap-1"><Clock size={11} /> queued</span>;
+        return <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-[var(--color-primary-glow)] text-[var(--color-primary)] border border-[var(--color-primary)]/20 flex items-center gap-1"><Clock size={11} /> queued</span>;
       case 'succeeded':
         return <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><CheckCircle2 size={11} /> succeeded</span>;
       case 'failed':
@@ -516,7 +516,7 @@ export function CliBridgeOrchestrationDashboard({
                               {j.cliAlias}
                             </span>
                             {j.roleProfile && (
-                              <span className="px-1.5 py-0.5 text-[10px] font-mono bg-purple-500/10 text-purple-300 rounded border border-purple-500/20">
+                              <span className="px-1.5 py-0.5 text-[10px] font-mono bg-[var(--color-primary-glow)] text-[var(--color-primary)] rounded border border-[var(--color-primary)]/20">
                                 {j.roleProfile}
                               </span>
                             )}

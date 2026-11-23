@@ -866,7 +866,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
         {/* Device Mode Resolution Label overlay */}
         {deviceMode !== 'desktop' && (
           <div className="flex items-center justify-between px-4 py-1.5 bg-[var(--bg-card)] border-b border-[var(--border-color)] text-xs text-[var(--text-muted)] select-none shrink-0">
-            <span className="font-semibold capitalize text-purple-400">
+            <span className="font-semibold capitalize text-[var(--color-primary)]">
               {deviceMode} View
             </span>
             <span className="font-mono bg-[var(--bg-main)] px-2 py-0.5 rounded border border-[var(--border-color)]">
@@ -924,7 +924,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
                   {nativeError && (
                     <div role="alert" className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[var(--bg-main)] p-5 text-center">
                       <p className="text-sm text-red-300">{nativeError}</p>
-                      <button type="button" className="rounded-md bg-purple-600 px-3 py-2 text-xs text-white"
+                      <button type="button" className="btn btn-sm btn-primary"
                         onClick={() => setNativeGeneration(value => value + 1)}>Retry Browser</button>
                     </div>
                   )}
@@ -948,8 +948,8 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 p-8 text-center bg-[var(--bg-main)]">
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-                      <Globe size={28} className="text-purple-400" />
+                    <div className="w-16 h-16 rounded-2xl bg-[var(--color-primary-glow)] border border-[var(--color-primary)]/20 flex items-center justify-center">
+                      <Globe size={28} style={{ color: 'var(--color-primary)' }} />
                     </div>
                     <h2 className="text-[var(--text-main)] font-semibold text-lg">External Website</h2>
                     <p className="text-[var(--text-muted)] text-sm max-w-sm leading-relaxed">
@@ -961,7 +961,7 @@ export default function BrowserTab({ tab, isActive, onUpdateTabName, onUpdateTab
                   <div className="flex flex-col gap-3 w-full max-w-sm">
                     <button
                       onClick={() => openInSystemBrowser(activeUrl)}
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-lg transition-colors  cursor-pointer"
+                      className="btn btn-md btn-primary w-full"
                     >
                       <ExternalLink size={15} />
                       Open in System Browser

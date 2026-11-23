@@ -55,6 +55,7 @@
     font-weight: var(--font-sans-weight, 400);
     overflow: hidden;
     height: 100vh;
+    height: 100dvh;
     width: 100vw;
     -webkit-font-smoothing: antialiased;
     background-image: 
@@ -66,6 +67,39 @@
     font-family: inherit;
     font-size: inherit;
     color: inherit;
+  }
+
+  /* Universal Custom Select Styling (r-ui v3.5.0 Law 9 - Anti-Raw Native Forms) */
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: var(--bg-card);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    border-radius: var(--r-ui-radius-sm, 6px);
+    padding: 5px 28px 5px 10px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 12px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s var(--r-ui-ease-spring, cubic-bezier(0.16, 1, 0.3, 1)), box-shadow 0.15s ease;
+  }
+
+  select:hover:not(:disabled) {
+    border-color: var(--r-ui-color-border-strong, rgba(255, 255, 255, 0.22));
+  }
+
+  select:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--color-primary);
+  }
+
+  select option {
+    background-color: var(--bg-card);
+    color: var(--text-main);
+    padding: 6px 10px;
   }
 
   a {
