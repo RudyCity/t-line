@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { GitBranch, Plus, Loader2, Download, Upload, X, CheckCircle2, AlertCircle, Search, Trash2, Check, RefreshCw } from 'lucide-react';
+import { Plus, Loader2, Download, Upload, X, CheckCircle2, AlertCircle, Search, Trash2, Check, RefreshCw } from 'lucide-react';
+import { GitBranchIcon } from './GitBranchIcon';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 
 interface BranchModalProps {
@@ -201,7 +202,7 @@ export const BranchModal: React.FC<BranchModalProps> = ({
         {/* Header */}
         <div className="bm-header">
           <div className="bm-title">
-            <GitBranch size={18} className="bm-title-icon" />
+            <GitBranchIcon size={18} className="bm-title-icon" />
             <span>Branch Management</span>
           </div>
           <button type="button" className="bm-close-btn" onClick={onClose}>
@@ -279,7 +280,7 @@ export const BranchModal: React.FC<BranchModalProps> = ({
                 return (
                   <div key={b} className="bm-list-item bm-list-item--confirm">
                     <span className="bm-confirm-label">
-                      <GitBranch size={13} />
+                      <GitBranchIcon size={13} />
                       {`Switch to branch '${b}'?`}
                     </span>
                     <span className="bm-confirm-actions">
@@ -297,7 +298,7 @@ export const BranchModal: React.FC<BranchModalProps> = ({
                   onClick={() => { if (!isActive && !syncAction && !loadingBranches) setCheckoutConfirmBranch(b); }}
                 >
                   <span className="bm-list-item-left">
-                    <GitBranch size={12} />
+                    <GitBranchIcon size={12} />
                     <span className="bm-list-item-name">{b}</span>
                   </span>
                   <span className="bm-list-item-right" onClick={(e) => e.stopPropagation()}>

@@ -1,5 +1,6 @@
 import React from 'react';
-import { GitBranch, ExternalLink, Copy, Check, Info, Folder, Globe, Cpu } from 'lucide-react';
+import { ExternalLink, Copy, Check, Info, Folder, Globe, Cpu } from 'lucide-react';
+import { GitBranchIcon } from './GitBranchIcon';
 import { WorkspaceInfo } from '../hooks/useTerminals';
 import { Toast } from './Toast';
 import { SystemStats } from '../hooks/useSystemStats';
@@ -140,10 +141,10 @@ export function Footer({
   return (
     <>
       <footer 
-        className="app-footer flex items-center justify-between px-6 border-t backdrop-blur-md text-xs select-none shrink-0 h-9 z-20"
+        className="app-footer flex items-center justify-between px-4 border-t backdrop-blur-md text-xs select-none shrink-0 h-8 z-20"
         style={{
-          backgroundColor: 'color-mix(in srgb, var(--bg-sidebar) 90%, transparent)',
-          borderTopColor: 'var(--border-color)',
+          backgroundColor: 'color-mix(in srgb, var(--bg-main) 92%, transparent)',
+          borderTopColor: 'color-mix(in srgb, var(--border-color) 40%, transparent)',
           color: 'var(--text-muted)'
         }}
       >
@@ -330,7 +331,7 @@ export function Footer({
                   onClick={onBranchClick}
                   title={activeBranch.isDirty ? "Uncommitted changes (Click to Switch/Sync Branch)" : "Git Branch (Click to Switch/Sync Branch)"}
                 >
-                  <GitBranch size={11} style={{ color: activeBranch.isMain ? 'var(--color-primary)' : '#10b981' }} />
+                  <GitBranchIcon size={12} style={{ color: activeBranch.isMain ? 'var(--color-primary)' : '#10b981' }} />
                   <span className="font-medium">{activeBranch.name}</span>
                 </span>
               </>

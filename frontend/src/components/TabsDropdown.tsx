@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, X, FileCode, Terminal as TerminalIcon, GitCompare, GitBranch, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, X, FileCode, Terminal as TerminalIcon, GitCompare, ArrowUp, ArrowDown } from 'lucide-react';
+import { GitBranchIcon } from './GitBranchIcon';
 import { TabData, TerminalInstanceData } from '../hooks/useTerminals';
 
 interface TabsDropdownProps {
@@ -248,7 +249,7 @@ export const TabsDropdown: React.FC<TabsDropdownProps> = ({
                         flexShrink: 0
                       }}
                     >
-                      <GitBranch size={8} />
+                      <GitBranchIcon size={10} />
                       <span>{branch}</span>
                     </div>
                   )}

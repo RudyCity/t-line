@@ -6,6 +6,7 @@ interface SuperAgentGroupedMessagesProps {
   messages: ConsoleMessage[];
   isSystemNoiseMsg: (msg: ConsoleMessage) => boolean;
   isStreaming?: boolean;
+  onOpenFile?: (filePath: string, fileName?: string) => void;
 }
 
 export interface TurnBlock {
@@ -74,11 +75,13 @@ export function groupMessagesIntoTurns(
 function CollapsibleProcessBlock({
   msgs,
   isLastTurn,
-  isStreaming
+  isStreaming,
+  onOpenFile
 }: {
   msgs: ConsoleMessage[];
   isLastTurn: boolean;
   isStreaming?: boolean;
+  onOpenFile?: (filePath: string, fileName?: string) => void;
 }) {
   const [expanded, setExpanded] = useState<boolean>(() =>
     !(localStorage.getItem('tline-theme') || '').startsWith('calm-')
@@ -149,7 +152,7 @@ function CollapsibleProcessBlock({
       {expanded && (
         <div className="mt-1 ml-3 pl-3 border-l border-[var(--color-primary)]/25 space-y-1 my-1">
           {msgs.map((msg, idx) => (
-            <SuperAgentMessageItem key={idx} msg={msg} index={idx} />
+            <SuperAgentMessageItem key={idx} msg={msg} index={idx} onOpenFile={onOpenFile} />
           ))}
         </div>
       )}
@@ -160,7 +163,8 @@ function CollapsibleProcessBlock({
 export const SuperAgentGroupedMessages: React.FC<SuperAgentGroupedMessagesProps> = ({
   messages,
   isSystemNoiseMsg,
-  isStreaming
+  isStreaming,
+  onOpenFile
 }) => {
   const turns = groupMessagesIntoTurns(messages, isSystemNoiseMsg);
 
@@ -178,7 +182,7 @@ export const SuperAgentGroupedMessages: React.FC<SuperAgentGroupedMessagesProps>
                     ❯ USER
                   </span>
                   <div className="text-xs text-[var(--text-main)] font-sans leading-relaxed flex-1 select-text">
-                    {renderMessageContent(turn.userMsg.text)}
+                    {renderMessageContent(turn.userMsg.text, onOpenFile)}
                   </div>
                 </div>
               </div>
@@ -193,6 +197,7 @@ export const SuperAgentGroupedMessages: React.FC<SuperAgentGroupedMessagesProps>
                     msgs={block.messages}
                     isLastTurn={isLastTurn}
                     isStreaming={isStreaming && isLastTurn}
+                    onOpenFile={onOpenFile}
                   />
                 );
               }
@@ -202,6 +207,7 @@ export const SuperAgentGroupedMessages: React.FC<SuperAgentGroupedMessagesProps>
                   key={`ast-${blockIdx}-${astIdx}`}
                   msg={astMsg}
                   index={turnIdx * 100 + blockIdx * 10 + astIdx}
+                  onOpenFile={onOpenFile}
                 />
               ));
             })}

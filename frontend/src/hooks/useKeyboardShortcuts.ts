@@ -3,7 +3,7 @@ import { useEffect, useCallback } from 'react';
 export interface KeyboardShortcutsOptions {
   /** Buka terminal baru (Alt+T) */
   onNewTerminal: () => void;
-  /** Tutup tab aktif (Alt+W) */
+  /** Tutup tab aktif (Alt+W / Ctrl+W) */
   onCloseTab: () => void;
   /** Tab berikutnya (Alt+]) */
   onNextTab: () => void;
@@ -34,7 +34,7 @@ export interface KeyboardShortcutsOptions {
  *
  * Shortcut Reference:
  *   Alt+T          → New Terminal
- *   Alt+W          → Close active tab
+ *   Alt+W / Ctrl+W → Close active tab (Ctrl+W reserved for readline inside xterm)
  *   Alt+]          → Next tab
  *   Alt+[          → Previous tab
  *   Alt+1-9        → Jump to tab N
@@ -113,8 +113,12 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      // ── Alt+W — Close current tab ───────────────────────
-      if (alt && !shift && e.key === 'w') {
+      // ── Alt+W or (Ctrl+W / Cmd+W outside xterm) — Close current tab ───
+      const isXterm = Boolean(
+        (e.target as HTMLElement)?.classList?.contains('xterm-helper-textarea') ||
+        (e.target as HTMLElement)?.closest?.('.xterm')
+      );
+      if (!shift && (e.key === 'w' || e.key === 'W') && (alt || (ctrlOrCmd && !isXterm))) {
         e.preventDefault();
         onCloseTab();
         return;

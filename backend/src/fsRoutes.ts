@@ -222,6 +222,41 @@ router.get('/read', authMiddleware, async (req, res) => {
   }
 });
 
+function getMimeType(ext: string): string {
+  switch (ext) {
+    // Documents
+    case '.pdf': return 'application/pdf';
+    case '.json': return 'application/json';
+    case '.txt': return 'text/plain; charset=utf-8';
+    case '.html': case '.htm': return 'text/html; charset=utf-8';
+    case '.css': return 'text/css; charset=utf-8';
+    case '.js': case '.mjs': return 'application/javascript; charset=utf-8';
+    // Images
+    case '.png': return 'image/png';
+    case '.jpg': case '.jpeg': return 'image/jpeg';
+    case '.gif': return 'image/gif';
+    case '.webp': return 'image/webp';
+    case '.svg': return 'image/svg+xml';
+    case '.ico': return 'image/x-icon';
+    case '.bmp': return 'image/bmp';
+    case '.avif': return 'image/avif';
+    // Videos
+    case '.mp4': return 'video/mp4';
+    case '.webm': return 'video/webm';
+    case '.ogv': return 'video/ogg';
+    case '.mov': return 'video/quicktime';
+    case '.mkv': return 'video/x-matroska';
+    // Audio
+    case '.mp3': return 'audio/mpeg';
+    case '.wav': return 'audio/wav';
+    case '.ogg': case '.oga': return 'audio/ogg';
+    case '.m4a': return 'audio/mp4';
+    case '.aac': return 'audio/aac';
+    case '.flac': return 'audio/flac';
+    default: return 'application/octet-stream';
+  }
+}
+
 router.get('/raw', authMiddleware, (req, res) => {
   const filePath = req.query.path as string;
   if (!filePath) {
@@ -234,24 +269,11 @@ router.get('/raw', authMiddleware, (req, res) => {
       if (!ssh) return res.status(400).json({ error: 'Invalid SSH path.' });
       
       const ext = path.extname(ssh.remotePath).toLowerCase();
-      let contentType = 'application/octet-stream';
-      if (ext === '.pdf') {
-        contentType = 'application/pdf';
-      } else if (ext === '.png') {
-        contentType = 'image/png';
-      } else if (ext === '.jpg' || ext === '.jpeg') {
-        contentType = 'image/jpeg';
-      } else if (ext === '.gif') {
-        contentType = 'image/gif';
-      } else if (ext === '.webp') {
-        contentType = 'image/webp';
-      } else if (ext === '.svg') {
-        contentType = 'image/svg+xml';
-      } else if (ext === '.ico') {
-        contentType = 'image/x-icon';
-      }
+      const contentType = getMimeType(ext);
+      const filename = path.basename(ssh.remotePath);
       
       res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
       const child = spawn('ssh', [
         '-p', ssh.port.toString(),
         '-o', 'BatchMode=yes',
@@ -274,26 +296,42 @@ router.get('/raw', authMiddleware, (req, res) => {
     }
 
     const ext = path.extname(resolvedPath).toLowerCase();
-    let contentType = 'application/octet-stream';
-    if (ext === '.pdf') {
-      contentType = 'application/pdf';
-    } else if (ext === '.png') {
-      contentType = 'image/png';
-    } else if (ext === '.jpg' || ext === '.jpeg') {
-      contentType = 'image/jpeg';
-    } else if (ext === '.gif') {
-      contentType = 'image/gif';
-    } else if (ext === '.webp') {
-      contentType = 'image/webp';
-    } else if (ext === '.svg') {
-      contentType = 'image/svg+xml';
-    } else if (ext === '.ico') {
-      contentType = 'image/x-icon';
-    }
+    const contentType = getMimeType(ext);
+    const filename = path.basename(resolvedPath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
 
-    res.setHeader('Content-Type', contentType);
-    const stream = fs.createReadStream(resolvedPath);
-    stream.pipe(res);
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+      if (start >= fileSize || end >= fileSize) {
+        res.status(416).setHeader('Content-Range', `bytes */${fileSize}`);
+        return res.end();
+      }
+
+      const chunksize = (end - start) + 1;
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': contentType,
+        'Content-Disposition': `inline; filename="${encodeURIComponent(filename)}"`,
+      });
+
+      const stream = fs.createReadStream(resolvedPath, { start, end });
+      stream.pipe(res);
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Accept-Ranges': 'bytes',
+        'Content-Type': contentType,
+        'Content-Disposition': `inline; filename="${encodeURIComponent(filename)}"`,
+      });
+      const stream = fs.createReadStream(resolvedPath);
+      stream.pipe(res);
+    }
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

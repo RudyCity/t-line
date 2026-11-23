@@ -204,9 +204,9 @@ export function SuperAgentHistorySidebar({
         onClick={() => onSelectSession(session.id)}
         className={`group relative flex items-center justify-between p-2 rounded-lg cursor-pointer transition ${
           isActive
-            ? 'bg-[var(--color-primary-glow)] text-[var(--text-main)] font-medium '
-            : 'text-[var(--text-muted)] hover:bg-[var(--surface-overlay-hover)] hover:text-[var(--text-main)]'
-        } ${isActive && isProcessing ? 'ring-1 ring-[var(--color-primary)]/30 ' : ''}`}
+            ? 'bg-[var(--color-primary-glow)] text-[var(--text-main)] font-medium border border-[var(--color-primary)]/30'
+            : 'text-[var(--text-muted)] hover:bg-[var(--surface-overlay-hover)] hover:text-[var(--text-main)] border border-transparent'
+        } ${isActive && isProcessing ? 'ring-1 ring-[var(--color-primary)]/30' : ''}`}
       >
         {isEditing ? (
           <form
@@ -344,9 +344,9 @@ export function SuperAgentHistorySidebar({
   };
 
   return (
-    <div className="w-full bg-[var(--bg-sidebar)] border-r border-[var(--border-color)] flex flex-col h-full shrink-0 select-none font-sans text-xs">
+    <div className="w-full bg-[var(--bg-main)] border-r border-[var(--border-color)]/25 flex flex-col h-full shrink-0 select-none font-sans text-xs">
       {/* Sidebar Header with History Title & Action Icon Buttons */}
-      <div className="p-2.5 px-3 border-b border-[var(--border-color)] flex items-center justify-between min-h-[44px]">
+      <div className="p-2.5 px-3 border-b border-[var(--border-color)]/20 flex items-center justify-between min-h-[40px]">
         <div className="flex items-center gap-2 font-semibold text-xs text-[var(--text-main)] tracking-wide">
           <History className="w-4 h-4 text-[var(--color-primary)] shrink-0" />
           <span>History</span>

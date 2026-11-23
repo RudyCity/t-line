@@ -68,4 +68,60 @@ describe('SuperAgentMessageItem - Thought Accordion & Message Rendering', () => 
     expect(screen.getByText('❯ USER')).toBeDefined();
     expect(screen.getByText('Please start the server.')).toBeDefined();
   });
+
+  it('intercepts file:/// markdown links and triggers onOpenFile', () => {
+    let openedPath = '';
+    let openedName = '';
+
+    render(
+      <SuperAgentMessageItem
+        index={3}
+        msg={{
+          role: 'assistant',
+          text: 'Check this out: [demo.mp4](file:///D:/assets/demo.mp4) and [app.tsx](file:///D:/src/app.tsx#L45)',
+        }}
+        onOpenFile={(path, name) => {
+          openedPath = path;
+          openedName = name || '';
+        }}
+      />
+    );
+
+    const videoLink = screen.getByText('demo.mp4');
+    expect(videoLink).toBeDefined();
+
+    fireEvent.click(videoLink);
+    expect(openedPath).toBe('D:/assets/demo.mp4');
+    expect(openedName).toBe('demo.mp4');
+
+    const codeLink = screen.getByText('app.tsx');
+    expect(codeLink).toBeDefined();
+
+    fireEvent.click(codeLink);
+    expect(openedPath).toBe('D:/src/app.tsx');
+    expect(openedName).toBe('app.tsx');
+  });
+
+  it('renders standard external https links with target="_blank"', () => {
+    let called = false;
+    render(
+      <SuperAgentMessageItem
+        index={4}
+        msg={{
+          role: 'assistant',
+          text: 'Visit [Google](https://google.com) for details.',
+        }}
+        onOpenFile={() => {
+          called = true;
+        }}
+      />
+    );
+
+    const link = screen.getByText('Google');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('href')).toBe('https://google.com');
+
+    fireEvent.click(link);
+    expect(called).toBe(false);
+  });
 });

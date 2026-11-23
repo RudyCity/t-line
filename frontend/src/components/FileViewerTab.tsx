@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { FileCode, RotateCcw, Check, ZoomIn, ZoomOut, Maximize, Image as ImageIcon, FileText, File } from 'lucide-react';
+import { FileCode, RotateCcw, Check, ZoomIn, ZoomOut, Maximize, Image as ImageIcon, FileText, File, Video, Music, Copy, Repeat, Gauge, AlertTriangle, ExternalLink } from 'lucide-react';
 import Editor, { loader } from '@monaco-editor/react';
 import DOMPurify from 'dompurify';
 import { PdfEditorPanel } from './PdfEditorPanel';
@@ -14,20 +14,25 @@ interface FileViewerTabProps {
   onRequestPdfEdit?: (instruction: string) => void;
 }
 
-function getFileType(filePath: string): 'image' | 'pdf' | 'text' | 'binary' {
-  const ext = filePath.split('.').pop()?.toLowerCase();
-  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico'].includes(ext || '')) {
+function getFileType(filePath: string): 'image' | 'video' | 'audio' | 'pdf' | 'text' | 'binary' {
+  const ext = filePath.split('.').pop()?.toLowerCase() || '';
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico', 'bmp', 'avif'].includes(ext)) {
     return 'image';
+  }
+  if (['mp4', 'webm', 'ogv', 'mov', 'mkv', 'm4v'].includes(ext)) {
+    return 'video';
+  }
+  if (['mp3', 'wav', 'ogg', 'oga', 'm4a', 'aac', 'flac'].includes(ext)) {
+    return 'audio';
   }
   if (ext === 'pdf') {
     return 'pdf';
   }
   const binaryExtensions = [
     'exe', 'dll', 'so', 'dylib', 'bin', 'zip', 'tar', 'gz', 'rar', '7z',
-    'mp3', 'mp4', 'wav', 'ogg', 'webm', 'woff', 'woff2', 'ttf', 'eot', 'dmg',
-    'pkg', 'iso', 'class', 'jar', 'db', 'sqlite'
+    'woff', 'woff2', 'ttf', 'eot', 'dmg', 'pkg', 'iso', 'class', 'jar', 'db', 'sqlite'
   ];
-  if (binaryExtensions.includes(ext || '')) {
+  if (binaryExtensions.includes(ext)) {
     return 'binary';
   }
   return 'text';
@@ -110,6 +115,120 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Universal Path Copy & Reveal
+  const [copiedPath, setCopiedPath] = useState(false);
+  const handleCopyPath = () => {
+    navigator.clipboard.writeText(filePath);
+    setCopiedPath(true);
+    setTimeout(() => setCopiedPath(false), 1500);
+  };
+
+  const handleRevealInExplorer = async () => {
+    try {
+      await fetch('/api/fs/open-explorer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${effectiveToken}`
+        },
+        body: JSON.stringify({ path: filePath })
+      });
+    } catch {}
+  };
+
+  // Video Player States & Handlers
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoRate, setVideoRate] = useState<number>(1);
+  const [isVideoLooping, setIsVideoLooping] = useState<boolean>(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
+
+  const handleVideoRateChange = (rate: number) => {
+    setVideoRate(rate);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = rate;
+    }
+  };
+
+  const handleToggleVideoLoop = () => {
+    setIsVideoLooping(prev => {
+      const next = !prev;
+      if (videoRef.current) {
+        videoRef.current.loop = next;
+      }
+      return next;
+    });
+  };
+
+  const handleTogglePiP = async () => {
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else if (videoRef.current && document.pictureInPictureEnabled) {
+        await videoRef.current.requestPictureInPicture();
+      }
+    } catch (err) {
+      console.warn('PiP error:', err);
+    }
+  };
+
+  // Audio Player States & Handlers
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [audioRate, setAudioRate] = useState<number>(1);
+  const [isAudioLooping, setIsAudioLooping] = useState<boolean>(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+
+  const handleAudioRateChange = (rate: number) => {
+    setAudioRate(rate);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = rate;
+    }
+  };
+
+  const handleToggleAudioLoop = () => {
+    setIsAudioLooping(prev => {
+      const next = !prev;
+      if (audioRef.current) {
+        audioRef.current.loop = next;
+      }
+      return next;
+    });
+  };
+
+  // Reset media states on file path change
+  useEffect(() => {
+    setVideoError(null);
+    setAudioError(null);
+    setVideoRate(1);
+    setAudioRate(1);
+    setIsVideoLooping(false);
+    setIsAudioLooping(false);
+  }, [filePath]);
+
+  // Reusable Universal Header Actions
+  const renderHeaderActions = (extra?: React.ReactNode) => (
+    <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+      {extra}
+      <button
+        type="button"
+        onClick={handleCopyPath}
+        className="flex items-center gap-1 rounded border border-[var(--border-color)] bg-[var(--bg-card)] px-2 py-0.5 text-[11px] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] transition-colors cursor-pointer"
+        title="Copy absolute file path"
+      >
+        {copiedPath ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+        <span>{copiedPath ? 'Copied' : 'Copy Path'}</span>
+      </button>
+      <button
+        type="button"
+        onClick={handleRevealInExplorer}
+        className="flex items-center gap-1 rounded border border-[var(--border-color)] bg-[var(--bg-card)] px-2 py-0.5 text-[11px] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] transition-colors cursor-pointer"
+        title="Reveal in File Explorer"
+      >
+        <ExternalLink size={12} />
+        <span>Reveal</span>
+      </button>
+    </div>
+  );
 
   // Image zoom and pan state
   const [zoom, setZoom] = useState(1);
@@ -411,40 +530,42 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
     return (
       <div className="flex flex-col flex-1 w-full h-full bg-[var(--bg-main)] overflow-hidden">
         {/* File Header */}
-        <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0">
-          <div className="flex items-center gap-2 truncate">
-            <ImageIcon size={14} className="text-purple-400 shrink-0" />
+        <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0 min-h-[36px]">
+          <div className="flex items-center gap-2 truncate min-w-0 mr-2">
+            <ImageIcon size={14} className="text-[var(--accent-primary)] shrink-0" />
             <span className="text-xs font-mono text-[var(--text-muted)] truncate" title={filePath}>
               {filePath}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            {isSvg && (
-              <div className="flex items-center bg-[var(--bg-card)] rounded-md p-0.5 border border-[var(--border-color)] mr-2">
-                <button
-                  onClick={() => setViewMode('preview')}
-                  className={`px-2 py-0.5 rounded text-[10px] font-medium transition duration-150 cursor-pointer ${
-                    viewMode === 'preview'
-                      ? 'bg-[var(--color-primary)] text-white'
-                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                  }`}
-                >
-                  Preview
-                </button>
-                <button
-                  onClick={() => setViewMode('code')}
-                  className={`px-2 py-0.5 rounded text-[10px] font-medium transition duration-150 cursor-pointer ${
-                    viewMode === 'code'
-                      ? 'bg-[var(--color-primary)] text-white'
-                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                  }`}
-                >
-                  Code
-                </button>
-              </div>
-            )}
-            <div className="text-[11px] text-slate-500 font-medium">Image Preview</div>
-          </div>
+          {renderHeaderActions(
+            <div className="flex items-center gap-2 mr-2">
+              {isSvg && (
+                <div className="flex items-center bg-[var(--bg-card)] rounded-md p-0.5 border border-[var(--border-color)]">
+                  <button
+                    onClick={() => setViewMode('preview')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-medium transition duration-150 cursor-pointer ${
+                      viewMode === 'preview'
+                        ? 'bg-[var(--color-primary)] text-white'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                    }`}
+                  >
+                    Preview
+                  </button>
+                  <button
+                    onClick={() => setViewMode('code')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-medium transition duration-150 cursor-pointer ${
+                      viewMode === 'code'
+                        ? 'bg-[var(--color-primary)] text-white'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                    }`}
+                  >
+                    Code
+                  </button>
+                </div>
+              )}
+              <div className="text-[11px] text-[var(--text-muted)] font-medium hidden sm:inline">Image Preview</div>
+            </div>
+          )}
         </div>
 
         {/* Image Viewer Area */}
@@ -565,27 +686,29 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
     return (
       <div className="flex flex-col flex-1 w-full h-full bg-[var(--bg-main)] overflow-hidden">
         {/* File Header */}
-        <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0">
-          <div className="flex items-center gap-2 truncate">
+        <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0 min-h-[36px]">
+          <div className="flex items-center gap-2 truncate min-w-0 mr-2">
             <FileText size={14} className="text-[var(--accent-primary)] shrink-0" />
             <span className="text-xs font-mono text-[var(--text-muted)] truncate" title={filePath}>
               {filePath}
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-[11px] text-[var(--text-muted)] font-medium">PDF Document</span>
-            {onRequestPdfEdit && (
-              <button
-                type="button"
-                onClick={() => setPdfEditorOpen(open => !open)}
-                aria-expanded={pdfEditorOpen}
-                aria-label="Edit PDF with SuperAgent"
-                className="rounded border border-[var(--border-color)] bg-[var(--bg-card)] px-2.5 py-1 text-xs text-[var(--text-main)] hover:bg-[var(--bg-hover)]"
-              >
-                {pdfEditorOpen ? 'Hide editor' : 'Edit PDF'}
-              </button>
-            )}
-          </div>
+          {renderHeaderActions(
+            <div className="flex items-center gap-2 mr-2">
+              <span className="text-[11px] text-[var(--text-muted)] font-medium hidden sm:inline">PDF Document</span>
+              {onRequestPdfEdit && (
+                <button
+                  type="button"
+                  onClick={() => setPdfEditorOpen(open => !open)}
+                  aria-expanded={pdfEditorOpen}
+                  aria-label="Edit PDF with SuperAgent"
+                  className="rounded border border-[var(--border-color)] bg-[var(--bg-card)] px-2 py-0.5 text-[11px] text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] transition-colors cursor-pointer"
+                >
+                  {pdfEditorOpen ? 'Hide editor' : 'Edit PDF'}
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Existing PDF preview stays loaded while the side inspector opens. */}
@@ -609,37 +732,222 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
     );
   }
 
-  if (renderType === 'binary') {
-    const handleRevealInExplorer = async () => {
-      try {
-        const res = await fetch('/api/fs/open-explorer', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${effectiveToken}`
-          },
-          body: JSON.stringify({ path: filePath })
-        });
-        if (!res.ok) {
-          const err = await res.json();
-          alert(`Failed to reveal file: ${err.error}`);
-        }
-      } catch (e: any) {
-        alert(`Error revealing file: ${e.message}`);
-      }
-    };
-
+  if (renderType === 'video') {
     return (
       <div className="flex flex-col flex-1 w-full h-full bg-[var(--bg-main)] overflow-hidden">
         {/* File Header */}
-        <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0">
-          <div className="flex items-center gap-2 truncate">
+        <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0 min-h-[36px]">
+          <div className="flex items-center gap-2 truncate min-w-0 mr-2">
+            <Video size={14} className="text-[var(--accent-primary)] shrink-0" />
+            <span className="text-xs font-mono text-[var(--text-muted)] truncate" title={filePath}>
+              {filePath}
+            </span>
+          </div>
+          {renderHeaderActions(
+            <div className="flex items-center gap-2 mr-2">
+              <span className="text-[11px] text-[var(--text-muted)] font-medium hidden sm:inline">Video Player</span>
+            </div>
+          )}
+        </div>
+
+        {/* Video Player Canvas */}
+        <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[var(--bg-main)] overflow-auto relative">
+          {videoError ? (
+            <div className="flex flex-col items-center justify-center p-8 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] text-center max-w-md shadow-xl">
+              <div className="p-3 rounded-full bg-amber-500/10 text-amber-500 mb-3 border border-amber-500/20">
+                <AlertTriangle size={28} />
+              </div>
+              <h3 className="text-sm font-semibold text-[var(--text-main)] mb-1">Playback Error</h3>
+              <p className="text-xs text-[var(--text-muted)] mb-5 max-w-xs">{videoError}</p>
+              <button
+                type="button"
+                onClick={handleRevealInExplorer}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[var(--accent-primary)] text-white text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
+              >
+                <ExternalLink size={13} />
+                <span>Open in Explorer / System Player</span>
+              </button>
+            </div>
+          ) : (
+            <div className="w-full max-w-4xl max-h-[85vh] flex flex-col items-center justify-center bg-[var(--bg-sidebar)] rounded-xl border border-[var(--border-color)] p-2 shadow-lg overflow-hidden">
+              <video
+                ref={videoRef}
+                src={`/api/fs/raw?path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(effectiveToken)}`}
+                controls
+                autoPlay={false}
+                playsInline
+                onError={() => setVideoError('Unable to decode video or format unsupported by browser.')}
+                className="w-full max-h-[70vh] rounded-lg bg-black object-contain outline-none"
+              >
+                Your browser does not support the video tag.
+              </video>
+              {/* Advanced Video Controls Bar */}
+              <div className="w-full flex items-center justify-between px-3 py-2 mt-2 border-t border-[var(--border-color)] text-xs text-[var(--text-muted)]">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="flex items-center gap-1 font-mono text-[11px] text-[var(--text-muted)]">
+                    <Gauge size={13} /> Speed:
+                  </span>
+                  {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
+                    <button
+                      key={rate}
+                      type="button"
+                      onClick={() => handleVideoRateChange(rate)}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors cursor-pointer ${
+                        videoRate === rate
+                          ? 'bg-[var(--accent-primary)] text-white font-medium'
+                          : 'hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
+                      }`}
+                    >
+                      {rate}x
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleToggleVideoLoop}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] transition-colors cursor-pointer ${
+                      isVideoLooping
+                        ? 'bg-[var(--accent-primary)] text-white font-medium'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]'
+                    }`}
+                    title="Toggle loop"
+                  >
+                    <Repeat size={12} />
+                    <span>Loop</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleTogglePiP}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)] transition-colors cursor-pointer"
+                    title="Picture in Picture"
+                  >
+                    <Maximize size={12} />
+                    <span>PiP</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (renderType === 'audio') {
+    return (
+      <div className="flex flex-col flex-1 w-full h-full bg-[var(--bg-main)] overflow-hidden">
+        {/* File Header */}
+        <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0 min-h-[36px]">
+          <div className="flex items-center gap-2 truncate min-w-0 mr-2">
+            <Music size={14} className="text-[var(--accent-primary)] shrink-0" />
+            <span className="text-xs font-mono text-[var(--text-muted)] truncate" title={filePath}>
+              {filePath}
+            </span>
+          </div>
+          {renderHeaderActions(
+            <div className="flex items-center gap-2 mr-2">
+              <span className="text-[11px] text-[var(--text-muted)] font-medium hidden sm:inline">Audio Player</span>
+            </div>
+          )}
+        </div>
+
+        {/* Audio Player Card */}
+        <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[var(--bg-main)] select-none">
+          {audioError ? (
+            <div className="flex flex-col items-center justify-center p-8 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] text-center max-w-md shadow-xl">
+              <div className="p-3 rounded-full bg-amber-500/10 text-amber-500 mb-3 border border-amber-500/20">
+                <AlertTriangle size={28} />
+              </div>
+              <h3 className="text-sm font-semibold text-[var(--text-main)] mb-1">Playback Error</h3>
+              <p className="text-xs text-[var(--text-muted)] mb-5 max-w-xs">{audioError}</p>
+              <button
+                type="button"
+                onClick={handleRevealInExplorer}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[var(--accent-primary)] text-white text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
+              >
+                <ExternalLink size={13} />
+                <span>Open in Explorer / System Player</span>
+              </button>
+            </div>
+          ) : (
+            <div className="w-full max-w-md bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] p-6 shadow-xl flex flex-col items-center text-center">
+              <div className="w-20 h-20 rounded-2xl bg-[var(--surface-overlay)] border border-[var(--border-color)] flex items-center justify-center text-[var(--accent-primary)] mb-5 shadow-inner">
+                <Music size={36} />
+              </div>
+              <h4 className="text-sm font-semibold text-[var(--text-main)] mb-1 truncate w-full" title={filePath.split(/[/\\]/).pop()}>
+                {filePath.split(/[/\\]/).pop()}
+              </h4>
+              <p className="text-[11px] text-[var(--text-muted)] font-mono mb-6 truncate w-full">
+                {filePath}
+              </p>
+              <div className="w-full mb-4">
+                <audio
+                  ref={audioRef}
+                  src={`/api/fs/raw?path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(effectiveToken)}`}
+                  controls
+                  onError={() => setAudioError('Unable to decode audio format or codec unsupported by browser.')}
+                  className="w-full outline-none"
+                >
+                  Your browser does not support the audio element.
+                </audio>
+              </div>
+              {/* Audio Speed & Loop Bar */}
+              <div className="w-full flex items-center justify-between pt-3 border-t border-[var(--border-color)] text-xs text-[var(--text-muted)]">
+                <div className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-1 font-mono text-[10px] text-[var(--text-muted)]">
+                    <Gauge size={12} /> Speed:
+                  </span>
+                  {[0.75, 1, 1.25, 1.5, 2].map((rate) => (
+                    <button
+                      key={rate}
+                      type="button"
+                      onClick={() => handleAudioRateChange(rate)}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors cursor-pointer ${
+                        audioRate === rate
+                          ? 'bg-[var(--accent-primary)] text-white font-medium'
+                          : 'hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)]'
+                      }`}
+                    >
+                      {rate}x
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleToggleAudioLoop}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] transition-colors cursor-pointer ${
+                    isAudioLooping
+                      ? 'bg-[var(--accent-primary)] text-white font-medium'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-[var(--border-color)]'
+                  }`}
+                  title="Toggle loop"
+                >
+                  <Repeat size={12} />
+                  <span>Loop</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (renderType === 'binary') {
+    return (
+      <div className="flex flex-col flex-1 w-full h-full bg-[var(--bg-main)] overflow-hidden">
+        {/* File Header */}
+        <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0 min-h-[36px]">
+          <div className="flex items-center gap-2 truncate min-w-0 mr-2">
             <File size={14} className="text-[var(--text-muted)] shrink-0" />
             <span className="text-xs font-mono text-[var(--text-muted)] truncate" title={filePath}>
               {filePath}
             </span>
           </div>
-          <div className="text-[11px] text-[var(--text-dark)] font-medium">Binary File</div>
+          {renderHeaderActions(
+            <div className="text-[11px] text-[var(--text-dark)] font-medium mr-2">Binary File</div>
+          )}
         </div>
 
         {/* Binary Warning Content */}
@@ -656,7 +964,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
           <div className="flex items-center gap-3">
             <button
               onClick={handleRevealInExplorer}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-md transition-colors duration-150 cursor-pointer"
+              className="px-4 py-2 bg-[var(--accent-primary)] hover:opacity-90 text-white text-xs font-medium rounded-md transition-opacity duration-150 cursor-pointer"
             >
               Reveal in Explorer
             </button>
@@ -671,7 +979,7 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
       {/* File Header */}
       <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-sidebar)]/80 border-b border-[var(--border-color)] shrink-0 min-h-[36px]">
         <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
-          <FileCode size={14} className="text-purple-400 shrink-0" />
+          <FileCode size={14} className="text-[var(--accent-primary)] shrink-0" />
           <span className="text-xs font-mono text-[var(--text-muted)] truncate" title={filePath}>
             {filePath}
           </span>
@@ -680,59 +988,61 @@ export function FileViewerTab({ filePath, token, onSave, theme, themeBackground,
           )}
         </div>
         
-        <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
-          {isSvg && (
-            <div className="flex items-center bg-[var(--bg-card)] rounded-md p-0.5 border border-[var(--border-color)] mr-2 shrink-0">
-              <button
-                onClick={() => setViewMode('preview')}
-                className={`px-2 py-0.5 rounded text-[10px] font-medium transition duration-150 cursor-pointer ${
-                  viewMode === 'preview'
-                    ? 'bg-[var(--color-primary)] text-white'
-                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                }`}
-              >
-                Preview
-              </button>
-              <button
-                onClick={() => setViewMode('code')}
-                className={`px-2 py-0.5 rounded text-[10px] font-medium transition duration-150 cursor-pointer ${
-                  viewMode === 'code'
-                    ? 'bg-[var(--color-primary)] text-white'
-                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                }`}
-              >
-                Code
-              </button>
-            </div>
-          )}
-          {saving ? (
-            <div className="flex items-center gap-1.5 text-[11px] text-purple-400 font-medium animate-pulse whitespace-nowrap">
-              <span className="h-1.5 w-1.5 rounded-full bg-purple-500 animate-ping shrink-0" />
-              <span>Saving...</span>
-            </div>
-          ) : saveSuccess ? (
-            <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-medium whitespace-nowrap">
-              <Check size={12} className="shrink-0" />
-              <span>Saved</span>
-            </div>
-          ) : isDirty ? (
-            <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
-              <span className="text-[10px] text-purple-400 font-semibold px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 whitespace-nowrap">
-                Modified
-              </span>
-              <button
-                onClick={handleRevert}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] rounded transition-all duration-150 cursor-pointer whitespace-nowrap"
-                title="Revert changes"
-              >
-                <RotateCcw size={12} />
-                <span>Revert</span>
-              </button>
-            </div>
-          ) : (
-            <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap shrink-0">Auto-save active</span>
-          )}
-        </div>
+        {renderHeaderActions(
+          <div className="flex items-center gap-2 mr-2 shrink-0 whitespace-nowrap">
+            {isSvg && (
+              <div className="flex items-center bg-[var(--bg-card)] rounded-md p-0.5 border border-[var(--border-color)] mr-1 shrink-0">
+                <button
+                  onClick={() => setViewMode('preview')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-medium transition duration-150 cursor-pointer ${
+                    viewMode === 'preview'
+                      ? 'bg-[var(--color-primary)] text-white'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                  }`}
+                >
+                  Preview
+                </button>
+                <button
+                  onClick={() => setViewMode('code')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-medium transition duration-150 cursor-pointer ${
+                    viewMode === 'code'
+                      ? 'bg-[var(--color-primary)] text-white'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                  }`}
+                >
+                  Code
+                </button>
+              </div>
+            )}
+            {saving ? (
+              <div className="flex items-center gap-1.5 text-[11px] text-[var(--accent-primary)] font-medium animate-pulse whitespace-nowrap">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-primary)] animate-ping shrink-0" />
+                <span>Saving...</span>
+              </div>
+            ) : saveSuccess ? (
+              <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-medium whitespace-nowrap">
+                <Check size={12} className="shrink-0" />
+                <span>Saved</span>
+              </div>
+            ) : isDirty ? (
+              <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
+                <span className="text-[10px] text-[var(--accent-primary)] font-semibold px-1.5 py-0.5 rounded bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20 whitespace-nowrap">
+                  Modified
+                </span>
+                <button
+                  onClick={handleRevert}
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] rounded transition-all duration-150 cursor-pointer whitespace-nowrap"
+                  title="Revert changes"
+                >
+                  <RotateCcw size={12} />
+                  <span>Revert</span>
+                </button>
+              </div>
+            ) : (
+              <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap shrink-0">Auto-save active</span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Editor Area */}

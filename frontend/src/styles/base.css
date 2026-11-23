@@ -4,12 +4,13 @@
     --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 
-    /* r-ui Calibrated Palette */
+    /* r-ui Calibrated Palette (Unified Canvas Architecture) */
     --bg-main: var(--r-ui-color-canvas, #090a0f);
-    --bg-sidebar: var(--r-ui-color-surface, #12141c);
+    --bg-sidebar: var(--r-ui-color-canvas, #090a0f);
     --bg-card: var(--r-ui-color-surface, #12141c);
     --bg-card-hover: var(--r-ui-color-surface-elevated, #1a1d28);
-    --border-color: var(--r-ui-color-border-standard, rgba(255, 255, 255, 0.12));
+    --border-color: var(--r-ui-color-border-standard, rgba(255, 255, 255, 0.10));
+    --border-subtle: var(--r-ui-color-border-subtle, rgba(255, 255, 255, 0.05));
     --border-glow: rgba(56, 189, 248, 0.12);
 
     /* Core Accents (Calibrated Optical Shades, Zero-Neon) */
@@ -30,10 +31,11 @@
     /* Anti-Slop Glassmorphism & Elevation Details (Max blur 8px, crisp 1px borders, zero muddy shadows) */
     --blur-amount: 8px;
     --glass-shadow: var(--r-ui-shadow-sm, 0 1px 3px 0 rgba(0, 0, 0, 0.08));
+    --floating-island-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
 
     /* Sizes */
-    --sidebar-width: 300px;
-    --topbar-height: 42px;
+    --sidebar-width: 280px;
+    --topbar-height: 38px;
 
     /* Image / SVG preview grid lines — subtle white on dark themes */
     --preview-grid-line: rgba(255, 255, 255, 0.05);

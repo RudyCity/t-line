@@ -1,5 +1,5 @@
 import React from 'react';
-import { GitBranch } from 'lucide-react';
+import { GitBranchIcon } from './GitBranchIcon';
 
 interface TabTooltipProps {
   activeTooltip: {
@@ -30,7 +30,7 @@ export const TabTooltip: React.FC<TabTooltipProps> = ({ activeTooltip, tabContex
       <div className="tab-tooltip-title">{activeTooltip.title}</div>
       {activeTooltip.branch && (
         <div className="tab-tooltip-branch">
-          <GitBranch size={10} className="shrink-0" />
+          <GitBranchIcon size={11} className="shrink-0" />
           <span>{activeTooltip.branch}</span>
         </div>
       )}

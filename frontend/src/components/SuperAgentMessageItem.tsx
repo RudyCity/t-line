@@ -67,7 +67,10 @@ function tryParseAdvisorPayload(text: string): AdvisorResultCardProps | null {
   };
 }
 
-function renderInlineMarkdown(text: string): React.ReactNode {
+function renderInlineMarkdown(
+  text: string,
+  onOpenFile?: (filePath: string, fileName?: string) => void
+): React.ReactNode {
   if (!text) return null;
 
   const tokens: React.ReactNode[] = [];
@@ -95,7 +98,7 @@ function renderInlineMarkdown(text: string): React.ReactNode {
     if (boldMatch) {
       tokens.push(
         <strong key={keyIdx++} className="font-semibold text-[var(--text-main)]">
-          {renderInlineMarkdown(boldMatch[2])}
+          {renderInlineMarkdown(boldMatch[2], onOpenFile)}
         </strong>
       );
       remaining = remaining.slice(boldMatch[0].length);
@@ -107,7 +110,7 @@ function renderInlineMarkdown(text: string): React.ReactNode {
     if (italicMatch) {
       tokens.push(
         <em key={keyIdx++} className="italic text-[var(--text-muted)]">
-          {renderInlineMarkdown(italicMatch[2])}
+          {renderInlineMarkdown(italicMatch[2], onOpenFile)}
         </em>
       );
       remaining = remaining.slice(italicMatch[0].length);
@@ -117,17 +120,77 @@ function renderInlineMarkdown(text: string): React.ReactNode {
     // 4. Link: [text](url)
     const linkMatch = remaining.match(/^\[([^\]]+)\]\(([^)]+)\)/);
     if (linkMatch) {
-      tokens.push(
-        <a
-          key={keyIdx++}
-          href={linkMatch[2]}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] underline font-medium transition-colors"
-        >
-          {linkMatch[1]}
-        </a>
-      );
+      const linkText = linkMatch[1];
+      const rawUrl = linkMatch[2];
+
+      const isFileLink = rawUrl.startsWith('file:///') ||
+        rawUrl.startsWith('file://') ||
+        /^(?:[a-zA-Z]:[\\\/]|\.{1,2}[\\\/]|\/)/.test(rawUrl);
+
+      if (isFileLink && onOpenFile) {
+        let filePath = rawUrl;
+        if (filePath.startsWith('file:///')) {
+          filePath = decodeURIComponent(filePath.slice(8));
+        } else if (filePath.startsWith('file://')) {
+          filePath = decodeURIComponent(filePath.slice(7));
+        } else {
+          filePath = decodeURIComponent(filePath);
+        }
+
+        // Handle Windows leading slash e.g. /D:/path -> D:/path
+        if (/^\/[a-zA-Z]:/.test(filePath)) {
+          filePath = filePath.slice(1);
+        }
+
+        let targetLine: number | undefined;
+        const lineHashMatch = filePath.match(/#L(\d+)(?:-L\d+)?$/i);
+        if (lineHashMatch) {
+          targetLine = parseInt(lineHashMatch[1], 10);
+          filePath = filePath.replace(/#L\d+(?:-L\d+)?$/i, '');
+        } else {
+          const colonMatch = filePath.match(/:(\d+)$/);
+          if (colonMatch) {
+            targetLine = parseInt(colonMatch[1], 10);
+            filePath = filePath.replace(/:\d+$/, '');
+          }
+        }
+
+        tokens.push(
+          <a
+            key={keyIdx++}
+            href={rawUrl}
+            onClick={(e) => {
+              e.preventDefault();
+              onOpenFile(filePath, linkText);
+              if (targetLine) {
+                setTimeout(() => {
+                  window.dispatchEvent(
+                    new CustomEvent('tline-focus-editor-line', {
+                      detail: { filePath, line: targetLine }
+                    })
+                  );
+                }, 150);
+              }
+            }}
+            className="text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] underline font-medium transition-colors cursor-pointer"
+            title={`Open ${filePath}${targetLine ? ` at line ${targetLine}` : ''}`}
+          >
+            {linkText}
+          </a>
+        );
+      } else {
+        tokens.push(
+          <a
+            key={keyIdx++}
+            href={rawUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] underline font-medium transition-colors"
+          >
+            {linkText}
+          </a>
+        );
+      }
       remaining = remaining.slice(linkMatch[0].length);
       continue;
     }
@@ -149,7 +212,10 @@ function renderInlineMarkdown(text: string): React.ReactNode {
   return tokens.length === 1 ? tokens[0] : <React.Fragment>{tokens}</React.Fragment>;
 }
 
-export function renderMessageContent(text: string) {
+export function renderMessageContent(
+  text: string,
+  onOpenFile?: (filePath: string, fileName?: string) => void
+) {
   if (!text) return null;
 
   const rawLines = text.split('\n');
@@ -221,7 +287,7 @@ export function renderMessageContent(text: string) {
                 <tr>
                   {headers.map((h, hIdx) => (
                     <th key={hIdx} className="px-3 py-2 border-r border-[var(--border-color)] last:border-r-0 font-semibold text-[var(--color-primary)] text-[11px]">
-                      {renderInlineMarkdown(h)}
+                      {renderInlineMarkdown(h, onOpenFile)}
                     </th>
                   ))}
                 </tr>
@@ -231,7 +297,7 @@ export function renderMessageContent(text: string) {
                   <tr key={rIdx} className="hover:bg-[var(--surface-overlay-hover)] transition-colors even:bg-[var(--surface-overlay)]">
                     {row.map((cell, cIdx) => (
                       <td key={cIdx} className="px-3 py-2 border-r border-[var(--border-color)]/60 last:border-r-0 text-[var(--text-main)] text-[11px] leading-snug">
-                        {renderInlineMarkdown(cell)}
+                        {renderInlineMarkdown(cell, onOpenFile)}
                       </td>
                     ))}
                   </tr>
@@ -254,25 +320,25 @@ export function renderMessageContent(text: string) {
         if (level === 1) {
           blocks.push(
             <h1 key={`h1-${i}`} className="text-sm font-bold text-[var(--color-primary)] mt-3 mb-1.5 pb-1 border-b border-[var(--border-color)] tracking-wide">
-              {renderInlineMarkdown(headingText)}
+              {renderInlineMarkdown(headingText, onOpenFile)}
             </h1>
           );
         } else if (level === 2) {
           blocks.push(
             <h2 key={`h2-${i}`} className="text-xs font-bold text-[var(--color-primary)] mt-2.5 mb-1 pb-0.5 border-b border-[var(--border-color)]/60">
-              {renderInlineMarkdown(headingText)}
+              {renderInlineMarkdown(headingText, onOpenFile)}
             </h2>
           );
         } else if (level === 3) {
           blocks.push(
             <h3 key={`h3-${i}`} className="text-xs font-semibold text-[var(--text-main)] mt-2 mb-1">
-              {renderInlineMarkdown(headingText)}
+              {renderInlineMarkdown(headingText, onOpenFile)}
             </h3>
           );
         } else {
           blocks.push(
             <h4 key={`h4-${i}`} className="text-[11px] font-semibold text-[var(--text-muted)] mt-1.5 mb-0.5">
-              {renderInlineMarkdown(headingText)}
+              {renderInlineMarkdown(headingText, onOpenFile)}
             </h4>
           );
         }
@@ -292,7 +358,7 @@ export function renderMessageContent(text: string) {
       const quoteText = trimmed.replace(/^>\s*/, '');
       blocks.push(
         <blockquote key={`quote-${i}`} className="my-2 border-l-2 border-[var(--color-primary)] bg-[var(--color-primary-glow)] px-3 py-1.5 rounded-r text-[var(--text-main)] italic text-[11px]">
-          {renderInlineMarkdown(quoteText)}
+          {renderInlineMarkdown(quoteText, onOpenFile)}
         </blockquote>
       );
       i++;
@@ -307,7 +373,7 @@ export function renderMessageContent(text: string) {
       blocks.push(
         <div key={`list-${i}`} className="flex items-start gap-2 my-0.5 pl-2 text-[var(--text-main)] text-xs">
           <span className="text-[var(--color-primary)] font-mono text-[11px] shrink-0 font-semibold">{prefix}</span>
-          <span className="flex-1 leading-normal">{renderInlineMarkdown(itemText)}</span>
+          <span className="flex-1 leading-normal">{renderInlineMarkdown(itemText, onOpenFile)}</span>
         </div>
       );
       i++;
@@ -320,7 +386,7 @@ export function renderMessageContent(text: string) {
     } else {
       blocks.push(
         <div key={`p-${i}`} className="leading-relaxed text-[var(--text-main)] text-xs my-0.5">
-          {renderInlineMarkdown(line)}
+          {renderInlineMarkdown(line, onOpenFile)}
         </div>
       );
     }
@@ -330,7 +396,11 @@ export function renderMessageContent(text: string) {
   return <div className="space-y-0.5 font-sans select-text">{blocks}</div>;
 }
 
-export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: number }> = ({ msg, index }) => {
+export const SuperAgentMessageItem: React.FC<{
+  msg: ConsoleMessage;
+  index: number;
+  onOpenFile?: (filePath: string, fileName?: string) => void;
+}> = ({ msg, index, onOpenFile }) => {
   // Check if message is an Execution Advisor result
   const advisorProps = tryParseAdvisorPayload(msg.text);
   if (advisorProps) {
@@ -387,7 +457,7 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
           <span>❯ USER</span>
         </div>
         <div className="leading-relaxed">
-          {renderMessageContent(msg.text)}
+          {renderMessageContent(msg.text, onOpenFile)}
         </div>
       </div>
     );
@@ -396,7 +466,7 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
   if (msg.role === 'thought') {
     return (
       <div key={index} className="w-full">
-        <ThoughtAccordionItem text={msg.text} />
+        <ThoughtAccordionItem text={msg.text} onOpenFile={onOpenFile} />
       </div>
     );
   }
@@ -410,7 +480,7 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
       </div>
 
       <div className="text-xs leading-relaxed text-[var(--text-main)] font-sans">
-        {renderMessageContent(msg.text)}
+        {renderMessageContent(msg.text, onOpenFile)}
       </div>
     </div>
   );
@@ -419,7 +489,8 @@ export const SuperAgentMessageItem: React.FC<{ msg: ConsoleMessage; index: numbe
 export const ThoughtAccordionItem: React.FC<{
   text: string;
   defaultOpen?: boolean;
-}> = ({ text, defaultOpen = true }) => {
+  onOpenFile?: (filePath: string, fileName?: string) => void;
+}> = ({ text, defaultOpen = true, onOpenFile }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const charCount = text ? text.length : 0;
   const preview = text ? text.split('\n')[0].slice(0, 60) : 'Thinking...';
@@ -447,7 +518,7 @@ export const ThoughtAccordionItem: React.FC<{
 
       {isOpen && (
         <div className="px-3 py-2 text-xs leading-relaxed text-[var(--text-muted)] italic border-t border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5">
-          {renderMessageContent(text)}
+          {renderMessageContent(text, onOpenFile)}
         </div>
       )}
     </div>

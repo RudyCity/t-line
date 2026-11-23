@@ -107,7 +107,7 @@ export function SuperAgentInputContainer({
   return (
     <div
       ref={consoleContainerRef}
-      className="sa-input-container calm-chat-composer relative w-full font-mono text-xs select-none"
+      className="sa-input-container relative w-full px-4 pb-4 pt-1 flex justify-center font-mono text-xs select-none z-30"
     >
       {/* Hidden File Input */}
       <input
@@ -118,56 +118,55 @@ export function SuperAgentInputContainer({
         multiple
       />
 
-      {/* Hallmark Minimalist Slash Command Autocomplete Popover (Unified with input) */}
-      {showSuggestions && suggestions.length > 0 && handleSelectSuggestion && (
-        <div className="absolute bottom-full left-0 right-0 mb-0 bg-[var(--bg-sidebar)] border border-b-0 border-[var(--border-color)] rounded-t-xl rounded-b-none  z-50 max-h-64 overflow-y-auto scrollbar-thin font-mono text-xs divide-y divide-[var(--border-color)]/60 select-none">
-          <div className="px-3 py-1.5 bg-[var(--panel-header-bg)] text-[10px] text-[var(--color-primary)] font-bold uppercase tracking-wider flex items-center justify-between sticky top-0 backdrop-blur-md border-b border-[var(--border-color)]">
-            <span className="flex items-center gap-1.5">
-              <Terminal className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-              <span>COMMANDS</span>
-              <span className="text-[var(--text-muted)] font-normal">({suggestions.length})</span>
-            </span>
-            <span className="text-[var(--text-muted)] font-normal normal-case font-sans text-[9px]">
-              ↑↓ Navigate • Tab/Enter Select • Esc Close
-            </span>
-          </div>
+      <div className="relative w-full max-w-3xl">
+        {/* Hallmark Minimalist Slash Command Autocomplete Popover (Unified with input) */}
+        {showSuggestions && suggestions.length > 0 && handleSelectSuggestion && (
+          <div className="absolute bottom-full left-0 right-0 mb-1.5 bg-[var(--bg-card)]/95 backdrop-blur-md border border-[var(--border-color)] rounded-2xl shadow-2xl z-50 max-h-64 overflow-y-auto scrollbar-thin font-mono text-xs divide-y divide-[var(--border-color)]/40 select-none">
+            <div className="px-3 py-1.5 bg-[var(--bg-card)] text-[10px] text-[var(--color-primary)] font-bold uppercase tracking-wider flex items-center justify-between sticky top-0 backdrop-blur-md border-b border-[var(--border-color)]/40 rounded-t-2xl">
+              <span className="flex items-center gap-1.5">
+                <Terminal className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                <span>COMMANDS</span>
+                <span className="text-[var(--text-muted)] font-normal">({suggestions.length})</span>
+              </span>
+              <span className="text-[var(--text-muted)] font-normal normal-case font-sans text-[9px]">
+                ↑↓ Navigate • Tab/Enter Select • Esc Close
+              </span>
+            </div>
 
-          {suggestions.map((s, idx) => {
-            const isSelected = idx === suggestionIndex;
-            return (
-              <div
-                key={s.command}
-                onClick={() => handleSelectSuggestion(s)}
-                onMouseEnter={() => setSuggestionIndex?.(idx)}
-                className={`px-3 py-2 cursor-pointer transition flex items-center justify-between gap-3 rounded-md ${
-                  isSelected
-                    ? 'bg-[var(--color-primary-glow)] text-[var(--text-main)] border border-[var(--color-primary)]/40'
-                    : 'text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-transparent'
-                }`}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className={`font-bold font-mono text-xs ${isSelected ? 'text-[var(--color-primary)]' : 'text-[var(--color-primary)]'}`}>
-                    {s.command}
-                  </span>
-                  {s.argsHelp && (
-                    <span className="text-[var(--text-muted)] text-[10px] font-mono truncate">
-                      {s.argsHelp}
+            {suggestions.map((s, idx) => {
+              const isSelected = idx === suggestionIndex;
+              return (
+                <div
+                  key={s.command}
+                  onClick={() => handleSelectSuggestion(s)}
+                  onMouseEnter={() => setSuggestionIndex?.(idx)}
+                  className={`px-3 py-2 cursor-pointer transition flex items-center justify-between gap-3 rounded-lg mx-1 my-0.5 ${
+                    isSelected
+                      ? 'bg-[var(--color-primary-glow)] text-[var(--text-main)] border border-[var(--color-primary)]/40'
+                      : 'text-[var(--text-main)] hover:bg-[var(--surface-overlay-hover)] border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-bold font-mono text-xs text-[var(--color-primary)]">
+                      {s.command}
                     </span>
-                  )}
+                    {s.argsHelp && (
+                      <span className="text-[var(--text-muted)] text-[10px] font-mono truncate">
+                        {s.argsHelp}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[var(--text-muted)] text-[11px] font-sans truncate max-w-xs shrink-0">
+                    {s.description}
+                  </span>
                 </div>
-                <span className="text-[var(--text-muted)] text-[11px] font-sans truncate max-w-xs shrink-0">
-                  {s.description}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
 
-      {/* Unified High-Craft CLI Input Card */}
-      <div className={`bg-[var(--panel-header-bg)] border-t border-[var(--border-color)] focus-within:border-t-[var(--color-primary)] transition-all duration-200 ${
-        showSuggestions && suggestions.length > 0 ? 'rounded-t-none' : 'rounded-t-xl'
-      }`}>
+        {/* Floating Island Input Capsule */}
+        <div className="sa-input-floating-island w-full bg-[var(--bg-card)]/90 backdrop-blur-md border border-[var(--border-color)]/70 hover:border-[var(--border-color)] focus-within:border-[var(--color-primary)]/80 focus-within:ring-1 focus-within:ring-[var(--color-primary)]/30 rounded-2xl shadow-xl transition-all duration-200 overflow-hidden">
         {/* Attachment Previews */}
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 px-3 pt-2 max-h-32 overflow-y-auto scrollbar-thin border-b border-[var(--border-color)]/60">
@@ -489,5 +488,6 @@ export function SuperAgentInputContainer({
         </div>
       </div>
     </div>
+  </div>
   );
 }

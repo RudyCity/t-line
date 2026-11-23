@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, Terminal as TerminalIcon, FileCode, FolderTree, GitCompare, GitBranch, LayoutGrid, Search } from 'lucide-react';
+import { Plus, Terminal as TerminalIcon, FileCode, FolderTree, GitCompare, LayoutGrid, Search } from 'lucide-react';
+import { GitBranchIcon } from './GitBranchIcon';
 import { TabData, TerminalInstanceData, WorkspaceInfo, WorktreeInfo } from '../hooks/useTerminals';
 import { WorkspaceList } from './WorkspaceList';
 import { ProjectBrowser } from './ProjectBrowser';
@@ -37,9 +38,9 @@ export function WorkspaceSwitcher({
           display: flex;
           align-items: center;
           gap: 4px;
-          padding: 5px 10px;
-          border-bottom: 1px solid var(--border-color);
-          background: var(--panel-header-bg, rgba(0,0,0,0.12));
+          padding: 6px 12px;
+          border-bottom: 1px solid color-mix(in srgb, var(--border-color) 35%, transparent);
+          background: transparent;
           flex-shrink: 0;
           overflow-x: auto;
           scrollbar-width: none;
@@ -110,7 +111,7 @@ export function WorkspaceSwitcher({
               onClick={() => onWorkspaceClick(panelWorkspace.id)}
               title={mainWt?.path ?? panelWorkspace.path}
             >
-              <GitBranch size={10} />
+              <GitBranchIcon size={11} />
               {mainWt?.branch || 'main'}
             </button>
 
@@ -125,7 +126,7 @@ export function WorkspaceSwitcher({
                   onClick={() => onWorktreeClick(panelWorkspace.id, wt.path)}
                   title={wt.path}
                 >
-                  <GitBranch size={10} />
+                  <GitBranchIcon size={11} />
                   {label}
                 </button>
               );

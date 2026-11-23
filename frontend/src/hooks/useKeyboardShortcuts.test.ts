@@ -145,4 +145,50 @@ describe('useKeyboardShortcuts', () => {
 
     document.body.removeChild(input);
   });
+
+  it('triggers onCloseTab on Alt+W and Ctrl+W outside inputs and xterm', () => {
+    const onCloseTab = vi.fn();
+    renderHook(() =>
+      useKeyboardShortcuts({
+        onNewTerminal: vi.fn(),
+        onCloseTab,
+        onNextTab: vi.fn(),
+        onPrevTab: vi.fn(),
+        onJumpToTab: vi.fn(),
+      })
+    );
+
+    // Alt + W
+    const altW = new KeyboardEvent('keydown', { key: 'w', altKey: true, bubbles: true, cancelable: true });
+    window.dispatchEvent(altW);
+    expect(onCloseTab).toHaveBeenCalledTimes(1);
+    expect(altW.defaultPrevented).toBe(true);
+
+    // Ctrl + W
+    const ctrlW = new KeyboardEvent('keydown', { key: 'w', ctrlKey: true, bubbles: true, cancelable: true });
+    window.dispatchEvent(ctrlW);
+    expect(onCloseTab).toHaveBeenCalledTimes(2);
+    expect(ctrlW.defaultPrevented).toBe(true);
+
+    // Cmd + W (macOS)
+    const cmdW = new KeyboardEvent('keydown', { key: 'w', metaKey: true, bubbles: true, cancelable: true });
+    window.dispatchEvent(cmdW);
+    expect(onCloseTab).toHaveBeenCalledTimes(3);
+
+    // Inside xterm helper textarea: Ctrl+W should NOT close tab (preserves readline unix-word-rubout)
+    const xtermEl = document.createElement('textarea');
+    xtermEl.className = 'xterm-helper-textarea';
+    document.body.appendChild(xtermEl);
+
+    const xtermCtrlW = new KeyboardEvent('keydown', { key: 'w', ctrlKey: true, bubbles: true, cancelable: true });
+    xtermEl.dispatchEvent(xtermCtrlW);
+    expect(onCloseTab).toHaveBeenCalledTimes(3); // unchanged
+
+    // But Alt+W in xterm DOES close tab
+    const xtermAltW = new KeyboardEvent('keydown', { key: 'w', altKey: true, bubbles: true, cancelable: true });
+    xtermEl.dispatchEvent(xtermAltW);
+    expect(onCloseTab).toHaveBeenCalledTimes(4);
+
+    document.body.removeChild(xtermEl);
+  });
 });

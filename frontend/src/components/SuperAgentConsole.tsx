@@ -1616,11 +1616,11 @@ export function SuperAgentConsole({
             </div>
           )}
 
-          {/* Left Resizer Drag Handle */}
+          {/* Left Resizer Drag Handle (Subtle Gutter) */}
           {showHistorySidebar && (
             <div
               onMouseDown={startResizingLeft}
-              className="w-[2px] hover:w-[4px] bg-[var(--border-color)] hover:bg-[var(--color-primary)] cursor-col-resize select-none transition-all duration-150 h-full shrink-0 z-20 active:bg-[var(--color-primary)]"
+              className="w-[4px] -ml-[2px] bg-transparent hover:bg-[var(--color-primary)]/50 active:bg-[var(--color-primary)] cursor-col-resize select-none transition-colors duration-150 h-full shrink-0 z-20"
               title="Drag to resize History panel"
             />
           )}
@@ -1673,6 +1673,7 @@ export function SuperAgentConsole({
               messages={messages}
               isSystemNoiseMsg={isSystemNoiseMsg}
               isStreaming={loading}
+              onOpenFile={onOpenFile}
             />
 
             {/* Live Progress Tool Message */}
@@ -1812,11 +1813,11 @@ export function SuperAgentConsole({
             />
           </div>
 
-          {/* Right Resizer Drag Handle */}
+          {/* Right Resizer Drag Handle (Subtle Gutter) */}
           {showSidebar && (
             <div
               onMouseDown={startResizingRight}
-              className="w-[2px] hover:w-[4px] bg-[var(--border-color)] hover:bg-[var(--color-primary)] cursor-col-resize select-none transition-all duration-150 h-full shrink-0 z-20 active:bg-[var(--color-primary)]"
+              className="w-[4px] -ml-[2px] bg-transparent hover:bg-[var(--color-primary)]/50 active:bg-[var(--color-primary)] cursor-col-resize select-none transition-colors duration-150 h-full shrink-0 z-20"
               title="Drag to resize Right Panel"
             />
           )}
