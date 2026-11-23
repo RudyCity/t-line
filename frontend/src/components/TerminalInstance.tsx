@@ -578,6 +578,24 @@ export function TerminalInstance({
         if (isPasteShortcut) {
           return false;
         }
+
+        // Zoom shortcuts: Ctrl/Cmd/Alt + (+ / - / = / 0 / Numpad)
+        // Yield control to browser / global shortcut handler so xterm doesn't intercept or send bytes to PTY
+        const isModifier = e.ctrlKey || e.metaKey || e.altKey;
+        if (isModifier) {
+          const isZoomKey =
+            key === '=' ||
+            key === '+' ||
+            key === '-' ||
+            key === '_' ||
+            key === '0' ||
+            e.code === 'NumpadAdd' ||
+            e.code === 'NumpadSubtract' ||
+            e.code === 'Numpad0';
+          if (isZoomKey) {
+            return false;
+          }
+        }
       }
       return true;
     });

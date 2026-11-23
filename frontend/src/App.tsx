@@ -8,7 +8,6 @@ import {
   Loader2, 
   Menu as MenuIcon,
   GitCompare,
-  GitBranch,
   FolderTree,
   Settings,
   FileCode,
@@ -84,6 +83,7 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
 import { Footer } from './components/Footer';
 import { TabsDropdown } from './components/TabsDropdown';
+import { GitBranchIcon } from './components/GitBranchIcon';
 import { EmptyDashboard } from './components/EmptyDashboard';
 import { MobileKeyboard } from './components/MobileKeyboard';
 import { useLayoutHelpers } from './hooks/useLayoutHelpers';
@@ -470,6 +470,7 @@ export default function App() {
     setDefaultShell,
     handleZoomIn,
     handleZoomOut,
+    handleZoomReset,
     openTerminal,
     openFileTab,
     openDiffTab,
@@ -957,13 +958,14 @@ export default function App() {
   // Listen to zoom events dispatched from terminal status bar
   useEffect(() => {
     const handleZoomEvent = (e: Event) => {
-      const detail = (e as CustomEvent<{ direction: 'in' | 'out' }>).detail;
+      const detail = (e as CustomEvent<{ direction: 'in' | 'out' | 'reset' }>).detail;
       if (detail?.direction === 'in') handleZoomIn();
       else if (detail?.direction === 'out') handleZoomOut();
+      else if (detail?.direction === 'reset') handleZoomReset();
     };
     window.addEventListener('tline-zoom', handleZoomEvent);
     return () => window.removeEventListener('tline-zoom', handleZoomEvent);
-  }, [handleZoomIn, handleZoomOut]);
+  }, [handleZoomIn, handleZoomOut, handleZoomReset]);
 
   // Listen to terminal focus events to show virtual touch keyboard on mobile
   useEffect(() => {
@@ -1181,6 +1183,7 @@ export default function App() {
     onSplitVertical: () => splitFocusedTerminal('vertical'),
     onZoomIn: handleZoomIn,
     onZoomOut: handleZoomOut,
+    onZoomReset: handleZoomReset,
     onOpenShellByDigit: (digit) => {
       const shell = shellForDigit(digit);
       if (shell) openTerminal('Shell', panelWorkspace?.path || workspaces[0]?.path || '', shell);
@@ -2267,7 +2270,7 @@ export default function App() {
                     const branchName = activeWt?.branch || 'worktree';
                     return (
                       <div className="tab-group-badge" title={`Branch: ${branchName}`}>
-                        <GitBranch size={10} />
+                        <GitBranchIcon size={11} />
                         <span>{branchName}</span>
                       </div>
                     );
@@ -2291,7 +2294,7 @@ export default function App() {
                         <Fragment key={t.id}>
                           {showGroupHeader && (
                             <div className="tab-group-badge" title={`Branch: ${branch}`}>
-                              <GitBranch size={10} />
+                              <GitBranchIcon size={11} />
                               <span>{branch}</span>
                             </div>
                           )}

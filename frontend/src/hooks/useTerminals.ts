@@ -420,6 +420,11 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     setTerminalFontSize(prev => Math.max(prev - 1, 5));
   }, []);
 
+  const handleZoomReset = useCallback(() => {
+    const isMobileOrTablet = typeof window !== 'undefined' && (window.innerWidth <= 1024 || ('ontouchstart' in window && window.innerWidth < 1280));
+    setTerminalFontSize(isMobileOrTablet ? 9 : 12);
+  }, []);
+
   const findWorkspaceIdForPath = useCallback((path: string): string | undefined => {
     if (!path) return undefined;
     const normPath = path.toLowerCase().replace(/\\/g, '/');
@@ -1048,6 +1053,7 @@ export function useTerminals(workspaces: WorkspaceInfo[], onTerminalOpen?: () =>
     setDefaultShell,
     handleZoomIn,
     handleZoomOut,
+    handleZoomReset,
     openTerminal,
     openFileTab,
     openDiffTab,

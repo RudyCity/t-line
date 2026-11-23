@@ -352,7 +352,7 @@ export function RightSidebar({
               <button
                 onClick={handleZoomOut}
                 className="text-[var(--text-muted)] hover:text-[var(--text-main)] active:scale-95 transition-all cursor-pointer p-1 rounded flex items-center justify-center"
-                title="Zoom Out"
+                title="Zoom Out (Ctrl+-)"
               >
                 <ZoomOut size={14} />
               </button>
@@ -362,7 +362,7 @@ export function RightSidebar({
               <button
                 onClick={handleZoomIn}
                 className="text-[var(--text-muted)] hover:text-[var(--text-main)] active:scale-95 transition-all cursor-pointer p-1 rounded flex items-center justify-center"
-                title="Zoom In"
+                title="Zoom In (Ctrl++)"
               >
                 <ZoomIn size={14} />
               </button>

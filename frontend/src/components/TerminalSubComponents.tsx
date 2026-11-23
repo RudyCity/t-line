@@ -225,7 +225,7 @@ export function TerminalStatusBar({
             <button
               onClick={handleZoomOut}
               className="terminal-status-btn-small"
-              title="Zoom Out Terminal Font"
+              title="Zoom Out Terminal Font (Ctrl+-)"
             >
               <ZoomOut size={10} />
             </button>
@@ -233,7 +233,7 @@ export function TerminalStatusBar({
             <button
               onClick={handleZoomIn}
               className="terminal-status-btn-small"
-              title="Zoom In Terminal Font"
+              title="Zoom In Terminal Font (Ctrl++)"
             >
               <ZoomIn size={10} />
             </button>

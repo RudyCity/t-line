@@ -14,9 +14,10 @@ export interface KeyboardShortcutsOptions {
   /** Toggle split pane (Alt+D = horizontal, Alt+E = vertical) */
   onSplitHorizontal?: () => void;
   onSplitVertical?: () => void;
-  /** Zoom in/out (Alt+= / Alt+-) */
+  /** Zoom in/out/reset (Ctrl+= / Ctrl+- / Ctrl+0 / Alt+= / Alt+- / Alt+0) */
   onZoomIn?: () => void;
   onZoomOut?: () => void;
+  onZoomReset?: () => void;
   onQuickSnapshot?: () => void;
   /** Buka shell spesifik via Ctrl+Shift+1..4 (PowerShell/CMD/Git Bash/WSL). */
   onOpenShellByDigit?: (digit: number) => void;
@@ -39,8 +40,9 @@ export interface KeyboardShortcutsOptions {
  *   Alt+1-9        → Jump to tab N
  *   Alt+D          → Split horizontal (side-by-side)
  *   Alt+E          → Split vertical (top-bottom)
- *   Alt+= / Alt++  → Zoom in
- *   Alt+-          → Zoom out
+ *   Ctrl+= / Ctrl++ / Alt+= / Alt++ → Zoom in
+ *   Ctrl+- / Alt+- → Zoom out
+ *   Ctrl+0 / Alt+0 → Zoom reset (100% / default size)
  *   Ctrl+Shift+F   → Search in terminal (handled inside TerminalInstance)
  */
 export function useKeyboardShortcuts({
@@ -53,6 +55,7 @@ export function useKeyboardShortcuts({
   onSplitVertical,
   onZoomIn,
   onZoomOut,
+  onZoomReset,
   onQuickSnapshot,
   onOpenShellByDigit,
   enabled = true,
@@ -71,11 +74,37 @@ export function useKeyboardShortcuts({
     if (!enabled) return;
 
     const handler = (e: KeyboardEvent) => {
-      // Skip if in a real input field (but not xterm)
-      if (isInInput(e.target)) return;
-
-      const alt = e.altKey;
+      const isAltGr = (Boolean(e.getModifierState && e.getModifierState('AltGraph'))) || (e.ctrlKey && e.altKey);
+      const ctrlOrCmd = (e.ctrlKey || e.metaKey) && !isAltGr;
+      const alt = e.altKey && !isAltGr;
       const shift = e.shiftKey;
+
+      // ── Zoom In (Ctrl+=, Ctrl++, Cmd+=, Cmd++, Alt+=, Alt++, Numpad+) ──
+      const isZoomInKey = e.key === '=' || e.key === '+' || e.code === 'NumpadAdd' || e.key === 'Add';
+      if ((ctrlOrCmd || alt) && isZoomInKey) {
+        e.preventDefault();
+        onZoomIn?.();
+        return;
+      }
+
+      // ── Zoom Out (Ctrl+-, Cmd+-, Alt+-, Numpad-) ─────────────────────
+      const isZoomOutKey = e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract' || e.key === 'Subtract';
+      if ((ctrlOrCmd || alt) && isZoomOutKey) {
+        e.preventDefault();
+        onZoomOut?.();
+        return;
+      }
+
+      // ── Zoom Reset (Ctrl+0, Cmd+0, Alt+0, Numpad0) ───────────────────
+      const isZoomResetKey = e.key === '0' || e.code === 'Numpad0';
+      if ((ctrlOrCmd || alt) && isZoomResetKey) {
+        e.preventDefault();
+        onZoomReset?.();
+        return;
+      }
+
+      // Skip non-zoom shortcuts if in a real input field (but not xterm)
+      if (isInInput(e.target)) return;
 
       // ── Alt+T — New Terminal ────────────────────────────
       if (alt && !shift && e.key === 't') {
@@ -133,20 +162,6 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      // ── Alt+= or Alt++ — Zoom in ─────────────────────────
-      if (alt && (e.key === '=' || e.key === '+')) {
-        e.preventDefault();
-        onZoomIn?.();
-        return;
-      }
-
-      // ── Alt+- — Zoom out ─────────────────────────────────
-      if (alt && e.key === '-') {
-        e.preventDefault();
-        onZoomOut?.();
-        return;
-      }
-
       // ── Alt+S — Quick Snapshot ──────────────────────────
       if (alt && !shift && e.key === 's') {
         e.preventDefault();
@@ -157,5 +172,20 @@ export function useKeyboardShortcuts({
 
     window.addEventListener('keydown', handler, { capture: true });
     return () => window.removeEventListener('keydown', handler, { capture: true });
-  }, [enabled, isInInput, onNewTerminal, onCloseTab, onNextTab, onPrevTab, onJumpToTab, onSplitHorizontal, onSplitVertical, onZoomIn, onZoomOut, onQuickSnapshot]);
+  }, [
+    enabled,
+    isInInput,
+    onNewTerminal,
+    onCloseTab,
+    onNextTab,
+    onPrevTab,
+    onJumpToTab,
+    onSplitHorizontal,
+    onSplitVertical,
+    onZoomIn,
+    onZoomOut,
+    onZoomReset,
+    onQuickSnapshot,
+    onOpenShellByDigit
+  ]);
 }
