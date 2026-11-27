@@ -1759,6 +1759,8 @@ pub fn run() {
             browser::commands::browser_focus,
             browser::commands::browser_undock,
             browser::commands::browser_pairing,
+            browser::commands::browser_bookmarks,
+            browser::commands::browser_telemetry,
             get_memory_usage,
             open_webview_devtools,
             eval_webview_js,

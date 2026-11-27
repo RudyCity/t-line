@@ -60,3 +60,77 @@ pub(crate) fn verified_target(
     }
     Ok(port)
 }
+
+#[cfg(all(test, windows))]
+mod live_tests {
+    use super::{cdp, engine, identity, launch, session};
+    use std::process::{Command, Stdio};
+    use std::time::{Duration, Instant};
+
+    /// Opt-in live check of the real-browser pipeline on this machine:
+    /// installed engine -> isolated profile -> verified CDP endpoint ->
+    /// target discovery -> navigation -> process cleanup.
+    /// Run with: cargo test --lib -- --ignored real_engine_launch
+    #[test]
+    #[ignore = "spawns the installed Chromium-family browser"]
+    fn real_engine_launch_cdp_navigate_and_cleanup() {
+        let engines = engine::discover();
+        assert!(
+            !engines.is_empty(),
+            "no installed Chromium-family browser found on this machine"
+        );
+        let engine = &engines[0];
+        let profile = std::env::temp_dir().join(format!("tline-live-browser-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&profile);
+        std::fs::create_dir_all(&profile).expect("create isolated profile");
+
+        let args = launch::launch_args(&profile, "about:blank", true);
+        let mut child = Command::new(&engine.executable)
+            .args(&args)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("spawn the installed browser");
+        let pid = child.id();
+
+        let (port, fingerprint) = session::await_endpoint(&profile, Duration::from_secs(25))
+            .expect("verified loopback CDP endpoint");
+        assert_eq!(fingerprint.len(), 64);
+
+        let targets = identity::list_targets(port).expect("list live page targets");
+        assert!(!targets.is_empty(), "expected at least one page target");
+        let page = targets[0].clone();
+
+        cdp::apply_action(
+            port,
+            &page.id,
+            cdp::PageAction::Navigate,
+            Some("https://example.com/"),
+        )
+        .expect("navigate the live target");
+
+        let deadline = Instant::now() + Duration::from_secs(20);
+        let mut reached = false;
+        while Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(300));
+            if let Ok(list) = identity::list_targets(port) {
+                if list.iter().any(|target| target.url.contains("example.com")) {
+                    reached = true;
+                    break;
+                }
+            }
+        }
+
+        let _ = Command::new("taskkill")
+            .args(["/PID", &pid.to_string(), "/T", "/F"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+        let _ = child.wait();
+        std::thread::sleep(Duration::from_millis(400));
+        let _ = std::fs::remove_dir_all(&profile);
+
+        assert!(reached, "navigated URL never appeared in the live target list");
+    }
+}

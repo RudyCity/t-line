@@ -234,6 +234,33 @@ mod tests {
         assert_eq!(public_url("file:///C:/secret"), "about:blank");
     }
 
+
+    #[test]
+    fn bookmark_tree_is_flattened_and_sanitized() {
+        let root = serde_json::json!({
+            "roots": { "bookmark_bar": { "children": [
+                { "type": "url", "name": "Docs", "url": "https://example.com/docs?q=1#x" },
+                { "type": "folder", "name": "Folder", "children": [
+                    { "type": "url", "name": "Nested", "url": "https://example.org/" },
+                    { "type": "url", "name": "Script", "url": "javascript:alert(1)" }
+                ]},
+                { "type": "url", "name": "Creds", "url": "https://user:pass@example.net/" }
+            ]}}
+        });
+        let list = parse_bookmarks(&root);
+        assert_eq!(list.len(), 2);
+        assert_eq!(list[0].name, "Docs");
+        assert!(list[0].url.contains("/docs?q=1#x"));
+        assert_eq!(list[1].name, "Nested");
+    }
+
+    #[test]
+    fn bookmark_entries_fall_back_to_host_names() {
+        let root = serde_json::json!({
+            "children": [ { "type": "url", "name": "   ", "url": "https://example.com/a" } ]
+        });
+        assert_eq!(parse_bookmarks(&root)[0].name, "example.com");
+    }
     #[test]
     fn marker_requires_loopback_browser_path() {
         let dir = std::env::temp_dir().join(format!("tline-marker-{}", std::process::id()));
@@ -256,4 +283,85 @@ mod tests {
         );
         let _ = fs::remove_dir_all(&dir);
     }
+}
+
+#[derive(serde::Serialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ProfileBookmark {
+    pub name: String,
+    pub url: String,
+}
+
+const MAX_BOOKMARKS_FILE: u64 = 4 * 1024 * 1024;
+const MAX_BOOKMARKS: usize = 200;
+
+/// Flattens the browser profile bookmark tree into a bounded, safe list.
+/// Only HTTP(S) entries are kept; folders are traversed, never returned.
+pub fn parse_bookmarks(root: &serde_json::Value) -> Vec<ProfileBookmark> {
+    fn walk(node: &serde_json::Value, out: &mut Vec<ProfileBookmark>, depth: u8) {
+        if out.len() >= MAX_BOOKMARKS || depth > 64 {
+            return;
+        }
+        if let Some(children) = node.get("children").and_then(|value| value.as_array()) {
+            for child in children {
+                walk(child, out, depth + 1);
+                if out.len() >= MAX_BOOKMARKS {
+                    return;
+                }
+            }
+            return;
+        }
+        let Some(url) = node.get("url").and_then(|value| value.as_str()) else {
+            return;
+        };
+        let parsed = tauri::Url::parse(url).ok();
+        let Some(parsed) = parsed else { return };
+        if !matches!(parsed.scheme(), "http" | "https") || !parsed.username().is_empty() {
+            return;
+        }
+        let name: String = node
+            .get("name")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .chars()
+            .take(120)
+            .collect();
+        out.push(ProfileBookmark {
+            name: if name.trim().is_empty() { parsed.host_str().unwrap_or("bookmark").to_string() } else { name },
+            url: parsed.to_string(),
+        });
+    }
+    let mut out = Vec::new();
+    match root.get("roots") {
+        Some(roots) => {
+            for section in ["bookmark_bar", "other", "synced"] {
+                if let Some(node) = roots.get(section) {
+                    walk(node, &mut out, 0);
+                }
+            }
+        }
+        None => walk(root, &mut out, 0),
+    }
+    out
+}
+
+/// Reads the installed browser's own bookmark file for one owned profile.
+/// This is read-only and never writes to the browser's profile.
+pub fn read_profile_bookmarks(profile: &Path) -> Result<Vec<ProfileBookmark>, String> {
+    let candidates = ["Default", "Profile 1", "Profile 2"];
+    for directory in candidates {
+        let path = profile.join(directory).join("Bookmarks");
+        let metadata = match fs::symlink_metadata(&path) {
+            Ok(metadata) => metadata,
+            Err(_) => continue,
+        };
+        if !metadata.file_type().is_file() || metadata.len() > MAX_BOOKMARKS_FILE {
+            continue;
+        }
+        let raw = fs::read_to_string(&path).map_err(|error| error.to_string())?;
+        let parsed: serde_json::Value =
+            serde_json::from_str(&raw).map_err(|_| "Invalid browser bookmark file.".to_string())?;
+        return Ok(parse_bookmarks(&parsed));
+    }
+    Ok(Vec::new())
 }

@@ -197,3 +197,33 @@ pub fn browser_pairing(
         engine_id,
     })
 }
+
+/// Read-only bookmarks from the embedded browser's own isolated profile.
+#[tauri::command]
+pub fn browser_bookmarks(
+    app: tauri::AppHandle,
+    webview: tauri::Webview,
+    state: tauri::State<'_, BrowserState>,
+    profile_id: String,
+) -> Result<Vec<identity::ProfileBookmark>, String> {
+    primary_ui(&webview)?;
+    let owned = session::snapshot(&state)?
+        .into_iter()
+        .any(|item| item.profile_id == profile_id);
+    if !owned {
+        return Err("No owned browser matches this profile.".into());
+    }
+    let profile = identity::profile_path(&app, &profile_id)?;
+    identity::read_profile_bookmarks(&profile)
+}
+
+/// Memory and CPU of the exact owned browser process.
+#[tauri::command]
+pub fn browser_telemetry(
+    webview: tauri::Webview,
+    state: tauri::State<'_, BrowserState>,
+    profile_id: String,
+) -> Result<Option<session::BrowserTelemetry>, String> {
+    primary_ui(&webview)?;
+    session::process_telemetry(&state, &profile_id)
+}

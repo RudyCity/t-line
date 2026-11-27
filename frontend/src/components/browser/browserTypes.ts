@@ -109,3 +109,32 @@ export function matchingGatewayClaim(port: number, targetId: string, payload: un
   }
   return null;
 }
+
+/** Read-only bookmark entry coming from the embedded browser's own profile. */
+export type ProfileBookmark = {
+  name: string;
+  url: string;
+};
+
+/** Memory and CPU of the exact owned browser process. */
+export type BrowserTelemetry = {
+  pid: number;
+  rssBytes: number;
+  cpuPercent: number;
+};
+
+export function isProfileBookmark(value: unknown): value is ProfileBookmark {
+  if (!value || typeof value !== 'object') return false;
+  const bookmark = value as Partial<ProfileBookmark>;
+  return typeof bookmark.name === 'string' && bookmark.name.length <= 200 &&
+    typeof bookmark.url === 'string' && bookmark.url.length <= 8192 &&
+    /^https?:\/\//i.test(bookmark.url);
+}
+
+export function isBrowserTelemetry(value: unknown): value is BrowserTelemetry {
+  if (!value || typeof value !== 'object') return false;
+  const telemetry = value as Partial<BrowserTelemetry>;
+  return Number.isSafeInteger(telemetry.pid) && Number(telemetry.pid) > 0 &&
+    Number.isFinite(telemetry.rssBytes) && Number(telemetry.rssBytes) >= 0 &&
+    Number.isFinite(telemetry.cpuPercent) && Number(telemetry.cpuPercent) >= 0;
+}

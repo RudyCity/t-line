@@ -3,17 +3,22 @@ import {
   isBrowserPairing,
   isBrowserSession,
   isBrowserTarget,
+  isBrowserTelemetry,
+  isProfileBookmark,
   matchingGatewayClaim,
   tabProfileId,
   type BrowserEngine,
   type BrowserPairing,
   type BrowserSessionStatus,
   type BrowserTarget,
+  type BrowserTelemetry,
   type ControlMode,
   type GatewayClaim,
+  type ProfileBookmark,
 } from './browserTypes';
 import { normalizeAddress } from './browserUrl';
 import { useDockBridge } from './useDockBridge';
+import { useOverlayWatch } from './useOverlayWatch';
 
 type Invoke = (name: string, args?: Record<string, unknown>) => Promise<unknown>;
 
@@ -89,9 +94,12 @@ export function useBrowserRuntime({
   const [registeredUntil, setRegisteredUntil] = useState<number | null>(null);
   const [controlMode, setControlMode] = useState<ControlMode | null>(null);
   const [claim, setClaim] = useState<GatewayClaim | null>(null);
-  const [overlaysOpen, setOverlaysOpen] = useState(false);
+  const [localOverlaysOpen, setLocalOverlaysOpen] = useState(false);
+  const [telemetry, setTelemetry] = useState<BrowserTelemetry | null>(null);
   const editingRef = useRef(false);
   const activeTarget = targets.find((target) => target.id === selectedTargetId) ?? null;
+  const modalOpen = useOverlayWatch(active);
+  const overlaysOpen = localOverlaysOpen || modalOpen;
 
   useDockBridge({ invoke, session, active, viewportRef, overlaysOpen });
 
@@ -424,11 +432,44 @@ export function useBrowserRuntime({
   }, [pairing, active]);
 
   useEffect(() => {
+    if (!invoke || !active || !session?.debuggingAvailable) {
+      setTelemetry(null);
+      return;
+    }
+    let cancelled = false;
+    const sample = async () => {
+      if (document.hidden) return;
+      try {
+        const raw = await invoke('browser_telemetry', { profileId: session.profileId });
+        if (!cancelled) setTelemetry(isBrowserTelemetry(raw) ? raw : null);
+      } catch {
+        if (!cancelled) setTelemetry(null);
+      }
+    };
+    void sample();
+    const timer = window.setInterval(() => void sample(), 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [invoke, active, session?.debuggingAvailable, session?.profileId]);
+
+  useEffect(() => {
     setPairing(null);
     setRegisteredUntil(null);
     setControlMode(null);
     setClaim(null);
   }, [session?.generation]);
+
+  const loadProfileBookmarks = useCallback(async (): Promise<ProfileBookmark[]> => {
+    if (!invoke || !session) return [];
+    try {
+      const raw = await invoke('browser_bookmarks', { profileId: session.profileId });
+      return Array.isArray(raw) ? raw.filter(isProfileBookmark) : [];
+    } catch {
+      return [];
+    }
+  }, [invoke, session?.profileId]);
 
   return {
     supported: !!invoke,
@@ -451,8 +492,11 @@ export function useBrowserRuntime({
     notice,
     clearError: () => setError(''),
     clearNotice: () => setNotice(''),
-    setOverlaysOpen,
+    setOverlaysOpen: setLocalOverlaysOpen,
     overlaysOpen,
+    modalOpen,
+    telemetry,
+    loadProfileBookmarks,
     launch,
     stop,
     act,

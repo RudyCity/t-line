@@ -20,7 +20,6 @@ import { createAgentTimelineStreamProxy } from './agentTimelineStreamProxy';
 import { createTlineAssistantTurnsRouter } from './tlineAssistantTurns';
 import { createOrchestrationProxy } from './orchestrationProxy';
 import { getWorkspaceSessions, getSessionMessages } from './sessionManager';
-import { getBrowserAgentSessions } from './browserSessions';
 import { createManagedBrowserHandoffRouter } from './managedBrowserHandoff';
 
 const router = Router();
@@ -88,14 +87,17 @@ router.get('/acp/engines', async (_req, res) => {
 });
 
 // Read-only, authenticated browser session monitoring for the T-Line browser.
-// The endpoint never returns CDP session capabilities or cookie data.
+// Sourced from the selected Core runtime over HTTP: T-Line never reads Core
+// session files from disk, and no CDP capability or cookie data is returned.
 router.get('/browser/sessions', async (_req, res) => {
-  try {
-    res.setHeader('Cache-Control', 'no-store');
-    res.json(await getBrowserAgentSessions());
-  } catch {
-    res.status(503).json({ ok: false, error: 'Browser session metadata unavailable.' });
-  }
+  res.setHeader('Cache-Control', 'no-store');
+  const upstream = await proxyToSuperAgent(
+    '/api/browser/sessions',
+    { ok: false, sessions: [], summary: { activeTabs: 0, activeAgents: 0 } },
+    undefined,
+    2500,
+  );
+  res.status(upstream?.ok === true ? 200 : 503).json(upstream);
 });
 
 /** Fixed-action browser collaboration controls, gated by T-Line auth AND

@@ -14,6 +14,7 @@ import {
 import SelectMenu from './SelectMenu';
 import type { BrowserRuntime } from './useBrowserRuntime';
 import { addressLabel } from './browserUrl';
+import type { ProfileBookmark } from './browserTypes';
 
 type Bookmark = { url: string; name: string; addedAt: number };
 const BOOKMARKS_KEY = 'tline-real-browser-bookmarks';
@@ -43,6 +44,7 @@ export default function BrowserToolbar({ runtime }: { runtime: BrowserRuntime })
   const { session, activeTarget, engines, engineId, busy } = runtime;
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(() => readList<Bookmark>(BOOKMARKS_KEY));
   const [history, setHistory] = useState<Bookmark[]>(() => readList<Bookmark>(HISTORY_KEY));
+  const [profileBookmarks, setProfileBookmarks] = useState<ProfileBookmark[]>([]);
   const [panel, setPanel] = useState<'none' | 'bookmarks' | 'history'>('none');
   const [confirmStop, setConfirmStop] = useState(false);
   const stopTimer = useRef<number | null>(null);
@@ -54,6 +56,20 @@ export default function BrowserToolbar({ runtime }: { runtime: BrowserRuntime })
   useEffect(() => () => {
     if (stopTimer.current) window.clearTimeout(stopTimer.current);
   }, []);
+
+  useEffect(() => {
+    if (!session || session.lifecycle !== 'ready') {
+      setProfileBookmarks([]);
+      return;
+    }
+    let cancelled = false;
+    void runtime.loadProfileBookmarks().then((entries) => {
+      if (!cancelled) setProfileBookmarks(entries);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [runtime.loadProfileBookmarks, session?.lifecycle, session?.profileId]);
 
   useEffect(() => {
     if (!activeTarget?.url || activeTarget.url === 'about:blank') return;
@@ -233,6 +249,20 @@ export default function BrowserToolbar({ runtime }: { runtime: BrowserRuntime })
               {entry.name}
             </button>
           ))}
+          {panel === 'bookmarks' && profileBookmarks.length > 0 && (
+            <>
+              <p className="px-1 pt-1.5 text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                From the browser profile
+              </p>
+              {profileBookmarks.map((entry, index) => (
+                <button key={`${entry.url}-${index}`} type="button"
+                  onClick={() => { setPanel('none'); void runtime.navigate(entry.url); }}
+                  className="block w-full truncate rounded-[4px] px-1.5 py-1 text-left text-[11px] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-card)] hover:text-[var(--text-main)]">
+                  {entry.name}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>

@@ -95,6 +95,11 @@ export default function BrowserSurface({
         <span>profile {runtime.profileId}</span>
         {runtime.session && <span>gen {runtime.session.generation.slice(0, 22)}</span>}
         {ready && <span>tabs {runtime.targets.length}</span>}
+        {runtime.telemetry && (
+          <span className="tabular-nums">
+            RSS {Math.round(runtime.telemetry.rssBytes / 1_048_576)} MiB · CPU {runtime.telemetry.cpuPercent.toFixed(0)}%
+          </span>
+        )}
         <span className="flex-1" />
         {runtime.error && (
           <button type="button" role="alert" onClick={() => runtime.clearError()}

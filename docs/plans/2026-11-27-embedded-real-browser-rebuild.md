@@ -68,3 +68,55 @@ React (trusted UI)                 Rust (Tauri)                        SuperAgen
 - `bun --bun x vitest run src/components/browser/__tests__/browserContract.test.ts` (frontend) → **9 passed**.
 - `bun --bun x tsc --noEmit` in `frontend` and `backend` → exit 0.
 - **Open:** packaged Windows app acceptance (docked Chrome resize/DPI/focus, real agent claim through Core, restart/cleanup). Source tests cannot prove native window behaviour.
+
+## Follow-up delivery (same day, second pass)
+
+### 1. Must-have (native evidence)
+- Added an opt-in live test `browser::live_tests::real_engine_launch_cdp_navigate_and_cleanup`
+  (`cargo test --lib -- --ignored real_engine_launch`). It discovers the installed engine, spawns the
+  real browser with the production launch arguments in an isolated profile, waits for the verified
+  loopback CDP endpoint and fingerprint, lists live page targets, navigates a target to
+  `https://example.com/`, asserts the URL appears in the live target list, then tree-kills the owned
+  process and removes the profile.
+  - Result on this machine: **1 passed** (1.83 s), engine = installed Google Chrome.
+- `cargo build --offline` produces the desktop binary (exit 0), so the module links in a full app build.
+- Packaged GUI acceptance is still a human step: see the checklist below.
+
+### 2. Good-to-have
+- **Core-owned session metadata**: SuperAgent now serves `GET /api/browser/sessions` (loopback-only,
+  bearer-authenticated, projection without tokens/cookies). T-Line proxies it through
+  `GET /api/superagent/browser/sessions` and the direct `~/.superagent-r/cdp-sessions` disk reader
+  (`backend/src/browserSessions.ts`) was deleted. One source of truth remains: Core.
+- **Overlay-safe docking**: `useOverlayWatch` observes `[role="dialog"]`, `[aria-modal="true"]`, and
+  `[data-tline-overlay]` and withdraws the native browser window, covering overlays that never emit
+  `tline-hide-native-webview`.
+- **`lib.rs` split: intentionally deferred.** `lib.rs` carries another agent's uncommitted hunk; a
+  1.8k-line refactor would collide. It stays flagged until that work lands.
+
+### 3. Nice-to-have
+- **Real profile bookmarks**: `browser_bookmarks` reads the installed browser's own `Bookmarks` file for
+  the owned profile (read-only, bounded, folders flattened, only HTTP(S) entries) and the toolbar lists
+  them under "From the browser profile".
+- **Process telemetry**: `browser_telemetry` samples RSS and CPU of the exact owned browser PID via
+  `sysinfo`; the status rail shows `RSS x MiB � CPU y%`.
+- **Cross-platform docking: documented, not implemented.** True embedding needs `SetParent` (Windows) or
+  X11 reparenting (Linux); macOS has no equivalent. Non-Windows hosts keep a fully functional real
+  browser in its own window ("Own window"), and the embedded command fails with an explicit message
+  instead of silently degrading. No unverified platform code was added.
+
+### Packaged GUI acceptance checklist (manual)
+1. `bun run build:tauri`, install, open a Browser tab, choose an engine, press **Open real browser here**.
+2. Resize the window and the sidebar; the browser follows the viewport with no blank gutters.
+3. Scroll, type, play a video with audio, press Ctrl+F and Ctrl+/- inside the page (handled by the real engine).
+4. Switch T-Line tabs and open a modal: the surface must disappear and return on activation.
+5. Press **Connect agent**, accept the handoff in chat; confirm the agent claims the same tab.
+6. **Take control**, ask the agent to type; Core must reject agent writes. **Return to agent** resumes.
+7. Stop the browser, confirm no orphan process remains, then relaunch on the same profile.
+8. Quit T-Line while the browser is embedded; confirm the owned process exits.
+
+### Updated verification
+- `cargo test --lib` ? **29 passed, 1 ignored** (the ignored test is the live browser check).
+- Live check ? **1 passed**.
+- `cargo build --offline` ? exit 0.
+- `bun --bun x tsc --noEmit` (SuperAgent) ? exit 0.
+- Frontend browser contract ? **11 passed**.

@@ -3,6 +3,8 @@ import {
   isBrowserPairing,
   isBrowserSession,
   isBrowserTarget,
+  isBrowserTelemetry,
+  isProfileBookmark,
   matchingGatewayClaim,
   tabProfileId,
 } from '../browserTypes';
@@ -99,5 +101,21 @@ describe('browser IPC shape guards', () => {
     expect(matchingGatewayClaim(53331, 'MISSING', payload)).toBeNull();
     expect(matchingGatewayClaim(4444, 'ABC', payload)).toBeNull();
     expect(matchingGatewayClaim(53331, 'ABC', null)).toBeNull();
+  });
+});
+
+describe('browser profile data guards', () => {
+  it('accepts only http bookmarks with bounded names', () => {
+    expect(isProfileBookmark({ name: 'Docs', url: 'https://example.com/docs' })).toBe(true);
+    expect(isProfileBookmark({ name: 'Bad', url: 'javascript:alert(1)' })).toBe(false);
+    expect(isProfileBookmark({ name: 'x'.repeat(201), url: 'https://example.com/' })).toBe(false);
+    expect(isProfileBookmark(null)).toBe(false);
+  });
+
+  it('accepts only sane process telemetry', () => {
+    expect(isBrowserTelemetry({ pid: 4242, rssBytes: 314_572_800, cpuPercent: 4.5 })).toBe(true);
+    expect(isBrowserTelemetry({ pid: 0, rssBytes: 1, cpuPercent: 1 })).toBe(false);
+    expect(isBrowserTelemetry({ pid: 4242, rssBytes: -1, cpuPercent: 1 })).toBe(false);
+    expect(isBrowserTelemetry({ pid: 4242, rssBytes: 1, cpuPercent: Number.NaN })).toBe(false);
   });
 });

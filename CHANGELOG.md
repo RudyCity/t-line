@@ -1,3 +1,14 @@
+## [1.3.754] - 2026-11-27
+
+### Embedded Real Browser Hardening & Core-Owned Session Metadata
+- **Live Native Verification**: Added an opt-in integration test that launches the installed browser through the production argument builder, verifies the loopback CDP endpoint and fingerprint, discovers live page targets, navigates a target, asserts the new URL, and cleans up the owned process tree. Result on this machine: 1 passed in 1.83 s; `cargo build --offline` also succeeds.
+- **Core-Owned Session Projection**: SuperAgent now exposes `GET /api/browser/sessions` (loopback-only, authenticated, tokens and cookies excluded) and T-Line proxies it via `/api/superagent/browser/sessions`. Deleted the direct `~/.superagent-r/cdp-sessions` disk reader so Core remains the single source of truth for CDP claim metadata.
+- **Overlay-Safe Docking**: Added `useOverlayWatch`, which detects `role="dialog"`, `aria-modal="true"`, and `data-tline-overlay` elements and withdraws the native browser child window, so T-Line dialogs are never covered even when they do not emit the existing hide event.
+- **Real Profile Bookmarks**: New `browser_bookmarks` command reads the owned profile's own `Bookmarks` file (read-only, bounded, folder-flattened, HTTP(S) only); the toolbar lists them under "From the browser profile".
+- **Owned Process Telemetry**: New `browser_telemetry` command samples RSS and CPU of the exact owned browser PID via `sysinfo`; the status rail reports `RSS x MiB · CPU y%`.
+- **Cross-Platform Boundary Documented**: True embedding needs Win32 `SetParent` (Windows) or X11 reparenting (Linux) and has no macOS equivalent. Non-Windows hosts keep a fully functional real browser in its own window with an explicit message; no unverified platform code was added.
+- **Deferred**: splitting `desktop-tauri/src-tauri/src/lib.rs` remains pending because that file holds another agent's in-flight change.
+- **Verification**: `cargo test --lib` 29 passed / 1 ignored (live check); live check 1 passed; `cargo build --offline` exit 0; SuperAgent `tsc --noEmit` exit 0; T-Line frontend browser contract 11 passed; frontend and backend `tsc --noEmit` exit 0.
 ## [1.3.753] - 2026-11-27
 
 ### Embedded Real Browser Rebuild (T-Line Client)

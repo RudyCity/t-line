@@ -278,3 +278,33 @@ mod tests {
         assert_eq!(lifecycle_label(false, Some(9222), true), "exited");
     }
 }
+
+#[derive(serde::Serialize, Clone, Copy)]
+#[serde(rename_all = "camelCase")]
+pub struct BrowserTelemetry {
+    pub pid: u32,
+    pub rss_bytes: u64,
+    pub cpu_percent: f32,
+}
+
+/// Memory and CPU for the exact owned browser process. Read-only sampling.
+pub fn process_telemetry(state: &BrowserState, profile_id: &str) -> Result<Option<BrowserTelemetry>, String> {
+    let mut guard = lock_state(state)?;
+    let Some(owned) = guard.get_mut(profile_id) else {
+        return Ok(None);
+    };
+    if !owned.is_alive() {
+        return Ok(None);
+    }
+    let pid = owned.child.id();
+    let mut system = sysinfo::System::new();
+    system.refresh_process_specifics(
+        sysinfo::Pid::from(pid as usize),
+        sysinfo::ProcessRefreshKind::new().with_memory().with_cpu(),
+    );
+    Ok(system.process(sysinfo::Pid::from(pid as usize)).map(|process| BrowserTelemetry {
+        pid,
+        rss_bytes: process.memory(),
+        cpu_percent: process.cpu_usage(),
+    }))
+}
