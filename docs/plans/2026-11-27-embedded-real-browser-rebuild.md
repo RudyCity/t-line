@@ -120,3 +120,28 @@ React (trusted UI)                 Rust (Tauri)                        SuperAgen
 - `cargo build --offline` ? exit 0.
 - `bun --bun x tsc --noEmit` (SuperAgent) ? exit 0.
 - Frontend browser contract ? **11 passed**.
+## Third pass: closure of the remaining audit items
+
+### 1. Must-have
+- **Automated native proof** stayed green after the refactors below.
+- **SuperAgent contract tests for the session projection**: new pure module
+  `src/core/browserSessionProjection.ts` (`isLoopbackRemote`, `projectCdpSessions`) is now the only
+  path used by `GET /api/browser/sessions`, and `tests/browserSessionProjection.test.ts` locks the
+  loopback gate, token stripping, malformed-entry dropping, participant/owner repair, and summary math
+  (4 tests). A packaged GUI pass is still a human checklist item.
+
+### 2. Good-to-have
+- **`lib.rs` is now under the 1000-line rule (973 lines)** without touching the concurrent change:
+  - `tray_menu.rs` (323 lines): system tray menu construction plus `is_paths_equal`/`get_folder_name`.
+  - `system_metrics.rs` (61 lines): the `get_memory_usage` command.
+  - Deleted `build_error_page_html` and its three tests: it was dead production code (the app navigates
+    to `/error.html`), kept alive only by its own tests.
+- **Overlay detection hardened**: `useOverlayWatch` now also matches `.modal-overlay`, which is the
+  class used by `Modals.tsx`, `SettingsModal.tsx`, and `CheckpointsPanel.tsx` (12 call sites), in
+  addition to `role="dialog"`, `aria-modal`, and `data-tline-overlay`.
+
+### Verification after the third pass
+- `cargo test --lib` ? **26 passed, 1 ignored** (the three deleted tests covered removed dead code).
+- `cargo check --offline` ? exit 0; no warnings.
+- SuperAgent `tsc --noEmit` ? exit 0; `tests/browserSessionProjection.test.ts` ? **4 passed**.
+- Frontend `tsc --noEmit` ? exit 0.

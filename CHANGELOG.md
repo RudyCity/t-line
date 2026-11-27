@@ -1,3 +1,11 @@
+## [1.3.755] - 2026-11-27
+
+### Browser Audit Closure: Module Split, Overlay Coverage, Core Session Contract
+- **`lib.rs` Under the 1000-Line Rule**: Extracted `tray_menu.rs` (tray menu construction with `is_paths_equal` and `get_folder_name`) and `system_metrics.rs` (the `get_memory_usage` command), leaving `lib.rs` at 973 lines. Another agent's in-flight `create_detached_window` change was preserved in the working tree and excluded from the commit.
+- **Dead Startup Markup Removed**: Deleted `build_error_page_html` and its three tests. The desktop app navigates to `/error.html`; the builder was dead production code kept alive only by its own tests.
+- **Broader Overlay Coverage**: `useOverlayWatch` now also matches `.modal-overlay`, covering `Modals.tsx`, `SettingsModal.tsx`, and `CheckpointsPanel.tsx` (12 call sites) so the embedded browser never covers T-Line dialogs.
+- **Core Session Projection Contract**: SuperAgent moved `GET /api/browser/sessions` onto a pure, tested module (`isLoopbackRemote`, `projectCdpSessions`) that strips tokens, drops malformed entries, repairs missing owners, and derives the summary. Four new Core tests lock the contract.
+- **Verification**: `cargo test --lib` 26 passed / 1 ignored; `cargo check --offline` exit 0; SuperAgent `tsc --noEmit` exit 0 and projection tests 4 passed; T-Line frontend `tsc --noEmit` exit 0.
 ## [1.3.754] - 2026-11-27
 
 ### Embedded Real Browser Hardening & Core-Owned Session Metadata

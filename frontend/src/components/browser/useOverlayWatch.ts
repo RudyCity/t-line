@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-const OVERLAY_SELECTOR = '[role="dialog"],[aria-modal="true"],[data-tline-overlay]';
+const OVERLAY_SELECTOR = '.modal-overlay,[role="dialog"],[aria-modal="true"],[data-tline-overlay]';
 
 /** Detects T-Line dialogs, drawers, and popovers that do not announce
  * themselves through `tline-hide-native-webview`. The embedded browser is a
