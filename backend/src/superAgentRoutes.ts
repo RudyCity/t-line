@@ -21,6 +21,7 @@ import { createTlineAssistantTurnsRouter } from './tlineAssistantTurns';
 import { createOrchestrationProxy } from './orchestrationProxy';
 import { getWorkspaceSessions, getSessionMessages } from './sessionManager';
 import { getBrowserAgentSessions } from './browserSessions';
+import { createManagedBrowserHandoffRouter } from './managedBrowserHandoff';
 
 const router = Router();
 
@@ -123,6 +124,10 @@ router.post('/browser/shared-control', async (req, res) => {
     undefined, 5500, 'POST', request);
   res.status(upstream?.success ? 200 : 403).json(upstream);
 });
+
+/** T-Line native browser handoff: verified loopback fingerprint plus selected
+ * runtime proxy. Fixed sub-paths only; no generic upstream URL or body passthrough. */
+router.use('/browser/managed', createManagedBrowserHandoffRouter(proxyToSuperAgentWithStatus));
 
 /** SSE relay with exact session identity, authenticated and bounded to local SuperAgent. */
 router.get('/tasks/events', streamTlineTaskEvents);

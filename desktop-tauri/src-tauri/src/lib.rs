@@ -18,12 +18,7 @@ mod backend_diagnostics;
 mod tray_logic;
 
 mod state;
-mod managed_browser;
-mod managed_browser_core;
-mod managed_browser_capture;
-mod managed_browser_input;
-mod managed_browser_stream;
-mod managed_browser_flow;
+mod browser;
 
 use backend_identity::{decide_port, verify_local_backend, PortDecision};
 
@@ -1751,24 +1746,19 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(state)
-        .manage(managed_browser::ManagedBrowserState::default())
-        .manage(managed_browser_stream::BrowserStreamState::default())
-        .manage(managed_browser_input::BrowserInputState::default())
+        .manage(browser::BrowserState::default())
         .invoke_handler(tauri::generate_handler![
-            managed_browser::managed_browser_discover,
-            managed_browser::managed_browser_status,
-            managed_browser::managed_browser_launch,
-            managed_browser::managed_browser_stop,
-            managed_browser::managed_browser_targets,
-            managed_browser::managed_browser_gateway_pairing,
-            managed_browser::managed_browser_gateway_register,
-            managed_browser::managed_browser_control_mode,
-            managed_browser_capture::managed_browser_capture,
-            managed_browser_input::managed_browser_interact,
-            managed_browser_stream::managed_browser_stream_start,
-            managed_browser_stream::managed_browser_stream_stop,
-            managed_browser_stream::managed_browser_stream_ack,
-            managed_browser_stream::managed_browser_stream_stats,
+            browser::commands::browser_engines,
+            browser::commands::browser_sessions,
+            browser::commands::browser_launch,
+            browser::commands::browser_stop,
+            browser::commands::browser_targets,
+            browser::commands::browser_act,
+            browser::commands::browser_dock_bounds,
+            browser::commands::browser_dock_visible,
+            browser::commands::browser_focus,
+            browser::commands::browser_undock,
+            browser::commands::browser_pairing,
             get_memory_usage,
             open_webview_devtools,
             eval_webview_js,
@@ -1930,12 +1920,10 @@ pub fn run() {
 
     app.run(move |app_handle, event| {
         if let tauri::RunEvent::Exit = event {
-            // Managed browser processes belong to this desktop instance only.
+            // Owned real-browser processes belong to this desktop instance only.
             // Closing to tray is not Exit and must not terminate them.
-            let streams = app_handle.state::<managed_browser_stream::BrowserStreamState>();
-            streams.stop_all();
-            let browsers = app_handle.state::<managed_browser::ManagedBrowserState>();
-            managed_browser::shutdown_owned(&browsers);
+            let browsers = app_handle.state::<browser::BrowserState>();
+            browser::session::shutdown_all(&browsers);
             let state = app_handle.state::<DesktopState>();
             stop_backend(&state);
         }

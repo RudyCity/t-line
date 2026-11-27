@@ -1,3 +1,15 @@
+## [1.3.753] - 2026-11-27
+
+### Embedded Real Browser Rebuild (T-Line Client)
+- **Genuine Installed Browser Instead of Streamed Frames**: Replaced the headless Chrome JPEG screencast (≤5 FPS, no audio or video, 16-character text input, 14 keys) with a real installed Chrome/Edge/Brave/Chromium process whose top-level window is docked inside the T-Line window. Rendering, input, media, zoom, find-in-page, downloads, and DevTools now come from the real engine; no pixels or synthetic input pass through T-Line.
+- **Multi-Engine Discovery**: Added deterministic discovery of Google Chrome, Microsoft Edge, Brave, and Chromium on Windows, macOS, and Linux, with a documented capability boundary (Chromium-family only, since Firefox no longer ships CDP and agent tooling speaks CDP).
+- **Deep Links Preserved**: Browser address policy now keeps query strings and fragments, rejects embedded credentials and non-HTTP(S) schemes, and is covered by unit tests in Rust and TypeScript.
+- **Agent Control Without Hardcoded Ports**: `managed_browser_core.rs` and the `127.0.0.1:7888` / `server-info-7888.json` reads were removed. The T-Line backend now recomputes the browser-level CDP fingerprint from the live loopback endpoint and proxies `register`/`control` to the startup-selected Core runtime; the renderer can never supply a forged identity and no Core credential reaches React or Rust.
+- **Human/Agent Handoff Kept**: Verified pairing returns only `profileId`, `generation`, `port`, `targetId`, and `engineId`. SuperAgent's existing CDP gateway claims the same tab the user sees, and a Core-verified human hold blocks agent writes while native human input keeps working.
+- **Docked Viewport Contract**: New `browser_dock_bounds` / `browser_dock_visible` / `browser_focus` / `browser_undock` commands keep the native browser glued to a measured viewport, withdraw it for tab switches, dropdowns, hidden documents, and `tline-hide-native-webview` overlays, and offer an undock escape hatch.
+- **Legacy Pipeline Deleted**: Removed `managed_browser.rs`, `managed_browser_core.rs`, `managed_browser_capture.rs`, `managed_browser_input.rs`, `managed_browser_stream.rs`, `managed_browser_flow.rs`, plus the legacy managed-browser panel, live preview, synthetic DevTools stack, navigation bar, agent session widgets, and their tests (~2,400 Rust lines and ~2,600 frontend lines removed).
+- **Verification**: `cargo test --lib` 27 passed; backend `managedBrowserHandoff` 4 passed; frontend browser contract 9 passed; `tsc --noEmit` clean in frontend and backend. Packaged Windows GUI acceptance (docked resize/DPI/focus, real agent claim, restart cleanup) remains open and is documented in `docs/plans/2026-11-27-embedded-real-browser-rebuild.md`.
+
 ## [1.3.752] - 2026-10-28
 
 ### Assistant Runtime Algorithm Remediation (T-Line Client)
