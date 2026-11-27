@@ -602,7 +602,7 @@ export function CheckpointsPanel({
 
       {/* CREATE CHECKPOINT MODAL DIALOG */}
       {showCreateModal && (
-        <div className="modal-overlay" style={{ zIndex: 1000 }}>
+        <div className="modal-overlay" data-tline-overlay="" style={{ zIndex: 1000 }}>
           <div className="modal-content glass-panel" style={{ maxWidth: '400px' }}>
             <div className="modal-header">
               <div className="flex items-center gap-2">

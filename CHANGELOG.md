@@ -1,3 +1,12 @@
+## [1.3.756] - 2026-11-27
+
+### Native Docking Proof, Core Endpoint Tests, and Desktop Module Split
+- **Automated Native Docking Test**: Added an opt-in test that creates a real Win32 host window, launches the installed browser with production arguments, reparents it with `SetParent`, asserts two DPI-scaled bounds (size plus x/y delta), verifies hide/show through `IsWindowVisible`, and confirms detach leaves no parent. Converts the riskiest manual checklist item into machine-checked evidence.
+- **Core Session Endpoint Integration Tests**: New `handleServerRoute` tests assert 200 for loopback IPv4/IPv6 with `Cache-Control: no-store` and no tokens, 403 for non-loopback or missing addresses, and 405 for non-GET requests.
+- **Explicit Overlay Markers**: All 12 modal roots across `Modals.tsx`, `SettingsModal.tsx`, and `CheckpointsPanel.tsx` now carry `data-tline-overlay=""`, so the embedded browser withdraws independently of CSS class names.
+- **`lib.rs` Reduced to 370 Lines**: Extracted bundled-backend supervision into `backend_process.rs` (spawn, health polling, restart, shutdown), keeping every Rust source file well under the 1000-line rule.
+- **Packaged Build Produced**: `bun run build:tauri` initially failed with `os error 112` at 0.18 GB free disk (debug target held 111 GB). After removing the regenerable incremental cache (74.8 GB, freeing 48 GB), the retry produced `app.exe` (9.6 MB), `t-line_1.3.756_x64_en-US.msi` (46 MB), and `t-line_1.3.756_x64-setup.exe` (35.6 MB) with exit 0.
+- **Verification**: `cargo test --lib` 26 passed / 2 ignored; `cargo check --offline` exit 0 with no warnings; SuperAgent projection tests 4 passed and endpoint tests 4 passed; SuperAgent `tsc --noEmit` exit 0.
 ## [1.3.755] - 2026-11-27
 
 ### Browser Audit Closure: Module Split, Overlay Coverage, Core Session Contract

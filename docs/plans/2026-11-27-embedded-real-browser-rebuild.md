@@ -145,3 +145,36 @@ React (trusted UI)                 Rust (Tauri)                        SuperAgen
 - `cargo check --offline` ? exit 0; no warnings.
 - SuperAgent `tsc --noEmit` ? exit 0; `tests/browserSessionProjection.test.ts` ? **4 passed**.
 - Frontend `tsc --noEmit` ? exit 0.
+## Fourth pass: native docking proof, endpoint integration tests, packaging
+
+### 1. Must-have
+- **Native docking proven automatically.** New opt-in test `browser::dock::live_dock_tests::dock_embeds_real_browser`
+  creates a real Win32 host window, launches the installed browser with production arguments, reparents it
+  with `SetParent`, applies two different DPI-scaled bounds (asserting width/height and the x/y delta),
+  toggles visibility (`IsWindowVisible`), and detaches it (`GetParent` becomes null). Result: **1 passed**.
+  Remaining manual surface is only human feel (font rendering, focus, real agent claim) — geometry,
+  parenting, and visibility are now machine-checked.
+- **Core endpoint integration tests.** `tests/browserSessionsEndpoint.test.ts` calls
+  `handleServerRoute` directly and asserts: loopback IPv4/IPv6 (incl. `::ffff:127.0.0.1`) returns 200 with
+  `Cache-Control: no-store` and no `tokenHash`/`sessionToken`; non-loopback and missing addresses return 403;
+  non-GET returns 405. Result: **4 passed**.
+- **Packaging succeeded.** `bun run build:tauri` first failed with `os error 112` (disk full: 0.18 GB
+  free while `target/debug` held 111 GB). The regenerable `target/debug/incremental` cache (74.8 GB)
+  was removed, freeing 48 GB. The retry built and bundled cleanly:
+  `target/release/app.exe` (9.6 MB), `target/release/bundle/msi/t-line_1.3.756_x64_en-US.msi` (46 MB),
+  and `target/release/bundle/nsis/t-line_1.3.756_x64-setup.exe` (35.6 MB).
+
+### 2. Good-to-have
+- **Explicit overlay markers.** All 12 modal roots in `Modals.tsx` (10), `SettingsModal.tsx` (1), and
+  `CheckpointsPanel.tsx` (1) now carry `data-tline-overlay=""`, so the browser surface steps aside
+  regardless of CSS class renames. The class selector stays as a fallback.
+- **`lib.rs` reduced to 370 lines** (from 973): `backend_process.rs` (~615 lines) now owns bundled backend
+  spawning, health polling, restart, and shutdown. `lib.rs` keeps the app builder, window/webview commands,
+  tray wiring, and `run()`.
+
+### Verification after the fourth pass
+- `cargo test --lib` ? **26 passed, 2 ignored** (live browser + live docking, both opt-in).
+- `cargo check --offline` ? exit 0, no warnings.
+- SuperAgent: `tsc --noEmit` exit 0; projection tests 4 passed; endpoint tests 4 passed.
+- Frontend: `tsc --noEmit` exit 0 and the full suite 420 tests passed after the modal marker change.
+- Packaged build: `bun run build:tauri` exit 0, MSI and NSIS installers produced.

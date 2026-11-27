@@ -274,3 +274,113 @@ mod tests {
         assert!(width >= 1 && height >= 1);
     }
 }
+
+#[cfg(all(test, windows))]
+mod live_dock_tests {
+    use super::*;
+    use crate::browser::{engine, launch, session};
+    use std::process::{Command, Stdio};
+    use std::time::Duration;
+    use windows_sys::Win32::Foundation::HWND;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        CreateWindowExW, DestroyWindow, GetParent, GetWindowRect, IsWindowVisible, ShowWindow,
+        WS_OVERLAPPEDWINDOW, WS_VISIBLE,
+    };
+
+    fn wide(value: &str) -> Vec<u16> {
+        value.encode_utf16().chain(std::iter::once(0)).collect()
+    }
+
+    /// Opt-in native docking check: a real host window, a real installed
+    /// browser, real reparenting, real bounds/visibility, and a clean detach.
+    /// Run with: cargo test --lib -- --ignored dock_embeds_real_browser
+    #[test]
+    #[ignore = "spawns the installed Chromium-family browser and a Win32 host window"]
+    fn dock_embeds_real_browser() {
+        let engines = engine::discover();
+        assert!(!engines.is_empty(), "no installed Chromium-family browser");
+        let class = wide("STATIC");
+        let title = wide("t-line dock test host");
+        let parent = unsafe {
+            CreateWindowExW(
+                0,
+                class.as_ptr(),
+                title.as_ptr(),
+                WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                100,
+                100,
+                900,
+                700,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+            )
+        };
+        assert!(!parent.is_null(), "host window creation failed");
+        unsafe { ShowWindow(parent, 5) };
+
+        let profile = std::env::temp_dir().join(format!("tline-dock-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&profile);
+        std::fs::create_dir_all(&profile).unwrap();
+        let mut child = Command::new(&engines[0].executable)
+            .args(launch::launch_args(&profile, "about:blank", true))
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("spawn browser");
+        let pid = child.id();
+
+        let result = (|| -> Result<(), String> {
+            session::await_endpoint(&profile, Duration::from_secs(25))
+                .ok_or("verified CDP endpoint did not appear")?;
+            let mut chrome = None;
+            for _ in 0..60 {
+                if let Some(hwnd) = find_chromium_window(pid) {
+                    chrome = Some(hwnd);
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(150));
+            }
+            let child_hwnd = chrome.ok_or("browser window did not appear")?;
+            attach(parent as isize, child_hwnd)?;
+            let expected_parent: HWND = parent;
+            assert_eq!(unsafe { GetParent(child_hwnd as HWND) }, expected_parent, "not reparented");
+
+            let mut first = unsafe { std::mem::zeroed::<windows_sys::Win32::Foundation::RECT>() };
+            set_bounds(child_hwnd, DockBounds { x: 10.0, y: 20.0, width: 640.0, height: 480.0 }, 1.0)?;
+            unsafe { GetWindowRect(child_hwnd as HWND, &mut first) };
+            assert_eq!(first.right - first.left, 640, "width not applied");
+            assert_eq!(first.bottom - first.top, 480, "height not applied");
+
+            let mut second = unsafe { std::mem::zeroed::<windows_sys::Win32::Foundation::RECT>() };
+            set_bounds(child_hwnd, DockBounds { x: 50.0, y: 60.0, width: 800.0, height: 600.0 }, 1.0)?;
+            unsafe { GetWindowRect(child_hwnd as HWND, &mut second) };
+            assert_eq!(second.right - second.left, 800, "width not updated");
+            assert_eq!(second.bottom - second.top, 600, "height not updated");
+            assert_eq!(second.left - first.left, 40, "x delta not applied");
+            assert_eq!(second.top - first.top, 40, "y delta not applied");
+
+            set_visible(child_hwnd, false);
+            assert_eq!(unsafe { IsWindowVisible(child_hwnd as HWND) }, 0, "hide failed");
+            set_visible(child_hwnd, true);
+            assert_ne!(unsafe { IsWindowVisible(child_hwnd as HWND) }, 0, "show failed");
+
+            detach(child_hwnd);
+            assert!(unsafe { GetParent(child_hwnd as HWND) }.is_null(), "detach failed");
+            Ok(())
+        })();
+
+        let _ = Command::new("taskkill")
+            .args(["/PID", &pid.to_string(), "/T", "/F"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+        let _ = child.wait();
+        unsafe { DestroyWindow(parent) };
+        std::thread::sleep(Duration::from_millis(300));
+        let _ = std::fs::remove_dir_all(&profile);
+        result.expect("native docking check failed");
+    }
+}

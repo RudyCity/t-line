@@ -42,7 +42,7 @@ export const WorkspaceAddModal: React.FC<WorkspaceAddModalProps> = ({
   if (!show) return null;
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" data-tline-overlay="">
       <form onSubmit={onSubmit} className="modal-content glass-panel" style={{ maxWidth: '520px' }}>
         <div className="modal-header">
           <h3 className="modal-title">Track New Workspace</h3>
@@ -259,7 +259,7 @@ export const WorktreeAddModal: React.FC<WorktreeAddModalProps> = ({
   if (!show) return null;
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" data-tline-overlay="">
       <form onSubmit={onSubmit} className="modal-content glass-panel" style={{ maxWidth: '520px' }}>
         <div className="modal-header">
           <h3 className="modal-title">Create Git Worktree</h3>
@@ -361,7 +361,7 @@ export const TunnelSetupModal: React.FC<TunnelSetupModalProps> = ({
   if (!show) return null;
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" data-tline-overlay="">
       <form onSubmit={onSubmit} className="modal-content glass-panel" style={{ maxWidth: '520px' }}>
         <div className="modal-header">
           <h3 className="modal-title">Cloudflare Named Tunnel</h3>
@@ -448,7 +448,7 @@ export const PortTunnelsManagerModal: React.FC<PortTunnelsManagerModalProps> = (
   };
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" data-tline-overlay="">
       <div className="modal-content glass-panel" style={{ maxWidth: '560px', width: '90%' }}>
         <div className="modal-header">
           <h3 className="modal-title">Port Tunnels Manager</h3>
@@ -655,7 +655,7 @@ export const ShortcutHelpModal: React.FC<ShortcutHelpModalProps> = ({ show, onCl
   if (!show) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" data-tline-overlay="" onClick={onClose}>
       <div
         className="modal-content glass-panel"
         style={{ maxWidth: '560px', width: '100%' }}
@@ -773,7 +773,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   if (!show) return null;
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 9999 }}>
+    <div className="modal-overlay" data-tline-overlay="" style={{ zIndex: 9999 }}>
       <div className="modal-content glass-panel" style={{ maxWidth: '400px' }}>
         <div className="modal-header">
           <h3 className="modal-title">{title}</h3>
@@ -845,7 +845,7 @@ export const WorkspaceEditModal: React.FC<WorkspaceEditModalProps> = ({
   ];
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" data-tline-overlay="">
       <form onSubmit={handleSubmit} className="modal-content glass-panel" style={{ maxWidth: '420px' }}>
         <div className="modal-header">
           <h3 className="modal-title">Edit Workspace Settings</h3>
@@ -929,7 +929,7 @@ export const InputModal: React.FC<InputModalProps> = ({
   };
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 9999 }}>
+    <div className="modal-overlay" data-tline-overlay="" style={{ zIndex: 9999 }}>
       <form onSubmit={handleSubmit} className="modal-content glass-panel" style={{ maxWidth: '400px' }}>
         <div className="modal-header">
           <h3 className="modal-title">{title}</h3>
@@ -1020,7 +1020,7 @@ export const SavePromptModal: React.FC<SavePromptModalProps> = ({
   }));
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 9999 }}>
+    <div className="modal-overlay" data-tline-overlay="" style={{ zIndex: 9999 }}>
       <form onSubmit={handleSubmit} className="modal-content glass-panel" style={{ maxWidth: '520px' }}>
         <div className="modal-header">
           <h3 className="modal-title">Save Prompt Shortcut</h3>
@@ -1113,7 +1113,7 @@ export const SelectGridModal: React.FC<SelectGridModalProps> = ({
   if (!show) return null;
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 9999 }}>
+    <div className="modal-overlay" data-tline-overlay="" style={{ zIndex: 9999 }}>
       <div className="modal-content glass-panel" style={{ maxWidth: '440px' }}>
         <div className="modal-header">
           <h3 className="modal-title">Select Terminal Grid</h3>

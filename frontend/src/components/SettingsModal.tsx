@@ -344,7 +344,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" data-tline-overlay="">
       <div className="modal-content glass-panel" style={{ maxWidth: '480px', padding: 0, overflow: 'hidden' }}>
         <div className="modal-header" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 className="modal-title">Settings</h3>
